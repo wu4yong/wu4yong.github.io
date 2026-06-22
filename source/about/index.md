@@ -75,8 +75,6 @@ type: "about"
   <img src="/assets/img/about/study.png" style="width:90%;
    max-width:1000px; object-fit:contain;" alt="我的人生">
 </div>
-
-### 学习是一种常态
 <div align="center">
   <img src="/assets/img/about/biji.png" style="width:90%;
    max-width:1000px; object-fit:contain;" alt="我的人生">
