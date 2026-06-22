@@ -7,7 +7,7 @@
  */
 
 // ===== 打字机动画 =====
-const story = "时空裂隙已开启，你降临在无垠星海之中。请选择你的去向。";
+const story = "时空裂隙已开启，你降临在无垠星海之中.";
 let index = 0;
 
 function typeWriter() {
