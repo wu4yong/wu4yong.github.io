@@ -183,3 +183,7 @@ deploy:
 补充说明区分推送目标
 git push -u origin "master" → 推 GitHub
 git push -u gitee master → 推 Gitee
+# 仅推送到 Gitee
+
+推 Gitee：git push origin master
+推 GitHub：git push github master
