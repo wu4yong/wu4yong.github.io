@@ -181,9 +181,34 @@ deploy:
 最后更新: 2026-06-21
 
 补充说明区分推送目标
-git push -u origin "master" → 推 GitHub
-git push -u gitee master → 推 Gitee
-# 仅推送到 Gitee
-
 推 Gitee：git push origin master
 推 GitHub：git push github master
+
+# 从 GitHub 拉取最新代码 git pull github master
+# 从 Gitee 拉取最新代码 git pull origin master
+
+
+# 查看状态
+git status
+
+# 查看远程仓库
+git remote -v
+
+# 查看提交历史
+git log --oneline -5
+
+# 推送到 GitHub
+git push github master
+
+# 推送到 Gitee
+git push origin master
+
+# 同时推送到两个仓库（一次性）
+git push github master
+git push origin master
+
+# 从 GitHub 拉取
+git pull github master
+
+# 从 Gitee 拉取
+git pull origin master
