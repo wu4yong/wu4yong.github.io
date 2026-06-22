@@ -56,6 +56,29 @@ starry-blog/
 ├── _config.butterfly.yml          # Butterfly 主题专属配置
 └── package.json                   # npm 依赖管理文件
 
+
+themes/butterfly/layout/
+├── _css/
+│   ├── common.css        # 全局公共样式（原有，注释补齐）
+│   ├── home.css          # 首页专用样式（原有，注释补齐）
+│   ├── archive.css       # 归档页 archive.njk 专属样式【新增抽取】
+│   ├── categories.css    # 分类总页 categories.njk 专属样式【新增抽取】
+│   ├── category-single.css # 单分类页 category.njk 专属样式【新增抽取】
+│   ├── post-layout.css   # 文章详情页 post.njk 布局样式（原layout.css重命名）
+│   └── sidebar.css       # 侧边栏 Sidebar.njk 样式（原有，注释补齐）
+├── _js/
+│   ├── typing.js         # 首页打字机+折叠菜单脚本（原有）
+│   └── post-float-btn.js # 文章页返回顶部悬浮按钮脚本【新增抽取】
+├── _components/
+│   ├── Particles.njk     # 星空粒子背景公共组件
+│   ├── HomeContent.njk   # 首页中央菜单按钮组件
+│   └── Sidebar.njk       # 文章页左侧侧边栏组件
+├── archive.njk
+├── categories.njk
+├── category.njk
+├── index.njk
+└── post.njk
+
 ## 🎨 首页组件说明
 
 ### 1. 星空粒子组件 (`_components/Particles.njk`)
