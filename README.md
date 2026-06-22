@@ -7,77 +7,46 @@
 
 ## 📁 项目结构
 starry-blog/
-├── source/                        # 站点源文件（文章、页面、静态资源）
-│   ├── _posts/                    # 文章根目录（按分类分文件夹存放）
-│   │   ├── bigdata/               # 大数据技术文章
-│   │   ├── database/              # MySQL/数据库技术文章
-│   │   ├── fun/                   # 休闲娱乐分类
-│   │   │   ├── game/              # 游戏子分类
-│   │   │   ├── movie/             # 电影子分类
-│   │   │   ├── music/             # 音乐子分类
-│   │   │   └── photo/             # 摄影图集
-│   │   ├── java/                  # Java 技术专栏
-│   │   ├── story/                 # 随笔故事
-│   │   └── web/                   # 前端/Web 开发
-│   ├── about/                     # 「关于我」独立页面
-│   │   └── index.md
-│   ├── assets/                    # 静态资源：图片、音频、素材
-│   │   ├── archive/
-│   │   ├── img/                   # 文章封面、页面背景图
-│   │   └── music/
-│   ├── categories/                # 分类汇总页面
-│   │   └── index.md
-│   ├── tags/                      # 标签汇总页面
-│   │   └── index.md
-│   └── website/                   # 工具/友链独立页面
-│       ├── link/                  # 友情链接
-│       └── tools/                 # 在线小工具
+├── node_modules/ # npm 依赖包
+├── public/ # hexo 生成静态站点（编译输出目录）
+├── source/ # 博客源文件：文章、资源、页面
+│ ├── _posts/ # 所有博客 Markdown 文章
+│ ├── assets/ # 静态资源：图片、视频、图标
+│ │ ├── img/ # 图片素材
+│ │ └── video/ # MP4 本地视频文件
+│ ├── tags/ # 标签页面源文件
+│ ├── categories/ # 分类页面源文件
+│ ├── fun// website/ # 自定义子页面目录
 ├── themes/
-│   └── butterfly/                 # 核心 Butterfly 主题目录
-│       └── layout/                # 页面模板存放目录
-│           ├── _components/       # 全局复用组件
-│           │   ├── HomeContent.njk  # 首页按钮、折叠菜单组件
-│           │   ├── Particles.njk    # 星空粒子背景组件
-│           │   └── Sidebar.njk       # 侧边栏导航组件
-│           ├── _css/              # 全局样式表
-│           │   ├── common.css     # 全站公共样式
-│           │   ├── home.css       # 首页专属样式
-│           │   ├── layout.css     # 页面基础布局
-│           │   └── sidebar.css    # 侧边栏样式
-│           ├── _js/               # 交互脚本
-│           │   └── typing.js      # 首页打字机、折叠菜单逻辑
-│           ├── index.njk          # 首页主模板
-│           ├── archive.njk        # 归档页模板
-│           ├── categories.njk     # 分类页模板
-│           ├── post.njk           # 文章详情页模板
-│           └── search/
-│               └── index.njk      # 搜索页模板
-├── _config.yml                    # Hexo 全局基础配置
-├── _config.butterfly.yml          # Butterfly 主题专属配置
-└── package.json                   # npm 依赖管理文件
+│ └── butterfly/ # 自定义重构 Butterfly 主题
+│ └── layout/ # 页面模板根目录
+│ ├── _components/ # 公共复用组件
+│ │ ├── Particles.njk # 星空粒子背景全局组件
+│ │ ├── HomeContent.njk # 首页中央菜单 / 折叠按钮组件
+│ │ └── Sidebar.njk # 文章页左侧侧边栏组件
+│ ├── _css/ # 全局 / 页面专属样式文件
+│ │ ├── common.css # 全局公共基础样式（所有页面共用）
+│ │ ├── home.css # index.njk 首页专属样式
+│ │ ├── archive.css # archive.njk 归档页专属样式
+│ │ ├── categories.css # categories.njk 分类汇总页样式
+│ │ ├── category-single.css # category.njk 单分类详情页样式
+│ │ ├── post-layout.css # post.njk 文章详情页布局样式
+│ │ └── sidebar.css # Sidebar.njk 侧边栏组件专属样式
+│ ├── _js/ # 页面脚本文件（内联 JS 全部抽离独立文件）
+│ │ ├── typing.js # 首页打字机 + 折叠菜单脚本
+│ │ └── post-float-btn.js # 文章页返回顶部悬浮按钮脚本
+│ ├── index.njk # 首页模板（封装规范基准模板）
+│ ├── archive.njk # 归档页面模板
+│ ├── categories.njk # 全分类汇总页面模板
+│ ├── category.njk # 单分类详情页面模板
+│ └── post.njk # 文章详情页模板
+├── _config.yml # Hexo 全局主配置
+├── _config.butterfly.yml # Butterfly 主题配置
+├── db.json # Hexo 本地缓存数据库
+├── package-lock.json
+└── package.json # npm 依赖配置                # npm 依赖管理文件
 
 
-themes/butterfly/layout/
-├── _css/
-│   ├── common.css        # 全局公共样式（原有，注释补齐）
-│   ├── home.css          # 首页专用样式（原有，注释补齐）
-│   ├── archive.css       # 归档页 archive.njk 专属样式【新增抽取】
-│   ├── categories.css    # 分类总页 categories.njk 专属样式【新增抽取】
-│   ├── category-single.css # 单分类页 category.njk 专属样式【新增抽取】
-│   ├── post-layout.css   # 文章详情页 post.njk 布局样式（原layout.css重命名）
-│   └── sidebar.css       # 侧边栏 Sidebar.njk 样式（原有，注释补齐）
-├── _js/
-│   ├── typing.js         # 首页打字机+折叠菜单脚本（原有）
-│   └── post-float-btn.js # 文章页返回顶部悬浮按钮脚本【新增抽取】
-├── _components/
-│   ├── Particles.njk     # 星空粒子背景公共组件
-│   ├── HomeContent.njk   # 首页中央菜单按钮组件
-│   └── Sidebar.njk       # 文章页左侧侧边栏组件
-├── archive.njk
-├── categories.njk
-├── category.njk
-├── index.njk
-└── post.njk
 
 ## 🎨 首页组件说明
 
