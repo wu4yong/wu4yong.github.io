@@ -1,6 +1,6 @@
 ---
 title: 自学吉他:真的爱你
-date: 2025-08-03 10:00:00
+date: 2026-06-04 10:00:00
 categories:
   - music
 tags:

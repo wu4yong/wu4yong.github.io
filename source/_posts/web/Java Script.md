@@ -1,6 +1,6 @@
 ---
 title: javaScript
-date: 2023-02-01 12:00:00
+date: 2026-06-09 08:00:00
 categories:
 - web
 tag: 

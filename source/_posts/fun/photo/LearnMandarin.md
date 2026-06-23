@@ -1,6 +1,6 @@
 ---
 title: 努力的理由
-date: 2023-06-22 19:47:02
+date: 2026-06-07 08:00:00
 categories:
  - photo
 tags:

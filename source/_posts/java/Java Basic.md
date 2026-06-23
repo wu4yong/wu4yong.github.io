@@ -1,10 +1,11 @@
 ---
 title: Java Basic
-date: 2025-09-02 10:00:00  
+date: 2026-06-01 10:00:00
+categories:
   - java
 tags:
-  - java
-  - Java入门
+  - Java Basic
+  - Java 基础
 top_img: /assets/img/java/javaBasic.png  
 cover: /assets/img/java/javaBasic.png    
 ---
