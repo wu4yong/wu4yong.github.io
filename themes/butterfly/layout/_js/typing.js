@@ -20,7 +20,7 @@ function typeWriter() {
 
 setTimeout(typeWriter, 300);
 
-// ===== 折叠/展开通用函数 =====
+// ===== 折叠/展开通用函数（只折叠，不跳转） =====
 function setupCollapse(triggerId, submenuId, arrowId) {
   const trigger = document.getElementById(triggerId);
   const submenu = document.getElementById(submenuId);
@@ -32,18 +32,6 @@ function setupCollapse(triggerId, submenuId, arrowId) {
     submenu.classList.toggle("show");
     arrow.classList.toggle("rotate");
     e.preventDefault();
-  });
-
-  // 双击跳转到分类总页
-  trigger.addEventListener("dblclick", function () {
-    window.location.href = "/about/";
-  });
-
-  // 点击除箭头外的区域，如果子菜单已展开则跳转
-  trigger.addEventListener("click", function (e) {
-    if (e.target !== arrow && submenu.classList.contains("show")) {
-      window.location.href = "/about/";
-    }
   });
 }
 
