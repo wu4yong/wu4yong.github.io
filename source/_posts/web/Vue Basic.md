@@ -1,6 +1,6 @@
 ---
 title: vueBasic
-date: 2026-06-09 08:00:00
+date: 2026-06-07 02:00:00
 categories:
 - web
 tag: 
