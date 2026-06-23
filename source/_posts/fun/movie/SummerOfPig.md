@@ -2,7 +2,7 @@
 title: 小猪妖的夏天
 date: 2026-06-02 01:00:00
 categories:
-  - movie  # 多级分类用 / 拼接
+  - movie
 tags:
   - movie
   - 小猪妖的夏天
