@@ -1,6 +1,6 @@
 ---
 title: 自学吉他:天使的翅膀
-date: 2026-06-04 11:00:00
+date: 2026-06-01 04:00:00
 categories:
   - music
 tags:
