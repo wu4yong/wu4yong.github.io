@@ -4,10 +4,7 @@ date: 2026-06-04 03:00:00
 categories:
   - java
 tags:
-  - JVM
-  - 虚拟机
-top_img: /assets/img/java/jvm.png 
-cover: /assets/img/java/jvm.png
+  - Java
 ---
 # 虚拟机篇
 

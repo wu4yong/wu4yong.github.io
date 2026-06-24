@@ -4,8 +4,7 @@ date: 2026-06-01 04:00:00
 categories:
   - music
 tags:
-  - music
-  - 天使的翅膀
+  - 音乐
 order: 1
 ---
 >自学吉他: Wings of Angels 

@@ -4,10 +4,7 @@ date: 2026-06-05 02:00:00
 categories:
   - database
 tags:
-  - mysql-interview
-  - Mysql面试题
-top_img: /assets/img/database.png
-cover: /assets/img/mysql/interview.png
+  - MySQL数据库
 ---
 # Mysql面试题
 [toc]

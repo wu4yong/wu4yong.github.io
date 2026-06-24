@@ -4,10 +4,7 @@ date: 2026-06-03 01:00:00
 categories:
  - photo
 tags:
-  - photo
-  - 努力的理由
-top_img: /assets/img/music.png
-cover: /assets/img/music.png
+  - 图片
 ---
 # 漫画-努力的理由
 <div align="center">

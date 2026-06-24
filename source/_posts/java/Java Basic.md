@@ -4,10 +4,7 @@ date: 2026-06-04 02:00:00
 categories:
   - java
 tags:
-  - Java Basic
-  - Java 基础
-top_img: /assets/img/java/javaBasic.png  
-cover: /assets/img/java/javaBasic.png    
+  - Java
 ---
 # 基础篇
 

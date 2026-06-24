@@ -4,8 +4,7 @@ date: 2026-06-02 02:00:00
 categories:
   - movie
 tags:
-  - movie
-  - Never Truly Lived
+  - 电影
 ---
 >Never Truly Lived
 {% dplayer url="/assets/video/NeverTruly.mp4" width="100%" height="auto" download="false" pip="false" %}

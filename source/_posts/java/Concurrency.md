@@ -4,10 +4,7 @@ date: 2026-06-04 04:00:00
 categories:
   - java
 tags:
-  - Java Concurrency
-  - 并发编程
-top_img: /assets/img/java/concurrency.png
-cover: /assets/img/java/concurrency.png
+  - Java
 ---
 # 并发篇
 

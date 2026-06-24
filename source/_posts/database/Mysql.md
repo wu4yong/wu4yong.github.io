@@ -4,10 +4,7 @@ date: 2026-06-05 01:00:00
 categories:
   - database
 tags:
-  - Mysql
-  - 数据库基础
-top_img: /assets/img/database.png
-cover: /assets/img/mysql/basic.png
+  - MySQL数据库
 ---
 # 基础篇
 

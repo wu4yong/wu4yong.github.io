@@ -4,8 +4,7 @@ date: 2026-06-04 05:00:00
 categories:
   - java
 tags:
-  - Spring Source
-  - Spring源码
+  - Java
 top_img: /assets/img/java/spring.png
 cover: /assets/img/java/spring.png
 ---

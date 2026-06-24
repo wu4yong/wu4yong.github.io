@@ -4,10 +4,7 @@ date: 2026-06-04 01:00:00
 categories:
   - java
 tags:
-  - HelloWorld
-  - 你好世界
-top_img: /assets/img/java/java.png
-cover: /assets/img/java/java.png
+  - Java
 ---
 # 						          **hello,编程**
 >  亲爱的“对象”

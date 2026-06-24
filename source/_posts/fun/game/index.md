@@ -4,7 +4,6 @@ date: 2026-06-03 03:00:00
 categories:
   - game  # 多级分类用 / 拼接，无需缩进
 tags:
-  - game
   - 游戏
 top_img: /assets/img/fun/game/woool.png  # 无则删除该行
 cover: /assets/img/fun/game/woool.png    # 无则删除该行

@@ -4,10 +4,7 @@ date: 2026-06-06 02:00:00
 categories:
   - bigdata
 tags:
-  - bigdata
-  - HBase 理论篇
-top_img: /assets/img/bigdata.png
-cover: /assets/img/bigdata2.png
+  - 大数据
 order: 3
 ---
 

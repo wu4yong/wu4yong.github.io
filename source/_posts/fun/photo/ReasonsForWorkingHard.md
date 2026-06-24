@@ -4,10 +4,7 @@ date: 2026-06-03 02:00:00
 categories:
  - photo
 tags:
-  - photo
-  - 学普通话
-top_img: /assets/img/music.png
-cover: /assets/img/music.png
+  - 图片
 ---
 # 漫画-学普通话
 ## 严须

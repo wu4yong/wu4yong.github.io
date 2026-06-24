@@ -4,8 +4,7 @@ date: 2026-06-01 03:00:00
 categories:
   - music
 tags:
-  - music
-  - 吉他热爱者
+  - 音乐
 order: 4
 ---
 >Guitar Be with you

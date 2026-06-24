@@ -4,8 +4,7 @@ date: 2026-06-01 02:00:00
 categories:
   - music  # 多级分类用 / 拼接
 tags:
-  - music
-  - Glorious Years‌ 
+  - 音乐 
 order: 3
 ---
 >Glorious Years
