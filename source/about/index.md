@@ -8,21 +8,23 @@ type: "about"
  2006年的那个夏天，高中毕业了，未来一片迷茫.
 >![]( /assets/img/coder/biye.png) 
  -->
-### 网瘾少年
+### 网瘾游戏少年
 <div align="center">
   <img src="/assets/img/about/wangba.png" style="width:90%;
    max-width:1000px; object-fit:contain;" alt="我的人生">
 </div>
-
-### 打工牛马
-<!-- 
 <div align="center">
-  <img src="/assets/img/about/daishu.png" style="width:90%;
+  <img src="/assets/img/about/cqsj.png" style="width:90%;
    max-width:1000px; object-fit:contain;" alt="我的人生">
-</div> 
--->
+</div>
+
+### 早教机构-市场专员
 <div align="center">
-  <img src="/assets/img/about/laborers.png" style="width:90%;
+  <img src="/assets/img/about/kindyroo1.png" style="width:90%;
+   max-width:1000px; object-fit:contain;" alt="我的人生">
+</div>
+<div align="center">
+  <img src="/assets/img/about/kindyroo2.png" style="width:90%;
    max-width:1000px; object-fit:contain;" alt="我的人生">
 </div>
 
