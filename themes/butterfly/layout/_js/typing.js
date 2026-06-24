@@ -2,11 +2,10 @@
  * ============================================
  * 首页打字机动画 + 折叠菜单脚本
  * 文件：_js/typing.js
- * 作用：首页的打字机文字效果 + 分类折叠展开
  * ============================================
  */
 
-// ===== 打字机动画 =====
+// ===== 打字机动画（对话框内） =====
 const story = "时空裂隙已开启，你降临在无垠星海之中.";
 let index = 0;
 
@@ -18,9 +17,9 @@ function typeWriter() {
   }
 }
 
-setTimeout(typeWriter, 300);
+setTimeout(typeWriter, 800);
 
-// ===== 折叠/展开通用函数（只折叠，不跳转） =====
+// ===== 折叠/展开通用函数 =====
 function setupCollapse(triggerId, submenuId, arrowId) {
   const trigger = document.getElementById(triggerId);
   const submenu = document.getElementById(submenuId);
@@ -28,7 +27,6 @@ function setupCollapse(triggerId, submenuId, arrowId) {
   if (!trigger || !submenu || !arrow) return;
 
   trigger.addEventListener("click", function (e) {
-    // 切换折叠状态
     submenu.classList.toggle("show");
     arrow.classList.toggle("rotate");
     e.preventDefault();
