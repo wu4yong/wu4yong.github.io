@@ -7,7 +7,9 @@ tags:
   - 音乐 
 order: 3
 ---
->Glorious Years
+<div class="essay-banner">
+ Glorious Years
+</div>
 <div style="width:100%;aspect-ratio:16/9;">
   <iframe 
     src="//player.bilibili.com/player.html?bvid=BV1iV4y1m7jm&page=1" 

@@ -7,7 +7,9 @@ tags:
   - 音乐
 order: 4
 ---
->Guitar Be with you
+<div class="essay-banner">
+  Guitar Be with you
+</div>
 <div style="width:100%;aspect-ratio:16/9;">
   <iframe 
     src="//player.bilibili.com/player.html?bvid=BV1dY4y1H7vg&page=1" 

@@ -7,8 +7,9 @@ tags:
   - 大数据
 order: 1
 ---
-
-# Hadoop HDFS 架构
+<div class="essay-banner">
+   Hadoop HDFS 架构
+</div>
 
 ## 一、HDFS 整体架构模型
 HDFS 数据分为两类：**文件元数据 MetaData**、**文件实际数据**

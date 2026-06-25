@@ -1,13 +1,14 @@
 ---
-title: concurrency
+title: 并发篇
 date: 2026-06-04 04:00:00
 categories:
   - java
 tags:
   - Java
 ---
-# 并发篇
-
+<div class="essay-banner">
+    Concurrency
+</div>
 ## 1. 线程状态
 
 **要求**

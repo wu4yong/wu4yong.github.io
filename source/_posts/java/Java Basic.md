@@ -1,12 +1,14 @@
 ---
-title: Java Basic
+title: Java基础篇
 date: 2026-06-04 02:00:00
 categories:
   - java
 tags:
   - Java
 ---
-# 基础篇
+<div class="essay-banner">
+    Java Basic
+</div>
 
 > ***基础篇要点：算法、数据结构、基础设计模式***
 

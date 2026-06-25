@@ -1,5 +1,5 @@
 ---
-title: HBase 理论篇
+title: HBase理论篇
 date: 2026-06-06 02:00:00
 categories:
   - bigdata
@@ -7,9 +7,9 @@ tags:
   - 大数据
 order: 3
 ---
-
-# HBase 分布式列式数据库
-
+<div class="essay-banner">
+   HBase 
+</div>
 ## 一、HBase 基础介绍
 ### 1. 核心定义
 HBase 是基于Hadoop的KV格式、面向列存储的分布式数据库，**非内存数据库、非传统列式数据库**。

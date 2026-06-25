@@ -1,12 +1,14 @@
 ---
-title: JVM
+title: 虚拟机篇
 date: 2026-06-04 03:00:00
 categories:
   - java
 tags:
   - Java
 ---
-# 虚拟机篇
+<div class="essay-banner">
+    JVM
+</div>
 
 ## 1. JVM 内存结构
 

@@ -6,7 +6,9 @@ categories:
 tags:
   - 随笔杂谈
 ---
- <span style="color:#0066cc; font-size:28px; font-weight:bold; text-align:center; display:block;">两棵树</span>
+<div class="essay-banner">
+    两· 棵· 树
+</div>
 
 <span style="color:#0066cc;">老教授问：“如果你去山上砍树，正好面前有两棵树，一棵粗，另一棵细，你会砍哪一棵?”</span>
 

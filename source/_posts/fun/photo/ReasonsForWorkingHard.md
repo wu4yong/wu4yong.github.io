@@ -6,7 +6,9 @@ categories:
 tags:
   - 图片
 ---
-# 漫画-学普通话
+<div class="essay-banner">
+   漫画-学普通话
+</div>
 ## 严须
 <div align="center">
   <img src="/assets/img/child/1.png" style="width:90%;max-width:1000px;object-fit:contain;" alt="严须">

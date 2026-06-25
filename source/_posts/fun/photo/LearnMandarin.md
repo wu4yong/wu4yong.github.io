@@ -6,7 +6,10 @@ categories:
 tags:
   - 图片
 ---
-# 漫画-努力的理由
+<div class="essay-banner">
+   漫画-努力的理由
+</div>
+
 <div align="center">
   <img src="/assets/img/nuli/1.png" style="width:90%;max-width:1000px;object-fit:contain;" alt="努力的理由">
 </div>

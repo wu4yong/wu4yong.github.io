@@ -6,5 +6,7 @@ categories:
 tags:
   - 电影
 ---
->Never Truly Lived
+<div class="essay-banner">
+  Never Truly Lived
+</div>
 {% dplayer url="/assets/video/NeverTruly.mp4" width="100%" height="auto" download="false" pip="false" %}

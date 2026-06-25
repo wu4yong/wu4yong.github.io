@@ -6,7 +6,9 @@ categories:
 tags:
   - 电影
 ---
->小猪妖的夏天
+<div class="essay-banner">
+ 小猪妖的夏天
+</div>
 <div style="width:100%;aspect-ratio:16/9;">
   <iframe 
     src="//player.bilibili.com/player.html?bvid=BV1fY41197ws&page=1" 

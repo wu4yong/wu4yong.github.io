@@ -1,12 +1,14 @@
 ---
-title: Mysql基础
+title: Mysql基础篇
 date: 2026-06-05 01:00:00
 categories:
   - database
 tags:
   - MySQL数据库
 ---
-# 基础篇
+<div class="essay-banner">
+   Mysql Basic
+</div>
 
 ## 通用语法及分类
 - DDL：数据定义语言，用来定义数据库对象（数据库、表、字段）

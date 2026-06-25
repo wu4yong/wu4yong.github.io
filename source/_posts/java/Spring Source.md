@@ -1,15 +1,17 @@
 ---
-title: Spring Source
+title: Spring源码篇
 date: 2026-06-04 05:00:00
 categories:
   - java
 tags:
   - Java
-top_img: /assets/img/java/spring.png
-cover: /assets/img/java/spring.png
 ---
-## 容器与 bean
+<div class="essay-banner">
+   Spring Source
+</div>
 
+
+## 容器与 bean
 ### 1) 容器接口
 
 * BeanFactory 接口，典型功能有：

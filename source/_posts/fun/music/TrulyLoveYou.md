@@ -7,7 +7,9 @@ tags:
   - 音乐
 order: 2
 ---
->自学吉他: Truly love you 
+<div class="essay-banner">
+  自学吉他: Truly love you 
+</div>
 <div style="width:100%;aspect-ratio:16/9;">
   <iframe 
     src="//player.bilibili.com/player.html?bvid=BV15X4y1t7kk&page=1" 

@@ -1,12 +1,14 @@
 ---
-title: Mysql面试题
+title: Mysql面试篇
 date: 2026-06-05 02:00:00
 categories:
   - database
 tags:
   - MySQL数据库
 ---
-# Mysql面试题
+<div class="essay-banner">
+   Mysql Interview
+</div>
 [toc]
 ## 一 Mysql索引
 

@@ -7,7 +7,9 @@ tags:
   - 音乐
 order: 1
 ---
->自学吉他: Wings of Angels 
+<div class="essay-banner">
+   Wings of Angels 
+</div>
 <div style="width:100%;aspect-ratio:16/9;">
   <iframe 
     src="//player.bilibili.com/player.html?bvid=BV1aN411r7yR&page=1" 
