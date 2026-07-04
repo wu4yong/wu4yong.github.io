@@ -1,16 +1,15 @@
 ---
-title: Netty基础篇
-date: 2026-06-08 01:00:00
+title: NIO基础篇
+date: 2026-06-08 23:00:00
 categories:
   - netty
 tags:
-  - c
+  - netty
 ---
 <div class="essay-banner">
     Netty Basic
 </div>
 
-> ***NIO 基础***
 # 一. NIO 基础
 
 non-blocking io 非阻塞 IO
@@ -19,7 +18,9 @@ non-blocking io 非阻塞 IO
 
 ### 1.1 Channel & Buffer
 
-channel 有一点类似于 stream，它就是读写数据的**双向通道**，可以从 channel 将数据读入 buffer，也可以将 buffer 的数据写入 channel，而之前的 stream 要么是输入，要么是输出，channel 比 stream 更为底层
+channel 有一点类似于 stream，它就是读写数据的**双向通道**，
+可以从 channel 将数据读入 buffer，也可以将 buffer 的数据写入 channel，
+而之前的 stream 要么是输入，要么是输出，channel 比 stream 更为底层
 
 ![](/assets/img/netty/channel-buffer.png)
 
@@ -66,7 +67,8 @@ selector 单从字面意思不好理解，需要结合服务器的设计演化�
 
 #### selector 版设计
 
-selector 的作用就是配合一个线程来管理多个 channel，获取这些 channel 上发生的事件，这些 channel 工作在非阻塞模式下，不会让线程吊死在一个 channel 上。适合连接数特别多，但流量低的场景（low traffic）
+selector 的作用就是配合一个线程来管理多个 channel，获取这些 channel 上发生的事件，这些 channel 工作在非阻塞模式下，
+不会让线程吊死在一个 channel 上。适合连接数特别多，但流量低的场景（low traffic）
 
 ![](/assets/img/netty/selector.png)
 
