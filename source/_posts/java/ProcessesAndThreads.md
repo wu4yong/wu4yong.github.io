@@ -1,17 +1,16 @@
 ---
-title: JUC多线程篇
-date: 2026-06-04 046:00:00
+title: JUC多线程篇(一)
+date: 2026-06-04 06:01:00
 categories:
   - java
 tags:
   - Java
 ---
 <div class="essay-banner">
-    Concurrency
+    进程与线程
 </div>
-# 进程与线程
 
-# 本章内容 
+# 本章内容 进程与线程
 
 
 - 进程和线程的概念
