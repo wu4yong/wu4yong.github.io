@@ -61,7 +61,8 @@ tags:
 
 两个线程分别对静态变量自增、自减5000次，最终结果大概率不为0：
 
-```java
+<div class="full-code-box">
+<pre>
 static int counter = 0;
 public static void main(String[] args) throws InterruptedException {
     Thread t1 = new Thread(() -> {
@@ -83,22 +84,25 @@ public static void main(String[] args) throws InterruptedException {
     
     log.debug("{}",counter);
 }
-```
-
+</pre>
+</div>
 ## 3.1.3 问题根源：非原子操作
 
 Java中静态变量的自增、自减并非单条指令，而是由多条JVM字节码组成，多线程下指令会交错执行，破坏原子性。
 
-**i\+\+ 字节码指令**：
+**i++ 字节码指令**：
 
-```java
+<div class="full-code-box">
+<pre>
 getstatic i    // 读取主存变量值
 iconst_1       // 加载常量1
 iadd           // 执行自增运算
 putstatic i    // 写回主存
 ```
+</pre>
+</div>
 
-**i\-\- 字节码指令**：将iadd替换为isub（减法），流程一致。
+**i-- 字节码指令**：将iadd替换为isub（减法），流程一致。
 
 单线程下指令顺序执行无问题；多线程下8条指令随机交错，最终结果出现正数、负数、零三种情况。
 
@@ -131,12 +135,14 @@ putstatic i    // 写回主存
 
 示例临界区代码：
 
-```java
+<div class="full-code-box">
+<pre>
 static int counter = 0;
 // 临界区：存在共享变量读写
 static void increment(){ counter++; }
 static void decrement(){ counter--; }
-```
+</pre>
+</div>
 
 ### 2. 竞态条件（Race Condition）
 
@@ -146,9 +152,9 @@ static void decrement(){ counter--; }
 
 ## 3.2.1 锁解决方案分类
 
-- **阻塞式方案**：synchronized（内置锁）、Lock（显式锁），通过互斥阻塞保证原子性
+**阻塞式方案**：synchronized（内置锁）、Lock（显式锁），通过互斥阻塞保证原子性
 
-- **非阻塞式方案**：原子变量（CAS实现，无阻塞）
+**非阻塞式方案**：原子变量（CAS实现，无阻塞）
 
 ## 3.2.2 synchronized 核心原理
 
@@ -156,23 +162,25 @@ static void decrement(){ counter--; }
 
 **互斥与同步区别**：
 
-- 互斥：保证临界区同一时刻单线程执行，解决竞态条件
+互斥：保证临界区同一时刻单线程执行，解决竞态条件
 
-- 同步：控制线程执行顺序，让线程等待其他线程执行到指定节点
+同步：控制线程执行顺序，让线程等待其他线程执行到指定节点
 
 ## 3.2.3 基础语法与修复案例
 
 **语法格式**：
 
-```java
+<div class="full-code-box">
+<pre>
 synchronized(锁对象){
     // 临界区代码
 }
-```
-
+</pre>
+</div>
 **修复共享变量错乱问题**：
 
-```java
+<div class="full-code-box">
+<pre>
 static int counter = 0;
 static final Object room = new Object(); // 唯一共享锁对象
 
@@ -199,7 +207,8 @@ public static void main(String[] args) throws InterruptedException {
     t2.join();
     log.debug("{}",counter); // 最终结果固定为0
 }
-```
+</pre>
+</div>
 <div class="img-wrap-left">
   <img class="left-img" src="/assets/img/java/concurrent/concurrent39.png" alt="示意图">
 </div>
@@ -225,7 +234,8 @@ synchronized 实际是用对象锁保证了临界区内代码的原子性，临�
 面向对象改进 
 把需要保护的共享变量放入一个类
 
-```
+<div class="full-code-box">
+<pre>
 class Room {
     int value = 0;
     public void increment() {
@@ -270,7 +280,8 @@ public class Test1 {
         log.debug("count: {}" , room.get());
     }
 }
-```
+</pre>
+</div>
 
 ## 3.2.4 锁机制通俗类比
 
@@ -295,8 +306,8 @@ public class Test1 {
 ## 3.2.6 面向对象优化写法
 
 将共享变量和锁封装到工具类，通过this作为锁对象，封装性更强：
-
-```java
+<div class="full-code-box">
+<pre>
 class Room {
     int value = 0;
     // 实例方法锁this对象
@@ -310,17 +321,19 @@ class Room {
         synchronized (this) { return value; }
     }
 }
-```
+</pre>
+</div>
 
 # 3.3 方法上的synchronized（线程八锁）
 
 ## 3.3.1 方法锁等价关系
 
-- **普通同步方法**：默认锁 **this（当前实例对象）**
+**普通同步方法**：默认锁 **this（当前实例对象）**
 
-- **静态同步方法**：默认锁 **类\.class（类对象）**
+**静态同步方法**：默认锁 **类\.class（类对象）**
 
-```java
+<div class="full-code-box">
+<pre>
 // 普通同步方法等价代码
 public synchronized void test() {}
 等价于
@@ -330,7 +343,9 @@ public void test() { synchronized(this) {} }
 public static synchronized void test() {}
 等价于
 public static void test() { synchronized(Test.class) {} }
-```
+</pre>
+</div>
+
 ## 不加 synchronized 的方法 
 不加 synchronzied 的方法就好比不遵守规则的人，不去老实排队（好比翻窗户进去的）
 
@@ -340,7 +355,9 @@ public static void test() { synchronized(Test.class) {} }
 核心判断逻辑：**锁对象是否相同，相同则互斥阻塞，不同则并发执行**
 
 1. **情况1：同一实例两个普通同步方法**：锁同一this，执行顺序12或21
-```
+
+<div class="full-code-box">
+<pre>
 @Slf4j(topic = "c.Number")
 class Number{
 	public synchronized void a() {
@@ -356,10 +373,12 @@ public static void main(String[] args) {
 	new Thread(()->{ n1.a(); }).start();
 	new Thread(()->{ n1.b(); }).start();
 }
-```
+</pre>
+</div>
 
 2. **情况2：普通同步方法加延时**：一个线程睡眠1秒，另一个线程等待，结果1s后12 / 2 1s后1
-```
+<div class="full-code-box">
+<pre>
 @Slf4j(topic = "c.Number")
 class Number{
     public synchronized void a() {
@@ -376,12 +395,13 @@ public static void main(String[] args) {
     new Thread(()->{ n1.a(); }).start();
     new Thread(()->{ n1.b(); }).start();
 }
-```
+</pre>
+</div>
 
 
 3. **情况3：同步方法\+普通方法**：普通方法无锁，可并发执行，输出3优先，再执行12
-
-```
+<div class="full-code-box">
+<pre>
 @Slf4j(topic = "c.Number")
 class Number{
     public synchronized void a() {
@@ -402,11 +422,13 @@ public static void main(String[] args) {
     new Thread(()->{ n1.b(); }).start();
     new Thread(()->{ n1.c(); }).start();
 }
-```
+</pre>
+</div>
 
 4. **情况4：不同实例普通同步方法**：锁不同this，互不阻塞，2优先，1s后输出1
 
-```
+<div class="full-code-box">
+<pre>
 @Slf4j(topic = "c.Number")
 class Number{
     public synchronized void a() {
@@ -424,11 +446,12 @@ public static void main(String[] args) {
     new Thread(()->{ n1.a(); }).start();
     new Thread(()->{ n2.b(); }).start();
 }
-```
-
+</pre>
+</div>
 5. **情况5：静态同步方法\+普通同步方法（同一实例）**：锁分别为类对象、实例对象，互不阻塞，2优先，1s后输出1
 
-```
+<div class="full-code-box">
+<pre>
 @Slf4j(topic = "c.Number")
 class Number{
     public static synchronized void a() {
@@ -445,11 +468,13 @@ public static void main(String[] args) {
     new Thread(()->{ n1.a(); }).start();
     new Thread(()->{ n1.b(); }).start();
 }
-```
+</pre>
+</div>
 
 6. **情况6：同一实例两个静态同步方法**：锁同一类对象，互斥阻塞，1s后12或2 1s后1
 
-```
+<div class="full-code-box">
+<pre>
 @Slf4j(topic = "c.Number")
 class Number{
     public static synchronized void a() {
@@ -466,11 +491,13 @@ public static void main(String[] args) {
     new Thread(()->{ n1.a(); }).start();
     new Thread(()->{ n1.b(); }).start();
 }
-```
+</pre>
+</div>
 
 7. **情况7：不同实例静态\+普通同步方法**：锁不同，互不阻塞，2优先，1s后输出1
 
-```
+<div class="full-code-box">
+<pre>
 @Slf4j(topic = "c.Number")
 class Number{
     public static synchronized void a() {
@@ -488,11 +515,14 @@ public static void main(String[] args) {
     new Thread(()->{ n1.a(); }).start();
     new Thread(()->{ n2.b(); }).start();
 }
-```
+</pre>
+</div>
+
 
 8. **情况8：不同实例两个静态同步方法**：锁同一类对象，互斥阻塞，1s后12或2 1s后1
 
-```
+<div class="full-code-box">
+<pre>
 @Slf4j(topic = "c.Number")
 class Number{
     public static synchronized void a() {
@@ -510,7 +540,9 @@ public static void main(String[] args) {
     new Thread(()->{ n1.a(); }).start();
     new Thread(()->{ n2.b(); }).start();
 }
-```
+</pre>
+</div>
+
 
 # 3.4 变量线程安全深度分析
 
@@ -533,15 +565,21 @@ public static void main(String[] args) {
 - 共享且**仅读**：线程安全
 - 共享且**读写共存**：存在临界区，线程不安全
 ## 3.4.2 局部变量线程安全分析
-```
+
+<div class="full-code-box">
+<pre>
 public static void test1() {
     int i = 10;
     i++; 
 }
-```
+</pre>
+</div>
 
 每个线程调用 test1() 方法时局部变量 i，会在每个线程的栈帧内存中被创建多份，因此不存在共享
-```
+
+
+<div class="full-code-box">
+<pre>
 public static void test1();
     descriptor: ()V
     flags: ACC_PUBLIC, ACC_STATIC
@@ -558,8 +596,8 @@ public static void test1();
     LocalVariableTable:
         Start Length Slot Name Signature
             3      4     0    i   I
-```
-
+</pre>
+</div>
 如图
 <div class="img-wrap-left">
   <img class="left-img" src="/assets/img/java/concurrent/concurrent41.png" alt="并发示意图">
@@ -567,7 +605,9 @@ public static void test1();
 
 局部变量的引用稍有不同 
 先看一个成员变量的例子：
-```
+
+<div class="full-code-box">
+<pre>
 class ThreadUnsafe {
     ArrayList<String> list = new ArrayList<>();
     public void method1(int loopNumber) {
@@ -585,10 +625,13 @@ class ThreadUnsafe {
         list.remove(0);
     }
 }
-```
+</pre>
+</div>
 执行
 
-```
+
+<div class="full-code-box">
+<pre>
 static final int THREAD_NUMBER = 2;
 static final int LOOP_NUMBER = 200;
 public static void main(String[] args) {
@@ -599,7 +642,8 @@ public static void main(String[] args) {
         }, "Thread" + i).start();
     }
 }
-```
+</pre>
+</div>
 
 分析： 
 ● 无论哪个线程中的 method2 引用的都是同一个对象中的 list 成员变量 
@@ -610,7 +654,8 @@ public static void main(String[] args) {
 
 将 list 修改为局部变量
 
-```
+<div class="full-code-box">
+<pre>
 class ThreadSafe {
     public final void method1(int loopNumber) {
         ArrayList<String> list = new ArrayList<>();
@@ -626,7 +671,9 @@ class ThreadSafe {
         list.remove(0);
     }
 }
-```
+</pre>
+</div>
+
 那么就不会有上述问题了
 分析： 
 ● list 是局部变量，每个线程调用时会创建其不同实例，没有共享 
@@ -640,7 +687,10 @@ class ThreadSafe {
 方法访问修饰符带来的思考，如果把 method2 和 method3 的方法修改为 public 会不会出现线程安全问题？ 
 ● 情况1：有其它线程调用 method2 和 method3 
 ● 情况2：在 情况1 的基础上，为 ThreadSafe 类添加子类，子类覆盖 method2 或 method3 方法，即
-```
+
+
+<div class="full-code-box">
+<pre>
 class ThreadSafe {
     public final void method1(int loopNumber) {
         ArrayList<String> list = new ArrayList<>();
@@ -665,9 +715,8 @@ class ThreadSafeSubClass extends ThreadSafe{
         }).start();
     }
 }
-```
-
-
+</pre>
+</div>
 
 ## 3.4.3 典型案例：集合线程安全问题
 
@@ -691,7 +740,8 @@ String、Integer等不可变类、StringBuffer、Vector、Hashtable、JUC包下�
 
 这里说它们是线程安全的是指，多个线程调用它们同一个实例的某个方法时，是线程安全的。也可以理解为
 
-```
+<div class="full-code-box">
+<pre>
 Hashtable table = new Hashtable();
 
 new Thread(()->{
@@ -701,7 +751,9 @@ new Thread(()->{
 new Thread(()->{
     table.put("key", "value2");
 }).start();
-```
+</pre>
+</div>
+
 - 它们的每个方法是原子的 
 - 但注意它们多个方法的组合不是原子的，见后面分析
 
@@ -709,13 +761,16 @@ new Thread(()->{
 
 示例：Hashtable先判断null再put，两步操作不原子，存在并发风险
 
-```
+<div class="full-code-box">
+<pre>
 Hashtable table = new Hashtable();
 // 线程1，线程2
 if( table.get("key") == null) {
     table.put("key", value);
 }
-```
+</pre>
+</div>
+
 <div class="img-wrap-left">
   <img class="left-img" src="/assets/img/java/concurrent/concurrent44.png" alt="并发示意图">
 </div>
@@ -741,7 +796,9 @@ String、Integer等类内部状态不可修改，所有修改操作都会返回�
 
 实例分析
 例1：
-```
+
+<div class="full-code-box">
+<pre>
 public class MyServlet extends HttpServlet {
     // 是否安全？  不安全
     Map<String,Object> map = new HashMap<>();
@@ -758,9 +815,12 @@ public class MyServlet extends HttpServlet {
         // 使用上述变量
     }
 }
-```
+</pre>
+</div>
+
 例2：
-```
+<div class="full-code-box">
+<pre>
 public class MyServlet extends HttpServlet {
     // 是否安全？  不安全
     private UserService userService = new UserServiceImpl();
@@ -779,9 +839,14 @@ public class UserServiceImpl implements UserService {
         count++;
     }
 }
-```
+</pre>
+</div>
+
 例3：
-```
+
+
+<div class="full-code-box">
+<pre>
 @Aspect
 @Component
 public class MyAspect {
@@ -799,9 +864,13 @@ public class MyAspect {
         System.out.println("cost time:" + (end-start));
     }
 }
-```
+</pre>
+</div>
+
 例4：
-```
+
+<div class="full-code-box">
+<pre>
 public class MyServlet extends HttpServlet {
     // 是否安全  安全
     private UserService userService = new UserServiceImpl();
@@ -831,9 +900,12 @@ public class UserDaoImpl implements UserDao {
         }
     }
 }
-```
+</pre>
+</div>
+
 例5：
-```
+<div class="full-code-box">
+<pre>
 public class MyServlet extends HttpServlet {
     // 是否安全
     private UserService userService = new UserServiceImpl();
@@ -862,9 +934,13 @@ public class UserDaoImpl implements UserDao {
         conn.close();
     }
 }
-```
+</pre>
+</div>
+
 例6：
-```
+
+<div class="full-code-box">
+<pre>
 public class MyServlet extends HttpServlet {
     // 是否安全
     private UserService userService = new UserServiceImpl();
@@ -891,9 +967,13 @@ public class UserDaoImpl implements UserDao {
         conn.close();
     }
 }
-```
+</pre>
+</div>
+
 例7：
-```
+
+<div class="full-code-box">
+<pre>
 public abstract class Test {
 
     public void bar() {
@@ -910,9 +990,13 @@ public abstract class Test {
     }
     
 }
-```
+</pre>
+</div>
+
 其中 foo 的行为是不确定的，可能导致不安全的发生，被称之为外星方法
-```
+
+<div class="full-code-box">
+<pre>
 public void foo(SimpleDateFormat sdf) {
     String dateStr = "1999-10-11 00:00:00";
     for (int i = 0; i < 20; i++) {
@@ -925,11 +1009,15 @@ public void foo(SimpleDateFormat sdf) {
         }).start();
     }
 }
-```
+</pre>
+</div>
+
 请比较 JDK 中 String 类的实现
 
 例8：
-```
+
+<div class="full-code-box">
+<pre>
 private static Integer i = 0;
 public static void main(String[] args) throws InterruptedException {
     List<Thread> list = new ArrayList<>();
@@ -953,12 +1041,17 @@ public static void main(String[] args) throws InterruptedException {
     });
     log.debug("{}", i);
 }
-```
+</pre>
+</div>
 
 # 3.5 经典习题：卖票问题
+
 卖票练习 
 测试下面代码是否存在线程安全问题，并尝试改正
-```
+
+
+<div class="full-code-box">
+<pre>
 public class ExerciseSell {
     public static void main(String[] args) {
         TicketWindow ticketWindow = new TicketWindow(2000);
@@ -1011,19 +1104,25 @@ class TicketWindow {
         }
     }
 }
-```
+</pre>
+</div>
+
 
 另外，用下面的代码行不行，为什么？
-```
+
+<div class="full-code-box">
+<pre>
+
+
 List<Integer> sellCount = new ArrayList<>();
-```
+
 测试脚本
-```
+
 for /L %n in (1,1,10) do java -cp ".;C:\Users\manyh\.m2\repository\ch\qos\logback\logback-classic\1.2.3\logback-classic-1.2.3.jar;C:\Users\manyh\.m2\repository\ch\qos\logback\logback-core\1.2.3\logback-core-1.2.3.jar;C:\Users\manyh\.m2\repository\org\slf4j\slf4j-api\1.7.25\slf4j-api-1.7.25.jar" cn.itcast.n4.exercise.ExerciseSell
-```
+
 转账练习
 测试下面代码是否存在线程安全问题，并尝试改正
-```
+
 public class ExerciseTransfer {
     public static void main(String[] args) throws InterruptedException {
         Account a = new Account(1000);
@@ -1071,17 +1170,21 @@ class Account {
         }
     }
 }
-```
-这样改正行不行，为什么？  不行,锁要用同一个共用锁,而这里的account是不同对象
+</pre>
+</div>
 
-```
+这样改正行不行，为什么？  不行,锁要用同一个共用锁,而这里的account是不同对象
+<div class="full-code-box">
+<pre>
 public synchronized void transfer(Account target, int amount) {
     if (this.money > amount) {
         this.setMoney(this.getMoney() - amount);
         target.setMoney(target.getMoney() + amount);
     }
 }
-```
+</pre>
+</div>
+
 ## 3.5.1 问题现象
 
 多线程并发卖票，sell方法存在**判断余量-扣减票数**两步非原子操作，出现超卖、票数总和不一致问题。

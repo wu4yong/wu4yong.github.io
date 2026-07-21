@@ -7,8 +7,9 @@ tags:
   - Java
 ---
 <div class="essay-banner">
-    Java线程基础
+    Thread Basic
 </div>
+
 # Java线程基础
 
 ## 本章内容
@@ -25,7 +26,8 @@ tags:
 
 ## 方法一，直接使用 Thread
 
-```java
+<div class="full-code-box">
+<pre>
 // 创建线程对象
 Thread t = new Thread() {
     public void run() {
@@ -34,11 +36,15 @@ Thread t = new Thread() {
 };
 // 启动线程
 t.start();
-```
+</pre>
+</div>
+
+
 
 **示例**
+<div class="full-code-box">
+<pre>
 
-```java
 // 构造方法的参数是给线程指定名字，推荐
 Thread t1 = new Thread("t1") {
     @Override
@@ -48,23 +54,19 @@ Thread t1 = new Thread("t1") {
     }
 };
 t1.start();
-```
-
 **输出**
-
-```plain
 19:19:00 [t1] c.ThreadStarter - hello
-```
+</pre>
+</div>
 
 ## 方法二，使用 Runnable 配合 Thread
 
 把【线程】和【任务】（要执行的代码）分开
+● Thread 代表线程
+● Runnable 可运行的任务（线程要执行的代码）
 
-- Thread 代表线程
-
-- Runnable 可运行的任务（线程要执行的代码）
-
-```java
+<div class="full-code-box">
+<pre>
 Runnable runnable = new Runnable() {
     public void run(){
         // 要执行的任务
@@ -74,11 +76,12 @@ Runnable runnable = new Runnable() {
 Thread t = new Thread( runnable );
 // 启动线程
 t.start();
-```
+</pre>
+</div>
 
 **示例**
-
-```java
+<div class="full-code-box">
+<pre>
 // 创建任务对象
 Runnable task2 = new Runnable() {
     @Override
@@ -90,30 +93,27 @@ Runnable task2 = new Runnable() {
 // 参数1 是任务对象; 参数2 是线程名字，推荐
 Thread t2 = new Thread(task2, "t2");
 t2.start();
-```
 
-**输出**
-
-```plain
+输出：
 19:19:00 [t2] c.ThreadStarter - hello
-```
-
+</pre>
+</div>
 Java 8 以后可以使用 lambda 精简代码
-
-```java
+<div class="full-code-box">
+<pre>
 // 创建任务对象
 Runnable task2 = () -> log.debug("hello");
 
 // 参数1 是任务对象; 参数2 是线程名字，推荐
 Thread t2 = new Thread(task2, "t2");
 t2.start();
-```
-
+</pre>
+</div>
 ### * 原理之 Thread 与 Runnable 的关系
 
 分析 Thread 的源码，理清它与 Runnable 的关系
-
-```java
+<div class="full-code-box">
+<pre>
 private Runnable target;
 
 @Override
@@ -122,21 +122,22 @@ public void run() {
         target.run();
     }
 }
-```
+</pre>
+</div>
 
 #### 小结
 
-- 方法1 是把线程和任务合并在了一起，方法2 是把线程和任务分开了
+●方法1 是把线程和任务合并在了一起，方法2 是把线程和任务分开了
 
-- 用 Runnable 更容易与线程池等高级 API 配合
+●用 Runnable 更容易与线程池等高级 API 配合
 
-- 用 Runnable 让任务类脱离了 Thread 继承体系，更灵活
+●用 Runnable 让任务类脱离了 Thread 继承体系，更灵活
 
 ## 方法三，FutureTask 配合 Thread
 
 FutureTask 能够接收 Callable 类型的参数，用来处理有返回结果的情况
-
-```java
+<div class="full-code-box">
+<pre>
 // 创建任务对象
 FutureTask<Integer> task3 = new FutureTask<>(() -> {
     log.debug("hello");
@@ -149,22 +150,19 @@ new Thread(task3, "t3").start();
 // 主线程阻塞，同步等待 task 执行完毕的结果
 Integer result = task3.get();
 log.debug("结果是:{}", result);
-```
 
-**输出**
-
-```plain
+输出：
 19:22:27 [t3] c.ThreadStarter - hello
 19:22:27 [main] c.ThreadStarter - 结果是:100
-```
+
+</pre>
+</div>
 
 # 2.2 观察多个线程同时运行
 
 主要是理解
-
-- 交替执行
-
-- 谁先谁后，不由程序控制，由操作系统调度决定
+●交替执行
+●谁先谁后，不由程序控制，由操作系统调度决定
 
 # 2.3 查看进程线程的方法
 
@@ -176,81 +174,62 @@ log.debug("结果是:{}", result);
 
 ## Windows
 
-- 任务管理器可以查看进程和线程数，也可以用来杀死进程
-
-- `tasklist` 查看所有进程
-
-- `taskkill` 杀死指定进程
+●任务管理器可以查看进程和线程数，也可以用来杀死进程
+●`tasklist` 查看所有进程
+●`taskkill` 杀死指定进程
 
 ## Linux
 
-- `ps -fe` 查看所有进程
-
-- `ps -fT -p <PID>` 查看某个进程（PID）的所有线程
-
-- `kill` 杀死进程
-
-- `top` 按大写 H 切换是否显示线程
-
-- `top -H -p <PID>` 查看某个进程（PID）的所有线程
+● `ps -fe` 查看所有进程
+● `ps -fT -p <PID>` 查看某个进程（PID）的所有线程
+● `kill` 杀死进程
+● `top` 按大写 H 切换是否显示线程
+● `top -H -p <PID>` 查看某个进程（PID）的所有线程
 
 ## Java
 
-- `jps` 命令查看所有 Java 进程
-
-- `jstack <PID>` 查看某个 Java 进程（PID）的所有线程状态
-
-- `jconsole`图形化工具，查看 Java 进程中线程的运行情况
-
+● `jps` 命令查看所有 Java 进程
+● `jstack <PID>` 查看某个 Java 进程（PID）的所有线程状态
+● `jconsole`图形化工具，查看 Java 进程中线程的运行情况
 ### jconsole 远程监控配置
 
 需要以如下方式运行你的 java 类
-
-```plain
+<div class="full-code-box">
+<pre>
 java -Djava.rmi.server.hostname=`ip地址` -Dcom.sun.management.jmxremote -
 Dcom.sun.management.jmxremote.port=`连接端口` -Dcom.sun.management.jmxremote.ssl=是否安全连接 -
 Dcom.sun.management.jmxremote.authenticate=是否认证 java类
-```
+</pre>
+</div>
 
 修改 /etc/hosts 文件将 127\.0\.0\.1 映射至主机名
 
-如果要认证访问，还需要做如下步骤
-
-- 复制 jmxremote\.password 文件
-
-- 修改 jmxremote\.password 和 jmxremote\.access 文件的权限为 600（仅文件所有者可读写）
-
-- 连接时填入 controlRole（用户名），R\&D（密码）
+如果要认证访问，还需要做如下步骤：
+● 复制 jmxremote\.password 文件
+● 修改 jmxremote\.password 和 jmxremote\.access 文件的权限为 600（仅文件所有者可读写）
+●连接时填入 controlRole（用户名），R\&D（密码）
 
 # 2.4 * 原理之线程运行
 
 ## 栈与栈帧
 
-Java Virtual Machine Stacks（Java 虚拟机栈）
+●Java Virtual Machine Stacks（Java 虚拟机栈）
+●JVM 内存由堆、栈、方法区组成，其中栈内存是**线程私有**，每个线程启动后，虚拟机都会为其分配独立的栈内存。
 
-JVM 内存由堆、栈、方法区组成，其中栈内存是**线程私有**，每个线程启动后，虚拟机都会为其分配独立的栈内存。
-
-- 每个栈由多个栈帧（Frame）组成，对应每次方法调用所占用的内存
-
-- 每个线程同一时刻只能有一个活动栈帧，对应当前正在执行的方法
+● 每个栈由多个栈帧（Frame）组成，对应每次方法调用所占用的内存
+● 每个线程同一时刻只能有一个活动栈帧，对应当前正在执行的方法
 
 ## 线程上下文切换（Thread Context Switch）
 
 以下场景会导致 CPU 暂停执行当前线程，切换执行其他线程：
 
-- 线程的 CPU 时间片用完
-
-- JVM 垃圾回收
-
-- 有更高优先级的线程需要运行
-
-- 线程调用了 sleep、yield、wait、join、park、synchronized、lock 等阻塞方法
-
+● 线程的 CPU 时间片用完
+● JVM 垃圾回收
+● 有更高优先级的线程需要运行
+● 线程调用了 sleep、yield、wait、join、park、synchronized、lock 等阻塞方法
 上下文切换时，操作系统会保存当前线程状态，恢复目标线程状态。Java 中**程序计数器（线程私有）**用于记录下一条 JVM 指令执行地址。
-
-- 线程状态包含：程序计数器、虚拟机栈所有栈帧信息（局部变量、操作数栈、返回地址等）
-
-- 频繁上下文切换会严重消耗系统性能
+● 线程状态包含：程序计数器、虚拟机栈所有栈帧信息（局部变量、操作数栈、返回地址等）
+● 频繁上下文切换会严重消耗系统性能
 
 # 2.5 常见线程API
 
@@ -287,8 +266,8 @@ JVM 内存由堆、栈、方法区组成，其中栈内存是**线程私有**，
 # 2.6 start 与 run
 
 ## 直接调用 run\(\)
-
-```java
+<div class="full-code-box">
+<pre>
 public static void main(String[] args) {
     Thread t1 = new Thread("t1") {
         @Override
@@ -301,71 +280,66 @@ public static void main(String[] args) {
     t1.run();
     log.debug("do other things ...");
 }
-```
 
-**输出**
-
-```plain
+输出：
 19:39:14 [main] c.TestStart - main
 19:39:14 [main] c.FileReader - read [1.mp4] start ...
 19:39:18 [main] c.FileReader - read [1.mp4] end ... cost: 4227 ms
 19:39:18 [main] c.TestStart - do other things ...
-```
-
+</pre>
+</div>
 程序仍在 **main 线程**运行，方法调用是**同步阻塞**的，没有创建新线程。
 
-## 调用 start\(\)
+## 调用 start()
 
+<div class="full-code-box">
+<pre>
 将 `t1.run();` 改为 `t1.start();`
 
-**输出**
-
-```plain
+输出
 19:41:30 [main] c.TestStart - do other things ...
 19:41:30 [t1] c.TestStart - t1
 19:41:30 [t1] c.FileReader - read [1.mp4] start ...
 19:41:35 [t1] c.FileReader - read [1.mp4] end ... cost: 4542 ms
-```
+</pre>
+</div>
 
 程序在 **t1 新线程**运行，方法调用是**异步非阻塞**的。
 
 ## 小结
 
-- 直接调用 run\(\)：仅为普通方法调用，在当前线程执行，不创建新线程
-
-- 调用 start\(\)：创建并启动新线程，由新线程间接执行 run\(\) 方法
+● 直接调用 run()：仅为普通方法调用，在当前线程执行，不创建新线程
+● 调用 start()：创建并启动新线程，由新线程间接执行 run() 方法
 
 # 2.7 sleep 与 yield
 
 ## sleep
 
-- 调用 sleep\(long n\) 会让当前线程从 Running 进入 Timed Waiting 阻塞状态
+● 调用 sleep(long n) 会让当前线程从 Running 进入 Timed Waiting 阻塞状态
+●阻塞期间可被 interrupt() 打断，抛出 InterruptedException，同时清除打断标记
+●睡眠时间结束后，线程进入就绪状态，未必会立刻获取CPU执行
 
-- 阻塞期间可被 interrupt\(\) 打断，抛出 InterruptedException，同时清除打断标记
-
-- 睡眠时间结束后，线程进入就绪状态，未必会立刻获取CPU执行
-
-- 推荐使用 `TimeUnit.XXX.sleep()` 替代 Thread\.sleep\(\)，可读性更高
+● 推荐使用 `TimeUnit.XXX.sleep()` 替代 Thread.sleep()，可读性更高
 
 ## yield
 
-- 调用 yield\(\) 会让当前线程从 Running 进入 Runnable 就绪状态，让出CPU时间片
+● 调用 yield() 会让当前线程从 Running 进入 Runnable 就绪状态，让出CPU时间片
 
-- 仅为操作系统调度提示，具体实现依赖系统调度器，不保证一定让出CPU
+● 仅为操作系统调度提示，具体实现依赖系统调度器，不保证一定让出CPU
 
 ## 线程优先级
 
-- 优先级取值 1\~10（MIN\_PRIORITY\~MAX\_PRIORITY），默认5
+● 优先级取值 1\~10（MIN_PRIORITY\~MAX_PRIORITY），默认5
 
-- 优先级仅为调度提示，CPU繁忙时，高优先级线程大概率获取更多时间片；CPU空闲时优先级无效
+● 优先级仅为调度提示，CPU繁忙时，高优先级线程大概率获取更多时间片；CPU空闲时优先级无效
 
 ### 应用：限制CPU空转消耗
 
 避免 while\(true\) 空转浪费CPU资源，通过 sleep/yield 让出CPU
 
 #### sleep 实现（无锁场景）
-
-```java
+<div class="full-code-box">
+<pre>
 while(true) {
     try {
         Thread.sleep(50);
@@ -373,11 +347,12 @@ while(true) {
         e.printStackTrace();
     }
 }
-```
+</pre>
+</div>
 
 #### wait 实现（需加锁同步场景）
-
-```java
+<div class="full-code-box">
+<pre>
 synchronized(锁对象) {
     while(条件不满足) {
         try {
@@ -388,11 +363,13 @@ synchronized(锁对象) {
     }
     // 执行后续操作
 }
-```
+</pre>
+</div>
 
 #### 条件变量实现（JUC锁场景）
 
-```java
+<div class="full-code-box">
+<pre>
 lock.lock();
 try {
     while(条件不满足) {
@@ -406,7 +383,8 @@ try {
 } finally {
     lock.unlock();
 }
-```
+</pre>
+</div>
 
 # 2.8 join方法详解
 
@@ -414,7 +392,8 @@ try {
 
 多线程并行执行时，主线程无法预知子线程执行完毕时间，导致获取不到子线程计算结果
 
-```java
+<div class="full-code-box">
+<pre>
 static int r = 0;
 public static void main(String[] args) throws InterruptedException {
     test1();
@@ -432,28 +411,27 @@ private static void test1() throws InterruptedException {
     log.debug("结果为:{}", r);
     log.debug("结束");
 }
-```
+</pre>
+</div>
 
 **分析**
 
-- 主线程与t1线程并行执行，t1需要1秒完成赋值 r=10
-
-- 主线程启动t1后立即打印结果，最终输出 r=0
-
+● 主线程与t1线程并行执行，t1需要1秒完成赋值 r=10
+● 主线程启动t1后立即打印结果，最终输出 r=0
 **解决方案**：在 `t1.start()` 后调用 `t1.join()`，让主线程等待子线程执行完毕
 
 ## 应用之同步
 
-- **同步**：调用方需要等待线程执行完毕、获取结果后，再继续运行
+**同步**：调用方需要等待线程执行完毕、获取结果后，再继续运行
 
-- **异步**：调用方无需等待，启动线程后直接继续运行
+**异步**：调用方无需等待，启动线程后直接继续运行
 <div class="img-wrap-left">
   <img class="left-img" src="/assets/img/java/concurrent/concurrent5.png" alt="示意图">
 </div>
 
 ## 等待多个线程结果
-
-```java
+<div class="full-code-box">
+<pre>
 static int r1 = 0;
 static int r2 = 0;
 public static void main(String[] args) throws InterruptedException {
@@ -476,21 +454,23 @@ private static void test2() throws InterruptedException {
     long end = System.currentTimeMillis();
     log.debug("r1: {} r2: {} cost: {}", r1, r2, end - start);
 }
-```
+</pre>
+</div>
 
 **分析**
 
-- 等待t1时，t2同步并行运行，不会阻塞
-
-- 1秒后t1执行完毕，主线程等待t2剩余1秒
-
-- 总耗时约2秒，颠倒join顺序结果一致
+● 等待t1时，t2同步并行运行，不会阻塞
+● 1秒后t1执行完毕，主线程等待t2剩余1秒
+● 总耗时约2秒，颠倒join顺序结果一致
 
 **输出**
 
-```plain
+<div class="full-code-box">
+<pre>
 20:45:43.239 [main] c.TestJoin - r1: 10 r2: 20 cost: 2005
-```
+</pre>
+</div>
+
 <div class="img-wrap-left">
   <img class="left-img" src="/assets/img/java/concurrent/concurrent6.png" alt="示意图">
 </div>
@@ -499,7 +479,8 @@ private static void test2() throws InterruptedException {
 
 ### 等够时间（线程提前执行完毕）
 
-```java
+<div class="full-code-box">
+<pre>
 static int r1 = 0;
 static int r2 = 0;
 public static void main(String[] args) throws InterruptedException {
@@ -517,17 +498,18 @@ public static void test3() throws InterruptedException {
     long end = System.currentTimeMillis();
     log.debug("r1: {} r2: {} cost: {}", r1, r2, end - start);
 }
-```
 
-**输出**
-
-```plain
+输出：
 20:48:01.320 [main] c.TestJoin - r1: 10 r2: 0 cost: 1010
-```
+
+
+</pre>
+</div>
 
 ### 没等够时间（线程超时未执行完毕）
 
-```java
+<div class="full-code-box">
+<pre>
 static int r1 = 0;
 static int r2 = 0;
 public static void main(String[] args) throws InterruptedException {
@@ -545,13 +527,14 @@ public static void test3() throws InterruptedException {
     long end = System.currentTimeMillis();
     log.debug("r1: {} r2: {} cost: {}", r1, r2, end - start);
 }
-```
 
-**输出**
-
-```plain
+输出：
 20:52:15.623 [main] c.TestJoin - r1: 0 r2: 0 cost: 1502
-```
+</pre>
+</div>
+
+
+
 
 # 2.9 interrupt 方法详解
 
@@ -559,7 +542,9 @@ public static void test3() throws InterruptedException {
 
 被打断的阻塞线程会抛出 `InterruptedException`，**自动清除打断标记**（标记置为false）
 
-```java
+
+<div class="full-code-box">
+<pre>
 private static void test1() throws InterruptedException {
     Thread t1 = new Thread(()->{
         sleep(1);
@@ -569,23 +554,23 @@ private static void test1() throws InterruptedException {
     t1.interrupt();
     log.debug(" 打断状态: {}", t1.isInterrupted());
 }
-```
-
-**输出**
-
-```plain
+输出：
 java.lang.InterruptedException: sleep interrupted
      at java.lang.Thread.sleep(Native Method)
      at java.lang.Thread.sleep(Thread.java:340)
      ...
 21:18:10.374 [main] c.TestInterrupt - 打断状态: false
-```
+</pre>
+</div>
+
+
 
 ## 打断正常运行的线程
 
 打断运行中的线程，**不会清除打断标记**（标记保持true），可通过代码自行处理终止逻辑
 
-```java
+<div class="full-code-box">
+<pre>
 private static void test2() throws InterruptedException {
     Thread t2 = new Thread(()->{
         while(true) {
@@ -601,23 +586,20 @@ private static void test2() throws InterruptedException {
     sleep(0.5);
     t2.interrupt();
 }
-```
-
-**输出**
-
-```plain
+输出：
 20:57:37.964 [t2] c.TestInterrupt - 打断状态: true 
-```
+</pre>
+</div>
+
+
 
 ## 终止模式之两阶段终止（优雅终止线程）
 
 核心思想：给线程预留收尾、料理后事的时间，避免强制终止导致数据异常、资源未释放
 
 ### 错误终止思路
-
-- **stop()方法**：强制杀死线程，若线程持有锁，会导致锁无法释放，引发死锁
-
-- **System.exit()**：终止整个程序，无法仅终止单个线程
+**stop()方法**：强制杀死线程，若线程持有锁，会导致锁无法释放，引发死锁
+**System.exit()**：终止整个程序，无法仅终止单个线程
 
 
 <div class="img-wrap-left">
@@ -626,7 +608,8 @@ private static void test2() throws InterruptedException {
 
 ### 方案一：基于 isInterrupted 实现
 
-```java
+<div class="full-code-box">
+<pre>
 class TPTInterrupt {
     private Thread thread;
     public void start(){
@@ -653,32 +636,34 @@ class TPTInterrupt {
         thread.interrupt();
     }
 }
-```
+
 
 **调用测试**
 
-```java
 TPTInterrupt t = new TPTInterrupt();
 t.start();
 
 Thread.sleep(3500);
 log.debug("stop");
 t.stop();
-```
 
-**输出**
 
-```plain
+输出：
 11:49:42.915 c.TwoPhaseTermination [监控线程] - 将结果保存
 11:49:43.919 c.TwoPhaseTermination [监控线程] - 将结果保存
 11:49:44.919 c.TwoPhaseTermination [监控线程] - 将结果保存
 11:49:45.413 c.TestTwoPhaseTermination [main] - stop 
 11:49:45.413 c.TwoPhaseTermination [监控线程] - 料理后事
-```
+
+</pre>
+</div>
+
+
 
 ### 方案二：基于 volatile 停止标记实现
 
-```java
+<div class="full-code-box">
+<pre>
 class TPTVolatile {
     private Thread thread;
     // volatile 保证多线程可见性
@@ -708,13 +693,16 @@ class TPTVolatile {
         thread.interrupt();
     }
 }
-```
+</pre>
+</div>
 
 ## 打断 park 线程
 
 park 线程被打断后，**保留打断标记**，不会自动清除
 
-```java
+
+<div class="full-code-box">
+<pre>
 private static void test3() throws InterruptedException {
     Thread t1 = new Thread(() -> {
         log.debug("park...");
@@ -726,15 +714,18 @@ private static void test3() throws InterruptedException {
     sleep(0.5);
     t1.interrupt();
 }
-```
 
-**输出**
-
-```plain
+输出：
 21:11:52.795 [t1] c.TestInterrupt - park... 
 21:11:53.295 [t1] c.TestInterrupt - unpark... 
 21:11:53.295 [t1] c.TestInterrupt - 打断状态：true
-```
+
+</pre>
+</div>
+
+
+
+
 
 > **注意**：若线程打断标记为true，park会直接失效，无法阻塞线程
 > 
@@ -748,7 +739,9 @@ private static void test3() throws InterruptedException {
 
 **守护线程**：依附于非守护线程，所有非守护线程结束后，即使守护线程未执行完毕，也会被强制终止。
 
-```java
+
+<div class="full-code-box">
+<pre>
 log.debug("开始运行...");
 Thread t1 = new Thread(() -> {
 	log.debug("开始运行...");
@@ -761,16 +754,14 @@ t1.start();
 
 sleep(1);
 log.debug("运行结束...");
-```
 
-**输出**
 
-```plain
+输出：
 08:26:38.123 [main] c.TestDaemon - 开始运行... 
 08:26:38.213 [daemon] c.TestDaemon - 开始运行... 
 08:26:39.215 [main] c.TestDaemon - 运行结束...
-```
-
+</pre>
+</div>
 > **常见守护线程**
 > 
 > - JVM 垃圾回收线程
@@ -783,32 +774,32 @@ log.debug("运行结束...");
 
 ## 一、操作系统层面：五种线程状态
 
-- **初始状态**：仅创建线程对象，未与操作系统内核线程绑定
+**初始状态**：仅创建线程对象，未与操作系统内核线程绑定
 
-- **可运行状态（就绪）**：线程已初始化完成，等待CPU调度执行
+**可运行状态（就绪）**：线程已初始化完成，等待CPU调度执行
 
-- **运行状态**：获取CPU时间片，正在执行线程代码
+**运行状态**：获取CPU时间片，正在执行线程代码
 
-- **阻塞状态**：调用阻塞API（BIO、锁等待等），放弃CPU，不参与调度，等待唤醒
+**阻塞状态**：调用阻塞API（BIO、锁等待等），放弃CPU，不参与调度，等待唤醒
 
-- **终止状态**：线程代码执行完毕，生命周期结束
+**终止状态**：线程代码执行完毕，生命周期结束
 <div class="img-wrap-left">
   <img class="left-img" src="/assets/img/java/concurrent/concurrent8.png" alt="线程状态示意图">
 </div>
 
 ## 二、Java API层面：六种线程状态（Thread\.State枚举）
 
-- **NEW**：线程创建完成，未调用 start\(\) 方法
+**NEW**：线程创建完成，未调用 start\(\) 方法
 
-- **RUNNABLE**：调用start\(\)后进入，涵盖操作系统的就绪、运行、BIO阻塞三种状态（Java无法区分BIO阻塞）
+**RUNNABLE**：调用start\(\)后进入，涵盖操作系统的就绪、运行、BIO阻塞三种状态（Java无法区分BIO阻塞）
 
-- **BLOCKED**：等待获取synchronized锁，未获取到锁时的阻塞状态
+**BLOCKED**：等待获取synchronized锁，未获取到锁时的阻塞状态
 
-- **WAITING**：无时限等待（wait\(\)、join\(\)、park\(\)），需主动唤醒
+**WAITING**：无时限等待（wait\(\)、join\(\)、park\(\)），需主动唤醒
 
-- **TIMED\_WAITING**：有时限等待（sleep\(\)、wait\(long\)、join\(long\)），超时自动唤醒
+**TIMED\_WAITING**：有时限等待（sleep\(\)、wait\(long\)、join\(long\)），超时自动唤醒
 
-- **TERMINATED**：线程代码执行完毕，终止运行
+**TERMINATED**：线程代码执行完毕，终止运行
 <div class="img-wrap-left">
   <img class="left-img" src="/assets/img/java/concurrent/concurrent9.png" alt="线程状态示意图">
 </div>
@@ -855,7 +846,8 @@ log.debug("运行结束...");
 * 应用之统筹（烧水泡茶）
 ### 解法一：join 线程等待
 
-```java
+<div class="full-code-box">
+<pre>
 Thread t1 = new Thread(() -> {
     log.debug("洗水壶");
     sleep(1);
@@ -881,11 +873,14 @@ Thread t2 = new Thread(() -> {
 
 t1.start();
 t2.start();
-```
+</pre>
+</div>
+
 
 ### 解法二：wait/notify 双向等待
 
-```java
+<div class="full-code-box">
+<pre>
 class S2 {
     static String kettle = "冷水";
     static String tea = null;
@@ -942,11 +937,14 @@ class S2 {
         
     }
 }
-```
+</pre>
+</div>
 
 ### 解法三：第三者协调（最优解）
 
-```java
+
+<div class="full-code-box">
+<pre>
 class S3 {
     
     static String kettle = "冷水";
@@ -995,40 +993,31 @@ class S3 {
         
     }
 }
-```
+</pre>
+</div>
 
 # 本章小结
 
 ## 1. 核心基础
 
-- 三种线程创建方式：Thread子类、Runnable任务、FutureTask带返回值任务
-
-- start\(\)创建新线程，run\(\)仅为普通方法调用，无新线程
+● 三种线程创建方式：Thread子类、Runnable任务、FutureTask带返回值任务
+● start()创建新线程，run()仅为普通方法调用，无新线程
 
 ## 2. 核心API
 
-- sleep/yield：线程休眠、让出CPU，调控线程执行节奏
-
-- join：线程同步等待，解决多线程结果依赖问题
-
-- interrupt：线程打断，区分阻塞/运行/ park线程的不同打断逻辑
+● sleep/yield：线程休眠、让出CPU，调控线程执行节奏
+● join：线程同步等待，解决多线程结果依赖问题
+● interrupt：线程打断，区分阻塞/运行/ park线程的不同打断逻辑
 
 ## 3. 线程状态
-
-- 操作系统5种状态：初始、就绪、运行、阻塞、终止
-
-- Java6种枚举状态：NEW、RUNNABLE、BLOCKED、WAITING、TIMED\_WAITING、TERMINATED
+● 操作系统5种状态：初始、就绪、运行、阻塞、终止
+● Java6种枚举状态：NEW、RUNNABLE、BLOCKED、WAITING、TIMED\_WAITING、TERMINATED
 
 ## 4. 核心应用与模式
-
-- 异步/同步调用：提升程序执行效率，解决任务依赖
-
-- 两阶段终止模式：优雅终止线程，保障资源释放、数据收尾
-
-- 多线程统筹：并行执行无依赖任务，最大化缩短执行耗时
+● 异步/同步调用：提升程序执行效率，解决任务依赖
+● 两阶段终止模式：优雅终止线程，保障资源释放、数据收尾
+● 多线程统筹：并行执行无依赖任务，最大化缩短执行耗时
 
 ## 5. 底层原理
-
-- 线程私有栈、栈帧机制，对应方法调用内存模型
-
-- 上下文切换原理及性能损耗问题
+● 线程私有栈、栈帧机制，对应方法调用内存模型
+● 上下文切换原理及性能损耗问题
