@@ -1121,13 +1121,46 @@ document.addEventListener('DOMContentLoaded', function() {
 <p>为存储计算中间结果，线程会读写主存中的共享变量，<strong>分时切换+共享读写</strong>会引发数据错乱问题：</p>
 <p>典型场景：小南读取变量0、执行+1未写回时，时间片用完发生上下文切换；小女读取变量0、执行-1并写回-1；后续小南恢复执行，将内存覆盖写为1，最终结果不符合预期。</p>
 <h2 id="3-1-2-Java代码复现问题"><a href="#3-1-2-Java代码复现问题" class="headerlink" title="3.1.2 Java代码复现问题"></a>3.1.2 Java代码复现问题</h2><p>两个线程分别对静态变量自增、自减5000次，最终结果大概率不为0：</p>
-<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">static</span> <span class="type">int</span> <span class="variable">counter</span> <span class="operator">=</span> <span class="number">0</span>;</span><br><span class="line"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title function_">main</span><span class="params">(String[] args)</span> <span class="keyword">throws</span> InterruptedException &#123;</span><br><span class="line">    <span class="type">Thread</span> <span class="variable">t1</span> <span class="operator">=</span> <span class="keyword">new</span> <span class="title class_">Thread</span>(() -&gt; &#123;</span><br><span class="line">        <span class="keyword">for</span> (<span class="type">int</span> <span class="variable">i</span> <span class="operator">=</span> <span class="number">0</span>; i &lt; <span class="number">5000</span>; i++) &#123;</span><br><span class="line">            counter++;</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;, <span class="string">&quot;t1&quot;</span>);</span><br><span class="line">    </span><br><span class="line">    <span class="type">Thread</span> <span class="variable">t2</span> <span class="operator">=</span> <span class="keyword">new</span> <span class="title class_">Thread</span>(() -&gt; &#123;</span><br><span class="line">        <span class="keyword">for</span> (<span class="type">int</span> <span class="variable">i</span> <span class="operator">=</span> <span class="number">0</span>; i &lt; <span class="number">5000</span>; i++) &#123;</span><br><span class="line">            counter--;</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;, <span class="string">&quot;t2&quot;</span>);</span><br><span class="line">    </span><br><span class="line">    t1.start();</span><br><span class="line">    t2.start();</span><br><span class="line">    t1.join();</span><br><span class="line">    t2.join();</span><br><span class="line">    </span><br><span class="line">    log.debug(<span class="string">&quot;&#123;&#125;&quot;</span>,counter);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<div class="full-code-box">
+<pre>
+static int counter = 0;
+public static void main(String[] args) throws InterruptedException {
+    Thread t1 = new Thread(() -> {
+        for (int i = 0; i < 5000; i++) {
+            counter++;
+        }
+    }, "t1");
+    
+<pre><code>Thread t2 = new Thread(() -&gt; {
+    for (int i = 0; i &lt; 5000; i++) {
+        counter--;
+    }
+}, &quot;t2&quot;);
 
-<h2 id="3-1-3-问题根源：非原子操作"><a href="#3-1-3-问题根源：非原子操作" class="headerlink" title="3.1.3 问题根源：非原子操作"></a>3.1.3 问题根源：非原子操作</h2><p>Java中静态变量的自增、自减并非单条指令，而是由多条JVM字节码组成，多线程下指令会交错执行，破坏原子性。</p>
+t1.start();
+t2.start();
+t1.join();
+t2.join();
+
+log.debug(&quot;{}&quot;,counter);
+</code></pre>
+<p>}<br></pre></p>
+</div>
+## 3.1.3 问题根源：非原子操作
+
+<p>Java中静态变量的自增、自减并非单条指令，而是由多条JVM字节码组成，多线程下指令会交错执行，破坏原子性。</p>
 <p><strong>i++ 字节码指令</strong>：</p>
-<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">getstatic i    <span class="comment">// 读取主存变量值</span></span><br><span class="line">iconst_1       <span class="comment">// 加载常量1</span></span><br><span class="line">iadd           <span class="comment">// 执行自增运算</span></span><br><span class="line">putstatic i    <span class="comment">// 写回主存</span></span><br></pre></td></tr></table></figure>
+<div class="full-code-box">
+<pre>
+getstatic i    // 读取主存变量值
+iconst_1       // 加载常量1
+iadd           // 执行自增运算
+putstatic i    // 写回主存
+```
+</pre>
+</div>
 
-<p><strong>i-- 字节码指令</strong>：将iadd替换为isub（减法），流程一致。</p>
+<p><strong>i– 字节码指令</strong>：将iadd替换为isub（减法），流程一致。</p>
 <p>单线程下指令顺序执行无问题；多线程下8条指令随机交错，最终结果出现正数、负数、零三种情况。</p>
 <p>而 Java 的内存模型如下，完成静态变量的自增，自减需要在主存和工作内存中进行数据交换：</p>
 <div class="img-wrap-left">
@@ -1151,28 +1184,54 @@ document.addEventListener('DOMContentLoaded', function() {
 
 <h2 id="3-1-4-核心概念定义"><a href="#3-1-4-核心概念定义" class="headerlink" title="3.1.4 核心概念定义"></a>3.1.4 核心概念定义</h2><h3 id="1-临界区（Critical-Section）"><a href="#1-临界区（Critical-Section）" class="headerlink" title="1. 临界区（Critical Section）"></a>1. 临界区（Critical Section）</h3><p>存在<strong>多线程对共享变量读写操作</strong>的代码块。仅多线程读共享资源无安全问题，读写共存才会触发风险。</p>
 <p>示例临界区代码：</p>
-<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">static</span> <span class="type">int</span> <span class="variable">counter</span> <span class="operator">=</span> <span class="number">0</span>;</span><br><span class="line"><span class="comment">// 临界区：存在共享变量读写</span></span><br><span class="line"><span class="keyword">static</span> <span class="keyword">void</span> <span class="title function_">increment</span><span class="params">()</span>&#123; counter++; &#125;</span><br><span class="line"><span class="keyword">static</span> <span class="keyword">void</span> <span class="title function_">decrement</span><span class="params">()</span>&#123; counter--; &#125;</span><br></pre></td></tr></table></figure>
+<div class="full-code-box">
+<pre>
+static int counter = 0;
+// 临界区：存在共享变量读写
+static void increment(){ counter++; }
+static void decrement(){ counter--; }
+</pre>
+</div>
 
 <h3 id="2-竞态条件（Race-Condition）"><a href="#2-竞态条件（Race-Condition）" class="headerlink" title="2. 竞态条件（Race Condition）"></a>2. 竞态条件（Race Condition）</h3><p>多个线程在临界区执行，因线程执行序列随机交错，导致最终结果不可预测的现象，是线程安全问题的核心诱因。</p>
-<h1 id="3-2-synchronized-互斥解决方案"><a href="#3-2-synchronized-互斥解决方案" class="headerlink" title="3.2 synchronized 互斥解决方案"></a>3.2 synchronized 互斥解决方案</h1><h2 id="3-2-1-锁解决方案分类"><a href="#3-2-1-锁解决方案分类" class="headerlink" title="3.2.1 锁解决方案分类"></a>3.2.1 锁解决方案分类</h2><ul>
-<li><p><strong>阻塞式方案</strong>：synchronized（内置锁）、Lock（显式锁），通过互斥阻塞保证原子性</p>
-</li>
-<li><p><strong>非阻塞式方案</strong>：原子变量（CAS实现，无阻塞）</p>
-</li>
-</ul>
+<h1 id="3-2-synchronized-互斥解决方案"><a href="#3-2-synchronized-互斥解决方案" class="headerlink" title="3.2 synchronized 互斥解决方案"></a>3.2 synchronized 互斥解决方案</h1><h2 id="3-2-1-锁解决方案分类"><a href="#3-2-1-锁解决方案分类" class="headerlink" title="3.2.1 锁解决方案分类"></a>3.2.1 锁解决方案分类</h2><p><strong>阻塞式方案</strong>：synchronized（内置锁）、Lock（显式锁），通过互斥阻塞保证原子性</p>
+<p><strong>非阻塞式方案</strong>：原子变量（CAS实现，无阻塞）</p>
 <h2 id="3-2-2-synchronized-核心原理"><a href="#3-2-2-synchronized-核心原理" class="headerlink" title="3.2.2 synchronized 核心原理"></a>3.2.2 synchronized 核心原理</h2><p>俗称<strong>对象锁</strong>，JVM内置互斥锁机制：同一时刻仅一个线程持有锁执行临界区代码，其他线程获取锁失败则阻塞，彻底避免指令交错，保证临界区代码原子性。</p>
 <p><strong>互斥与同步区别</strong>：</p>
-<ul>
-<li><p>互斥：保证临界区同一时刻单线程执行，解决竞态条件</p>
-</li>
-<li><p>同步：控制线程执行顺序，让线程等待其他线程执行到指定节点</p>
-</li>
-</ul>
+<p>互斥：保证临界区同一时刻单线程执行，解决竞态条件</p>
+<p>同步：控制线程执行顺序，让线程等待其他线程执行到指定节点</p>
 <h2 id="3-2-3-基础语法与修复案例"><a href="#3-2-3-基础语法与修复案例" class="headerlink" title="3.2.3 基础语法与修复案例"></a>3.2.3 基础语法与修复案例</h2><p><strong>语法格式</strong>：</p>
-<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">synchronized</span>(锁对象)&#123;</span><br><span class="line">    <span class="comment">// 临界区代码</span></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<div class="full-code-box">
+<pre>
+synchronized(锁对象){
+    // 临界区代码
+}
+</pre>
+</div>
+**修复共享变量错乱问题**：
 
-<p><strong>修复共享变量错乱问题</strong>：</p>
-<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">static</span> <span class="type">int</span> <span class="variable">counter</span> <span class="operator">=</span> <span class="number">0</span>;</span><br><span class="line"><span class="keyword">static</span> <span class="keyword">final</span> <span class="type">Object</span> <span class="variable">room</span> <span class="operator">=</span> <span class="keyword">new</span> <span class="title class_">Object</span>(); <span class="comment">// 唯一共享锁对象</span></span><br><span class="line"></span><br><span class="line"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title function_">main</span><span class="params">(String[] args)</span> <span class="keyword">throws</span> InterruptedException &#123;</span><br><span class="line">    <span class="type">Thread</span> <span class="variable">t1</span> <span class="operator">=</span> <span class="keyword">new</span> <span class="title class_">Thread</span>(() -&gt; &#123;</span><br><span class="line">        <span class="keyword">for</span> (<span class="type">int</span> <span class="variable">i</span> <span class="operator">=</span> <span class="number">0</span>; i &lt; <span class="number">5000</span>; i++) &#123;</span><br><span class="line">            <span class="keyword">synchronized</span> (room) &#123;</span><br><span class="line">                counter++;</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;, <span class="string">&quot;t1&quot;</span>);</span><br><span class="line">    </span><br><span class="line">    <span class="type">Thread</span> <span class="variable">t2</span> <span class="operator">=</span> <span class="keyword">new</span> <span class="title class_">Thread</span>(() -&gt; &#123;</span><br><span class="line">        <span class="keyword">for</span> (<span class="type">int</span> <span class="variable">i</span> <span class="operator">=</span> <span class="number">0</span>; i &lt; <span class="number">5000</span>; i++) &#123;</span><br><span class="line">            <span class="keyword">synchronized</span> (room) &#123;</span><br><span class="line">                counter--;</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;, <span class="string">&quot;t2&quot;</span>);</span><br><span class="line">    </span><br><span class="line">    t1.start();</span><br><span class="line">    t2.start();</span><br><span class="line">    t1.join();</span><br><span class="line">    t2.join();</span><br><span class="line">    log.debug(<span class="string">&quot;&#123;&#125;&quot;</span>,counter); <span class="comment">// 最终结果固定为0</span></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<div class="full-code-box">
+<pre>
+static int counter = 0;
+static final Object room = new Object(); // 唯一共享锁对象
+
+<p>public static void main(String[] args) throws InterruptedException {<br>    Thread t1 &#x3D; new Thread(() -&gt; {<br>        for (int i &#x3D; 0; i &lt; 5000; i++) {<br>            synchronized (room) {<br>                counter++;<br>            }<br>        }<br>    }, “t1”);</p>
+<pre><code>Thread t2 = new Thread(() -&gt; {
+    for (int i = 0; i &lt; 5000; i++) {
+        synchronized (room) {
+            counter--;
+        }
+    }
+}, &quot;t2&quot;);
+
+t1.start();
+t2.start();
+t1.join();
+t2.join();
+log.debug(&quot;{}&quot;,counter); // 最终结果固定为0
+</code></pre>
+<p>}<br></pre></p>
+</div>
 <div class="img-wrap-left">
   <img class="left-img" src="/assets/img/java/concurrent/concurrent39.png" alt="示意图">
 </div>
@@ -1190,7 +1249,52 @@ document.addEventListener('DOMContentLoaded', function() {
 <p>思考<br>synchronized 实际是用对象锁保证了临界区内代码的原子性，临界区内的代码对外是不可分割的，不会被线程切换所打断。 </p>
 <p>为了加深理解，请思考下面的问题<br>● 如果把 synchronized(obj) 放在 for 循环的外面，如何理解？– 原子性<br>● 如果 t1 synchronized(obj1) 而 t2 synchronized(obj2) 会怎样运作？– 锁对象<br>● 如果 t1 synchronized(obj) 而 t2 没有加会怎么样？如何理解？– 锁对象</p>
 <p>面向对象改进<br>把需要保护的共享变量放入一个类</p>
-<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br></pre></td><td class="code"><pre><span class="line">class Room &#123;</span><br><span class="line">    int value = 0;</span><br><span class="line">    public void increment() &#123;</span><br><span class="line">        synchronized (this) &#123;</span><br><span class="line">            value++;</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">    public void decrement() &#123;</span><br><span class="line">        synchronized (this) &#123;</span><br><span class="line">            value--;</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">    public int get() &#123;</span><br><span class="line">        synchronized (this) &#123;</span><br><span class="line">            return value;</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">@Slf4j</span><br><span class="line">public class Test1 &#123;</span><br><span class="line"></span><br><span class="line">    public static void main(String[] args) throws InterruptedException &#123;</span><br><span class="line">        Room room = new Room();</span><br><span class="line">        Thread t1 = new Thread(() -&gt; &#123;</span><br><span class="line">            for (int j = 0; j &lt; 5000; j++) &#123;</span><br><span class="line">                room.increment();</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;, &quot;t1&quot;);</span><br><span class="line">        </span><br><span class="line">        Thread t2 = new Thread(() -&gt; &#123;</span><br><span class="line">            for (int j = 0; j &lt; 5000; j++) &#123;</span><br><span class="line">                room.decrement();</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;, &quot;t2&quot;);</span><br><span class="line">        </span><br><span class="line">        t1.start();</span><br><span class="line">        t2.start();</span><br><span class="line">        t1.join();</span><br><span class="line">        t2.join();</span><br><span class="line">        </span><br><span class="line">        log.debug(&quot;count: &#123;&#125;&quot; , room.get());</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<div class="full-code-box">
+<pre>
+class Room {
+    int value = 0;
+    public void increment() {
+        synchronized (this) {
+            value++;
+        }
+    }
+    public void decrement() {
+        synchronized (this) {
+            value--;
+        }
+    }
+    public int get() {
+        synchronized (this) {
+            return value;
+        }
+    }
+}
+
+<p>@Slf4j<br>public class Test1 {</p>
+<pre><code>public static void main(String[] args) throws InterruptedException {
+    Room room = new Room();
+    Thread t1 = new Thread(() -&gt; {
+        for (int j = 0; j &lt; 5000; j++) {
+            room.increment();
+        }
+    }, &quot;t1&quot;);
+    
+    Thread t2 = new Thread(() -&gt; {
+        for (int j = 0; j &lt; 5000; j++) {
+            room.decrement();
+        }
+    }, &quot;t2&quot;);
+    
+    t1.start();
+    t2.start();
+    t1.join();
+    t2.join();
+    
+    log.debug(&quot;count: {}&quot; , room.get());
+}
+</code></pre>
+<p>}<br></pre></p>
+</div>
 
 <h2 id="3-2-4-锁机制通俗类比"><a href="#3-2-4-锁机制通俗类比" class="headerlink" title="3.2.4 锁机制通俗类比"></a>3.2.4 锁机制通俗类比</h2><p>锁对象&#x3D;唯一房间，线程&#x3D;使用者：</p>
 <ol>
@@ -1212,15 +1316,36 @@ document.addEventListener('DOMContentLoaded', function() {
 </li>
 </ol>
 <h2 id="3-2-6-面向对象优化写法"><a href="#3-2-6-面向对象优化写法" class="headerlink" title="3.2.6 面向对象优化写法"></a>3.2.6 面向对象优化写法</h2><p>将共享变量和锁封装到工具类，通过this作为锁对象，封装性更强：</p>
-<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">class</span> <span class="title class_">Room</span> &#123;</span><br><span class="line">    <span class="type">int</span> <span class="variable">value</span> <span class="operator">=</span> <span class="number">0</span>;</span><br><span class="line">    <span class="comment">// 实例方法锁this对象</span></span><br><span class="line">    <span class="keyword">public</span> <span class="keyword">void</span> <span class="title function_">increment</span><span class="params">()</span> &#123;</span><br><span class="line">        <span class="keyword">synchronized</span> (<span class="built_in">this</span>) &#123; value++; &#125;</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">public</span> <span class="keyword">void</span> <span class="title function_">decrement</span><span class="params">()</span> &#123;</span><br><span class="line">        <span class="keyword">synchronized</span> (<span class="built_in">this</span>) &#123; value--; &#125;</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">public</span> <span class="type">int</span> <span class="title function_">get</span><span class="params">()</span> &#123;</span><br><span class="line">        <span class="keyword">synchronized</span> (<span class="built_in">this</span>) &#123; <span class="keyword">return</span> value; &#125;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<div class="full-code-box">
+<pre>
+class Room {
+    int value = 0;
+    // 实例方法锁this对象
+    public void increment() {
+        synchronized (this) { value++; }
+    }
+    public void decrement() {
+        synchronized (this) { value--; }
+    }
+    public int get() {
+        synchronized (this) { return value; }
+    }
+}
+</pre>
+</div>
 
-<h1 id="3-3-方法上的synchronized（线程八锁）"><a href="#3-3-方法上的synchronized（线程八锁）" class="headerlink" title="3.3 方法上的synchronized（线程八锁）"></a>3.3 方法上的synchronized（线程八锁）</h1><h2 id="3-3-1-方法锁等价关系"><a href="#3-3-1-方法锁等价关系" class="headerlink" title="3.3.1 方法锁等价关系"></a>3.3.1 方法锁等价关系</h2><ul>
-<li><p><strong>普通同步方法</strong>：默认锁 <strong>this（当前实例对象）</strong></p>
-</li>
-<li><p><strong>静态同步方法</strong>：默认锁 <strong>类.class（类对象）</strong></p>
-</li>
-</ul>
-<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// 普通同步方法等价代码</span></span><br><span class="line"><span class="keyword">public</span> <span class="keyword">synchronized</span> <span class="keyword">void</span> <span class="title function_">test</span><span class="params">()</span> &#123;&#125;</span><br><span class="line">等价于</span><br><span class="line"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title function_">test</span><span class="params">()</span> &#123; <span class="keyword">synchronized</span>(<span class="built_in">this</span>) &#123;&#125; &#125;</span><br><span class="line"></span><br><span class="line"><span class="comment">// 静态同步方法等价代码</span></span><br><span class="line"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">synchronized</span> <span class="keyword">void</span> <span class="title function_">test</span><span class="params">()</span> &#123;&#125;</span><br><span class="line">等价于</span><br><span class="line"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title function_">test</span><span class="params">()</span> &#123; <span class="keyword">synchronized</span>(Test.class) &#123;&#125; &#125;</span><br></pre></td></tr></table></figure>
+<h1 id="3-3-方法上的synchronized（线程八锁）"><a href="#3-3-方法上的synchronized（线程八锁）" class="headerlink" title="3.3 方法上的synchronized（线程八锁）"></a>3.3 方法上的synchronized（线程八锁）</h1><h2 id="3-3-1-方法锁等价关系"><a href="#3-3-1-方法锁等价关系" class="headerlink" title="3.3.1 方法锁等价关系"></a>3.3.1 方法锁等价关系</h2><p><strong>普通同步方法</strong>：默认锁 <strong>this（当前实例对象）</strong></p>
+<p><strong>静态同步方法</strong>：默认锁 <strong>类.class（类对象）</strong></p>
+<div class="full-code-box">
+<pre>
+// 普通同步方法等价代码
+public synchronized void test() {}
+等价于
+public void test() { synchronized(this) {} }
+
+<p>&#x2F;&#x2F; 静态同步方法等价代码<br>public static synchronized void test() {}<br>等价于<br>public static void test() { synchronized(Test.class) {} }<br></pre></p>
+</div>
+
 <h2 id="不加-synchronized-的方法"><a href="#不加-synchronized-的方法" class="headerlink" title="不加 synchronized 的方法"></a>不加 synchronized 的方法</h2><p>不加 synchronzied 的方法就好比不遵守规则的人，不去老实排队（好比翻窗户进去的）</p>
 <h2 id="3-3-2-线程八锁核心案例（核心考点）"><a href="#3-3-2-线程八锁核心案例（核心考点）" class="headerlink" title="3.3.2 线程八锁核心案例（核心考点）"></a>3.3.2 线程八锁核心案例（核心考点）</h2><pre><code>其实就是考察 synchronized 锁住的是哪个对象 
 </code></pre>
@@ -1228,43 +1353,157 @@ document.addEventListener('DOMContentLoaded', function() {
 <ol>
 <li><strong>情况1：同一实例两个普通同步方法</strong>：锁同一this，执行顺序12或21</li>
 </ol>
-<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><span class="line">@Slf4j(topic = &quot;c.Number&quot;)</span><br><span class="line">class Number&#123;</span><br><span class="line">	public synchronized void a() &#123;</span><br><span class="line">		log.debug(&quot;1&quot;);</span><br><span class="line">	&#125;</span><br><span class="line">	public synchronized void b() &#123;</span><br><span class="line">		log.debug(&quot;2&quot;);</span><br><span class="line">	&#125;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">public static void main(String[] args) &#123;</span><br><span class="line">	Number n1 = new Number();</span><br><span class="line">	new Thread(()-&gt;&#123; n1.a(); &#125;).start();</span><br><span class="line">	new Thread(()-&gt;&#123; n1.b(); &#125;).start();</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<div class="full-code-box">
+<pre>
+@Slf4j(topic = "c.Number")
+class Number{
+	public synchronized void a() {
+		log.debug("1");
+	}
+	public synchronized void b() {
+		log.debug("2");
+	}
+}
+
+<p>public static void main(String[] args) {<br>	Number n1 &#x3D; new Number();<br>	new Thread(()-&gt;{ n1.a(); }).start();<br>	new Thread(()-&gt;{ n1.b(); }).start();<br>}<br></pre></p>
+</div>
 
 <ol start="2">
 <li><strong>情况2：普通同步方法加延时</strong>：一个线程睡眠1秒，另一个线程等待，结果1s后12 &#x2F; 2 1s后1</li>
 </ol>
-<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br></pre></td><td class="code"><pre><span class="line">@Slf4j(topic = &quot;c.Number&quot;)</span><br><span class="line">class Number&#123;</span><br><span class="line">    public synchronized void a() &#123;</span><br><span class="line">        sleep(1);</span><br><span class="line">        log.debug(&quot;1&quot;);</span><br><span class="line">    &#125;</span><br><span class="line">    public synchronized void b() &#123;</span><br><span class="line">        log.debug(&quot;2&quot;);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">public static void main(String[] args) &#123;</span><br><span class="line">    Number n1 = new Number();</span><br><span class="line">    new Thread(()-&gt;&#123; n1.a(); &#125;).start();</span><br><span class="line">    new Thread(()-&gt;&#123; n1.b(); &#125;).start();</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<div class="full-code-box">
+<pre>
+@Slf4j(topic = "c.Number")
+class Number{
+    public synchronized void a() {
+        sleep(1);
+        log.debug("1");
+    }
+    public synchronized void b() {
+        log.debug("2");
+    }
+}
+
+<p>public static void main(String[] args) {<br>    Number n1 &#x3D; new Number();<br>    new Thread(()-&gt;{ n1.a(); }).start();<br>    new Thread(()-&gt;{ n1.b(); }).start();<br>}<br></pre></p>
+</div>
 
 
 <ol start="3">
 <li><strong>情况3：同步方法+普通方法</strong>：普通方法无锁，可并发执行，输出3优先，再执行12</li>
 </ol>
-<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br></pre></td><td class="code"><pre><span class="line">@Slf4j(topic = &quot;c.Number&quot;)</span><br><span class="line">class Number&#123;</span><br><span class="line">    public synchronized void a() &#123;</span><br><span class="line">        sleep(1);</span><br><span class="line">        log.debug(&quot;1&quot;);</span><br><span class="line">    &#125;</span><br><span class="line">    public synchronized void b() &#123;</span><br><span class="line">        log.debug(&quot;2&quot;);</span><br><span class="line">    &#125;</span><br><span class="line">    public void c() &#123;</span><br><span class="line">        log.debug(&quot;3&quot;);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">public static void main(String[] args) &#123;</span><br><span class="line">    Number n1 = new Number();</span><br><span class="line">    new Thread(()-&gt;&#123; n1.a(); &#125;).start();</span><br><span class="line">    new Thread(()-&gt;&#123; n1.b(); &#125;).start();</span><br><span class="line">    new Thread(()-&gt;&#123; n1.c(); &#125;).start();</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<div class="full-code-box">
+<pre>
+@Slf4j(topic = "c.Number")
+class Number{
+    public synchronized void a() {
+        sleep(1);
+        log.debug("1");
+    }
+    public synchronized void b() {
+        log.debug("2");
+    }
+    public void c() {
+        log.debug("3");
+    }
+}
+
+<p>public static void main(String[] args) {<br>    Number n1 &#x3D; new Number();<br>    new Thread(()-&gt;{ n1.a(); }).start();<br>    new Thread(()-&gt;{ n1.b(); }).start();<br>    new Thread(()-&gt;{ n1.c(); }).start();<br>}<br></pre></p>
+</div>
 
 <ol start="4">
 <li><strong>情况4：不同实例普通同步方法</strong>：锁不同this，互不阻塞，2优先，1s后输出1</li>
 </ol>
-<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br></pre></td><td class="code"><pre><span class="line">@Slf4j(topic = &quot;c.Number&quot;)</span><br><span class="line">class Number&#123;</span><br><span class="line">    public synchronized void a() &#123;</span><br><span class="line">        sleep(1);</span><br><span class="line">        log.debug(&quot;1&quot;);</span><br><span class="line">    &#125;</span><br><span class="line">    public synchronized void b() &#123;</span><br><span class="line">        log.debug(&quot;2&quot;);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">public static void main(String[] args) &#123;</span><br><span class="line">    Number n1 = new Number();</span><br><span class="line">    Number n2 = new Number();</span><br><span class="line">    new Thread(()-&gt;&#123; n1.a(); &#125;).start();</span><br><span class="line">    new Thread(()-&gt;&#123; n2.b(); &#125;).start();</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<div class="full-code-box">
+<pre>
+@Slf4j(topic = "c.Number")
+class Number{
+    public synchronized void a() {
+        sleep(1);
+        log.debug("1");
+    }
+    public synchronized void b() {
+        log.debug("2");
+    }
+}
 
-<ol start="5">
-<li><strong>情况5：静态同步方法+普通同步方法（同一实例）</strong>：锁分别为类对象、实例对象，互不阻塞，2优先，1s后输出1</li>
-</ol>
-<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br></pre></td><td class="code"><pre><span class="line">@Slf4j(topic = &quot;c.Number&quot;)</span><br><span class="line">class Number&#123;</span><br><span class="line">    public static synchronized void a() &#123;</span><br><span class="line">        sleep(1);</span><br><span class="line">        log.debug(&quot;1&quot;);</span><br><span class="line">    &#125;</span><br><span class="line">    public synchronized void b() &#123;</span><br><span class="line">        log.debug(&quot;2&quot;);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">public static void main(String[] args) &#123;</span><br><span class="line">    Number n1 = new Number();</span><br><span class="line">    new Thread(()-&gt;&#123; n1.a(); &#125;).start();</span><br><span class="line">    new Thread(()-&gt;&#123; n1.b(); &#125;).start();</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>public static void main(String[] args) {<br>    Number n1 &#x3D; new Number();<br>    Number n2 &#x3D; new Number();<br>    new Thread(()-&gt;{ n1.a(); }).start();<br>    new Thread(()-&gt;{ n2.b(); }).start();<br>}<br></pre></p>
+</div>
+5. **情况5：静态同步方法\+普通同步方法（同一实例）**：锁分别为类对象、实例对象，互不阻塞，2优先，1s后输出1
+
+<div class="full-code-box">
+<pre>
+@Slf4j(topic = "c.Number")
+class Number{
+    public static synchronized void a() {
+        sleep(1);
+        log.debug("1");
+    }
+    public synchronized void b() {
+        log.debug("2");
+    }
+}
+
+<p>public static void main(String[] args) {<br>    Number n1 &#x3D; new Number();<br>    new Thread(()-&gt;{ n1.a(); }).start();<br>    new Thread(()-&gt;{ n1.b(); }).start();<br>}<br></pre></p>
+</div>
 
 <ol start="6">
 <li><strong>情况6：同一实例两个静态同步方法</strong>：锁同一类对象，互斥阻塞，1s后12或2 1s后1</li>
 </ol>
-<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br></pre></td><td class="code"><pre><span class="line">@Slf4j(topic = &quot;c.Number&quot;)</span><br><span class="line">class Number&#123;</span><br><span class="line">    public static synchronized void a() &#123;</span><br><span class="line">        sleep(1);</span><br><span class="line">        log.debug(&quot;1&quot;);</span><br><span class="line">    &#125;</span><br><span class="line">    public static synchronized void b() &#123;</span><br><span class="line">        log.debug(&quot;2&quot;);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">public static void main(String[] args) &#123;</span><br><span class="line">    Number n1 = new Number();</span><br><span class="line">    new Thread(()-&gt;&#123; n1.a(); &#125;).start();</span><br><span class="line">    new Thread(()-&gt;&#123; n1.b(); &#125;).start();</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<div class="full-code-box">
+<pre>
+@Slf4j(topic = "c.Number")
+class Number{
+    public static synchronized void a() {
+        sleep(1);
+        log.debug("1");
+    }
+    public static synchronized void b() {
+        log.debug("2");
+    }
+}
+
+<p>public static void main(String[] args) {<br>    Number n1 &#x3D; new Number();<br>    new Thread(()-&gt;{ n1.a(); }).start();<br>    new Thread(()-&gt;{ n1.b(); }).start();<br>}<br></pre></p>
+</div>
 
 <ol start="7">
 <li><strong>情况7：不同实例静态+普通同步方法</strong>：锁不同，互不阻塞，2优先，1s后输出1</li>
 </ol>
-<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br></pre></td><td class="code"><pre><span class="line">@Slf4j(topic = &quot;c.Number&quot;)</span><br><span class="line">class Number&#123;</span><br><span class="line">    public static synchronized void a() &#123;</span><br><span class="line">        sleep(1);</span><br><span class="line">        log.debug(&quot;1&quot;);</span><br><span class="line">    &#125;</span><br><span class="line">    public synchronized void b() &#123;</span><br><span class="line">        log.debug(&quot;2&quot;);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">public static void main(String[] args) &#123;</span><br><span class="line">    Number n1 = new Number();</span><br><span class="line">    Number n2 = new Number();</span><br><span class="line">    new Thread(()-&gt;&#123; n1.a(); &#125;).start();</span><br><span class="line">    new Thread(()-&gt;&#123; n2.b(); &#125;).start();</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<div class="full-code-box">
+<pre>
+@Slf4j(topic = "c.Number")
+class Number{
+    public static synchronized void a() {
+        sleep(1);
+        log.debug("1");
+    }
+    public synchronized void b() {
+        log.debug("2");
+    }
+}
+
+<p>public static void main(String[] args) {<br>    Number n1 &#x3D; new Number();<br>    Number n2 &#x3D; new Number();<br>    new Thread(()-&gt;{ n1.a(); }).start();<br>    new Thread(()-&gt;{ n2.b(); }).start();<br>}<br></pre></p>
+</div>
+
 
 <ol start="8">
 <li><strong>情况8：不同实例两个静态同步方法</strong>：锁同一类对象，互斥阻塞，1s后12或2 1s后1</li>
 </ol>
-<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br></pre></td><td class="code"><pre><span class="line">@Slf4j(topic = &quot;c.Number&quot;)</span><br><span class="line">class Number&#123;</span><br><span class="line">    public static synchronized void a() &#123;</span><br><span class="line">        sleep(1);</span><br><span class="line">        log.debug(&quot;1&quot;);</span><br><span class="line">    &#125;</span><br><span class="line">    public static synchronized void b() &#123;</span><br><span class="line">        log.debug(&quot;2&quot;);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">public static void main(String[] args) &#123;</span><br><span class="line">    Number n1 = new Number();</span><br><span class="line">    Number n2 = new Number();</span><br><span class="line">    new Thread(()-&gt;&#123; n1.a(); &#125;).start();</span><br><span class="line">    new Thread(()-&gt;&#123; n2.b(); &#125;).start();</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<div class="full-code-box">
+<pre>
+@Slf4j(topic = "c.Number")
+class Number{
+    public static synchronized void a() {
+        sleep(1);
+        log.debug("1");
+    }
+    public static synchronized void b() {
+        log.debug("2");
+    }
+}
+
+<p>public static void main(String[] args) {<br>    Number n1 &#x3D; new Number();<br>    Number n2 &#x3D; new Number();<br>    new Thread(()-&gt;{ n1.a(); }).start();<br>    new Thread(()-&gt;{ n2.b(); }).start();<br>}<br></pre></p>
+</div>
+
 
 <h1 id="3-4-变量线程安全深度分析"><a href="#3-4-变量线程安全深度分析" class="headerlink" title="3.4 变量线程安全深度分析"></a>3.4 变量线程安全深度分析</h1><h2 id="3-4-1-成员变量-静态变量线程安全"><a href="#3-4-1-成员变量-静态变量线程安全" class="headerlink" title="3.4.1 成员变量&#x2F;静态变量线程安全"></a>3.4.1 成员变量&#x2F;静态变量线程安全</h2><p>成员变量和静态变量是否线程安全？ </p>
 <ul>
@@ -1287,20 +1526,80 @@ document.addEventListener('DOMContentLoaded', function() {
 <li>共享且<strong>仅读</strong>：线程安全</li>
 <li>共享且<strong>读写共存</strong>：存在临界区，线程不安全</li>
 </ul>
-<h2 id="3-4-2-局部变量线程安全分析"><a href="#3-4-2-局部变量线程安全分析" class="headerlink" title="3.4.2 局部变量线程安全分析"></a>3.4.2 局部变量线程安全分析</h2><figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">public static void test1() &#123;</span><br><span class="line">    int i = 10;</span><br><span class="line">    i++; </span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<h2 id="3-4-2-局部变量线程安全分析"><a href="#3-4-2-局部变量线程安全分析" class="headerlink" title="3.4.2 局部变量线程安全分析"></a>3.4.2 局部变量线程安全分析</h2><div class="full-code-box">
+<pre>
+public static void test1() {
+    int i = 10;
+    i++; 
+}
+</pre>
+</div>
 
 <p>每个线程调用 test1() 方法时局部变量 i，会在每个线程的栈帧内存中被创建多份，因此不存在共享</p>
-<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br></pre></td><td class="code"><pre><span class="line">public static void test1();</span><br><span class="line">    descriptor: ()V</span><br><span class="line">    flags: ACC_PUBLIC, ACC_STATIC</span><br><span class="line">    Code:</span><br><span class="line">        stack=1, locals=1, args_size=0</span><br><span class="line">        0: bipush            10</span><br><span class="line">        2: istore_0</span><br><span class="line">        3: iinc               0, 1</span><br><span class="line">        6: return</span><br><span class="line">    LineNumberTable:</span><br><span class="line">        line 10: 0</span><br><span class="line">        line 11: 3</span><br><span class="line">        line 12: 6</span><br><span class="line">    LocalVariableTable:</span><br><span class="line">        Start Length Slot Name Signature</span><br><span class="line">            3      4     0    i   I</span><br></pre></td></tr></table></figure>
-
-<p>如图</p>
+<div class="full-code-box">
+<pre>
+public static void test1();
+    descriptor: ()V
+    flags: ACC_PUBLIC, ACC_STATIC
+    Code:
+        stack=1, locals=1, args_size=0
+        0: bipush            10
+        2: istore_0
+        3: iinc               0, 1
+        6: return
+    LineNumberTable:
+        line 10: 0
+        line 11: 3
+        line 12: 6
+    LocalVariableTable:
+        Start Length Slot Name Signature
+            3      4     0    i   I
+</pre>
+</div>
+如图
 <div class="img-wrap-left">
   <img class="left-img" src="/assets/img/java/concurrent/concurrent41.png" alt="并发示意图">
 </div>
 
 <p>局部变量的引用稍有不同<br>先看一个成员变量的例子：</p>
-<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br></pre></td><td class="code"><pre><span class="line">class ThreadUnsafe &#123;</span><br><span class="line">    ArrayList&lt;String&gt; list = new ArrayList&lt;&gt;();</span><br><span class="line">    public void method1(int loopNumber) &#123;</span><br><span class="line">        for (int i = 0; i &lt; loopNumber; i++) &#123;</span><br><span class="line">            // &#123; 临界区, 会产生竞态条件</span><br><span class="line">            method2();</span><br><span class="line">            method3();</span><br><span class="line">            // &#125; 临界区</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">    private void method2() &#123;</span><br><span class="line">        list.add(&quot;1&quot;);</span><br><span class="line">    &#125;</span><br><span class="line">    private void method3() &#123;</span><br><span class="line">        list.remove(0);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-<p>执行</p>
-<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line">static final int THREAD_NUMBER = 2;</span><br><span class="line">static final int LOOP_NUMBER = 200;</span><br><span class="line">public static void main(String[] args) &#123;</span><br><span class="line">    ThreadUnsafe test = new ThreadUnsafe();</span><br><span class="line">    for (int i = 0; i &lt; THREAD_NUMBER; i++) &#123;</span><br><span class="line">        new Thread(() -&gt; &#123;</span><br><span class="line">            test.method1(LOOP_NUMBER);</span><br><span class="line">        &#125;, &quot;Thread&quot; + i).start();</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<div class="full-code-box">
+<pre>
+class ThreadUnsafe {
+    ArrayList<String> list = new ArrayList<>();
+    public void method1(int loopNumber) {
+        for (int i = 0; i < loopNumber; i++) {
+            // { 临界区, 会产生竞态条件
+            method2();
+            method3();
+            // } 临界区
+        }
+    }
+    private void method2() {
+        list.add("1");
+    }
+    private void method3() {
+        list.remove(0);
+    }
+}
+</pre>
+</div>
+执行
+
+
+<div class="full-code-box">
+<pre>
+static final int THREAD_NUMBER = 2;
+static final int LOOP_NUMBER = 200;
+public static void main(String[] args) {
+    ThreadUnsafe test = new ThreadUnsafe();
+    for (int i = 0; i < THREAD_NUMBER; i++) {
+        new Thread(() -> {
+            test.method1(LOOP_NUMBER);
+        }, "Thread" + i).start();
+    }
+}
+</pre>
+</div>
 
 <p>分析：<br>● 无论哪个线程中的 method2 引用的都是同一个对象中的 list 成员变量<br>● method3 与 method2 分析相同</p>
 <div class="img-wrap-left">
@@ -1308,16 +1607,52 @@ document.addEventListener('DOMContentLoaded', function() {
 </div>
 
 <p>将 list 修改为局部变量</p>
-<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><span class="line">class ThreadSafe &#123;</span><br><span class="line">    public final void method1(int loopNumber) &#123;</span><br><span class="line">        ArrayList&lt;String&gt; list = new ArrayList&lt;&gt;();</span><br><span class="line">        for (int i = 0; i &lt; loopNumber; i++) &#123;</span><br><span class="line">            method2(list);</span><br><span class="line">            method3(list);</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">    private void method2(ArrayList&lt;String&gt; list) &#123;</span><br><span class="line">        list.add(&quot;1&quot;);</span><br><span class="line">    &#125;</span><br><span class="line">    private void method3(ArrayList&lt;String&gt; list) &#123;</span><br><span class="line">        list.remove(0);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<div class="full-code-box">
+<pre>
+class ThreadSafe {
+    public final void method1(int loopNumber) {
+        ArrayList<String> list = new ArrayList<>();
+        for (int i = 0; i < loopNumber; i++) {
+            method2(list);
+            method3(list);
+        }
+    }
+    private void method2(ArrayList<String> list) {
+        list.add("1");
+    }
+    private void method3(ArrayList<String> list) {
+        list.remove(0);
+    }
+}
+</pre>
+</div>
+
 <p>那么就不会有上述问题了<br>分析：<br>● list 是局部变量，每个线程调用时会创建其不同实例，没有共享<br>● 而 method2 的参数是从 method1 中传递过来的，与 method1 中引用同一个对象<br>● method3 的参数分析与 method2 相同</p>
 <div class="img-wrap-left">
   <img class="left-img" src="/assets/img/java/concurrent/concurrent43.png" alt="并发示意图">
 </div>
 
 <p>方法访问修饰符带来的思考，如果把 method2 和 method3 的方法修改为 public 会不会出现线程安全问题？<br>● 情况1：有其它线程调用 method2 和 method3<br>● 情况2：在 情况1 的基础上，为 ThreadSafe 类添加子类，子类覆盖 method2 或 method3 方法，即</p>
-<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br></pre></td><td class="code"><pre><span class="line">class ThreadSafe &#123;</span><br><span class="line">    public final void method1(int loopNumber) &#123;</span><br><span class="line">        ArrayList&lt;String&gt; list = new ArrayList&lt;&gt;();</span><br><span class="line">        for (int i = 0; i &lt; loopNumber; i++) &#123;</span><br><span class="line">            method2(list);</span><br><span class="line">            method3(list);</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">    private void method2(ArrayList&lt;String&gt; list) &#123;</span><br><span class="line">        list.add(&quot;1&quot;);</span><br><span class="line">    &#125;</span><br><span class="line">    private void method3(ArrayList&lt;String&gt; list) &#123;</span><br><span class="line">        list.remove(0);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">class ThreadSafeSubClass extends ThreadSafe&#123;</span><br><span class="line">    @Override</span><br><span class="line">    public void method3(ArrayList&lt;String&gt; list) &#123;</span><br><span class="line">        new Thread(() -&gt; &#123;</span><br><span class="line">            list.remove(0);</span><br><span class="line">        &#125;).start();</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<div class="full-code-box">
+<pre>
+class ThreadSafe {
+    public final void method1(int loopNumber) {
+        ArrayList<String> list = new ArrayList<>();
+        for (int i = 0; i < loopNumber; i++) {
+            method2(list);
+            method3(list);
+        }
+    }
+    private void method2(ArrayList<String> list) {
+        list.add("1");
+    }
+    private void method3(ArrayList<String> list) {
+        list.remove(0);
+    }
+}
 
-
+<p>class ThreadSafeSubClass extends ThreadSafe{<br>    @Override<br>    public void method3(ArrayList<String> list) {<br>        new Thread(() -&gt; {<br>            list.remove(0);<br>        }).start();<br>    }<br>}<br></pre></p>
+</div>
 
 <h2 id="3-4-3-典型案例：集合线程安全问题"><a href="#3-4-3-典型案例：集合线程安全问题" class="headerlink" title="3.4.3 典型案例：集合线程安全问题"></a>3.4.3 典型案例：集合线程安全问题</h2><p><strong>不安全写法（成员变量集合）</strong>：多线程共享同一个ArrayList，add&#x2F;remove交替执行，大概率报索引越界异常</p>
 <p><strong>安全写法（局部变量集合）</strong>：每个线程创建独立ArrayList实例，无共享，彻底规避安全问题</p>
@@ -1333,14 +1668,30 @@ document.addEventListener('DOMContentLoaded', function() {
 </ul>
 <h2 id="3-4-4-常见线程安全类"><a href="#3-4-4-常见线程安全类" class="headerlink" title="3.4.4 常见线程安全类"></a>3.4.4 常见线程安全类</h2><p>String、Integer等不可变类、StringBuffer、Vector、Hashtable、JUC包下所有类</p>
 <p>这里说它们是线程安全的是指，多个线程调用它们同一个实例的某个方法时，是线程安全的。也可以理解为</p>
-<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line">Hashtable table = new Hashtable();</span><br><span class="line"></span><br><span class="line">new Thread(()-&gt;&#123;</span><br><span class="line">    table.put(&quot;key&quot;, &quot;value1&quot;);</span><br><span class="line">&#125;).start();</span><br><span class="line"></span><br><span class="line">new Thread(()-&gt;&#123;</span><br><span class="line">    table.put(&quot;key&quot;, &quot;value2&quot;);</span><br><span class="line">&#125;).start();</span><br></pre></td></tr></table></figure>
+<div class="full-code-box">
+<pre>
+Hashtable table = new Hashtable();
+
+<p>new Thread(()-&gt;{<br>    table.put(“key”, “value1”);<br>}).start();</p>
+<p>new Thread(()-&gt;{<br>    table.put(“key”, “value2”);<br>}).start();<br></pre></p>
+</div>
+
 <ul>
 <li>它们的每个方法是原子的 </li>
 <li>但注意它们多个方法的组合不是原子的，见后面分析</li>
 </ul>
 <p><strong>核心注意点</strong>：线程安全类的<strong>单一方法是原子的，但多个方法组合操作非原子</strong>，依然存在竞态条件</p>
 <p>示例：Hashtable先判断null再put，两步操作不原子，存在并发风险</p>
-<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">Hashtable table = new Hashtable();</span><br><span class="line">// 线程1，线程2</span><br><span class="line">if( table.get(&quot;key&quot;) == null) &#123;</span><br><span class="line">    table.put(&quot;key&quot;, value);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<div class="full-code-box">
+<pre>
+Hashtable table = new Hashtable();
+// 线程1，线程2
+if( table.get("key") == null) {
+    table.put("key", value);
+}
+</pre>
+</div>
+
 <div class="img-wrap-left">
   <img class="left-img" src="/assets/img/java/concurrent/concurrent44.png" alt="并发示意图">
 </div>
@@ -1361,36 +1712,265 @@ document.addEventListener('DOMContentLoaded', function() {
 </li>
 </ul>
 <p>实例分析<br>例1：</p>
-<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br></pre></td><td class="code"><pre><span class="line">public class MyServlet extends HttpServlet &#123;</span><br><span class="line">    // 是否安全？  不安全</span><br><span class="line">    Map&lt;String,Object&gt; map = new HashMap&lt;&gt;();</span><br><span class="line">    // 是否安全？  安全</span><br><span class="line">    String S1 = &quot;...&quot;;</span><br><span class="line">    // 是否安全？  安全</span><br><span class="line">    final String S2 = &quot;...&quot;;</span><br><span class="line">    // 是否安全？  不安全</span><br><span class="line">    Date D1 = new Date();</span><br><span class="line">    // 是否安全？  不安全</span><br><span class="line">    final Date D2 = new Date();</span><br><span class="line"></span><br><span class="line">    public void doGet(HttpServletRequest request, HttpServletResponse response) &#123;</span><br><span class="line">        // 使用上述变量</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<div class="full-code-box">
+<pre>
+public class MyServlet extends HttpServlet {
+    // 是否安全？  不安全
+    Map<String,Object> map = new HashMap<>();
+    // 是否安全？  安全
+    String S1 = "...";
+    // 是否安全？  安全
+    final String S2 = "...";
+    // 是否安全？  不安全
+    Date D1 = new Date();
+    // 是否安全？  不安全
+    final Date D2 = new Date();
+
+<pre><code>public void doGet(HttpServletRequest request, HttpServletResponse response) {
+    // 使用上述变量
+}
+</code></pre>
+<p>}<br></pre></p>
+</div>
+
 <p>例2：</p>
-<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br></pre></td><td class="code"><pre><span class="line">public class MyServlet extends HttpServlet &#123;</span><br><span class="line">    // 是否安全？  不安全</span><br><span class="line">    private UserService userService = new UserServiceImpl();</span><br><span class="line"></span><br><span class="line">    public void doGet(HttpServletRequest request, HttpServletResponse response) &#123;</span><br><span class="line">        userService.update(...);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">public class UserServiceImpl implements UserService &#123;</span><br><span class="line">    // 记录调用次数</span><br><span class="line">    private int count = 0;</span><br><span class="line"></span><br><span class="line">    public void update() &#123;</span><br><span class="line">        // ...</span><br><span class="line">        count++;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<div class="full-code-box">
+<pre>
+public class MyServlet extends HttpServlet {
+    // 是否安全？  不安全
+    private UserService userService = new UserServiceImpl();
+
+<pre><code>public void doGet(HttpServletRequest request, HttpServletResponse response) {
+    userService.update(...);
+}
+</code></pre>
+<p>}</p>
+<p>public class UserServiceImpl implements UserService {<br>    &#x2F;&#x2F; 记录调用次数<br>    private int count &#x3D; 0;</p>
+<pre><code>public void update() {
+    // ...
+    count++;
+}
+</code></pre>
+<p>}<br></pre></p>
+</div>
+
 <p>例3：</p>
-<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br></pre></td><td class="code"><pre><span class="line">@Aspect</span><br><span class="line">@Component</span><br><span class="line">public class MyAspect &#123;</span><br><span class="line">    // 是否安全？ 不安全</span><br><span class="line">    private long start = 0L;</span><br><span class="line"></span><br><span class="line">    @Before(&quot;execution(* *(..))&quot;)</span><br><span class="line">    public void before() &#123;</span><br><span class="line">        start = System.nanoTime();</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    @After(&quot;execution(* *(..))&quot;)</span><br><span class="line">    public void after() &#123;</span><br><span class="line">        long end = System.nanoTime();</span><br><span class="line">        System.out.println(&quot;cost time:&quot; + (end-start));</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<div class="full-code-box">
+<pre>
+@Aspect
+@Component
+public class MyAspect {
+    // 是否安全？ 不安全
+    private long start = 0L;
+
+<pre><code>@Before(&quot;execution(* *(..))&quot;)
+public void before() {
+    start = System.nanoTime();
+}
+
+@After(&quot;execution(* *(..))&quot;)
+public void after() {
+    long end = System.nanoTime();
+    System.out.println(&quot;cost time:&quot; + (end-start));
+}
+</code></pre>
+<p>}<br></pre></p>
+</div>
+
 <p>例4：</p>
-<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br></pre></td><td class="code"><pre><span class="line">public class MyServlet extends HttpServlet &#123;</span><br><span class="line">    // 是否安全  安全</span><br><span class="line">    private UserService userService = new UserServiceImpl();</span><br><span class="line"></span><br><span class="line">    public void doGet(HttpServletRequest request, HttpServletResponse response) &#123;</span><br><span class="line">        userService.update(...);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">public class UserServiceImpl implements UserService &#123;</span><br><span class="line">    // 是否安全 安全</span><br><span class="line">    private UserDao userDao = new UserDaoImpl();</span><br><span class="line"></span><br><span class="line">    public void update() &#123;</span><br><span class="line">        userDao.update();</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">public class UserDaoImpl implements UserDao &#123;</span><br><span class="line">    public void update() &#123;</span><br><span class="line">        String sql = &quot;update user set password = ? where username = ?&quot;;</span><br><span class="line">        // 是否安全 安全</span><br><span class="line">        try (Connection conn = DriverManager.getConnection(&quot;&quot;,&quot;&quot;,&quot;&quot;))&#123;</span><br><span class="line">            // ...</span><br><span class="line">        &#125; catch (Exception e) &#123;</span><br><span class="line">            // ...</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<div class="full-code-box">
+<pre>
+public class MyServlet extends HttpServlet {
+    // 是否安全  安全
+    private UserService userService = new UserServiceImpl();
+
+<pre><code>public void doGet(HttpServletRequest request, HttpServletResponse response) {
+    userService.update(...);
+}
+</code></pre>
+<p>}</p>
+<p>public class UserServiceImpl implements UserService {<br>    &#x2F;&#x2F; 是否安全 安全<br>    private UserDao userDao &#x3D; new UserDaoImpl();</p>
+<pre><code>public void update() {
+    userDao.update();
+}
+</code></pre>
+<p>}</p>
+<p>public class UserDaoImpl implements UserDao {<br>    public void update() {<br>        String sql &#x3D; “update user set password &#x3D; ? where username &#x3D; ?”;<br>        &#x2F;&#x2F; 是否安全 安全<br>        try (Connection conn &#x3D; DriverManager.getConnection(“”,””,””)){<br>            &#x2F;&#x2F; …<br>        } catch (Exception e) {<br>            &#x2F;&#x2F; …<br>        }<br>    }<br>}<br></pre></p>
+</div>
+
 <p>例5：</p>
-<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br></pre></td><td class="code"><pre><span class="line">public class MyServlet extends HttpServlet &#123;</span><br><span class="line">    // 是否安全</span><br><span class="line">    private UserService userService = new UserServiceImpl();</span><br><span class="line"></span><br><span class="line">    public void doGet(HttpServletRequest request, HttpServletResponse response) &#123;</span><br><span class="line">        userService.update(...);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">public class UserServiceImpl implements UserService &#123;</span><br><span class="line">    // 是否安全</span><br><span class="line">    private UserDao userDao = new UserDaoImpl();</span><br><span class="line"></span><br><span class="line">    public void update() &#123;</span><br><span class="line">        userDao.update();</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">public class UserDaoImpl implements UserDao &#123;</span><br><span class="line">    // 是否安全 </span><br><span class="line">    private Connection conn = null;</span><br><span class="line">    public void update() throws SQLException &#123;</span><br><span class="line">        String sql = &quot;update user set password = ? where username = ?&quot;;</span><br><span class="line">        conn = DriverManager.getConnection(&quot;&quot;,&quot;&quot;,&quot;&quot;);</span><br><span class="line">        // ...</span><br><span class="line">        conn.close();</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<div class="full-code-box">
+<pre>
+public class MyServlet extends HttpServlet {
+    // 是否安全
+    private UserService userService = new UserServiceImpl();
+
+<pre><code>public void doGet(HttpServletRequest request, HttpServletResponse response) {
+    userService.update(...);
+}
+</code></pre>
+<p>}</p>
+<p>public class UserServiceImpl implements UserService {<br>    &#x2F;&#x2F; 是否安全<br>    private UserDao userDao &#x3D; new UserDaoImpl();</p>
+<pre><code>public void update() {
+    userDao.update();
+}
+</code></pre>
+<p>}</p>
+<p>public class UserDaoImpl implements UserDao {<br>    &#x2F;&#x2F; 是否安全<br>    private Connection conn &#x3D; null;<br>    public void update() throws SQLException {<br>        String sql &#x3D; “update user set password &#x3D; ? where username &#x3D; ?”;<br>        conn &#x3D; DriverManager.getConnection(“”,””,””);<br>        &#x2F;&#x2F; …<br>        conn.close();<br>    }<br>}<br></pre></p>
+</div>
+
 <p>例6：</p>
-<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br></pre></td><td class="code"><pre><span class="line">public class MyServlet extends HttpServlet &#123;</span><br><span class="line">    // 是否安全</span><br><span class="line">    private UserService userService = new UserServiceImpl();</span><br><span class="line"></span><br><span class="line">    public void doGet(HttpServletRequest request, HttpServletResponse response) &#123;</span><br><span class="line">        userService.update(...);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">public class UserServiceImpl implements UserService &#123;</span><br><span class="line">    public void update() &#123;</span><br><span class="line">        UserDao userDao = new UserDaoImpl();</span><br><span class="line">        userDao.update();</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">public class UserDaoImpl implements UserDao &#123;</span><br><span class="line">    // 是否安全</span><br><span class="line">    private Connection = null;</span><br><span class="line">    public void update() throws SQLException &#123;</span><br><span class="line">        String sql = &quot;update user set password = ? where username = ?&quot;;</span><br><span class="line">        conn = DriverManager.getConnection(&quot;&quot;,&quot;&quot;,&quot;&quot;);</span><br><span class="line">        // ...</span><br><span class="line">        conn.close();</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<div class="full-code-box">
+<pre>
+public class MyServlet extends HttpServlet {
+    // 是否安全
+    private UserService userService = new UserServiceImpl();
+
+<pre><code>public void doGet(HttpServletRequest request, HttpServletResponse response) {
+    userService.update(...);
+}
+</code></pre>
+<p>}</p>
+<p>public class UserServiceImpl implements UserService {<br>    public void update() {<br>        UserDao userDao &#x3D; new UserDaoImpl();<br>        userDao.update();<br>    }<br>}</p>
+<p>public class UserDaoImpl implements UserDao {<br>    &#x2F;&#x2F; 是否安全<br>    private Connection &#x3D; null;<br>    public void update() throws SQLException {<br>        String sql &#x3D; “update user set password &#x3D; ? where username &#x3D; ?”;<br>        conn &#x3D; DriverManager.getConnection(“”,””,””);<br>        &#x2F;&#x2F; …<br>        conn.close();<br>    }<br>}<br></pre></p>
+</div>
+
 <p>例7：</p>
-<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br></pre></td><td class="code"><pre><span class="line">public abstract class Test &#123;</span><br><span class="line"></span><br><span class="line">    public void bar() &#123;</span><br><span class="line">        // 是否安全</span><br><span class="line">        SimpleDateFormat sdf = new SimpleDateFormat(&quot;yyyy-MM-dd HH:mm:ss&quot;);</span><br><span class="line">        foo(sdf);</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    public abstract foo(SimpleDateFormat sdf);</span><br><span class="line"></span><br><span class="line"></span><br><span class="line">    public static void main(String[] args) &#123;</span><br><span class="line">        new Test().bar();</span><br><span class="line">    &#125;</span><br><span class="line">    </span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<div class="full-code-box">
+<pre>
+public abstract class Test {
+
+<pre><code>public void bar() {
+    // 是否安全
+    SimpleDateFormat sdf = new SimpleDateFormat(&quot;yyyy-MM-dd HH:mm:ss&quot;);
+    foo(sdf);
+}
+
+public abstract foo(SimpleDateFormat sdf);
+
+
+public static void main(String[] args) {
+    new Test().bar();
+}
+</code></pre>
+<p>}<br></pre></p>
+</div>
+
 <p>其中 foo 的行为是不确定的，可能导致不安全的发生，被称之为外星方法</p>
-<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line">public void foo(SimpleDateFormat sdf) &#123;</span><br><span class="line">    String dateStr = &quot;1999-10-11 00:00:00&quot;;</span><br><span class="line">    for (int i = 0; i &lt; 20; i++) &#123;</span><br><span class="line">        new Thread(() -&gt; &#123;</span><br><span class="line">            try &#123;</span><br><span class="line">                sdf.parse(dateStr);</span><br><span class="line">            &#125; catch (ParseException e) &#123;</span><br><span class="line">                e.printStackTrace();</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;).start();</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<div class="full-code-box">
+<pre>
+public void foo(SimpleDateFormat sdf) {
+    String dateStr = "1999-10-11 00:00:00";
+    for (int i = 0; i < 20; i++) {
+        new Thread(() -> {
+            try {
+                sdf.parse(dateStr);
+            } catch (ParseException e) {
+                e.printStackTrace();
+            }
+        }).start();
+    }
+}
+</pre>
+</div>
+
 <p>请比较 JDK 中 String 类的实现</p>
 <p>例8：</p>
-<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br></pre></td><td class="code"><pre><span class="line">private static Integer i = 0;</span><br><span class="line">public static void main(String[] args) throws InterruptedException &#123;</span><br><span class="line">    List&lt;Thread&gt; list = new ArrayList&lt;&gt;();</span><br><span class="line">    for (int j = 0; j &lt; 2; j++) &#123;</span><br><span class="line">        Thread thread = new Thread(() -&gt; &#123;</span><br><span class="line">            for (int k = 0; k &lt; 5000; k++) &#123;</span><br><span class="line">                synchronized (i) &#123;</span><br><span class="line">                    i++;</span><br><span class="line">                &#125;</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;, &quot;&quot; + j);</span><br><span class="line">        list.add(thread);</span><br><span class="line">    &#125;</span><br><span class="line">    list.stream().forEach(t -&gt; t.start());</span><br><span class="line">    list.stream().forEach(t -&gt; &#123;</span><br><span class="line">        try &#123;</span><br><span class="line">            t.join();</span><br><span class="line">        &#125; catch (InterruptedException e) &#123;</span><br><span class="line">            e.printStackTrace();</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;);</span><br><span class="line">    log.debug(&quot;&#123;&#125;&quot;, i);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<div class="full-code-box">
+<pre>
+private static Integer i = 0;
+public static void main(String[] args) throws InterruptedException {
+    List<Thread> list = new ArrayList<>();
+    for (int j = 0; j < 2; j++) {
+        Thread thread = new Thread(() -> {
+            for (int k = 0; k < 5000; k++) {
+                synchronized (i) {
+                    i++;
+                }
+            }
+        }, "" + j);
+        list.add(thread);
+    }
+    list.stream().forEach(t -> t.start());
+    list.stream().forEach(t -> {
+        try {
+            t.join();
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+    });
+    log.debug("{}", i);
+}
+</pre>
+</div>
 
 <h1 id="3-5-经典习题：卖票问题"><a href="#3-5-经典习题：卖票问题" class="headerlink" title="3.5 经典习题：卖票问题"></a>3.5 经典习题：卖票问题</h1><p>卖票练习<br>测试下面代码是否存在线程安全问题，并尝试改正</p>
-<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br></pre></td><td class="code"><pre><span class="line">public class ExerciseSell &#123;</span><br><span class="line">    public static void main(String[] args) &#123;</span><br><span class="line">        TicketWindow ticketWindow = new TicketWindow(2000);</span><br><span class="line">        List&lt;Thread&gt; list = new ArrayList&lt;&gt;();</span><br><span class="line">        // 用来存储买出去多少张票</span><br><span class="line">        List&lt;Integer&gt; sellCount = new Vector&lt;&gt;();</span><br><span class="line">        for (int i = 0; i &lt; 2000; i++) &#123;</span><br><span class="line">            Thread t = new Thread(() -&gt; &#123;</span><br><span class="line">                // 分析这里的竞态条件</span><br><span class="line">                int count = ticketWindow.sell(randomAmount());</span><br><span class="line">                sellCount.add(count);</span><br><span class="line">            &#125;);</span><br><span class="line">            list.add(t);</span><br><span class="line">            t.start();</span><br><span class="line">        &#125;</span><br><span class="line">        list.forEach((t) -&gt; &#123;</span><br><span class="line">            try &#123;</span><br><span class="line">                t.join();</span><br><span class="line">            &#125; catch (InterruptedException e) &#123;</span><br><span class="line">                e.printStackTrace();</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;);</span><br><span class="line">        // 卖出去的票求和</span><br><span class="line">        log.debug(&quot;selled count:&#123;&#125;&quot;,sellCount.stream().mapToInt(c -&gt; c).sum());</span><br><span class="line">        // 剩余票数</span><br><span class="line">        log.debug(&quot;remainder count:&#123;&#125;&quot;, ticketWindow.getCount());</span><br><span class="line">    &#125;</span><br><span class="line">    // Random 为线程安全</span><br><span class="line">    static Random random = new Random();</span><br><span class="line">    // 随机 1~5</span><br><span class="line">    public static int randomAmount() &#123;</span><br><span class="line">        return random.nextInt(5) + 1;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">class TicketWindow &#123;</span><br><span class="line">    private int count;</span><br><span class="line">    public TicketWindow(int count) &#123;</span><br><span class="line">        this.count = count;</span><br><span class="line">    &#125;</span><br><span class="line">    public int getCount() &#123;</span><br><span class="line">        return count;</span><br><span class="line">    &#125;</span><br><span class="line">    public int sell(int amount) &#123;</span><br><span class="line">        if (this.count &gt;= amount) &#123;</span><br><span class="line">            this.count -= amount;</span><br><span class="line">            return amount;</span><br><span class="line">        &#125; else &#123;</span><br><span class="line">            return 0;</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<div class="full-code-box">
+<pre>
+public class ExerciseSell {
+    public static void main(String[] args) {
+        TicketWindow ticketWindow = new TicketWindow(2000);
+        List<Thread> list = new ArrayList<>();
+        // 用来存储买出去多少张票
+        List<Integer> sellCount = new Vector<>();
+        for (int i = 0; i < 2000; i++) {
+            Thread t = new Thread(() -> {
+                // 分析这里的竞态条件
+                int count = ticketWindow.sell(randomAmount());
+                sellCount.add(count);
+            });
+            list.add(t);
+            t.start();
+        }
+        list.forEach((t) -> {
+            try {
+                t.join();
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+        });
+        // 卖出去的票求和
+        log.debug("selled count:{}",sellCount.stream().mapToInt(c -> c).sum());
+        // 剩余票数
+        log.debug("remainder count:{}", ticketWindow.getCount());
+    }
+    // Random 为线程安全
+    static Random random = new Random();
+    // 随机 1~5
+    public static int randomAmount() {
+        return random.nextInt(5) + 1;
+    }
+}
+
+<p>class TicketWindow {<br>    private int count;<br>    public TicketWindow(int count) {<br>        this.count &#x3D; count;<br>    }<br>    public int getCount() {<br>        return count;<br>    }<br>    public int sell(int amount) {<br>        if (this.count &gt;&#x3D; amount) {<br>            this.count -&#x3D; amount;<br>            return amount;<br>        } else {<br>            return 0;<br>        }<br>    }<br>}<br></pre></p>
+</div>
+
 
 <p>另外，用下面的代码行不行，为什么？</p>
-<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">List&lt;Integer&gt; sellCount = new ArrayList&lt;&gt;();</span><br></pre></td></tr></table></figure>
+<div class="full-code-box">
+<pre>
+
+
+<p>List<Integer> sellCount &#x3D; new ArrayList&lt;&gt;();</p>
 <p>测试脚本</p>
-<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">for /L %n in (1,1,10) do java -cp &quot;.;C:\Users\manyh\.m2\repository\ch\qos\logback\logback-classic\1.2.3\logback-classic-1.2.3.jar;C:\Users\manyh\.m2\repository\ch\qos\logback\logback-core\1.2.3\logback-core-1.2.3.jar;C:\Users\manyh\.m2\repository\org\slf4j\slf4j-api\1.7.25\slf4j-api-1.7.25.jar&quot; cn.itcast.n4.exercise.ExerciseSell</span><br></pre></td></tr></table></figure>
+<p>for &#x2F;L %n in (1,1,10) do java -cp “.;C:\Users\manyh.m2\repository\ch\qos\logback\logback-classic\1.2.3\logback-classic-1.2.3.jar;C:\Users\manyh.m2\repository\ch\qos\logback\logback-core\1.2.3\logback-core-1.2.3.jar;C:\Users\manyh.m2\repository\org\slf4j\slf4j-api\1.7.25\slf4j-api-1.7.25.jar” cn.itcast.n4.exercise.ExerciseSell</p>
 <p>转账练习<br>测试下面代码是否存在线程安全问题，并尝试改正</p>
-<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br></pre></td><td class="code"><pre><span class="line">public class ExerciseTransfer &#123;</span><br><span class="line">    public static void main(String[] args) throws InterruptedException &#123;</span><br><span class="line">        Account a = new Account(1000);</span><br><span class="line">        Account b = new Account(1000);</span><br><span class="line">        Thread t1 = new Thread(() -&gt; &#123;</span><br><span class="line">            for (int i = 0; i &lt; 1000; i++) &#123;</span><br><span class="line">                a.transfer(b, randomAmount());</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;, &quot;t1&quot;);</span><br><span class="line">        Thread t2 = new Thread(() -&gt; &#123;</span><br><span class="line">            for (int i = 0; i &lt; 1000; i++) &#123;</span><br><span class="line">                b.transfer(a, randomAmount());</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;, &quot;t2&quot;);</span><br><span class="line">        t1.start();</span><br><span class="line">        t2.start();</span><br><span class="line">        t1.join();</span><br><span class="line">        t2.join();</span><br><span class="line">        // 查看转账2000次后的总金额</span><br><span class="line">        log.debug(&quot;total:&#123;&#125;&quot;,(a.getMoney() + b.getMoney()));</span><br><span class="line">    &#125;</span><br><span class="line">    // Random 为线程安全</span><br><span class="line">    static Random random = new Random();</span><br><span class="line">    // 随机 1~100</span><br><span class="line">    public static int randomAmount() &#123;</span><br><span class="line">        return random.nextInt(100) +1;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">class Account &#123;</span><br><span class="line">    private int money;</span><br><span class="line">    public Account(int money) &#123;</span><br><span class="line">        this.money = money;</span><br><span class="line">    &#125;</span><br><span class="line">    public int getMoney() &#123;</span><br><span class="line">        return money;</span><br><span class="line">    &#125;</span><br><span class="line">    public void setMoney(int money) &#123;</span><br><span class="line">        this.money = money;</span><br><span class="line">    &#125;</span><br><span class="line">    public void transfer(Account target, int amount) &#123;</span><br><span class="line">        if (this.money &gt; amount) &#123;</span><br><span class="line">            this.setMoney(this.getMoney() - amount);</span><br><span class="line">            target.setMoney(target.getMoney() + amount);</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>public class ExerciseTransfer {<br>    public static void main(String[] args) throws InterruptedException {<br>        Account a &#x3D; new Account(1000);<br>        Account b &#x3D; new Account(1000);<br>        Thread t1 &#x3D; new Thread(() -&gt; {<br>            for (int i &#x3D; 0; i &lt; 1000; i++) {<br>                a.transfer(b, randomAmount());<br>            }<br>        }, “t1”);<br>        Thread t2 &#x3D; new Thread(() -&gt; {<br>            for (int i &#x3D; 0; i &lt; 1000; i++) {<br>                b.transfer(a, randomAmount());<br>            }<br>        }, “t2”);<br>        t1.start();<br>        t2.start();<br>        t1.join();<br>        t2.join();<br>        &#x2F;&#x2F; 查看转账2000次后的总金额<br>        log.debug(“total:{}”,(a.getMoney() + b.getMoney()));<br>    }<br>    &#x2F;&#x2F; Random 为线程安全<br>    static Random random &#x3D; new Random();<br>    &#x2F;&#x2F; 随机 1~100<br>    public static int randomAmount() {<br>        return random.nextInt(100) +1;<br>    }<br>}</p>
+<p>class Account {<br>    private int money;<br>    public Account(int money) {<br>        this.money &#x3D; money;<br>    }<br>    public int getMoney() {<br>        return money;<br>    }<br>    public void setMoney(int money) {<br>        this.money &#x3D; money;<br>    }<br>    public void transfer(Account target, int amount) {<br>        if (this.money &gt; amount) {<br>            this.setMoney(this.getMoney() - amount);<br>            target.setMoney(target.getMoney() + amount);<br>        }<br>    }<br>}<br></pre></p>
+</div>
+
 <p>这样改正行不行，为什么？  不行,锁要用同一个共用锁,而这里的account是不同对象</p>
-<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">public synchronized void transfer(Account target, int amount) &#123;</span><br><span class="line">    if (this.money &gt; amount) &#123;</span><br><span class="line">        this.setMoney(this.getMoney() - amount);</span><br><span class="line">        target.setMoney(target.getMoney() + amount);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<div class="full-code-box">
+<pre>
+public synchronized void transfer(Account target, int amount) {
+    if (this.money > amount) {
+        this.setMoney(this.getMoney() - amount);
+        target.setMoney(target.getMoney() + amount);
+    }
+}
+</pre>
+</div>
+
 <h2 id="3-5-1-问题现象"><a href="#3-5-1-问题现象" class="headerlink" title="3.5.1 问题现象"></a>3.5.1 问题现象</h2><p>多线程并发卖票，sell方法存在<strong>判断余量-扣减票数</strong>两步非原子操作，出现超卖、票数总和不一致问题。</p>
 <h2 id="3-5-2-问题根源"><a href="#3-5-2-问题根源" class="headerlink" title="3.5.2 问题根源"></a>3.5.2 问题根源</h2><p>多个线程同时判断票数充足，全部进入扣减逻辑，超出剩余票数。</p>
 <h2 id="3-5-3-优化方案"><a href="#3-5-3-优化方案" class="headerlink" title="3.5.3 优化方案"></a>3.5.3 优化方案</h2><p>给sell方法加synchronized锁，保证判断+扣减原子执行；同时sellCount需使用Vector（线程安全），不可用ArrayList（线程不安全）。</p>
