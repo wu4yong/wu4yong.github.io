@@ -12,7 +12,7 @@
 <html>
   <head>
     <meta charset="UTF-8">
-    <title> 时空秘境 - 01-面试题之并发编程 </title>
+    <title> 时空秘境 - JUC多线程篇(一) </title>
     <style>
       /**
  * ============================================
@@ -922,7 +922,7 @@ particlesJS("particles", {
     <p class="bio">星辰大海，代码为舟</p>
     <div class="stats">
       <div class="stat-item">
-        <span class="stat-num">37</span>
+        <span class="stat-num">42</span>
         <span class="stat-label">文章</span>
       </div>
       <div class="stat-item">
@@ -1088,6 +1088,21 @@ particlesJS("particles", {
           </li>
         
       
+        
+        
+      
+        
+        
+      
+        
+        
+      
+        
+        
+      
+        
+        
+      
     </ul>
   </div>
 </aside>
@@ -1167,74 +1182,124 @@ document.addEventListener('DOMContentLoaded', function() {
 
       <main class="main-content">
         <div class="article-card">
-          <h1 class="article-title">01-面试题之并发编程</h1>
-          <div class="article-meta">📅 2026-10-24</div>
-          <div class="article-content"><div class="essay-image ">
-    面试题之并发编程
+          <h1 class="article-title">JUC多线程篇(一)</h1>
+          <div class="article-meta">📅 2026-06-05</div>
+          <div class="article-content"><div class="essay-banner">
+    进程与线程
 </div>
 
-<h2 id="第-1-1-题-synchronized-锁只能从轻往重单向升级、不能反向降级，为什么压测高峰过后锁状态又变回轻量级？压测高峰过去后，锁状态又变回轻量级，该怎么解释？"><a href="#第-1-1-题-synchronized-锁只能从轻往重单向升级、不能反向降级，为什么压测高峰过后锁状态又变回轻量级？压测高峰过去后，锁状态又变回轻量级，该怎么解释？" class="headerlink" title="第 1-1 题　synchronized 锁只能从轻往重单向升级、不能反向降级，为什么压测高峰过后锁状态又变回轻量级？压测高峰过去后，锁状态又变回轻量级，该怎么解释？"></a>第 1-1 题　synchronized 锁只能从轻往重单向升级、不能反向降级，为什么压测高峰过后锁状态又变回轻量级？压测高峰过去后，锁状态又变回轻量级，该怎么解释？</h2><p>**候选人浅层回答：**锁一旦升级成重量级锁就永远不能降级。</p>
-<h2 id="核心拆解一句话结论"><a href="#核心拆解一句话结论" class="headerlink" title="核心拆解一句话结论"></a>核心拆解一句话结论</h2><p>HotSpot 中：已经膨胀绑定 Monitor 的重量级锁对象，线程释放锁之后，<strong>该对象不会自动降级为轻量级 &#x2F; 偏向锁</strong>。但 JVM 有「批量重偏向、批量撤销」安全点机制，针对<strong>同一个 Class 下尚未膨胀为重量级的对象</strong>批量重置偏向标记；监控看到 “锁变回轻量级”，并不是旧重量级对象降级，而是<strong>同类新对象 &#x2F; 未膨胀对象</strong>的锁状态变化，这是观测现象的根本原因。</p>
-<h2 id="区分两个极易混淆的概念："><a href="#区分两个极易混淆的概念：" class="headerlink" title="区分两个极易混淆的概念："></a>区分两个极易混淆的概念：</h2><ol>
-<li><strong>单个锁对象（实例维度）</strong>：已经膨胀成重量级锁、绑定 ObjectMonitor；锁释放之后，<strong>不会自动降级</strong>。该对象 Mark Word 依旧指向 Monitor；ObjectMonitor 会放入内部缓存池复用，不会立刻归还操作系统。<br>⚠️注意：ObjectMonitor 缓存池的复用 &#x2F; 回收，和批量重偏向、批量撤销完全无关。</li>
-<li><strong>批量重偏向 &#x2F; 批量撤销（Class 维度，偏向锁专属机制）</strong>：JVM 在全局安全点 STW，扫描处理当前类下对象头 Mark Word；<strong>只修改还没有膨胀为重量级锁的对象的偏向标记，不会触碰已经膨胀为重量级的对象</strong>。这是面试的核心陷阱。</li>
-</ol>
-<h2 id="锁状态流转基础（偏向锁-→-轻量级锁-→-重量级锁）"><a href="#锁状态流转基础（偏向锁-→-轻量级锁-→-重量级锁）" class="headerlink" title="锁状态流转基础（偏向锁 → 轻量级锁 → 重量级锁）"></a>锁状态流转基础（偏向锁 → 轻量级锁 → 重量级锁）</h2><ol>
-<li>偏向锁：  单线程无竞争，mark word 记录线程 ID；</li>
-<li>轻量级锁：多线程交替竞争，CAS 自旋，不进入 OS 内核；</li>
-<li>重量级锁：自旋失败，向 OS 申请 Monitor，线程进入内核态阻塞。</li>
-</ol>
-<p>升级触发：竞争加剧单向往上走。<strong>单个对象一旦膨胀重量级，不会自动回落降级</strong>。</p>
-<h2 id="两个关键机制（面试重点，仅在开启偏向锁-XX-UseBiasedLocking-才生效，JDK15-默认关闭偏向锁）"><a href="#两个关键机制（面试重点，仅在开启偏向锁-XX-UseBiasedLocking-才生效，JDK15-默认关闭偏向锁）" class="headerlink" title="两个关键机制（面试重点，仅在开启偏向锁 -XX:+UseBiasedLocking 才生效，JDK15 默认关闭偏向锁）"></a>两个关键机制（面试重点，仅在开启偏向锁 -XX:+UseBiasedLocking 才生效，JDK15 默认关闭偏向锁）</h2><ol>
-<li>批量重偏向（Bias Rebiasing）<ul>
-<li>JVM 统计同一个 Class 下偏向锁被撤销的次数，达到阈值触发批量重偏向。</li>
-<li>在安全点 STW，把该类下还没有膨胀成重量级的对象，重新偏向新的活跃线程。</li>
-<li>作用：业务线程交替访问大量同类对象，避免频繁撤销偏向锁、反复生成轻量级锁，降低开销。</li>
-<li>本质：重置偏向标记；不会把重量级锁降级。</li>
-</ul>
+<h1 id="本章内容-进程与线程"><a href="#本章内容-进程与线程" class="headerlink" title="本章内容 进程与线程"></a>本章内容 进程与线程</h1><ul>
+<li><p>进程和线程的概念</p>
 </li>
-<li>批量撤销（Bias Revocation）<ul>
-<li>当偏向撤销次数继续增大，超过批量撤销阈值，JVM 判断该类对象偏向锁竞争剧烈。</li>
-<li>在安全点 STW：撤销该 Class 所有对象的偏向标记，将对象置为无锁状态（01，无偏向）。</li>
-<li>❗重点修正：批量撤销不回收 ObjectMonitor，不会处理已经膨胀重量级的对象；它只管偏向标记位。无锁 ≠ 轻量级锁；后续线程来竞争无锁对象，才会通过 CAS 生成轻量级锁。</li>
-<li>现象解释：压测高峰，大量对象竞争膨胀为重量级锁；高峰结束，触发批量撤销，同类未膨胀对象被清除偏向标记变为无锁；后续线程竞争这些无锁对象，生成轻量级锁。监控统计全量对象，看起来就像是锁发生了 “降级”。<strong>已经膨胀重量级的老对象依旧保持重量级标记，没有发生降级</strong>。</li>
-</ul>
+<li><p>并行和并发的概念</p>
 </li>
-</ol>
-<h2 id="连环追问要点整理"><a href="#连环追问要点整理" class="headerlink" title="连环追问要点整理"></a>连环追问要点整理</h2><ol>
-<li>为什么单个重量级锁释放后不自动降级？<ul>
-<li>降级成本很高：需要 STW、修改对象头 Mark Word、处理内核相关 Monitor；频繁升降级会带来严重锁震荡性能抖动。HotSpot 采用保守策略，不实现单对象重量级锁自动降级。ObjectMonitor 释放后放入缓存池复用，避免频繁向操作系统申请释放。</li>
-</ul>
+<li><p>线程基本应用</p>
 </li>
-<li>那压测低峰看到锁变回轻量级是什么？<ul>
-<li>不是同一个重量级对象发生降级。是同类其他未膨胀 &#x2F; 新建对象，经过批量撤销后处于无锁状态，后续发生竞争时生成轻量级锁；老的已经膨胀成重量级的对象仍然维持重量级标记。</li>
 </ul>
+<h2 id="1-1-进程与线程"><a href="#1-1-进程与线程" class="headerlink" title="1.1 进程与线程"></a>1.1 进程与线程</h2><h3 id="进程："><a href="#进程：" class="headerlink" title="进程："></a>进程：</h3><ul>
+<li><p>程序由指令和数据组成，若要运行指令、读写数据，需将指令加载至CPU、数据加载至内存，指令运行过程中还会用到磁盘、网络等设备。<strong>进程的核心作用就是加载指令、管理内存、管理IO资源</strong>。</p>
 </li>
-<li>安全点在这里的角色？<ul>
-<li>批量重偏向、批量撤销只能在全局安全点执行，触发 STW 短暂停顿；不会在业务线程运行过程中随时执行，扫描对象头批量修改 Mark Word。</li>
-</ul>
+<li><p>当程序从磁盘加载代码到内存中运行时，一个进程就随之开启。</p>
 </li>
-</ol>
-<p>参数相关:</p>
-<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">-XX:+UseBiasedLocking 开启偏向锁（JDK15 默认关闭）</span><br><span class="line">-XX:BiasedLockingBiasThreshold 批量重偏向阈值</span><br><span class="line">-XX:BiasedLockingRevocationThreshold 批量撤销阈值</span><br></pre></td></tr></table></figure>
-
-<h2 id="面试回答完整话术"><a href="#面试回答完整话术" class="headerlink" title="面试回答完整话术"></a>面试回答完整话术</h2><ul>
-<li>很多资料说 synchronized 锁单向升级、不能降级，这个结论有限定范围：<strong>针对单个对象实例</strong>。同一个对象一旦膨胀为重量级锁，释放锁之后不会自动降级。</li>
-<li>JVM 的批量重偏向、批量撤销是偏向锁专属、Class 维度的机制，运行在安全点 STW 下，只会重置还没有膨胀重量级的对象的偏向标记，不会处理已经绑定 Monitor 的重量级对象。批量撤销仅仅清除偏向位，把对象置为无锁，并不会回收 ObjectMonitor。</li>
-<li>压测高峰期大量对象竞争膨胀重量级；流量下降触发批量撤销，同类未膨胀对象变为无锁；后续线程竞争这些对象，会重新生成轻量级锁。监控观测到的 “锁降级”，是这批新 &#x2F; 未膨胀对象的状态，不是原来重量级对象降级。</li>
+<li><p>进程可看作程序的运行实例。多数程序支持多实例进程同时运行，如记事本、画图工具、浏览器等；部分程序仅支持单实例进程运行，如网易云音乐、360安全卫士等。</p>
+</li>
 </ul>
-<p>  设计取舍：不做单对象即时降级，避免反复膨胀降级带来高昂内核切换与锁震荡；批量偏向操作放在安全点统一处理，做性能权衡。</p>
-<h2 id="追问：本题考察核心是什么？"><a href="#追问：本题考察核心是什么？" class="headerlink" title="追问：本题考察核心是什么？"></a>追问：本题考察核心是什么？</h2><p>  参考答案：<br>  初级开发者只会背诵一句话 “锁单向升级，不能降级”，分不清单个对象实例锁状态和同类 Class 批量偏向标记重置，无法解释压测低峰观测现象，不清楚批量重偏向、批量撤销依赖安全点 STW，还会混淆偏向批量机制和 ObjectMonitor 缓存回收逻辑。</p>
-<h3 id="高级工程师要分清："><a href="#高级工程师要分清：" class="headerlink" title="高级工程师要分清："></a>高级工程师要分清：</h3><ol>
-<li>单向升级不可降级的适用边界：针对单个对象实例；</li>
-<li>批量重偏向 &#x2F; 批量撤销是偏向锁专属的 Class 维度重置，不是单对象锁降级，不操作 ObjectMonitor；</li>
-<li>MarkWord 状态区分：无锁≠轻量级锁；</li>
-<li>理解 JVM 取舍：不实现重量级锁即时降级是为了避免锁震荡；</li>
-<li>解释压测波峰波谷观测现象，明白锁状态观测要区分对象实例，不能只记笼统结论。<br>  核心思想：本题典型面试陷阱，混淆「单个实例锁状态」和「同 Class 批量偏向标记重置」；<strong>重量级锁本身不会降级，观测到的现象来自其他对象的状态变化。</strong></li>
-</ol>
+<h3 id="线程："><a href="#线程：" class="headerlink" title="线程："></a>线程：</h3><ul>
+<li><p>一个进程内部可以包含一个或多个线程，线程是进程的组成单元。</p>
+</li>
+<li><p>线程本质是一条指令流，能够按照既定顺序将逐条指令提交给CPU执行。</p>
+</li>
+<li><p><strong>Java中，线程是CPU最小调度单位，进程是系统资源分配的最小单位；Windows系统中进程无实际运行能力，仅作为线程的容器存在</strong>。</p>
+</li>
+</ul>
+<h3 id="进程与线程二者对比："><a href="#进程与线程二者对比：" class="headerlink" title="进程与线程二者对比："></a>进程与线程二者对比：</h3><ul>
+<li><p>独立性：进程之间基本相互独立；线程隶属于对应进程，是进程的子集，无法独立存在。</p>
+</li>
+<li><p>资源共享：进程拥有独立的内存空间等系统资源，其内部所有线程可共享该进程的全部资源。</p>
+</li>
+<li><p>通信难度：进程间通信复杂。同一计算机内的进程通信称为IPC（进程间通信）；不同计算机的进程通信需要依托网络，遵循HTTP等网络协议。</p>
+</li>
+<li><p><strong>线程通信简单便捷，由于共享进程内存空间，多个线程可直接访问同一个共享变量实现数据交互</strong>。</p>
+</li>
+<li><p>运行开销：线程属于轻量级运行单元，线程的上下文切换成本远低于进程上下文切换成本，运行效率更高。</p>
+</li>
+</ul>
+<h2 id="1-2-并行与并发"><a href="#1-2-并行与并发" class="headerlink" title="1.2 并行与并发"></a>1.2 并行与并发</h2><p>单核CPU环境下，线程本质为<strong>串行执行</strong>。操作系统的任务调度器会将CPU的时间片（Windows系统下最小时间片约15毫秒）分配给不同线程。由于CPU在线程间的切换速度极快，宏观上会给人多线程同时运行的错觉，核心特点可总结为：<strong>微观串行，宏观并行</strong>。<br>一般会将这种 线程轮流使用 CPU 的做法称为并发， concurrent</p>
 <div class="img-wrap-left">
-    <img class="left-img" src="/assets/img/interview/01-synchronized.png" alt="答题要点结构图">
-</div></div>
+  <img class="left-img" src="/assets/img/java/concurrent/concurrent1.png" alt="并发示意图">
+</div>
+<div class="img-wrap-left">
+  <img class="left-img" src="/assets/img/java/concurrent/concurrent2.png" alt="并发示意图">
+</div>
+**并发（concurrent）：指线程轮流抢占、使用CPU时间片的运行模式，同一时刻仅执行一个线程，通过快速切换实现多任务交替执行**。
+
+<p>多核CPU环境下，每一个CPU核心都可以独立调度并运行线程，多个核心可同时执行多个线程，这种真正意义上的同时执行就是并行。</p>
+<div class="img-wrap-left">
+  <img class="left-img" src="/assets/img/java/concurrent/concurrent3.png" alt="并发示意图">
+</div>
+<div class="img-wrap-left">
+  <img class="left-img" src="/assets/img/java/concurrent/concurrent4.png" alt="并发示意图">
+</div>
+### 通俗案例区分
+
+<ul>
+<li><p>并发：一名家庭主妇独自轮流完成做饭、打扫卫生、喂奶多项工作，同一时间只做一件事，交替处理多任务。</p>
+</li>
+<li><p>并发+并行：家庭主妇雇佣一名保姆，两人同时处理家务，部分任务可并行完成，但受锅、工具等资源限制，部分任务需要排队等待，存在并发竞争。</p>
+</li>
+<li><p>并行：雇佣三名保姆，分别专职负责做饭、打扫卫生、喂奶，三项任务互不干扰、同时执行。</p>
+</li>
+</ul>
+<h3 id="Rob-Pike-权威定义（Golang语言创造者）"><a href="#Rob-Pike-权威定义（Golang语言创造者）" class="headerlink" title="Rob Pike 权威定义（Golang语言创造者）"></a>Rob Pike 权威定义（Golang语言创造者）</h3><ul>
+<li><p>并发（concurrent）：同一时间具备应对、处理多件事情的能力（侧重任务管理）。</p>
+</li>
+<li><p>并行（parallel）：同一时间可以动手执行多件事情的能力（侧重任务执行）。</p>
+</li>
+</ul>
+<h2 id="1-3-线程核心应用"><a href="#1-3-线程核心应用" class="headerlink" title="1.3 线程核心应用"></a>1.3 线程核心应用</h2><h3 id="应用一：实现异步调用"><a href="#应用一：实现异步调用" class="headerlink" title="应用一：实现异步调用"></a>应用一：实现异步调用</h3><p>从调用方执行逻辑区分同步与异步：</p>
+<ul>
+<li><p><strong>同步</strong>：调用方法后，必须等待方法执行完毕、返回结果，才能继续执行后续代码。</p>
+</li>
+<li><p><strong>异步</strong>：调用方法后，无需等待结果返回，可直接继续执行后续代码，不阻塞当前执行流程。</p>
+</li>
+</ul>
+<h4 id="设计思路"><a href="#设计思路" class="headerlink" title="设计思路"></a>设计思路</h4><p>借助多线程可将同步阻塞的方法改造为异步执行。例如磁盘文件读取耗时5秒，若无多线程机制，当前线程会全程阻塞，CPU闲置、其他代码暂停执行；开启独立子线程处理IO耗时操作，可避免主线程阻塞。</p>
+<h4 id="实际应用场景"><a href="#实际应用场景" class="headerlink" title="实际应用场景"></a>实际应用场景</h4><ul>
+<li><p>项目开发中，视频格式转换、文件解析等耗时操作，单独开启子线程处理，保障主线程正常运行。</p>
+</li>
+<li><p>Tomcat异步Servlet，将耗时业务交由独立线程处理，避免阻塞核心工作线程，提升服务吞吐量。</p>
+</li>
+<li><p>UI界面程序，所有耗时计算、网络请求均在子线程执行，防止阻塞UI线程，保证界面流畅可操作。</p>
+</li>
+</ul>
+<h3 id="应用二：提升程序运行效率"><a href="#应用二：提升程序运行效率" class="headerlink" title="应用二：提升程序运行效率"></a>应用二：提升程序运行效率</h3><p>多线程可充分发挥多核CPU的硬件优势，通过任务拆分、并行执行缩短整体运行耗时，以下为具体案例对比：</p>
+<p>任务场景：执行3项独立计算，最终汇总结果，各任务耗时如下：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">计算1：10ms、计算2：11ms、计算3：9ms、结果汇总：1ms</span><br></pre></td></tr></table></figure>
+
+<ul>
+<li><p>串行执行：总耗时 &#x3D; 10 + 11 + 9 + 1 &#x3D; 31ms</p>
+</li>
+<li><p>多核并行执行：四核CPU可分别开启线程并行执行3项计算，整体耗时取决于最长任务（11ms），叠加汇总耗时，总耗时仅12ms，大幅提升效率。</p>
+</li>
+</ul>
+<blockquote>
+<p><strong>注意</strong>：多线程提升效率的前提是<strong>多核CPU环境</strong>，单核CPU仅能实现线程交替执行，无法真正提升运算效率。</p>
+</blockquote>
+<h4 id="核心结论"><a href="#核心结论" class="headerlink" title="核心结论"></a>核心结论</h4><ol>
+<li><p>单核CPU下，多线程无法提升程序运行效率，其核心作用是实现任务轮换，避免单一线程长期占用CPU，导致其他任务阻塞卡死，保障多任务正常调度。</p>
+</li>
+<li><p>多核CPU可实现线程并行执行，但并非所有场景都能提效：</p>
+<ul>
+<li><p>可拆分的独立计算型任务，通过多线程并行能够显著缩短耗时、提升效率（受阿姆达尔定律约束）；</p>
+</li>
+<li><p>无法拆分、强依赖执行顺序的任务，多线程无提效意义。</p>
+</li>
+</ul>
+</li>
+<li><p>常规阻塞式IO操作不占用CPU资源，但线程会持续等待IO完成，造成线程资源浪费，因此衍生出非阻塞IO、异步IO等优化方案，进一步提升资源利用率。</p>
+</li>
+</ol>
+</div>
         </div>
       </main>
     </div>
