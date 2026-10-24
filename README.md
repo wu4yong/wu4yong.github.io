@@ -178,6 +178,9 @@ deploy:
 端口被占用	hexo server -p 5000
 分类页面404	检查 source/categories/index.md 是否存在
 
+
+报错：bash: hexo: command not found
+执行 nvm use 20.19.2
 最后更新: 2026-06-21
 
 补充说明区分推送目标
