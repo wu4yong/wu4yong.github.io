@@ -1,13 +1,13 @@
 ---
-title: 1-5面试题之接口与抽象类
-date: 2026-10-24 20:00:00
+title: 1-5  Java基础  接口与抽象类
+date: 2026-10-23 15:00:00
 categories:
   - interview
 tags:
   - interview
 ---
 <div class="essay-image ">
-    面试题之接口与抽象类
+    接口和抽象类到底有什么区别？项目里该怎么选？
 </div>
 
 ## 第 1-5 题　接口和抽象类到底有什么区别？项目里该怎么选？

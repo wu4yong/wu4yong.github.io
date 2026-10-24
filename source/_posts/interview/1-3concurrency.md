@@ -1,13 +1,13 @@
 ---
-title: 1-3面试题之并发编程连环问
-date: 2026-10-24 18:00:00
+title: 1-3  并发编程 并发编程连环问
+date: 2026-10-23 13:00:00
 categories:
   - interview
 tags:
   - interview
 ---
 <div class="essay-image ">
-    面试题之并发编程连环问
+    Java 并发全套连环问（线程安全、synchronized vs Lock、乐观悲观锁、线程池、线程池耗尽、死锁）
 </div>
 
 ## 第 1-3 题　Java 并发全套连环问（线程安全、synchronized vs Lock、乐观悲观锁、线程池、线程池耗尽、死锁）

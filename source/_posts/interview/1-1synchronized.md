@@ -1,13 +1,13 @@
 ---
-title: 1-1面试题之并发编程
-date: 2026-10-24 16:00:00
+title: 1-1  并发编程 synchronized
+date: 2026-10-23 11:00:00
 categories:
   - interview
 tags:
   - interview
 ---
 <div class="essay-image ">
-    面试题之并发编程
+     synchronized 锁只能从轻往重单向升级、不能反向降级，为什么压测高峰过后锁状态又变回轻量级？
 </div>
 
 ## 第 1-1 题　synchronized 锁只能从轻往重单向升级、不能反向降级，为什么压测高峰过后锁状态又变回轻量级？

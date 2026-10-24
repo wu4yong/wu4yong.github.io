@@ -1,13 +1,13 @@
 ---
-title: 1-2面试题之ThreadLocal内存泄漏
-date: 2026-10-24 17:00:00
+title: 1-2  并发编程 hreadLocal内存泄漏
+date: 2026-10-23 12:00:00
 categories:
   - interview
 tags:
   - interview
 ---
 <div class="essay-image ">
-    面试题之ThreadLocal内存泄漏
+    ThreadLocal 使用不当会内存泄漏，背后根本原因是什么？
 </div>
 
 ## 第 1-2 题　ThreadLocal 使用不当会内存泄漏，背后根本原因是什么？

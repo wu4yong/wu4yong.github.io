@@ -1,16 +1,16 @@
 ---
-title: 1-4面试题之synchronized与Lock
-date: 2026-10-24 19:00:00
+title: 1-4  并发编程 synchronized与Lock
+date: 2026-10-23 14:00:00
 categories:
   - interview
 tags:
   - interview
 ---
 <div class="essay-image ">
-    面试题之synchronized与Lock
+    多线程并发场景 synchronized 和 Lock 的底层原理、功能特性、适用场景有什么核心区别？
 </div>
 
-## 第 1-4 题　多线程并发场景，synchronized 和 Lock 的底层原理、功能特性、适用场景有什么核心区别？
+## 第 1-4 题　多线程并发场景 synchronized 和 Lock 的底层原理、功能特性、适用场景有什么核心区别？
 
 **候选人浅层回答：** 两者都是锁，保证线程安全，用法差别不大。
 
