@@ -1,5 +1,5 @@
 ---
-title: 01-面试题之并发编程
+title: 1-1面试题之并发编程
 date: 2026-10-24 16:00:00
 categories:
   - interview
@@ -81,5 +81,5 @@ HotSpot 中：已经膨胀绑定 Monitor 的重量级锁对象，线程释放锁
 
 
 <div class="img-wrap-left">
-    <img class="left-img" src="/assets/img/interview/01-synchronized.png" alt="答题要点结构图">
+    <img class="left-img" src="/assets/img/interview/1-1synchronized.png" alt="答题要点结构图">
 </div>
