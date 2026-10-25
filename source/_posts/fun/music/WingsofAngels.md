@@ -7,7 +7,7 @@ tags:
   - 音乐
 order: 1
 ---
-<div class="essay-banner">
+<div class="essay-banner essay-image9">
    Wings of Angels 
 </div>
 <div style="width:100%;aspect-ratio:16/9;">

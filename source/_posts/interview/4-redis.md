@@ -65,7 +65,7 @@ Redis6 多线程，只是多线程处理网络 IO；命令执行仍然是单线�
 <strong>核心思想：</strong>单线程是为了简化并发控制，规避锁；Redis6 多线程只是把网络收发卸载到多核，核心数据操作依然串行。
 
 <!-- ![图 4-1　答题要点结构图](/assets/img/interview/4-1redis-single-thread-fast.png) -->
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/interview/4-1redis-single-thread-fast.png" alt="Redis答题要点结构图"></div> 
+<div class="img-wrap-left"><img class="left-img" src="/assets/img/interview/4-1redis-single-thread-fast.png" alt="Redis答题要点结构图"></div>
 
 ## 第 2 题　Redis 过期的数据是立刻被删除的吗？
 
@@ -123,7 +123,7 @@ Redis 实际是：惰性删除 + 定期抽样删除，两者配合。所以过�
 <strong>核心思想：</strong>过期时间只是逻辑失效标记；物理删除是延迟、按需进行的，有性能取舍，不能做到实时全部清理。
 
 <!-- ![图 4-2　答题要点结构图](/assets/img/interview/4-2redis-key-expiration.png) -->
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/interview/4-2redis-key-expiration.png" alt="Redis答题要点结构图"></div> 
+<div class="img-wrap-left"><img class="left-img" src="/assets/img/interview/4-2redis-key-expiration.png" alt="Redis答题要点结构图"></div>
 
 ## 第 3 题　Redis 持久化怎么选才稳妥？
 
@@ -188,7 +188,7 @@ Redis 是单线程模型，fork 操作是在主线程中执行，fork 期间主�
 <strong>核心思想：</strong>持久化操作是带代价的，不是开启配置就万事大吉；高并发系统要将备份任务和线上读写流量隔离。
 
 <!-- ![图 4-3　答题要点结构图](/assets/img/interview/4-3redis-persistence.png) -->
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/interview/4-3redis-persistence.png" alt="Redis答题要点结构图"></div> 
+<div class="img-wrap-left"><img class="left-img" src="/assets/img/interview/4-3redis-persistence.png" alt="Redis答题要点结构图"></div>
 
 ## 第 4 题　Redis 缓存穿透
 
@@ -249,7 +249,7 @@ Q：计数布隆有什么代价？ A：每个位置多一个计数器，内存�
 A：布隆有维护成本，数据频繁增删要同步；小流量、低攻击风险场景，短TTL 空缓存实现简单够用。 Q：布隆说不存在，就一定不存在吗？ A：是的；布隆的特性：说不存在，一定不存在；说存在，有可能误判。
 
 <!-- ![图 4-4　答题要点结构图](/assets/img/interview/4-4redis-cache-penetration.png) -->
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/interview/4-4redis-cache-penetration.png" alt="Redis答题要点结构图"></div> 
+<div class="img-wrap-left"><img class="left-img" src="/assets/img/interview/4-4redis-cache-penetration.png" alt="Redis答题要点结构图"></div>
 
 ## 第 5 题　布隆过滤器防缓存穿透，新品被误拦截、误判率持续上涨
 
@@ -664,7 +664,7 @@ Q：为什么不能只靠随机 TTL？ A：随机 TTL 只能解决过期雪崩�
 
 Q：缓存批量删除怎么避免雪崩？ A：不要 del 批量删；用异步分批删除；或者标记失效，后台慢慢清理，不要一次性清空。
 
-<!-- ![图 4-10　答题要点结构图](/assets/img/cacheinterview/4-10cache-avalanche-triage.png) -->
+<!-- ![图 4-10　答题要点结构图](/assets/img/interview/4-10cache-avalanche-triage.png) -->
 <div class="img-wrap-left"><img class="left-img" src="/assets/img/interview/4-10cache-avalanche-triage.png" alt="Redis答题要点结构图"></div>
 
 ## 第 11 题　电商首页商品缓存，大批量 key 同时过期+Redis 宕机双重风险
@@ -1398,3 +1398,4 @@ ZK 临时会话节点，会话存活锁就存在，会话消失自动释放，�
 
 <!-- ![图 4-19　答题要点结构图](/assets/img/interview/4-19redis-lock-inventory.png) -->
 <div class="img-wrap-left"><img class="left-img" src="/assets/img/interview/4-19redis-lock-inventory.png" alt="Redis答题要点结构图"></div>
+

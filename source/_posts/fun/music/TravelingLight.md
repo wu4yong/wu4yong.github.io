@@ -7,7 +7,7 @@ tags:
   - 音乐 
 order: 3
 ---
-<div class="essay-banner">
+<div class="essay-banner essay-image9">
 Traveling Light 
 </div>
 <div style="width:100%;aspect-ratio:16/9;">

@@ -6,7 +6,7 @@ categories:
 tags:
   - Java
 ---
-<div class="essay-banner">
+<div class="essay-banner essay-image1">
     Wait  Notify   
 </div>
 

@@ -8,7 +8,7 @@ tags:
 top_img: /assets/img/fun/game/woool.png  # 无则删除该行
 cover: /assets/img/fun/game/woool.png    # 无则删除该行
 ---
-<div class="essay-banner">
+<div class="essay-banner essay-image9">
     最爱GAME-网络游戏-传奇世界-回忆录
 </div>
 

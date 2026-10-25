@@ -7,7 +7,7 @@ tags:
   - 大数据
 order: 1
 ---
-<div class="essay-banner">
+<div class="essay-banner essay-image11">
    Hadoop HDFS 架构
 </div>
 

@@ -6,7 +6,7 @@ categories:
 tags:
   - 电影
 ---
-<div class="essay-banner">
+<div class="essay-banner essay-image9">
  小猪妖的夏天
 </div>
 <div style="width:100%;aspect-ratio:16/9;">

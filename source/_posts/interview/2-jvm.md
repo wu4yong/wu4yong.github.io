@@ -55,10 +55,7 @@ Eden 占 8 份，两个 Survivor 各占 1 份。 设计初衷：大部分对象�
 <strong>参考答案：</strong> 考察是不是死记硬背 JVM 参数模板。面试官要看你是否理解参数背后的 GC 原理，能不能结合业务、监控、GC 日志做配置，而不是网上抄一套参数直接上线。真正调优是依据线上监控、GC 日志反向推导参数，而不是直接套用教科书默认比例。
 
 <!-- ![图 2-1　答题要点结构图](/assets/img/interview/2-1jvm-heap-tuning.png) -->
-
-<div class="img-wrap-left">
-   <img class="left-img" src="/assets/img/interview/2-1jvm-heap-tuning.png" alt="答题要点结构图">
- </div> 
+<div class="img-wrap-left"><img class="left-img" src="/assets/img/interview/2-1jvm-heap-tuning.png" alt="JVM答题要点结构图"></div>
 
 ## 第 2 题　JVM 垃圾回收算法选型
 
@@ -96,12 +93,8 @@ Eden 占 8 份，两个 Survivor 各占 1 份。 设计初衷：大部分对象�
 - 年轻代：对象死得多，牺牲少量内存换速度 + 无碎片；
 - 老年代：存活对象多，复制代价太高，放弃复制算法； 很多开发只会调堆大小，没有思考垃圾收集算法背后取舍，遇到连环追问就答不上来。
 
-
 <!-- ![图 2-2　答题要点结构图](/assets/img/interview/2-2jvm-gc-algorithm.png) -->
-
-<div class="img-wrap-left">
-   <img class="left-img" src="/assets/img/interview/2-2jvm-gc-algorithm.png" alt="答题要点结构图">
- </div> 
+<div class="img-wrap-left"><img class="left-img" src="/assets/img/interview/2-2jvm-gc-algorithm.png" alt="JVM答题要点结构图"></div>
 
 ## 第 3 题　线上 JVM OOM，堆参数配置合理，运行一段时间 FullGC 频繁、最终OOM，重启只能临时恢复，定位与解决方案
 
@@ -200,11 +193,7 @@ OOM 发生时自动生成堆快照 dump 文件，保存现场；同时开启 GC 
 <strong>核心思想：</strong>OOM 排查核心不是改 - Xmx，而是找到无效强引用链，切断对象引用，让 GC 正常回收。
 
 <!-- ![图 2-3　答题要点结构图](/assets/img/interview/2-3jvm-oom-fullgc.png) -->
-
-<div class="img-wrap-left">
-   <img class="left-img" src="/assets/img/interview/2-3jvm-oom-fullgc.png" alt="答题要点结构图">
- </div> 
-
+<div class="img-wrap-left"><img class="left-img" src="/assets/img/interview/2-3jvm-oom-fullgc.png" alt="JVM答题要点结构图"></div>
 
 ## 第 4 题　核心服务频繁 OOM 宕机，如何快速止损、区分不同内存区 OOM、在线排查、集群批量定位、权衡堆大小与 GC 停顿
 
@@ -302,11 +291,7 @@ OOM 发生时自动生成堆快照 dump 文件，保存现场；同时开启 GC 
 6. 形成闭环：应急止损 → 低风险取证定位 → 代码修复 + 监控预警 + 架构约束，防止复现。
 
 <!-- ![图 2-4　答题要点结构图](/assets/img/interview/2-4jvm-oom-triage.png) -->
-
-<div class="img-wrap-left">
-   <img class="left-img" src="/assets/img/interview/2-4jvm-oom-fullgc.png" alt="答题要点结构图">
- </div> 
-
+<div class="img-wrap-left"><img class="left-img" src="/assets/img/interview/2-4jvm-oom-triage.png" alt="JVM答题要点结构图"></div>
 
 ## 第 5 题　线上核心服务频繁 Full GC，卡顿超时、吞吐量腰斩，如何快速止损、定位、权衡 GC 频率与停顿、分场景根治
 
@@ -410,7 +395,5 @@ OOM 发生时自动生成堆快照 dump 文件，保存现场；同时开启 GC 
 4. 整套闭环：应急 → 定位 → 参数调优临时缓解 → 代码修复 + 前置监控压测，防止复现。
 
 <!-- ![图 2-5　答题要点结构图](/assets/img/interview/2-5jvm-fullgc-latency.png) -->
+<div class="img-wrap-left"><img class="left-img" src="/assets/img/interview/2-5jvm-fullgc-latency.png" alt="JVM答题要点结构图"></div>
 
-<div class="img-wrap-left">
-   <img class="left-img" src="/assets/img/interview/2-5jvm-fullgc-latency.png" alt="答题要点结构图">
- </div> 

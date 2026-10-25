@@ -6,7 +6,7 @@ categories:
 tags:
   - 图片
 ---
-<div class="essay-banner">
+<div class="essay-banner essay-image9">
    漫画-学普通话
 </div>
 ## 严须

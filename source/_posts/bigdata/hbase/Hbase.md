@@ -7,7 +7,7 @@ tags:
   - 大数据
 order: 3
 ---
-<div class="essay-banner">
+<div class="essay-banner essay-image11">
    HBase 
 </div>
 

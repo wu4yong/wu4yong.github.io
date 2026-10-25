@@ -6,7 +6,7 @@ categories:
 tags:
   - Java
 ---
-<div class="essay-banner">
+<div class="essay-banner essay-image1">
     多线程共享变量与线程安全  
 </div>
 

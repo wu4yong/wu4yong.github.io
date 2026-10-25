@@ -39,7 +39,7 @@ tags:
 想要真正掌握 Spring 事务，不能只知道简单使用注解，要理解底层 AOP 代理的工作原理，清楚事务注解生效的前提条件，识别各类事务失效场景，面试讲清楚这些层次，代表真正理解 Spring 事务原理。
 
 <!-- ![图 5-1　答题要点结构图](/assets/img/interview/5-1transactional-basics.png) -->
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/interview/5-1transactional-basics.png" alt="Spring生态答题要点结构图"></div> 
+<div class="img-wrap-left"><img class="left-img" src="/assets/img/interview/5-1transactional-basics.png" alt="Spring答题要点结构图"></div>
 
 ## 第 2 题　方法上加 @Transactional，抛出异常但是数据没有回滚。如何排查？
 
@@ -138,7 +138,7 @@ Error 属于 Throwable 的直接子类，和 Exception 同级。
 <strong>核心思想：</strong>Spring 注解事务不是银弹，是 AOP 代理带来的能力，它有明确边界；所有事务坑，本质都是越界使用 AOP 代理能力或者错误理解异常 / 线程 / 传播行为。
 
 <!-- ![图 5-2　答题要点结构图](/assets/img/interview/5-2transactional-rollback-fail.png) -->
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/interview/5-2transactional-rollback-fail.png" alt="Spring生态答题要点结构图"></div> 
+<div class="img-wrap-left"><img class="left-img" src="/assets/img/interview/5-2transactional-rollback-fail.png" alt="Spring答题要点结构图"></div>
 
 ## 第 3 题　方法上加@Transactional，抛出异常数据却没有回滚，怎么排查根因？如何从规范层面避免事务失效？
 
@@ -233,7 +233,7 @@ rollbackFor = Exception.class 会把受检异常也纳入回滚范围；Error �
 <strong>核心思想：</strong>@Transactional 不是数据库原生事务，是 SpringAOP 提供的增强能力，存在明确边界；所有踩坑，都是超出了 AOP 和事务底层机制的适用范围。
 
 <!-- ![图 5-3　答题要点结构图](/assets/img/interview/5-3transactional-failure-rootcause.png) -->
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/interview/5-3transactional-failure-rootcause.png" alt="Spring生态答题要点结构图"></div> 
+<div class="img-wrap-left"><img class="left-img" src="/assets/img/interview/5-3transactional-failure-rootcause.png" alt="Spring答题要点结构图"></div>
 
 ## 第 4 题　Spring 利用三级缓存解决单例 Bean 循环依赖，这套机制能覆盖所有循环依赖场景吗？
 
@@ -312,7 +312,7 @@ rollbackFor = Exception.class 会把受检异常也纳入回滚范围；Error �
 <strong>核心思想：</strong>三级缓存的本质是提前暴露实例化完成但未填充属性的半成品 Bean，并且按需懒加载生成 AOP 代理；它有严格适用边界，不能当成万能方案。
 
 <!-- ![图 5-4　答题要点结构图](/assets/img/interview/5-4spring-circular-dependency.png) -->
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/interview/5-4spring-circular-dependency.png" alt="Spring生态答题要点结构图"></div> 
+<div class="img-wrap-left"><img class="left-img" src="/assets/img/interview/5-4spring-circular-dependency.png" alt="Spring答题要点结构图"></div>
 
 ## 第 5 题　Spring 三级缓存、循环依赖+AOP/事务叠加踩坑
 
@@ -395,4 +395,5 @@ Bean 的加载顺序受包扫描、starter、@Conditional、注解解析顺序�
 Q：为什么不把代理直接放到二级缓存，还要搞三级 ObjectFactory？ A：不是所有 Bean 都需要 AOP 代理；用工厂懒生成代理，不需要代理的 Bean 就不会执行代理逻辑，节省开销。 Q：@DependsOn 的作用？ A：强制指定 Bean 创建先后顺序，可以规避一部分顺序不确定性带来的随机异常，但不能解决循环依赖本身。
 
 <!-- ![图 5-5　答题要点结构图](/assets/img/interview/5-5spring-circular-dependency-aop.png) -->
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/interview/5-5spring-circular-dependency-aop.png" alt="Spring生态答题要点结构图"></div> 
+<div class="img-wrap-left"><img class="left-img" src="/assets/img/interview/5-5spring-circular-dependency-aop.png" alt="Spring答题要点结构图"></div>
+

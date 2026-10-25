@@ -6,7 +6,7 @@ categories:
 tags:
   - 随笔杂谈
 ---
-<div class="essay-banner">
+<div class="essay-banner essay-image10">
     窗 · 口
 </div>
 

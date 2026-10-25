@@ -52,8 +52,7 @@ tags:
 核心设计思想：利用磁盘页批量读取的特性，用多叉降低树高，减少 IO；叶子链表优化范围查询
 
 <!-- ![图 3-1　答题要点结构图](/assets/img/interview/3-1innodb-b-plus-tree.png) -->
-
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/interview/3-1innodb-b-plus-tree.png" alt="MySQL答题要点结构图"></div> 
+<div class="img-wrap-left"><img class="left-img" src="/assets/img/interview/3-1innodb-b-plus-tree.png" alt="MySQL答题要点结构图"></div>
 
 ## 第 2 题　MySQL 主键就一定是聚集索引吗？
 
@@ -121,10 +120,7 @@ MyISAM 不存在聚集索引，它的数据和索引分开存储，所有索引�
 <strong>核心思想：</strong>“主键是聚集索引” 只是 InnoDB 有主键时的默认结果，不是定义；概念先行，再看引擎规则，不能当成普适真理。
 
 <!-- ![图 3-2　答题要点结构图](/assets/img/interview/3-2mysql-clustered-index.png) -->
-
-<div class="img-wrap-left">
-   <img class="left-img" src="/assets/img/interview/3-2mysql-clustered-index.png" alt="MySQL答题要点结构图">
- </div> 
+<div class="img-wrap-left"><img class="left-img" src="/assets/img/interview/3-2mysql-clustered-index.png" alt="MySQL答题要点结构图"></div>
 
 ## 第 3 题　MySQL 联合索引最左前缀
 
@@ -181,10 +177,7 @@ and b=? 和 b=? and a=? 结果完全一样，优化器会根据索引选择合�
 Q：覆盖索引在这里起到什么作用？ A：如果只查索引包含字段，不需要回表；select * 一定会回表，增加 IO 开销。
 
 <!-- ![图 3-3　答题要点结构图](/assets/img/interview/3-3mysql-leftmost-prefix.png) -->
-
-<div class="img-wrap-left">
-   <img class="left-img" src="/assets/img/interview/3-3mysql-leftmost-prefix.png" alt="MySQL答题要点结构图">
- </div> 
+<div class="img-wrap-left"><img class="left-img" src="/assets/img/interview/3-3mysql-leftmost-prefix.png" alt="MySQL答题要点结构图"></div>
 
 ## 第 4 题　MySQL 加了索引，查询就一定更快吗？
 
@@ -250,10 +243,7 @@ Q：覆盖索引在这里起到什么作用？ A：如果只查索引包含字�
 <strong>核心思想：</strong>索引只是一种查询备选路径，能不能变快，取决于过滤比例、区分度、是否回表、数据量、IO 模型，而不是只要建了索引就一定更快。
 
 <!-- ![图 3-4　答题要点结构图](/assets/img/interview/3-4mysql-index-not-always-faster.png) -->
-
-<div class="img-wrap-left">
-   <img class="left-img" src="/assets/img/interview/3-4mysql-index-not-always-faster.png" alt="MySQL答题要点结构图">
- </div> 
+<div class="img-wrap-left"><img class="left-img" src="/assets/img/interview/3-4mysql-index-not-always-faster.png" alt="MySQL答题要点结构图"></div>
 
 ## 第 5 题　MySQL 灵魂三连问
 
@@ -354,10 +344,7 @@ Q：覆盖索引在这里起到什么作用？ A：如果只查索引包含字�
 高级工程师标准：知其然，更知其所以然；知道怎么排查，知道怎么提前规避风险。
 
 <!-- ![图 3-5　答题要点结构图](/assets/img/interview/3-5mysql-three-key-questions.png) -->
-
-<div class="img-wrap-left">
-   <img class="left-img" src="/assets/img/interview/3-5mysql-three-key-questions.png" alt="MySQL答题要点结构图">
- </div
+<div class="img-wrap-left"><img class="left-img" src="/assets/img/interview/3-5mysql-three-key-questions.png" alt="MySQL答题要点结构图"></div>
 
 ## 第 6 题　MySQL 索引：执行计划显示走索引，但 SQL 依然很慢
 
@@ -404,8 +391,7 @@ Q：怎么解决统计信息不准？ A：analyze table 更新统计信息；避
 Q：主键查询为什么也要 limit？ A：主键范围查询不加 limit，扫描行数多，B + 树遍历大量数据页，IO 上升。
 
 <!-- ![图 3-6　答题要点结构图](/assets/img/interview/3-6mysql-index-still-slow.png) -->
-
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/interview/3-6mysql-index-still-slow.png" alt="MySQL答题要点结构图"></div
+<div class="img-wrap-left"><img class="left-img" src="/assets/img/interview/3-6mysql-index-still-slow.png" alt="MySQL答题要点结构图"></div>
 
 ## 第 7 题　MySQL 索引：explain 已经走二级索引，为什么查询还是慢？优化器凭什么放弃索引走全表扫描？
 
@@ -450,8 +436,7 @@ Q：主键查询为什么也要 limit？ A：主键范围查询不加 limit，�
 Q：20% 是硬性阈值吗？ A：不是固定值，受 Buffer Pool 大小、单条行大小、磁盘性能影响，只是工程经验参考。 Q：统计信息不准怎么处理？ A：analyze table 更新；尽量避免极端数据倾斜；force index 只适合临时应急，不建议长期在线上使用。 Q：覆盖索引怎么理解？ A：查询所需要的全部字段都包含在二级联合索引中，查询不需要回表读取聚簇索引。
 
 <!-- ![图 3-7　答题要点结构图](/assets/img/interview/3-7mysql-optimizer-abandons-index.png) -->
-
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/interview/3-7mysql-optimizer-abandons-index.png" alt="MySQL答题要点结构图"></div
+<div class="img-wrap-left"><img class="left-img" src="/assets/img/interview/3-7mysql-optimizer-abandons-index.png" alt="MySQL答题要点结构图"></div>
 
 ## 第 8 题　线上慢 SQL 引发数据库 CPU 99% 故障
 
@@ -509,8 +494,7 @@ Q：20% 是硬性阈值吗？ A：不是固定值，受 Buffer Pool 大小、单
 Q：kill 慢 SQL 会不会丢数据？ A：只读查询 kill 没有影响；如果是 DML语句，kill 后事务回滚，不会产生脏数据，代价是回滚消耗一点资源，紧急场景收益远大于代价。 Q：什么时候不能直接加 FORCE INDEX？ A：数据分布持续变化的场景，hint 是临时急救手段，长期要用 baseline，避免索引随数据变化反而变差。 Q：max_execution_time 作用？ A：给 select 设置超时，防止单条失控 SQL 长时间霸占 CPU，属于数据库自我保护。
 
 <!-- ![图 3-8　答题要点结构图](/assets/img/interview/3-8mysql-slow-sql-cpu-99.png) -->
-
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/interview/3-8mysql-slow-sql-cpu-99.png" alt="MySQL答题要点结构图"></div
+<div class="img-wrap-left"><img class="left-img" src="/assets/img/interview/3-8mysql-slow-sql-cpu-99.png" alt="MySQL答题要点结构图"></div>
 
 ## 第 9 题　MySQL 索引高并发踩坑，CPU 飙升线上故障复盘
 
@@ -577,8 +561,7 @@ Q：kill 慢 SQL 会不会丢数据？ A：只读查询 kill 没有影响；如�
 <strong>核心思想：</strong>索引优化不是单纯调 SQL 语法，是查询收益、写入成本、数据分布、架构方案之间的综合权衡。
 
 <!-- ![图 3-9　答题要点结构图](/assets/img/interview/3-9mysql-index-high-concurrency.png) -->
-
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/interview/3-9mysql-index-high-concurrency.png" alt="MySQL答题要点结构图"></div
+<div class="img-wrap-left"><img class="left-img" src="/assets/img/interview/3-9mysql-index-high-concurrency.png" alt="MySQL答题要点结构图"></div>
 
 ## 第 10 题　MySQL 慢查询优化，百万订单分页筛选索引失效故障复盘
 
@@ -662,8 +645,7 @@ Q：kill 慢 SQL 会不会丢数据？ A：只读查询 kill 没有影响；如�
 <strong>核心思想：</strong>MySQL 慢查询优化，是 SQL 写法、索引结构、数据生命周期、架构资源隔离一起配合的系统工程，而不是单一靠建索引
 
 <!-- ![图 3-10　答题要点结构图](/assets/img/interview/3-10mysql-slow-query-pagination.png) -->
-
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/interview/3-10mysql-slow-query-pagination.png" alt="MySQL答题要点结构图"></div
+<div class="img-wrap-left"><img class="left-img" src="/assets/img/interview/3-10mysql-slow-query-pagination.png" alt="MySQL答题要点结构图"></div>
 
 ## 第 11 题　MySQL 千万级单表加完索引、硬件高配，查询依旧很慢
 
@@ -730,8 +712,7 @@ Q：kill 慢 SQL 会不会丢数据？ A：只读查询 kill 没有影响；如�
 <strong>参考答案：</strong> 区分只会背 “加索引、升级机器” 的普通开发。面试官希望看到不把慢查询简单归罪于数据量大，能够从执行计划、索引使用代价、回表、MVCC、表碎片、SQL 写法多维度分析；同时理解分库分表的适用场景，知道分库分表是最后手段，而不是万能解药。很多人只停留在表面，遇到千万表直接说分库分表，分不清优先优化顺序。
 
 <!-- ![图 3-11　答题要点结构图](/assets/img/interview/3-11mysql-huge-table-still-slow.png) -->
-
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/interview/3-11mysql-huge-table-still-slow.png" alt="MySQL答题要点结构图"></div
+<div class="img-wrap-left"><img class="left-img" src="/assets/img/interview/3-11mysql-huge-table-still-slow.png" alt="MySQL答题要点结构图"></div>
 
 ## 第 12 题　慢 SQL、索引治理，不能无脑建索引
 
@@ -815,8 +796,7 @@ Q：kill 慢 SQL 会不会丢数据？ A：只读查询 kill 没有影响；如�
 <strong>参考答案：</strong> 考察能不能跳出 “慢查询就加索引” 的固化思维。 很多开发只知道索引可以加速查询，忽略索引对写入的代价；分不清单列索引和联合索引适用场景。 高级后端要权衡查询收益与写入损耗，不能无脑堆索引；需要从 SQL 编码、索引设计、存储架构整套体系解决慢查询，而不是只靠新增索引这一招。同时区分核心写入链路和查询链路，通过读写分离、搜索引擎做架构隔离，避免分析类查询拖垮核心交易
 
 <!-- ![图 3-12　答题要点结构图](/assets/img/interview/3-12mysql-index-governance.png) -->
-
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/interview/3-12mysql-index-governance.png" alt="MySQL答题要点结构图"></div
+<div class="img-wrap-left"><img class="left-img" src="/assets/img/interview/3-12mysql-index-governance.png" alt="MySQL答题要点结构图"></div>
 
 ## 第 13 题　MySQL 线上雪崩应急止损、索引失效排查治理
 
@@ -919,8 +899,7 @@ Q：kill 慢 SQL 会不会丢数据？ A：只读查询 kill 没有影响；如�
 4. 不止会应急，还要有完整长效治理手段，建立上线‑监控‑故障复盘闭环。 高级后端工程师需要懂得数据库故障连锁反应，不能只靠数据库本身扛住一切，业务层、架构层也要做防护。
 
 <!-- ![图 3-13　答题要点结构图](/assets/img/interview/3-13mysql-avalanche-triage.png) -->
-
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/interview/3-13mysql-avalanche-triage.png" alt="MySQL答题要点结构图"></div
+<div class="img-wrap-left"><img class="left-img" src="/assets/img/interview/3-13mysql-avalanche-triage.png" alt="MySQL答题要点结构图"></div>
 
 ## 第 14 题　MySQL InnoDB RR 可重复读与幻读
 
@@ -999,8 +978,7 @@ Q：kill 慢 SQL 会不会丢数据？ A：只读查询 kill 没有影响；如�
 高级工程师认知：没有万能隔离级别，根据业务并发、一致性要求做取舍，优先业务层规避，而不是一味靠数据库锁硬扛。
 
 <!-- ![图 3-14　答题要点结构图](/assets/img/interview/3-14mysql-rr-phantom-read.png) -->
-
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/interview/3-14mysql-rr-phantom-read.png" alt="MySQL答题要点结构图"></div
+<div class="img-wrap-left"><img class="left-img" src="/assets/img/interview/3-14mysql-rr-phantom-read.png" alt="MySQL答题要点结构图"></div>
 
 ## 第 15 题　RR 隔离级别下秒杀库存超卖问题
 
@@ -1070,8 +1048,7 @@ id=xxx and count>0 and version=#{oldVersion};
 3. 架构层：高并发场景上层限流、Redis 预扣，削减打到 DB 的并发压力。
 
 <!-- ![图 3-15　答题要点结构图](/assets/img/interview/3-15mysql-rr-oversell.png) -->
-
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/interview/3-15mysql-rr-oversell.png" alt="MySQL答题要点结构图"></div
+<div class="img-wrap-left"><img class="left-img" src="/assets/img/interview/3-15mysql-rr-oversell.png" alt="MySQL答题要点结构图"></div>
 
 ## 第 16 题　线上长事务引发连接打满、死锁、CPU 高、主从延迟，完整应急、排查、根治方案
 
@@ -1193,7 +1170,6 @@ id=xxx and count>0 and version=#{oldVersion};
 4. 有完整工程化体系：规范、SQL 审核、监控、限流、灰度改造，而不是单次修复。
 
 <!-- ![图 3-16　答题要点结构图](/assets/img/interview/3-16mysql-long-transaction.png) -->
-
 <div class="img-wrap-left"><img class="left-img" src="/assets/img/interview/3-16mysql-long-transaction.png" alt="MySQL答题要点结构图"></div>
 
 ## 第 17 题　MySQL 线上死锁故障排查与根治治理
@@ -1264,7 +1240,6 @@ id=xxx and count>0 and version=#{oldVersion};
 高级工程师认知：分布式锁不是万能解药，优先在数据库、业务代码层面解决；隔离级别调整是临时手段，要清楚带来的业务风险。
 
 <!-- ![图 3-17　答题要点结构图](/assets/img/interview/3-17mysql-deadlock-triage.png) -->
-
 <div class="img-wrap-left"><img class="left-img" src="/assets/img/interview/3-17mysql-deadlock-triage.png" alt="MySQL答题要点结构图"></div>
 
 ## 第 18 题　MySQL 数据库死锁，电商大促死锁线上故障复盘
@@ -1425,7 +1400,6 @@ show engine innodb status;
 4. 明白死锁只能降低概率，无法 100% 消灭，必须配套容错机制，而不是单纯依赖编码规范。
 
 <!-- ![图 3-19　答题要点结构图](/assets/img/interview/3-19mysql-deadlock-update-order.png) -->
-
 <div class="img-wrap-left"><img class="left-img" src="/assets/img/interview/3-19mysql-deadlock-update-order.png" alt="MySQL答题要点结构图"></div>
 
 ## 第 20 题　MySQL 读写分离，主从延迟线上故障复盘
@@ -1495,7 +1469,6 @@ MySQL 默认异步复制，主库写完事务直接返回成功，Binlog 异步�
 <strong>核心思想：</strong>读写分离不是简单配置主从，性能和一致性永远需要权衡，根据业务诉求做流量隔离才是架构关键。
 
 <!-- ![图 3-20　答题要点结构图](/assets/img/interview/3-20mysql-replication-lag.png) -->
-
 <div class="img-wrap-left"><img class="left-img" src="/assets/img/interview/3-20mysql-replication-lag.png" alt="MySQL答题要点结构图"></div>
 
 ## 第 21 题　MySQL 主从读写分离，主从延迟业务治理
@@ -1580,7 +1553,6 @@ binlog 同步是异步行为。主库执行完写操作立刻返回，binlog 传
 <strong>核心思想：</strong>读写分离不是简单读写分开，要把主从延迟这个风险点纳入整套架构设计。
 
 <!-- ![图 3-21　答题要点结构图](/assets/img/interview/3-21mysql-read-write-split-lag.png) -->
-
 <div class="img-wrap-left"><img class="left-img" src="/assets/img/interview/3-21mysql-read-write-split-lag.png" alt="MySQL答题要点结构图"></div>
 
 ## 第 22 题　读写分离架构，主库写入后从库查不到数据，全链路分级治理方案
@@ -1669,7 +1641,6 @@ GTID 位点路由进阶：写入主库拿到本次事务 GTID，读从库前，�
 <strong>核心思想：</strong>读写分离的一致性治理，不是 “要不要走主库”，而是谁、什么时候、在什么条件下可以走从库，用分级策略把强一致流量控制在最小范围。
 
 <!-- ![图 3-22　答题要点结构图](/assets/img/interview/3-22mysql-read-write-split-consistency.png) -->
-
 <div class="img-wrap-left"><img class="left-img" src="/assets/img/interview/3-22mysql-read-write-split-consistency.png" alt="MySQL答题要点结构图"></div>
 
 ## 第 23 题　MySQL limit 大偏移深分页优化
@@ -1980,7 +1951,6 @@ pt-online-schema-change（pt-osc）原理：建影子新表，拷贝原表全量
 <strong>核心思想：</strong>MySQL 适合确定性查询；任意多条件、模糊全文检索，应该交给搜索引擎，不要强行让 MySQL 扛。
 
 <!-- ![图 3-25　答题要点结构图](/assets/img/interview/3-25mysql-big-table-query-timeout.png) -->
-
 <div class="img-wrap-left"><img class="left-img" src="/assets/img/interview/3-25mysql-big-table-query-timeout.png" alt="MySQL答题要点结构图"></div>
 
 ## 第 26 题　亿级订单表，手机号+时间范围查询、手机号可变、跨多年、多表关联
@@ -2039,3 +2009,4 @@ Q：如果用户一定要用旧手机号查历史订单怎么办？ A：ES 里�
 
 <!-- ![图 3-26　答题要点结构图](/assets/img/interview/3-26mysql-billion-orders-phone-query.png) -->
 <div class="img-wrap-left"><img class="left-img" src="/assets/img/interview/3-26mysql-billion-orders-phone-query.png" alt="MySQL答题要点结构图"></div>
+
