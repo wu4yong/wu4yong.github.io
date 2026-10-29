@@ -66,11 +66,11 @@ class DateTimeTools {
 
 #### 模型的评估
 
-可以测试大模型的幻觉反应(`在系列课详细讲解`）
+可以测试大模型的幻觉反应
 
 #### 可观察性
 
-它把AI运行时的大量关键指标暴露出来， 可以提供Spring Boot actuctor进行观测(`在系列课详细讲解`）
+它把AI运行时的大量关键指标暴露出来， 可以提供Spring Boot actuctor进行观测
 
 #### agent应用
 
@@ -85,7 +85,6 @@ springai 提供了5种agent模式的示例
 4. [Chaining](https://github.com/spring-projects/spring-ai-examples/tree/main/agentic-patterns/chain-workflow) – The pattern decomposes complex tasks into a sequence of steps, where each LLM call processes the output of the previous one.
 5. [Parallelization](https://github.com/spring-projects/spring-ai-examples/tree/main/agentic-patterns/parallelization-worflow) – The pattern is useful for scenarios requiring parallel execution of LLM calls with automated output aggregation.
 
-学完这5种你会对对模型下的agent应用有一个完整认识(`在系列课详细讲解`）
 
 ## langchain4j vs springAI
 
@@ -116,8 +115,36 @@ springai 提供了5种agent模式的示例
         4. 5月    deepseek-r1-0528     6710亿   671b  性能都要要
 4. 对成本有要求： 选择(qwen3-30b)
 5. 不差钱 deepseek-r1-0528 满血版本
-        1. <div class="img-wrap-left"><img class="left-img" src="/assets/img/springai/ch01_model_selection_1.png" alt="ch01_model_selection_1.png"></div>
+## 综合能力排行榜
 
+### 1.各行评测基准（Qwen3 官方评测表）
+# 图 1：Qwen3 超大模型（235B/32B）官方自测，对标 o1/R1/Gemini2.5-Pro
+<div class="img-wrap-left"><img class="left-img" src="/assets/img/springai/ch01_model_selection_1.png" alt="ch01_model_selection_1.png"></div>
+{% raw %}
+<style>
+table.llm-bench th,table.llm-bench td {padding:8px 10px;font-size:14px;}
+table.llm-bench {width:100%;border-collapse: collapse;}
+table.llm-bench th {background:#f4f4f4;}
+</style>
+{% endraw %}
+
+# LLM Benchmark 评测基准汇总
+| 名称 | 全称 / 中文 | 用途说明 | 官网/仓库链接 | 备注 |
+| :------------ | :-------------------------------------------: | :--------------------------------------------------------------------------------------------------------------------------------------- | :---------------------------------------------------------------------------------------------------------------------------------------------------------------- | :---------------------------------------------------------------------------------------------------------------- |
+| ArenaHard | Arena Hard | 高难度通用对话推理评测，使用 LLM 作为裁判打分，考察模型复杂指令、综合推理能力，分数越高对话越强 | [github](https://github.com/lm-sys/arena-hard-auto) <br> [huggingface](https://huggingface.co/spaces/lmsys/arena-hard-browser) | LMSYS（Chatbot Arena）出品，可在线浏览样例 |
+| AIME'24 / AIME'25 | American Invitational Mathematics Examination | 美国数学邀请赛真题，专门测数学推理，AIME24 是 24 年真题、AIME25 是 25 年真题，数学能力核心指标 | [maa.org](https://www.maa.org/math-competitions/aime) | 美国数学邀请赛（MAA 官方），真题来源 |
+| LiveCodeBench | LiveCodeBench | 代码能力评测，全部是比赛新题、规避训练集污染，测算法代码生成、自我修复能力，v5 是版本号 | [主页](https://livecodebench.github.io/) <br> [github](https://github.com/livecodebench/livecodebench) <br> [v5榜单](https://livecodebench.github.io/leaderboard_v5.html) | 防污染代码评测，表中 v5 榜单页 |
+| CodeForces | CodeForces Elo Rating | 算法竞赛平台 Elo 分，和人类选手同一套评分体系，代表模型竞赛算法水平 | [codeforces](https://codeforces.com/) | 算法竞赛平台，Elo 评分体系原生站点 |
+| Aider | Aider Pass@2 | Aider 是真实项目代码助手基准，Pass@2：最多 2 次尝试通过项目级代码修复任务，测工程代码能力 | [aider.chat](https://aider.chat/) <br> [github](https://github.com/Aider-AI/aider) | 真实项目代码助手基准，测试仓库级代码修复 |
+| LiveBench | LiveBench | 防数据泄露的综合评测，包含推理、数据分析、工具调用等，题目持续更新，不容易刷分 | [livebench.ai](https://livebench.ai/) | 持续更新、规避训练集污染的综合评测 |
+| BFCL v3 | Berkeley Function Calling Leaderboard v3 | 伯克利函数调用榜单，专门测试模型工具调用、function call，单轮 / 多轮、并行调用、参数正确性，Agent 必备能力 | [博客页](https://gorilla.cs.berkeley.edu/blogs/8_berkeley_function_calling_leaderboard.html) <br> [github](https://github.com/ShishirPatil/gorilla) | 伯克利 Gorilla 团队函数调用榜单 |
+| MultiIF | Multi-IF | 多语言多轮指令跟随评测（Meta 出品），8 Languages = 覆盖 8 种语言，考察模型能不能严格遵守复杂指令、多轮对话不跑偏、多语言稳定性 | [arxiv](https://arxiv.org/abs/2410.15553) <br> [github](https://github.com/facebookresearch/Multi-IF) | Meta 的多语言多轮指令跟随评测 |
+
+# 图 2：Qwen3 中小参数（30B MoE / 4B 稠密）官方自测，对标 GPT4o、Gemma3、DeepSeek V3
 <div class="img-wrap-left"><img class="left-img" src="/assets/img/springai/ch01_model_selection_2.png" alt="ch01_model_selection_2.png"></div>
 
+# 图 3：第三方 AA 聚合总榜，全世界所有主流模型放一起比，商用 / 开源分开，统一标准打分[非官方图]
+# 仓库地址：https://github.com/jeinlee1991/chinese-llm-benchmark
 <div class="img-wrap-left"><img class="left-img" src="/assets/img/springai/ch01_model_benchmark.png" alt="ch01_model_benchmark.png"></div>
+
+<div class="img-wrap-left"><img class="left-img" src="/assets/img/springai/llm-top.png" alt="ch01_model_benchmark.png"></div>
