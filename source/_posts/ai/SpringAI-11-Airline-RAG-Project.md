@@ -10,7 +10,7 @@ tags:
    Airline Smart Customer Service (RAG)
 </div>
 
-## 《基于航空智能客服+RAG》实战
+### 《基于航空智能客服+RAG》实战
 1. 配置向量数据库
 2. 写入数据（Embedding）
 3. 查询
