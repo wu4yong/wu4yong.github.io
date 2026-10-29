@@ -6,7 +6,7 @@ categories:
 tags:
   - MySQL数据库
 ---
-<div class="essay-banner essay-image2">
+<div class="essay-banner essay-image3">
    Mysql Advanced
 </div>
 

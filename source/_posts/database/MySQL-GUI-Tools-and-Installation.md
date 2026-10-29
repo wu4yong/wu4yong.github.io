@@ -6,7 +6,7 @@ categories:
 tags:
   - MySQL数据库
 ---
-<div class="essay-banner essay-image6">
+<div class="essay-banner essay-image3">
    Mysql GUI Tools & Installation
 </div>
 
