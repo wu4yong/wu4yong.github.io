@@ -6,13 +6,12 @@ categories:
 tags:
   - Spring AI
 ---
+
 <div class="essay-banner essay-image11">
    十五、Agent5种模式详细应用
 </div>
 
-
-
-## 什么是 Ai agent: 
+## 什么是 Ai agent:
 
 你给个任务，它自己拆分、规划、调用资源、执行链路，直到返回结果。你给个任务，它自己规划（根据你指定的规划方式）、拆分（根据你指定的拆分方式）、调用资源（根据你提供的资源）、（自动）执行链路，直到返回结果。
 

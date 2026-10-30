@@ -6,10 +6,10 @@ categories:
 tags:
   - Spring AI
 ---
+
 <div class="essay-banner essay-image11">
    Chat Memory in DB & Redis
 </div>
-
 大型语言模型 (LLM) 是无状态的，这意味着它们不会保留先前交互的信息。
 
 ```java
@@ -37,7 +37,6 @@ tags:
 <div class="img-wrap-left"><img class="left-img" src="/assets/img/springai/ch06_1748870240621-6c24ff74-035a-426e-bd0f-a5e60e5c15f4_2bd890a5af.png" alt="ch06_1748870240621-6c24ff74-035a-426e-bd0f-a5e60e5c15f4_2bd890a5af.png"></div>
 
 SpringAi提供了一个`ChatMemory`的组件用于存储聊天记录，允许您使用 LLM 跨多个交互存储和检索信息。并且可以为不同用户的多个交互之间维护上下文或状态。
-
 可以在每次对话的时候把当前聊天信息和模型的响应存储到ChatMemory， 然后下一次对话把聊天记录取出来再发给大模型。  
 
 ```java
@@ -46,8 +45,6 @@ SpringAi提供了一个`ChatMemory`的组件用于存储聊天记录，允许您
 
 //输出 名字叫SpringAI
 ```
-
- 
 
 ## 但是这样做未免太麻烦！ 能不能简化？ 思考一下！
 
@@ -80,10 +77,10 @@ public class ChatMemoryAutoConfiguration {
 }
 ```
 
-
 所以我们可以这样用：
 
 ### 使用
+
 SpringAi提供了  `PromptChatMemoryAdvisor`   专门用于对话记忆的拦截
 
 ```java
@@ -126,19 +123,15 @@ public class ChatMemoryTest {
 ```
 
 ### 配置聊天记录最大存储数量
-你要知道， 我们把聊天记录发给大模型， 都是算token计数的。
 
+你要知道， 我们把聊天记录发给大模型， 都是算token计数的。
 大模型的token是有上限了，  如果你发送过多聊天记录，可能就会导致token过长。
 
 <div class="img-wrap-left"><img class="left-img" src="/assets/img/springai/ch06_1748871034319-bcb8f5e9-b1bb-431e-8776-f54d93d6ff85_45c2fb393a.png" alt="ch06_1748871034319-bcb8f5e9-b1bb-431e-8776-f54d93d6ff85_45c2fb393a.png"></div>
 
 并且更多的token也意味更多的费用， 更久的解析时间.  所以不建议太长
-
 （DEFAULT_MAX_MESSAGES默认20即10次对话）
-
-
   一旦超出DEFAULT_MAX_MESSAGES只会存最后面N条（可以理解为先进先出），参考`MessageWindowChatMemory`源码
-
 
 ```java
    @Bean
@@ -151,6 +144,7 @@ public class ChatMemoryTest {
 ```
 
 ### 配置多用户隔离记忆
+
 如果有多个用户在进行对话， 肯定不能将对话记录混在一起， 不同的用户的对话记忆需要隔离
 
 ```java
@@ -183,32 +177,25 @@ public class ChatMemoryTest {
     }
 ```
 
-
 会发现， 不同的CONVERSATION_ID，会有不同的记忆
 
 <div class="img-wrap-left"><img class="left-img" src="/assets/img/springai/ch06_1748871907406-385208ea-02bf-40d8-ab33-48ee834f59a4_d603e8c94e.png" alt="ch06_1748871907406-385208ea-02bf-40d8-ab33-48ee834f59a4_d603e8c94e.png"></div>
 
 ### 原理源码$
+
 主要有前置存储
-
 `MessageWindowChatMemory`
-
 具体存储实现
-
 `ChatMemoryRepository`
 
 <div class="img-wrap-left"><img class="left-img" src="/assets/img/springai/ch06_1748936717843-1c2d02a4-1b8a-4e14-89c8-e6809b240893_d17c1e4d47.png" alt="ch06_1748936717843-1c2d02a4-1b8a-4e14-89c8-e6809b240893_d17c1e4d47.png"></div>
 
-
 ### 数据库存储对话记忆
-默认情况， 对话内容会存在jvm内存会导致：
 
+默认情况， 对话内容会存在jvm内存会导致：
 1. 一直存最终会撑爆JVM导致OOM。
 2. 重启就丢了， 如果已想存储到第三方存储进行持久化
-
 springAi内置提供了以下几种方式（例如 Cassandra、JDBC 或 Neo4j）， 这里演示下JDBC方式
-
-
 1. 添加依赖
 
 ```xml
@@ -233,14 +220,12 @@ springAi内置提供了以下几种方式（例如 Cassandra、JDBC 或 Neo4j）
         </dependency>
 ```
 
-
 2. 添加配置
 
 ```properties
 spring.ai.chat.memory.repository.jdbc.initialize-schema=always
 spring.ai.chat.memory.repository.jdbc.schema=classpath:/schema-mysql.sql
 ```
-
 
 ```yaml
 spring:
@@ -282,7 +267,6 @@ CREATE TABLE IF NOT EXISTS SPRING_AI_CHAT_MEMORY (
     INDEX `SPRING_AI_CHAT_MEMORY_CONVERSATION_ID_TIMESTAMP_IDX` (`conversation_id`, `timestamp`)
     );
 ```
-
 
 5. 测试
 
@@ -332,14 +316,11 @@ public class ChatMemoryTest {
 
 <div class="img-wrap-left"><img class="left-img" src="/assets/img/springai/ch06_1748937116139-c2400662-b5af-4f98-8c37-cce47407912a_8c5b279922.png" alt="ch06_1748937116139-c2400662-b5af-4f98-8c37-cce47407912a_8c5b279922.png"></div>
 
-
 ### Redis存储
+
 如果你想用redis ， 你需要自己实现ChatMemoryRepository接口（自己实现增、删、查）
-
 但是alibaba-ai有现成的实现：（还包括ES）
-
 [https://github.com/alibaba/spring-ai-alibaba/tree/main/community/memories](https://github.com/alibaba/spring-ai-alibaba/tree/main/community/memories)
-
 
 ```java
 <properties>
@@ -371,7 +352,6 @@ spring:
         password:
 ```
 
-
 ```java
 
 @Configuration
@@ -399,25 +379,20 @@ public class RedisMemoryConfig {
 }
 ```
 
-
 ### **多层次记忆架构 ****痛点**
+
 记忆多=聪明， 记忆多会触发token上限
-
 要知道， 无论你用什么存储对话以及， 也只能保证服务端的存储性能。  
-
-但是一旦聊天记录多了依然会超过token上限， 但是有时候我们依然希望存储更多的聊天记录，这样才能保证整个对话更像“人”。    
-
-
+但是一旦聊天记录多了依然会超过token上限， 但是有时候我们依然希望存储更多的聊天记录，这样才能保证整个对话更像“人”。  
 **多层次记忆架构（模仿人类）**
-
     - **近期记忆**：保留在上下文窗口中的最近几轮对话，每轮对话完成后立即存储（可通过ChatMemory）；   10 条
     - **中期记忆**：通过RAG检索的相关历史对话(每轮对话完成后，异步将对话内容转换为向量并存入向量数据库）    5条
-    - **长期记忆**：关键信息的固化总结 
+    - **长期记忆**：关键信息的固化总结
         * **方式一：定时批处理**
             + 通过定时任务（如每天或每周）对积累的对话进行总结和提炼
-            + 提取关键信息、用户偏好、重要事实等 
-            + 批处理方式降低计算成本，适合大规模处理 
+            + 提取关键信息、用户偏好、重要事实等
+            + 批处理方式降低计算成本，适合大规模处理
         * **方式二：关键点实时处理**
             + 在对话中识别出关键信息点时立即提取并存储
-            + 例如，当用户明确表达偏好、提供个人信息或设置持久性指令时 
-            + 采用"写入触发器"机制，在特定条件下自动更新长期记忆 
+            + 例如，当用户明确表达偏好、提供个人信息或设置持久性指令时
+            + 采用"写入触发器"机制，在特定条件下自动更新长期记忆

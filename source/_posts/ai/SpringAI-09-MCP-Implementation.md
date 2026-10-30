@@ -6,48 +6,47 @@ categories:
 tags:
   - Spring AI
 ---
+
 <div class="essay-banner essay-image11">
    MCP Implementation
 </div>
 
 ## MCP
+
 ### 问题：
+
 1. 当有服务商需要将tools提供外部使用（比如高德地图提供了位置服务tools， 比如百度提供了联网搜索的tools...）
 2.  或者在企业级中， 有多个智能应用，想将通用的tools公共化
-
   怎么办？  
-
-
-可以把tools单独抽取出来，  由应用程序读取外部的tools。     那关键是怎么读呢？ 怎么解析呢？  如果每个提供商各用一种规则你能想象有多麻烦！ 所以MCP就诞生了，  他指定了标准规则，  以jsonrpc2.0的方式进行通讯。 
-
+可以把tools单独抽取出来，  由应用程序读取外部的tools。     那关键是怎么读呢？ 怎么解析呢？  如果每个提供商各用一种规则你能想象有多麻烦！ 所以MCP就诞生了，  他指定了标准规则，  以jsonrpc2.0的方式进行通讯。
 那问题又来了， 以什么方式通讯呢？   http?  rpc?  stdio?      mcp提供了sse和stdio这2种方式。
 
 <div class="img-wrap-left"><img class="left-img" src="/assets/img/springai/ch09_1749538652064-fa3cda1e-d919-4e45-999c-db97817ba693_d2dfc9e867.png" alt="ch09_1749538652064-fa3cda1e-d919-4e45-999c-db97817ba693_d2dfc9e867.png"></div>
 
 ### 使用
+
 Streamable http目前springai1.0版本不支持， 我们先掌握SSE和STDIO
-
 分别说下STDIO和SSE的方式：
-
 + **STDIO**更适合客户端桌面应用和辅助工具
 + **SSE**更适合web应用 、业务有关的公共tools
 
-
 <div class="img-wrap-left"><img class="left-img" src="/assets/img/springai/ch09_1749543212615-6e6d670b-73d7-4c49-aab9-6640ee8b98c8_b84ced1e93.png" alt="ch09_1749543212615-6e6d670b-73d7-4c49-aab9-6640ee8b98c8_b84ced1e93.png"></div>
 
-#### STDIO
-##### MCP Server
-###### 现成共用MCP Server
+### STDIO
+
+#### MCP Server
+
+##### 现成共用MCP Server
+
 现在有很多MCP 服务 给大家提供一个网站：[MCP Server（MCP 服务器）](https://mcp.so/zh)
 
 <div class="img-wrap-left"><img class="left-img" src="/assets/img/springai/ch09_1743148612881-af22674d-a11a-4914-a3a0-eaf1f83a01aa_41669ac3b7.png" alt="ch09_1743148612881-af22674d-a11a-4914-a3a0-eaf1f83a01aa_41669ac3b7.png"></div>
 
 那MCP有了， 怎么调用呢？  这里介绍2种使用方式：
 
+##### 自定义MCP Server
 
-###### 自定义MCP Server
 创建一个springai项目
-
 1. 依赖
 
 ```xml
@@ -88,7 +87,6 @@ Streamable http目前springai1.0版本不支持， 我们先掌握SSE和STDIO
         </plugins>
     </build>
 ```
-
 
 2. 添加工具
 
@@ -133,38 +131,32 @@ spring:
         version: 0.0.1
 ```
 
-
-# 注意：您必须禁用横幅和控制台日志记录，以允许 STDIO 传输!!工作  banner-mode: off
-
+注意：您必须禁用横幅和控制台日志记录，以允许 STDIO 传输!!工作  banner-mode: off
 
 5. 打包  mvn package
-
-
 此时target/生成了jar则成功！
 
+#### MCP Client
 
-##### MCP Client
-###### 通过工具
+##### 通过工具
+
 CherryStudio、Cursor 、Claude Desktop、[Cline ](https://marketplace.visualstudio.com/items?itemName=saoudrizwan.claude-dev) 等等很多， 这里不一一演示， 不会的话自己找个文章， 工具使用都很简单!
-
 
 <div class="img-wrap-left"><img class="left-img" src="/assets/img/springai/ch09_1743151169161-51d3e731-8ad4-48e3-85bc-2519460274ec_f511ecef49.png" alt="ch09_1743151169161-51d3e731-8ad4-48e3-85bc-2519460274ec_f511ecef49.png"></div>
 
 以Cline为例： 他是Vscode的插件
-
 1. 安装VSCode
-
-
 2. 安装插件：
 
 <div class="img-wrap-left"><img class="left-img" src="/assets/img/springai/ch09_1743506292616-d840d75c-1ee7-4954-b3c1-80c472c23321_11dbd88bb8.png" alt="ch09_1743506292616-d840d75c-1ee7-4954-b3c1-80c472c23321_11dbd88bb8.png"></div>
-
 
 3. 配置cline的模型：
 
 <div class="img-wrap-left"><img class="left-img" src="/assets/img/springai/ch09_1743506403789-4eedfc69-694e-4409-8b30-9711f3d5d5bb_eda7948c1d.png" alt="ch09_1743506403789-4eedfc69-694e-4409-8b30-9711f3d5d5bb_eda7948c1d.png"></div>
 
-4. 配置cline的mcpserver<div class="img-wrap-left"><img class="left-img" src="/assets/img/springai/ch09_1743506882142-2aa504e7-2ff4-470a-a859-ba6428ae0673_413ab0762a.png" alt="ch09_1743506882142-2aa504e7-2ff4-470a-a859-ba6428ae0673_413ab0762a.png"></div>
+4. 配置cline的mcpserver
+
+<div class="img-wrap-left"><img class="left-img" src="/assets/img/springai/ch09_1743506882142-2aa504e7-2ff4-470a-a859-ba6428ae0673_413ab0762a.png" alt="ch09_1743506882142-2aa504e7-2ff4-470a-a859-ba6428ae0673_413ab0762a.png"></div>
 
 ```json
 {
@@ -207,14 +199,16 @@ CherryStudio、Cursor 、Claude Desktop、[Cline ](https://marketplace.visualstu
 
 5. 开启cline权限
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/springai/ch09_1743506993562-39b29cae-c7f0-4912-9d36-7ff5957347eb_df4b008111.png" alt="ch09_1743506993562-39b29cae-c7f0-4912-9d36-7ff5957347eb_df4b008111.png"></div><div class="img-wrap-left"><img class="left-img" src="/assets/img/springai/ch09_1743507041841-ad6dca07-fe24-41a4-af70-fa74e5300dda_fc65e678a6.png" alt="ch09_1743507041841-ad6dca07-fe24-41a4-af70-fa74e5300dda_fc65e678a6.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="/assets/img/springai/ch09_1743506993562-39b29cae-c7f0-4912-9d36-7ff5957347eb_df4b008111.png" alt="ch09_1743506993562-39b29cae-c7f0-4912-9d36-7ff5957347eb_df4b008111.png"></div>
+
+<div class="img-wrap-left"><img class="left-img" src="/assets/img/springai/ch09_1743507041841-ad6dca07-fe24-41a4-af70-fa74e5300dda_fc65e678a6.png" alt="ch09_1743507041841-ad6dca07-fe24-41a4-af70-fa74e5300dda_fc65e678a6.png"></div>
 
 6.测试：
 
 <div class="img-wrap-left"><img class="left-img" src="/assets/img/springai/ch09_1743507165047-e40b880f-ddd3-410a-ad0d-0d300bce963a_1cab5d4d10.png" alt="ch09_1743507165047-e40b880f-ddd3-410a-ad0d-0d300bce963a_1cab5d4d10.png"></div>
 
+##### 通过Spring AI
 
-###### 通过Spring AI
 1. 依赖
 
 ```xml
@@ -247,7 +241,6 @@ spring:
 ```
 
 3. mcp-servers-config.json：
-
 获取Baidu地图key: [控制台 | 百度地图开放平台](https://lbsyun.baidu.com/apiconsole/key)
 
 ```json
@@ -328,8 +321,6 @@ public Flux<String> generateStreamAsString(@RequestParam(value = "message", defa
     
 ```
 
- 
-
 ```yaml
 # 调试日志
 logging:
@@ -340,13 +331,11 @@ logging:
         spec: DEBUG
 ```
 
+### SSE
 
-#### SSE
+#### MCP Server
 
-
-##### MCP Server
 这种方式需要将部署为Web服务
-
 1. 依赖
 
 ```java
@@ -358,16 +347,13 @@ logging:
         </dependency>
 ```
 
+如果用：`<artifactId>spring-ai-starter-mcp-server-**webflux**</artifactId>`  
+会出现：
 
-如果用：`<artifactId>spring-ai-starter-mcp-server-**webflux**</artifactId>`    
+<div class="img-wrap-left"><img class="left-img" src="/assets/img/springai/ch09_1759203265265-9bd3c786-1835-42dd-b2f4-4cb200293726_efaf578694.png" alt="ch09_1759203265265-9bd3c786-1835-42dd-b2f4-4cb200293726_efaf578694.png"></div>
 
-会出现：<div class="img-wrap-left"><img class="left-img" src="/assets/img/springai/ch09_1759203265265-9bd3c786-1835-42dd-b2f4-4cb200293726_efaf578694.png" alt="ch09_1759203265265-9bd3c786-1835-42dd-b2f4-4cb200293726_efaf578694.png"></div>
-
-根据官方：[https://github.com/spring-projects/spring-ai/pull/3511](https://github.com/spring-projects/spring-ai/pull/3511) 
-
+根据官方：[https://github.com/spring-projects/spring-ai/pull/3511](https://github.com/spring-projects/spring-ai/pull/3511)
 建议加入： `spring.main.web-application-type=reactive  `
-
-
 2. 定义外部工具
 
 ```java
@@ -408,12 +394,9 @@ server:
 
 ```
 
-
 5. 启动
 
-
-##### MCP Client
-
+#### MCP Client
 
 1. 添加依赖
 
@@ -483,16 +466,16 @@ public class OpenAiController {
 
 ```
 
+### 原理
 
-#### 原理
 1. STDIO 是基于标准输入\输出流的方式， 需要在MCP 客户端安装一个包（可以是jar包、python包、npm包等..）. 它是“客户端”的MCP Server。
 
 <div class="img-wrap-left"><img class="left-img" src="/assets/img/springai/ch09_1752585876004-6075ff95-4059-4c69-a950-3a0c51f7a0d3_9e362dd9fc.png" alt="ch09_1752585876004-6075ff95-4059-4c69-a950-3a0c51f7a0d3_9e362dd9fc.png"></div>
 
 2. SSE  是基于Http的方式进行通讯， 需要将MCP Server部署为一个web服务. 它是服务端的MCP Server
 
+#### STDIO原理
 
-##### STDIO原理
 <div class="img-wrap-left"><img class="left-img" src="/assets/img/springai/ch09_1752591174064-97591e76-da2c-4c04-81d4-6aebe59361fd_521455aebc.png" alt="ch09_1752591174064-97591e76-da2c-4c04-81d4-6aebe59361fd_521455aebc.png"></div>
 
 很多人不理解stdio到底什么意思， 为什么一定要把stdio server的banner关掉， 还要清空控制台？
@@ -528,7 +511,6 @@ String[] commands={"java",
         Process process = processBuilder.start();
 ```
 
-
 其实你也完全可以自己通过mcd去执行命令
 
 <div class="img-wrap-left"><img class="left-img" src="/assets/img/springai/ch09_1749544393733-af10cef8-2d9d-4fb9-a14b-1b61761afcda_d209c132b2.png" alt="ch09_1749544393733-af10cef8-2d9d-4fb9-a14b-1b61761afcda_d209c132b2.png"></div>
@@ -536,10 +518,7 @@ String[] commands={"java",
 1. 运行jar -jar mcp-stdio-server.jar
 2. 输入{"jsonrpc":"2.0","method":"tools/list","id":"3b3f3431-1","params":{}}
 3. 输出tools列表
-
 这就是标准输入输出流!    看到这里你应该知道， 为什么需要`-Dlogging.pattern.console=`  完全是为了清空控制台，才能读取信息!
-
-
 所以利用java也是一样的原理：
 
 ```java
@@ -603,32 +582,27 @@ String[] commands={"java",
 1. 通过ProcessBuilder执行命令
 2. 通过子线程轮询 process.getInputStream 获取输出流
 3. 通过process.getOutputStream(); 进行写入流
-
 所以整个过程是这样的：再回顾上面的图
-
 启动程序--->读取mcpjson--->通过ProcessBuilder启动命令---> 写入初始化jsonrpc---->写入获取tools列表jsonrpc---->请求大模型（携带tools）---->写入请求外部tool的jsonrpc---->获取数据--->发送给大模型---->响应。
 
+### STDIO源码
 
-#### STDIO源码
 <div class="img-wrap-left"><img class="left-img" src="/assets/img/springai/ch09_1749543994705-06c671de-1be4-4d18-838f-2148c7eac45d_de4f38b3e9.png" alt="ch09_1749543994705-06c671de-1be4-4d18-838f-2148c7eac45d_de4f38b3e9.png"></div>
 
+### MCP鉴权
 
-#### MCP鉴权
 在做MCP企业级方案落地时， 我们可能不想让没有权限的人访问MCP Server,  或者需要根据不同的用户返回不同的数据， 这里就涉及到MCP Server授权操作。
-
-
 那MCP Server有2种传输方式，  实现起来不一样：
 
-##### STDIO
+#### STDIO
+
 这种方式在本地运行,**它 将MCP Server作为子进程启动**。 我们称为标准输入输出， 其实就是利用运行命令的方式写入和读取控制台的信息，以达到传输。  
 
 <div class="img-wrap-left"><img class="left-img" src="/assets/img/springai/ch09_1747376380238-74bfcf1f-4ed0-41f2-ac6a-39cdf3b54fd1_70a3c6a91b.png" alt="ch09_1747376380238-74bfcf1f-4ed0-41f2-ac6a-39cdf3b54fd1_70a3c6a91b.png"></div>
 
  通常我们会配置一段json，比如这里的百度地图MCP Server ：
-
 + 其中command和args代表运行的命令和参数。
 + 其实env中的节点BAIDU_MAP_API_KEY就是做授权的。
-
 如果你传入的BAIDU_MAP_API_KEY不对， 就没有使用权限。
 
 ```json
@@ -646,17 +620,11 @@ String[] commands={"java",
 },
 ```
 
-
 所以STDIO做授权的方式很明确， 就是通过env【环境变量】，实现步骤如下：
-
 1. 服务端发放一个用户的凭证（可以是秘钥、token）  这步不细讲，需要有一个授权中心发放凭证。
 2. 通过mcp client通过env传入凭证
 3. mcp server通过环境变量鉴权
-
- 
-
 所以在MCP Server端就可以通过获取环境变量的方式获取env里面的变量：
-
 也可以通过AOP的方式统一处理
 
 ```java
@@ -668,26 +636,18 @@ String[] commands={"java",
     }
 ```
 
-
 这种方式要注意：  他不支持动态鉴权，  也就是动态更换环境变量，  因为STDIO是本地运行方式，**它 将MCP Server作为子进程启动, **如果是多个用户动态切换凭证， 会对共享的环境变量造成争抢， 最终只能存储一个。  除非一个用户对应一个STDIO MCP  Server.     但是这样肯定很吃性能！   如果要多用户动态切换授权，  可以用SSE的方式；
 
+#### SSE
 
-##### SSE
-###### 说明
+##### 说明
+
 不过，如果你想把 MCP 服务器开放给外部使用，就需要暴露一些标准的 HTTP 接口。对于私有场景，MCP 服务器可能并不需要严格的身份认证，但在企业级部署下，对这些接口的安全和权限把控就非常重要了。为了解决这个问题，[2025 年 3 月发布的最新 MCP 规范](https://modelcontextprotocol.io/specification/2025-03-26/basic/authorization)引入了安全基础，借助了广泛使用的 [OAuth2 框架](https://modelcontextprotocol.io/specification/2025-03-26/basic/authorization)。
-
-  
-
 
 <div class="img-wrap-left"><img class="left-img" src="/assets/img/springai/ch09_1747373008252-ea86cf42-b7c5-49b2-96f4-9abdc4d986cf_67ceb074a7.webp" alt="ch09_1747373008252-ea86cf42-b7c5-49b2-96f4-9abdc4d986cf_67ceb074a7.webp"></div>
 
-  
-
-
 本文不会详细介绍 OAuth2 的所有内容，不过简单回顾一下还是很有帮助。
-
 **在规范的草案中，MCP 服务器既是资源服务器，也是授权服务器。**
-
 + **作为资源服务器**，MCP 负责检查每个请求中的 `Authorization`请求头。这个请求头必须包括一个 OAuth2`access_token`（令牌），它代表客户端的“权限”。这个令牌通常是一个 JWT（JSON Web Token），也可能只是一个不可读的随机字符串。如果令牌缺失或无效（无法解析、已过期、不是发给本服务器的等），请求会被拒绝。正常情况下，调用示例如下：
 
 ```plain
@@ -695,20 +655,13 @@ curl https://mcp.example.com/sse -H "Authorization: Bearer <有效的 access tok
 ```
 
 + **作为授权服务器**，MCP 还需要有能力为客户端安全地签发 `access_token`。在发放令牌前，服务器会校验客户端的凭据，有时还需要校验访问用户的身份。授权服务器决定令牌的有效期、权限范围、目标受众等特性。
-
 用 Spring Security 和 Spring Authorization Server，可以方便地为现有的 Spring MCP 服务器加上这两大安全能力。
-
-  
-
 
 <div class="img-wrap-left"><img class="left-img" src="/assets/img/springai/ch09_1747373008252-989690c4-f96d-4333-87a1-0b027a0f42f0_2c193481d9.webp" alt="ch09_1747373008252-989690c4-f96d-4333-87a1-0b027a0f42f0_2c193481d9.webp"></div>
 
-  
+##### 给 Spring MCP 服务器加上 OAuth2 支持
 
-
-###### 给 Spring MCP 服务器加上 OAuth2 支持
 这里以官方例子仓库的【天气】MCP 工具演示如何集成 OAuth2，主要是让服务器端能签发和校验令牌。
-
 首先，`pom.xml` 里添加必要的依赖：
 
 ```xml
@@ -753,12 +706,10 @@ class SecurityConfiguration {
 ```
 
 这个过滤链主要做了这些事情：
-
 + 要求所有请求都要经过身份认证。也就是访问 MCP 的接口，必须带上 access_token。
 + 同时启用了授权服务器和资源服务器两大能力。
 + 关闭了 CSRF（跨站请求伪造防护），因为 MCP 不是给浏览器直接用的，这部分无需开启。
 + 打开了 CORS（跨域资源共享），方便用 MCP inspector 测试。
-
 这样配置之后，只有带 access_token 的访问才会被接受，否则会直接返回 401 未授权错误，例如：
 
 ```powershell
@@ -784,20 +735,15 @@ curl http://localhost:8080/sse -H"Authorization: Bearer YOUR_ACCESS_TOKEN"
 
 你还可以直接在 MCP inspector 工具里用这个 access_token。从菜单的 Authentication > Bearer 处粘贴令牌并连接即可。
 
-  
+##### 为MCP Client设置请求头
 
-
-###### 为MCP Client设置请求头
 目前，  mcp 的java sdk 没有提供api直接调用，  经过SpringAI老师研究源码后， 你只能通过2种方式实现：
 
-###### 重写源码
+##### 重写源码
+
 扩展mcp 的sse方式java sdk的源码，  整个重写一遍。 工作量较大， 并且我预计过不了多久， spring ai和mcp协议都会更新这块。  看你的紧急程度， 如果考虑整体扩展性维护性，可以整体重写一遍：
-
-
 提供一个重写思路
-
 **重写McpSseClientProperties**
-
 MCPSse客户端属性配置：新增请求头字段
 
 ```java
@@ -869,12 +815,8 @@ public class McpSseClientProperties {
 }
 ```
 
-  
 **重写SseWebFluxTransportAutoConfiguration**
-
 **自动装配添加请求头配置信息**
-
- 
 
 ```java
 package org.springframework.ai.autoconfigure.mcp.client;
@@ -927,18 +869,12 @@ public class SseWebFluxTransportAutoConfiguration {
 }
 ```
 
-
  使用：
 
 <div class="img-wrap-left"><img class="left-img" src="/assets/img/springai/ch09_1747380936959-4787c998-23ca-4e5e-b3be-24fb49476be9_5346f8a3e2.png" alt="ch09_1747380936959-4787c998-23ca-4e5e-b3be-24fb49476be9_5346f8a3e2.png"></div>
 
-
 **设置WebClientCustomizer**
-
-
 在用Spring-ai-M8版本的时候， 发现提供了WebClientCustomizer进行扩展。 可以尝试：
-
-
 1. 根据用户凭证进行授权
 
 ```java
@@ -957,9 +893,6 @@ public WebClientCustomizer webClientCustomizer() {
 }
 ```
 
-
-SSE是支持动态切换token的，  因为一个请求就是一个新的http请求，  不会出现多线程争抢。 
-
+SSE是支持动态切换token的，  因为一个请求就是一个新的http请求，  不会出现多线程争抢。
 但是需要动态请求：
-
 curl -XPOST [http://localhost:8080/oauth2/token](http://localhost:8080/oauth2/token) --data grant_type=client_credentials --user xushu:xushu666    进行重新授权

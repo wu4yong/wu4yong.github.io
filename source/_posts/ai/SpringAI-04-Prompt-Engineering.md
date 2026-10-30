@@ -6,15 +6,15 @@ categories:
 tags:
   - Spring AI
 ---
+
 <div class="essay-banner essay-image11">
    Prompt Engineering Tips
 </div>
-
 在生成式人工智能中，创建提示对于开发人员来说是一项至关重要的任务。这些提示的质量和结构会显著影响人工智能输出的有效性。投入时间和精力设计周到的提示可以显著提升人工智能的成果。
-
 例如，一项重要的研究表明，以“深呼吸，一步一步解决这个问题”作为提示开头，可以显著提高解决问题的效率。这凸显了精心选择的语言对生成式人工智能系统性能的影响。
 
-### 提示词类型：
+## 提示词类型：
+
 ```java
 public enum MessageType {
 
@@ -34,12 +34,11 @@ public enum MessageType {
 + **USER****用户角色**：代表用户的输入——他们向AI提出的问题、命令或语句。这个角色至关重要，因为它构成了AI响应的基础。
 + **ASSISTANT助手角色**：AI 对用户输入的响应。它不仅仅是一个答案或反应，对于维持对话的流畅性至关重要。通过追踪 AI 之前的响应（其“助手角色”消息），系统可以确保交互的连贯性以及与上下文的相关性。助手消息也可能包含功能工具调用请求信息。它就像 AI 中的一项特殊功能，在需要执行特定功能（例如计算、获取数据或其他不仅仅是对话的任务）时使用。
 + **TOOL工具/功能角色**：工具/功能角色专注于响应工具调用助手消息返回附加信息。
-
-
 提示词模板：
 有时候， 提示词里面的内容不能写死， 需要根据对话动态传入
 
-#### chatModel $ 
+### chatModel $
+
 可以使用SystemPromptTemplate  
 
 ```java
@@ -64,7 +63,8 @@ Prompt prompt = new Prompt(List.of(userMessage, systemMessage));
 List<Generation> response = chatModel.call(prompt).getResults();
 ```
 
-#### chatClient
+### chatClient
+
 ```java
 String answer = ChatClient.create(chatModel).prompt()
     .user(u -> u
@@ -74,9 +74,10 @@ String answer = ChatClient.create(chatModel).prompt()
     .content();
 ```
 
+## 自定义提示词模板
 
-### 自定义提示词模板
-#### chatModel $ 
+### chatModel $
+
 ```java
 PromptTemplate promptTemplate = PromptTemplate.builder()
     .renderer(StTemplateRenderer.builder().startDelimiterToken('<').endDelimiterToken('>').build())
@@ -88,7 +89,8 @@ PromptTemplate promptTemplate = PromptTemplate.builder()
 String prompt = promptTemplate.render(Map.of("composer", "John Williams"));
 ```
 
-#### chatClient
+### chatClient
+
 ```java
 String answer = ChatClient.create(chatModel).prompt()
     .user(u -> u
@@ -99,8 +101,10 @@ String answer = ChatClient.create(chatModel).prompt()
     .content();
 ```
 
-### 提示词模板文件
-#### chatModel $ 
+## 提示词模板文件
+
+### chatModel $
+
 ```java
 @Value("classpath:/prompts/system-message.st")
 private Resource systemResource;
@@ -108,13 +112,13 @@ private Resource systemResource;
 SystemPromptTemplate systemPromptTemplate = new SystemPromptTemplate(systemResource);
 ```
 
-#### chatClient
+### chatClient
+
 /prompts/system-message.st
 
 ```plain
 告诉我5部{composer}的电影
 ```
-
 
 ```java
 @Test
@@ -134,9 +138,10 @@ public void testPrompt(@Autowired DeepSeekChatModel chatModel,
 }
 ```
 
+## 提示词设置技巧 $
 
-### 提示词设置技巧 $
-#### 简单技巧
+### 简单技巧
+
 + [**文本摘要**](https://www.promptingguide.ai/introduction/examples.en#text-summarization)：  
 将大量文本缩减为简洁的摘要，捕捉关键点和主要思想，同时省略不太重要的细节。
 + [**问答**](https://www.promptingguide.ai/introduction/examples.en#question-answering)：  
@@ -148,7 +153,8 @@ public void testPrompt(@Autowired DeepSeekChatModel chatModel,
 + [**代码生成**](https://www.promptingguide.ai/introduction/examples.en#code-generation)：  
 根据特定的用户要求或描述生成功能代码片段，将自然语言指令转换为可执行代码。
 
-#### 高级技术
+### 高级技术
+
 + [**零样本**](https://www.promptingguide.ai/techniques/zeroshot)**、**[**少样本学习**](https://www.promptingguide.ai/techniques/fewshot)：  
 使模型能够利用特定问题类型的极少或没有先前的示例做出准确的预测或响应，并使用学习到的概括来理解和执行新任务。
 + [**思路链**](https://www.promptingguide.ai/techniques/cot)：  
@@ -156,23 +162,21 @@ public void testPrompt(@Autowired DeepSeekChatModel chatModel,
 + [**ReAct（推理 + 行动）**](https://www.promptingguide.ai/techniques/react)：  
 在这种方法中，人工智能首先分析输入（推理），然后确定最合适的行动或响应方案。它将理解与决策结合在一起。
 
-#### Microsoft 指导
+### Microsoft 指导
+
 + [**提示创建和优化框架**](https://github.com/microsoft/guidance)：  
 微软提供了一种结构化的方法来开发和完善提示。该框架指导用户创建有效的提示，以便从 AI 模型中获取所需的响应，并优化交互以提高清晰度和效率。
-
-
 1. **指令明确**
     1. 避免情绪化内容
         1. “求求你好好说啊~！”“你这样我不会啊~”
     2. 不要让大模型去猜去臆想你的想法， 描述足够清楚
         1. 补充必要背景信息：身份、场景、用途、已有内容等，避免 AI “脑补” 出错。
-        2. 避免“或许、可能、你懂的”等模糊修饰语 
+        2. 避免“或许、可能、你懂的”等模糊修饰语
     3. 把大模型当一个小学生，你描述的任务越清楚他执行越具体  
 ❌ 模糊：写一篇文章  
 ✅ 清晰：写一篇 800 字的高考作文，主题 “坚持与创新”，结构分引言、三个论点（每个配历史案例）、结论，语言风格正式书面
 2. **格式清晰（结构化）**  
  可以通关markdown格式，确定一级标题、二级标题、列表 这样更利于模型理解。后续维也更加清晰
-
 公式：「角色设定」+「具体任务（技能）」+「限制条件（约束）」+「示例参考」
 
 ```java

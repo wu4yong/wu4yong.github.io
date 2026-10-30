@@ -6,12 +6,15 @@ categories:
 tags:
   - Spring AI
 ---
+
 <div class="essay-banner essay-image11">
    Structured Output & Tools
 </div>
 
 ## 结构化输出
+
 ### 基础类型：
+
 以Boolean为例 ， 在agent中可以用于判定用于的内容2个分支，  不同的分支走不同的逻辑
 
 ```java
@@ -44,6 +47,7 @@ public void testBoolOut() {
 ```
 
 ### Pojo类型：
+
 用购物APP应该见过复制一个地址， 自动为你填入每个输入框。  用大模型轻松完成！
 
 <div class="img-wrap-left"><img class="left-img" src="/assets/img/springai/ch07_1749126843402-3cca89cf-d3a8-40c6-aa95-3664d526feb9_9f65c71b46.png" alt="ch07_1749126843402-3cca89cf-d3a8-40c6-aa95-3664d526feb9_9f65c71b46.png"></div>
@@ -74,8 +78,8 @@ public record Address(
 ) {}
 ```
 
-
 ### 原理
+
 <div class="img-wrap-left"><img class="left-img" src="/assets/img/springai/ch07_1749126360371-0165c51c-79c1-4058-9b1e-32c75182f51d_6662f99fc1.jpeg" alt="ch07_1749126360371-0165c51c-79c1-4058-9b1e-32c75182f51d_6662f99fc1.jpeg"></div>
 
 `ChatModel`或者直接使用低级API：
@@ -106,14 +110,18 @@ public record Address(
     }
 ```
 
-
 ## 链接多个模型协调工作实战 - 初代tools： $
-#### 背景：
+
+### 背景：
+
 大模型如果它无法和企业API互联那将毫无意义！  比如我们开发一个智能票务助手，  当用户需要退票， 基础大模型它肯定做不到， 因为票务信息都存在了我们系统中， 必须通过我们系统的业务方法才能进行退票。  那怎么能让大模型“调用”我们自己系统的业务方法呢？ 今天叫大家通过结构化输入连接多个模型一起协同完成这个任务：
 
+### 票务助手
 
-####  票务助手<div class="img-wrap-left"><img class="left-img" src="/assets/img/springai/ch07_1749133561508-8d90a71e-e734-471e-a36e-5605fabc6b8c_cedfc4a752.png" alt="ch07_1749133561508-8d90a71e-e734-471e-a36e-5605fabc6b8c_cedfc4a752.png"></div>
-#### 效果
+<div class="img-wrap-left"><img class="left-img" src="/assets/img/springai/ch07_1749133561508-8d90a71e-e734-471e-a36e-5605fabc6b8c_cedfc4a752.png" alt="ch07_1749133561508-8d90a71e-e734-471e-a36e-5605fabc6b8c_cedfc4a752.png"></div>
+
+### 效果
+
 <div class="img-wrap-left"><img class="left-img" src="/assets/img/springai/ch07_1749133770407-472b9b4b-f1a8-43f2-b3d2-86d40abb3491_d4f72b04df.png" alt="ch07_1749133770407-472b9b4b-f1a8-43f2-b3d2-86d40abb3491_d4f72b04df.png"></div>
 
 <div class="img-wrap-left"><img class="left-img" src="/assets/img/springai/ch07_1749133811144-c451d972-8ffc-4760-8b47-dfd14d4db5df_1f12e00328.png" alt="ch07_1749133811144-c451d972-8ffc-4760-8b47-dfd14d4db5df_1f12e00328.png"></div>
@@ -124,13 +132,12 @@ public record Address(
 
 <div class="img-wrap-left"><img class="left-img" src="/assets/img/springai/ch07_1749133804610-66c41dfc-a556-49be-9353-e90eee657c20_245c5419ab.png" alt="ch07_1749133804610-66c41dfc-a556-49be-9353-e90eee657c20_245c5419ab.png"></div>
 
-
 普通对话：
 
 <div class="img-wrap-left"><img class="left-img" src="/assets/img/springai/ch07_1749133832665-d12ca731-fae6-4991-8f17-cb0039a9a1ac_39e77779b1.png" alt="ch07_1749133832665-d12ca731-fae6-4991-8f17-cb0039a9a1ac_39e77779b1.png"></div>
 
+### 代码：
 
-#### 代码：
 ```java
 public class AiJob {
      record Job(JobType jobType, Map<String,String> keyInfos) {
@@ -144,7 +151,6 @@ public class AiJob {
 }
 
 ```
-
 
 ```java
 

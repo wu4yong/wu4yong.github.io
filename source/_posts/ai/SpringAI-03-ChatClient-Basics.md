@@ -6,21 +6,21 @@ categories:
 tags:
   - Spring AI
 ---
+
 <div class="essay-banner essay-image11">
    ChatClient Basics
 </div>
 
-## ChatClient 
-
+## ChatClient
 
 ChatClient 基于ChatModel进行了封装提供了通用的 API，它适用所有的大模型， 使用ChatClient可以让你面向SpringAi通用的api 而无需面向为每一种不同的模型的api来进行编程，
-虽然您仍然可以使用 ChatModel 来实现某些模型更加个性化的操作（ChatModel更偏向于底层），但 ChatClient 提供了灵活、更全面的方法来构建您的客户端选项以与模型进行交互： 
+虽然您仍然可以使用 ChatModel 来实现某些模型更加个性化的操作（ChatModel更偏向于底层），但 ChatClient 提供了灵活、更全面的方法来构建您的客户端选项以与模型进行交互：
 比如系统提示词、格式式化响应、聊天记忆 、tools 都更加易用和优雅，所以除非ChatClient无法实现，
 否则我们**优先考虑用ChatClient**。
 所以我们后续基于ChatClient来进行学习应用。   基于ChatModel来学习源码，因为ChatClient底层依然还是ChatModel的封装。
 
+### 基本使用
 
-#### 基本使用
 + **必须通过ChatClient.Builder 来进行构造**
 
 ```java
@@ -38,8 +38,6 @@ public class ChatClientTest {
     }
 }
 ```
-
- 
 
 这种方式会在底层自动注入1个`ChatModel `， 如果你配置了多个模型依赖，  会无法注入。
 
@@ -66,8 +64,8 @@ public class ChatClientTest {
 
 ```
 
+### 流式
 
-#### 流式
 ```java
 @Test
     public void testChatStream() {
@@ -81,8 +79,8 @@ public class ChatClientTest {
     }
 ```
 
-
 ## 《多个模型动态切管理实战》
+
 1）application.properties
 
 ```properties
@@ -167,7 +165,6 @@ public class AiConfig {
 }
 
 ```
-
 
 请求：
 

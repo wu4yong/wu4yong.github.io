@@ -6,11 +6,13 @@ categories:
 tags:
   - Spring AI
 ---
+
 <div class="essay-banner essay-image11">
    Airline Smart Customer Service (RAG)
 </div>
 
-### 《基于航空智能客服+RAG》实战
+## 《基于航空智能客服+RAG》实战
+
 1. 配置向量数据库
 2. 写入数据（Embedding）
 3. 查询
@@ -33,8 +35,8 @@ tags:
 - 退款将在 7 个工作日内处理。
 ```
 
+### 向量数据库
 
-#### 向量数据库
 ```java
 	@Bean
 	public VectorStore vectorStore(EmbeddingModel embeddingModel) {
@@ -44,8 +46,8 @@ tags:
 ```
 
 写入向量数据库
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/springai/ch11_1730894384826-1fc20e94-3ba1-4514-b20f-bb04a24dc3e1_8d06c771f0.webp" alt="ch11_1730894384826-1fc20e94-3ba1-4514-b20f-bb04a24dc3e1_8d06c771f0.webp"></div>
 
+<div class="img-wrap-left"><img class="left-img" src="/assets/img/springai/ch11_1730894384826-1fc20e94-3ba1-4514-b20f-bb04a24dc3e1_8d06c771f0.webp" alt="ch11_1730894384826-1fc20e94-3ba1-4514-b20f-bb04a24dc3e1_8d06c771f0.webp"></div>
 
 ```java
 @Bean
@@ -61,7 +63,6 @@ CommandLineRunner ingestTermOfServiceToVectorStore(EmbeddingModel embeddingModel
     };
 }
 ```
-
 
 **配置Advisor：**
 
@@ -90,8 +91,8 @@ new QuestionAnswerAdvisor(vectorStore, SearchRequest.defaults()), // RAG
 				.build();
 ```
 
+### 文档嵌入
 
-#### 文档嵌入
 在上面的`VectorStore`配置中我们提供了`EmbeddingModel`，调用`vectorStore.add(splitDocuments)`底层会把文档给`EmbeddingModel`把文本变成向量然后再存入向量数据库。
 
 ```java
@@ -116,7 +117,8 @@ private final VectorStore vectorStore;
     }
 ```
 
-#### 文档查询
+### 文档查询
+
 调用`vectorStore.similaritySearch(query)`时同样会先把用户的提问给`EmbeddingModel`，将提问变成向量，然后与向量数据库中的文档向量进行相似度计算（cosine值）。
 
 要注意：此时向量数据库不会回答用户的提问。要回答用户的提问需要指定advisor
