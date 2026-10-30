@@ -1,6 +1,6 @@
 ---
 title: 二十四、LangGraph 概述与快速入门
-date: 2026-10-27 00:00:00
+date: 2026-10-26 23:05:00
 categories:
   - llm
 tags:

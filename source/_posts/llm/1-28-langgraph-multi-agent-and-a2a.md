@@ -1,6 +1,6 @@
 ---
 title: 二十八、LangGraph 多智能体与 A2A
-date: 2026-10-27 04:00:00
+date: 2026-10-26 23:25:00
 categories:
   - llm
 tags:

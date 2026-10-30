@@ -1,6 +1,6 @@
 ---
 title: 二十九、Skills 技能与 AI 编程工具实践
-date: 2026-10-27 05:00:00
+date: 2026-10-26 23:30:00
 categories:
   - llm
 tags:
