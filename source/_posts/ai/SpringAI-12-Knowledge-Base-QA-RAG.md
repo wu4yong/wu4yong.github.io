@@ -27,7 +27,8 @@ tags:
 
 <div class="img-wrap-left"><img class="left-img" src="/assets/img/springai/ch12_1766926120899-f9d183f2-7261-46c0-b862-534db6b5e763_eefcd501a4.png" alt="ch12_1766926120899-f9d183f2-7261-46c0-b862-534db6b5e763_eefcd501a4.png"></div>
 
-链接:  (不对外提供）
+链接:  
+可参考： https://gitee.com/hongpo/rag-ai  
 
 ## 核心功能
 
