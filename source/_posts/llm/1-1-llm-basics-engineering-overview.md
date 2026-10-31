@@ -189,7 +189,8 @@ RNN 的工作方式很像“按队伍顺序传话”：第 10 个词想理解第
 <!-- ![RNN 按时间步逐个处理文本序列的结构示意图](/assets/img/llm/1-1/1-1-1-2-4.png) -->
 <div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/1-1/1-1-1-2-4.png" alt="RNN 按时间步逐个处理文本序列的结构示意图"></div>
 
-Attention 的关键变化，是让模型在生成或理解某个位置时，可以直接关注输入里的关键位置，不必完全依赖一个被压缩后的固定向量。Transformer 更进一步，把注意力机制作为主体结构，去掉 RNN 的串行依赖。
+Attention 的关键变化，是让模型在生成或理解某个位置时，可以直接关注输入里的关键位置，不必完全依赖一个被压缩后的固定向量。
+Transformer 更进一步，把注意力机制作为主体结构，去掉 RNN 的串行依赖。
 
 <!-- ![Transformer 编码器与解码器结构示意图](/assets/img/llm/1-1/1-1-1-2-5.png) -->
 <div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/1-1/1-1-1-2-5.png" alt="Transformer 编码器与解码器结构示意图"></div>
