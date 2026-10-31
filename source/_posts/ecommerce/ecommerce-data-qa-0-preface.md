@@ -30,11 +30,13 @@ tags:
 <!-- ![电商问数前端首页：支持样例问题、自然语言输入和智能数据分析 Agent 交互](/assets/img/ecommerce/0/0-1.png) -->
 
 <div class="img-wrap-left"><img class="left-img" src="/assets/img/ecommerce/0/0-1.png" alt="电商问数前端首页：支持样例问题、自然语言输入和智能数据分析 Agent 交互"></div>
+
 一句话概括：**「电商问数」不是一个只会让大模型裸写 SQL 的 Demo，而是一套围绕“先构建元数据知识库，再检索、推理、生成、校验和执行 SQL”展开的智能问数实战项目。**
 
 它可能不是一个完整的企业级生产系统，但非常适合作为入门到进阶阶段的项目实战课程。你可以在这里系统学习一套智能体应用从“数据准备”到“检索增强”，再到“工作流编排”和“接口交付”的完整主链路。
 
-**配套源码仓库地址**：https://github.com/didilili/shopkeeper-agent
+<!-- **配套源码仓库地址**：https://github.com/didilili/shopkeeper-agent -->
+**配套源码仓库地址**：https://github.com/wu4yong/shopkeeper-agent
 
 ---
 
@@ -99,6 +101,7 @@ tags:
 <!-- ![电商问数 NL2SQL 系统架构：用户提问、后端调度、字段表召回、SQL 生成、数据库查询与前端展示](/assets/img/ecommerce/0/0-2.jpg) -->
 
 <div class="img-wrap-left"><img class="left-img" src="/assets/img/ecommerce/0/0-2.jpg" alt="电商问数 NL2SQL 系统架构：用户提问、后端调度、字段表召回、SQL 生成、数据库查询与前端展示"></div>
+
 从使用者视角看，它就是一个“会查数的智能数据分析助手”：
 
 1. 用户先用自然语言提问
@@ -113,6 +116,7 @@ tags:
 <!-- ![电商问数查询结果页：展示 LangGraph 执行流程、SQL 闭环进度和最终 GMV 查询结果](/assets/img/ecommerce/0/0-3.png) -->
 
 <div class="img-wrap-left"><img class="left-img" src="/assets/img/ecommerce/0/0-3.png" alt="电商问数查询结果页：展示 LangGraph 执行流程、SQL 闭环进度和最终 GMV 查询结果"></div>
+
 所以，这个项目的重点从来不只是“大模型”，而是下面这整条链路：
 
 - 数据仓库怎么设计和模拟
