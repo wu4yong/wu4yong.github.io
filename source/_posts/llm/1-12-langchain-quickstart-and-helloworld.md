@@ -35,6 +35,7 @@ LangChain 可以通过不同集成包接入很多模型提供商，官方提供�
 
 - **Providers Overview**：https://docs.langchain.com/oss/python/integrations/providers/overview
 
+<!-- ![LangChain支持的大模型](/assets/img/llm/10/10-1-1-1.png) -->
 <div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/10/10-1-1-1.png" alt="LangChain支持的大模型"></div>
 
 本课程的选型是：
@@ -192,6 +193,7 @@ pip install langchain-deepseek -i https://pypi.tuna.tsinghua.edu.cn/simple
 
 在 PyCharm 的 **Python 软件包** 面板里，可以直接确认 `langchain`、`langchain-core`、`langchain-openai` 等包是否存在、版本是什么。
 
+<!-- ![PyCharm「Python 软件包」面板：查看已安装的 langchain、langchain-core、langchain-openai 等包及版本，用于核对是否装对虚拟环境](/assets/img/llm/10/10-3-3-1.png) -->
 <div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/10/10-3-3-1.png" alt="PyCharm「Python 软件包」面板：查看已安装的 langchain、langchain-core、langchain-openai 等包及版本，用于核对是否装对虚拟环境"></div>
 
 ---
@@ -206,22 +208,27 @@ pip install langchain-deepseek -i https://pypi.tuna.tsinghua.edu.cn/simple
 
 在百炼控制台的 **API-KEY 管理**中创建并复制密钥，通常形如 `sk-xxx`。
 
+<!-- ![阿里云百炼控制台：API-KEY 管理页创建与复制密钥（形如 sk-xxx）](/assets/img/llm/10/10-4-1-1.jpeg) -->
 <div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/10/10-4-1-1.jpeg" alt="阿里云百炼控制台：API-KEY 管理页创建与复制密钥（形如 sk-xxx）"></div>
 
 #### 4.1.2 获得模型名
 
 在模型广场或模型详情页里确认你真正要调用的模型标识，例如 `qwen-plus`、`qwen3-max` 等。
 
+<!-- ![百炼模型广场：浏览可选模型及在列表中展示的模型标识](/assets/img/llm/10/10-4-1-2.jpeg) -->
 <div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/10/10-4-1-2.jpeg" alt="百炼模型广场：浏览可选模型及在列表中展示的模型标识"></div>
 
+<!-- ![模型详情页：查看实际调用时使用的模型名（与界面展示名称可能略有差异，以详情/API 文档为准）](/assets/img/llm/10/10-4-1-3.jpeg) -->
 <div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/10/10-4-1-3.jpeg" alt="模型详情页：查看实际调用时使用的模型名（与界面展示名称可能略有差异，以详情/API 文档为准）"></div>
 
+<!-- ![模型名示例：如 qwen-plus、qwen3-max 等在代码 `model=` 中填写的字符串](/assets/img/llm/10/10-4-1-4.jpeg) -->
 <div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/10/10-4-1-4.jpeg" alt="模型名示例：如 qwen-plus、qwen3-max 等在代码 `model=` 中填写的字符串"></div>
 
 #### 4.1.3 获得 Base URL
 
 如果你走的是 OpenAI 兼容接法，就需要对应的兼容接口地址，例如：
 
+<!-- ![百炼文档或控制台：OpenAI 兼容模式的 Base URL（如 compatible-mode/v1 根地址）](/assets/img/llm/10/10-4-1-5.jpeg) -->
 <div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/10/10-4-1-5.jpeg" alt="百炼文档或控制台：OpenAI 兼容模式的 Base URL（如 compatible-mode/v1 根地址）"></div>
 
 当前课程里最常见的百炼 Base URL 是：
@@ -349,6 +356,7 @@ https://dashscope.aliyuncs.com/compatible-mode/v1
 
 在 DeepSeek 控制台创建并复制 Key。
 
+<!-- ![DeepSeek 开放平台：API Key 创建、查看与管理入口](/assets/img/llm/10/10-5-2-1.jpeg) -->
 <div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/10/10-5-2-1.jpeg" alt="DeepSeek 开放平台：API Key 创建、查看与管理入口"></div>
 
 #### 5.2.2 获得模型名
@@ -360,6 +368,7 @@ https://dashscope.aliyuncs.com/compatible-mode/v1
 
 > 说明：DeepSeek 官方文档已将 `deepseek-chat` 和 `deepseek-reasoner` 标注为兼容别名，它们会在 2026-07-24 弃用。新写代码时，优先以官方当前模型列表里的 `deepseek-v4-flash`、`deepseek-v4-pro` 等模型名为准。
 
+<!-- ![DeepSeek 文档或控制台：模型列表与调用名示意（如 deepseek-v4-flash、deepseek-v4-pro）](/assets/img/llm/10/10-5-2-2.jpeg) -->
 <div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/10/10-5-2-2.jpeg" alt="DeepSeek 文档或控制台：模型列表与调用名示意（如 deepseek-v4-flash、deepseek-v4-pro）"></div>
 
 #### 5.2.3 获得 Base URL
@@ -372,6 +381,7 @@ https://api.deepseek.com
 
 具体仍应以 DeepSeek 官方文档为准。
 
+<!-- ![DeepSeek：普通对话模式与推理（reasoner）模式的适用场景说明示意](/assets/img/llm/10/10-5-2-3.jpeg) -->
 <div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/10/10-5-2-3.jpeg" alt="DeepSeek：普通对话模式与推理（reasoner）模式的适用场景说明示意"></div>
 
 ### 5.3 多模型共存示例代码

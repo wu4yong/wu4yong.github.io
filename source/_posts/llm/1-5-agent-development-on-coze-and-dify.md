@@ -73,6 +73,7 @@ tags:
 
 **举例 1：HyperWrite 研发的个人助理型智能体，可自动预订航班机票**
 
+<!-- ![HyperWrite 个人助理型智能体自动预订航班机票的示意图](/assets/img/llm/3/3-1-1-1.png) -->
 <div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/3/3-1-1-1.png" alt="HyperWrite 个人助理型智能体自动预订航班机票的示意图"></div>
 
 这类智能体不是只会回答问题，而是会**围绕一个目标去调用工具并完成动作**。
@@ -81,12 +82,14 @@ tags:
 
 情感沟通类智能体“`林间聊愈室`”app 上线，收获大量用户好评。其中产品使用小动物的角色设定降低了用户的戒备心，加上治愈的画风和场景设计，打造独特的用户体验。
 
+<!-- ![情感沟通类智能体林间聊愈室的产品界面示意图](/assets/img/llm/3/3-1-1-2.png) -->
 <div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/3/3-1-1-2.png" alt="情感沟通类智能体林间聊愈室的产品界面示意图"></div>
 
 这类产品说明：哪怕没有复杂工具，仅靠角色设定、对话体验和风格设计，也能做出有价值的智能体产品。
 
 **举例 3：Shopify 多模态智能体**
 
+<!-- ![Shopify 多模态智能体分析商品图像与库存环境的示意图](/assets/img/llm/3/3-1-1-3.png) -->
 <div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/3/3-1-1-3.png" alt="Shopify 多模态智能体分析商品图像与库存环境的示意图"></div>
 
 Shopify 多模态智能体图片识别功能，分析产品图像、货架状况和仓库环境，有助于快速评估库存水平、识别损坏情况并有效进行产品分类。
@@ -95,6 +98,7 @@ Shopify 多模态智能体图片识别功能，分析产品图像、货架状况
 
 **举例 4：豆包上集成的多种智能体**
 
+<!-- ![豆包上集成多种智能体的界面示意图](/assets/img/llm/3/3-1-1-4.png) -->
 <div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/3/3-1-1-4.png" alt="豆包上集成多种智能体的界面示意图"></div>
 
 这类平台型智能体最适合做“**快速验证需求、快速交付给用户体验**”。
@@ -103,6 +107,7 @@ Shopify 多模态智能体图片识别功能，分析产品图像、货架状况
 
 开发的智能体可以一键发布到豆包、飞书、微信公众号等多个社交平台和应用程序上。
 
+<!-- ![Coze 智能体可一键发布到多个平台的示意图](/assets/img/llm/3/3-1-1-5.png) -->
 <div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/3/3-1-1-5.png" alt="Coze 智能体可一键发布到多个平台的示意图"></div>
 
 ### 1.4 平台智能体通常由哪些能力组成？
@@ -123,10 +128,12 @@ OpenAI 前研究负责人 Lilian Weng 在 2023 年的文章中，对当时常见
 
 智能体架构：
 
+<!-- ![Lilian Weng 文章中关于 AI Agent 组成模块的概览图](/assets/img/llm/3/3-1-5-1.png) -->
 <div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/3/3-1-5-1.png" alt="Lilian Weng 文章中关于 AI Agent 组成模块的概览图"></div>
 
 文章链接如下：https://lilianweng.github.io/posts/2023-06-23-agent/
 
+<!-- ![AI Agent 架构图中关于规划、记忆与工具协同方式的说明](/assets/img/llm/3/3-1-5-2.svg) -->
 <div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/3/3-1-5-2.svg" alt="AI Agent 架构图中关于规划、记忆与工具协同方式的说明"></div>
 
 下面我们只保留对平台学习最有帮助的理解。
@@ -140,6 +147,7 @@ OpenAI 前研究负责人 Lilian Weng 在 2023 年的文章中，对当时常见
 
 - **短期记忆**：主要是当前对话上下文，受上下文窗口限制。
 
+  <!-- ![短期记忆在对话上下文中的示意图](/assets/img/llm/3/3-1-5-3.png) -->
   <div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/3/3-1-5-3.png" alt="短期记忆在对话上下文中的示意图"></div>
 
 - **长期记忆**：跨轮次、跨任务保留信息，平台里往往通过变量、数据库、知识库或总结机制来近似实现。
@@ -148,6 +156,7 @@ OpenAI 前研究负责人 Lilian Weng 在 2023 年的文章中，对当时常见
 
 **3. 工具使用（Tool Use）解决“模型本身做不了什么”的问题**
 
+<!-- ![工具使用扩展大模型能力边界的示意图](/assets/img/llm/3/3-1-5-4.png) -->
 <div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/3/3-1-5-4.png" alt="工具使用扩展大模型能力边界的示意图"></div>
 
 - 例如联网搜索、订单查询、数据库写入、调用外部接口。
@@ -158,8 +167,10 @@ OpenAI 前研究负责人 Lilian Weng 在 2023 年的文章中，对当时常见
 - 工作流更适合**固定步骤**任务。
 - 更自主的 Agent 更适合**目标开放、需要临场判断**的任务。
 
+<!-- ![规划与任务拆解的示意图](/assets/img/llm/3/3-1-5-5.png) -->
 <div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/3/3-1-5-5.png" alt="规划与任务拆解的示意图"></div>
 
+<!-- ![规划与反思机制的示意图](/assets/img/llm/3/3-1-5-6.png) -->
 <div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/3/3-1-5-6.png" alt="规划与反思机制的示意图"></div>
 
 **5. 行动（Action）是真正把决策落实成结果**
@@ -167,6 +178,7 @@ OpenAI 前研究负责人 Lilian Weng 在 2023 年的文章中，对当时常见
 - 比如发起搜索、调用模型、生成图片、写入记录、汇总回答。
 - 多个智能体之间也可以协作，从单智能体升级到多智能体系统。
 
+<!-- ![多智能体协作完成复杂任务的示意图](/assets/img/llm/3/3-1-5-7.png) -->
 <div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/3/3-1-5-7.png" alt="多智能体协作完成复杂任务的示意图"></div>
 
 ### 1.5 平台生态、应用场景与发展方向
@@ -175,20 +187,24 @@ OpenAI 前研究负责人 Lilian Weng 在 2023 年的文章中，对当时常见
 
 将 AI 和人类协作的程度类比自动驾驶的不同阶段：
 
+<!-- ![将 AI 与人类协作程度类比自动驾驶分级的示意图](/assets/img/llm/3/3-1-2-1.png) -->
 <div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/3/3-1-2-1.png" alt="将 AI 与人类协作程度类比自动驾驶分级的示意图"></div>
 
 研究 AI 智能体的终极愿景，是让系统逐步具备更强的感知、决策与执行能力，最终向 AGI 靠近：
 
+<!-- ![从当前智能体能力走向 AGI 的发展阶段示意图](/assets/img/llm/3/3-1-2-2.png) -->
 <div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/3/3-1-2-2.png" alt="从当前智能体能力走向 AGI 的发展阶段示意图"></div>
 
 国内大模型厂商也都在快速布局智能体平台和应用生态：
 
+<!-- ![国内大模型厂商也都在快速布局智能体平台和应用生态的界面示意图](/assets/img/llm/3/3-1-1-3.png) -->
 <div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/3/3-1-1-3.png" alt="国内大模型厂商也都在快速布局智能体平台和应用生态的界面示意图"></div>
 
 > 比如，用户可以在该平台上创建、配置和管理聊天机器人和智能体。
 
 智能体的应用领域也已经非常广泛：
 
+<!-- ![智能体在不同行业和场景中的应用示意图](/assets/img/llm/3/3-1-4-1.png) -->
 <div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/3/3-1-4-1.png" alt="智能体在不同行业和场景中的应用示意图"></div>
 
 在不久的将来，**智能体会越来越像 AI 系统里的最小工作单元**。对普通用户来说，它像助手；对企业来说，它更像一个可配置、可调用、可交付的智能任务单元。
@@ -212,6 +228,7 @@ OpenAI 前研究负责人 Lilian Weng 在 2023 年的文章中，对当时常见
 - 模型围绕一个目标，自主进行任务拆分、工具选择和过程推进。
 - 更灵活，但也更难控、更难调试。
 
+<!-- ![平台智能体 Level 1、Level 2、Level 3 的区别示意图](/assets/img/llm/3/3-1-6-1.png) -->
 <div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/3/3-1-6-1.png" alt="平台智能体 Level 1、Level 2、Level 3 的区别示意图"></div>
 
 > - 只是要一个有角色感的助手，用 Level 1 就够。
@@ -234,48 +251,59 @@ OpenAI 前研究负责人 Lilian Weng 在 2023 年的文章中，对当时常见
 
 #### 步骤 1：创建智能体
 
+<!-- ![在 Cherry Studio 中进入智能体创建入口的界面](/assets/img/llm/3/3-2-1-1.png) -->
 <div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/3/3-2-1-1.png" alt="在 Cherry Studio 中进入智能体创建入口的界面"></div>
 
+<!-- ![在 Cherry Studio 中新建智能体配置页的界面](/assets/img/llm/3/3-2-1-2.png) -->
 <div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/3/3-2-1-2.png" alt="在 Cherry Studio 中新建智能体配置页的界面"></div>
 
 其中，提示词可以借助 LLM 提供：
 
+<!-- ![在 Cherry Studio 中借助大模型生成提示词的界面](/assets/img/llm/3/3-2-1-3.png) -->
 <div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/3/3-2-1-3.png" alt="在 Cherry Studio 中借助大模型生成提示词的界面"></div>
 
 #### 步骤 2：进一步编辑智能体
 
+<!-- ![在 Cherry Studio 中继续编辑智能体基础信息的界面](/assets/img/llm/3/3-2-1-4.png) -->
 <div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/3/3-2-1-4.png" alt="在 Cherry Studio 中继续编辑智能体基础信息的界面"></div>
 
+<!-- ![在 Cherry Studio 中调整模型参数与智能体配置的界面](/assets/img/llm/3/3-2-1-5.png) -->
 <div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/3/3-2-1-5.png" alt="在 Cherry Studio 中调整模型参数与智能体配置的界面"></div>
 
 说明：模型温度：温度越高，输出的内容越有创意性。
 
 #### 步骤 3：添加到助手
 
+<!-- ![将新建智能体添加到助手列表中的界面](/assets/img/llm/3/3-2-1-6.png) -->
 <div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/3/3-2-1-6.png" alt="将新建智能体添加到助手列表中的界面"></div>
 
 #### 步骤 4：使用
 
+<!-- ![在 Cherry Studio 中调用智能体进行对话的界面](/assets/img/llm/3/3-2-1-7.png) -->
 <div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/3/3-2-1-7.png" alt="在 Cherry Studio 中调用智能体进行对话的界面"></div>
 
 ### 2.2 其他平台创建智能体
 
 举例：豆包
 
+<!-- ![豆包平台中创建智能体的界面示意图](/assets/img/llm/3/3-2-2-1.png) -->
 <div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/3/3-2-2-1.png" alt="豆包平台中创建智能体的界面示意图"></div>
 
 举例：腾讯元器
 
 https://yuanqi.tencent.com/agent-shop
 
+<!-- ![腾讯元器平台中创建智能体的界面示意图](/assets/img/llm/3/3-2-2-2.png) -->
 <div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/3/3-2-2-2.png" alt="腾讯元器平台中创建智能体的界面示意图"></div>
 
 举例：讯飞星火
 
 https://xinghuo.xfyun.cn/desktop-app-download
 
+<!-- ![讯飞星火平台中创建智能体的界面示意图](/assets/img/llm/3/3-2-2-3.png) -->
 <div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/3/3-2-2-3.png" alt="讯飞星火平台中创建智能体的界面示意图"></div>
 
+<!-- ![讯飞星火平台中配置智能体能力的界面示意图](/assets/img/llm/3/3-2-2-4.png) -->
 <div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/3/3-2-2-4.png" alt="讯飞星火平台中配置智能体能力的界面示意图"></div>
 
 > 后续细节这里省略。
@@ -290,6 +318,7 @@ https://xinghuo.xfyun.cn/desktop-app-download
 
 https://agent.xfyun.cn/home
 
+<!-- ![以讯飞星辰 Agent 平台为例的界面示意图](/assets/img/llm/3/3-3-1-1.png) -->
 <div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/3/3-3-1-1.png" alt="以讯飞星辰 Agent 平台为例的界面示意图"></div>
 
 工作流最适合的场景，可以直接概括成一句话：**任务步骤大致确定，希望过程可见、可控、可复用时，优先工作流。**
@@ -337,14 +366,17 @@ https://agent.xfyun.cn/home
 
 `工作空间`：展示已开发的智能体或资源库列表，用户可在该平台上创建、配置和管理聊天机器人与智能体。
 
+<!-- ![Coze 工作空间界面示意图](/assets/img/llm/3/3-4-3-1.png) -->
 <div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/3/3-4-3-1.png" alt="Coze 工作空间界面示意图"></div>
 
 `商店`：展示平台上其他用户开发的项目，以及开发时可用的各种插件（如联网、爬虫、股票分析等）。
 
+<!-- ![Coze 商店与插件市场界面示意图](/assets/img/llm/3/3-4-3-2.png) -->
 <div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/3/3-4-3-2.png" alt="Coze 商店与插件市场界面示意图"></div>
 
 `模板`：提供大量可复制的模板，部分模板收费。
 
+<!-- ![Coze 模板中心界面示意图](/assets/img/llm/3/3-4-3-3.png) -->
 <div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/3/3-4-3-3.png" alt="Coze 模板中心界面示意图"></div>
 
 ### 4.4 案例 1：深夜情感主持
@@ -359,10 +391,12 @@ https://agent.xfyun.cn/home
 
 #### ① 创建智能体
 
+<!-- ![在 Coze 中创建深夜情感主持智能体的界面](/assets/img/llm/3/3-4-4-1.png) -->
 <div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/3/3-4-4-1.png" alt="在 Coze 中创建深夜情感主持智能体的界面"></div>
 
 #### ② 填写提示词
 
+<!-- ![在 Coze 中填写深夜情感主持提示词的界面](/assets/img/llm/3/3-4-4-2.png) -->
 <div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/3/3-4-4-2.png" alt="在 Coze 中填写深夜情感主持提示词的界面"></div>
 
 ##### 通用结构
@@ -392,8 +426,10 @@ https://agent.xfyun.cn/home
 2. 描述角色在互动过程中需要遵循的限制条件2
 ```
 
+<!-- ![深夜情感主持智能体的通用提示词结构模板](/assets/img/llm/3/3-4-4-3.png) -->
 <div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/3/3-4-4-3.png" alt="深夜情感主持智能体的通用提示词结构模板"></div>
 
+<!-- ![深夜情感主持智能体的完整提示词示例](/assets/img/llm/3/3-4-4-4.png) -->
 <div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/3/3-4-4-4.png" alt="深夜情感主持智能体的完整提示词示例"></div>
 
 ```
@@ -430,30 +466,37 @@ https://agent.xfyun.cn/home
 
 #### ③ 模型参数设置
 
+<!-- ![在 Coze 中设置深夜情感主持模型参数的界面](/assets/img/llm/3/3-4-4-5.png) -->
 <div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/3/3-4-4-5.png" alt="在 Coze 中设置深夜情感主持模型参数的界面"></div>
 
 关于 temperature（温度）：
 
+<!-- ![模型温度 Temperature 参数高低带来的输出差异示意图](/assets/img/llm/3/3-4-4-6.jpg) -->
 <div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/3/3-4-4-6.jpg" alt="模型温度 Temperature 参数高低带来的输出差异示意图"></div>
 
 **说明**：温度（Temperature）控制模型输出的随机程度。**温度越低**（接近 0），回答越稳定、一致、偏保守，适合事实问答、代码等；**温度越高**（接近 1 或更大），回答越随机、有创意、多样，适合创意写作、头脑风暴等。情感类、开放对话可适当调高，需精确一致时建议调低。
 
 #### ④ 测试
 
+<!-- ![在 Coze 中测试深夜情感主持智能体的界面](/assets/img/llm/3/3-4-4-7.png) -->
 <div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/3/3-4-4-7.png" alt="在 Coze 中测试深夜情感主持智能体的界面"></div>
 
 #### ⑤ 设置开场白及预设问题
 
+<!-- ![在 Coze 中配置开场白和预设问题的界面](/assets/img/llm/3/3-4-4-8.png) -->
 <div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/3/3-4-4-8.png" alt="在 Coze 中配置开场白和预设问题的界面"></div>
 
 #### ⑥ 发布
 
+<!-- ![在 Coze 中发布深夜情感主持智能体的界面](/assets/img/llm/3/3-4-4-9.png) -->
 <div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/3/3-4-4-9.png" alt="在 Coze 中发布深夜情感主持智能体的界面"></div>
 
 可以发布到多个平台：
 
+<!-- ![Coze 智能体支持发布到多个平台的界面](/assets/img/llm/3/3-4-4-10.png) -->
 <div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/3/3-4-4-10.png" alt="Coze 智能体支持发布到多个平台的界面"></div>
 
+<!-- ![Coze 智能体多平台发布后的渠道选择界面](/assets/img/llm/3/3-4-4-11.png) -->
 <div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/3/3-4-4-11.png" alt="Coze 智能体多平台发布后的渠道选择界面"></div>
 
 ### 4.5 案例 2：高考报考指南
@@ -470,10 +513,12 @@ https://agent.xfyun.cn/home
 
 创建智能体：
 
+<!-- ![在 Coze 中创建高考报考指南智能体的界面](/assets/img/llm/3/3-4-5-1.png) -->
 <div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/3/3-4-5-1.png" alt="在 Coze 中创建高考报考指南智能体的界面"></div>
 
 #### ② 填写提示词
 
+<!-- ![在 Coze 中填写高考报考指南提示词的界面](/assets/img/llm/3/3-4-5-2.png) -->
 <div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/3/3-4-5-2.png" alt="在 Coze 中填写高考报考指南提示词的界面"></div>
 
 ```
@@ -507,34 +552,45 @@ https://agent.xfyun.cn/home
 
 未使用插件时：
 
+<!-- ![高考报考指南在未接入插件时的回答界面](/assets/img/llm/3/3-4-5-3.png) -->
 <div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/3/3-4-5-3.png" alt="高考报考指南在未接入插件时的回答界面"></div>
 
 安装插件：
 
+<!-- ![在 Coze 中为高考报考指南安装搜索插件的界面](/assets/img/llm/3/3-4-5-4.png) -->
 <div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/3/3-4-5-4.png" alt="在 Coze 中为高考报考指南安装搜索插件的界面"></div>
 
 继续搜索：
 
+<!-- ![高考报考指南继续配置搜索插件的界面](/assets/img/llm/3/3-4-5-5.png) -->
 <div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/3/3-4-5-5.png" alt="高考报考指南继续配置搜索插件的界面"></div>
 
+<!-- ![高考报考指南选择并启用搜索插件的界面](/assets/img/llm/3/3-4-5-6.png) -->
 <div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/3/3-4-5-6.png" alt="高考报考指南选择并启用搜索插件的界面"></div>
 
 **插件 2：头条图片搜索**
 
+<!-- ![头条图片搜索插件的界面示意图](/assets/img/llm/3/3-4-5-7.png) -->
 <div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/3/3-4-5-7.png" alt="头条图片搜索插件的界面示意图"></div>
 
+<!-- ![头条图片搜索插件调用效果的界面示意图](/assets/img/llm/3/3-4-5-8.png) -->
 <div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/3/3-4-5-8.png" alt="头条图片搜索插件调用效果的界面示意图"></div>
 
 #### ④ 使用知识库
 
+<!-- ![在 Coze 中为高考报考指南接入知识库的界面](/assets/img/llm/3/3-4-5-9.png) -->
 <div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/3/3-4-5-9.png" alt="在 Coze 中为高考报考指南接入知识库的界面"></div>
 
+<!-- ![在 Coze 中创建或选择知识库资源的界面](/assets/img/llm/3/3-4-5-10.png) -->
 <div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/3/3-4-5-10.png" alt="在 Coze 中创建或选择知识库资源的界面"></div>
 
+<!-- ![在 Coze 中上传高考相关资料到知识库的界面](/assets/img/llm/3/3-4-5-11.png) -->
 <div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/3/3-4-5-11.png" alt="在 Coze 中上传高考相关资料到知识库的界面"></div>
 
+<!-- ![在 Coze 中配置知识库召回策略的界面](/assets/img/llm/3/3-4-5-12.png) -->
 <div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/3/3-4-5-12.png" alt="在 Coze 中配置知识库召回策略的界面"></div>
 
+<!-- ![高考报考指南调用知识库后的回答效果示意图](/assets/img/llm/3/3-4-5-13.png) -->
 <div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/3/3-4-5-13.png" alt="高考报考指南调用知识库后的回答效果示意图"></div>
 
 ### 4.6 案例 3：家庭记账助手
@@ -549,12 +605,15 @@ https://agent.xfyun.cn/home
 
 #### ① 创建智能体
 
+<!-- ![在 Coze 中创建家庭记账助手的界面](/assets/img/llm/3/3-4-6-1.png) -->
 <div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/3/3-4-6-1.png" alt="在 Coze 中创建家庭记账助手的界面"></div>
 
 #### ② 填写提示词
 
+<!-- ![在 Coze 中填写家庭记账助手提示词的界面](/assets/img/llm/3/3-4-6-2.png) -->
 <div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/3/3-4-6-2.png" alt="在 Coze 中填写家庭记账助手提示词的界面"></div>
 
+<!-- ![在 Coze 中继续完善家庭记账助手提示词的界面](/assets/img/llm/3/3-4-6-3.png) -->
 <div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/3/3-4-6-3.png" alt="在 Coze 中继续完善家庭记账助手提示词的界面"></div>
 
 ```
@@ -603,36 +662,47 @@ https://agent.xfyun.cn/home
 
 在没有变量时，聊天中的上下文一旦清空，就没法获取之前的交互数据了。比如：
 
+<!-- ![家庭记账助手在未使用变量时的对话记录示意图](/assets/img/llm/3/3-4-6-4.png) -->
 <div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/3/3-4-6-4.png" alt="家庭记账助手在未使用变量时的对话记录示意图"></div>
 
 > 小插曲：修改了提示词“限制”部分：
 >
+> <!-- ![修改家庭记账助手提示词限制部分的界面示意图](/assets/img/llm/3/3-4-6-5.png) -->
 > <div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/3/3-4-6-5.png" alt="修改家庭记账助手提示词限制部分的界面示意图"></div>
 
 但清空记录以后：
 
+<!-- ![清空历史记录后家庭记账助手无法记住用户信息的示意图](/assets/img/llm/3/3-4-6-6.png) -->
 <div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/3/3-4-6-6.png" alt="清空历史记录后家庭记账助手无法记住用户信息的示意图"></div>
 
+<!-- ![清空历史记录后家庭记账助手上下文丢失的示意图](/assets/img/llm/3/3-4-6-7.png) -->
 <div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/3/3-4-6-7.png" alt="清空历史记录后家庭记账助手上下文丢失的示意图"></div>
 
 设置变量：
 
+<!-- ![在 Coze 中为家庭记账助手设置变量的界面](/assets/img/llm/3/3-4-6-8.png) -->
 <div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/3/3-4-6-8.png" alt="在 Coze 中为家庭记账助手设置变量的界面"></div>
 
+<!-- ![在 Coze 中配置家庭记账助手变量字段的界面](/assets/img/llm/3/3-4-6-9.png) -->
 <div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/3/3-4-6-9.png" alt="在 Coze 中配置家庭记账助手变量字段的界面"></div>
 
+<!-- ![家庭记账助手变量写入与读取配置的界面](/assets/img/llm/3/3-4-6-10.png) -->
 <div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/3/3-4-6-10.png" alt="家庭记账助手变量写入与读取配置的界面"></div>
 
 在清除历史记录以后，仍然可以记录用户信息。
 
 #### ④ 数据库的使用
 
+<!-- ![家庭记账助手中数据库功能的配置界面](/assets/img/llm/3/3-4-6-11.png) -->
 <div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/3/3-4-6-11.png" alt="家庭记账助手中数据库功能的配置界面"></div>
 
+<!-- ![家庭记账助手中数据库字段配置的界面](/assets/img/llm/3/3-4-6-12.png) -->
 <div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/3/3-4-6-12.png" alt="家庭记账助手中数据库字段配置的界面"></div>
 
+<!-- ![家庭记账助手中数据库写入能力的界面示意图](/assets/img/llm/3/3-4-6-13.png) -->
 <div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/3/3-4-6-13.png" alt="家庭记账助手中数据库写入能力的界面示意图"></div>
 
+<!-- ![家庭记账助手中数据库查询或展示效果的界面示意图](/assets/img/llm/3/3-4-6-14.png) -->
 <div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/3/3-4-6-14.png" alt="家庭记账助手中数据库查询或展示效果的界面示意图"></div>
 
 #### ⑤ 其他功能
@@ -657,6 +727,7 @@ Dify（DefineModify）是一个开源的大语言模型(LLM)应用开发平台�
 
 Dify 为 AI Agent 提供了 50 多种内置工具，如谷歌搜索、DALL·E、Stable Diffusion 和 WolframAlpha 等。
 
+<!-- ![Dify 平台中内置工具能力的界面示意图](/assets/img/llm/3/3-5-1-1.png) -->
 <div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/3/3-5-1-1.png" alt="Dify 平台中内置工具能力的界面示意图"></div>
 
 它的具体功能如下：
@@ -665,6 +736,7 @@ Dify 为 AI Agent 提供了 50 多种内置工具，如谷歌搜索、DALL·E、
 - 基于`RAG`构建私有知识库应用
 - 基于`Workflow`构建智能工作流应用
 
+<!-- ![Dify 支持 Agent、RAG 与 Workflow 三类应用形态的示意图](/assets/img/llm/3/3-5-1-2.png) -->
 <div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/3/3-5-1-2.png" alt="Dify 支持 Agent、RAG 与 Workflow 三类应用形态的示意图"></div>
 
 Dify 可以本地化部署，保证数据的安全。
@@ -681,16 +753,20 @@ Dify 可以本地化部署，保证数据的安全。
 
 #### ① 创建 Agent
 
+<!-- ![在 Dify 中创建时事评论助手 Agent 的界面](/assets/img/llm/3/3-5-2-1.png) -->
 <div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/3/3-5-2-1.png" alt="在 Dify 中创建时事评论助手 Agent 的界面"></div>
 
+<!-- ![在 Dify 中选择 Agent 应用类型的界面](/assets/img/llm/3/3-5-2-2.png) -->
 <div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/3/3-5-2-2.png" alt="在 Dify 中选择 Agent 应用类型的界面"></div>
 
 #### ② 配置
 
+<!-- ![在 Dify 中配置时事评论助手基础参数的界面](/assets/img/llm/3/3-5-2-3.png) -->
 <div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/3/3-5-2-3.png" alt="在 Dify 中配置时事评论助手基础参数的界面"></div>
 
 借助大模型提供提示词：
 
+<!-- ![在 Dify 中借助大模型生成时事评论助手提示词的界面](/assets/img/llm/3/3-5-2-4.png) -->
 <div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/3/3-5-2-4.png" alt="在 Dify 中借助大模型生成时事评论助手提示词的界面"></div>
 
 ```
@@ -748,20 +824,25 @@ Dify 可以本地化部署，保证数据的安全。
 
 #### ③ 测试
 
+<!-- ![在 Dify 中测试时事评论助手的界面](/assets/img/llm/3/3-5-2-5.png) -->
 <div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/3/3-5-2-5.png" alt="在 Dify 中测试时事评论助手的界面"></div>
 
 #### ④ 查看 Agent 日志
 
+<!-- ![在 Dify 中查看时事评论助手 Agent 日志入口的界面](/assets/img/llm/3/3-5-2-6.png) -->
 <div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/3/3-5-2-6.png" alt="在 Dify 中查看时事评论助手 Agent 日志入口的界面"></div>
 
 Agent 日志如下：
 
+<!-- ![Dify 时事评论助手的 Agent 日志界面示意图](/assets/img/llm/3/3-5-2-7.png) -->
 <div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/3/3-5-2-7.png" alt="Dify 时事评论助手的 Agent 日志界面示意图"></div>
 
+<!-- ![Dify 时事评论助手的 Agent 日志详情界面示意图](/assets/img/llm/3/3-5-2-8.png) -->
 <div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/3/3-5-2-8.png" alt="Dify 时事评论助手的 Agent 日志详情界面示意图"></div>
 
 #### ⑤ 发布
 
+<!-- ![在 Dify 中发布时事评论助手的界面](/assets/img/llm/3/3-5-2-9.png) -->
 <div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/3/3-5-2-9.png" alt="在 Dify 中发布时事评论助手的界面"></div>
 
 > 评价：根据现有资料，Dify 搭建的智能体和 Coze 搭建的智能体一样，检索资料解决问题的能力仍有待提高。
@@ -785,6 +866,7 @@ Agent 日志如下：
 
 #### ① 创建一个空白的 Agent 应用
 
+<!-- ![① 创建一个空白的 Agent 应用的界面示意图](/assets/img/llm/3/3-5-3-1.png) -->
 <div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/3/3-5-3-1.png" alt="① 创建一个空白的 Agent 应用的界面示意图"></div>
 
 #### ② 添加提示词
@@ -842,14 +924,17 @@ Agent 日志如下：
 ⽤户计划前往{{destination}}旅⾏{{num_day}}天，预算为{{budget}}。
 ```
 
+<!-- ![北京旅行助手在 Dify 中填写提示词后的配置界面](/assets/img/llm/3/3-5-3-2.png) -->
 <div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/3/3-5-3-2.png" alt="北京旅行助手在 Dify 中填写提示词后的配置界面"></div>
 
 #### ③ 添加对话开场白、内容审查
 
 选择“管理”，在功能中添加对话开场白和内容审查等功能
 
+<!-- ![在 Dify 管理页中添加对话开场白和内容审查功能的界面](/assets/img/llm/3/3-5-3-3.png) -->
 <div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/3/3-5-3-3.png" alt="在 Dify 管理页中添加对话开场白和内容审查功能的界面"></div>
 
+<!-- ![在 Dify 中继续配置对话开场白和内容审查功能的界面](/assets/img/llm/3/3-5-3-4.png) -->
 <div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/3/3-5-3-4.png" alt="在 Dify 中继续配置对话开场白和内容审查功能的界面"></div>
 
 对话开场白：
@@ -867,12 +952,15 @@ Agent 日志如下：
 帮我制定一次蜜月旅行，目的地是{{destination}}，为期{{num_day}}天，预算是{{budget}}
 ```
 
+<!-- ![北京旅行助手配置对话开场白和开场问题的界面](/assets/img/llm/3/3-5-3-5.png) -->
 <div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/3/3-5-3-5.png" alt="北京旅行助手配置对话开场白和开场问题的界面"></div>
 
+<!-- ![北京旅行助手变量填写后的开场问题配置界面](/assets/img/llm/3/3-5-3-6.png) -->
 <div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/3/3-5-3-6.png" alt="北京旅行助手变量填写后的开场问题配置界面"></div>
 
 内容审查设置
 
+<!-- ![北京旅行助手内容审查规则的配置界面](/assets/img/llm/3/3-5-3-7.png) -->
 <div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/3/3-5-3-7.png" alt="北京旅行助手内容审查规则的配置界面"></div>
 
 ```
@@ -887,10 +975,12 @@ Agent 日志如下：
 
 提问被拦截
 
+<!-- ![北京旅行助手中敏感问题被内容审查拦截的效果示意图](/assets/img/llm/3/3-5-3-8.png) -->
 <div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/3/3-5-3-8.png" alt="北京旅行助手中敏感问题被内容审查拦截的效果示意图"></div>
 
 #### ④ 完整测试
 
+<!-- ![北京旅行助手在 Dify 中完成配置后的整体测试界面](/assets/img/llm/3/3-5-3-10.png) -->
 <div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/3/3-5-3-10.png" alt="北京旅行助手在 Dify 中完成配置后的整体测试界面"></div>
 
 ---
@@ -929,12 +1019,14 @@ Agent 日志如下：
 
 **情况 1：发布到商店：Yes！**
 
+<!-- ![Coze 工作流发布到商店后的界面示意图](/assets/img/llm/3/3-6-2-1.png) -->
 <div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/3/3-6-2-1.png" alt="Coze 工作流发布到商店后的界面示意图"></div>
 
 发布到商店后，其他用户只能体验，不能复制或查看工作流（无复制选项）。
 
 **情况 2：发布到模板：No！**
 
+<!-- ![Coze 工作流模板发布权限限制的界面示意图](/assets/img/llm/3/3-6-2-2.png) -->
 <div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/3/3-6-2-2.png" alt="Coze 工作流模板发布权限限制的界面示意图"></div>
 
 只有发布为模板后，其他用户才能查看应用或智能体的设置细节，但权限管理较严格。
@@ -973,6 +1065,7 @@ https://metaso.cn/
 
 **1. 选择长思考和研究模式**
 
+<!-- ![秘塔 AI 中选择长思考和研究模式的界面示意图](/assets/img/llm/3/3-9-1-1.png) -->
 <div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/3/3-9-1-1.png" alt="秘塔 AI 中选择长思考和研究模式的界面示意图"></div>
 
 选择长思考-R1 会调用秘塔部署的满血版 DeepSeek-R1 模型。
@@ -1007,6 +1100,7 @@ https://metaso.cn/
 
 秘塔 AI 会自主拆解任务，并依次执行，最后汇总
 
+<!-- ![秘塔 AI 会自主拆解任务，并依次执行，最后汇总的界面示意图](/assets/img/llm/3/3-9-1-2.png) -->
 <div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/3/3-9-1-2.png" alt="秘塔 AI 会自主拆解任务，并依次执行，最后汇总的界面示意图"></div>
 
 此外，回答内容会通过引文标注出处。
@@ -1015,6 +1109,7 @@ https://metaso.cn/
 
 https://zhida.zhihu.com/pro
 
+<!-- ![知乎直答中使用深度研究能力的界面示意图](/assets/img/llm/3/3-9-2-1.png) -->
 <div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/3/3-9-2-1.png" alt="知乎直答中使用深度研究能力的界面示意图"></div>
 
 ```
@@ -1023,14 +1118,17 @@ https://zhida.zhihu.com/pro
 
 **回答**
 
+<!-- ![知乎直答对比 QWQ 和 DeepSeek-R1 的回答界面](/assets/img/llm/3/3-9-2-2.png) -->
 <div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/3/3-9-2-2.png" alt="知乎直答对比 QWQ 和 DeepSeek-R1 的回答界面"></div>
 
 ### 9.3 PerPlexity
 
 https://www.perplexity.ai
 
+<!-- ![Perplexity 首页与深度研究入口的界面示意图](/assets/img/llm/3/3-9-3-1.png) -->
 <div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/3/3-9-3-1.png" alt="Perplexity 首页与深度研究入口的界面示意图"></div>
 
+<!-- ![Perplexity 中切换深度研究模式的界面示意图](/assets/img/llm/3/3-9-3-2.png) -->
 <div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/3/3-9-3-2.png" alt="Perplexity 中切换深度研究模式的界面示意图"></div>
 
 选择深度研究即可使用官方部署的 DeepSeek-R1 满血版。
@@ -1043,6 +1141,7 @@ https://www.perplexity.ai
 
 **回答**
 
+<!-- ![Perplexity 对比 QWQ 和 DeepSeek-R1 的回答界面](/assets/img/llm/3/3-9-3-3.png) -->
 <div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/3/3-9-3-3.png" alt="Perplexity 对比 QWQ 和 DeepSeek-R1 的回答界面"></div>
 
 **总结**
@@ -1055,30 +1154,37 @@ OpenAI 推出的深度研究模式，只有每月支付$200 才可以使用。�
 
 https://chatgpt.com/#pricing
 
+<!-- ![OpenAI GPT Pro 中 Deep Research 功能入口的界面示意图](/assets/img/llm/3/3-9-4-1.png) -->
 <div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/3/3-9-4-1.png" alt="OpenAI GPT Pro 中 Deep Research 功能入口的界面示意图"></div>
 
 之前的页面：
 
+<!-- ![OpenAI Deep Research 早期页面布局的界面示意图](/assets/img/llm/3/3-9-4-2.png) -->
 <div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/3/3-9-4-2.png" alt="OpenAI Deep Research 早期页面布局的界面示意图"></div>
 
 相对而言，这是更加接近 AI Agent 的模式，AI 可以自主调用工具、自主决策，中间过程更复杂，最终输出的内容更加优质。
 
 以下是 B 站某博主实测截图，研究耗时 19 分钟：
 
+<!-- ![OpenAI Deep Research 实测中研究耗时 19 分钟的界面示意图](/assets/img/llm/3/3-9-4-3.png) -->
 <div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/3/3-9-4-3.png" alt="OpenAI Deep Research 实测中研究耗时 19 分钟的界面示意图"></div>
 
+<!-- ![OpenAI Deep Research 实测中间过程的界面示意图](/assets/img/llm/3/3-9-4-4.png) -->
 <div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/3/3-9-4-4.png" alt="OpenAI Deep Research 实测中间过程的界面示意图"></div>
 
 下图右侧展示的都是 DeepResearch 自主规划的子任务：
 
+<!-- ![OpenAI Deep Research 自主规划子任务列表的界面示意图](/assets/img/llm/3/3-9-4-5.png) -->
 <div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/3/3-9-4-5.png" alt="OpenAI Deep Research 自主规划子任务列表的界面示意图"></div>
 
 研究耗时 13 分钟，生成 3 万多字，突破了大模型单次输出上限：
 
+<!-- ![OpenAI Deep Research 生成长篇研究结果的界面示意图](/assets/img/llm/3/3-9-4-6.png) -->
 <div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/3/3-9-4-6.png" alt="OpenAI Deep Research 生成长篇研究结果的界面示意图"></div>
 
 会主动追问需求：
 
+<!-- ![OpenAI Deep Research 主动追问补充需求的界面示意图](/assets/img/llm/3/3-9-4-7.png) -->
 <div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/3/3-9-4-7.png" alt="OpenAI Deep Research 主动追问补充需求的界面示意图"></div>
 
 补充需求后最终耗时 32 分钟研究。

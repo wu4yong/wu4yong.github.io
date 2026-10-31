@@ -82,6 +82,7 @@ def node(state: MyState) -> dict:
 - `config`：适合放 `thread_id`、`tags`、`metadata`
 - `runtime`：适合放模型名、数据库连接、API 密钥、环境配置这类不属于 State 的依赖
 
+<!-- ![官方文档摘录：LangGraph 节点可接收 state、config、runtime 三类参数](/assets/img/llm/24/24-1-3-1.jpeg) -->
 <div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/24/24-1-3-1.jpeg" alt="官方文档摘录：LangGraph 节点可接收 state、config、runtime 三类参数"></div>
 
 图里这三个词的层次建议这样记：
@@ -194,6 +195,7 @@ LangGraph 要真正命中缓存，通常要看三层：
 
 入门阶段先记住：**节点声明支持缓存，图编译时选择具体缓存后端。**
 
+<!-- ![官方说明摘录：节点缓存需在编译时提供 cache、在节点上配置 CachePolicy（含 key 与 ttl）](/assets/img/llm/24/24-1-7-1.jpeg) -->
 <div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/24/24-1-7-1.jpeg" alt="官方说明摘录：节点缓存需在编译时提供 cache、在节点上配置 CachePolicy（含 key 与 ttl）"></div>
 
 在真实项目里，缓存很适合这些节点：
@@ -327,6 +329,7 @@ builder.add_edge("node_a", "node_b")
 
 这行代码的意思很简单：`node_a` 跑完，就去 `node_b`，没有判断、没有分支。
 
+<!-- ![固定边示例：`add_edge` 串联 START → input → process → output → END 与对应有向图](/assets/img/llm/24/24-2-3-1.jpeg) -->
 <div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/24/24-2-3-1.jpeg" alt="固定边示例：`add_edge` 串联 START → input → process → output → END 与对应有向图"></div>
 
 **图注：** 左侧为课件示例代码，右侧为线性拓扑；编译时若边指向未注册的节点会报错。
@@ -442,6 +445,7 @@ flowchart LR
 
 ReAct 就是最典型的例子：输入进入模型节点，模型可能直接输出，也可能先调用工具；工具结果再回到模型节点，由模型继续判断是否已经可以回答。
 
+<!-- ![ReAct 循环示意：input 进入 model，model 可调用 tools，tools 结果再回到 model，最终输出 output](/assets/img/llm/24/24-2-9-1.png) -->
 <div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/24/24-2-9-1.png" alt="ReAct 循环示意：input 进入 model，model 可调用 tools，tools 结果再回到 model，最终输出 output"></div>
 
 这类循环之所以适合 LangGraph，是因为它有几个天然难点：
@@ -683,6 +687,7 @@ Send、Command、Runtime 容易混，可以用下面这张表来记：
 | **Command** | 节点离场时同时更新状态并指定下一跳  | 决策节点的“一次性交代” |
 | **Runtime** | 给节点注入不属于 State 的配置与依赖 | 配置和状态分离         |
 
+<!-- ![Send、Command 与 Runtime 对比：Send 负责动态多路分发，Command 负责更新状态并指定下一跳，Runtime 负责注入运行配置](/assets/img/llm/24/24-3-10-1.png) -->
 <div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/24/24-3-10-1.png" alt="Send、Command 与 Runtime 对比：Send 负责动态多路分发，Command 负责更新状态并指定下一跳，Runtime 负责注入运行配置"></div>
 
 - **Send**：一件事拆成很多小事并行去做

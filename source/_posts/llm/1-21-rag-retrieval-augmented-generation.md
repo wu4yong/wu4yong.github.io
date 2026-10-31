@@ -83,6 +83,7 @@ LangChain 官方文档通常也把 RAG 拆成两大阶段：**索引（Indexing�
 
 这不是为了重复，而是为了把“平台里的按钮和配置项”翻译成“代码里的组件与数据流”。
 
+<!-- ![RAG 完整数据流程：离线完成文档加载、切分、向量化和入库，在线完成问题检索、上下文组装与答案生成](/assets/img/llm/19/19-1-3-1.png) -->
 <div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/19/19-1-3-1.png" alt="RAG 完整数据流程：离线完成文档加载、切分、向量化和入库，在线完成问题检索、上下文组装与答案生成"></div>
 
 #### 1.3.1 索引阶段：先把知识库准备好
@@ -98,6 +99,7 @@ LangChain 官方文档通常也把 RAG 拆成两大阶段：**索引（Indexing�
 3. **向量化（Embed）**：把每个文档片段转成向量。
 4. **存储（Store）**：把“片段内容 + 向量 + 元数据”写入向量数据库。
 
+<!-- ![索引阶段细节示意](/assets/img/llm/19/19-1-3-2.png) -->
 <div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/19/19-1-3-2.png" alt="索引阶段细节示意"></div>
 
 这里有两个很容易忽略的点：
@@ -122,6 +124,7 @@ LangChain 官方文档通常也把 RAG 拆成两大阶段：**索引（Indexing�
 4. 把这些片段作为 `context` 放进 Prompt。
 5. 再把 `context + question` 一起发给大模型生成答案。
 
+<!-- ![检索阶段：查询向量化、相似检索、上下文组装与生成](/assets/img/llm/19/19-1-3-3.png) -->
 <div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/19/19-1-3-3.png" alt="检索阶段：查询向量化、相似检索、上下文组装与生成"></div>
 
 这一阶段的核心不是“再去建库”，而是“**拿已经建好的索引来查资料**”。也就是说：
@@ -181,6 +184,7 @@ RAG 并不是某一个单独类就能完成的功能，它更像一条由多个�
 5. 把片段作为上下文，和用户问题一起填进 Prompt。
 6. 调用大模型，得到最终答案。
 
+<!-- ![RAG 从检索到生成的完整数据流](/assets/img/llm/19/19-2-1-1.svg) -->
 <div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/19/19-2-1-1.svg" alt="RAG 从检索到生成的完整数据流"></div>
 
 #### 2.1.1 from_documents 与 add_texts：两种常见的入库方式
@@ -298,6 +302,7 @@ LangChain 官方对文档加载器的定位很明确：它们为不同数据源�
 
 **原始文件 -> Loader -> List[Document] -> TextSplitter -> VectorStore**
 
+<!-- ![文档加载器继承关系示意](/assets/img/llm/19/19-2-2-1.jpeg) -->
 <div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/19/19-2-2-1.jpeg" alt="文档加载器继承关系示意"></div>
 
 #### 2.2.2 如何选择加载器
@@ -424,6 +429,7 @@ LangChain 官方也明确建议：面对通用文本时，`RecursiveCharacterTex
 
 真实项目里，不存在一个“永远最优”的块大小。它和文档类型、语言、问答粒度、模型上下文长度都有关系。学习时先跑通主链路，再基于效果调参，是更现实的路线。
 
+<!-- ![chunk_size 每个块之间有一部分重叠](/assets/img/llm/19/19-2-3-1.png) -->
 <div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/19/19-2-3-1.png" alt="chunk_size 每个块之间有一部分重叠"></div>
 
 #### 2.3.4 文本分割器案例
@@ -465,8 +471,10 @@ LangChain 官方也明确建议：面对通用文本时，`RecursiveCharacterTex
 - **查询改写**：多查询扩展、HyDE 等，用额外一步改善问句与文档的匹配（常与 Agent 或固定预处理脚本结合）。
 - **评测与观测**：准备一批「问题—期望引用片段或标准答」做回归；线上可用 [LangSmith](https://docs.langchain.com/langsmith/observability-llm-tutorial) 等工具追踪检索与生成全链路，定位是检索差还是 Prompt / 模型问题。
 
+<!-- ![RRF 重排序示意：融合多路检索结果的排名，缓解单一路径召回不稳的问题](/assets/img/llm/19/19-2-4-1.png) -->
 <div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/19/19-2-4-1.png" alt="RRF 重排序示意：融合多路检索结果的排名，缓解单一路径召回不稳的问题"></div>
 
+<!-- ![高级 RAG 五维增强体系：从查询、索引、检索器、生成器和管道五个方向优化效果](/assets/img/llm/19/19-2-4-2.png) -->
 <div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/19/19-2-4-2.png" alt="高级 RAG 五维增强体系：从查询、索引、检索器、生成器和管道五个方向优化效果"></div>
 
 进一步看，生产级 RAG 的优化通常可以从五个方向入手：

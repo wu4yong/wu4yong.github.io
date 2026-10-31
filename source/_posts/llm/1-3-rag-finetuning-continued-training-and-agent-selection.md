@@ -43,6 +43,7 @@ tags:
 | 模型是不是不懂这个领域的语言分布？ | 拿到资料也读不懂，专业术语和行业逻辑经常错           | 续训，通常再配合 RAG    |
 | 任务是不是需要多步执行？           | 需要查资料、调接口、校验、重试、写入系统             | 工作流或 Agent          |
 
+<!-- ![从提示词、RAG、微调、续训到智能体的方案诊断关系图](/assets/img/llm/1-3/1-3-1-1-1.png) -->
 <div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/1-3/1-3-1-1-1.png" alt="从提示词、RAG、微调、续训到智能体的方案诊断关系图"></div>
 
 1. **先 Prompt**：如果只是需求表达不清，先把输入、输出、约束写清楚。
@@ -78,6 +79,7 @@ RAG 的重点不是“修改模型参数”，而是**在运行时给模型补�
 - **提示词工程**主要依赖你提前写好的 Prompt。
 - **RAG**主要依赖系统在提问时实时检索到的外部资料。
 
+<!-- ![RAG 的基本流程：先检索外部资料，再把结果与问题一起交给大模型生成答案](/assets/img/llm/1-3/1-3-2-1-1.png) -->
 <div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/1-3/1-3-2-1-1.png" alt="RAG 的基本流程：先检索外部资料，再把结果与问题一起交给大模型生成答案"></div>
 
 ### 2.2 为什么 RAG 往往是项目里的第一选择
@@ -307,6 +309,7 @@ RAG 和微调常被混在一起。工程上先看这条分工：
 - **RAG 更偏补知识**
 - **微调更偏改行为**
 
+<!-- ![RAG、微调等方案在“补知识”和“改行为”上的分工对比示意图](/assets/img/llm/1-3/1-3-3-6-1.png) -->
 <div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/1-3/1-3-3-6-1.png" alt="RAG、微调等方案在“补知识”和“改行为”上的分工对比示意图"></div>
 
 先用下面这张工程对照表来建立判断：
@@ -457,6 +460,7 @@ RAG 和微调常被混在一起。工程上先看这条分工：
 
 OpenAI 前安全系统团队负责人`翁丽莲`于 2023 年 6 月在个人博客系统化总结了当时流行的 LLM Agent 典型架构。
 
+<!-- ![典型 LLM Agent 架构：模型、记忆、工具、规划和行动执行协同工作](/assets/img/llm/1-3/1-3-5-1-1.jpg) -->
 <div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/1-3/1-3-5-1-1.jpg" alt="典型 LLM Agent 架构：模型、记忆、工具、规划和行动执行协同工作"></div>
 
 **与单纯大模型的本质区别：**
@@ -507,8 +511,10 @@ Tool Calls / Function Calling（函数调用，也常写作 Function Call、Tool
 
 **2、流程**
 
+<!-- ![Function Calling 的基本流程：模型决定工具和参数，程序负责真正执行](/assets/img/llm/1-3/1-3-5-3-1.jpg) -->
 <div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/1-3/1-3-5-3-1.jpg" alt="Function Calling 的基本流程：模型决定工具和参数，程序负责真正执行"></div>
 
+<!-- ![Function Calling 在实际接口调用中的工具声明与参数返回示意图](/assets/img/llm/1-3/1-3-5-3-2.jpg) -->
 <div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/1-3/1-3-5-3-2.jpg" alt="Function Calling 在实际接口调用中的工具声明与参数返回示意图"></div>
 
 **3、演示**
@@ -748,6 +754,7 @@ MCP 更关注的是“**怎么统一接入和复用外部能力**”，而不仅
 
 MCP 就像 AI 世界的 USB-C 接口。只要某个能力按 MCP 标准暴露出来，支持 MCP 的不同 AI 应用就可以更容易地发现和使用它。
 
+<!-- ![MCP 像 AI 世界的 USB-C 接口，用统一协议暴露工具、资源和提示模板](/assets/img/llm/1-3/1-3-5-3-3.jpg) -->
 <div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/1-3/1-3-5-3-3.jpg" alt="MCP 像 AI 世界的 USB-C 接口，用统一协议暴露工具、资源和提示模板"></div>
 
 **Function Calling 与 MCP 的关系与区别**
@@ -768,6 +775,7 @@ Function Calling 和 MCP 不是同一个东西，但经常会一起出现。
 
 **2、流程**
 
+<!-- ![MCP 的调用流程：主机、客户端和服务器之间如何完成能力发现与调用](/assets/img/llm/1-3/1-3-5-3-4.jpg) -->
 <div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/1-3/1-3-5-3-4.jpg" alt="MCP 的调用流程：主机、客户端和服务器之间如何完成能力发现与调用"></div>
 
 MCP 本质上是对“工具接入”做了进一步标准化。除了 Tools，它还支持 Resources 和 Prompts。
@@ -827,6 +835,7 @@ MCP 一定程度上弥补了 Function Calling 在生态层面的不足：
 
 工作流（Workflow）是一种更强调**固定步骤和可控执行**的设计模式。它通常用于把复杂任务拆成一系列明确步骤，并按预设顺序执行。
 
+<!-- ![工作流更强调固定步骤、可控执行和明确顺序的流程编排方式](/assets/img/llm/1-3/1-3-5-5-1.jpg) -->
 <div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/1-3/1-3-5-5-1.jpg" alt="工作流更强调固定步骤、可控执行和明确顺序的流程编排方式"></div>
 
 例如：先分类、再检索、再生成、再校验、再输出。

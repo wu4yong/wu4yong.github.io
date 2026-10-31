@@ -90,6 +90,7 @@ Build, Ship and Run Any App, Anywhere
 
 虚拟机会把操作系统也虚拟出来，每个虚拟机都有自己的完整系统；Docker 容器共享宿主机内核，只把应用运行需要的文件、依赖和隔离环境打包起来。
 
+<!-- ![Docker 与虚拟机在架构层面的区别](/assets/img/llm/8/8-1-3-1.png) -->
 <div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/8/8-1-3-1.png" alt="Docker 与虚拟机在架构层面的区别"></div>
 
 主要看三个区别：
@@ -109,6 +110,7 @@ Docker 是典型的客户端和服务端架构。
 
 你在终端里执行的 `docker` 命令，是 Docker Client；负责创建容器、拉取镜像、管理网络和数据卷的是 Docker Daemon。镜像通常来自 Docker Hub 或其他镜像仓库。
 
+<!-- ![Docker 客户端、Docker Daemon 与 Registry 的关系](/assets/img/llm/8/8-1-4-1.png) -->
 <div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/8/8-1-4-1.png" alt="Docker 客户端、Docker Daemon 与 Registry 的关系"></div>
 
 图里重点画出了四个对象：客户端、Docker 主机、镜像仓库、容器。为了后面能读懂 Dify 的 Compose 文件，这里再把 volume 和 Compose 一起补进来：
@@ -198,10 +200,12 @@ Windows 上可以按下面顺序检查：
 
 虚拟化可以在任务管理器里看，确认状态显示为“已启用”：
 
+<!-- ![在任务管理器中确认 CPU 虚拟化已启用](/assets/img/llm/8/8-2-2-1.png) -->
 <div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/8/8-2-2-1.png" alt="在任务管理器中确认 CPU 虚拟化已启用"></div>
 
 WSL 2 相关功能可以在 Windows 功能里勾选。不同 Windows 版本的显示文字可能略有差异，重点是启用 Virtual Machine Platform 和 WSL：
 
+<!-- ![在 Windows 功能中启用虚拟机平台和适用于 Linux 的 Windows 子系统](/assets/img/llm/8/8-2-2-2.png) -->
 <div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/8/8-2-2-2.png" alt="在 Windows 功能中启用虚拟机平台和适用于 Linux 的 Windows 子系统"></div>
 
 如果需要用命令启用 WSL 和虚拟机平台，可以用管理员 PowerShell 执行：
@@ -223,16 +227,19 @@ https://www.docker.com/products/docker-desktop/
 
 选择 Windows 版本下载安装包。
 
+<!-- ![Docker Desktop 官方下载页面](/assets/img/llm/8/8-2-3-1.png) -->
 <div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/8/8-2-3-1.png" alt="Docker Desktop 官方下载页面"></div>
 
 ### 2.4 安装并启动 Docker Desktop
 
 双击安装包，按提示完成安装即可。安装过程中如果看到 WSL 2、桌面快捷方式等选项，保持默认配置即可。
 
+<!-- ![Docker Desktop 安装设置界面](/assets/img/llm/8/8-2-4-1.png) -->
 <div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/8/8-2-4-1.png" alt="Docker Desktop 安装设置界面"></div>
 
 安装完成后打开 Docker Desktop，确认状态栏显示 **Running**。
 
+<!-- ![Docker Desktop 成功启动后的主界面](/assets/img/llm/8/8-2-4-2.png) -->
 <div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/8/8-2-4-2.png" alt="Docker Desktop 成功启动后的主界面"></div>
 
 如果 Windows 提示需要安装“适用于 Linux 的 Windows 子系统”，按提示装完，再重新打开 Docker Desktop。
@@ -289,6 +296,7 @@ docker pull mysql:8.0.45
 docker images
 ```
 
+<!-- ![使用 docker images 查看本地 MySQL 镜像](/assets/img/llm/8/8-2-6-1.png) -->
 <div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/8/8-2-6-1.png" alt="使用 docker images 查看本地 MySQL 镜像"></div>
 
 启动一个 MySQL 容器：
@@ -313,6 +321,7 @@ docker run -d --name mysql-db -p 9999:3306 -e MYSQL_ROOT_PASSWORD=123456 mysql:8
 docker ps
 ```
 
+<!-- ![使用 docker ps 查看正在运行的 MySQL 容器](/assets/img/llm/8/8-2-6-2.png) -->
 <div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/8/8-2-6-2.png" alt="使用 docker ps 查看正在运行的 MySQL 容器"></div>
 
 这里有两个地址容易混：
@@ -360,6 +369,7 @@ print("Python 已成功连接 Docker 中的 MySQL")
 python test_mysql.py
 ```
 
+<!-- ![本机 Python 脚本成功连接 Docker 中的 MySQL](/assets/img/llm/8/8-2-7-1.png) -->
 <div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/8/8-2-7-1.png" alt="本机 Python 脚本成功连接 Docker 中的 MySQL"></div>
 
 这个小案例不是为了讲 MySQL，而是先把 Docker 的基本动作串起来：
@@ -380,6 +390,7 @@ docker ps
 
 命令行里看到的容器列表大致是这样的：
 
+<!-- ![docker ps 输出中 IMAGE 列与 NAMES 列的区别](/assets/img/llm/8/8-2-8-1.png) -->
 <div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/8/8-2-8-1.png" alt="docker ps 输出中 IMAGE 列与 NAMES 列的区别"></div>
 
 输出里常见两列：
@@ -396,8 +407,10 @@ docker ps
 
 Docker Desktop 里也能直接区分：
 
+<!-- ![Docker Desktop 中的 Containers 列表](/assets/img/llm/8/8-2-8-2.png) -->
 <div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/8/8-2-8-2.png" alt="Docker Desktop 中的 Containers 列表"></div>
 
+<!-- ![Docker Desktop 中的 Images 列表](/assets/img/llm/8/8-2-8-3.png) -->
 <div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/8/8-2-8-3.png" alt="Docker Desktop 中的 Images 列表"></div>
 
 一个镜像可以启动多个容器。Dify 的 `api`、`worker`、`worker_beat` 就可能使用同一个后端镜像，只是启动模式不同。
@@ -856,6 +869,7 @@ mysql_data:/var/lib/mysql
 
 Windows 路径写法也遵循同一个规则：冒号左边是宿主机真实目录，右边是容器内目录。容器写入右边目录时，数据会落到左边目录。
 
+<!-- ![bind mount 中宿主机路径和容器路径的对应关系](/assets/img/llm/8/8-4-2-1.png) -->
 <div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/8/8-4-2-1.png" alt="bind mount 中宿主机路径和容器路径的对应关系"></div>
 
 粗略判断可以这样看：
@@ -904,6 +918,7 @@ Docker 官方文档也把 volume 定义为由容器引擎管理的持久化数�
 
 如果你使用的是 Docker Desktop，通常可以在设置中找到 Docker Engine 的配置区域，然后为 `registry-mirrors` 增加镜像地址。Ubuntu 服务器上的配置方式见第 2.10 小节。
 
+<!-- ![Docker Desktop 的 Docker Engine 配置界面与 registry-mirrors 示例](/assets/img/llm/8/8-4-4-1.png) -->
 <div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/8/8-4-4-1.png" alt="Docker Desktop 的 Docker Engine 配置界面与 registry-mirrors 示例"></div>
 
 镜像源可参考 GitHub 上的汇总项目：[dongyubin/DockerHub 国内镜像加速列表](https://github.com/dongyubin/DockerHub)。
@@ -983,6 +998,7 @@ docker compose logs python-app
 docker images
 ```
 
+<!-- ![使用 docker images 确认需要离线迁移的镜像](/assets/img/llm/8/8-4-5-1.png) -->
 <div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/8/8-4-5-1.png" alt="使用 docker images 确认需要离线迁移的镜像"></div>
 
 打包 MySQL 镜像和自定义 Python 镜像：
@@ -1040,6 +1056,7 @@ docker compose ps
 docker compose logs python-app
 ```
 
+<!-- ![离线导入镜像后使用 Compose 启动并验证服务](/assets/img/llm/8/8-4-5-2.png) -->
 <div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/8/8-4-5-2.png" alt="离线导入镜像后使用 Compose 启动并验证服务"></div>
 
 这个思路迁移到 Dify 也一样：提前准备好所需镜像、`.env`、`docker-compose.yaml`、`envs/` 目录、volume / 挂载目录和数据库备份，再到目标服务器导入和启动。
@@ -1414,10 +1431,12 @@ docker compose logs -f redis
 
 这类页面不是“正常升级完成”，而是新环境像第一次安装一样重新进入了初始化流程：
 
+<!-- ![Dify 升级后进入初始化管理员页面的示例](/assets/img/llm/8/8-6-4-1.png) -->
 <div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/8/8-6-4-1.png" alt="Dify 升级后进入初始化管理员页面的示例"></div>
 
 也可能在浏览器里看到安装/初始化入口。出现这种情况时，不要急着重新初始化，先检查旧数据库是否还在：
 
+<!-- ![Dify 升级后进入安装入口页面的示例](/assets/img/llm/8/8-6-4-2.png) -->
 <div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/8/8-6-4-2.png" alt="Dify 升级后进入安装入口页面的示例"></div>
 
 先查 PostgreSQL 里是否有用户表数据：
@@ -1426,6 +1445,7 @@ docker compose logs -f redis
 docker exec -it docker-db_postgres-1 psql -U postgres -d dify -c "select count(*) as users_count from account;"
 ```
 
+<!-- ![通过 psql 查询 Dify 用户表记录数以判断是否读到旧数据库](/assets/img/llm/8/8-6-4-3.png) -->
 <div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/8/8-6-4-3.png" alt="通过 psql 查询 Dify 用户表记录数以判断是否读到旧数据库"></div>
 
 如果用户表有记录，说明数据库里仍有旧数据；如果为 0 或表不存在，需要继续查库名和挂载。
@@ -1441,10 +1461,12 @@ docker volume ls
 
 `docker volume ls` 可以帮助确认当前环境里有哪些 Docker 管理的数据卷：
 
+<!-- ![使用 docker volume ls 查看 Dify 相关 volume 列表](/assets/img/llm/8/8-6-4-4.png) -->
 <div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/8/8-6-4-4.png" alt="使用 docker volume ls 查看 Dify 相关 volume 列表"></div>
 
 `docker inspect` 的 Mounts 字段能看到数据库容器实际挂载到了哪里：
 
+<!-- ![使用 docker inspect 查看 PostgreSQL 容器的 Mounts 挂载信息](/assets/img/llm/8/8-6-4-5.png) -->
 <div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/8/8-6-4-5.png" alt="使用 docker inspect 查看 PostgreSQL 容器的 Mounts 挂载信息"></div>
 
 常见原因：
@@ -1542,6 +1564,7 @@ docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' doc
 
 在 Mac 本地保存服务器私钥，例如：
 
+<!-- ![在 Mac 本地保存用于 SSH 隧道连接的服务器私钥](/assets/img/llm/8/8-6-5-1.png) -->
 <div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/8/8-6-5-1.png" alt="在 Mac 本地保存用于 SSH 隧道连接的服务器私钥"></div>
 
 ```bash
@@ -1560,10 +1583,12 @@ ssh -i ~/.ssh/aliyun_navicat.pem \
 
 这个终端窗口需要保持打开。关闭窗口，隧道就断开。
 
+<!-- ![建立 SSH 隧道后终端保持连接的状态](/assets/img/llm/8/8-6-5-2.png) -->
 <div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/8/8-6-5-2.png" alt="建立 SSH 隧道后终端保持连接的状态"></div>
 
 Navicat 里不要再勾选 SSH 选项，因为隧道已经由命令行建好了。它只需要连接本机端口：
 
+<!-- ![Navicat 中通过本机 15432 端口连接 PostgreSQL 的配置](/assets/img/llm/8/8-6-5-3.png) -->
 <div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/8/8-6-5-3.png" alt="Navicat 中通过本机 15432 端口连接 PostgreSQL 的配置"></div>
 
 常见填写方式：
@@ -1578,6 +1603,7 @@ Navicat 里不要再勾选 SSH 选项，因为隧道已经由命令行建好了�
 
 连接成功后，就可以像普通 PostgreSQL 一样查看 Dify 表结构和数据：
 
+<!-- ![Navicat 成功连接 Dify PostgreSQL 数据库后的表结构视图](/assets/img/llm/8/8-6-5-4.png) -->
 <div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/8/8-6-5-4.png" alt="Navicat 成功连接 Dify PostgreSQL 数据库后的表结构视图"></div>
 
 生产环境里，查看表结构通常没问题；如果要改数据、删数据或批量更新，先备份，再确认影响范围。
@@ -1650,10 +1676,12 @@ docker compose down
 
 执行后，终端里通常会看到容器和网络被移除：
 
+<!-- ![执行 docker compose down 后容器和网络被移除的终端输出](/assets/img/llm/8/8-7-1-1.png) -->
 <div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/8/8-7-1-1.png" alt="执行 docker compose down 后容器和网络被移除的终端输出"></div>
 
 可以再看一眼 volume 是否仍然存在：
 
+<!-- ![docker compose down 后使用 docker volume ls 确认 volume 仍然存在](/assets/img/llm/8/8-7-1-2.png) -->
 <div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/8/8-7-1-2.png" alt="docker compose down 后使用 docker volume ls 确认 volume 仍然存在"></div>
 
 **第 5 步：准备新版本**
@@ -1666,16 +1694,19 @@ cd /opt/dify/dify-<new-version>/docker
 
 如果使用 `git clone` 拉取新版本，网络不稳定时可能会中断，失败后可以重试或先处理代理/镜像源问题：
 
+<!-- ![通过 git clone 拉取 Dify 新版本源码目录的终端示例](/assets/img/llm/8/8-7-1-3.png) -->
 <div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/8/8-7-1-3.png" alt="通过 git clone 拉取 Dify 新版本源码目录的终端示例"></div>
 
 把旧版本 `.env` 复制过来，再按新版本 `.env.example` 补齐新增变量。若项目提供同步脚本，可以使用官方推荐脚本；如果没有，就逐项对照新旧 `.env`。
 
 同步脚本或配置对比工具通常会提示哪些变量需要保留、补齐或调整：
 
+<!-- ![Dify 升级时同步 .env 配置后的终端输出示例](/assets/img/llm/8/8-7-1-4.png) -->
 <div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/8/8-7-1-4.png" alt="Dify 升级时同步 .env 配置后的终端输出示例"></div>
 
 实际改配置时，建议一项一项确认，不要整段盲贴：
 
+<!-- ![在终端编辑 Dify .env 配置文件的示例](/assets/img/llm/8/8-7-1-5.png) -->
 <div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/8/8-7-1-5.png" alt="在终端编辑 Dify .env 配置文件的示例"></div>
 
 重点检查：
@@ -1690,6 +1721,7 @@ cd /opt/dify/dify-<new-version>/docker
 
 改完后用 `grep` 之类的命令确认关键变量已经生效：
 
+<!-- ![使用 grep 确认 Dify 升级后的关键 .env 变量](/assets/img/llm/8/8-7-1-6.png) -->
 <div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/8/8-7-1-6.png" alt="使用 grep 确认 Dify 升级后的关键 .env 变量"></div>
 
 **第 6 步：拉取并启动新版本**
@@ -1701,10 +1733,12 @@ docker compose up -d
 
 镜像拉取阶段会逐个下载服务镜像：
 
+<!-- ![执行 docker compose pull 拉取 Dify 服务镜像的输出示例](/assets/img/llm/8/8-7-1-7.png) -->
 <div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/8/8-7-1-7.png" alt="执行 docker compose pull 拉取 Dify 服务镜像的输出示例"></div>
 
 启动后可以用 `docker ps` 或 `docker compose ps` 查看容器状态：
 
+<!-- ![Dify 新版本启动后使用 docker ps 查看容器状态](/assets/img/llm/8/8-7-1-8.png) -->
 <div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/8/8-7-1-8.png" alt="Dify 新版本启动后使用 docker ps 查看容器状态"></div>
 
 启动后查看：
@@ -1733,6 +1767,7 @@ cat /path/to/dify_backup.sql | docker exec -i docker-db_postgres-1 psql -U postg
 
 如果看到大量 `already exists` 之类的错误，通常说明目标库不是干净空库：
 
+<!-- ![向已初始化数据库导入备份时出现 already exists 重复对象报错](/assets/img/llm/8/8-7-1-9.png) -->
 <div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/8/8-7-1-9.png" alt="向已初始化数据库导入备份时出现 already exists 重复对象报错"></div>
 
 确认可以清空目标库后，再执行：
@@ -1746,6 +1781,7 @@ cat /path/to/dify_backup.sql | docker exec -i docker-db_postgres-1 psql -U postg
 
 重建空库并重新导入时，先确认你手里已经有可用备份：
 
+<!-- ![重建 dify 数据库并准备重新导入备份的终端示例](/assets/img/llm/8/8-7-1-10.png) -->
 <div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/8/8-7-1-10.png" alt="重建 dify 数据库并准备重新导入备份的终端示例"></div>
 
 完成后重启关键服务：

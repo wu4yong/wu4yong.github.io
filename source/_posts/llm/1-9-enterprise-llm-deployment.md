@@ -66,6 +66,7 @@ tags:
 
 调用路径（从上到下）：
 
+<!-- ![企业级大模型部署中应用层与模型推理层的调用路径示意图](/assets/img/llm/7/7-1-2-1.png) -->
 <div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/7/7-1-2-1.png" alt="企业级大模型部署中应用层与模型推理层的调用路径示意图"></div>
 
 **这种分层架构的优势在于**：
@@ -143,6 +144,7 @@ tags:
 
 整体图示如下：
 
+<!-- ![Dify 对接 Xinference 与推理引擎的整体调用关系图](/assets/img/llm/7/7-1-3-1.png) -->
 <div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/7/7-1-3-1.png" alt="Dify 对接 Xinference 与推理引擎的整体调用关系图"></div>
 
 **问题：为什么这个项目里 Dify 装在 Docker 中，而 Xinference 直接装在 GPU 服务器上？**
@@ -191,42 +193,51 @@ https://buy.cloud.tencent.com/cvm
 
 > 竞价实例，只要有人租长期的服务器就有可能把你的服务器踢掉，实例被竞价释放也是有解决办法的，后续会去讲。
 
+<!-- ![腾讯云服务器购买页中选择计费与实例类型的界面](/assets/img/llm/7/7-2-2-1.png) -->
 <div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/7/7-2-2-1.png" alt="腾讯云服务器购买页中选择计费与实例类型的界面"></div>
 
 地域选择：没有要求，自己根据需要选即可。
 
 实例配置：根据自己需求选择，无具体要求。这里我选择 4 核 8GB。
 
+<!-- ![腾讯云服务器实例配置选择界面](/assets/img/llm/7/7-2-2-2.png) -->
 <div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/7/7-2-2-2.png" alt="腾讯云服务器实例配置选择界面"></div>
 
 镜像：选择 CentOS、Ubuntu 都可以，这里使用了 Ubuntu。选择后点击下一步。
 
+<!-- ![腾讯云服务器镜像选择界面](/assets/img/llm/7/7-2-2-3.png) -->
 <div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/7/7-2-2-3.png" alt="腾讯云服务器镜像选择界面"></div>
 
+<!-- ![腾讯云服务器镜像确认界面](/assets/img/llm/7/7-2-2-4.png) -->
 <div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/7/7-2-2-4.png" alt="腾讯云服务器镜像确认界面"></div>
 
 #### 2.2.2 设置网络和主机
 
 拉满带宽上限，新建安全组，把常用的端口都开启：
 
+<!-- ![腾讯云服务器安全组和带宽配置界面](/assets/img/llm/7/7-2-2-5.png) -->
 <div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/7/7-2-2-5.png" alt="腾讯云服务器安全组和带宽配置界面"></div>
 
 命名实例，设置密码，进行下一步：
 
+<!-- ![腾讯云服务器设置主机名与登录密码的界面](/assets/img/llm/7/7-2-2-6.png) -->
 <div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/7/7-2-2-6.png" alt="腾讯云服务器设置主机名与登录密码的界面"></div>
 
 开通：
 
+<!-- ![腾讯云服务器确认开通的界面](/assets/img/llm/7/7-2-2-7.png) -->
 <div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/7/7-2-2-7.png" alt="腾讯云服务器确认开通的界面"></div>
 
 #### 2.2.3 登录(使用 Xshell 或 finalshell 或 windTerm)
 
+<!-- ![腾讯云服务器获取公网 IP 与登录信息的界面](/assets/img/llm/7/7-2-2-8.png) -->
 <div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/7/7-2-2-8.png" alt="腾讯云服务器获取公网 IP 与登录信息的界面"></div>
 
 创建好了，通过这个公网 IP，端口使用 22，账号 ubuntu，密码使用你设置的密码。使用你的远程连接工具 XShell 或 FinalShell 连接即可。
 
 XShell 界面如下：
 
+<!-- ![使用 XShell 连接腾讯云服务器的界面](/assets/img/llm/7/7-2-2-9.png) -->
 <div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/7/7-2-2-9.png" alt="使用 XShell 连接腾讯云服务器的界面"></div>
 
 ### 2.3 部署 Docker
@@ -235,12 +246,14 @@ XShell 界面如下：
 
 **什么是 Docker？**
 
+<!-- ![Docker 容器化技术的概念示意图](/assets/img/llm/7/7-2-3-1.png) -->
 <div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/7/7-2-3-1.png" alt="Docker 容器化技术的概念示意图"></div>
 
 Docker 是一种容器化技术，相较于传统的通过虚拟机技术实现的虚拟化方案来说，Docker 是⼀种更加轻量级的虚拟化解决方案。
 
 **它可以将应用程序及其依赖项打包成一个独立的容器，并在不同的环境中运行。**通过 Docker 容器， 开发者可以轻松地构建、部署和运行应用程序，而无需担心环境配置和依赖问题。
 
+<!-- ![Docker 容器与传统部署方式对比示意图](/assets/img/llm/7/7-2-3-2.png) -->
 <div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/7/7-2-3-2.png" alt="Docker 容器与传统部署方式对比示意图"></div>
 
 **使用 Docker 的好处：**
@@ -292,6 +305,7 @@ sudo apt install docker-ce docker-ce-cli containerd.io docker-buildx-plugin dock
 
 执行`sudo apt upgrade`的时候会出现这个界面，按回车即可
 
+<!-- ![执行 sudo apt upgrade 时出现交互提示的界面](/assets/img/llm/7/7-2-3-3.png) -->
 <div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/7/7-2-3-3.png" alt="执行 sudo apt upgrade 时出现交互提示的界面"></div>
 
 之后如果在这个界面卡住，按几下回车即可。
@@ -306,12 +320,14 @@ sudo systemctl status docker
 
 如图所示即为启动成功
 
+<!-- ![Docker 服务启动成功并显示 running 状态的界面](/assets/img/llm/7/7-2-3-4.png) -->
 <div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/7/7-2-3-4.png" alt="Docker 服务启动成功并显示 running 状态的界面"></div>
 
 > 看到 running 状态说明 docker 已经正常启动
 
 **注意：安装过程中如果报错如下：**
 
+<!-- ![Docker 安装过程中报错的界面](/assets/img/llm/7/7-2-3-5.png) -->
 <div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/7/7-2-3-5.png" alt="Docker 安装过程中报错的界面"></div>
 
 可以按如下操作步骤执行：
@@ -357,12 +373,14 @@ sudo mkdir dify #用于存储dify源码包
 
 下载地址：https://github.com/langgenius/dify/releases/tag/0.15.5
 
+<!-- ![GitHub 上下载 Dify 0.15.5 离线安装包的界面](/assets/img/llm/7/7-2-4-1.png) -->
 <div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/7/7-2-4-1.png" alt="GitHub 上下载 Dify 0.15.5 离线安装包的界面"></div>
 
 > 注意：网络不好的同学，可在网盘资料中查看使用。
 
 利用远程连接工具（比如：XFTP）将 dify 源码包传递到服务器 /opt/dify 文件夹中，并解压即可：
 
+<!-- ![通过 XFTP 将 Dify 源码包上传到服务器的界面](/assets/img/llm/7/7-2-4-2.png) -->
 <div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/7/7-2-4-2.png" alt="通过 XFTP 将 Dify 源码包上传到服务器的界面"></div>
 
 上传可能失败（因为默认 ubuntu 用户权限不足），解决办法如下
@@ -389,6 +407,7 @@ cd /opt/dify/dify-0.15.5
 pwd # 输出 /opt/dify/dify-0.15.5
 ```
 
+<!-- ![在服务器上解压 Dify 源码包并进入目录的界面](/assets/img/llm/7/7-2-4-3.png) -->
 <div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/7/7-2-4-3.png" alt="在服务器上解压 Dify 源码包并进入目录的界面"></div>
 
 ##### 方式 2：Gitee 下载
@@ -413,6 +432,7 @@ sudo git clone https://gitee.com/你的用户名/dify.git
 sudo git clone https://gitee.com/shkstart/dify.git
 ```
 
+<!-- ![通过 Gitee 克隆 Dify 项目的界面](/assets/img/llm/7/7-2-4-4.png) -->
 <div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/7/7-2-4-4.png" alt="通过 Gitee 克隆 Dify 项目的界面"></div>
 
 #### 2.4.2 使用 docker 启动 Dify
@@ -450,6 +470,7 @@ sudo git clone https://gitee.com/shkstart/dify.git
 
    注意：第一次拉取镜像，时间可能会很长，实测约将近十分钟。
 
+   <!-- ![首次执行 docker compose up -d 启动 Dify 时的容器创建界面](/assets/img/llm/7/7-2-4-25.png) -->
    <div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/7/7-2-4-25.png" alt="首次执行 docker compose up -d 启动 Dify 时的容器创建界面"></div>
 
 ```cmd
@@ -475,6 +496,7 @@ sudo git clone https://gitee.com/shkstart/dify.git
 
    在这个输出中，你应该可以看到包括 3 个业务服务 `api / worker / web`，以及 6 个基础组件 `weaviate / db / redis / nginx / ssrf_proxy / sandbox` 。
 
+<!-- ![执行 docker compose ps 查看 Dify 容器状态的界面](/assets/img/llm/7/7-2-4-5.png) -->
 <div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/7/7-2-4-5.png" alt="执行 docker compose ps 查看 Dify 容器状态的界面"></div>
 
 6. 停止 Dify 运行
@@ -500,8 +522,10 @@ sudo docker compose up -d
 
 执行失败，大概率会由于网络问题或镜像缺失问题发生报错。
 
+<!-- ![Dify 启动时因镜像或网络问题报错的界面](/assets/img/llm/7/7-2-4-6.png) -->
 <div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/7/7-2-4-6.png" alt="Dify 启动时因镜像或网络问题报错的界面"></div>
 
+<!-- ![通过 XFTP 将 Dify 源码包上传到服务器的界面](/assets/img/llm/7/7-2-4-2.png) -->
 <div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/7/7-2-4-2.png" alt="通过 XFTP 将 Dify 源码包上传到服务器的界面"></div>
 
 进行镜像源或代理配置。
@@ -540,12 +564,15 @@ sudo docker compose up -d
 
 开始正常下载了：
 
+<!-- ![配置镜像源后重新下载 Docker 镜像的界面](/assets/img/llm/7/7-2-4-8.png) -->
 <div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/7/7-2-4-8.png" alt="配置镜像源后重新下载 Docker 镜像的界面"></div>
 
+<!-- ![通过 Gitee 克隆 Dify 项目的界面](/assets/img/llm/7/7-2-4-4.png) -->
 <div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/7/7-2-4-4.png" alt="通过 Gitee 克隆 Dify 项目的界面"></div>
 
 **问题 2：可能出现报错，报错如下**
 
+<!-- ![Dify 部署过程中出现系统配置报错的界面](/assets/img/llm/7/7-2-4-10.png) -->
 <div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/7/7-2-4-10.png" alt="Dify 部署过程中出现系统配置报错的界面"></div>
 
 于是根据报错信息检查
@@ -556,10 +583,12 @@ sudo vi /etc/apparmor.d/tunables/home.d/ubuntu
 
 删除掉报错信息中第七行的多余字符即可
 
+<!-- ![修复系统配置文件中多余字符的界面](/assets/img/llm/7/7-2-4-11.png) -->
 <div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/7/7-2-4-11.png" alt="修复系统配置文件中多余字符的界面"></div>
 
 重新运行，成功
 
+<!-- ![修复后重新运行 Dify 成功的界面](/assets/img/llm/7/7-2-4-12.png) -->
 <div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/7/7-2-4-12.png" alt="修复后重新运行 Dify 成功的界面"></div>
 
 #### 2.4.4 访问
@@ -571,10 +600,12 @@ sudo vi /etc/apparmor.d/tunables/home.d/ubuntu
 http://your_server_ip/install   #your_server_ip即为配置的腾讯云服务器地址
 ```
 
+<!-- ![访问 Dify 管理员初始化页面的界面](/assets/img/llm/7/7-2-4-13.png) -->
 <div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/7/7-2-4-13.png" alt="访问 Dify 管理员初始化页面的界面"></div>
 
 如图所示为成功访问，进行注册登录即可
 
+<!-- ![Dify 私有化部署成功后的登录或首页界面](/assets/img/llm/7/7-2-4-14.png) -->
 <div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/7/7-2-4-14.png" alt="Dify 私有化部署成功后的登录或首页界面"></div>
 
 **注意：如果一直无法加载进去，则需要重启 Docker 再次尝试**
@@ -583,10 +614,13 @@ http://your_server_ip/install   #your_server_ip即为配置的腾讯云服务器
 
 为避免案例中的竞价实例被释放，可以在控制台中的快照中设置快照策略，即使被释放了也能保存快照，从而快速恢复
 
+<!-- ![腾讯云创建快照策略的界面](/assets/img/llm/7/7-2-4-15.png) -->
 <div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/7/7-2-4-15.png" alt="腾讯云创建快照策略的界面"></div>
 
+<!-- ![腾讯云配置快照策略细节的界面](/assets/img/llm/7/7-2-4-16.png) -->
 <div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/7/7-2-4-16.png" alt="腾讯云配置快照策略细节的界面"></div>
 
+<!-- ![腾讯云快照策略设置成功的界面](/assets/img/llm/7/7-2-4-17.png) -->
 <div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/7/7-2-4-17.png" alt="腾讯云快照策略设置成功的界面"></div>
 
 再次进入定期快照策略，可发现已设置成功。
@@ -595,16 +629,20 @@ http://your_server_ip/install   #your_server_ip即为配置的腾讯云服务器
 
 如果想调用线上的 LLM，则可以用 Dify 选择线上的模型运营商。比如说可以在模型运营商中选择 DeepSeek。
 
+<!-- ![Dify 中添加在线模型供应商的界面](/assets/img/llm/7/7-2-5-1.png) -->
 <div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/7/7-2-5-1.png" alt="Dify 中添加在线模型供应商的界面"></div>
 
 DeepSeek 官网地址：https://www.deepseek.com/ ，在官网获取自己的 API Key 即可配置后使用
 
+<!-- ![DeepSeek 官网获取 API Key 的界面](/assets/img/llm/7/7-2-5-2.png) -->
 <div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/7/7-2-5-2.png" alt="DeepSeek 官网获取 API Key 的界面"></div>
 
 在这里可以使用平台提供的在线大模型服务（运营商），但是考虑到可能存在的数据安全问题，所以我们自己部署 Xinference，进而部署私有的大模型。
 
+<!-- ![Dify 中选择在线模型运营商的界面](/assets/img/llm/7/7-2-5-3.png) -->
 <div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/7/7-2-5-3.png" alt="Dify 中选择在线模型运营商的界面"></div>
 
+<!-- ![Dify 中配置在线大模型连接信息的界面](/assets/img/llm/7/7-2-5-4.png) -->
 <div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/7/7-2-5-4.png" alt="Dify 中配置在线大模型连接信息的界面"></div>
 
 ---
@@ -632,6 +670,7 @@ DeepSeek 官网地址：https://www.deepseek.com/ ，在官网获取自己的 AP
 
 注意：AutoDL 官方文档中默认会将实例的 **6006** 和 **6008** 端口映射为自定义服务入口。
 
+<!-- ![Xinference WebUI 访问成功后的界面](/assets/img/llm/7/7-3-2-4.png) -->
 <div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/7/7-3-2-4.png" alt="Xinference WebUI 访问成功后的界面"></div>
 
 > 注意：
@@ -642,6 +681,7 @@ DeepSeek 官网地址：https://www.deepseek.com/ ，在官网获取自己的 AP
 
 选择镜像版本：
 
+<!-- ![AutoDL 平台中选择镜像和基础环境的界面](/assets/img/llm/7/7-3-1-2.png) -->
 <div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/7/7-3-1-2.png" alt="AutoDL 平台中选择镜像和基础环境的界面"></div>
 
 界面中的「框架」是 AutoDL 预装好的基础环境，不同框架用途不同，可做大致区分：
@@ -659,20 +699,24 @@ DeepSeek 官网地址：https://www.deepseek.com/ ，在官网获取自己的 AP
 
 **本教程建议**：选择 **PyTorch** 对应镜像，Python 选 **3.10**，CUDA 选 **11.8**（或与当前显卡驱动兼容的版本）。这样便于在实例中直接使用 conda 安装并运行 Xinference。
 
+<!-- ![AutoDL 平台中确认镜像配置的界面](/assets/img/llm/7/7-3-1-3.png) -->
 <div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/7/7-3-1-3.png" alt="AutoDL 平台中确认镜像配置的界面"></div>
 
 #### 3.1.2 XShell 连接登录
 
 复制该服务器的登录指令，通过远程连接工具进行登录
 
+<!-- ![AutoDL 平台中查看服务器登录命令的界面](/assets/img/llm/7/7-3-1-4.png) -->
 <div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/7/7-3-1-4.png" alt="AutoDL 平台中查看服务器登录命令的界面"></div>
 
+<!-- ![通过远程工具连接 AutoDL 服务器的界面](/assets/img/llm/7/7-3-1-5.png) -->
 <div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/7/7-3-1-5.png" alt="通过远程工具连接 AutoDL 服务器的界面"></div>
 
 测试连接：
 
 > 默认的用户名：root
 
+<!-- ![测试 AutoDL 服务器连接成功的界面](/assets/img/llm/7/7-3-1-6.png) -->
 <div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/7/7-3-1-6.png" alt="测试 AutoDL 服务器连接成功的界面"></div>
 
 连接成功
@@ -685,6 +729,7 @@ DeepSeek 官网地址：https://www.deepseek.com/ ，在官网获取自己的 AP
 
 https://www.autodl.com/docs/network_turbo/
 
+<!-- ![AutoDL 学术资源加速说明页面界面](/assets/img/llm/7/7-3-1-7.png) -->
 <div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/7/7-3-1-7.png" alt="AutoDL 学术资源加速说明页面界面"></div>
 
 将图中框选的一行复制到终端输入即可
@@ -695,6 +740,7 @@ source /etc/network_turbo
 
 > **加速说明：** `source /etc/network_turbo` 主要用于当前终端访问 GitHub、HuggingFace 等学术资源时的临时加速，官方也不承诺稳定性。用完或发现影响其他网络请求时，可执行 `unset http_proxy && unset https_proxy` 取消当前终端代理。
 
+<!-- ![在终端中开启 AutoDL 学术资源加速的界面](/assets/img/llm/7/7-3-1-8.png) -->
 <div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/7/7-3-1-8.png" alt="在终端中开启 AutoDL 学术资源加速的界面"></div>
 
 ### 3.2 部署 XInference
@@ -735,6 +781,7 @@ which python
 which pip
 ```
 
+<!-- ![Xinference WebUI 访问成功后的界面](/assets/img/llm/7/7-3-2-4.png) -->
 <div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/7/7-3-2-4.png" alt="Xinference WebUI 访问成功后的界面"></div>
 
 #### 3.2.2 部署 XInference
@@ -774,14 +821,17 @@ XINFERENCE_MODEL_SRC=modelscope 的作用是将默认的模型仓库从**Hugging
 
 ##### ① 查看 AutoDL 自定义服务地址
 
+<!-- ![Xinference WebUI 访问成功后的界面](/assets/img/llm/7/7-3-2-4.png) -->
 <div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/7/7-3-2-4.png" alt="Xinference WebUI 访问成功后的界面"></div>
 
+<!-- ![Xinference WebUI 访问成功后的界面](/assets/img/llm/7/7-3-2-4.png) -->
 <div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/7/7-3-2-4.png" alt="Xinference WebUI 访问成功后的界面"></div>
 
 AutoDL 的云 GPU 服务器默认会将 6006 和 6008 映射为服务，Xinference 服务端监听了 6006 端口，访问对应链接即可访问 Xinference 的 WebUI。
 
 ##### ② 访问 Xinference 的 WebUI
 
+<!-- ![Xinference WebUI 访问成功后的界面](/assets/img/llm/7/7-3-2-4.png) -->
 <div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/7/7-3-2-4.png" alt="Xinference WebUI 访问成功后的界面"></div>
 
 ### 3.3 部署 LLM（大语言模型）
@@ -796,6 +846,7 @@ AutoDL 的云 GPU 服务器默认会将 6006 和 6008 映射为服务，Xinferen
 
 > https://inference.readthedocs.io/zh-cn/latest/models/builtin/llm/qwen3.html
 
+<!-- ![Xinference 官方文档中 Qwen3 模型配置示意图](/assets/img/llm/7/7-3-3-1.png) -->
 <div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/7/7-3-3-1.png" alt="Xinference 官方文档中 Qwen3 模型配置示意图"></div>
 
 Xinference 把模型分成了很多模型族，每个模型族都包含一系列不同规模的模型，通过不同的属性配置区分。Qwen3-0.6B 的模型族为 qwen3，配置如上图所示。
@@ -847,10 +898,12 @@ xinference launch \
 
 此时服务端可以看到模型正在下载。
 
+<!-- ![Xinference 服务端下载 LLM 模型时的界面](/assets/img/llm/7/7-3-3-2.png) -->
 <div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/7/7-3-3-2.png" alt="Xinference 服务端下载 LLM 模型时的界面"></div>
 
 模型部署完成
 
+<!-- ![LLM 在 Xinference 中部署完成后的界面](/assets/img/llm/7/7-3-3-3.png) -->
 <div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/7/7-3-3-3.png" alt="LLM 在 Xinference 中部署完成后的界面"></div>
 
 ##### ② 本地模型文件
@@ -882,10 +935,12 @@ xinference list \
   --endpoint http://localhost:6006
 ```
 
+<!-- ![使用 xinference list 查看 LLM 部署情况的界面](/assets/img/llm/7/7-3-3-4.png) -->
 <div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/7/7-3-3-4.png" alt="使用 xinference list 查看 LLM 部署情况的界面"></div>
 
 ##### ② WebUI
 
+<!-- ![Xinference WebUI 中查看已部署 LLM 的界面](/assets/img/llm/7/7-3-3-5.png) -->
 <div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/7/7-3-3-5.png" alt="Xinference WebUI 中查看已部署 LLM 的界面"></div>
 
 ##### ③ 发送请求
@@ -902,6 +957,7 @@ curl http://localhost:6006/v1/chat/completions -H "Content-Type: application/jso
 
 响应如下：
 
+<!-- ![向 Xinference 发送 LLM 请求后的响应界面](/assets/img/llm/7/7-3-3-6.png) -->
 <div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/7/7-3-3-6.png" alt="向 Xinference 发送 LLM 请求后的响应界面"></div>
 
 ### 3.4 部署 Embedding 模型（嵌入模型）
@@ -923,10 +979,12 @@ xinference launch \
 
 正在下载
 
+<!-- ![Xinference 下载 Embedding 模型时的界面](/assets/img/llm/7/7-3-4-1.png) -->
 <div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/7/7-3-4-1.png" alt="Xinference 下载 Embedding 模型时的界面"></div>
 
 部署完成
 
+<!-- ![Embedding 模型在 Xinference 中部署完成后的界面](/assets/img/llm/7/7-3-4-2.png) -->
 <div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/7/7-3-4-2.png" alt="Embedding 模型在 Xinference 中部署完成后的界面"></div>
 
 ##### ② 本地文件
@@ -950,10 +1008,12 @@ xinference list \
   --endpoint http://localhost:6006
 ```
 
+<!-- ![使用 xinference list 查看 Embedding 模型的界面](/assets/img/llm/7/7-3-4-3.png) -->
 <div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/7/7-3-4-3.png" alt="使用 xinference list 查看 Embedding 模型的界面"></div>
 
 ##### ② WebUI
 
+<!-- ![Xinference WebUI 中查看 Embedding 模型的界面](/assets/img/llm/7/7-3-4-4.png) -->
 <div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/7/7-3-4-4.png" alt="Xinference WebUI 中查看 Embedding 模型的界面"></div>
 
 ##### ③ 发送请求
@@ -969,6 +1029,7 @@ curl http://localhost:6006/v1/embeddings \
 
 响应如下：
 
+<!-- ![向 Xinference 发送 Embedding 请求后的响应界面](/assets/img/llm/7/7-3-4-5.png) -->
 <div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/7/7-3-4-5.png" alt="向 Xinference 发送 Embedding 请求后的响应界面"></div>
 
 ### 3.5 部署 Rerank 模型（重排序模型）
@@ -984,10 +1045,12 @@ xinference launch \
 
 正在下载
 
+<!-- ![Xinference 下载 Rerank 模型时的界面](/assets/img/llm/7/7-3-5-1.png) -->
 <div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/7/7-3-5-1.png" alt="Xinference 下载 Rerank 模型时的界面"></div>
 
 部署完成
 
+<!-- ![Rerank 模型在 Xinference 中部署完成后的界面](/assets/img/llm/7/7-3-5-2.png) -->
 <div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/7/7-3-5-2.png" alt="Rerank 模型在 Xinference 中部署完成后的界面"></div>
 
 #### 3.5.2 测试
@@ -999,10 +1062,12 @@ xinference list \
   --endpoint http://localhost:6006
 ```
 
+<!-- ![使用 xinference list 查看 Rerank 模型的界面](/assets/img/llm/7/7-3-5-3.png) -->
 <div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/7/7-3-5-3.png" alt="使用 xinference list 查看 Rerank 模型的界面"></div>
 
 ##### ② WebUI
 
+<!-- ![Xinference WebUI 中查看 Rerank 模型的界面](/assets/img/llm/7/7-3-5-4.png) -->
 <div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/7/7-3-5-4.png" alt="Xinference WebUI 中查看 Rerank 模型的界面"></div>
 
 ##### ③ 发送请求
@@ -1028,48 +1093,61 @@ curl http://localhost:6006/v1/rerank \
 
 响应如下：
 
+<!-- ![向 Xinference 发送 Rerank 请求后的响应界面](/assets/img/llm/7/7-3-5-5.png) -->
 <div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/7/7-3-5-5.png" alt="向 Xinference 发送 Rerank 请求后的响应界面"></div>
 
 ### 3.6 Dify 对接 Xinference
 
 #### 3.6.1 安装 Xinference 插件
 
+<!-- ![Dify 插件市场入口界面](/assets/img/llm/7/7-3-6-1.png) -->
 <div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/7/7-3-6-1.png" alt="Dify 插件市场入口界面"></div>
 
 搜索 Xinference
 
+<!-- ![在 Dify 插件市场中搜索 Xinference 的界面](/assets/img/llm/7/7-3-6-2.png) -->
 <div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/7/7-3-6-2.png" alt="在 Dify 插件市场中搜索 Xinference 的界面"></div>
 
 安装插件
 
+<!-- ![在 Dify 中安装 Xinference 插件的界面](/assets/img/llm/7/7-3-6-3.png) -->
 <div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/7/7-3-6-3.png" alt="在 Dify 中安装 Xinference 插件的界面"></div>
 
+<!-- ![Dify 中确认安装 Xinference 插件的界面](/assets/img/llm/7/7-3-6-4.png) -->
 <div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/7/7-3-6-4.png" alt="Dify 中确认安装 Xinference 插件的界面"></div>
 
 安装完成后即可看到 Xinference
 
+<!-- ![Dify 中已成功安装 Xinference 插件的界面](/assets/img/llm/7/7-3-6-5.png) -->
 <div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/7/7-3-6-5.png" alt="Dify 中已成功安装 Xinference 插件的界面"></div>
 
 #### 3.6.2 添加 LLM
 
+<!-- ![在 Dify 中添加 Xinference 提供的 LLM 的界面](/assets/img/llm/7/7-3-6-6.png) -->
 <div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/7/7-3-6-6.png" alt="在 Dify 中添加 Xinference 提供的 LLM 的界面"></div>
 
+<!-- ![在 Dify 中填写 Xinference LLM 连接信息的界面](/assets/img/llm/7/7-3-6-7.png) -->
 <div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/7/7-3-6-7.png" alt="在 Dify 中填写 Xinference LLM 连接信息的界面"></div>
 
 在 Xinference 插件下可以看到模型，则配置成功
 
+<!-- ![Dify 中看到 Xinference LLM 模型列表的界面](/assets/img/llm/7/7-3-6-8.png) -->
 <div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/7/7-3-6-8.png" alt="Dify 中看到 Xinference LLM 模型列表的界面"></div>
 
 #### 3.6.3 添加 Embedding 模型
 
+<!-- ![在 Dify 中添加 Xinference Embedding 模型的界面](/assets/img/llm/7/7-3-6-9.png) -->
 <div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/7/7-3-6-9.png" alt="在 Dify 中添加 Xinference Embedding 模型的界面"></div>
 
+<!-- ![Dify 中配置 Xinference Embedding 模型的界面](/assets/img/llm/7/7-3-6-10.png) -->
 <div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/7/7-3-6-10.png" alt="Dify 中配置 Xinference Embedding 模型的界面"></div>
 
 #### 3.6.4 添加 Rerank 模型
 
+<!-- ![在 Dify 中添加 Xinference Rerank 模型的界面](/assets/img/llm/7/7-3-6-11.png) -->
 <div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/7/7-3-6-11.png" alt="在 Dify 中添加 Xinference Rerank 模型的界面"></div>
 
+<!-- ![Dify 中配置 Xinference Rerank 模型的界面](/assets/img/llm/7/7-3-6-12.png) -->
 <div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/7/7-3-6-12.png" alt="Dify 中配置 Xinference Rerank 模型的界面"></div>
 
 ---

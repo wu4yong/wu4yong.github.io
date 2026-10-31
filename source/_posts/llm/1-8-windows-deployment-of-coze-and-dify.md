@@ -80,6 +80,7 @@ Coze 开源后，本地部署多了一条选择。以前很多 B 端交付会优
 
 ## 2、Coze Studio 的安装和配置
 
+<!-- ![Coze Studio 本地部署四阶段流程总览图](/assets/img/llm/6/6-2-0-1.png) -->
 <div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/6/6-2-0-1.png" alt="Coze Studio 本地部署四阶段流程总览图"></div>
 
 ### 2.1 获取 Coze Studio 项目
@@ -92,6 +93,7 @@ git clone https://github.com/coze-dev/coze-studio.git
 
 在 Docker Desktop 终端中执行：
 
+<!-- ![在 Docker Desktop 终端中克隆 Coze Studio 仓库的界面](/assets/img/llm/6/6-2-1-1.png) -->
 <div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/6/6-2-1-1.png" alt="在 Docker Desktop 终端中克隆 Coze Studio 仓库的界面"></div>
 
 > 如果本机还没有安装 Git，可从 https://git-scm.com/downloads 下载并安装。安装完成后重新打开终端，再执行 `git clone`。
@@ -102,6 +104,7 @@ git clone https://github.com/coze-dev/coze-studio.git
 
 进入 `coze-studio` 根目录，在地址栏输入 `cmd` 并按回车：
 
+<!-- ![在 Coze Studio 根目录地址栏输入 cmd 的界面](/assets/img/llm/6/6-2-2-1.png) -->
 <div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/6/6-2-2-1.png" alt="在 Coze Studio 根目录地址栏输入 cmd 的界面"></div>
 
 先复制火山方舟豆包模型的模板文件：
@@ -128,42 +131,51 @@ copy backend\conf\model\template\model_template_ark_doubao-seed-1.6.yaml backend
 
 进入火山引擎官网 https://www.volcengine.com ，打开控制台。
 
+<!-- ![火山引擎控制台首页界面](/assets/img/llm/6/6-2-2-2.png) -->
 <div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/6/6-2-2-2.png" alt="火山引擎控制台首页界面"></div>
 
 搜索并进入“火山方舟”，在“API Key 管理”中点击“创建 API Key”。
 
+<!-- ![火山方舟创建 API Key 的界面](/assets/img/llm/6/6-2-2-3.png) -->
 <div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/6/6-2-2-3.png" alt="火山方舟创建 API Key 的界面"></div>
 
 点击小眼睛查看 API Key，并复制备用。
 
+<!-- ![火山方舟查看 API Key 的界面](/assets/img/llm/6/6-2-2-4.png) -->
 <div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/6/6-2-2-4.png" alt="火山方舟查看 API Key 的界面"></div>
 
 **第二步：创建 Endpoint**
 
 进入“在线推理”页面，选择“自定义推理接入点”，点击“创建推理接入点”。
 
+<!-- ![火山方舟创建推理接入点的界面](/assets/img/llm/6/6-2-2-5.png) -->
 <div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/6/6-2-2-5.png" alt="火山方舟创建推理接入点的界面"></div>
 
 输入接入点名称，建议按模型命名，然后点击“添加模型”。
 
+<!-- ![火山方舟设置推理接入点名称并添加模型的界面](/assets/img/llm/6/6-2-2-6.png) -->
 <div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/6/6-2-2-6.png" alt="火山方舟设置推理接入点名称并添加模型的界面"></div>
 
 模型可选择豆包、DeepSeek、Kimi、Qwen 等。这里以豆包 1.6 为例。
 
+<!-- ![火山方舟选择豆包模型接入点的界面](/assets/img/llm/6/6-2-2-7.png) -->
 <div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/6/6-2-2-7.png" alt="火山方舟选择豆包模型接入点的界面"></div>
 
 也可以从另一个入口添加模型：
 
+<!-- ![火山方舟添加模型的备选入口界面](/assets/img/llm/6/6-2-2-8.png) -->
 <div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/6/6-2-2-8.png" alt="火山方舟添加模型的备选入口界面"></div>
 
 勾选协议，点击“开通模型并接入”。
 
+<!-- ![火山方舟勾选协议并开通模型接入的界面](/assets/img/llm/6/6-2-2-9.png) -->
 <div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/6/6-2-2-9.png" alt="火山方舟勾选协议并开通模型接入的界面"></div>
 
 如果是首次开通模型，平台可能会要求实名认证，按页面提示完成即可。
 
 创建完成后复制 Endpoint ID。注意：模型名称下方的 ID 就是后面要填入配置文件的 Endpoint。
 
+<!-- ![火山方舟复制 Endpoint ID 的界面](/assets/img/llm/6/6-2-2-10.png) -->
 <div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/6/6-2-2-10.png" alt="火山方舟复制 Endpoint ID 的界面"></div>
 
 **第三步：写入 Coze Studio 配置文件**
@@ -172,10 +184,12 @@ copy backend\conf\model\template\model_template_ark_doubao-seed-1.6.yaml backend
 
 先把 `id` 改成任意 5 位以上纯数字。
 
+<!-- ![编辑 Coze Studio 模型配置文件的界面](/assets/img/llm/6/6-2-2-11.png) -->
 <div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/6/6-2-2-11.png" alt="编辑 Coze Studio 模型配置文件的界面"></div>
 
 再把 API Key 和 Endpoint 写入对应位置，保存并关闭文件。
 
+<!-- ![在 Coze Studio 模型配置文件中填写 API Key 和 Endpoint 的界面](/assets/img/llm/6/6-2-2-12.png) -->
 <div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/6/6-2-2-12.png" alt="在 Coze Studio 模型配置文件中填写 API Key 和 Endpoint 的界面"></div>
 
 #### 2.2.2 方案二：本地 Ollama 模型
@@ -188,10 +202,12 @@ Ollama 路线适合更关注私有化、离线可用和数据可控的场景。�
 ollama pull qwen2.5:7b
 ```
 
+<!-- ![本地安装 Ollama 并准备拉取模型的界面](/assets/img/llm/6/6-2-2-13.png) -->
 <div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/6/6-2-2-13.png" alt="本地安装 Ollama 并准备拉取模型的界面"></div>
 
 然后在 Coze Studio 项目中找到 Ollama 模型配置模板 `model_template_ollama.yaml`，复制并重命名为 `model_ollama.yaml`，放到 `backend/conf/model/` 目录下。
 
+<!-- ![复制 Ollama 模型配置模板文件的界面](/assets/img/llm/6/6-2-2-14.png) -->
 <div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/6/6-2-2-14.png" alt="复制 Ollama 模型配置模板文件的界面"></div>
 
 修改配置文件中的：
@@ -199,16 +215,19 @@ ollama pull qwen2.5:7b
 - `base_url`：通常填写 `http://host.docker.internal:11434`
 - `model`：填写你通过 Ollama 拉取的模型名，例如 `qwen2.5:7b`
 
+<!-- ![修改 Ollama 模型配置文件 base_url 和 model 的界面](/assets/img/llm/6/6-2-2-15.png) -->
 <div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/6/6-2-2-15.png" alt="修改 Ollama 模型配置文件 base_url 和 model 的界面"></div>
 
 ### 2.3 启动 Coze Studio
 
 模型配置完成后，进入项目中的 `docker` 目录。
 
+<!-- ![Coze Studio 项目中 docker 目录位置的界面](/assets/img/llm/6/6-2-3-1.png) -->
 <div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/6/6-2-3-1.png" alt="Coze Studio 项目中 docker 目录位置的界面"></div>
 
 先在终端输入 `docker` 并回车。如果能看到类似帮助信息，说明 Docker 命令可用。
 
+<!-- ![在终端中验证 Docker 是否安装成功的界面](/assets/img/llm/6/6-2-3-2.png) -->
 <div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/6/6-2-3-2.png" alt="在终端中验证 Docker 是否安装成功的界面"></div>
 
 接着复制环境配置文件：
@@ -219,6 +238,7 @@ copy .env.example .env
 
 > Windows 下使用 `copy`；Linux / macOS 下可使用 `cp .env.example .env`。
 
+<!-- ![将 Coze Studio 的 .env.example 复制为 .env 的界面](/assets/img/llm/6/6-2-3-3.jpeg) -->
 <div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/6/6-2-3-3.jpeg" alt="将 Coze Studio 的 .env.example 复制为 .env 的界面"></div>
 
 在 `coze-studio\docker` 目录中执行：
@@ -227,12 +247,14 @@ copy .env.example .env
 docker compose --profile '*' up -d
 ```
 
+<!-- ![在 Docker 中启动 Coze Studio 的命令行界面](/assets/img/llm/6/6-2-3-4.png) -->
 <div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/6/6-2-3-4.png" alt="在 Docker 中启动 Coze Studio 的命令行界面"></div>
 
 这条命令会通过 Compose 启用所有 profile，并在后台启动服务。`docker compose up -d` 的通用含义见 [第 10 章 Compose](/2026/10/26/llm/1-10-docker-quickstart-and-dify-deployment-troubleshooting/#_32-compose)。
 
 首次启动可能需要 5-10 分钟，具体取决于网络和镜像拉取速度。看到类似下面的结果，说明服务已经启动。
 
+<!-- ![Coze Studio 启动成功后的日志界面](/assets/img/llm/6/6-2-3-5.png) -->
 <div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/6/6-2-3-5.png" alt="Coze Studio 启动成功后的日志界面"></div>
 
 启动后查看运行状态：
@@ -243,6 +265,7 @@ docker compose ps
 
 也可以打开 Docker Desktop，在容器列表中确认相关服务是否处于运行状态。
 
+<!-- ![查看 Coze Studio 容器运行状态的界面](/assets/img/llm/6/6-2-3-6.png) -->
 <div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/6/6-2-3-6.png" alt="查看 Coze Studio 容器运行状态的界面"></div>
 
 ### 2.4 访问 Coze Studio
@@ -253,10 +276,12 @@ docker compose ps
 http://localhost:8888/
 ```
 
+<!-- ![浏览器访问 Coze Studio 时的登录界面](/assets/img/llm/6/6-2-4-1.png) -->
 <div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/6/6-2-4-1.png" alt="浏览器访问 Coze Studio 时的登录界面"></div>
 
 登录后即可进入 Coze Studio 主界面。
 
+<!-- ![登录后的 Coze Studio 主界面](/assets/img/llm/6/6-2-4-2.png) -->
 <div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/6/6-2-4-2.png" alt="登录后的 Coze Studio 主界面"></div>
 
 开源版的功能与商业版不完全一致，学习时重点关注：能否登录、能否看到模型、能否创建 Agent 或工作流。
@@ -294,6 +319,7 @@ https://docs.dify.ai/zh-hans/getting-started/install-self-hosted/docker-compose
 
 然后按需修改 `.env` 中的配置，例如端口。
 
+<!-- ![修改 Dify .env 端口配置的界面](/assets/img/llm/6/6-3-3-1.png) -->
 <div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/6/6-3-3-1.png" alt="修改 Dify .env 端口配置的界面"></div>
 
 第一次部署最常改的是端口。如果本机 `80` 端口被其他程序占用，可以改成 `8100`、`8080` 或其他未被占用端口。
@@ -306,6 +332,7 @@ https://docs.dify.ai/zh-hans/getting-started/install-self-hosted/docker-compose
 
 进入 Dify 仓库下的 `docker` 目录：
 
+<!-- ![在终端中进入 Dify docker 目录的界面](/assets/img/llm/6/6-3-4-1.png) -->
 <div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/6/6-3-4-1.png" alt="在终端中进入 Dify docker 目录的界面"></div>
 
 执行：
@@ -314,18 +341,21 @@ https://docs.dify.ai/zh-hans/getting-started/install-self-hosted/docker-compose
 docker compose up -d
 ```
 
+<!-- ![执行 docker compose up -d 启动 Dify 的界面](/assets/img/llm/6/6-3-4-2.png) -->
 <div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/6/6-3-4-2.png" alt="执行 docker compose up -d 启动 Dify 的界面"></div>
 
 首次启动时，它会自动拉取镜像、创建容器并初始化服务，这个过程可能比较慢。
 
 安装完成后：
 
+<!-- ![Dify 首次安装完成后的命令行界面](/assets/img/llm/6/6-3-4-3.png) -->
 <div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/6/6-3-4-3.png" alt="Dify 首次安装完成后的命令行界面"></div>
 
 后续再次执行 `docker compose up -d`，通常就是启动已有服务。
 
 也可以在 Docker Desktop 的 Containers 页面查看当前运行的容器。
 
+<!-- ![Docker Desktop 中查看 Dify 容器运行状态的界面](/assets/img/llm/6/6-3-4-4.png) -->
 <div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/6/6-3-4-4.png" alt="Docker Desktop 中查看 Dify 容器运行状态的界面"></div>
 
 ### 3.5 浏览器访问 Dify
@@ -337,6 +367,7 @@ docker compose up -d
 
 首次访问需要设置管理员用户名与密码。
 
+<!-- ![Dify 首次访问时设置管理员账户的界面](/assets/img/llm/6/6-3-5-1.png) -->
 <div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/6/6-3-5-1.png" alt="Dify 首次访问时设置管理员账户的界面"></div>
 
 进入后，本地版的使用方式就和 Dify 云平台基本一致了。
@@ -347,6 +378,7 @@ docker compose up -d
 
 ### 4.1 Coze Loop 解决什么问题
 
+<!-- ![Coze Loop 产品介绍界面](/assets/img/llm/6/6-4-1-1.png) -->
 <div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/6/6-4-1-1.png" alt="Coze Loop 产品介绍界面"></div>
 
 Coze Loop 更偏“效果管理”和“运行观测”。它可以帮助开发者做 Prompt 调试、评测集管理、实验对比、Trace 追踪和自动化评测。
@@ -363,16 +395,19 @@ Coze Loop 更偏“效果管理”和“运行观测”。它可以帮助开发�
 
 Go 语言官网：https://go.dev/dl/
 
+<!-- ![Go 语言官网下载页面](/assets/img/llm/6/6-4-2-1.png) -->
 <div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/6/6-4-2-1.png" alt="Go 语言官网下载页面"></div>
 
 下载完成后双击运行安装程序。
 
+<!-- ![Go 安装程序启动界面](/assets/img/llm/6/6-4-2-2.png) -->
 <div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/6/6-4-2-2.png" alt="Go 安装程序启动界面"></div>
 
 按提示一路点击“Next”即可。
 
 安装完成后，确保 Go 安装目录下的 `bin` 目录，或 `GOPATH/bin`，已加入环境变量 PATH。
 
+<!-- ![Go 安装完成后的环境变量配置示意图](/assets/img/llm/6/6-4-2-3.png) -->
 <div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/6/6-4-2-3.png" alt="Go 安装完成后的环境变量配置示意图"></div>
 
 **2. Docker 环境**
@@ -389,6 +424,7 @@ Go 语言官网：https://go.dev/dl/
 git clone https://gitee.com/shkstart/coze-loop.git
 ```
 
+<!-- ![通过 Gitee 克隆 Coze Loop 仓库的界面](/assets/img/llm/6/6-4-3-1.png) -->
 <div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/6/6-4-3-1.png" alt="通过 Gitee 克隆 Coze Loop 仓库的界面"></div>
 
 ### 4.4 配置模型与端口
@@ -404,6 +440,7 @@ coze-loop-main\release\deployment\docker-compose\conf\model_config.yaml
 - `api_key`：火山方舟 API Key，可参考前面 Coze Studio 的创建方式。
 - `model`：火山方舟模型接入点的 Endpoint ID。
 
+<!-- ![配置 Coze Loop model_config.yaml 的界面](/assets/img/llm/6/6-4-4-1.png) -->
 <div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/6/6-4-4-1.png" alt="配置 Coze Loop model_config.yaml 的界面"></div>
 
 接着打开：
@@ -414,10 +451,12 @@ coze-loop-main\release\deployment\docker-compose\.env
 
 将 `COZE_LOOP_APP_OPENAPI_PORT` 改为 `8889` 或其他未被占用端口。
 
+<!-- ![修改 Coze Loop .env 端口配置的界面](/assets/img/llm/6/6-4-4-2.png) -->
 <div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/6/6-4-4-2.png" alt="修改 Coze Loop .env 端口配置的界面"></div>
 
 再打开同目录下的 `docker-compose.yml`，确认引用 `${COZE_LOOP_APP_OPENAPI_PORT}` 的端口与 `.env` 中保持一致。
 
+<!-- ![修改 Coze Loop docker-compose 端口映射的界面](/assets/img/llm/6/6-4-4-3.png) -->
 <div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/6/6-4-4-3.png" alt="修改 Coze Loop docker-compose 端口映射的界面"></div>
 
 ### 4.5 启动并访问 Coze Loop
@@ -442,8 +481,10 @@ docker compose -f docker-compose.yml --env-file .env --profile "*" up
 
 首次启动需要拉取镜像、构建本地镜像，可能耗时较久。看到以下日志，说明部署基本完成。
 
+<!-- ![Coze Loop 首次启动时的日志界面](/assets/img/llm/6/6-4-5-1.png) -->
 <div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/6/6-4-5-1.png" alt="Coze Loop 首次启动时的日志界面"></div>
 
+<!-- ![Coze Loop 启动完成后的日志界面](/assets/img/llm/6/6-4-5-2.png) -->
 <div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/6/6-4-5-2.png" alt="Coze Loop 启动完成后的日志界面"></div>
 
 在 Docker Desktop 的容器列表中，除 `xxx-init` 这类初始化容器执行完后自动退出外，其余服务容器应保持运行状态。
@@ -454,106 +495,133 @@ docker compose -f docker-compose.yml --env-file .env --profile "*" up
 http://localhost:8082
 ```
 
+<!-- ![Docker Desktop 中 Coze Loop 容器运行状态的界面](/assets/img/llm/6/6-4-5-3.png) -->
 <div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/6/6-4-5-3.png" alt="Docker Desktop 中 Coze Loop 容器运行状态的界面"></div>
 
 注册完成后即可进入应用详情页。
 
+<!-- ![浏览器访问 Coze Loop 开源版时的界面](/assets/img/llm/6/6-4-5-4.png) -->
 <div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/6/6-4-5-4.png" alt="浏览器访问 Coze Loop 开源版时的界面"></div>
 
 ### 4.6 Coze Loop 主要功能速览
 
 下面以在线版 `https://www.coze.cn/loop` 的 Demo 空间为例，看一下 Coze Loop 的核心功能。开源版和在线版界面可能略有差异，但功能理解是一致的。
 
+<!-- ![Coze Loop 在线版 Demo 空间界面](/assets/img/llm/6/6-4-6-1.png) -->
 <div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/6/6-4-6-1.png" alt="Coze Loop 在线版 Demo 空间界面"></div>
 
 #### 4.6.1 Prompt 开发
 
 用于提示词预览与调试。
 
+<!-- ![Coze Loop 的 Prompt 开发模块界面](/assets/img/llm/6/6-4-6-2.png) -->
 <div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/6/6-4-6-2.png" alt="Coze Loop 的 Prompt 开发模块界面"></div>
 
 点击详情：
 
+<!-- ![Coze Loop Prompt 开发详情入口界面](/assets/img/llm/6/6-4-6-3.png) -->
 <div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/6/6-4-6-3.png" alt="Coze Loop Prompt 开发详情入口界面"></div>
 
+<!-- ![Coze Loop Prompt 开发详情页界面](/assets/img/llm/6/6-4-6-4.png) -->
 <div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/6/6-4-6-4.png" alt="Coze Loop Prompt 开发详情页界面"></div>
 
 #### 4.6.2 Playground
 
 Playground 和 Prompt 开发类似，但更适合做自由对比。
 
+<!-- ![Coze Loop Playground 模块界面](/assets/img/llm/6/6-4-6-5.png) -->
 <div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/6/6-4-6-5.png" alt="Coze Loop Playground 模块界面"></div>
 
 Demo 空间中无法开启自由对比模式，可切换到个人空间使用。
 
+<!-- ![Coze Loop 在 Demo 空间中的 Playground 界面](/assets/img/llm/6/6-4-6-6.png) -->
 <div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/6/6-4-6-6.png" alt="Coze Loop 在 Demo 空间中的 Playground 界面"></div>
 
+<!-- ![Coze Loop 切换到个人空间的界面](/assets/img/llm/6/6-4-6-7.png) -->
 <div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/6/6-4-6-7.png" alt="Coze Loop 切换到个人空间的界面"></div>
 
+<!-- ![Coze Loop 自由对比模式的界面](/assets/img/llm/6/6-4-6-8.png) -->
 <div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/6/6-4-6-8.png" alt="Coze Loop 自由对比模式的界面"></div>
 
 #### 4.6.3 评测集
 
 评测集用于管理测试样本，是后续实验和自动化评测的基础。
 
+<!-- ![Coze Loop 评测集模块界面](/assets/img/llm/6/6-4-6-9.png) -->
 <div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/6/6-4-6-9.png" alt="Coze Loop 评测集模块界面"></div>
 
+<!-- ![Coze Loop 评测集详情界面](/assets/img/llm/6/6-4-6-10.png) -->
 <div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/6/6-4-6-10.png" alt="Coze Loop 评测集详情界面"></div>
 
+<!-- ![Coze Loop 新建评测集的界面](/assets/img/llm/6/6-4-6-11.png) -->
 <div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/6/6-4-6-11.png" alt="Coze Loop 新建评测集的界面"></div>
 
 #### 4.6.4 评估器
 
 该模块用于构建评估 **Prompt 开发**实例的工具，可以理解为带有评分提示词的大模型。
 
+<!-- ![Coze Loop 评估器模块界面](/assets/img/llm/6/6-4-6-12.png) -->
 <div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/6/6-4-6-12.png" alt="Coze Loop 评估器模块界面"></div>
 
+<!-- ![Coze Loop 新建评估器的界面](/assets/img/llm/6/6-4-6-13.png) -->
 <div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/6/6-4-6-13.png" alt="Coze Loop 新建评估器的界面"></div>
 
+<!-- ![Coze Loop 评估器配置详情界面](/assets/img/llm/6/6-4-6-14.png) -->
 <div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/6/6-4-6-14.png" alt="Coze Loop 评估器配置详情界面"></div>
 
 #### 4.6.5 实验
 
 实验用于把评测集、评测对象和评估器串起来，做版本对比和效果分析。
 
+<!-- ![Coze Loop 实验模块界面](/assets/img/llm/6/6-4-6-15.png) -->
 <div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/6/6-4-6-15.png" alt="Coze Loop 实验模块界面"></div>
 
 Demo 空间无权创建实验，切换到个人空间即可。
 
+<!-- ![Coze Loop 切换到个人空间创建实验的界面](/assets/img/llm/6/6-4-6-16.png) -->
 <div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/6/6-4-6-16.png" alt="Coze Loop 切换到个人空间创建实验的界面"></div>
 
 实验详情如下：
 
+<!-- ![Coze Loop 实验详情页界面](/assets/img/llm/6/6-4-6-17.png) -->
 <div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/6/6-4-6-17.png" alt="Coze Loop 实验详情页界面"></div>
 
 指标统计模块会以可视化方式展示评估结果。
 
+<!-- ![Coze Loop 实验指标统计界面](/assets/img/llm/6/6-4-6-18.png) -->
 <div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/6/6-4-6-18.png" alt="Coze Loop 实验指标统计界面"></div>
 
 新建实验时，依次设置基础信息、评测集、评测对象和评估器即可。
 
+<!-- ![Coze Loop 新建实验的界面](/assets/img/llm/6/6-4-6-19.png) -->
 <div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/6/6-4-6-19.png" alt="Coze Loop 新建实验的界面"></div>
 
 #### 4.6.6 Trace
 
 Trace 用于记录运行链路里的详细信息，适合排查模型调用、工具调用和执行步骤。
 
+<!-- ![Coze Loop Trace 模块界面](/assets/img/llm/6/6-4-6-20.png) -->
 <div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/6/6-4-6-20.png" alt="Coze Loop Trace 模块界面"></div>
 
+<!-- ![Coze Loop Trace 详情界面](/assets/img/llm/6/6-4-6-21.png) -->
 <div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/6/6-4-6-21.png" alt="Coze Loop Trace 详情界面"></div>
 
+<!-- ![Coze Loop Trace 运行明细界面](/assets/img/llm/6/6-4-6-22.png) -->
 <div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/6/6-4-6-22.png" alt="Coze Loop Trace 运行明细界面"></div>
 
 #### 4.6.7 统计与自动化任务
 
 统计模块用于查看空间整体运行情况；自动化任务用于周期性执行评测。
 
+<!-- ![Coze Loop 自动化任务模块界面](/assets/img/llm/6/6-4-6-23.png) -->
 <div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/6/6-4-6-23.png" alt="Coze Loop 自动化任务模块界面"></div>
 
 详情页：
 
+<!-- ![Coze Loop 自动化任务详情页界面](/assets/img/llm/6/6-4-6-24.png) -->
 <div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/6/6-4-6-24.png" alt="Coze Loop 自动化任务详情页界面"></div>
 
+<!-- ![Coze Loop 自动化任务配置明细界面](/assets/img/llm/6/6-4-6-25.png) -->
 <div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/6/6-4-6-25.png" alt="Coze Loop 自动化任务配置明细界面"></div>
 
 ---

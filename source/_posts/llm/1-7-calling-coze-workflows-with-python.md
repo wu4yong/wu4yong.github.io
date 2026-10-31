@@ -32,6 +32,7 @@ tags:
 
 Coze 的 API 能力需要通过应用发布功能启用。
 
+<!-- ![Coze 工作流发布 API 入口的界面示意图](/assets/img/llm/5/5-1-1-1.png) -->
 <div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/5/5-1-1-1.png" alt="Coze 工作流发布 API 入口的界面示意图"></div>
 
 这一步的意义和 Dify 很像：只有发布后的工作流，才适合作为外部系统依赖的稳定入口。
@@ -44,6 +45,7 @@ Coze 的 API 能力需要通过应用发布功能启用。
 
 发布成功后，在工作流画布页面可以看到 API 调试入口。
 
+<!-- ![Coze 工作流画布中的 API 调试入口界面](/assets/img/llm/5/5-2-1-1.png) -->
 <div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/5/5-2-1-1.png" alt="Coze 工作流画布中的 API 调试入口界面"></div>
 
 ### 2.2 查看 workflow_id 和 app_id
@@ -55,6 +57,7 @@ Coze 的 API 能力需要通过应用发布功能启用。
 - **工作流 ID**：`workflow_id`
 - **应用 ID**：`app_id`
 
+<!-- ![Coze API Playground 中查看 workflow_id 和 app_id 的界面](/assets/img/llm/5/5-2-2-1.png) -->
 <div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/5/5-2-2-1.png" alt="Coze API Playground 中查看 workflow_id 和 app_id 的界面"></div>
 
 可以这样理解：
@@ -66,10 +69,12 @@ Coze 的 API 能力需要通过应用发布功能启用。
 
 左侧窗口向下滑动，可以看到 token（即 API Key），点击“授权”按钮。
 
+<!-- ![Coze API Playground 中生成并授权 API Key 的界面](/assets/img/llm/5/5-2-3-1.png) -->
 <div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/5/5-2-3-1.png" alt="Coze API Playground 中生成并授权 API Key 的界面"></div>
 
 点击后会自动生成并填充 API Key。
 
+<!-- ![Coze API Playground 中自动填充 API Key 后的界面](/assets/img/llm/5/5-2-3-2.png) -->
 <div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/5/5-2-3-2.png" alt="Coze API Playground 中自动填充 API Key 后的界面"></div>
 
 右侧的 Shell 命令窗口会同步更新。
@@ -78,6 +83,7 @@ Coze 的 API 能力需要通过应用发布功能启用。
 
 请求体中的 `parameters` 对象用于向工作流传递参数，该对象的每个属性都对应工作流中的一个输入变量。
 
+<!-- ![Coze API Playground 中配置 parameters 入参的界面](/assets/img/llm/5/5-2-4-1.png) -->
 <div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/5/5-2-4-1.png" alt="Coze API Playground 中配置 parameters 入参的界面"></div>
 
 这也是 Coze 调用里最容易出错的地方。因为它不是“差不多就行”，而是**字段名、类型、结构都必须对齐平台里的定义**。
@@ -86,6 +92,7 @@ Coze 的 API 能力需要通过应用发布功能启用。
 
 可以直接点击 Shell 命令窗口右上角的“运行”按钮。
 
+<!-- ![Coze API Playground 中运行工作流请求的界面](/assets/img/llm/5/5-2-5-1.png) -->
 <div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/5/5-2-5-1.png" alt="Coze API Playground 中运行工作流请求的界面"></div>
 
 ---
@@ -121,16 +128,19 @@ curl -X POST 'https://api.coze.cn/v1/workflow/stream_run' \
 
 ### 4.1 运行结果界面
 
+<!-- ![Coze 工作流流式运行结果界面的整体示意图](/assets/img/llm/5/5-4-1-1.png) -->
 <div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/5/5-4-1-1.png" alt="Coze 工作流流式运行结果界面的整体示意图"></div>
 
 ### 4.2 Message
 
+<!-- ![Coze 流式返回中 Message 事件内容的界面示意图](/assets/img/llm/5/5-4-2-1.png) -->
 <div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/5/5-4-2-1.png" alt="Coze 流式返回中 Message 事件内容的界面示意图"></div>
 
 `Message` 才是携带真正业务内容的事件类型，此处的 `content` 就是工作流某一步的输出。
 
 ### 4.3 Done
 
+<!-- ![Coze 流式返回中 Done 结束事件的界面示意图](/assets/img/llm/5/5-4-3-1.png) -->
 <div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/5/5-4-3-1.png" alt="Coze 流式返回中 Done 结束事件的界面示意图"></div>
 
 `Done` 表示流式响应结束，通常出现在所有 `Message` 之后。
@@ -151,6 +161,7 @@ curl -X POST 'https://api.coze.cn/v1/workflow/stream_run' \
 
 Coze 提供了官方 Python SDK：`cozepy`。
 
+<!-- ![Coze 官方 Python SDK cozepy 的文档或仓库界面示意图](/assets/img/llm/5/5-5-1-1.png) -->
 <div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/5/5-5-1-1.png" alt="Coze 官方 Python SDK cozepy 的文档或仓库界面示意图"></div>
 
 ### 5.2 安装依赖
@@ -292,12 +303,14 @@ handle_workflow_iterator(
 
 ### 5.5 运行结果
 
+<!-- ![Python 调用 Coze 工作流后的运行结果界面示意图](/assets/img/llm/5/5-5-5-1.png) -->
 <div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/5/5-5-5-1.png" alt="Python 调用 Coze 工作流后的运行结果界面示意图"></div>
 
 ## 6、除了 SDK，还可以在平台侧运行
 
 如果你只是想先确认工作流本身能正常输出，也可以直接在平台里测试。
 
+<!-- ![在 Coze 平台侧直接测试工作流输出的界面示意图](/assets/img/llm/5/5-6-1-1.png) -->
 <div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/5/5-6-1-1.png" alt="在 Coze 平台侧直接测试工作流输出的界面示意图"></div>
 
 真实项目中，推荐的顺序通常是：

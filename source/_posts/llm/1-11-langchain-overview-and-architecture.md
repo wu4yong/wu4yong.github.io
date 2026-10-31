@@ -41,6 +41,7 @@ tags:
 
 LangChain 在 GitHub 上的热度变化如下图所示：
 
+<!-- ![LangChain 主仓库（langchain-ai/langchain）GitHub Star 历史增长曲线，2023 初至 2025 初由近零增长至约 10 万+（star-history.com 风格图）](/assets/img/llm/9/9-1-1-1.png) -->
 <div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/9/9-1-1-1.png" alt="LangChain 主仓库（langchain-ai/langchain）GitHub Star 历史增长曲线，2023 初至 2025 初由近零增长至约 10 万+（star-history.com 风格图）"></div>
 
 从工程视角看，LangChain 的价值不在于“替你发一次请求”，而在于帮你把下面这些原本零散的东西组织起来：
@@ -59,6 +60,7 @@ LangChain 在 GitHub 上的热度变化如下图所示：
 
 如果你只是偶尔调一下模型 API，直接用 OpenAI、阿里百炼、DeepSeek、智谱等厂商 SDK 完全没问题；但一旦进入真实项目，单纯“把一个字符串发给模型，再拿回一段文本”的开发方式很快就会暴露出一批工程问题。
 
+<!-- ![大语言模型单独使用时的典型局限：知识截止、无实时联网、难接私有数据与数据库、输出稳定性与工具调用等（示意图）](/assets/img/llm/9/9-1-2-1.png) -->
 <div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/9/9-1-2-1.png" alt="大语言模型单独使用时的典型局限：知识截止、无实时联网、难接私有数据与数据库、输出稳定性与工具调用等（示意图）"></div>
 
 常见问题包括：
@@ -78,6 +80,7 @@ LangChain 并不会神奇地消灭这些复杂度，但它给你提供了一套�
 
 最典型的类比，就是 Java 里的 **JDBC** 或 **Spring**。你的业务代码不想被某一个数据库或某一个中间件写死，于是你希望中间有一层统一接口来隔离差异。在大模型应用里，这一层统一抽象、统一编排、统一接入的角色，LangChain 很大程度上就在承担。
 
+<!-- ![JDBC 与 LangChain 的类比：左侧为 Java 经 JDBC 对接多种数据库；右侧为 AI 应用经 LangChain 对接多种模型 API（直连单一 API「可行但不建议」的示意）](/assets/img/llm/9/9-1-3-1.jpg) -->
 <div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/9/9-1-3-1.jpg" alt="JDBC 与 LangChain 的类比：左侧为 Java 经 JDBC 对接多种数据库；右侧为 AI 应用经 LangChain 对接多种模型 API（直连单一 API「可行但不建议」的示意）"></div>
 
 放到项目开发里，两种路线的边界大致是：
@@ -176,6 +179,7 @@ LangChain 的优势很明显，但它也不是银弹。学习时要同时看到�
 
 下面这张图可以帮助你理解 LangChain 在系统架构中的位置：
 
+<!-- ![LLM 应用四层架构：UI 交互层、服务/链层、模型层、存储层及数据流方向；LangChain 主要处于服务/链层](/assets/img/llm/9/9-2-2-1.png) -->
 <div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/9/9-2-2-1.png" alt="LLM 应用四层架构：UI 交互层、服务/链层、模型层、存储层及数据流方向；LangChain 主要处于服务/链层"></div>
 
 | 层级              | 这层负责什么                                                                 | 常见对象 / 产品                                     | LangChain 在哪里                       |
@@ -226,6 +230,7 @@ LangChain 的优势很明显，但它也不是银弹。学习时要同时看到�
 
 > 附：从事「基础通用大模型」开发者简历（示意）
 
+<!-- ![招聘场景中简历片段示意](/assets/img/llm/9/9-2-4-1.png) -->
 <div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/9/9-2-4-1.png" alt="招聘场景中简历片段示意"></div>
 
 ---
@@ -239,11 +244,13 @@ LangChain 的演进大致可以分成三个阶段来理解：
 **第一阶段：0.0.x / 0.1 早期阶段，特点是“链优先”。**  
 这一时期大家更多把 LangChain 理解成“Prompt + LLM + Chain”的组合工具，很多经典写法例如 `LLMChain`、`ConversationChain`、各种旧版 AgentExecutor 都是从这里来的。
 
+<!-- ![LangChain V0.1 时期架构示意：以链（Chain）与组件组合为主线的经典教学图](/assets/img/llm/9/9-3-1-1.gif) -->
 <div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/9/9-3-1-1.gif" alt="LangChain V0.1 时期架构示意：以链（Chain）与组件组合为主线的经典教学图"></div>
 
 **第二阶段：0.2 / 0.3 阶段，开始重视生态拆分和工程边界。**  
 这一时期官方逐渐把 LangChain、集成包、部署与调试能力拆开，形成更清晰的产品层次。你也会在很多 2024 年左右的教程里看到这套结构图。
 
+<!-- ![LangChain V0.2/V0.3 生态：架构、组件、部署三层示意](/assets/img/llm/9/9-3-1-2.gif) -->
 <div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/9/9-3-1-2.gif" alt="LangChain V0.2/V0.3 生态：架构、组件、部署三层示意"></div>
 
 > **说明**：上图将 LangChain 生态分为三层——**架构（Architecture）**、**组件（Components）**、**部署（Deployment）**。
@@ -255,6 +262,7 @@ LangChain 的演进大致可以分成三个阶段来理解：
 **第三阶段：1.x 阶段，重点变成“精简主包、强化 Agent、与 LangGraph 深度融合”。**  
 官方文档在 1.x 里强调：`langchain` 主包只保留核心高层能力，集成拆到独立 provider 包，旧能力迁到 `langchain-classic`，Agent 则建立在 LangGraph runtime 之上。
 
+<!-- ![LangChain 1.x 轻核心示意：langchain-core 为底座，主包精简、集成拆至各 provider 包并与 LangGraph 等协作](/assets/img/llm/9/9-3-1-3.gif) -->
 <div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/9/9-3-1-3.gif" alt="LangChain 1.x 轻核心示意：langchain-core 为底座，主包精简、集成拆至各 provider 包并与 LangGraph 等协作"></div>
 
 如果记一个时间点即可：
@@ -287,6 +295,7 @@ LangChain 的演进大致可以分成三个阶段来理解：
 
 下面这张图对应的是大家最容易感受到的变化：**写法变了，重点也变了。**
 
+<!-- ![LangChain 0.x 与 1.x 核心差异：旧写法多步组装，新主线强调统一入口、create_agent 与 LangGraph Runtime](/assets/img/llm/9/9-3-3-1.jpeg) -->
 <div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/9/9-3-3-1.jpeg" alt="LangChain 0.x 与 1.x 核心差异：旧写法多步组装，新主线强调统一入口、create_agent 与 LangGraph Runtime"></div>
 
 先用一句话总结：
@@ -359,6 +368,7 @@ create_agent(模型、工具、提示等) → [Agent]
 
 先用下面这张图把知识块铺开。它不要求你现在全部掌握，只需要看懂后面章节会沿着哪条路线展开：
 
+<!-- ![LangChain 完整知识体系：从模型接入、Prompt、Parser、LCEL 到 Retrieval、Tools、MCP、Agent 的学习路线](/assets/img/llm/9/9-4-1-1.png) -->
 <div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/9/9-4-1-1.png" alt="LangChain 完整知识体系：从模型接入、Prompt、Parser、LCEL 到 Retrieval、Tools、MCP、Agent 的学习路线"></div>
 
 你可以先把一个典型 AI 应用想成这样一条链路：
@@ -385,6 +395,7 @@ create_agent(模型、工具、提示等) → [Agent]
 
 Model I/O 说的就是“**围绕模型调用本身的一圈能力**”。它解决的是：**输入怎么组织、模型怎么调、输出怎么拿得稳。**
 
+<!-- ![LangChain Model I/O：Format（输入格式化）→ Predict（调用模型）→ Parse（解析输出）三阶段关系示意](/assets/img/llm/9/9-4-2-1.png) -->
 <div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/9/9-4-2-1.png" alt="LangChain Model I/O：Format（输入格式化）→ Predict（调用模型）→ Parse（解析输出）三阶段关系示意"></div>
 
 从学习路径上看，它主要包含三件事：
@@ -451,6 +462,7 @@ Model I/O 说的就是“**围绕模型调用本身的一圈能力**”。它解
 ### 4.5 Retrieval（检索）：检索与 RAG
 
 **Retrieval** 模块解决的是“模型不知道的知识从哪里来”的问题。它是 RAG 的核心组成部分，负责从外部知识源中检索和当前问题相关的信息，再把检索结果交给模型辅助生成答案。
+<!-- ![LangChain Retrieval：外部知识接入与检索增强生成（RAG）在应用中的位置示意](/assets/img/llm/9/9-4-5-1.png) -->
 <div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/9/9-4-5-1.png" alt="LangChain Retrieval：外部知识接入与检索增强生成（RAG）在应用中的位置示意"></div>
 
 这一块你可以先把它拆成两段理解：
@@ -493,6 +505,7 @@ Model I/O 说的就是“**围绕模型调用本身的一圈能力**”。它解
 
 **Agent** 则是在 Tool 之上再多一层：它不是简单执行固定步骤，而是让模型根据当前任务自主决定“下一步该做什么”。例如：先判断是否需要查天气；如果需要，就调用天气工具；看到结果后，再决定是否需要继续问用户；最后组织最终回复。
 
+<!-- ![LangChain Agents：在工具（Tools）之上由模型进行规划、选工具与多步执行的典型关系示意](/assets/img/llm/9/9-4-6-1.png) -->
 <div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/9/9-4-6-1.png" alt="LangChain Agents：在工具（Tools）之上由模型进行规划、选工具与多步执行的典型关系示意"></div>
 
 在 1.x 官方语境下，**LangChain 的 Agent 已经明确建立在 LangGraph 运行时之上**。这意味着你即使只是调用 `create_agent`，底层也不再只是一个松散的“工具循环”，而是带有状态、节点、流转、持久化能力的图式运行逻辑。
@@ -534,6 +547,7 @@ Model I/O 说的就是“**围绕模型调用本身的一圈能力**”。它解
 
 四大块侧重“**模型 I/O → 链 → 检索 → 智能体**”这条主线；六大模块则补上 **Memory** 和 **Callbacks**，让你的系统视角更完整。
 
+<!-- ![LangChain 六大核心模块关系总览：Models、Memory、Retrieval、Chains、Agents、Callbacks（教学向总图，与官方 1.x 文档栏目划分是粗粒度对应关系）](/assets/img/llm/9/9-4-8-1.jpeg) -->
 <div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/9/9-4-8-1.jpeg" alt="LangChain 六大核心模块关系总览：Models、Memory、Retrieval、Chains、Agents、Callbacks（教学向总图，与官方 1.x 文档栏目划分是粗粒度对应关系）"></div>
 
 > **说明**：这张图属于“教学视图”，适合入门时建立全局感。到了官方 1.x 文档中，你会看到这些能力被拆到 Agents、Models、Messages、Tools、Memory、Retrieval、Streaming、Structured Output、Middleware、Runtime、LangSmith 等更细的栏目里。两者不是冲突关系，而是“粗粒度总图”和“细粒度产品化视图”的区别。
@@ -549,6 +563,7 @@ Model I/O 说的就是“**围绕模型调用本身的一圈能力**”。它解
 
 下面这张图把这些模块进一步展开了：
 
+<!-- ![LangChain 六大模块展开小结：Agent、Chain、Memory、Data Connection、Model I/O、Callbacks 及其子组件在一页上的关系](/assets/img/llm/9/9-4-8-2.jpg) -->
 <div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/9/9-4-8-2.jpg" alt="LangChain 六大模块展开小结：Agent、Chain、Memory、Data Connection、Model I/O、Callbacks 及其子组件在一页上的关系"></div>
 
 **虚线表示什么**：图中虚线表示**数据流或依赖关系**——例如链会用到 Memory 和 Data Connection，会通过 Model I/O 调模型；Document Loaders 产出给 Transformers/Splitters，再进 Vector Stores；Document Retrievers 从 Vector Stores 里查。看虚线就能看出「谁用谁、数据怎么流」。
