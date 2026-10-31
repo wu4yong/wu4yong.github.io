@@ -23,9 +23,9 @@ tags:
 - 完成 Xinference 在 GPU 服务器上的部署，并分别托管 LLM、Embedding、Rerank 模型。
 - 理解 Dify 对接 Xinference 后，为什么这条链路更适合企业做统一模型治理。
 
-**学习建议：** 企业部署最容易被环境细节淹没，先把层次分清：Dify 属于应用层，Xinference 属于推理层，GPU 服务器只是承载它们的基础设施。第 1 节先看选型逻辑，第 2 节只负责把 Dify 跑起来，第 3 节再接模型服务。遇到 Docker、网络、数据库或升级问题，直接回看 [第 8 章](8-Docker快速入门与Dify部署排障.md)，不要在这一章里硬猜。
+**学习建议：** 企业部署最容易被环境细节淹没，先把层次分清：Dify 属于应用层，Xinference 属于推理层，GPU 服务器只是承载它们的基础设施。第 1 节先看选型逻辑，第 2 节只负责把 Dify 跑起来，第 3 节再接模型服务。遇到 Docker、网络、数据库或升级问题，直接回看 [第 10 章](/2026/10/26/llm/1-10-docker-quickstart-and-dify-deployment-troubleshooting/)，不要在这一章里硬猜。
 
-**官方文档与资源**：详见 [工具导航与参考资料索引 - 部署与基础设施](工具导航与参考资料索引.md#部署与基础设施)。
+**官方文档与资源**：详见 [工具导航与参考资料索引 - 部署与基础设施](/2026/10/26/llm/tools-and-references-index/#部署与基础设施)。
 
 ---
 
@@ -506,7 +506,7 @@ sudo docker compose up -d
 
 进行镜像源或代理配置。
 
-> **说明：** 镜像源和代理属于 Docker 通用网络问题，第三方镜像源的可用性、安全性和同步完整性都可能变化。生产环境优先使用 Docker 官方源、企业内网镜像仓库，或云厂商明确提供并可信的镜像加速服务。通用处理思路见 [第 8 章 - 网络慢或镜像拉取失败](8-Docker快速入门与Dify部署排障.md#_44-网络慢或镜像拉取失败)。
+> **说明：** 镜像源和代理属于 Docker 通用网络问题，第三方镜像源的可用性、安全性和同步完整性都可能变化。生产环境优先使用 Docker 官方源、企业内网镜像仓库，或云厂商明确提供并可信的镜像加速服务。通用处理思路见 [第 10 章 - 网络慢或镜像拉取失败](/2026/10/26/llm/1-10-docker-quickstart-and-dify-deployment-troubleshooting/#_44-网络慢或镜像拉取失败)。
 
 ```bash
 sudo vi /etc/docker/daemon.json
@@ -1101,4 +1101,4 @@ curl http://localhost:6006/v1/rerank \
 - **排错时也要按分层思路查**：应用层看 Dify 配置和 Docker，模型层看 Xinference、模型下载和端口，接入层看插件、地址、鉴权和 API 兼容性。分层排查，才不会把“平台问题”和“模型服务问题”混成一锅。
 - 从掌握结果看，学完本章后，你至少应该：能理解企业级私有化部署为什么不仅是“能跑起来”，还涉及安全、成本、版本、可观测和运维治理；能区分推理引擎和模型托管平台在架构中的不同职责，并理解本章为什么选 Xinference；能大致复述“Dify 应用层 + Xinference 模型托管层 + 兼容 API 接入”的整体链路，并知道它如何衔接后续 RAG / Agent 主线。
 
-**建议下一步：** 先按第 2 节在腾讯云上把 Dify 跑通并能在浏览器使用；再按第 3 节在 AutoDL 上把 Xinference 及 LLM/Embedding/Rerank 部署并测试通过；最后在 Dify 中安装 Xinference 插件并添加自建模型，用一个小型 RAG 或 Agent 应用验证端到端调用。遇到 Docker 基础问题或 Dify 具体报错可查 [第 8 章 Docker 快速入门与 Dify 部署排障](8-Docker快速入门与Dify部署排障.md)。
+**建议下一步：** 先按第 2 节在腾讯云上把 Dify 跑通并能在浏览器使用；再按第 3 节在 AutoDL 上把 Xinference 及 LLM/Embedding/Rerank 部署并测试通过；最后在 Dify 中安装 Xinference 插件并添加自建模型，用一个小型 RAG 或 Agent 应用验证端到端调用。遇到 Docker 基础问题或 Dify 具体报错可查 [第 10 章 Docker 快速入门与 Dify 部署排障](/2026/10/26/llm/1-10-docker-quickstart-and-dify-deployment-troubleshooting/)。

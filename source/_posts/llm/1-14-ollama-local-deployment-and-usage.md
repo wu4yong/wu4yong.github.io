@@ -19,11 +19,11 @@ tags:
 
 - 理解 **Ollama** 是什么、解决什么问题，以及它在整套 LangChain / Agent 学习路线里的位置。
 - 掌握 Ollama 的**安装、模型目录配置、常用命令、模型拉取与验证**，并建立“本地模型运行”这条完整思路。
-- 学会使用 **LangChain** 里的 `ChatOllama` 调用本机 Ollama 服务，理解它与 [第 11 章 Model I/O 与模型接入](11-Model-I-O与模型接入.md) 中云端模型调用的异同。
+- 学会使用 **LangChain** 里的 `ChatOllama` 调用本机 Ollama 服务，理解它与 [第 13 章 Model I/O 与模型接入](/2026/10/26/llm/1-13-model-io-and-model-access/) 中云端模型调用的异同。
 
 **学习建议：** Ollama 的重点不是多背几个命令，而是亲手确认“本地模型能被服务化调用”。先装好 Ollama，拉取一个小模型，用命令行验证能回答，再接到 LangChain 的 `ChatOllama`。读代码时顺手记下模型名称、模型存放位置和机器资源限制，这些才是本地部署最常见的排障入口。
 
-**官方文档与资源**：详见 [工具导航与参考资料索引 - 模型接入与本地运行](工具导航与参考资料索引.md#模型接入与本地运行)。
+**官方文档与资源**：详见 [工具导航与参考资料索引 - 模型接入与本地运行](/2026/10/26/llm/tools-and-references-index/#模型接入与本地运行)。
 
 ---
 
@@ -572,7 +572,7 @@ print(model.invoke("什么是 LangChain，100 字以内").content)
 
 ### 5.4 消息列表写法：更贴近后续章节
 
-如果你希望和 [第 13 章 提示词与消息模板](13-提示词与消息模板.md) 保持一致，也可以传消息列表：
+如果你希望和 [第 15 章 提示词与消息模板](/2026/10/26/llm/1-15-prompts-and-message-templates/) 保持一致，也可以传消息列表：
 
 ```python
 from langchain_core.messages import HumanMessage
@@ -651,4 +651,4 @@ ChatOllama(
 - 本章的实践主线有两条：第一条是 **安装与模型管理**，包括下载 Ollama、规划模型目录、理解 `OLLAMA_MODELS`、掌握 `pull / run / list / rm / ps` 等常用命令；第二条是 **LangChain 接入**，也就是用 `ChatOllama` 把本地模型纳入与云端模型一致的编程方式中，继续使用 `invoke()`、消息列表和 `AIMessage` 这套统一抽象。
 - 本章更重要的不是死记所有命令，而是建立一个完整认知：**Ollama 负责把模型跑在本地，LangChain 负责把本地模型接进代码和应用流程里。** 理解这一点之后，后面的 Prompt、LCEL、Agent、RAG 都可以继续在本地模型上练习。
 
-**建议下一步：** 先亲手完成这条最小链路：安装 Ollama → `ollama run qwen:4b` 跑通一次本地模型 → 用 [LangChain_Ollama.py](案例与源码-2-LangChain框架/03-ollama/LangChain_Ollama.py) 在 Python 里调通本机模型。跑通之后，再进入 [第 13 章 提示词与消息模板](13-提示词与消息模板.md)、[第 14 章 输出解析器](14-输出解析器.md)、[第 15 章 LCEL 与链式调用](15-LCEL与链式调用.md)，把本地模型也串进完整的 LangChain 工作流里。
+**建议下一步：** 先亲手完成这条最小链路：安装 Ollama → `ollama run qwen:4b` 跑通一次本地模型 → 用 [LangChain_Ollama.py](案例与源码-2-LangChain框架/03-ollama/LangChain_Ollama.py) 在 Python 里调通本机模型。跑通之后，再进入 [第 15 章 提示词与消息模板](/2026/10/26/llm/1-15-prompts-and-message-templates/)、[第 16 章 输出解析器](/2026/10/26/llm/1-16-output-parsers/)、[第 17 章 LCEL 与链式调用](/2026/10/26/llm/1-17-lcel-and-chaining/)，把本地模型也串进完整的 LangChain 工作流里。

@@ -1,6 +1,6 @@
 ---
-title: 项目案例链接汇总
-date: 2026-10-26 00:30:00
+title: 教程案例链接汇总
+date: 2026-10-26 00:45:00
 categories:
   - llm
 tags:
@@ -11,7 +11,7 @@ tags:
     case-links-and-demos
 </div>
 
-# 项目案例链接汇总
+# 教程案例链接汇总（源码与在线演示）
 
 本文档为教程案例的**链接汇总**，集中存放各案例的**在线演示链接**与**源码链接**，便于跳转与维护。
 
@@ -35,26 +35,26 @@ tags:
 
 ### 案例 1：深夜情感主持
 
-- **项目教程**：[点击直达](3-基于Coze&Dify平台的智能体开发.md#44-案例-1深夜情感主持)（Coze）
+- **项目教程**：[点击直达](/2026/10/26/llm/1-5-agent-development-on-coze-and-dify/#44-案例-1深夜情感主持)（Coze）
 - **线上演示链接**：[打开智能体](https://www.coze.cn/store/agent/7601901852661727286?bot_id=true)
 
 ### 案例 2：高考报考指南
 
-- **项目教程**：[点击直达](3-基于Coze&Dify平台的智能体开发.md#45-案例-2高考报考指南)（Coze）
+- **项目教程**：[点击直达](/2026/10/26/llm/1-5-agent-development-on-coze-and-dify/#45-案例-2高考报考指南)（Coze）
 - **线上演示链接**：[打开智能体](https://www.coze.cn/store/agent/7601912158700027954?bot_id=true)
 
 ### 案例 3：家庭记账助手
 
-- **项目教程**：[点击直达](3-基于Coze&Dify平台的智能体开发.md#46-案例-3家庭记账助手)（Coze）
+- **项目教程**：[点击直达](/2026/10/26/llm/1-5-agent-development-on-coze-and-dify/#46-案例-3家庭记账助手)（Coze）
 - **线上演示链接**：[打开智能体](https://www.coze.cn/store/agent/7601917953688977446?bot_id=true)
 
 ### 案例 4：时事评论助手
 
-- **项目教程**：[点击直达](3-基于Coze&Dify平台的智能体开发.md#52-案例-1时事评论助手)（Dify）
+- **项目教程**：[点击直达](/2026/10/26/llm/1-5-agent-development-on-coze-and-dify/#52-案例-1时事评论助手)（Dify）
 
 ### 案例 5：北京旅行助手
 
-- **项目教程**：[点击直达](3-基于Coze&Dify平台的智能体开发.md#53-案例-2北京旅行助手)（Dify）
+- **项目教程**：[点击直达](/2026/10/26/llm/1-5-agent-development-on-coze-and-dify/#53-案例-2北京旅行助手)（Dify）
 
 ---
 
@@ -101,3 +101,5 @@ tags:
 - **项目教程**：[点击直达](案例与源码-1-Coze&Dify工作流智能体/3.10-Coze案例：商品营销卖点提炼/3.10-商品营销卖点提炼-Coze.md)（Coze）
 
 ---
+
+_说明：若链接失效或需更新，请在 [Issue](https://github.com/didilili/ai-agents-from-zero/issues) 进行反馈。_

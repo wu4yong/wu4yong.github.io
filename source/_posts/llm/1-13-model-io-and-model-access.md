@@ -21,9 +21,9 @@ tags:
 - 理解 LangChain 的 **Model I/O** 模块：输入提示（Prompt）、调用模型（Model）、输出解析（Parser）三件套。
 - 掌握 LangChain 里最常见的**模型分类**、**标准化参数**、**返回值结构**，尤其是 Chat Model 与 `AIMessage`。
 
-**学习建议：** 第 10 章解决“能不能调通”，这一章解决“怎么把调用写得可换、可管、可复用”。读的时候按输入、参数、返回值、接入方式这条线走，并留意哪些代码和具体模型供应商绑定，哪些可以保持通用。后面看 [第 13 章](13-提示词与消息模板.md) 和 [第 14 章](14-输出解析器.md) 时，再把它们接回 Model I/O 这条主链。
+**学习建议：** 第 12 章解决“能不能调通”，这一章解决“怎么把调用写得可换、可管、可复用”。读的时候按输入、参数、返回值、接入方式这条线走，并留意哪些代码和具体模型供应商绑定，哪些可以保持通用。后面看 [第 15 章](/2026/10/26/llm/1-15-prompts-and-message-templates/) 和 [第 16 章](/2026/10/26/llm/1-16-output-parsers/) 时，再把它们接回 Model I/O 这条主链。
 
-**官方文档与资源**：详见 [工具导航与参考资料索引 - 模型接入与本地运行](工具导航与参考资料索引.md#模型接入与本地运行)。
+**官方文档与资源**：详见 [工具导航与参考资料索引 - 模型接入与本地运行](/2026/10/26/llm/tools-and-references-index/#模型接入与本地运行)。
 
 ---
 
@@ -47,9 +47,9 @@ tags:
 
 可以把这张图看作后续几章的总地图：
 
-- **Format** 主要会在 [第 13 章 提示词与消息模板](13-提示词与消息模板.md) 详细展开
+- **Format** 主要会在 [第 15 章 提示词与消息模板](/2026/10/26/llm/1-15-prompts-and-message-templates/) 详细展开
 - **Predict** 是本章的重点
-- **Parse** 主要会在 [第 14 章 输出解析器](14-输出解析器.md) 详细展开
+- **Parse** 主要会在 [第 16 章 输出解析器](/2026/10/26/llm/1-16-output-parsers/) 详细展开
 
 ### 1.2 为什么需要 Model I/O
 
@@ -163,7 +163,7 @@ Embedding 不是“会说话”的模型，但它依然属于 Model I/O 体系�
 - Chat Model 负责“生成回答”
 - Embedding Model 负责“把文本转成向量”
 
-后面你在 [第 18 章 向量数据库与 Embedding 实战](18-向量数据库与Embedding实战.md) 和 [第 19 章 RAG 检索增强生成](19-RAG检索增强生成.md) 会深入学习它。这里先建立一个概念即可：**Embedding 也是模型，只是它的输出不是自然语言，而是向量。**
+后面你在 [第 20 章 向量数据库与 Embedding 实战](/2026/10/26/llm/1-20-vector-database-and-embedding-in-practice/) 和 [第 21 章 RAG 检索增强生成](/2026/10/26/llm/1-21-rag-retrieval-augmented-generation/) 会深入学习它。这里先建立一个概念即可：**Embedding 也是模型，只是它的输出不是自然语言，而是向量。**
 
 ### 2.5 常用模型参数
 
@@ -309,7 +309,7 @@ AIMessage(
 
 ### 2.11 Messages 的作用
 
-本章先点到为止，后面会在 [第 13 章 提示词与消息模板](13-提示词与消息模板.md) 专门展开。你现在只需要先建立一个概念：
+本章先点到为止，后面会在 [第 15 章 提示词与消息模板](/2026/10/26/llm/1-15-prompts-and-message-templates/) 专门展开。你现在只需要先建立一个概念：
 
 > **Chat Model 的输入输出，本质上都是“消息（Message）”。**
 
@@ -525,7 +525,7 @@ model = init_chat_model(
 - `base_url` 用百炼兼容接口地址
 - `model` 写 `qwen-plus` 等模型名
 
-这也是你在 [第 10 章 HelloWorld](10-LangChain快速上手与HelloWorld.md) 里已经接触过的主要写法。
+这也是你在 [第 12 章 HelloWorld](/2026/10/26/llm/1-12-langchain-quickstart-and-helloworld/) 里已经接触过的主要写法。
 
 对应本章的案例是：
 
@@ -601,11 +601,11 @@ print(model.invoke("你是谁？").content)
 
 | 能力 | 常见写法 | 后续章节 |
 | ---- | -------- | -------- |
-| 普通调用 | `model.invoke(messages)` | 本章、第 13 章 |
-| 流式输出 | `model.stream(messages)` | 第 10 章、第 21 章 |
-| 结构化输出 | `model.with_structured_output(schema)` | 第 14 章 |
-| 绑定工具 | `model.bind_tools(tools)` | 第 17 章 |
-| 进入链路 | `prompt | model | parser` | 第 15 章 |
+| 普通调用 | `model.invoke(messages)` | 本章、第 15 章 |
+| 流式输出 | `model.stream(messages)` | 第 12 章、第 23 章 |
+| 结构化输出 | `model.with_structured_output(schema)` | 第 16 章 |
+| 绑定工具 | `model.bind_tools(tools)` | 第 19 章 |
+| 进入链路 | `prompt | model | parser` | 第 17 章 |
 
 所以本章不要只把模型对象看成“请求客户端”。在后面的 Prompt、Parser、LCEL、Tools、Agent 里，它会一直作为核心组件出现。
 
@@ -678,4 +678,4 @@ response = configurable_model.invoke(
 - **Model I/O** 是 LangChain 中最基础、最核心的一层，负责 **Format → Predict → Parse** 三步。其中本章重点讲的是 **Predict（模型调用）**：模型如何分类、如何配置参数、如何返回结果，以及如何把不同 provider 接进来。
 - 从课程和真实项目角度看，最值得重点掌握的是 **Chat Model**。它比传统 LLM 更适合多轮对话、消息结构、工具调用和 Agent 场景，返回结果通常是 **`AIMessage`**，最常用字段是 `content`、`response_metadata` 和 `usage_metadata`。
 
-**建议下一步：** 先把本章的 `02-models_io` 目录按顺序跑一遍，推荐顺序是：`ModelIO_OpenAI.py` → `ModelIO_ChatOpenAI.py` → `ModelIO_Init_chat_model.py` → `ModelIO_Params.py` → `ModelIO_DeepSeek.py` → `ModelIO_Qwen.py`。跑完之后，再进入 [第 12 章 Ollama 本地部署与调用](12-Ollama本地部署与调用.md)、[第 13 章 提示词与消息模板](13-提示词与消息模板.md)、[第 14 章 输出解析器](14-输出解析器.md)，把本章中的 “模型接入” 和后续的 “输入组织”“输出解析” 串成完整闭环。
+**建议下一步：** 先把本章的 `02-models_io` 目录按顺序跑一遍，推荐顺序是：`ModelIO_OpenAI.py` → `ModelIO_ChatOpenAI.py` → `ModelIO_Init_chat_model.py` → `ModelIO_Params.py` → `ModelIO_DeepSeek.py` → `ModelIO_Qwen.py`。跑完之后，再进入 [第 14 章 Ollama 本地部署与调用](/2026/10/26/llm/1-14-ollama-local-deployment-and-usage/)、[第 15 章 提示词与消息模板](/2026/10/26/llm/1-15-prompts-and-message-templates/)、[第 16 章 输出解析器](/2026/10/26/llm/1-16-output-parsers/)，把本章中的 “模型接入” 和后续的 “输入组织”“输出解析” 串成完整闭环。

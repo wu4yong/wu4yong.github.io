@@ -18,11 +18,11 @@ tags:
 **本章课程目标：**
 
 - 理解 **向量（Vector）**、**向量化（Embedding）**、**向量数据库（Vector Store / Vector Database）** 这三件事分别是什么，以及它们之间的关系。
-- 建立一条清晰主线：**文本先向量化，再写入向量库，再做相似性检索**；学完本章后，可以自然衔接到 [第 19 章 RAG 检索增强生成](19-RAG检索增强生成.md)。
+- 建立一条清晰主线：**文本先向量化，再写入向量库，再做相似性检索**；学完本章后，可以自然衔接到 [第 21 章 RAG 检索增强生成](/2026/10/26/llm/1-21-rag-retrieval-augmented-generation/)。
 
 **学习建议：** 这章先画链路，再看代码：文本经过 Embedding 模型变成向量，向量进入数据库，查询时再用相似度找回来。API 名称可以后记，但要弄清“存进去的是什么、查出来的是什么、相似度为什么能代表相关性”。如果有余力，用两三条短文本手算或打印一次相似度，会比空背概念扎实。
 
-**官方文档与资源**：详见 [工具导航与参考资料索引 - RAG与向量检索](工具导航与参考资料索引.md#RAG与向量检索)。
+**官方文档与资源**：详见 [工具导航与参考资料索引 - RAG与向量检索](/2026/10/26/llm/tools-and-references-index/#RAG与向量检索)。
 
 ---
 
@@ -205,7 +205,7 @@ RAG 的底层链路通常是：
 
 <div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/18/18-2-6-1.jpeg" alt="向量与向量库在知识体系中的位置"></div>
 
-> **图意说明：** 上半为**索引/入库**链路，下半为**查询**链路；向量库处于「分段文本向量化之后、检索 top-K 片段之后交给模型」的关键位置。完整加载器、切分器与生成环节见 [第 19 章 RAG](19-RAG检索增强生成.md)。
+> **图意说明：** 上半为**索引/入库**链路，下半为**查询**链路；向量库处于「分段文本向量化之后、检索 top-K 片段之后交给模型」的关键位置。完整加载器、切分器与生成环节见 [第 21 章 RAG](/2026/10/26/llm/1-21-rag-retrieval-augmented-generation/)。
 
 ### 2.7 Redis 与 Milvus 怎么选
 
@@ -224,7 +224,7 @@ RAG 的底层链路通常是：
 
 本教程选择 **Redis / Redis Stack** 来做向量存储，不是因为它是唯一方案，而是因为它适合教学和工程入门：
 
-- 项目前面已经在 [第 16 章](16-记忆与对话历史（含Redis基础）.md) 引入了 Redis
+- 项目前面已经在 [第 18 章](/2026/10/26/llm/1-18-memory-and-chat-history-with-redis/) 引入了 Redis
 - Redis Stack 在 Redis 基础上集成了搜索与向量检索能力
 - 对入门学习来说，一套环境就能同时覆盖缓存、消息、历史记录、向量检索，工程连贯性会更强
 
@@ -253,7 +253,7 @@ Redis 官方文档里也明确提到，Redis 可以：
 
 当然，工程里也要知道它的边界：如果向量规模非常大、检索需求非常复杂，团队也可能选择 Milvus、Weaviate、Pinecone 等更专门的方案；这不是“谁绝对更好”的问题，而是“你的场景更适合哪种方案”。
 
-如果你还没有装好 Redis Stack，请先回看 [第 16 章](16-记忆与对话历史（含Redis基础）.md) 里关于 Docker、Redis Stack、RedisInsight 的部分；本章不重复安装过程，只聚焦“Embedding + 向量检索”这条主线。
+如果你还没有装好 Redis Stack，请先回看 [第 18 章](/2026/10/26/llm/1-18-memory-and-chat-history-with-redis/) 里关于 Docker、Redis Stack、RedisInsight 的部分；本章不重复安装过程，只聚焦“Embedding + 向量检索”这条主线。
 
 > 先区分一个容易误解的点
 >
@@ -468,7 +468,7 @@ OpenAI 官方文档里也明确提到：在很多 Embedding 场景里，**余弦
 
 先强调一个边界：**这一节还不是完整 RAG。**这里演示的是 RAG 的底层能力，也就是：建索引，做相似度检索。但还没有加入：文档加载器，文本切分器，检索结果交给大模型生成最终答案。
 
-这些会在 [第 19 章 RAG 检索增强生成](19-RAG检索增强生成.md) 继续展开。
+这些会在 [第 21 章 RAG 检索增强生成](/2026/10/26/llm/1-21-rag-retrieval-augmented-generation/) 继续展开。
 
 ### 6.1 案例：把 Document 列表写入 Redis，再用检索器取回结果
 
@@ -476,7 +476,7 @@ OpenAI 官方文档里也明确提到：在很多 Embedding 场景里，**余弦
 
 它做的事情可以概括成：
 
-1. 先准备若干 `Document`（`page_content` + `metadata`，在完整 RAG 中常由加载器与切分器产生，见 [第 19 章](19-RAG检索增强生成.md)）
+1. 先准备若干 `Document`（`page_content` + `metadata`，在完整 RAG 中常由加载器与切分器产生，见 [第 21 章](/2026/10/26/llm/1-21-rag-retrieval-augmented-generation/)）
 2. 用 `DashScopeEmbeddings` 把 `page_content` 向量化
 3. 用 `Redis.from_documents(...)` 一次性写入 Redis
 4. 再通过 `as_retriever()` 生成检索器
@@ -589,7 +589,7 @@ OpenAI 官方文档里也明确提到：在很多 Embedding 场景里，**余弦
 - 它们都在做“文本向量化 + 写入向量库”
 - 区别主要是入参结构和工程组织方式
 
-### 6.6 本章与第19章的关系
+### 6.6 本章与第21章的关系
 
 这一节结束后，你已经掌握了 RAG 中非常关键的底层能力：
 
@@ -597,7 +597,7 @@ OpenAI 官方文档里也明确提到：在很多 Embedding 场景里，**余弦
 - 向量写入 Redis
 - 相似性检索
 
-而 [第 19 章](19-RAG检索增强生成.md) 会在此基础上补齐剩余三步：
+而 [第 21 章](/2026/10/26/llm/1-21-rag-retrieval-augmented-generation/) 会在此基础上补齐剩余三步：
 
 1. 用加载器把 PDF / Word / Markdown 等文档读成 `Document`
 2. 用文本分割器把长文档切成片段
@@ -613,10 +613,10 @@ OpenAI 官方文档里也明确提到：在很多 Embedding 场景里，**余弦
 
 这三条线不用在本章全部展开，但它们会帮助你理解：向量数据库不是“存一下向量”这么简单，而是 RAG 系统效果和性能的底座。
 
-所以，本章和第 19 章的关系可以概括为：
+所以，本章和第 21 章的关系可以概括为：
 
-- **第 18 章**：先把“向量化 + 存储 + 检索”练熟
-- **第 19 章**：再把它们和文档处理、Prompt、LLM 串成完整 RAG
+- **第 20 章**：先把“向量化 + 存储 + 检索”练熟
+- **第 21 章**：再把它们和文档处理、Prompt、LLM 串成完整 RAG
 
 ---
 
@@ -650,4 +650,4 @@ OpenAI 官方文档里也明确提到：在很多 Embedding 场景里，**余弦
 
 1. 先把 `09-embedding` 目录下的案例按顺序跑一遍，尤其是 `Text2Embedding_DashScope.py`、`Text2Embedding_CosSimilarity.py`、`EmbeddingStoreRedis.py`。
 2. 再运行 `10-rag` 目录下的 `RedisVectorStore.py` 和 `RedisVectorStore_SimilaritySearch.py`，对比两种 Redis 向量库写法。
-3. 学完本章后继续阅读 [第 19 章 RAG 检索增强生成](19-RAG检索增强生成.md)，把本章的向量能力接到完整 RAG 流程里。
+3. 学完本章后继续阅读 [第 21 章 RAG 检索增强生成](/2026/10/26/llm/1-21-rag-retrieval-augmented-generation/)，把本章的向量能力接到完整 RAG 流程里。

@@ -19,7 +19,7 @@ tags:
 
 - 理解 **Runnable** 的定位，知道 LangChain 为什么要把 Prompt、Model、Parser、Tool、Chain 都抽象成统一的“可执行组件”。
 - 理解 **LCEL**（LangChain Expression Language，LangChain 表达式语言）到底解决了什么问题，掌握 `|` 管道符背后的链式组合思想。
-- 能读懂并运行本章全部案例：**顺序链、分支链、多步串行链、并行链、函数链**，建立后续学习 [记忆与对话历史](16-记忆与对话历史（含Redis基础）.md)、[Tools 工具调用](17-Tools工具调用.md)、[RAG](19-RAG检索增强生成.md)、[Agent](21-Agent智能体.md) 的基础。
+- 能读懂并运行本章全部案例：**顺序链、分支链、多步串行链、并行链、函数链**，建立后续学习 [记忆与对话历史](/2026/10/26/llm/1-18-memory-and-chat-history-with-redis/)、[Tools 工具调用](/2026/10/26/llm/1-19-tools-and-tool-calling/)、[RAG](/2026/10/26/llm/1-21-rag-retrieval-augmented-generation/)、[Agent](/2026/10/26/llm/1-23-agent/) 的基础。
 
 **学习建议：** 先亲手跑通 `prompt | model | parser`，再谈分支、并行和自定义函数节点。读代码时盯住两件事：每个 Runnable 收什么、吐什么；组合之后还能不能继续被 `invoke`、`stream`、`batch` 调用。这样看 LCEL，就不会只把它当成一个管道符语法。
 
@@ -77,7 +77,7 @@ LangChain 的解决思路就是：**把这些“能接收输入并产生输出�
 
 在 LangChain 里，很多你已经学过的对象，本质上都属于 Runnable：
 
-- [Prompt 模板](13-提示词与消息模板.md)、[聊天模型](11-Model-I-O与模型接入.md)、[输出解析器](14-输出解析器.md)
+- [Prompt 模板](/2026/10/26/llm/1-15-prompts-and-message-templates/)、[聊天模型](/2026/10/26/llm/1-13-model-io-and-model-access/)、[输出解析器](/2026/10/26/llm/1-16-output-parsers/)
 - 后面会学到的检索器、工具、甚至整条链
 - 更进一步，编译后的 LangGraph 图本身也可以作为 Runnable 被调用
 
@@ -285,7 +285,7 @@ result = chain.invoke({"question": "什么是 LangChain？"})
 
 这一节开始，我们不再重点讨论“怎么写链”，而是看“链通常长什么样”。这一章和前面三章的关系非常紧密。
 
-如果把 [第 13 章](13-提示词与消息模板.md)、[第 11 章](11-Model-I-O与模型接入.md)、[第 14 章](14-输出解析器.md) 放在一起看，你会发现最典型的一条链就是：
+如果把 [第 15 章](/2026/10/26/llm/1-15-prompts-and-message-templates/)、[第 13 章](/2026/10/26/llm/1-13-model-io-and-model-access/)、[第 16 章](/2026/10/26/llm/1-16-output-parsers/) 放在一起看，你会发现最典型的一条链就是：
 
 1. **Prompt**：组织输入
 2. **Model**：调用模型生成结果
@@ -600,8 +600,8 @@ fallback_chain = primary_chain.with_fallbacks([backup_chain])
 
 - **Runnable** 是 LangChain 中统一的“可执行组件”抽象。Prompt、Model、Parser、Tool、Chain 之所以能被统一调用，是因为它们在 Runnable 这层被约束成了同一种接口风格。
 - **LCEL** 是把多个 Runnable 组合成链的表达式语言。它最核心的价值，不只是 `|` 写起来简洁，而是让流程变得声明式、可组合、可扩展。
-- **链的核心主线** 是前面几章内容的自然延伸：把 [提示词模板](13-提示词与消息模板.md)、[模型调用](11-Model-I-O与模型接入.md)、[输出解析器](14-输出解析器.md) 组织成一条可执行流程。
+- **链的核心主线** 是前面几章内容的自然延伸：把 [提示词模板](/2026/10/26/llm/1-15-prompts-and-message-templates/)、[模型调用](/2026/10/26/llm/1-13-model-io-and-model-access/)、[输出解析器](/2026/10/26/llm/1-16-output-parsers/) 组织成一条可执行流程。
 - **常见链结构** 中，顺序链是基础，分支链解决路由问题，多步串行链解决前后步骤依赖问题，并行链解决多路同时处理问题，RunnableLambda 解决自定义逻辑如何插入链；重试与兜底则解决链路稳定性问题。
 - 从掌握结果看，学完本章后，你至少应该：明白 `Runnable` 为什么是 LangChain 里最重要的统一抽象，知道 Prompt、Model、Parser、Chain 都能被统一调用；能熟练读懂并写出 `prompt | model | parser` 这种最基础 LCEL 链；能区分顺序链、分支链、多步串行链、并行链、函数链的使用场景。
 
-**建议下一步：** 先把本章 5 个案例都跑一遍，重点观察“每一步输入输出是什么、为什么能接上下一步”；然后继续学习 [第 16 章 记忆与对话历史](16-记忆与对话历史（含Redis基础）.md) 和 [第 17 章 Tools 工具调用](17-Tools工具调用.md)，你会更清楚链式调用如何进一步扩展成带状态、带工具、带决策能力的 LLM 应用。
+**建议下一步：** 先把本章 5 个案例都跑一遍，重点观察“每一步输入输出是什么、为什么能接上下一步”；然后继续学习 [第 18 章 记忆与对话历史](/2026/10/26/llm/1-18-memory-and-chat-history-with-redis/) 和 [第 19 章 Tools 工具调用](/2026/10/26/llm/1-19-tools-and-tool-calling/)，你会更清楚链式调用如何进一步扩展成带状态、带工具、带决策能力的 LLM 应用。

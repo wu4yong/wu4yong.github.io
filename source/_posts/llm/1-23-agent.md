@@ -17,14 +17,14 @@ tags:
 
 **本章课程目标：**
 
-- 理解 **Agent（智能体）** 到底是什么、适合解决什么问题，以及它与 [Tool](17-Tools工具调用.md)、Function Calling、[RAG](19-RAG检索增强生成.md)、[MCP](20-MCP模型上下文协议.md) 的关系。
+- 理解 **Agent（智能体）** 到底是什么、适合解决什么问题，以及它与 [Tool](/2026/10/26/llm/1-19-tools-and-tool-calling/)、Function Calling、[RAG](/2026/10/26/llm/1-21-rag-retrieval-augmented-generation/)、[MCP](/2026/10/26/llm/1-22-mcp-model-context-protocol/) 的关系。
 - 掌握 Agent 的核心工作方式：**围绕目标持续推理、决定是否调用工具、接收结果、继续决策，直到满足结束条件**。
 - 理解 LangChain 中 Agent 的两条学习主线：**V0.3 / classic 的 Agent + AgentExecutor**，以及 **V1.x 的 `create_agent` + LangGraph 运行时**。
 - 跑通并理解本章全部案例：`AgentSmartSelectV0.3.py`、`AgentSmartSelectV1.0.py`、`AgentReact.py`、`Agent2Agent.py`、`McpClientAgent.py`。
 
 **学习建议：** Agent 这章先抓一句话：Agent 是决策层，不是工具本身。读的时候先看它如何决定下一步，再看 Tool、RAG、MCP、Function Calling 分别给它补了什么能力。代码部分重点比较旧的 AgentExecutor 和新的 `create_agent` 思路；读完后要能判断一个需求到底该用普通链、工具调用，还是 Agent。
 
-**官方文档与资源**：详见 [工具导航与参考资料索引 - 工具调用、MCP与智能体](工具导航与参考资料索引.md#工具调用、MCP与智能体)。
+**官方文档与资源**：详见 [工具导航与参考资料索引 - 工具调用、MCP与智能体](/2026/10/26/llm/tools-and-references-index/#工具调用、MCP与智能体)。
 
 ---
 
@@ -135,7 +135,7 @@ ReAct 只是最经典、最适合入门的一种理解方式，因为它最容�
 - 固定先分类，再摘要，再存库
 - 固定按 A → B → C 的顺序执行
 
-这类场景更像 [第 15 章 LCEL 与链式调用](15-LCEL与链式调用.md) 或后续 LangGraph 的**工作流**问题。
+这类场景更像 [第 17 章 LCEL 与链式调用](/2026/10/26/llm/1-17-lcel-and-chaining/) 或后续 LangGraph 的**工作流**问题。
 
 **如果下一步怎么做不固定，需要模型根据中间结果动态决定，就更适合 Agent。**
 
@@ -267,7 +267,7 @@ from langchain.agents import create_agent
 ("placeholder", "{agent_scratchpad}")
 ```
 
-其中 `ChatPromptTemplate`、占位符与消息结构，与 [第 13 章 提示词与消息模板](13-提示词与消息模板.md) 一脉相承；这里多出来的 `{agent_scratchpad}` 专供多轮工具循环使用。
+其中 `ChatPromptTemplate`、占位符与消息结构，与 [第 15 章 提示词与消息模板](/2026/10/26/llm/1-15-prompts-and-message-templates/) 一脉相承；这里多出来的 `{agent_scratchpad}` 专供多轮工具循环使用。
 
 这不是装饰，它的作用非常关键。它相当于 Agent 的“草稿区 / 中间步骤区”，用来承接：模型上一轮决定调用什么工具；工具返回了什么；下一轮模型基于这些信息继续推理。
 
@@ -375,7 +375,7 @@ config = {"configurable": {"thread_id": "user-001"}}
 
 > **版本说明：** 在 LangChain 1.x 语境里，`thread_id` 主要服务于 checkpointing 和多轮状态隔离；如果要传用户资料、租户信息、权限上下文等静态运行时信息，还需要关注 `create_agent` 的 `context` 等上下文机制，不要把所有业务信息都塞进 `thread_id`。
 
-这一点和 [第 16 章 记忆与对话历史（含Redis基础）](16-记忆与对话历史（含Redis基础）.md) 是连着的。第 16 章更偏“记忆是什么、怎么存历史消息”，而这里更偏“在 `create_agent` 这条 1.x 主线上，状态和短期记忆是怎么接进 Agent 运行时的”。
+这一点和 [第 18 章 记忆与对话历史（含Redis基础）](/2026/10/26/llm/1-18-memory-and-chat-history-with-redis/) 是连着的。第 18 章更偏“记忆是什么、怎么存历史消息”，而这里更偏“在 `create_agent` 这条 1.x 主线上，状态和短期记忆是怎么接进 Agent 运行时的”。
 
 ### 4.5 运行过程怎么观察：stream 与 LangSmith
 
@@ -548,7 +548,7 @@ Agent 的问题，往往不是“有没有报错”这么简单，而是：
 
 [McpClientAgent.py](案例与源码-2-LangChain框架/11-mcp/McpClientAgent.py ":include :type=code")
 
-这一节把第 20 章 MCP 和本章 Agent 接上了。前面几个案例里的工具，基本都是当前进程里直接写的 `@tool`。而这个案例演示的是另一件更接近真实项目的事：**工具不一定定义在本地代码里，也可以来自外部 MCP 服务。**
+这一节把第 22 章 MCP 和本章 Agent 接上了。前面几个案例里的工具，基本都是当前进程里直接写的 `@tool`。而这个案例演示的是另一件更接近真实项目的事：**工具不一定定义在本地代码里，也可以来自外部 MCP 服务。**
 
 它的大致链路是：
 
@@ -566,7 +566,7 @@ Agent 的问题，往往不是“有没有报错”这么简单，而是：
 - Agent 侧只负责接入和使用
 - 这样一个工具集可以被多个 AI 应用复用
 
-也正因为如此，本章和 [第 20 章 MCP 模型上下文协议](20-MCP模型上下文协议.md) 是强关联的：第 20 章解决“工具怎么标准化暴露”，第 21 章解决“Agent 怎么把这些能力真正用起来”。
+也正因为如此，本章和 [第 22 章 MCP 模型上下文协议](/2026/10/26/llm/1-22-mcp-model-context-protocol/) 是强关联的：第 22 章解决“工具怎么标准化暴露”，第 23 章解决“Agent 怎么把这些能力真正用起来”。
 
 ---
 
@@ -574,7 +574,7 @@ Agent 的问题，往往不是“有没有报错”这么简单，而是：
 
 这是本章最后必须收口的一节，因为这些概念最容易混。
 
-> **术语约定：** 为和前文保持一致，本章这里写 **Function Calling** 是因为它在很多官方资料里仍然常见；如果你更习惯 [第 17 章](17-Tools工具调用.md) 的说法，也可以直接把它理解成 **Tool Calling 这层调用机制**。
+> **术语约定：** 为和前文保持一致，本章这里写 **Function Calling** 是因为它在很多官方资料里仍然常见；如果你更习惯 [第 19 章](/2026/10/26/llm/1-19-tools-and-tool-calling/) 的说法，也可以直接把它理解成 **Tool Calling 这层调用机制**。
 
 ### 6.1 一张总表先记住
 
@@ -633,4 +633,4 @@ Agent 的问题，往往不是“有没有报错”这么简单，而是：
 - **什么时候不该上 Agent 也要明确**：如果步骤固定、路径稳定、可控性要求高，优先用 LCEL 或 Workflow；只有当任务真的需要动态选工具、临场分解步骤、边执行边调整时，Agent 才值得它带来的复杂度。
 - **可上线的 Agent，重点在边界而不只是能力**：工具白名单、参数校验、人审或二次确认、超时重试、日志与状态持久化，往往比“再多接几个 Tool”更重要。
 
-**建议下一步：** 先在本地依次运行 `AgentSmartSelectV0.3.py`、`AgentSmartSelectV1.0.py`、`AgentReact.py` 和 `Agent2Agent.py`，对照文档理解 [Tool](17-Tools工具调用.md)、Agent、AgentExecutor 的配合。若要把外部能力接入 Agent，再回看 [第 20 章 MCP 模型上下文协议](20-MCP模型上下文协议.md) 中的 `McpClientAgent.py`。链式固定流程与 Agent 的取舍，可对照 [第 15 章 LCEL 与链式调用](15-LCEL与链式调用.md) 和本文 **1.4 Agent 的使用场景**。
+**建议下一步：** 先在本地依次运行 `AgentSmartSelectV0.3.py`、`AgentSmartSelectV1.0.py`、`AgentReact.py` 和 `Agent2Agent.py`，对照文档理解 [Tool](/2026/10/26/llm/1-19-tools-and-tool-calling/)、Agent、AgentExecutor 的配合。若要把外部能力接入 Agent，再回看 [第 22 章 MCP 模型上下文协议](/2026/10/26/llm/1-22-mcp-model-context-protocol/) 中的 `McpClientAgent.py`。链式固定流程与 Agent 的取舍，可对照 [第 17 章 LCEL 与链式调用](/2026/10/26/llm/1-17-lcel-and-chaining/) 和本文 **1.4 Agent 的使用场景**。

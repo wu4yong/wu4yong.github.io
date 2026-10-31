@@ -24,7 +24,7 @@ tags:
 - 能用 **Postman** 或 **Python + requests** 成功触发一个 Dify 工作流，并从流式结果里拿到最终输出。
 - 会在 Dify 工作空间里查看运行日志，把“代码侧日志”和“平台侧日志”对起来排查问题。
 
-**学习建议：** 这篇是在把 Dify 工作流从页面带到代码里。读的时候盯住五个位置：发布状态、API Key、`inputs`、流式事件、运行日志。建议先用 Postman 或 `requests` 跑通一个最小调用，再回头补字段细节；否则很容易把“接口没通”和“工作流本身没跑对”混在一起。如果你已经看过 [第 3 章](3-基于Coze&Dify平台的智能体开发.md) 的平台案例，本章会是非常自然的下一步。
+**学习建议：** 这篇是在把 Dify 工作流从页面带到代码里。读的时候盯住五个位置：发布状态、API Key、`inputs`、流式事件、运行日志。建议先用 Postman 或 `requests` 跑通一个最小调用，再回头补字段细节；否则很容易把“接口没通”和“工作流本身没跑对”混在一起。如果你已经看过 [第 5 章](/2026/10/26/llm/1-5-agent-development-on-coze-and-dify/) 的平台案例，本章会是非常自然的下一步。
 
 ---
 
@@ -481,6 +481,6 @@ print(final_text[:300])
 
 **建议下一步：**
 
-- 如果你还要继续接 Coze 平台工作流，进入 [第 5 章 Python 调用 Coze 平台工作流](5-Python调用Coze平台工作流.md)。
-- 如果你想把平台能力和 Agent 原理连接起来，进入 [第 21 章 Agent 智能体](21-Agent智能体.md)。
-- 如果你准备部署自己的 Dify 环境，进入 [第 6 章 Dify 的安装和启动](6-Coze与Dify的Windows平台部署.md#_4、dify-的安装和启动) 或 [第 7 章 企业级大模型部署](7-企业级大模型部署.md)。
+- 如果你还要继续接 Coze 平台工作流，进入 [第 7 章 Python 调用 Coze 平台工作流](/2026/10/26/llm/1-7-calling-coze-workflows-with-python/)。
+- 如果你想把平台能力和 Agent 原理连接起来，进入 [第 23 章 Agent 智能体](/2026/10/26/llm/1-23-agent/)。
+- 如果你准备部署自己的 Dify 环境，进入 [第 8 章 Dify 的安装和启动](/2026/10/26/llm/1-8-windows-deployment-of-coze-and-dify/#_4、dify-的安装和启动) 或 [第 9 章 企业级大模型部署](/2026/10/26/llm/1-9-enterprise-llm-deployment/)。

@@ -23,13 +23,13 @@ tags:
 
 **学习建议：** 这章要解决的是“模型说的话，程序怎么放心使用”。可以从 `StrOutputParser` 跑到 `JsonOutputParser`，再跑到 Pydantic，边跑边看哪里只是解析，哪里才发生校验。读完后能分清 Parser、Structured Output、TypedDict、Pydantic、JSON Schema 的边界，就已经抓住重点了。
 
-**官方文档与资源**：详见 [工具导航与参考资料索引 - 提示词与结构化输出](工具导航与参考资料索引.md#提示词与结构化输出)。
+**官方文档与资源**：详见 [工具导航与参考资料索引 - 提示词与结构化输出](/2026/10/26/llm/tools-and-references-index/#提示词与结构化输出)。
 
 ---
 
 ## 1、输出解析器简介
 
-本章对应 [Model I/O](11-Model-I-O与模型接入.md) 中的**输出解析（Parse）**部分：把模型的**文本输出**转成程序易用的**结构化数据**（如字符串、JSON、强类型对象）。与 [第 13 章 提示词](13-提示词与消息模板.md)（**Format（输入格式化）**）、第 11 章模型（**Predict（模型调用）**）组合，即形成「输入 → 模型 → 输出解析」完整链路，[第 15 章 LCEL](15-LCEL与链式调用.md) 会用管道符将三者串成一条链。
+本章对应 [Model I/O](/2026/10/26/llm/1-13-model-io-and-model-access/) 中的**输出解析（Parse）**部分：把模型的**文本输出**转成程序易用的**结构化数据**（如字符串、JSON、强类型对象）。与 [第 15 章 提示词](/2026/10/26/llm/1-15-prompts-and-message-templates/)（**Format（输入格式化）**）、第 13 章模型（**Predict（模型调用）**）组合，即形成「输入 → 模型 → 输出解析」完整链路，[第 17 章 LCEL](/2026/10/26/llm/1-17-lcel-and-chaining/) 会用管道符将三者串成一条链。
 
 ### 1.1 定义
 
@@ -42,7 +42,7 @@ tags:
 - Prompt 负责把输入整理好，告诉模型“**你要怎么回答**”；
 - Model 负责生成结果，真正“**生成回答**”；
 - Output Parser 负责把结果转成字符串、JSON 或对象，把这份回答“**整理成程序好用的样子**”。
-- 第 [15 章 LCEL 与链式调用](15-LCEL与链式调用.md) 会把这条链真正串起来。
+- 第 [17 章 LCEL 与链式调用](/2026/10/26/llm/1-17-lcel-and-chaining/) 会把这条链真正串起来。
 
 <div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/14/14-1-1-1.jpeg" alt="输出解析器在 Model I/O 中的位置：承接模型文本输出，解析为程序可用的结构化数据"></div>
 
@@ -658,4 +658,4 @@ class LineListParser(BaseOutputParser[list[str]]):
 - 现代 LangChain 更推荐在支持的模型上优先考虑 `with_structured_output(...)`，输出解析器则继续在兼容性、后处理、附加校验等方面发挥作用。
 - 从掌握结果看，学完本章后，你至少应该：能分清 **输出解析器** 和 **结构化输出** 的关系，知道它们都在解决“模型结果如何稳定交给程序”这个问题；知道 `StrOutputParser`、`JsonOutputParser`、`PydanticOutputParser` 三类方案各自适用什么场景；理解 `TypedDict`、`Annotated`、Pydantic、`JSON Schema` 在“描述结构”和“运行时校验”上的边界。
 
-**建议下一步：** 学习 [第 15 章 LCEL 与链式调用](15-LCEL与链式调用.md)，把本章的解析器与 [第 13 章](13-提示词与消息模板.md) 的 Prompt、[第 11 章](11-Model-I-O与模型接入.md) 的 Model 串成真正的 `prompt | model | parser` 链。
+**建议下一步：** 学习 [第 17 章 LCEL 与链式调用](/2026/10/26/llm/1-17-lcel-and-chaining/)，把本章的解析器与 [第 15 章](/2026/10/26/llm/1-15-prompts-and-message-templates/) 的 Prompt、[第 13 章](/2026/10/26/llm/1-13-model-io-and-model-access/) 的 Model 串成真正的 `prompt | model | parser` 链。

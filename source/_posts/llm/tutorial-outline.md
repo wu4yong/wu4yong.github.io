@@ -1,6 +1,6 @@
 ---
-title: 项目目录大纲
-date: 2026-10-26 00:20:00
+title: 教程目录大纲
+date: 2026-10-26 00:30:00
 categories:
   - llm
 tags:
@@ -11,7 +11,7 @@ tags:
     tutorial-outline
 </div>
 
-# 项目目录大纲
+# 教程目录大纲
 
 本大纲为《从入门到精通：AI 智能体实战速成指南》的导航索引，各条目均链接至对应章节的二级标题，便于按知识脉络跳转学习。
 
@@ -23,35 +23,35 @@ tags:
 
 ### 01-1 大模型（LLM）认识与环境准备
 
-- 大模型的起源与发展历程、大模型与 AGI 关系、AI 应用场景 → [1、认识大模型](1-1-大模型认知与工程概览.md#_1、认识大模型)、[3、大模型如何落地](1-1-大模型认知与工程概览.md#_3、大模型如何落地)
-- 国际知名、国产主流大模型的功能特点、优势与适用场景，以及开源 / 闭源差异 → [1.5 大模型的开源 vs 闭源](1-1-大模型认知与工程概览.md#_15-大模型的开源-vs-闭源)
-- 大模型分类：按模态（LLM / 多模态理解 / 多模态生成）、按功能（生成式 / 嵌入 / 重排序 / 分类）→ [1.4 大模型分类](1-1-大模型认知与工程概览.md#_14-大模型分类)
-- 参数规模与计量单位（B、T、FLOPs）、token 与上下文窗口 → [1.3 大模型计量单位](1-1-大模型认知与工程概览.md#_13-大模型计量单位)
-- 训练三阶段：预训练 → 微调 → 推理；预训练、SFT、RLHF/RLAIF 的含义与区别 → [2、大模型是如何"被教会说人话"的？](1-1-大模型认知与工程概览.md#_2、大模型是如何%22被教会说人话%22的%3F)
-- 训练与推理的区别、算力从何而来、常见硬件与瓶颈 → [3、大模型如何落地](1-1-大模型认知与工程概览.md#_3、大模型如何落地)
+- 大模型的起源与发展历程、大模型与 AGI 关系、AI 应用场景 → [1、认识大模型](/2026/10/26/llm/1-1-llm-basics-engineering-overview/#_1、认识大模型)、[3、大模型如何落地](/2026/10/26/llm/1-1-llm-basics-engineering-overview/#_3、大模型如何落地)
+- 国际知名、国产主流大模型的功能特点、优势与适用场景，以及开源 / 闭源差异 → [1.5 大模型的开源 vs 闭源](/2026/10/26/llm/1-1-llm-basics-engineering-overview/#_15-大模型的开源-vs-闭源)
+- 大模型分类：按模态（LLM / 多模态理解 / 多模态生成）、按功能（生成式 / 嵌入 / 重排序 / 分类）→ [1.4 大模型分类](/2026/10/26/llm/1-1-llm-basics-engineering-overview/#_14-大模型分类)
+- 参数规模与计量单位（B、T、FLOPs）、token 与上下文窗口 → [1.3 大模型计量单位](/2026/10/26/llm/1-1-llm-basics-engineering-overview/#_13-大模型计量单位)
+- 训练三阶段：预训练 → 微调 → 推理；预训练、SFT、RLHF/RLAIF 的含义与区别 → [2、大模型是如何"被教会说人话"的？](/2026/10/26/llm/1-1-llm-basics-engineering-overview/#_2、大模型是如何%22被教会说人话%22的%3F)
+- 训练与推理的区别、算力从何而来、常见硬件与瓶颈 → [3、大模型如何落地](/2026/10/26/llm/1-1-llm-basics-engineering-overview/#_3、大模型如何落地)
 
 ### 01-2 大模型调度平台
 
-- Ollama 定义、安装与本地运行大模型、以及与 LangChain 的整合方式 → [1、Ollama 简介](12-Ollama本地部署与调用.md#_1、Ollama%20简介)、[2、安装与配置](12-Ollama本地部署与调用.md#_2、安装与配置)、[4、安装与验证模型](12-Ollama本地部署与调用.md#_4、安装与验证模型)、[5、LangChain 整合 Ollama](12-Ollama本地部署与调用.md#_5、langchain-整合-ollama)
-- 如何调用私有大模型：在线平台、API 调用、本地客户端 → [4.2 访问大模型的方式](1-1-大模型认知与工程概览.md#_42-访问大模型的方式)
-- 云端部署（AWS、阿里云）、本地部署等模型部署流程与方法 → [1、企业级大模型部署概述](7-企业级大模型部署.md#_1、企业级大模型部署概述)、[2、Dify 平台私有化部署](7-企业级大模型部署.md#_2、Dify%20平台私有化部署)、[3、模型部署](7-企业级大模型部署.md#_3、模型部署)
+- Ollama 定义、安装与本地运行大模型、以及与 LangChain 的整合方式 → [1、Ollama 简介](/2026/10/26/llm/1-14-ollama-local-deployment-and-usage/#_1、Ollama%20简介)、[2、安装与配置](/2026/10/26/llm/1-14-ollama-local-deployment-and-usage/#_2、安装与配置)、[4、安装与验证模型](/2026/10/26/llm/1-14-ollama-local-deployment-and-usage/#_4、安装与验证模型)、[5、LangChain 整合 Ollama](/2026/10/26/llm/1-14-ollama-local-deployment-and-usage/#_5、langchain-整合-ollama)
+- 如何调用私有大模型：在线平台、API 调用、本地客户端 → [4.2 访问大模型的方式](/2026/10/26/llm/1-1-llm-basics-engineering-overview/#_42-访问大模型的方式)
+- 云端部署（AWS、阿里云）、本地部署等模型部署流程与方法 → [1、企业级大模型部署概述](/2026/10/26/llm/1-9-enterprise-llm-deployment/#_1、企业级大模型部署概述)、[2、Dify 平台私有化部署](/2026/10/26/llm/1-9-enterprise-llm-deployment/#_2、Dify%20平台私有化部署)、[3、模型部署](/2026/10/26/llm/1-9-enterprise-llm-deployment/#_3、模型部署)
 
 ### 01-3 提示词工程
 
-- 提示词工程基础：核心原则、基础结构、基础编写方法 → [1、提示词与提示词工程](1-2-提示词工程基础.md#_1、提示词与提示词工程)、[2、提示词怎么写](1-2-提示词工程基础.md#_2、提示词怎么写)
-- 高级技巧：深入上下文控制、任务分解与链式思维提示法、Few-shot 示例与模式引导 → [2.2 核心六要素与典型构成](1-2-提示词工程基础.md#_22-核心六要素与典型构成)、[2.3 Zero-shot 与 Few-shot](1-2-提示词工程基础.md#_23-zero-shot-与-few-shot)
-- 多轮对话与结构化组织：System / User / Assistant 消息角色、文件加载提示词 → [2.4 结构化组织方式](1-2-提示词工程基础.md#_24-结构化组织方式)
-- 评估提示效果与迭代优化、解决 Prompt 失效与偏差问题 → [3、提示词工程的边界](1-2-提示词工程基础.md#_3、提示词工程的边界)、[4、提示词工程的几个注意点](1-2-提示词工程基础.md#_4、提示词工程的几个注意点)
-- 提示词在 Agent 与工具调用中的应用 → [4、智能体开发](1-3-RAG、微调、续训与智能体选型.md#_4、智能体开发)
+- 提示词工程基础：核心原则、基础结构、基础编写方法 → [1、提示词与提示词工程](/2026/10/26/llm/1-2-prompt-engineering-basics/#_1、提示词与提示词工程)、[2、提示词怎么写](/2026/10/26/llm/1-2-prompt-engineering-basics/#_2、提示词怎么写)
+- 高级技巧：深入上下文控制、任务分解与链式思维提示法、Few-shot 示例与模式引导 → [2.2 核心六要素与典型构成](/2026/10/26/llm/1-2-prompt-engineering-basics/#_22-核心六要素与典型构成)、[2.3 Zero-shot 与 Few-shot](/2026/10/26/llm/1-2-prompt-engineering-basics/#_23-zero-shot-与-few-shot)
+- 多轮对话与结构化组织：System / User / Assistant 消息角色、文件加载提示词 → [2.4 结构化组织方式](/2026/10/26/llm/1-2-prompt-engineering-basics/#_24-结构化组织方式)
+- 评估提示效果与迭代优化、解决 Prompt 失效与偏差问题 → [3、提示词工程的边界](/2026/10/26/llm/1-2-prompt-engineering-basics/#_3、提示词工程的边界)、[4、提示词工程的几个注意点](/2026/10/26/llm/1-2-prompt-engineering-basics/#_4、提示词工程的几个注意点)
+- 提示词在 Agent 与工具调用中的应用 → [4、智能体开发](/2026/10/26/llm/1-3-rag-finetuning-continued-training-and-agent-selection/#_4、智能体开发)
 - 项目：商品营销卖点提炼、电商 / 自媒体爆款文案生成 → [3.10 商品营销卖点提炼（Coze）](案例与源码-1-Coze&Dify工作流智能体/3.10-Coze案例：商品营销卖点提炼/3.10-商品营销卖点提炼-Coze.md#_本案例概要)
 
 ### 01-4 大模型架构原理
 
-- 大模型的发展历程、关键推动因素与趋势 → [1.2 为什么会出现大模型？](1-1-大模型认知与工程概览.md#_12-为什么会出现大模型)
-- Transformer 编码器 / 解码器结构、可扩展性与 MoE 模型，以及工程实现思路 → [1.2 为什么会出现大模型？](1-1-大模型认知与工程概览.md#_12-为什么会出现大模型)、[4、大模型的工程实现概览](1-1-大模型认知与工程概览.md#_4、大模型的工程实现概览)
+- 大模型的发展历程、关键推动因素与趋势 → [1.2 为什么会出现大模型？](/2026/10/26/llm/1-1-llm-basics-engineering-overview/#_12-为什么会出现大模型)
+- Transformer 编码器 / 解码器结构、可扩展性与 MoE 模型，以及工程实现思路 → [1.2 为什么会出现大模型？](/2026/10/26/llm/1-1-llm-basics-engineering-overview/#_12-为什么会出现大模型)、[4、大模型的工程实现概览](/2026/10/26/llm/1-1-llm-basics-engineering-overview/#_4、大模型的工程实现概览)
 - 自注意力机制与多头注意力 → [全书术语表：大模型与训练基础术语](全书术语表.md#_3、大模型与训练基础术语)
-- LLaMA、Qwen、GPT 等主流体系 → [1.4 大模型分类](1-1-大模型认知与工程概览.md#_14-大模型分类)
-- 多模态架构：文本 + 图像 + 音频 + 视频 / 文档 / 图表 / 屏幕 UI 理解 → [1.4 大模型分类](1-1-大模型认知与工程概览.md#_14-大模型分类)
+- LLaMA、Qwen、GPT 等主流体系 → [1.4 大模型分类](/2026/10/26/llm/1-1-llm-basics-engineering-overview/#_14-大模型分类)
+- 多模态架构：文本 + 图像 + 音频 + 视频 / 文档 / 图表 / 屏幕 UI 理解 → [1.4 大模型分类](/2026/10/26/llm/1-1-llm-basics-engineering-overview/#_14-大模型分类)
 
 ---
 
@@ -61,10 +61,10 @@ tags:
 
 ### 02-1 Coze（扣子）平台
 
-- Coze 界面主要功能介绍、主要目标用户 → [4.2 Coze(扣子)介绍](3-基于Coze%26Dify平台的智能体开发.md#_4.2-coze扣子介绍)
-- 核心功能模块（插件、知识库、工作流、智能体）的创建与配置 → [4.3 功能说明](3-基于Coze%26Dify平台的智能体开发.md#_4.3-功能说明)
-- 提示词设计、模型选择与配置、发布渠道与多端部署能力 → [4、level 3：使用 Coze 搭建高阶智能体](3-基于Coze%26Dify平台的智能体开发.md#_4、level-3使用-coze-搭建高阶智能体)
-- Python 调用 Coze 平台工作流 → [1. 发布 API](5-Python调用Coze平台工作流.md#_1-发布-api)
+- Coze 界面主要功能介绍、主要目标用户 → [4.2 Coze(扣子)介绍](/2026/10/26/llm/1-5-agent-development-on-coze-and-dify/#_4.2-coze扣子介绍)
+- 核心功能模块（插件、知识库、工作流、智能体）的创建与配置 → [4.3 功能说明](/2026/10/26/llm/1-5-agent-development-on-coze-and-dify/#_4.3-功能说明)
+- 提示词设计、模型选择与配置、发布渠道与多端部署能力 → [4、level 3：使用 Coze 搭建高阶智能体](/2026/10/26/llm/1-5-agent-development-on-coze-and-dify/#_4、level-3使用-coze-搭建高阶智能体)
+- Python 调用 Coze 平台工作流 → [1. 发布 API](/2026/10/26/llm/1-7-calling-coze-workflows-with-python/#_1-发布-api)
 
 ### 02-2 项目 1：商户运营管家
 
@@ -76,27 +76,27 @@ tags:
 
 ### 02-3 Dify AI 平台
 
-- 不同低代码平台对比、Dify 核心功能与组件（工作流、Agent、知识库）→ [5.1 Dify 介绍](3-基于Coze%26Dify平台的智能体开发.md#_5.1-dify-介绍)
-- 提示词编排、工具与 Agent、模型集成、工作流基本结构 → [6、工作流的搭建](3-基于Coze%26Dify平台的智能体开发.md#_6、工作流的搭建)
+- 不同低代码平台对比、Dify 核心功能与组件（工作流、Agent、知识库）→ [5.1 Dify 介绍](/2026/10/26/llm/1-5-agent-development-on-coze-and-dify/#_5.1-dify-介绍)
+- 提示词编排、工具与 Agent、模型集成、工作流基本结构 → [6、工作流的搭建](/2026/10/26/llm/1-5-agent-development-on-coze-and-dify/#_6、工作流的搭建)
 - Dify 案例：客户投诉分类助手 → [3.5 Dify 案例：客户投诉分类助手](案例与源码-1-Coze&Dify工作流智能体/3.5-Dify案例：客户投诉分类助手/3.5-客户投诉分类助手.md#_本案例概要)
 - Dify 案例：一键生成行业调研报告 → [3.4 Dify 案例：一键生成行业调研报告](案例与源码-1-Coze&Dify工作流智能体/3.4-Dify案例：一键生成行业调研报告/3.4-一键生成行业调研报告.md#_本案例概要)
 - Dify 案例：客服对话记录分析 → [3.7 Dify 案例：客服对话记录分析](案例与源码-1-Coze&Dify工作流智能体/3.7-Dify案例：客服对话记录分析/3.7-客服对话记录分析-Dify.md#_本案例概要)
 - Dify 案例：商品评论分析 → [3.9 Dify 案例：商品评论分析](案例与源码-1-Coze&Dify工作流智能体/3.9-Dify案例：商品评论分析/3.9-商品评论分析-Dify.md#_本案例概要)
-- Python 调用 Dify 平台工作流 → [1、发布](4-Python调用Dify平台工作流.md#_1、发布)
+- Python 调用 Dify 平台工作流 → [1、发布](/2026/10/26/llm/1-6-calling-dify-workflows-with-python/#_1、发布)
 
 ### 02-4 容器化技术
 
-- Docker / Compose 核心概念、镜像、容器、数据卷、端口映射与常用命令 → [第 8 章 Docker 快速入门与 Dify 部署排障](8-Docker快速入门与Dify部署排障.md)
-- Docker Desktop 安装与验证 → [第 8 章 2.2 Windows 安装前准备](8-Docker快速入门与Dify部署排障.md#_22-windows-安装前准备)
-- Dify 部署后的排障、数据位置、备份升级、Navicat 连接与前端自建镜像 → [第 8 章 Docker 快速入门与 Dify 部署排障](8-Docker快速入门与Dify部署排障.md)
+- Docker / Compose 核心概念、镜像、容器、数据卷、端口映射与常用命令 → [第 10 章 Docker 快速入门与 Dify 部署排障](/2026/10/26/llm/1-10-docker-quickstart-and-dify-deployment-troubleshooting/)
+- Docker Desktop 安装与验证 → [第 10 章 2.2 Windows 安装前准备](/2026/10/26/llm/1-10-docker-quickstart-and-dify-deployment-troubleshooting/#_22-windows-安装前准备)
+- Dify 部署后的排障、数据位置、备份升级、Navicat 连接与前端自建镜像 → [第 10 章 Docker 快速入门与 Dify 部署排障](/2026/10/26/llm/1-10-docker-quickstart-and-dify-deployment-troubleshooting/)
 
 ### 02-5 企业级大模型部署
 
-- 部署核心方案：应用层（Dify）+ 推理层（Xinference 等）+ OpenAI 兼容 API → [1、企业级大模型部署概述](7-企业级大模型部署.md#_1、企业级大模型部署概述)
-- 腾讯云/阿里云服务器部署、Dify 的下载与配置 → [2、Dify 平台私有化部署](7-企业级大模型部署.md#_2、Dify%20平台私有化部署)
-- AutoDL 服务器配置、Ollama 下载与大语言模型的加载 → [3、模型部署](7-企业级大模型部署.md#_3、模型部署)
-- Xinference 平台下载、嵌入模型与重排序模型的部署 → [3、模型部署](7-企业级大模型部署.md#_3、模型部署)（含 3.2 部署 Xinference、3.4 Embedding、3.5 Rerank）
-- 低代码平台 Coze Studio、Dify、Coze Loop 的本地部署 → [1、整体概述](6-Coze与Dify的Windows平台部署.md#_1、整体概述)、[3、Coze Studio 的安装和配置](6-Coze与Dify的Windows平台部署.md#_3、coze-studio-的安装和配置)、[4、Dify 的安装和启动](6-Coze与Dify的Windows平台部署.md#_4、dify-的安装和启动)、[5、Coze Loop（扣子罗盘）指南](6-Coze与Dify的Windows平台部署.md#_5、coze-loop扣子罗盘指南)
+- 部署核心方案：应用层（Dify）+ 推理层（Xinference 等）+ OpenAI 兼容 API → [1、企业级大模型部署概述](/2026/10/26/llm/1-9-enterprise-llm-deployment/#_1、企业级大模型部署概述)
+- 腾讯云/阿里云服务器部署、Dify 的下载与配置 → [2、Dify 平台私有化部署](/2026/10/26/llm/1-9-enterprise-llm-deployment/#_2、Dify%20平台私有化部署)
+- AutoDL 服务器配置、Ollama 下载与大语言模型的加载 → [3、模型部署](/2026/10/26/llm/1-9-enterprise-llm-deployment/#_3、模型部署)
+- Xinference 平台下载、嵌入模型与重排序模型的部署 → [3、模型部署](/2026/10/26/llm/1-9-enterprise-llm-deployment/#_3、模型部署)（含 3.2 部署 Xinference、3.4 Embedding、3.5 Rerank）
+- 低代码平台 Coze Studio、Dify、Coze Loop 的本地部署 → [1、整体概述](/2026/10/26/llm/1-8-windows-deployment-of-coze-and-dify/#_1、整体概述)、[3、Coze Studio 的安装和配置](/2026/10/26/llm/1-8-windows-deployment-of-coze-and-dify/#_3、coze-studio-的安装和配置)、[4、Dify 的安装和启动](/2026/10/26/llm/1-8-windows-deployment-of-coze-and-dify/#_4、dify-的安装和启动)、[5、Coze Loop（扣子罗盘）指南](/2026/10/26/llm/1-8-windows-deployment-of-coze-and-dify/#_5、coze-loop扣子罗盘指南)
 
 ---
 
@@ -106,61 +106,61 @@ tags:
 
 ### 03-1 LangChain 框架原理与应用
 
-- LangChain 框架概述、定位与六大核心模块（Models、Memory、Retrieval、Chains、Agents、Callback）→ [1、LangChain 是什么](9-LangChain概述与架构.md#_1、langchain-是什么)、[3、总体架构与六大核心模块](9-LangChain概述与架构.md#_3、总体架构与六大核心模块)
-- LangChain 的安装与调用、环境与依赖 → [3、安装依赖](10-LangChain快速上手与HelloWorld.md#_3、安装依赖)、[4、实战：基于阿里百炼的 HelloWorld](10-LangChain快速上手与HelloWorld.md#_4、实战基于阿里百炼的-helloworld)
+- LangChain 框架概述、定位与六大核心模块（Models、Memory、Retrieval、Chains、Agents、Callback）→ [1、LangChain 是什么](/2026/10/26/llm/1-11-langchain-overview-and-architecture/#_1、langchain-是什么)、[3、总体架构与六大核心模块](/2026/10/26/llm/1-11-langchain-overview-and-architecture/#_3、总体架构与六大核心模块)
+- LangChain 的安装与调用、环境与依赖 → [3、安装依赖](/2026/10/26/llm/1-12-langchain-quickstart-and-helloworld/#_3、安装依赖)、[4、实战：基于阿里百炼的 HelloWorld](/2026/10/26/llm/1-12-langchain-quickstart-and-helloworld/#_4、实战基于阿里百炼的-helloworld)
 
 **① Model I/O（输入输出与模型接入）**
 
-- Message、Prompt Template、Output Parsers、Function Calling → [1、Model I/O 概述与三件套](11-Model-I-O与模型接入.md#_1、model-io-概述与三件套)、[1、Prompt 与消息基础](13-提示词与消息模板.md#_1、prompt-与消息基础)、[1、输出解析器概述](14-输出解析器.md#_1、输出解析器概述)、[2、Tool 是什么与能干嘛](17-Tools工具调用.md#_2、tool-是什么与能干嘛)
+- Message、Prompt Template、Output Parsers、Function Calling → [1、Model I/O 概述与三件套](/2026/10/26/llm/1-13-model-io-and-model-access/#_1、model-io-概述与三件套)、[1、Prompt 与消息基础](/2026/10/26/llm/1-15-prompts-and-message-templates/#_1、prompt-与消息基础)、[1、输出解析器概述](/2026/10/26/llm/1-16-output-parsers/#_1、输出解析器概述)、[2、Tool 是什么与能干嘛](/2026/10/26/llm/1-19-tools-and-tool-calling/#_2、tool-是什么与能干嘛)
 
 **② Chains（链式调用）**
 
-- LCEL 与 Runnable、链式调用（顺序链、分支链、串行链、并行链、函数链）→ [1、Runnable 与统一调用方式](15-LCEL与链式调用.md#_1、runnable-与统一调用方式)、[2、LCEL 是什么](15-LCEL与链式调用.md#_2、lcel-是什么)、[4、链式调用基础用法与案例](15-LCEL与链式调用.md#_4、链式调用基础用法与案例)
+- LCEL 与 Runnable、链式调用（顺序链、分支链、串行链、并行链、函数链）→ [1、Runnable 与统一调用方式](/2026/10/26/llm/1-17-lcel-and-chaining/#_1、runnable-与统一调用方式)、[2、LCEL 是什么](/2026/10/26/llm/1-17-lcel-and-chaining/#_2、lcel-是什么)、[4、链式调用基础用法与案例](/2026/10/26/llm/1-17-lcel-and-chaining/#_4、链式调用基础用法与案例)
 
 **③ Memory（记忆与对话历史）**
 
-- RunnableWithMessageHistory、内存与 Redis 持久化 → [1、为什么需要记忆](16-记忆与对话历史%EF%BC%88含Redis基础%EF%BC%89.md#_1、为什么需要记忆)、[4、实现原理](16-记忆与对话历史%EF%BC%88含Redis基础%EF%BC%89.md#_4、实现原理)、[5、实现类介绍：0.3 与 1.0+](16-记忆与对话历史%EF%BC%88含Redis基础%EF%BC%89.md#_5、实现类介绍%EF%BC%9A0.3%20与%201.0%2B)、[6、案例代码](16-记忆与对话历史%EF%BC%88含Redis基础%EF%BC%89.md#_6、案例代码)
+- RunnableWithMessageHistory、内存与 Redis 持久化 → [1、为什么需要记忆](/2026/10/26/llm/1-18-memory-and-chat-history-with-redis/#_1、为什么需要记忆)、[4、实现原理](/2026/10/26/llm/1-18-memory-and-chat-history-with-redis/#_4、实现原理)、[5、实现类介绍：0.3 与 1.0+](/2026/10/26/llm/1-18-memory-and-chat-history-with-redis/#_5、实现类介绍%EF%BC%9A0.3%20与%201.0%2B)、[6、案例代码](/2026/10/26/llm/1-18-memory-and-chat-history-with-redis/#_6、案例代码)
 
 **④ Agents（智能体与工具调用）**
 
-- Agent 抽象、ReAct 范式、create_agent 与 Executor → [1、Agent 是什么？与 Tool 的关系](21-Agent智能体.md#_1、agent-是什么与-tool-的关系)、[2、演变过程：从多步组装到一步创建](21-Agent智能体.md#_2、演变过程从多步组装到一步创建)、[5、实操与案例](21-Agent智能体.md#_5、实操与案例)
-- 现代 Agent 场景：浏览器自动化 / Computer Use、长任务研究代理、代码库维护代理、文件 / 数据分析代理 → [1.4 Agent 的使用场景](21-Agent智能体.md#_14-agent-的使用场景)
+- Agent 抽象、ReAct 范式、create_agent 与 Executor → [1、Agent 是什么？与 Tool 的关系](/2026/10/26/llm/1-23-agent/#_1、agent-是什么与-tool-的关系)、[2、演变过程：从多步组装到一步创建](/2026/10/26/llm/1-23-agent/#_2、演变过程从多步组装到一步创建)、[5、实操与案例](/2026/10/26/llm/1-23-agent/#_5、实操与案例)
+- 现代 Agent 场景：浏览器自动化 / Computer Use、长任务研究代理、代码库维护代理、文件 / 数据分析代理 → [1.4 Agent 的使用场景](/2026/10/26/llm/1-23-agent/#_14-agent-的使用场景)
 
 **⑤ Retrieval（检索与向量）**
 
-- 文档加载器、Text Splitters、Embedding、向量存储与检索 → [1、向量与向量化](18-向量数据库与Embedding实战.md#_1、向量与向量化)、[2、向量数据库](18-向量数据库与Embedding实战.md#_2、向量数据库)、[2、RAG 文本处理核心知识](19-RAG检索增强生成.md#_2、rag-文本处理核心知识)
+- 文档加载器、Text Splitters、Embedding、向量存储与检索 → [1、向量与向量化](/2026/10/26/llm/1-20-vector-database-and-embedding-in-practice/#_1、向量与向量化)、[2、向量数据库](/2026/10/26/llm/1-20-vector-database-and-embedding-in-practice/#_2、向量数据库)、[2、RAG 文本处理核心知识](/2026/10/26/llm/1-21-rag-retrieval-augmented-generation/#_2、rag-文本处理核心知识)
 
 - 电商平台商家对话助手案例：集成店铺运营数据库检索、平台政策实时查询和客户服务管理功能；开发多工具调用能力，记忆机制管理多会话上下文；本地知识库的搭建与调用（待更新）
 
 ### 03-2 LangGraph 框架原理与应用
 
-- LangGraph 入门：从链式到图状的思维转变 → [1、LangGraph 简介](22-LangGraph概述与快速入门.md#_1、langgraph-简介)、[2、HelloWorld 快速入门](22-LangGraph概述与快速入门.md#_2、helloworld-快速入门)
-- 图的核心要素：State、Node、Edge → [1.4 四个核心概念：State、Nodes、Edges、Graph](22-LangGraph概述与快速入门.md#_1.4-四个核心概念：state、nodes、edges、graph)、[2、Graph API 之 State（状态）](23-LangGraphAPI：图与状态.md#_2、graph-api-之-state（状态）)、[1、Graph API 之 Node（节点）](24-LangGraphAPI：节点、边与进阶.md#_1、graph-api-之-node（节点）)、[2、Graph API 之 Edge（边）](24-LangGraphAPI：节点、边与进阶.md#_2、graph-api-之-edge（边）)
-- Graphs：图的构建与编译 → [1、Graph API 之 Graph（图）](23-LangGraphAPI：图与状态.md#_1、graph-api-之-graph（图）)、[2.3 Graph 最小构建流程](22-LangGraph概述与快速入门.md#_2.3-graph-最小构建流程)
-- Runtime：Pregel、Actor、Channel、Superstep 与状态快照 → [4、补充理解：LangGraph 底层如何运行这张图](23-LangGraphAPI：图与状态.md#_4、补充理解：langgraph-底层如何运行这张图)
-- Memory：图中的持久化状态与记忆 → [2、状态持久化（Persistence）](25-LangGraph高级特性.md#_2、状态持久化（persistence）)、[3.5 本章和 LangGraph 官方主线的关系](16-记忆与对话历史（含Redis基础）.md#_3.5-本章和-langgraph-官方主线的关系)
-- Human-in-the-loop：中断、人工审核与恢复执行 → [3、人机协作与中断恢复（Interrupt / HITL）](25-LangGraph高级特性.md#_3、人机协作与中断恢复（interrupt--hitl）)
-- Agents：构建更鲁棒、更可控的智能体，覆盖长任务 Agent、多智能体协作与并行任务 → [21-Agent 智能体](21-Agent智能体.md#_1、agent-简介)、[26-LangGraph 多智能体与 A2A](26-LangGraph多智能体与A2A.md#_2、supervisor-与-handoff)
-- Agent Skills：把可复用提示词、流程、模板、脚本和资源封装成按需加载的能力包 → [27-Skills 技能与 AI 编程工具实践](27-Skills技能与AI编程工具实践.md#_1、为什么-skills-突然变重要)
-- 高级应用与技巧：流式输出、时间回溯与子图 → [1、流式处理（Streaming）](25-LangGraph高级特性.md#_1、流式处理（streaming）)、[4、时间回溯（Time-Travel）](25-LangGraph高级特性.md#_4、时间回溯（time-travel）)、[5、子图（Subgraphs）](25-LangGraph高级特性.md#_5、子图（subgraphs）)
+- LangGraph 入门：从链式到图状的思维转变 → [1、LangGraph 简介](/2026/10/27/llm/1-24-langgraph-overview-and-quickstart/#_1、langgraph-简介)、[2、HelloWorld 快速入门](/2026/10/27/llm/1-24-langgraph-overview-and-quickstart/#_2、helloworld-快速入门)
+- 图的核心要素：State、Node、Edge → [1.4 四个核心概念：State、Nodes、Edges、Graph](/2026/10/27/llm/1-24-langgraph-overview-and-quickstart/#_1.4-四个核心概念：state、nodes、edges、graph)、[2、Graph API 之 State（状态）](/2026/10/27/llm/1-25-langgraph-api-graph-and-state/#_2、graph-api-之-state（状态）)、[1、Graph API 之 Node（节点）](/2026/10/27/llm/1-26-langgraph-api-nodes-edges-and-advanced/#_1、graph-api-之-node（节点）)、[2、Graph API 之 Edge（边）](/2026/10/27/llm/1-26-langgraph-api-nodes-edges-and-advanced/#_2、graph-api-之-edge（边）)
+- Graphs：图的构建与编译 → [1、Graph API 之 Graph（图）](/2026/10/27/llm/1-25-langgraph-api-graph-and-state/#_1、graph-api-之-graph（图）)、[2.3 Graph 最小构建流程](/2026/10/27/llm/1-24-langgraph-overview-and-quickstart/#_2.3-graph-最小构建流程)
+- Runtime：Pregel、Actor、Channel、Superstep 与状态快照 → [4、补充理解：LangGraph 底层如何运行这张图](/2026/10/27/llm/1-25-langgraph-api-graph-and-state/#_4、补充理解：langgraph-底层如何运行这张图)
+- Memory：图中的持久化状态与记忆 → [2、状态持久化（Persistence）](/2026/10/27/llm/1-27-langgraph-advanced-features/#_2、状态持久化（persistence）)、[3.5 本章和 LangGraph 官方主线的关系](/2026/10/26/llm/1-18-memory-and-chat-history-with-redis/#_3.5-本章和-langgraph-官方主线的关系)
+- Human-in-the-loop：中断、人工审核与恢复执行 → [3、人机协作与中断恢复（Interrupt / HITL）](/2026/10/27/llm/1-27-langgraph-advanced-features/#_3、人机协作与中断恢复（interrupt--hitl）)
+- Agents：构建更鲁棒、更可控的智能体，覆盖长任务 Agent、多智能体协作与并行任务 → [23-Agent 智能体](/2026/10/26/llm/1-23-agent/#_1、agent-简介)、[28-LangGraph 多智能体与 A2A](/2026/10/27/llm/1-28-langgraph-multi-agent-and-a2a/#_2、supervisor-与-handoff)
+- Agent Skills：把可复用提示词、流程、模板、脚本和资源封装成按需加载的能力包 → [29-Skills 技能与 AI 编程工具实践](/2026/10/27/llm/1-29-skills-and-ai-coding-tools/#_1、为什么-skills-突然变重要)
+- 高级应用与技巧：流式输出、时间回溯与子图 → [1、流式处理（Streaming）](/2026/10/27/llm/1-27-langgraph-advanced-features/#_1、流式处理（streaming）)、[4、时间回溯（Time-Travel）](/2026/10/27/llm/1-27-langgraph-advanced-features/#_4、时间回溯（time-travel）)、[5、子图（Subgraphs）](/2026/10/27/llm/1-27-langgraph-advanced-features/#_5、子图（subgraphs）)
 
 ### 03-3 MCP 从原理到实战
 
-- Function Calling 对比 MCP 的核心差异、功能定位、交互逻辑及适用场景 → [4.3 工具调用的实现方式](1-3-RAG、微调、续训与智能体选型.md#_43-工具调用的实现方式)、[1、为什么需要 MCP](20-MCP模型上下文协议.md#_1、为什么需要-mcp)、[2、MCP 是什么（入门概念）](20-MCP模型上下文协议.md#_2、MCP%20是什么%EF%BC%88入门概念%EF%BC%89)
-- MCP 应用场景、通信机制与传输逻辑（STDIO / SSE），包括浏览器、文件、代码库与数据系统等外部能力接入 → [3、MCP 能做什么](20-MCP模型上下文协议.md#_3、mcp-能做什么)、[5、MCP 架构知识](20-MCP模型上下文协议.md#_5、mcp-架构知识)
-- MCP 关键组成要素，及各要素功能在体系中的作用 → [5.1 主机、客户端、服务器定义](20-MCP模型上下文协议.md#_5.1-主机、客户端、服务器定义)、[5.4 FastMCP 的基本写法与常用 API](20-MCP模型上下文协议.md#_5.4-fastmcp-的基本写法与常用-api)
-- MCP 从初始化到日志记录的完整工作流程，各环节核心动作 → [5.2 MCP 协议层面大致怎么工作](20-MCP模型上下文协议.md#_5.2-mcp-协议层面大致怎么工作)、[5.5 完整调用过程理解](20-MCP模型上下文协议.md#_5.5-完整调用过程理解)
-- 热门 MCP Server 推荐：主流工具，及各工具特点及适用场景 → [4.1 直接使用现成的 MCP 服务](20-MCP模型上下文协议.md#_4.1-直接使用现成的-mcp-服务)
-- 从底层逻辑剖析 MCP 在服务解耦、路由、容错等方面的核心原理 → [1.2 MCP 到底在解决什么问题](20-MCP模型上下文协议.md#_1.2-mcp-到底在解决什么问题)、[5.2 MCP 协议层面大致怎么工作](20-MCP模型上下文协议.md#_5.2-mcp-协议层面大致怎么工作)
-- 案例：多种具体环境 MCP Server 部署与测试 → [6、案例实战：本地 MCP 天气服务与客户端](20-MCP模型上下文协议.md#_6、案例实战本地-mcp-天气服务与客户端)
-- 案例：自定义 MCP 的开发步骤、功能验证要点与目标 → [4.2 本地自建 MCP 服务端](20-MCP模型上下文协议.md#_4.2-本地自建-mcp-服务端)、[6.2 服务端案例区分理解](20-MCP模型上下文协议.md#_6.2-服务端案例区分理解)、[6.4 客户端案例怎么区分理解](20-MCP模型上下文协议.md#_6.4-客户端案例怎么区分理解)
+- Function Calling 对比 MCP 的核心差异、功能定位、交互逻辑及适用场景 → [4.3 工具调用的实现方式](/2026/10/26/llm/1-3-rag-finetuning-continued-training-and-agent-selection/#_43-工具调用的实现方式)、[1、为什么需要 MCP](/2026/10/26/llm/1-22-mcp-model-context-protocol/#_1、为什么需要-mcp)、[2、MCP 是什么（入门概念）](/2026/10/26/llm/1-22-mcp-model-context-protocol/#_2、MCP%20是什么%EF%BC%88入门概念%EF%BC%89)
+- MCP 应用场景、通信机制与传输逻辑（STDIO / SSE），包括浏览器、文件、代码库与数据系统等外部能力接入 → [3、MCP 能做什么](/2026/10/26/llm/1-22-mcp-model-context-protocol/#_3、mcp-能做什么)、[5、MCP 架构知识](/2026/10/26/llm/1-22-mcp-model-context-protocol/#_5、mcp-架构知识)
+- MCP 关键组成要素，及各要素功能在体系中的作用 → [5.1 主机、客户端、服务器定义](/2026/10/26/llm/1-22-mcp-model-context-protocol/#_5.1-主机、客户端、服务器定义)、[5.4 FastMCP 的基本写法与常用 API](/2026/10/26/llm/1-22-mcp-model-context-protocol/#_5.4-fastmcp-的基本写法与常用-api)
+- MCP 从初始化到日志记录的完整工作流程，各环节核心动作 → [5.2 MCP 协议层面大致怎么工作](/2026/10/26/llm/1-22-mcp-model-context-protocol/#_5.2-mcp-协议层面大致怎么工作)、[5.5 完整调用过程理解](/2026/10/26/llm/1-22-mcp-model-context-protocol/#_5.5-完整调用过程理解)
+- 热门 MCP Server 推荐：主流工具，及各工具特点及适用场景 → [4.1 直接使用现成的 MCP 服务](/2026/10/26/llm/1-22-mcp-model-context-protocol/#_4.1-直接使用现成的-mcp-服务)
+- 从底层逻辑剖析 MCP 在服务解耦、路由、容错等方面的核心原理 → [1.2 MCP 到底在解决什么问题](/2026/10/26/llm/1-22-mcp-model-context-protocol/#_1.2-mcp-到底在解决什么问题)、[5.2 MCP 协议层面大致怎么工作](/2026/10/26/llm/1-22-mcp-model-context-protocol/#_5.2-mcp-协议层面大致怎么工作)
+- 案例：多种具体环境 MCP Server 部署与测试 → [6、案例实战：本地 MCP 天气服务与客户端](/2026/10/26/llm/1-22-mcp-model-context-protocol/#_6、案例实战本地-mcp-天气服务与客户端)
+- 案例：自定义 MCP 的开发步骤、功能验证要点与目标 → [4.2 本地自建 MCP 服务端](/2026/10/26/llm/1-22-mcp-model-context-protocol/#_4.2-本地自建-mcp-服务端)、[6.2 服务端案例区分理解](/2026/10/26/llm/1-22-mcp-model-context-protocol/#_6.2-服务端案例区分理解)、[6.4 客户端案例怎么区分理解](/2026/10/26/llm/1-22-mcp-model-context-protocol/#_6.4-客户端案例怎么区分理解)
 
 ### 03-4 跨 Agent 通信：A2A 协议
 
-- A2A 协议定义与作用、与 MCP 协议关系、核心组件架构 → [1、A2A 协议与多智能体架构](26-LangGraph多智能体与A2A.md#_1、a2a-协议与多智能体架构)、[1.5 A2A 和 MCP 的区别](26-LangGraph多智能体与A2A.md#_1.5-a2a-和-mcp-的区别)
-- 工作流程机制、消息格式与数据结构、请求与响应流程 → [1.4 A2A 协议定义](26-LangGraph多智能体与A2A.md#_1.4-a2a-协议定义)、[1.6 LangGraph 多智能体和 A2A 是什么关系](26-LangGraph多智能体与A2A.md#_1.6-langgraph-多智能体和-a2a-是什么关系)
-- 认证与授权机制、错误码与异常处理 → [1、A2A 协议与多智能体架构](26-LangGraph多智能体与A2A.md#_1、a2a-协议与多智能体架构)
-- 性能优化与并发控制、典型业务场景示例，包括软件工程团队式协作、研究代理团队、数据分析代理团队与并行代码任务 → [1.9 使用场景](26-LangGraph多智能体与A2A.md#_1.9-使用场景)、[2.9 Supervisor 和 Handoff 怎么选](26-LangGraph多智能体与A2A.md#_2.9-supervisor-和-handoff-怎么选)
+- A2A 协议定义与作用、与 MCP 协议关系、核心组件架构 → [1、A2A 协议与多智能体架构](/2026/10/27/llm/1-28-langgraph-multi-agent-and-a2a/#_1、a2a-协议与多智能体架构)、[1.5 A2A 和 MCP 的区别](/2026/10/27/llm/1-28-langgraph-multi-agent-and-a2a/#_1.5-a2a-和-mcp-的区别)
+- 工作流程机制、消息格式与数据结构、请求与响应流程 → [1.4 A2A 协议定义](/2026/10/27/llm/1-28-langgraph-multi-agent-and-a2a/#_1.4-a2a-协议定义)、[1.6 LangGraph 多智能体和 A2A 是什么关系](/2026/10/27/llm/1-28-langgraph-multi-agent-and-a2a/#_1.6-langgraph-多智能体和-a2a-是什么关系)
+- 认证与授权机制、错误码与异常处理 → [1、A2A 协议与多智能体架构](/2026/10/27/llm/1-28-langgraph-multi-agent-and-a2a/#_1、a2a-协议与多智能体架构)
+- 性能优化与并发控制、典型业务场景示例，包括软件工程团队式协作、研究代理团队、数据分析代理团队与并行代码任务 → [1.9 使用场景](/2026/10/27/llm/1-28-langgraph-multi-agent-and-a2a/#_1.9-使用场景)、[2.9 Supervisor 和 Handoff 怎么选](/2026/10/27/llm/1-28-langgraph-multi-agent-and-a2a/#_2.9-supervisor-和-handoff-怎么选)
 
 ---
 
@@ -170,11 +170,11 @@ tags:
 
 ### 04-1 RAG 与知识库基础
 
-- RAG 是什么、为何需要、执行流程（索引阶段 + 检索阶段）→ [1、RAG 的理解](2-RAG-搭建企业私有%26个人知识库.md#_1、rag-的理解)、[1、RAG 概述](19-RAG检索增强生成.md#_1、rag-概述)
-- 知识库搭建平台对比与选型（Cherry Studio、ima、Dify、RAGFlow 等）→ [2、知识库的概述](2-RAG-搭建企业私有%26个人知识库.md#_2、知识库的概述)
-- 使用 Cherry Studio、ima、Dify 从零搭建个人/企业知识库 → [3、Cherry-Studio 搭建个人知识库](2-RAG-搭建企业私有%26个人知识库.md#_3、cherry-studio-搭建个人知识库)、[4、ima 搭建个人知识库](2-RAG-搭建企业私有%26个人知识库.md#_4、ima-搭建个人知识库)、[5、使用 Dify 搭建知识库](2-RAG-搭建企业私有%26个人知识库.md#_5、使用-dify-搭建知识库)
-- 向量与向量化、向量数据库与 Embedding 实战 → [18-向量数据库与 Embedding 实战](18-向量数据库与Embedding实战.md#_1、向量与向量化)
-- RAG 综合案例：文档加载、分割、向量存储、检索与生成 → [3、RAG 综合案例：智能运维助手](19-RAG检索增强生成.md#_3、rag-综合案例智能运维助手)
+- RAG 是什么、为何需要、执行流程（索引阶段 + 检索阶段）→ [1、RAG 的理解](/2026/10/26/llm/1-4-rag-private-and-personal-knowledge-base/#_1、rag-的理解)、[1、RAG 概述](/2026/10/26/llm/1-21-rag-retrieval-augmented-generation/#_1、rag-概述)
+- 知识库搭建平台对比与选型（Cherry Studio、ima、Dify、RAGFlow 等）→ [2、知识库的概述](/2026/10/26/llm/1-4-rag-private-and-personal-knowledge-base/#_2、知识库的概述)
+- 使用 Cherry Studio、ima、Dify 从零搭建个人/企业知识库 → [3、Cherry-Studio 搭建个人知识库](/2026/10/26/llm/1-4-rag-private-and-personal-knowledge-base/#_3、cherry-studio-搭建个人知识库)、[4、ima 搭建个人知识库](/2026/10/26/llm/1-4-rag-private-and-personal-knowledge-base/#_4、ima-搭建个人知识库)、[5、使用 Dify 搭建知识库](/2026/10/26/llm/1-4-rag-private-and-personal-knowledge-base/#_5、使用-dify-搭建知识库)
+- 向量与向量化、向量数据库与 Embedding 实战 → [20-向量数据库与 Embedding 实战](/2026/10/26/llm/1-20-vector-database-and-embedding-in-practice/#_1、向量与向量化)
+- RAG 综合案例：文档加载、分割、向量存储、检索与生成 → [3、RAG 综合案例：智能运维助手](/2026/10/26/llm/1-21-rag-retrieval-augmented-generation/#_3、rag-综合案例智能运维助手)
 
 ### 04-2 项目 2：掌柜智库
 
@@ -221,7 +221,7 @@ tags:
 
 ### 05-1 大模型微调核心
 
-- 大模型微调概述、核心要素、数据收集 → [2、微调（Fine-tuning）](1-3-RAG、微调、续训与智能体选型.md#_2、微调%EF%BC%88Fine-tuning%EF%BC%89)
+- 大模型微调概述、核心要素、数据收集 → [2、微调（Fine-tuning）](/2026/10/26/llm/1-3-rag-finetuning-continued-training-and-agent-selection/#_2、微调%EF%BC%88Fine-tuning%EF%BC%89)
 - 大模型微调数据集处理、Alpaca 指令跟随格式、ShareGPT 多轮对话格式（待更新）
 - 大模型微调技术 PEFT 概述、prompt-tuning / p-tuning、zero-shot / few-shot（待更新）
 - 大模型量化算法、LoRA 微调、QLoRA 微调（待更新）
@@ -265,7 +265,7 @@ tags:
 
 ## 附录与导航
 
-- **教程案例链接汇总**（在线演示与源码入口）→ [教程案例链接汇总](教程案例链接汇总.md)
+- **教程案例链接汇总**（在线演示与源码入口）→ [教程案例链接汇总](/2026/10/26/llm/case-links-and-demos/)
 - **全书术语表**（核心概念速查、易混概念对照）→ [全书术语表](全书术语表.md)
-- **新手入门与常见问题**（环境准备、运行案例、API Key 配置、常见报错）→ [新手入门与常见问题](新手入门与常见问题.md)
-
+- **新手入门与常见问题**（环境准备、运行案例、API Key 配置、常见报错）→ [新手入门与常见问题](/2026/10/26/llm/getting-started-and-faq/)
+- **教程更新日志** → [教程更新日志](教程更新日志.md)

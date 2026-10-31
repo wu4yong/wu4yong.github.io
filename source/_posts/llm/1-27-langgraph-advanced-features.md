@@ -1,6 +1,6 @@
 ---
 title: 二十七、LangGraph 高级特性
-date: 2026-10-26 23:20:00
+date: 2026-10-27 03:00:00
 categories:
   - llm
 tags:
@@ -23,7 +23,7 @@ tags:
 
 **学习建议：** 这章按真实项目的优先级读：流式解决“看不见进度”，持久化解决“状态接不上、失败要重跑”，Interrupt 解决“关键动作要人审”，时间回溯偏调试复盘，子图偏复用拆分。每学一个特性，先问它解决哪类痛点，再看 API。
 
-**官方文档与资源**：详见 [工具导航与参考资料索引 - LangGraph](工具导航与参考资料索引.md#LangGraph)。
+**官方文档与资源**：详见 [工具导航与参考资料索引 - LangGraph](/2026/10/26/llm/tools-and-references-index/#LangGraph)。
 
 ---
 
@@ -62,7 +62,7 @@ tags:
 - 如果你只关心最后结果，用 `invoke()`
 - 如果你想一边执行一边观察，用 `stream()` 或 `astream()`
 
-LangGraph 图本身实现了 **Runnable** 接口，所以自然拥有这些流式能力。这也让它和 [LangChain `Runnable` / LCEL](15-LCEL与链式调用.md) 体系能够衔接起来。
+LangGraph 图本身实现了 **Runnable** 接口，所以自然拥有这些流式能力。这也让它和 [LangChain `Runnable` / LCEL](/2026/10/26/llm/1-17-lcel-and-chaining/) 体系能够衔接起来。
 
 这里还要补一个关键参数：`stream_mode`。`stream()` 不是只有一种固定输出格式，`stream_mode` 决定了“图在执行过程中，到底往外流什么”，比如完整状态、增量更新、模型消息片段，或自定义进度信息。
 
@@ -170,7 +170,7 @@ stream_mode=["updates", "custom"]
 
 如果说流式处理解决的是“图在运行过程中怎么被看见”，那状态持久化解决的是另一个问题：**图跑到一半、跑完之后，状态能不能被记住，并在下次继续使用。**
 
-LangGraph 的持久化核心围绕 **checkpoint（检查点）** 展开。给图配置 checkpointer 后，图在执行过程中会把状态保存成一个个检查点。被保存的字段与合并规则，仍由你在 [第 23 章](23-LangGraphAPI：图与状态.md) 定义的 **State / Reducer** 决定。
+LangGraph 的持久化核心围绕 **checkpoint（检查点）** 展开。给图配置 checkpointer 后，图在执行过程中会把状态保存成一个个检查点。被保存的字段与合并规则，仍由你在 [第 25 章](/2026/10/27/llm/1-25-langgraph-api-graph-and-state/) 定义的 **State / Reducer** 决定。
 
 这些检查点会被组织到某个 **thread** 下面。入门阶段，可以先把 thread 理解成“同一条会话或同一条工作流链路”的 ID 容器，而最常见的就是通过：
 
@@ -248,7 +248,7 @@ graph.invoke(None, config={"configurable": {"thread_id": "user-001"}})
 - 中间某一步到底写入了哪些字段？
 - 如果要做时间回溯，应该从哪一个 checkpoint 开始？
 
-这和第 23 章讲过的 `StateSnapshot` 是一条线：`values` 让你看到当前状态，`next` 让你知道下一步，`config` / `parent_config` 帮你串起 checkpoint 链，`interrupts` 用来记录等待处理的人机中断。
+这和第 25 章讲过的 `StateSnapshot` 是一条线：`values` 让你看到当前状态，`next` 让你知道下一步，`config` / `parent_config` 帮你串起 checkpoint 链，`interrupts` 用来记录等待处理的人机中断。
 
 ### 2.6 短期记忆：Checkpointer
 

@@ -1,6 +1,6 @@
 ---
 title: 二十五、LangGraph API：图与状态
-date: 2026-10-26 23:10:00
+date: 2026-10-27 01:00:00
 categories:
   - llm
 tags:
@@ -20,11 +20,11 @@ tags:
 - 理解 **Graph API 里的 Graph（图）** 到底是什么，知道 `StateGraph`、`START`、`END`、`compile()`、`invoke()` 分别负责什么。
 - 理解 **State（状态）** 和 **Reducer（规约函数）** 的分工，知道为什么 LangGraph 不是靠“函数之间手动传一堆参数”，而是靠“共享状态 + 按规则合并更新”来驱动工作流。
 - 掌握 **TypedDict / Pydantic / dataclass** 这些 State Schema 写法、**state_schema / input_schema / output_schema** 的边界，以及 **默认覆盖、`add_messages`、`operator.add`、`operator.mul`、自定义 Reducer** 这些常见状态合并方式。
-- 能运行并理解本章全部案例，为后续 [第 24 章 LangGraph API：节点、边与进阶](24-LangGraphAPI：节点、边与进阶.md) 打基础。
+- 能运行并理解本章全部案例，为后续 [第 26 章 LangGraph API：节点、边与进阶](/2026/10/27/llm/1-26-langgraph-api-nodes-edges-and-advanced/) 打基础。
 
 **学习建议：** 这章的重点不是“怎么画图”，而是状态怎么被安全地改。看每个例子时都问三句话：节点读了 State 里的什么，返回了哪些局部更新，Reducer 最后怎么合并。只要这条线顺了，`add_messages`、`operator.add`、自定义 Reducer 就不再是一堆孤立写法。
 
-**官方文档与资源**：详见 [工具导航与参考资料索引 - LangGraph](工具导航与参考资料索引.md#LangGraph)。
+**官方文档与资源**：详见 [工具导航与参考资料索引 - LangGraph](/2026/10/26/llm/tools-and-references-index/#LangGraph)。
 
 ---
 
@@ -49,7 +49,7 @@ tags:
 
 ### 1.2 为什么单独讲 Graph
 
-[第 22 章](22-LangGraph概述与快速入门.md) 已经讲过 LangGraph 四要素。这里继续讲 Graph，是为了把“图构建器、状态接口、状态合并规则”讲清楚。上一章解决“能跑起来”，本章解决“为什么这样设计更稳”。
+[第 24 章](/2026/10/27/llm/1-24-langgraph-overview-and-quickstart/) 已经讲过 LangGraph 四要素。这里继续讲 Graph，是为了把“图构建器、状态接口、状态合并规则”讲清楚。上一章解决“能跑起来”，本章解决“为什么这样设计更稳”。
 
 真实项目里，Graph 这一层最容易踩坑的往往不是“节点函数怎么写”，而是下面这些问题：
 
@@ -61,7 +61,7 @@ tags:
 
 ### 1.3 构建 Graph 的 5 步
 
-如果先不看条件边、`Send`、`Command`、`Runtime` 等进阶能力（这些在 [第 24 章](24-LangGraphAPI：节点、边与进阶.md) 系统讲），构建一张最基础的 `StateGraph`，最核心的流程还是下面 5 步：
+如果先不看条件边、`Send`、`Command`、`Runtime` 等进阶能力（这些在 [第 26 章](/2026/10/27/llm/1-26-langgraph-api-nodes-edges-and-advanced/) 系统讲），构建一张最基础的 `StateGraph`，最核心的流程还是下面 5 步：
 
 1. **定义 State Schema**：先说明这张图内部要维护哪些状态字段。
 2. **创建 `StateGraph` 构建器**：`builder = StateGraph(MyState)`。
@@ -506,4 +506,4 @@ Pregel 模型里还有一个很关键的词：**Superstep**。你可以先把它
 - **Reducer 选择要跟业务语义对齐**：默认覆盖适合最新值，`add_messages` 适合消息历史，`operator.add` 适合拼接/累加，自定义 Reducer 适合更复杂的合并规则。
 - 学完本章后，你至少应该能说清 **Graph、State、Schema、Reducer** 四层关系，知道它们不是同一层东西；知道 `state_schema`、`input_schema`、`output_schema` 各自负责什么边界；能根据字段语义选择默认覆盖、`add_messages`、`operator.add` 或自定义 Reducer。
 
-**建议下一步：** 先按顺序跑一遍 `BuildWholeGraphSummary.py`、`DefState.py`、`StateSchema.py` 和 `03-state/reducers` 目录下所有 Reducer 案例，然后自己做两个小练习：把 `BuildWholeGraphSummary.py` 的 `process_data` 改成用 `operator.add` 追加历史记录；把 `StateReducersMyChatBot.py` 再加一个 `latest_summary` 字段，用默认覆盖保存最新摘要。做完后进入 [第 24 章 - LangGraph API：节点、边与进阶](24-LangGraphAPI：节点、边与进阶.md)，继续学习节点、普通边、条件边和 `Command` / `Send` / `Runtime`。
+**建议下一步：** 先按顺序跑一遍 `BuildWholeGraphSummary.py`、`DefState.py`、`StateSchema.py` 和 `03-state/reducers` 目录下所有 Reducer 案例，然后自己做两个小练习：把 `BuildWholeGraphSummary.py` 的 `process_data` 改成用 `operator.add` 追加历史记录；把 `StateReducersMyChatBot.py` 再加一个 `latest_summary` 字段，用默认覆盖保存最新摘要。做完后进入 [第 26 章 - LangGraph API：节点、边与进阶](/2026/10/27/llm/1-26-langgraph-api-nodes-edges-and-advanced/)，继续学习节点、普通边、条件边和 `Command` / `Send` / `Runtime`。

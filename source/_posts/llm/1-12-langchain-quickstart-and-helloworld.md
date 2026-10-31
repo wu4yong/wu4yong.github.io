@@ -19,11 +19,11 @@ tags:
 
 - 从“知道 LangChain 是什么”真正走到“**亲手跑通第一次 LangChain 调用**”，完成从环境准备到 HelloWorld 的闭环。
 - 理解接入大模型最重要的 **调用三件套**：**API Key、模型名、Base URL**，并以 LangChain **1.x** 写法作为主线，同时能读懂旧资料里的 classic 写法。
-- 会运行并理解本章全部案例：**环境检查、HelloWorld、多模型共存、企业级封装、流式输出**，为后续 [Model I/O](11-Model-I-O与模型接入.md)、[Ollama 本地调用](12-Ollama本地部署与调用.md)、[提示词与消息模板](13-提示词与消息模板.md)、[输出解析器](14-输出解析器.md) 打基础。
+- 会运行并理解本章全部案例：**环境检查、HelloWorld、多模型共存、企业级封装、流式输出**，为后续 [Model I/O](/2026/10/26/llm/1-13-model-io-and-model-access/)、[Ollama 本地调用](/2026/10/26/llm/1-14-ollama-local-deployment-and-usage/)、[提示词与消息模板](/2026/10/26/llm/1-15-prompts-and-message-templates/)、[输出解析器](/2026/10/26/llm/1-16-output-parsers/) 打基础。
 
 **学习建议：** 这一章的目标很朴素：先让一次模型调用真的跑起来。学习时先确认依赖、模型名、API Key、Base URL 这几项，再看代码结构；第一次成功后，再比较多模型共存和工程化封装。遇到旧教程里的 0.x 写法，重点看它和本章 1.x 写法在入口和对象组织上有什么差别。
 
-**官方文档与资源**：详见 [工具导航与参考资料索引 - LangChain](工具导航与参考资料索引.md#_LangChain)。
+**官方文档与资源**：详见 [工具导航与参考资料索引 - LangChain](/2026/10/26/llm/tools-and-references-index/#_LangChain)。
 
 ---
 
@@ -68,7 +68,7 @@ LangChain 可以通过不同集成包接入很多模型提供商，官方提供�
 2. 激活虚拟环境
 3. 安装本项目完整依赖
 
-更细的环境准备步骤，可配合 [新手入门与常见问题](新手入门与常见问题.md) 一起看。
+更细的环境准备步骤，可配合 [新手入门与常见问题](/2026/10/26/llm/getting-started-and-faq/) 一起看。
 
 ### 1.3 运行案例前置注意事项
 
@@ -483,4 +483,4 @@ for chunk in model.stream("请介绍一下 LangGraph"):
 - 本章建议按 **LangChain 1.x** 语境学习，并遵循本项目当前环境约定：**Python 3.10–3.13，推荐 3.10**。如果是跟着本仓库学，优先执行 `pip install -r requirements.txt`；如果只想跑本章最小案例，至少安装 `langchain`、`langchain-openai`、`openai`、`python-dotenv`、`langchain-core`，运行 DeepSeek 多模型案例时建议补 `langchain-deepseek`。
 - 本章保留的全部案例，分别对应了不同学习目标：`GetEnvInfo.py` 用于**检查环境**，`LangChainV0.3.py` 与 `LangChainV1.0.py` 用于理解 **经典写法与 1.x 写法**，`LangChain_MoreV1.0.py` 用于掌握 **多模型共存**，`StandardDesc.py` 则让你迈出从“教学 Demo”走向“工程化写法”的第一步。
 
-**建议下一步：** 先亲手跑通本章至少两个脚本，推荐顺序是：`GetEnvInfo.py` → `LangChainV1.0.py` → `LangChain_MoreV1.0.py` → `StandardDesc.py`。跑通之后，马上进入 [第 11 章 Model I/O 与模型接入](11-Model-I-O与模型接入.md)，把这章中“会用”的部分升级成“真正理解为什么这样接、不同模型如何统一接入”。等你再接着学 [第 13 章 提示词与消息模板](13-提示词与消息模板.md) 和 [第 14 章 输出解析器](14-输出解析器.md)，就能形成完整的 **输入 → 模型 → 输出** 学习闭环。
+**建议下一步：** 先亲手跑通本章至少两个脚本，推荐顺序是：`GetEnvInfo.py` → `LangChainV1.0.py` → `LangChain_MoreV1.0.py` → `StandardDesc.py`。跑通之后，马上进入 [第 13 章 Model I/O 与模型接入](/2026/10/26/llm/1-13-model-io-and-model-access/)，把这章中“会用”的部分升级成“真正理解为什么这样接、不同模型如何统一接入”。等你再接着学 [第 15 章 提示词与消息模板](/2026/10/26/llm/1-15-prompts-and-message-templates/) 和 [第 16 章 输出解析器](/2026/10/26/llm/1-16-output-parsers/)，就能形成完整的 **输入 → 模型 → 输出** 学习闭环。

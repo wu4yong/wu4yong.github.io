@@ -17,13 +17,13 @@ tags:
 
 **本章课程目标：**
 
-- 理解 **MCP（Model Context Protocol，模型上下文协议）** 是什么、解决什么痛点，以及它与 [Tool](17-Tools工具调用.md)、[RAG](19-RAG检索增强生成.md)、[Agent](21-Agent智能体.md) 的定位区别。
+- 理解 **MCP（Model Context Protocol，模型上下文协议）** 是什么、解决什么痛点，以及它与 [Tool](/2026/10/26/llm/1-19-tools-and-tool-calling/)、[RAG](/2026/10/26/llm/1-21-rag-retrieval-augmented-generation/)、[Agent](/2026/10/26/llm/1-23-agent/) 的定位区别。
 - 掌握 MCP 的**主机 / 客户端 / 服务器**架构、核心能力、常见传输方式，以及 `mcp.json`、FastMCP、LangChain MCP 适配器在项目中的作用。
-- 跑通并理解本章全部案例：**极简教学版服务端、FastMCP 服务端、天气 MCP 服务、同进程客户端、基于 `mcp.json` + LangChain Agent 的 MCP 客户端**，为后续学习 [第 21 章 Agent 智能体](21-Agent智能体.md) 打基础。
+- 跑通并理解本章全部案例：**极简教学版服务端、FastMCP 服务端、天气 MCP 服务、同进程客户端、基于 `mcp.json` + LangChain Agent 的 MCP 客户端**，为后续学习 [第 23 章 Agent 智能体](/2026/10/26/llm/1-23-agent/) 打基础。
 
-**学习建议：** MCP 先别当成一堆协议名背，它的核心是把外部能力接入模型应用时变得更标准。第一遍只抓三组关系：Tools / Resources / Prompts 是暴露的能力，Host / Client / Server 是通信角色，stdio / Streamable HTTP 是传输方式。学完 [第 21 章 Agent 智能体](21-Agent智能体.md) 后再回来看 `Agent + MCP`，会更容易理解它为什么重要。
+**学习建议：** MCP 先别当成一堆协议名背，它的核心是把外部能力接入模型应用时变得更标准。第一遍只抓三组关系：Tools / Resources / Prompts 是暴露的能力，Host / Client / Server 是通信角色，stdio / Streamable HTTP 是传输方式。学完 [第 23 章 Agent 智能体](/2026/10/26/llm/1-23-agent/) 后再回来看 `Agent + MCP`，会更容易理解它为什么重要。
 
-**官方文档与资源**：详见 [工具导航与参考资料索引 - 工具调用、MCP与智能体](工具导航与参考资料索引.md#工具调用、MCP与智能体)。
+**官方文档与资源**：详见 [工具导航与参考资料索引 - 工具调用、MCP与智能体](/2026/10/26/llm/tools-and-references-index/#工具调用、MCP与智能体)。
 
 ---
 
@@ -109,7 +109,7 @@ MCP（Model Context Protocol，模型上下文协议）是一套**开放的标�
 
 一句话速记：
 
-> **术语约定：** 本章里表格写作 **Tool / Function Calling**，是为了兼容不同文档语境；和 [第 17 章](17-Tools工具调用.md) 一样，你可以把它们先看成同一层“模型如何表达工具调用意图”的机制。
+> **术语约定：** 本章里表格写作 **Tool / Function Calling**，是为了兼容不同文档语境；和 [第 19 章](/2026/10/26/llm/1-19-tools-and-tool-calling/) 一样，你可以把它们先看成同一层“模型如何表达工具调用意图”的机制。
 
 - **Tool** 解决“能不能调用”
 - **RAG** 解决“能不能拿到知识”
@@ -261,7 +261,7 @@ LangChain 官方已经提供了对 MCP 的适配支持。常见路线是：
 1. 用 `MultiServerMCPClient` 连接一台或多台 MCP 服务器
 2. 通过 `get_tools()` 取回 MCP 工具
 3. 把这些工具交给 `create_tool_calling_agent` 或 `create_agent`
-4. 让 Agent 在对话中实际调用它们（Agent 的创建与执行细节见 [第 21 章 Agent 智能体](21-Agent智能体.md)）
+4. 让 Agent 在对话中实际调用它们（Agent 的创建与执行细节见 [第 23 章 Agent 智能体](/2026/10/26/llm/1-23-agent/)）
 
 这也说明了 MCP 和 LangChain 的关系：
 
@@ -333,7 +333,7 @@ MCP 更像是：**“AI 应用与外部能力之间的协议层 + 能力发现�
 5. **结果回传与继续生成（Result Feedback）**  
    Server 把结果返回给 Client，Client 再把结果交回 Host，由 Host 继续让模型生成最终回答，或者直接展示给用户。
 
-可以把这个过程和第 17 章 Tool 调用对比着理解：
+可以把这个过程和第 19 章 Tool 调用对比着理解：
 
 - **Tool 调用** 更像“模型知道怎么调一个函数”
 - **MCP** 更像“这个函数来自哪里、怎么发现、怎么连接、怎么按协议调”
@@ -748,4 +748,4 @@ MCP 不负责帮你规划，也不负责帮你推理；它负责把工具接进�
 - **安全边界不能省略**：MCP 让接入更统一，不代表接入就天然安全。真实项目里仍要考虑服务器来源可信、认证授权、最小权限、敏感能力隔离，以及不要把本不该暴露的内部资源直接开放给模型侧。
 - 学完本章后，你至少应该能分清四件事：MCP 是协议层；Host / Client / Server 是通信角色；Tools / Resources / Prompts 是服务端暴露的能力；统一接入不等于自动解决安全问题。
 
-**建议下一步：** 建议先把本章的本地服务端和客户端都亲手跑通，再回看 [第 17 章 Tools 工具调用](17-Tools工具调用.md) 和 [第 21 章 Agent 智能体](21-Agent智能体.md)，你会更容易看清“本地 Tool、MCP Tool、Agent 决策层”三者在工程上的分工。
+**建议下一步：** 建议先把本章的本地服务端和客户端都亲手跑通，再回看 [第 19 章 Tools 工具调用](/2026/10/26/llm/1-19-tools-and-tool-calling/) 和 [第 23 章 Agent 智能体](/2026/10/26/llm/1-23-agent/)，你会更容易看清“本地 Tool、MCP Tool、Agent 决策层”三者在工程上的分工。

@@ -1,6 +1,6 @@
 ---
 title: 二十八、LangGraph 多智能体与 A2A
-date: 2026-10-26 23:25:00
+date: 2026-10-27 04:00:00
 categories:
   - llm
 tags:
@@ -23,7 +23,7 @@ tags:
 
 **学习建议：** 这章先分层，再写代码：多智能体讲应用内分工，MCP 讲外部能力接入，A2A 讲不同 Agent 系统之间的协作。第一遍不必背 A2A 规范细节，先把“谁和谁通信、传什么、边界在哪里”想清楚，再看 Supervisor、Handoff 和 Skills。
 
-**官方文档与资源**：详见 [工具导航与参考资料索引 - LangGraph](工具导航与参考资料索引.md#LangGraph)、[工具导航与参考资料索引 - 工具调用、mcp与智能体](工具导航与参考资料索引.md#工具调用、mcp与智能体)。
+**官方文档与资源**：详见 [工具导航与参考资料索引 - LangGraph](/2026/10/26/llm/tools-and-references-index/#LangGraph)、[工具导航与参考资料索引 - 工具调用、mcp与智能体](/2026/10/26/llm/tools-and-references-index/#工具调用、mcp与智能体)。
 
 ---
 
@@ -290,7 +290,7 @@ Supervisor 模式可以理解成：**一个主管 Agent 负责判断当前该让
 
 <div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/26/26-2-2-1.svg" alt="Supervisor 执行流程示意：主管 Agent 接收用户请求后，按任务类型调度航班、酒店等子 Agent，并汇总结果返回给用户"></div>
 
-放回 LangGraph 的 API 主线看，Supervisor 仍然属于第 24 章讲过的控制流问题，只是路由逻辑从普通条件函数升级成了一个主管 Agent：
+放回 LangGraph 的 API 主线看，Supervisor 仍然属于第 26 章讲过的控制流问题，只是路由逻辑从普通条件函数升级成了一个主管 Agent：
 
 - 主管 Agent 像一个更高级的路由节点，负责判断下一步该交给谁。
 - 子 Agent 可以被当成工具，也可以被编排成图里的节点。
@@ -327,7 +327,7 @@ Supervisor 和 Subagents 可以放在一起理解：很多时候，主管并不�
 - 主管如何协调不同子 Agent
 - 为什么这种结构适合旅行预订这类多角色场景
 
-如果你对照第 21 章 Agent 和第 22~25 章 LangGraph 主线来看，这个案例还有一个教学价值：它让你看到 **`create_agent` 创建的 Agent 完全可以继续被放进更大的 LangGraph 多智能体结构里**。换句话说，单 Agent 不是多智能体的对立面，而是多智能体系统里的基础部件。
+如果你对照第 23 章 Agent 和第 24~27 章 LangGraph 主线来看，这个案例还有一个教学价值：它让你看到 **`create_agent` 创建的 Agent 完全可以继续被放进更大的 LangGraph 多智能体结构里**。换句话说，单 Agent 不是多智能体的对立面，而是多智能体系统里的基础部件。
 
 【案例源码】`案例与源码-3-LangGraph框架/08-multi_agent/SupervisorV1.0.py`
 
@@ -374,7 +374,7 @@ Handoff 特别适合这些场景：
 
 多智能体真正难的往往不是“跳过去”，而是**上下文工程**。
 
-从第 24 章学过的控制原语角度看，Handoff 和 `Command` 的关系更近：
+从第 26 章学过的控制原语角度看，Handoff 和 `Command` 的关系更近：
 
 - `Command` 用来表达“当前 Agent 处理完后，控制权交给哪个 Agent，并同时更新父图状态”。
 - `Command.PARENT` 这类用法说明：子 Agent 或工具不只是返回文本，还可以影响父图的下一步控制流。
@@ -407,7 +407,7 @@ Handoff 特别适合这些场景：
 
 ## 3、Skills 与多智能体的边界
 
-第 27 章会专门系统讲 Agent Skills。本章只保留一个和多智能体设计有关的边界问题：**Skills 能增强 Agent，但 Skills 本身不是多智能体模式。**
+第 29 章会专门系统讲 Agent Skills。本章只保留一个和多智能体设计有关的边界问题：**Skills 能增强 Agent，但 Skills 本身不是多智能体模式。**
 
 ### 3.1 Skill 不是一个独立 Agent
 
@@ -502,7 +502,7 @@ Skills 和多智能体不是替代关系，而是组合关系。
 - 不必把所有规则都塞进主 Agent 的 system prompt；
 - 后续替换某个 Skill，通常不需要重构整个多智能体架构。
 
-### 3.5 本章和第 27 章怎么衔接
+### 3.5 本章和第 29 章怎么衔接
 
 本章只回答“Skills 和多智能体是什么关系”。
 
@@ -514,7 +514,7 @@ Skills 和多智能体不是替代关系，而是组合关系。
 - Skill 和 Tool、MCP、Memory、Rules 怎么区分；
 - Codex、Cursor、Claude Code、DeepAgents / LangChain 里怎么使用 Skills；
 
-请继续看 [第 27 章 Agent Skills 智能体技能与 AI 编程工具实践](27-Skills技能与AI编程工具实践.md)。
+请继续看 [第 29 章 Agent Skills 智能体技能与 AI 编程工具实践](/2026/10/27/llm/1-29-skills-and-ai-coding-tools/)。
 
 ---
 
@@ -545,4 +545,4 @@ Skills 和多智能体不是替代关系，而是组合关系。
 - **Skills** 更像能力工程化和上下文工程的补充层：它不一定等于多智能体，但能帮助单 Agent 和多 Agent 系统都变得更可复用、更可维护，也能降低把所有能力都堆进一个总 Prompt 里的混乱度。
 - 学完本章后，你至少应该能判断什么时候真的需要多智能体，而不是把“任务有点复杂”直接等同于“必须 multi-agent”；能分清 **LangGraph 应用内多智能体编排**、**A2A 跨系统协作协议**、**MCP 外部能力接入协议** 三层边界；知道 `Supervisor`、`Handoff`、`Skills` 分别解决什么问题，适合放在什么位置，并理解上下文传递为什么是多智能体工程里的关键设计点。
 
-**建议下一步：** 建议先完整运行 `案例与源码-3-LangGraph框架/08-multi_agent` 下的 4 个案例，再回头对照 [第 20 章 MCP 模型上下文协议](20-MCP模型上下文协议.md)、[第 21 章 Agent 智能体](21-Agent智能体.md)、[第 25 章 LangGraph 高级特性](25-LangGraph高级特性.md) 一起理解。这样你会更容易把“工具接入、单智能体、多智能体、协议互通”四层关系真正串起来。
+**建议下一步：** 建议先完整运行 `案例与源码-3-LangGraph框架/08-multi_agent` 下的 4 个案例，再回头对照 [第 22 章 MCP 模型上下文协议](/2026/10/26/llm/1-22-mcp-model-context-protocol/)、[第 23 章 Agent 智能体](/2026/10/26/llm/1-23-agent/)、[第 27 章 LangGraph 高级特性](/2026/10/27/llm/1-27-langgraph-advanced-features/) 一起理解。这样你会更容易把“工具接入、单智能体、多智能体、协议互通”四层关系真正串起来。

@@ -19,19 +19,19 @@ tags:
 
 - 理解 **Prompt** 是什么，知道它为什么会从“一段字符串”逐步演化成“多角色消息 + 模板 + 占位符”。
 - 掌握 LangChain 中与输入组织最相关的三块内容：**消息类型（Message）**、**模型调用方式（invoke / stream / batch）**、**提示词模板（PromptTemplate / ChatPromptTemplate）**。
-- 会运行并理解本章全部案例：**输入类型、同步与异步调用、文本模板、对话模板、消息占位符、从 JSON / YAML 加载提示词**，为后续 [输出解析器](14-输出解析器.md)、[LCEL 与链式调用](15-LCEL与链式调用.md)、[记忆与对话历史](16-记忆与对话历史（含Redis基础）.md) 打基础。
+- 会运行并理解本章全部案例：**输入类型、同步与异步调用、文本模板、对话模板、消息占位符、从 JSON / YAML 加载提示词**，为后续 [输出解析器](/2026/10/26/llm/1-16-output-parsers/)、[LCEL 与链式调用](/2026/10/26/llm/1-17-lcel-and-chaining/)、[记忆与对话历史](/2026/10/26/llm/1-18-memory-and-chat-history-with-redis/) 打基础。
 
 **学习建议：** 读这一章时，拿一条普通用户问题练手，把它改造成消息列表：系统消息放规则，用户消息放任务，历史消息放上下文。先理解模型到底吃进去什么，再看 `PromptTemplate`、`ChatPromptTemplate`、`MessagesPlaceholder` 怎么帮你复用这些结构。读完后最好能判断：什么时候写死提示词，什么时候抽成模板，什么时候需要把模板放到文件里。
 
-**官方文档与资源**：详见 [工具导航与参考资料索引 - 提示词与结构化输出](工具导航与参考资料索引.md#提示词与结构化输出)。
+**官方文档与资源**：详见 [工具导航与参考资料索引 - 提示词与结构化输出](/2026/10/26/llm/tools-and-references-index/#提示词与结构化输出)。
 
 ---
 
 ## 1、Prompt 简介
 
-本章对应 [第 11 章 Model I/O](11-Model-I-O与模型接入.md) 里的 **输入格式化（Format）** 与 **模型调用（Predict）** 两部分。模型并不是“凭空思考”，它始终是在读取我们提供的输入后再生成输出；而 Prompt、Message、Template，正是组织这份输入的核心工具。
+本章对应 [第 13 章 Model I/O](/2026/10/26/llm/1-13-model-io-and-model-access/) 里的 **输入格式化（Format）** 与 **模型调用（Predict）** 两部分。模型并不是“凭空思考”，它始终是在读取我们提供的输入后再生成输出；而 Prompt、Message、Template，正是组织这份输入的核心工具。
 
-如果你已经学过 [1-2 提示词工程基础](1-2-提示词工程基础.md)，那么本章可以直接理解为它的代码实现版：前一章讲“怎么把角色、任务、上下文、输入、输出和约束说清楚”，这一章讲“这些内容进入 LangChain 后，应该以什么输入形态存在、如何复用、如何插入多轮历史、如何外置到文件”。
+如果你已经学过 [1-2 提示词工程基础](/2026/10/26/llm/1-2-prompt-engineering-basics/)，那么本章可以直接理解为它的代码实现版：前一章讲“怎么把角色、任务、上下文、输入、输出和约束说清楚”，这一章讲“这些内容进入 LangChain 后，应该以什么输入形态存在、如何复用、如何插入多轮历史、如何外置到文件”。
 
 ### 1.1 定义
 
@@ -77,17 +77,17 @@ tags:
 | `chat_prompt_template/` | 对话模板     | `ChatPromptTemplate`、消息参数、消息占位符 |
 | `load_external/`        | 外部文件加载 | 如何从 JSON / YAML 加载 Prompt             |
 
-这一章不是零散的 API 介绍，而是在回答一个问题：**开发 LLM 应用时，怎样把 [1-2 提示词工程基础](1-2-提示词工程基础.md) 里学到的写法和原则，组织成一套可复用、可维护、可扩展的结构？**
+这一章不是零散的 API 介绍，而是在回答一个问题：**开发 LLM 应用时，怎样把 [1-2 提示词工程基础](/2026/10/26/llm/1-2-prompt-engineering-basics/) 里学到的写法和原则，组织成一套可复用、可维护、可扩展的结构？**
 
 ---
 
 ## 2、调用大模型的入参类型
 
-初学者容易误以为：调用聊天模型时，输入永远只能是“一段字符串”。实际上，LangChain 聊天模型为了适配真实对话场景，通常支持多种输入形态。这些写法表面不同，核心都一样：**把 [1-2 章](1-2-提示词工程基础.md) 里讲过的角色、任务、上下文、输入和约束，以合适的消息结构交给模型。**
+初学者容易误以为：调用聊天模型时，输入永远只能是“一段字符串”。实际上，LangChain 聊天模型为了适配真实对话场景，通常支持多种输入形态。这些写法表面不同，核心都一样：**把 [1-2 章](/2026/10/26/llm/1-2-prompt-engineering-basics/) 里讲过的角色、任务、上下文、输入和约束，以合适的消息结构交给模型。**
 
 ### 2.1 入参形态总览
 
-同一次 `invoke`，左侧可以是多种类型的输入，中间由聊天模型处理，右侧典型返回值是 `AIMessage`。这也是为什么你在 [第 11 章](11-Model-I-O与模型接入.md) 会经常看到“正文一般通过 `.content` 读取”。
+同一次 `invoke`，左侧可以是多种类型的输入，中间由聊天模型处理，右侧典型返回值是 `AIMessage`。这也是为什么你在 [第 13 章](/2026/10/26/llm/1-13-model-io-and-model-access/) 会经常看到“正文一般通过 `.content` 读取”。
 
 <div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/13/13-2-1-1.png" alt="聊天模型 invoke：常见入参类型与 AIMessage 输出"></div>
 
@@ -326,7 +326,7 @@ public enum MessageType {
 
 这些内容更适合放在 `SystemMessage` 里，因为它们属于“长期规则”，而不是某一轮具体问题。
 
-这正对应了 [1-2 提示词工程基础](1-2-提示词工程基础.md) 里强调的那条原则：**稳定约束和动态输入要拆开写。**在 LangChain 里，这条原则最直接的落地方式就是把稳定规则放进 `SystemMessage`，把当前任务放进 `HumanMessage`。
+这正对应了 [1-2 提示词工程基础](/2026/10/26/llm/1-2-prompt-engineering-basics/) 里强调的那条原则：**稳定约束和动态输入要拆开写。**在 LangChain 里，这条原则最直接的落地方式就是把稳定规则放进 `SystemMessage`，把当前任务放进 `HumanMessage`。
 
 在真实项目里，SystemMessage 往往决定：
 
@@ -412,7 +412,7 @@ print(response.content)
 
 - **命令行脚本、教学示例、简单后台任务**：优先 `invoke`
 - **FastAPI、异步服务、并发请求**：优先 `ainvoke`
-- **本地开源模型（Ollama 等）**：实例化与端点配置见 [第 12 章 Ollama 本地部署与调用](12-Ollama本地部署与调用.md)，本章的 `invoke` / `stream` / `batch` 用法同样适用。
+- **本地开源模型（Ollama 等）**：实例化与端点配置见 [第 14 章 Ollama 本地部署与调用](/2026/10/26/llm/1-14-ollama-local-deployment-and-usage/)，本章的 `invoke` / `stream` / `batch` 用法同样适用。
 
 [LLM_Invoke.py](案例与源码-2-LangChain框架/04-prompt/invoke/LLM_Invoke.py ":include :type=code")
 
@@ -883,7 +883,7 @@ prompt_value = prompt.invoke({
 print(prompt_value.to_string())
 ```
 
-这段代码的价值在于，它让模板本身变得非常稳定，而把“历史有几轮、具体内容是什么”延迟到运行时再决定。后面学 [第 16 章 记忆与对话历史](16-记忆与对话历史（含Redis基础）.md) 时，你会频繁看到这种模式。
+这段代码的价值在于，它让模板本身变得非常稳定，而把“历史有几轮、具体内容是什么”延迟到运行时再决定。后面学 [第 18 章 记忆与对话历史](/2026/10/26/llm/1-18-memory-and-chat-history-with-redis/) 时，你会频繁看到这种模式。
 
 【案例源码】  
 显式：`案例与源码-2-LangChain框架/04-prompt/chat_prompt_template/placeholder/ChatPromptTemplate_ExplicitPlaceholder.py`  
@@ -922,7 +922,7 @@ print(template.format(name="张三", what="搞笑"))
 
 YAML 与 JSON 的核心思路完全相同，只是文件格式更适合人工阅读，也更方便写注释。对团队协作来说，很多场景会更喜欢 YAML。
 
-运行这类案例时，先确认**当前工作目录**，否则相对路径可能找不到文件。这一点和 [第 10 章 HelloWorld](10-LangChain快速上手与HelloWorld.md) 中的 `.env` 读取问题本质很像，都是“脚本运行位置”和“相对路径”的关系。
+运行这类案例时，先确认**当前工作目录**，否则相对路径可能找不到文件。这一点和 [第 12 章 HelloWorld](/2026/10/26/llm/1-12-langchain-quickstart-and-helloworld/) 中的 `.env` 读取问题本质很像，都是“脚本运行位置”和“相对路径”的关系。
 
 【案例源码】  
 JSON：`案例与源码-2-LangChain框架/04-prompt/load_external/PromptLoadDemo01.py`  
@@ -968,4 +968,4 @@ YAML：`案例与源码-2-LangChain框架/04-prompt/load_external/PromptLoadDemo
 - **模板与工程化**：`PromptTemplate` 适合文本模板，`ChatPromptTemplate` 适合聊天模型与多角色场景，`MessagesPlaceholder` 是多轮历史拼接的关键；将 Prompt 放入 JSON / YAML 更适合真实项目中的版本管理、多人协作与 A/B 测试。
 - 学完本章后，你至少应该能区分四类输入组织方式：**纯字符串、消息列表、模板 + 占位符、外部文件加载**；也要知道 `PromptTemplate`、`ChatPromptTemplate`、`MessagesPlaceholder` 分别适合什么场景。
 
-**建议下一步：** 继续学习 [第 14 章 输出解析器](14-输出解析器.md)，把本章的“输入组织”与下一章的“输出结构化”连起来；再配合 [第 15 章 LCEL 与链式调用](15-LCEL与链式调用.md)，就能形成 LangChain 中最核心的“输入 -> 模型 -> 输出 -> 链式编排”主线。如果你读到这里，仍然对“为什么要这样拆 Prompt”不够踏实，也可以回看 [1-2 提示词工程基础](1-2-提示词工程基础.md) 中的六要素、Few-shot 和结构化组织方式部分。
+**建议下一步：** 继续学习 [第 16 章 输出解析器](/2026/10/26/llm/1-16-output-parsers/)，把本章的“输入组织”与下一章的“输出结构化”连起来；再配合 [第 17 章 LCEL 与链式调用](/2026/10/26/llm/1-17-lcel-and-chaining/)，就能形成 LangChain 中最核心的“输入 -> 模型 -> 输出 -> 链式编排”主线。如果你读到这里，仍然对“为什么要这样拆 Prompt”不够踏实，也可以回看 [1-2 提示词工程基础](/2026/10/26/llm/1-2-prompt-engineering-basics/) 中的六要素、Few-shot 和结构化组织方式部分。

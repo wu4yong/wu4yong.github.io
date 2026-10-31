@@ -21,9 +21,9 @@ tags:
 - 理解 LangChain 在 **1.x 时代**的产品边界、包结构、版本演进，以及它与 **LangGraph、LangSmith、Deep Agents** 的关系。
 - 建立对 **Model I/O、Chains、Memory、Retrieval、Tools/Agents、Callbacks** 这六类教学视角的整体认知。
 
-**学习建议：** 这一章先当成 LangChain 的地图，不急着记 API。读完最好能说清三件事：LangChain 帮你组织哪些能力、它不负责哪些底层能力、1.x 写法和旧资料里的 0.x 写法为什么会不一样。看完后直接进入 [第 10 章](10-LangChain快速上手与HelloWorld.md) 跑一次最小调用，抽象概念会落得更稳。
+**学习建议：** 这一章先当成 LangChain 的地图，不急着记 API。读完最好能说清三件事：LangChain 帮你组织哪些能力、它不负责哪些底层能力、1.x 写法和旧资料里的 0.x 写法为什么会不一样。看完后直接进入 [第 12 章](/2026/10/26/llm/1-12-langchain-quickstart-and-helloworld/) 跑一次最小调用，抽象概念会落得更稳。
 
-**官方文档与资源**：详见 [工具导航与参考资料索引 - LangChain](工具导航与参考资料索引.md#LangChain)。
+**官方文档与资源**：详见 [工具导航与参考资料索引 - LangChain](/2026/10/26/llm/tools-and-references-index/#LangChain)。
 
 ---
 
@@ -315,7 +315,7 @@ create_agent(模型、工具、提示等) → [Agent]
 | **Python 版本** | 老资料中常见 3.8 / 3.9                | 官方 1.x 要求 **Python 3.10+**           |
 
 这里有一个容易混淆的点：
-**并不是说 1.x 以后“链”就没用了，而是说很多旧式高层 Chain 类不再是官方推荐主线。**课程后面的 [第 15 章 LCEL 与链式调用](15-LCEL与链式调用.md) 仍然是主线内容，因为“把多个步骤组合起来”的思想从来没有过时，只是实现方式从“某个现成 Chain 类”逐渐转向 **Runnable / LCEL / Graph**。
+**并不是说 1.x 以后“链”就没用了，而是说很多旧式高层 Chain 类不再是官方推荐主线。**课程后面的 [第 17 章 LCEL 与链式调用](/2026/10/26/llm/1-17-lcel-and-chaining/) 仍然是主线内容，因为“把多个步骤组合起来”的思想从来没有过时，只是实现方式从“某个现成 Chain 类”逐渐转向 **Runnable / LCEL / Graph**。
 
 ### 3.4 LangChain 常见包分类
 
@@ -395,10 +395,10 @@ Model I/O 说的就是“**围绕模型调用本身的一圈能力**”。它解
 
 对应章节：
 
-- [第 10 章 HelloWorld](10-LangChain快速上手与HelloWorld.md)：先学会把模型调起来
-- [第 11 章 Model I/O](11-Model-I-O与模型接入.md)：理解模型接入与参数
-- [第 13 章 提示词与消息模板](13-提示词与消息模板.md)：理解 Prompt、Message
-- [第 14 章 输出解析器](14-输出解析器.md)：理解结构化输出
+- [第 12 章 HelloWorld](/2026/10/26/llm/1-12-langchain-quickstart-and-helloworld/)：先学会把模型调起来
+- [第 13 章 Model I/O](/2026/10/26/llm/1-13-model-io-and-model-access/)：理解模型接入与参数
+- [第 15 章 提示词与消息模板](/2026/10/26/llm/1-15-prompts-and-message-templates/)：理解 Prompt、Message
+- [第 16 章 输出解析器](/2026/10/26/llm/1-16-output-parsers/)：理解结构化输出
 
 从真实开发角度看，**Model I/O 是所有 LangChain 学习的基础层**。后面学的链、记忆、RAG、Agent，本质上都还是围绕“如何更好地调用模型”展开。
 
@@ -423,7 +423,7 @@ Model I/O 说的就是“**围绕模型调用本身的一圈能力**”。它解
 
 对应章节：
 
-- [第 15 章 LCEL 与链式调用](15-LCEL与链式调用.md)
+- [第 17 章 LCEL 与链式调用](/2026/10/26/llm/1-17-lcel-and-chaining/)
 
 ### 4.4 Memory（记忆）：记忆与上下文状态
 
@@ -446,7 +446,7 @@ Model I/O 说的就是“**围绕模型调用本身的一圈能力**”。它解
 
 对应章节：
 
-- [第 16 章 记忆与对话历史（含 Redis 基础）](16-记忆与对话历史（含Redis基础）.md)
+- [第 18 章 记忆与对话历史（含 Redis 基础）](/2026/10/26/llm/1-18-memory-and-chat-history-with-redis/)
 
 ### 4.5 Retrieval（检索）：检索与 RAG
 
@@ -469,8 +469,8 @@ Model I/O 说的就是“**围绕模型调用本身的一圈能力**”。它解
 
 对应章节：
 
-- [第 18 章 向量数据库与 Embedding 实战](18-向量数据库与Embedding实战.md)
-- [第 19 章 RAG 检索增强生成](19-RAG检索增强生成.md)
+- [第 20 章 向量数据库与 Embedding 实战](/2026/10/26/llm/1-20-vector-database-and-embedding-in-practice/)
+- [第 21 章 RAG 检索增强生成](/2026/10/26/llm/1-21-rag-retrieval-augmented-generation/)
 
 并且你已经能在源码目录里看到很多具体案例，例如：
 
@@ -507,8 +507,8 @@ Model I/O 说的就是“**围绕模型调用本身的一圈能力**”。它解
 
 对应章节与案例：
 
-- [第 17 章 Tools 工具调用](17-Tools工具调用.md)
-- [第 21 章 Agent 智能体](21-Agent智能体.md)
+- [第 19 章 Tools 工具调用](/2026/10/26/llm/1-19-tools-and-tool-calling/)
+- [第 23 章 Agent 智能体](/2026/10/26/llm/1-23-agent/)
 
 ### 4.7 Callbacks（回调）：日志、调试与可观测性
 
@@ -603,4 +603,4 @@ Model I/O 说的就是“**围绕模型调用本身的一圈能力**”。它解
 - 现阶段学习 LangChain，应以 **1.x 官方文档**为主线。要重点理解：`langchain` 主包已精简，很多旧能力迁移到了 `langchain-classic`；Agent 以 `create_agent` 为高层入口，底层建立在 **LangGraph** 之上；集成能力则通过 `langchain-openai`、`langchain-ollama` 等独立 provider 包扩展。
 - 在入门阶段，最重要的不是一开始记住所有 API，而是先建立 **六块认知地图**：**Model I/O、Chains、Memory、Retrieval、Tools / Agents、Callbacks**。后续章节会按这张地图一块一块展开，并且已经在项目目录中配好了对应案例源码。
 
-**建议下一步：** 直接进入 [第 10 章 LangChain 快速上手与 HelloWorld](10-LangChain快速上手与HelloWorld.md)，先把 **API Key、模型名、Base URL、HelloWorld 调用、多模型共存、企业级封装与流式输出** 跑通。等你真正把第一个 LangChain 调用写出来，再回头看这一章的“定位、架构、模块”，理解会明显更扎实。
+**建议下一步：** 直接进入 [第 12 章 LangChain 快速上手与 HelloWorld](/2026/10/26/llm/1-12-langchain-quickstart-and-helloworld/)，先把 **API Key、模型名、Base URL、HelloWorld 调用、多模型共存、企业级封装与流式输出** 跑通。等你真正把第一个 LangChain 调用写出来，再回头看这一章的“定位、架构、模块”，理解会明显更扎实。

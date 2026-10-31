@@ -1,6 +1,6 @@
 ---
 title: AI 智能体与大模型应用开发面试题库
-date: 2026-10-26 23:40:00
+date: 2026-10-27 07:00:00
 categories:
   - llm
 tags:
@@ -57,7 +57,7 @@ RAG 不改模型参数，而是在运行时把相关资料检索出来，再交�
 
 **考察点：**知识增强和行为优化的区分能力。
 
-**对应章节：**[1-3 RAG、微调、续训与智能体选型 §1、RAG](1-3-RAG、微调、续训与智能体选型.md#_1、rag)；[1-3 RAG、微调、续训与智能体选型 §2、微调（Fine-tuning）](1-3-RAG、微调、续训与智能体选型.md#_2、微调%EF%BC%88fine-tuning%EF%BC%89)
+**对应章节：**[1-3 RAG、微调、续训与智能体选型 §1、RAG](/2026/10/26/llm/1-3-rag-finetuning-continued-training-and-agent-selection/#_1、rag)；[1-3 RAG、微调、续训与智能体选型 §2、微调（Fine-tuning）](/2026/10/26/llm/1-3-rag-finetuning-continued-training-and-agent-selection/#_2、微调%EF%BC%88fine-tuning%EF%BC%89)
 
 ### Q1-2. 什么是 AI Agent？它和传统 AI 应用的区别是什么？
 
@@ -78,7 +78,7 @@ RAG 不改模型参数，而是在运行时把相关资料检索出来，再交�
 
 **考察点：**是否理解 Agent 的本质，不会把任何聊天机器人都叫 Agent。
 
-**对应章节：**[21 Agent智能体 §1、Agent 简介](21-Agent智能体.md#_1、agent-简介)；[1-3 RAG、微调、续训与智能体选型 §4、智能体开发](1-3-RAG、微调、续训与智能体选型.md#_4、智能体开发)
+**对应章节：**[23 Agent智能体 §1、Agent 简介](/2026/10/26/llm/1-23-agent/#_1、agent-简介)；[1-3 RAG、微调、续训与智能体选型 §4、智能体开发](/2026/10/26/llm/1-3-rag-finetuning-continued-training-and-agent-selection/#_4、智能体开发)
 
 ### Q1-3. 什么时候该用 Prompt、RAG、微调、Workflow、Agent？
 
@@ -110,7 +110,7 @@ RAG 不改模型参数，而是在运行时把相关资料检索出来，再交�
 
 **考察点：**技术选型能力、边界意识、是否有工程判断。
 
-**对应章节：**[1-3 RAG、微调、续训与智能体选型 §1、RAG](1-3-RAG、微调、续训与智能体选型.md#_1、rag)；[1-3 RAG、微调、续训与智能体选型 §4、智能体开发](1-3-RAG、微调、续训与智能体选型.md#_4、智能体开发)
+**对应章节：**[1-3 RAG、微调、续训与智能体选型 §1、RAG](/2026/10/26/llm/1-3-rag-finetuning-continued-training-and-agent-selection/#_1、rag)；[1-3 RAG、微调、续训与智能体选型 §4、智能体开发](/2026/10/26/llm/1-3-rag-finetuning-continued-training-and-agent-selection/#_4、智能体开发)
 
 ### Q1-4. Token 和上下文窗口是什么？它们在工程上意味着什么？
 
@@ -135,7 +135,7 @@ Token 可以看作模型处理文本的基本计量单位，不等于“字数�
 
 **考察点：**是否真正理解 token、上下文窗口和成本 / 截断 / 长文本场景之间的关系。
 
-**对应章节：**[1-1 大模型认知与工程概览 §1、认识大模型](1-1-大模型认知与工程概览.md#_1、认识大模型)；[11 Model I/O 与模型接入 §2、LangChain 模型分类、参数与返回](11-Model-I-O与模型接入.md#_2、langchain-模型分类、参数与返回)
+**对应章节：**[1-1 大模型认知与工程概览 §1、认识大模型](/2026/10/26/llm/1-1-llm-basics-engineering-overview/#_1、认识大模型)；[13 Model I/O 与模型接入 §2、LangChain 模型分类、参数与返回](/2026/10/26/llm/1-13-model-io-and-model-access/#_2、langchain-模型分类、参数与返回)
 
 **来源：**腾讯AI后台工程师一面（实际大厂面试题）
 
@@ -161,7 +161,7 @@ Token 可以看作模型处理文本的基本计量单位，不等于“字数�
 
 **考察点：**是否具备生产环境意识。
 
-**对应章节：**[1-1 大模型认知与工程概览 §4、大模型的工程实现（概览）](1-1-大模型认知与工程概览.md#_4、大模型的工程实现%EF%BC%88概览%EF%BC%89)；[7 企业级大模型部署 §1、企业级大模型部署概述](7-企业级大模型部署.md#_1、企业级大模型部署概述)
+**对应章节：**[1-1 大模型认知与工程概览 §4、大模型的工程实现（概览）](/2026/10/26/llm/1-1-llm-basics-engineering-overview/#_4、大模型的工程实现%EF%BC%88概览%EF%BC%89)；[9 企业级大模型部署 §1、企业级大模型部署概述](/2026/10/26/llm/1-9-enterprise-llm-deployment/#_1、企业级大模型部署概述)
 
 ---
 
@@ -179,7 +179,7 @@ System 里一般放角色、目标、边界、安全规则、输出格式要求�
 
 **考察点：**Prompt 分层设计能力。
 
-**对应章节：**[13 提示词与消息模板 §3、入参的消息类型](13-提示词与消息模板.md#_3、入参的消息类型)；[13 提示词与消息模板 §7、对话提示词模板（ChatPromptTemplate）](13-提示词与消息模板.md#_7、对话提示词模板%EF%BC%88chatprompttemplate%EF%BC%89)
+**对应章节：**[15 提示词与消息模板 §3、入参的消息类型](/2026/10/26/llm/1-15-prompts-and-message-templates/#_3、入参的消息类型)；[15 提示词与消息模板 §7、对话提示词模板（ChatPromptTemplate）](/2026/10/26/llm/1-15-prompts-and-message-templates/#_7、对话提示词模板%EF%BC%88chatprompttemplate%EF%BC%89)
 
 ### Q2-2. 结构化输出有哪些常见做法？各自的优缺点是什么？
 
@@ -210,7 +210,7 @@ System 里一般放角色、目标、边界、安全规则、输出格式要求�
 
 **考察点：**从“能输出 JSON”到“能稳定接系统”的工程意识。
 
-**对应章节：**[14 输出解析器 §1、输出解析器简介](14-输出解析器.md#_1、输出解析器简介)；[14 输出解析器 §4、结构化输出](14-输出解析器.md#_4、结构化输出)
+**对应章节：**[16 输出解析器 §1、输出解析器简介](/2026/10/26/llm/1-16-output-parsers/#_1、输出解析器简介)；[16 输出解析器 §4、结构化输出](/2026/10/26/llm/1-16-output-parsers/#_4、结构化输出)
 
 ### Q2-3. Prompt Injection 是什么？为什么 RAG / Agent 场景更要小心？
 
@@ -238,7 +238,7 @@ Prompt Injection 本质上是：**不可信输入试图改写系统指令、诱�
 
 **考察点：**应用层安全意识，以及对直接注入、间接注入和工具越权风险的理解。
 
-**对应章节：**[13 提示词与消息模板 §1、Prompt 简介](13-提示词与消息模板.md#_1、prompt-简介)；[17 Tools工具调用 §6、从课程案例走向真实项目](17-Tools工具调用.md#_6、从课程案例走向真实项目)
+**对应章节：**[15 提示词与消息模板 §1、Prompt 简介](/2026/10/26/llm/1-15-prompts-and-message-templates/#_1、prompt-简介)；[19 Tools工具调用 §6、从课程案例走向真实项目](/2026/10/26/llm/1-19-tools-and-tool-calling/#_6、从课程案例走向真实项目)
 
 ### Q2-4. Prompt Engineering 中，如何系统优化提示词并把准确率做上去？
 
@@ -266,7 +266,7 @@ Prompt Injection 本质上是：**不可信输入试图改写系统指令、诱�
 
 **考察点：**Prompt 优化方法论、评测闭环意识，以及是否知道 Prompt 不是万能修复工具。
 
-**对应章节：**[1-2 提示词工程基础 §2、提示词怎么写](1-2-提示词工程基础.md#_2、提示词怎么写)；[14 输出解析器 §8、实际开发选择](14-输出解析器.md#_8、实际开发选择)
+**对应章节：**[1-2 提示词工程基础 §2、提示词怎么写](/2026/10/26/llm/1-2-prompt-engineering-basics/#_2、提示词怎么写)；[16 输出解析器 §8、实际开发选择](/2026/10/26/llm/1-16-output-parsers/#_8、实际开发选择)
 
 ### Q2-5. Prompt 工程的边界是什么？为什么不能把一切问题都交给 Prompt？
 
@@ -280,7 +280,7 @@ Prompt 更接近一种“任务表达和约束手段”，但它解决不了知�
 
 **考察点：**是否理解 Prompt 不是万能药。
 
-**对应章节：**[1-2 提示词工程基础 §4、提示词工程的边界](1-2-提示词工程基础.md#_4、提示词工程的边界)；[13 提示词与消息模板 §1、Prompt 简介](13-提示词与消息模板.md#_1、prompt-简介)
+**对应章节：**[1-2 提示词工程基础 §4、提示词工程的边界](/2026/10/26/llm/1-2-prompt-engineering-basics/#_4、提示词工程的边界)；[15 提示词与消息模板 §1、Prompt 简介](/2026/10/26/llm/1-15-prompts-and-message-templates/#_1、prompt-简介)
 
 ### Q2-6. 如何做 Prompt 版本管理与回归？
 
@@ -312,7 +312,7 @@ Prompt 更接近一种“任务表达和约束手段”，但它解决不了知�
 
 **考察点：**Prompt 工程化治理能力，而不是只会手改提示词。
 
-**对应章节：**[13 提示词与消息模板 §8、从文件加载提示词](13-提示词与消息模板.md#_8、从文件加载提示词)；[1-2 提示词工程基础 §5、提示词工程的几个注意点](1-2-提示词工程基础.md#_5、提示词工程的几个注意点)
+**对应章节：**[15 提示词与消息模板 §8、从文件加载提示词](/2026/10/26/llm/1-15-prompts-and-message-templates/#_8、从文件加载提示词)；[1-2 提示词工程基础 §5、提示词工程的几个注意点](/2026/10/26/llm/1-2-prompt-engineering-basics/#_5、提示词工程的几个注意点)
 
 ---
 
@@ -336,7 +336,7 @@ Prompt 更接近一种“任务表达和约束手段”，但它解决不了知�
 
 **考察点：**是否真正理解 RAG，而不是只会说“检索增强生成”。
 
-**对应章节：**[19 RAG检索增强生成 §1、RAG 简介](19-RAG检索增强生成.md#_1、rag-简介)；[19 RAG检索增强生成 §2、RAG 文本处理核心知识](19-RAG检索增强生成.md#_2、rag-文本处理核心知识)
+**对应章节：**[21 RAG检索增强生成 §1、RAG 简介](/2026/10/26/llm/1-21-rag-retrieval-augmented-generation/#_1、rag-简介)；[21 RAG检索增强生成 §2、RAG 文本处理核心知识](/2026/10/26/llm/1-21-rag-retrieval-augmented-generation/#_2、rag-文本处理核心知识)
 
 ### Q3-2. 文本切块应该怎么设计？有哪些常见坑？
 
@@ -350,7 +350,7 @@ Prompt 更接近一种“任务表达和约束手段”，但它解决不了知�
 
 **考察点：**RAG 基础功是否扎实。
 
-**对应章节：**[19 RAG检索增强生成 §2、RAG 文本处理核心知识](19-RAG检索增强生成.md#_2、rag-文本处理核心知识)；[2-RAG 搭建企业私有&个人知识库 §2、知识库的概述](2-RAG-搭建企业私有&个人知识库.md#_2、知识库的概述)
+**对应章节：**[21 RAG检索增强生成 §2、RAG 文本处理核心知识](/2026/10/26/llm/1-21-rag-retrieval-augmented-generation/#_2、rag-文本处理核心知识)；[4-RAG 搭建企业私有&个人知识库 §2、知识库的概述](/2026/10/26/llm/1-4-rag-private-and-personal-knowledge-base/#_2、知识库的概述)
 
 ### Q3-3. RAG 效果不好时，你会怎么排查？
 
@@ -372,7 +372,7 @@ Prompt 更接近一种“任务表达和约束手段”，但它解决不了知�
 
 **考察点：**排障能力、定位思路是否分层。
 
-**对应章节：**[19 RAG检索增强生成 §2、RAG 文本处理核心知识](19-RAG检索增强生成.md#_2、rag-文本处理核心知识)；[19 RAG检索增强生成 §3、RAG 综合案例：智能运维助手](19-RAG检索增强生成.md#_3、rag-综合案例：智能运维助手)
+**对应章节：**[21 RAG检索增强生成 §2、RAG 文本处理核心知识](/2026/10/26/llm/1-21-rag-retrieval-augmented-generation/#_2、rag-文本处理核心知识)；[21 RAG检索增强生成 §3、RAG 综合案例：智能运维助手](/2026/10/26/llm/1-21-rag-retrieval-augmented-generation/#_3、rag-综合案例：智能运维助手)
 
 ### Q3-4. 混合检索、重排序和查询改写分别解决什么问题？
 
@@ -394,7 +394,7 @@ Prompt 更接近一种“任务表达和约束手段”，但它解决不了知�
 
 **考察点：**是否理解检索优化的职责分工。
 
-**对应章节：**[18 向量数据库与Embedding实战 §6、向量库的写入与检索](18-向量数据库与Embedding实战.md#_6、向量库的写入与检索%EF%BC%88rag-的底层能力%EF%BC%89)；[19 RAG检索增强生成 §2、RAG 文本处理核心知识](19-RAG检索增强生成.md#_2、rag-文本处理核心知识)
+**对应章节：**[20 向量数据库与Embedding实战 §6、向量库的写入与检索](/2026/10/26/llm/1-20-vector-database-and-embedding-in-practice/#_6、向量库的写入与检索%EF%BC%88rag-的底层能力%EF%BC%89)；[21 RAG检索增强生成 §2、RAG 文本处理核心知识](/2026/10/26/llm/1-21-rag-retrieval-augmented-generation/#_2、rag-文本处理核心知识)
 
 ### Q3-5. RAG 应该如何接入 Agent 执行链路？
 
@@ -417,7 +417,7 @@ RAG 接到 Agent 里，不能只理解成“先查一遍资料再回答”，更
 
 **考察点：**是否理解 Agentic RAG 的接入方式，而不是只会把 RAG 当成固定前置流水线。
 
-**对应章节：**[19 RAG检索增强生成 §1、RAG 简介](19-RAG检索增强生成.md#_1、rag-简介)；[21 Agent智能体 §6、小结：Agent、Tool、Function Calling、RAG、MCP 的区别与联系](21-Agent智能体.md#_6、小结：agent、tool、function-calling、rag、mcp-的区别与联系)
+**对应章节：**[21 RAG检索增强生成 §1、RAG 简介](/2026/10/26/llm/1-21-rag-retrieval-augmented-generation/#_1、rag-简介)；[23 Agent智能体 §6、小结：Agent、Tool、Function Calling、RAG、MCP 的区别与联系](/2026/10/26/llm/1-23-agent/#_6、小结：agent、tool、function-calling、rag、mcp-的区别与联系)
 
 ### Q3-6. 为什么企业项目里的 RAG 必须重视权限、版本和引用？
 
@@ -431,7 +431,7 @@ RAG 接到 Agent 里，不能只理解成“先查一遍资料再回答”，更
 
 **考察点：**企业落地意识，不只停留在 Demo。
 
-**对应章节：**[2-RAG 搭建企业私有&个人知识库 §2、知识库的概述](2-RAG-搭建企业私有&个人知识库.md#_2、知识库的概述)；[19 RAG检索增强生成 §3、RAG 综合案例：智能运维助手](19-RAG检索增强生成.md#_3、rag-综合案例：智能运维助手)
+**对应章节：**[4-RAG 搭建企业私有&个人知识库 §2、知识库的概述](/2026/10/26/llm/1-4-rag-private-and-personal-knowledge-base/#_2、知识库的概述)；[21 RAG检索增强生成 §3、RAG 综合案例：智能运维助手](/2026/10/26/llm/1-21-rag-retrieval-augmented-generation/#_3、rag-综合案例：智能运维助手)
 
 ### Q3-7. 什么是 Lost in the Middle？它对 RAG 设计有什么启示？
 
@@ -452,7 +452,7 @@ Lost in the Middle 指的是：上下文一长，模型往往更容易利用开�
 
 **考察点：**长上下文理解能力，以及检索、重排、上下文组装之间的联动意识。
 
-**对应章节：**[19 RAG检索增强生成 §2、RAG 文本处理核心知识](19-RAG检索增强生成.md#_2、rag-文本处理核心知识)；[19 RAG检索增强生成 §3、RAG 综合案例：智能运维助手](19-RAG检索增强生成.md#_3、rag-综合案例：智能运维助手)
+**对应章节：**[21 RAG检索增强生成 §2、RAG 文本处理核心知识](/2026/10/26/llm/1-21-rag-retrieval-augmented-generation/#_2、rag-文本处理核心知识)；[21 RAG检索增强生成 §3、RAG 综合案例：智能运维助手](/2026/10/26/llm/1-21-rag-retrieval-augmented-generation/#_3、rag-综合案例：智能运维助手)
 
 ### Q3-8. 有了超长上下文模型，还需要 RAG 吗？
 
@@ -473,7 +473,7 @@ Lost in the Middle 指的是：上下文一长，模型往往更容易利用开�
 
 **考察点：**是否理解“长窗口能力”和“检索系统价值”不是同一层问题。
 
-**对应章节：**[19 RAG检索增强生成 §1、RAG 简介](19-RAG检索增强生成.md#_1、rag-简介)；[1-1 大模型认知与工程概览 §1、认识大模型](1-1-大模型认知与工程概览.md#_1、认识大模型)
+**对应章节：**[21 RAG检索增强生成 §1、RAG 简介](/2026/10/26/llm/1-21-rag-retrieval-augmented-generation/#_1、rag-简介)；[1-1 大模型认知与工程概览 §1、认识大模型](/2026/10/26/llm/1-1-llm-basics-engineering-overview/#_1、认识大模型)
 
 ### Q3-9. 复杂文档 RAG 或多模态 RAG 应该怎么做？
 
@@ -498,7 +498,7 @@ Lost in the Middle 指的是：上下文一长，模型往往更容易利用开�
 
 **考察点：**是否意识到 RAG 不只是检索问题，还包括文档解析、结构恢复和引用追踪。
 
-**对应章节：**[19 RAG检索增强生成 §2、RAG 文本处理核心知识](19-RAG检索增强生成.md#_2、rag-文本处理核心知识)；[2-RAG 搭建企业私有&个人知识库 §2、知识库的概述](2-RAG-搭建企业私有&个人知识库.md#_2、知识库的概述)
+**对应章节：**[21 RAG检索增强生成 §2、RAG 文本处理核心知识](/2026/10/26/llm/1-21-rag-retrieval-augmented-generation/#_2、rag-文本处理核心知识)；[4-RAG 搭建企业私有&个人知识库 §2、知识库的概述](/2026/10/26/llm/1-4-rag-private-and-personal-knowledge-base/#_2、知识库的概述)
 
 ### Q3-10. 什么是 Agentic RAG？它和“一次检索后直接生成”有什么区别？
 
@@ -527,7 +527,7 @@ Lost in the Middle 指的是：上下文一长，模型往往更容易利用开�
 
 **考察点：**是否真正理解 RAG 从固定流水线向智能检索闭环演进的边界和代价。
 
-**对应章节：**[19 RAG检索增强生成 §1、RAG 简介](19-RAG检索增强生成.md#_1、rag-简介)；[21 Agent智能体 §1、Agent 简介](21-Agent智能体.md#_1、agent-简介)
+**对应章节：**[21 RAG检索增强生成 §1、RAG 简介](/2026/10/26/llm/1-21-rag-retrieval-augmented-generation/#_1、rag-简介)；[23 Agent智能体 §1、Agent 简介](/2026/10/26/llm/1-23-agent/#_1、agent-简介)
 
 ---
 
@@ -545,7 +545,7 @@ Lost in the Middle 指的是：上下文一长，模型往往更容易利用开�
 
 **考察点：**底层检索设施理解。
 
-**对应章节：**[18 向量数据库与Embedding实战 §2、向量数据库](18-向量数据库与Embedding实战.md#_2、向量数据库)；[18 向量数据库与Embedding实战 §6、向量库的写入与检索](18-向量数据库与Embedding实战.md#_6、向量库的写入与检索%EF%BC%88rag-的底层能力%EF%BC%89)
+**对应章节：**[20 向量数据库与Embedding实战 §2、向量数据库](/2026/10/26/llm/1-20-vector-database-and-embedding-in-practice/#_2、向量数据库)；[20 向量数据库与Embedding实战 §6、向量库的写入与检索](/2026/10/26/llm/1-20-vector-database-and-embedding-in-practice/#_6、向量库的写入与检索%EF%BC%88rag-的底层能力%EF%BC%89)
 
 ### Q4-2. Embedding 是什么？它在应用开发里最核心的价值是什么？
 
@@ -564,7 +564,7 @@ Embedding 的本质，是把文本、图片这类原始内容变成一串固定�
 
 **考察点：**是否理解 Embedding 不是“附属模型”，而是检索基础设施。
 
-**对应章节：**[18 向量数据库与Embedding实战 §1、向量与向量化](18-向量数据库与Embedding实战.md#_1、向量与向量化)；[18 向量数据库与Embedding实战 §4、Embedding 文本向量化](18-向量数据库与Embedding实战.md#_4、embedding-文本向量化)
+**对应章节：**[20 向量数据库与Embedding实战 §1、向量与向量化](/2026/10/26/llm/1-20-vector-database-and-embedding-in-practice/#_1、向量与向量化)；[20 向量数据库与Embedding实战 §4、Embedding 文本向量化](/2026/10/26/llm/1-20-vector-database-and-embedding-in-practice/#_4、embedding-文本向量化)
 
 ### Q4-3. 如何选择一个合适的 Embedding 模型？评估它好坏看什么？
 
@@ -591,7 +591,7 @@ Embedding 的本质，是把文本、图片这类原始内容变成一串固定�
 
 **考察点：**Embedding 选型、评测意识，以及“模型一致性 + 检索链路联动”的理解。
 
-**对应章节：**[18 向量数据库与Embedding实战 §4、Embedding 文本向量化](18-向量数据库与Embedding实战.md#_4、embedding-文本向量化)；[18 向量数据库与Embedding实战 §6、向量库的写入与检索](18-向量数据库与Embedding实战.md#_6、向量库的写入与检索%EF%BC%88rag-的底层能力%EF%BC%89)
+**对应章节：**[20 向量数据库与Embedding实战 §4、Embedding 文本向量化](/2026/10/26/llm/1-20-vector-database-and-embedding-in-practice/#_4、embedding-文本向量化)；[20 向量数据库与Embedding实战 §6、向量库的写入与检索](/2026/10/26/llm/1-20-vector-database-and-embedding-in-practice/#_6、向量库的写入与检索%EF%BC%88rag-的底层能力%EF%BC%89)
 
 ### Q4-4. 近似检索和精确检索怎么权衡？
 
@@ -603,7 +603,7 @@ Embedding 的本质，是把文本、图片这类原始内容变成一串固定�
 
 **考察点：**性能和效果取舍能力。
 
-**对应章节：**[18 向量数据库与Embedding实战 §2、向量数据库](18-向量数据库与Embedding实战.md#_2、向量数据库)；[18 向量数据库与Embedding实战 §5、通过向量计算语义相似度](18-向量数据库与Embedding实战.md#_5、通过向量计算语义相似度)
+**对应章节：**[20 向量数据库与Embedding实战 §2、向量数据库](/2026/10/26/llm/1-20-vector-database-and-embedding-in-practice/#_2、向量数据库)；[20 向量数据库与Embedding实战 §5、通过向量计算语义相似度](/2026/10/26/llm/1-20-vector-database-and-embedding-in-practice/#_5、通过向量计算语义相似度)
 
 ### Q4-5. 在什么场景下，知识图谱或图数据库比纯向量检索更有价值？
 
@@ -664,7 +664,7 @@ ReAct 的价值在于把“推理”和“行动”串起来，让模型不只�
 
 **考察点：**Agent 运行范式理解。
 
-**对应章节：**[21 Agent智能体 §3、Agent 工作原理（V0.3）](21-Agent智能体.md#_3、agent-工作原理%EF%BC%88v0.3%EF%BC%89)；[17 Tools工具调用 §2、工具调用的工作方式](17-Tools工具调用.md#_2、工具调用的工作方式)
+**对应章节：**[23 Agent智能体 §3、Agent 工作原理（V0.3）](/2026/10/26/llm/1-23-agent/#_3、agent-工作原理%EF%BC%88v0.3%EF%BC%89)；[19 Tools工具调用 §2、工具调用的工作方式](/2026/10/26/llm/1-19-tools-and-tool-calling/#_2、工具调用的工作方式)
 
 ### Q5-2. Tool、Function Calling、Agent 三者是什么关系？
 
@@ -684,7 +684,7 @@ Tool 解决“能做什么”，Function Calling 解决“怎么发起结构化�
 
 **考察点：**概念拆分是否清楚。
 
-**对应章节：**[17 Tools工具调用 §1、Tools 简介](17-Tools工具调用.md#_1、tools-简介)；[21 Agent智能体 §6、小结：Agent、Tool、Function Calling、RAG、MCP 的区别与联系](21-Agent智能体.md#_6、小结：agent、tool、function-calling、rag、mcp-的区别与联系)
+**对应章节：**[19 Tools工具调用 §1、Tools 简介](/2026/10/26/llm/1-19-tools-and-tool-calling/#_1、tools-简介)；[23 Agent智能体 §6、小结：Agent、Tool、Function Calling、RAG、MCP 的区别与联系](/2026/10/26/llm/1-23-agent/#_6、小结：agent、tool、function-calling、rag、mcp-的区别与联系)
 
 ### Q5-3. 一个 Agent 应该如何设计？它通常由哪些核心组件构成？
 
@@ -716,7 +716,7 @@ Tool 解决“能做什么”，Function Calling 解决“怎么发起结构化�
 
 **考察点：**Agent 架构能力，而不是停留在概念层。
 
-**对应章节：**[21 Agent智能体 §1、Agent 简介](21-Agent智能体.md#_1、agent-简介)；[21 Agent智能体 §6、小结：Agent、Tool、Function Calling、RAG、MCP 的区别与联系](21-Agent智能体.md#_6、小结：agent、tool、function-calling、rag、mcp-的区别与联系)
+**对应章节：**[23 Agent智能体 §1、Agent 简介](/2026/10/26/llm/1-23-agent/#_1、agent-简介)；[23 Agent智能体 §6、小结：Agent、Tool、Function Calling、RAG、MCP 的区别与联系](/2026/10/26/llm/1-23-agent/#_6、小结：agent、tool、function-calling、rag、mcp-的区别与联系)
 
 ### Q5-4. Function Calling 的基本原理是什么？
 
@@ -744,7 +744,7 @@ Function Calling 的核心分工，可以概括成一句话：模型负责决策
 
 **考察点：**是否理解模型和宿主程序的职责边界。
 
-**对应章节：**[17 Tools工具调用 §1、Tools 简介](17-Tools工具调用.md#_1、tools-简介)；[17 Tools工具调用 §2、工具调用的工作方式](17-Tools工具调用.md#_2、工具调用的工作方式)
+**对应章节：**[19 Tools工具调用 §1、Tools 简介](/2026/10/26/llm/1-19-tools-and-tool-calling/#_1、tools-简介)；[19 Tools工具调用 §2、工具调用的工作方式](/2026/10/26/llm/1-19-tools-and-tool-calling/#_2、工具调用的工作方式)
 
 **来源：**腾讯AI后台工程师一面（实际大厂面试题）
 
@@ -760,7 +760,7 @@ Function Calling 的核心分工，可以概括成一句话：模型负责决策
 
 **考察点：**是否有把工具接到生产系统的经验意识。
 
-**对应章节：**[17 Tools工具调用 §3、自定义 Tool](17-Tools工具调用.md#_3、自定义-tool：从最简单的工具开始)；[17 Tools工具调用 §4、参数 schema：为什么要配合 Pydantic](17-Tools工具调用.md#_4、参数-schema：为什么要配合-pydantic)
+**对应章节：**[19 Tools工具调用 §3、自定义 Tool](/2026/10/26/llm/1-19-tools-and-tool-calling/#_3、自定义-tool：从最简单的工具开始)；[19 Tools工具调用 §4、参数 schema：为什么要配合 Pydantic](/2026/10/26/llm/1-19-tools-and-tool-calling/#_4、参数-schema：为什么要配合-pydantic)
 
 ### Q5-6. 如果让你实现一个“查天气、查新闻”的 AI 助手，你会怎么设计？
 
@@ -781,7 +781,7 @@ Function Calling 的核心分工，可以概括成一句话：模型负责决策
 
 **考察点：**能否把一个简单助手拆成“意图、工具、调度、输出”四层，而不是一股脑说上 Agent。
 
-**对应章节：**[17 Tools工具调用 §5、天气助手实战](17-Tools工具调用.md#_5、天气助手实战：把-tool-跑成业务闭环)；[21 Agent智能体 §5、实操与案例](21-Agent智能体.md#_5、实操与案例)
+**对应章节：**[19 Tools工具调用 §5、天气助手实战](/2026/10/26/llm/1-19-tools-and-tool-calling/#_5、天气助手实战：把-tool-跑成业务闭环)；[23 Agent智能体 §5、实操与案例](/2026/10/26/llm/1-23-agent/#_5、实操与案例)
 
 **来源：**腾讯AI后台工程师一面（实际大厂面试题）
 
@@ -806,7 +806,7 @@ Function Calling 的核心分工，可以概括成一句话：模型负责决策
 
 **考察点：**对 Tool Use 稳定性和风险控制的理解。
 
-**对应章节：**[17 Tools工具调用 §6、从课程案例走向真实项目](17-Tools工具调用.md#_6、从课程案例走向真实项目)；[17 Tools工具调用 §4、参数 schema：为什么要配合 Pydantic](17-Tools工具调用.md#_4、参数-schema：为什么要配合-pydantic)
+**对应章节：**[19 Tools工具调用 §6、从课程案例走向真实项目](/2026/10/26/llm/1-19-tools-and-tool-calling/#_6、从课程案例走向真实项目)；[19 Tools工具调用 §4、参数 schema：为什么要配合 Pydantic](/2026/10/26/llm/1-19-tools-and-tool-calling/#_4、参数-schema：为什么要配合-pydantic)
 
 ### Q5-8. Function Calling 和“让模型输出 JSON 再自己解析”有什么区别？
 
@@ -832,7 +832,7 @@ Function Calling 的核心分工，可以概括成一句话：模型负责决策
 
 **考察点：**结构化输出和工具调用之间的协议级差异理解。
 
-**对应章节：**[14 输出解析器 §4、结构化输出](14-输出解析器.md#_4、结构化输出)；[17 Tools工具调用 §2、工具调用的工作方式](17-Tools工具调用.md#_2、工具调用的工作方式)
+**对应章节：**[16 输出解析器 §4、结构化输出](/2026/10/26/llm/1-16-output-parsers/#_4、结构化输出)；[19 Tools工具调用 §2、工具调用的工作方式](/2026/10/26/llm/1-19-tools-and-tool-calling/#_2、工具调用的工作方式)
 
 ### Q5-9. 当工具很多时，如何控制上下文长度和调用稳定性？
 
@@ -859,7 +859,7 @@ Function Calling 的核心分工，可以概括成一句话：模型负责决策
 
 **考察点：**多工具场景下的上下文治理和工具编排能力。
 
-**对应章节：**[17 Tools工具调用 §6、从课程案例走向真实项目](17-Tools工具调用.md#_6、从课程案例走向真实项目)；[21 Agent智能体 §5、实操与案例](21-Agent智能体.md#_5、实操与案例)
+**对应章节：**[19 Tools工具调用 §6、从课程案例走向真实项目](/2026/10/26/llm/1-19-tools-and-tool-calling/#_6、从课程案例走向真实项目)；[23 Agent智能体 §5、实操与案例](/2026/10/26/llm/1-23-agent/#_5、实操与案例)
 
 ---
 
@@ -883,7 +883,7 @@ LangGraph 最大的价值是把复杂流程中的状态、节点、边和循环�
 
 **考察点：**是否理解图编排的必要性。
 
-**对应章节：**[22 LangGraph概述与快速入门 §1、LangGraph 简介](22-LangGraph概述与快速入门.md#_1、langgraph-简介)；[23 LangGraphAPI：图与状态 §1、Graph API 之 Graph](23-LangGraphAPI：图与状态.md#_1、graph-api-之-graph%EF%BC%88图%EF%BC%89)
+**对应章节：**[24 LangGraph概述与快速入门 §1、LangGraph 简介](/2026/10/27/llm/1-24-langgraph-overview-and-quickstart/#_1、langgraph-简介)；[25 LangGraphAPI：图与状态 §1、Graph API 之 Graph](/2026/10/27/llm/1-25-langgraph-api-graph-and-state/#_1、graph-api-之-graph%EF%BC%88图%EF%BC%89)
 
 ### Q6-2. 在 LangGraph 里，State、Node、Edge 分别代表什么？
 
@@ -897,7 +897,7 @@ State 决定图里“大家共同操作的上下文”是什么；Node 决定每
 
 **考察点：**LangGraph 基础心智模型。
 
-**对应章节：**[23 LangGraphAPI：图与状态 §2、Graph API 之 State](23-LangGraphAPI：图与状态.md#_2、graph-api-之-state%EF%BC%88状态%EF%BC%89)；[24 LangGraphAPI：节点、边与进阶 §2、Graph API 之 Edge](24-LangGraphAPI：节点、边与进阶.md#_2、graph-api-之-edge%EF%BC%88边%EF%BC%89)
+**对应章节：**[25 LangGraphAPI：图与状态 §2、Graph API 之 State](/2026/10/27/llm/1-25-langgraph-api-graph-and-state/#_2、graph-api-之-state%EF%BC%88状态%EF%BC%89)；[26 LangGraphAPI：节点、边与进阶 §2、Graph API 之 Edge](/2026/10/27/llm/1-26-langgraph-api-nodes-edges-and-advanced/#_2、graph-api-之-edge%EF%BC%88边%EF%BC%89)
 
 ### Q6-3. LangChain 在今天的价值是什么？为什么不是直接手写 SDK 就够了？
 
@@ -909,7 +909,7 @@ LangChain 的价值不在于“能不能调模型”，而在于它把模型输�
 
 **考察点：**框架选型判断，而不是盲目崇拜框架。
 
-**对应章节：**[9 LangChain概述与架构 §2、LangChain 定位](9-LangChain概述与架构.md#_2、langchain-定位)；[9 LangChain概述与架构 §4、LangChain 核心模块](9-LangChain概述与架构.md#_4、langchain-核心模块)
+**对应章节：**[11 LangChain概述与架构 §2、LangChain 定位](/2026/10/26/llm/1-11-langchain-overview-and-architecture/#_2、langchain-定位)；[11 LangChain概述与架构 §4、LangChain 核心模块](/2026/10/26/llm/1-11-langchain-overview-and-architecture/#_4、langchain-核心模块)
 
 ### Q6-4. 如何使用 LangChain 开发一个 Agent？
 
@@ -931,7 +931,7 @@ LangChain 的价值不在于“能不能调模型”，而在于它把模型输�
 
 **考察点：**是否理解 Agent 不是“调一个 create_agent 就结束”，而是清楚底层组成。
 
-**对应章节：**[21 Agent智能体 §5、实操与案例](21-Agent智能体.md#_5、实操与案例)；[17 Tools工具调用 §5、天气助手实战](17-Tools工具调用.md#_5、天气助手实战：把-tool-跑成业务闭环)
+**对应章节：**[23 Agent智能体 §5、实操与案例](/2026/10/26/llm/1-23-agent/#_5、实操与案例)；[19 Tools工具调用 §5、天气助手实战](/2026/10/26/llm/1-19-tools-and-tool-calling/#_5、天气助手实战：把-tool-跑成业务闭环)
 
 ### Q6-5. LCEL 的价值是什么？为什么说它不只是语法糖？
 
@@ -943,7 +943,7 @@ LCEL 的核心价值是把 Prompt、Model、Parser、Retriever、函数逻辑都
 
 **考察点：**是否理解链式编排的统一接口思想。
 
-**对应章节：**[15 LCEL与链式调用 §1、Runnable 与统一调用方式](15-LCEL与链式调用.md#_1、runnable-与统一调用方式)；[15 LCEL与链式调用 §2、LCEL 简介](15-LCEL与链式调用.md#_2、lcel-简介)
+**对应章节：**[17 LCEL与链式调用 §1、Runnable 与统一调用方式](/2026/10/26/llm/1-17-lcel-and-chaining/#_1、runnable-与统一调用方式)；[17 LCEL与链式调用 §2、LCEL 简介](/2026/10/26/llm/1-17-lcel-and-chaining/#_2、lcel-简介)
 
 ### Q6-6. LangGraph 的进阶特性里，你觉得最有工程价值的是哪些？
 
@@ -974,7 +974,7 @@ LCEL 的核心价值是把 Prompt、Model、Parser、Retriever、函数逻辑都
 
 **考察点：**是否关注真实生产能力，而不是只会 HelloWorld。
 
-**对应章节：**[25 LangGraph高级特性 §1、流式处理（Streaming）](25-LangGraph高级特性.md#_1、流式处理%EF%BC%88streaming%EF%BC%89)；[25 LangGraph高级特性 §2、状态持久化（Persistence）](25-LangGraph高级特性.md#_2、状态持久化%EF%BC%88persistence%EF%BC%89)；[25 LangGraph高级特性 §3、时间回溯（Time-Travel）](25-LangGraph高级特性.md#_3、时间回溯%EF%BC%88time-travel%EF%BC%89)；[25 LangGraph高级特性 §4、子图（Subgraphs）](25-LangGraph高级特性.md#_4、子图%EF%BC%88subgraphs%EF%BC%89)
+**对应章节：**[27 LangGraph高级特性 §1、流式处理（Streaming）](/2026/10/27/llm/1-27-langgraph-advanced-features/#_1、流式处理%EF%BC%88streaming%EF%BC%89)；[27 LangGraph高级特性 §2、状态持久化（Persistence）](/2026/10/27/llm/1-27-langgraph-advanced-features/#_2、状态持久化%EF%BC%88persistence%EF%BC%89)；[27 LangGraph高级特性 §3、时间回溯（Time-Travel）](/2026/10/27/llm/1-27-langgraph-advanced-features/#_3、时间回溯%EF%BC%88time-travel%EF%BC%89)；[27 LangGraph高级特性 §4、子图（Subgraphs）](/2026/10/27/llm/1-27-langgraph-advanced-features/#_4、子图%EF%BC%88subgraphs%EF%BC%89)
 
 ### Q6-7. Checkpoint、HITL、Time-Travel 在面试里怎么讲得更工程化？
 
@@ -1000,7 +1000,7 @@ LCEL 的核心价值是把 Prompt、Model、Parser、Retriever、函数逻辑都
 
 **考察点：**LangGraph 生产能力理解，以及对恢复、审批、复盘三类能力的归纳能力。
 
-**对应章节：**[25 LangGraph高级特性 §2、状态持久化（Persistence）](25-LangGraph高级特性.md#_2、状态持久化%EF%BC%88persistence%EF%BC%89)；[25 LangGraph高级特性 §3、时间回溯（Time-Travel）](25-LangGraph高级特性.md#_3、时间回溯%EF%BC%88time-travel%EF%BC%89)
+**对应章节：**[27 LangGraph高级特性 §2、状态持久化（Persistence）](/2026/10/27/llm/1-27-langgraph-advanced-features/#_2、状态持久化%EF%BC%88persistence%EF%BC%89)；[27 LangGraph高级特性 §3、时间回溯（Time-Travel）](/2026/10/27/llm/1-27-langgraph-advanced-features/#_3、时间回溯%EF%BC%88time-travel%EF%BC%89)
 
 ---
 
@@ -1025,7 +1025,7 @@ LCEL 的核心价值是把 Prompt、Model、Parser、Retriever、函数逻辑都
 
 **考察点：**对话系统和 Agent 的状态设计能力。
 
-**对应章节：**[16 记忆与对话历史 §1、记忆简介](16-记忆与对话历史（含Redis基础）.md#_1、记忆简介)；[25 LangGraph高级特性 §2、状态持久化（Persistence）](25-LangGraph高级特性.md#_2、状态持久化%EF%BC%88persistence%EF%BC%89)
+**对应章节：**[18 记忆与对话历史 §1、记忆简介](/2026/10/26/llm/1-18-memory-and-chat-history-with-redis/#_1、记忆简介)；[27 LangGraph高级特性 §2、状态持久化（Persistence）](/2026/10/27/llm/1-27-langgraph-advanced-features/#_2、状态持久化%EF%BC%88persistence%EF%BC%89)
 
 ### Q7-2. 如何为 Agent 设计短期记忆和长期记忆系统？技术上通常怎么落地？
 
@@ -1062,7 +1062,7 @@ LCEL 的核心价值是把 Prompt、Model、Parser、Retriever、函数逻辑都
 
 **考察点：**记忆分层设计能力，以及对短期状态、长期知识、外部存储边界的理解。
 
-**对应章节：**[16 记忆与对话历史 §4、RunnableWithMessageHistory 与 BaseChatMessageHistory](16-记忆与对话历史（含Redis基础）.md#_4、实现类介绍：runnablewithmessagehistory-与-basechatmessagehistory)；[25 LangGraph高级特性 §2、状态持久化（Persistence）](25-LangGraph高级特性.md#_2、状态持久化%EF%BC%88persistence%EF%BC%89)
+**对应章节：**[18 记忆与对话历史 §4、RunnableWithMessageHistory 与 BaseChatMessageHistory](/2026/10/26/llm/1-18-memory-and-chat-history-with-redis/#_4、实现类介绍：runnablewithmessagehistory-与-basechatmessagehistory)；[27 LangGraph高级特性 §2、状态持久化（Persistence）](/2026/10/27/llm/1-27-langgraph-advanced-features/#_2、状态持久化%EF%BC%88persistence%EF%BC%89)
 
 ### Q7-3. 什么是 MCP？它解决的核心问题是什么？它和 Tool、RAG、Agent 有什么区别？
 
@@ -1089,7 +1089,7 @@ MCP 本质上是在做“模型能力接入的统一协议层”，解决的不�
 
 **考察点：**协议层理解能力。
 
-**对应章节：**[20 MCP模型上下文协议 §2、MCP 简介](20-MCP模型上下文协议.md#_2、mcp-简介)；[20 MCP模型上下文协议 §3、MCP 能做什么](20-MCP模型上下文协议.md#_3、mcp-能做什么)
+**对应章节：**[22 MCP模型上下文协议 §2、MCP 简介](/2026/10/26/llm/1-22-mcp-model-context-protocol/#_2、mcp-简介)；[22 MCP模型上下文协议 §3、MCP 能做什么](/2026/10/26/llm/1-22-mcp-model-context-protocol/#_3、mcp-能做什么)
 
 **来源：**腾讯AI后台工程师一面（实际大厂面试题）
 
@@ -1105,7 +1105,7 @@ Function Calling 更接近模型侧的“结构化调用机制”，MCP 更接�
 
 **考察点：**协议层和调用机制的边界理解。
 
-**对应章节：**[20 MCP模型上下文协议 §2、MCP 简介](20-MCP模型上下文协议.md#_2、mcp-简介)；[17 Tools工具调用 §2、工具调用的工作方式](17-Tools工具调用.md#_2、工具调用的工作方式)
+**对应章节：**[22 MCP模型上下文协议 §2、MCP 简介](/2026/10/26/llm/1-22-mcp-model-context-protocol/#_2、mcp-简介)；[19 Tools工具调用 §2、工具调用的工作方式](/2026/10/26/llm/1-19-tools-and-tool-calling/#_2、工具调用的工作方式)
 
 ### Q7-5. MCP 是如何做到跨平台兼容的？
 
@@ -1119,7 +1119,7 @@ MCP 的跨平台兼容，本质上来自“统一协议，而不是统一实现�
 
 **考察点：**协议标准化的理解。
 
-**对应章节：**[20 MCP模型上下文协议 §5、MCP 架构知识](20-MCP模型上下文协议.md#_5、mcp-架构知识)
+**对应章节：**[22 MCP模型上下文协议 §5、MCP 架构知识](/2026/10/26/llm/1-22-mcp-model-context-protocol/#_5、mcp-架构知识)
 
 ### Q7-6. MCP 技术协议的主体内容是什么？
 
@@ -1142,7 +1142,7 @@ MCP 的跨平台兼容，本质上来自“统一协议，而不是统一实现�
 
 **考察点：**是否理解 MCP 协议层的基本构成。
 
-**对应章节：**[20 MCP模型上下文协议 §5、MCP 架构知识](20-MCP模型上下文协议.md#_5、mcp-架构知识)；[20 MCP模型上下文协议 §3、MCP 能做什么](20-MCP模型上下文协议.md#_3、mcp-能做什么)
+**对应章节：**[22 MCP模型上下文协议 §5、MCP 架构知识](/2026/10/26/llm/1-22-mcp-model-context-protocol/#_5、mcp-架构知识)；[22 MCP模型上下文协议 §3、MCP 能做什么](/2026/10/26/llm/1-22-mcp-model-context-protocol/#_3、mcp-能做什么)
 
 ### Q7-7. MCP 服务器开发流程是什么？
 
@@ -1160,7 +1160,7 @@ MCP 的跨平台兼容，本质上来自“统一协议，而不是统一实现�
 
 **考察点：**是否理解 MCP 不只是“会用”，还包括服务端建设。
 
-**对应章节：**[20 MCP模型上下文协议 §4、怎么用 MCP](20-MCP模型上下文协议.md#_4、怎么用-mcp)；[20 MCP模型上下文协议 §6、案例实战：本地 MCP 天气服务与客户端](20-MCP模型上下文协议.md#_6、案例实战：本地-mcp-天气服务与客户端)
+**对应章节：**[22 MCP模型上下文协议 §4、怎么用 MCP](/2026/10/26/llm/1-22-mcp-model-context-protocol/#_4、怎么用-mcp)；[22 MCP模型上下文协议 §6、案例实战：本地 MCP 天气服务与客户端](/2026/10/26/llm/1-22-mcp-model-context-protocol/#_6、案例实战：本地-mcp-天气服务与客户端)
 
 ### Q7-8. Agent 应该如何接入 MCP 工具？
 
@@ -1184,7 +1184,7 @@ Agent 接入 MCP 工具，核心是把 MCP 暴露出来的能力纳入自己的�
 
 **考察点：**Agent 架构与 MCP 的结合方式。
 
-**对应章节：**[20 MCP模型上下文协议 §4、怎么用 MCP](20-MCP模型上下文协议.md#_4、怎么用-mcp)；[20 MCP模型上下文协议 §6、案例实战：本地 MCP 天气服务与客户端](20-MCP模型上下文协议.md#_6、案例实战：本地-mcp-天气服务与客户端)
+**对应章节：**[22 MCP模型上下文协议 §4、怎么用 MCP](/2026/10/26/llm/1-22-mcp-model-context-protocol/#_4、怎么用-mcp)；[22 MCP模型上下文协议 §6、案例实战：本地 MCP 天气服务与客户端](/2026/10/26/llm/1-22-mcp-model-context-protocol/#_6、案例实战：本地-mcp-天气服务与客户端)
 
 ### Q7-9. MCP 的流式 HTTP 传输核心优势是什么？
 
@@ -1202,7 +1202,7 @@ Agent 接入 MCP 工具，核心是把 MCP 暴露出来的能力纳入自己的�
 
 **考察点：**流式协议在体验和并发上的价值理解。
 
-**对应章节：**[20 MCP模型上下文协议 §5、MCP 架构知识](20-MCP模型上下文协议.md#_5、mcp-架构知识)
+**对应章节：**[22 MCP模型上下文协议 §5、MCP 架构知识](/2026/10/26/llm/1-22-mcp-model-context-protocol/#_5、mcp-架构知识)
 
 ### Q7-10. MCP 调用如何保证并发？
 
@@ -1221,7 +1221,7 @@ MCP 并发能力不只是协议本身决定的，更取决于宿主和服务端�
 
 **考察点：**高并发调用下的协议和宿主设计能力。
 
-**对应章节：**[20 MCP模型上下文协议 §5、MCP 架构知识](20-MCP模型上下文协议.md#_5、mcp-架构知识)
+**对应章节：**[22 MCP模型上下文协议 §5、MCP 架构知识](/2026/10/26/llm/1-22-mcp-model-context-protocol/#_5、mcp-架构知识)
 
 ### Q7-11. A2A 和 MCP 的区别是什么？什么时候需要多智能体？
 
@@ -1243,7 +1243,7 @@ MCP 更关注“模型和外部能力怎么接”，A2A 更关注“Agent 和 Ag
 
 **考察点：**协议边界和系统拆分能力。
 
-**对应章节：**[26 LangGraph多智能体与A2A §1、A2A 协议与多智能体架构](26-LangGraph多智能体与A2A.md#_1、a2a-协议与多智能体架构)；[26 LangGraph多智能体与A2A §2、Supervisor 与 Handoff](26-LangGraph多智能体与A2A.md#_2、supervisor-与-handoff)；[26 LangGraph多智能体与A2A §3、Skills 与多智能体的边界](26-LangGraph多智能体与A2A.md#_3、skills-与多智能体的边界)；[27 Agent Skills智能体技能与AI编程工具实践](27-Agent%20Skills智能体技能与AI编程工具实践.md)
+**对应章节：**[28 LangGraph多智能体与A2A §1、A2A 协议与多智能体架构](/2026/10/27/llm/1-28-langgraph-multi-agent-and-a2a/#_1、a2a-协议与多智能体架构)；[28 LangGraph多智能体与A2A §2、Supervisor 与 Handoff](/2026/10/27/llm/1-28-langgraph-multi-agent-and-a2a/#_2、supervisor-与-handoff)；[28 LangGraph多智能体与A2A §3、Skills 与多智能体的边界](/2026/10/27/llm/1-28-langgraph-multi-agent-and-a2a/#_3、skills-与多智能体的边界)；[29 Agent Skills智能体技能与AI编程工具实践](/2026/10/27/llm/1-29-skills-and-ai-coding-tools/)
 
 **来源：**腾讯AI后台工程师一面（实际大厂面试题）
 
@@ -1282,7 +1282,7 @@ Coze / Dify 更偏应用层、低代码和可视化交付，LangChain / LangGrap
 
 **考察点：**平台能力和代码能力的选型判断。
 
-**对应章节：**[3 基于Coze&Dify平台的智能体开发 §1、智能体(AI Agent)概述](3-基于Coze&Dify平台的智能体开发.md#_1、智能体ai-agent概述)；[9 LangChain概述与架构 §2、LangChain 定位](9-LangChain概述与架构.md#_2、langchain-定位)
+**对应章节：**[5 基于Coze&Dify平台的智能体开发 §1、智能体(AI Agent)概述](/2026/10/26/llm/1-5-agent-development-on-coze-and-dify/#_1、智能体ai-agent概述)；[11 LangChain概述与架构 §2、LangChain 定位](/2026/10/26/llm/1-11-langchain-overview-and-architecture/#_2、langchain-定位)
 
 ### Q8-2. 各类 Agent 开发框架应该如何选取？
 
@@ -1304,7 +1304,7 @@ Coze / Dify 更偏应用层、低代码和可视化交付，LangChain / LangGrap
 
 **考察点：**框架选型和工程判断。
 
-**对应章节：**[9 LangChain概述与架构 §2、LangChain 定位](9-LangChain概述与架构.md#_2、langchain-定位)；[22 LangGraph概述与快速入门 §1、LangGraph 简介](22-LangGraph概述与快速入门.md#_1、langgraph-简介)
+**对应章节：**[11 LangChain概述与架构 §2、LangChain 定位](/2026/10/26/llm/1-11-langchain-overview-and-architecture/#_2、langchain-定位)；[24 LangGraph概述与快速入门 §1、LangGraph 简介](/2026/10/27/llm/1-24-langgraph-overview-and-quickstart/#_1、langgraph-简介)
 
 ### Q8-3. 什么时候工作流比 Agent 更合适？
 
@@ -1322,7 +1322,7 @@ Coze / Dify 更偏应用层、低代码和可视化交付，LangChain / LangGrap
 
 **考察点：**流程治理意识。
 
-**对应章节：**[3 基于Coze&Dify平台的智能体开发 §6、工作流的搭建](3-基于Coze&Dify平台的智能体开发.md#_6、工作流的搭建)；[21 Agent智能体 §1、Agent 简介](21-Agent智能体.md#_1、agent-简介)
+**对应章节：**[5 基于Coze&Dify平台的智能体开发 §6、工作流的搭建](/2026/10/26/llm/1-5-agent-development-on-coze-and-dify/#_6、工作流的搭建)；[23 Agent智能体 §1、Agent 简介](/2026/10/26/llm/1-23-agent/#_1、agent-简介)
 
 ### Q8-4. 用 Python 调用 Dify / Coze 工作流时，最值得关注哪些工程细节？
 
@@ -1365,7 +1365,7 @@ Coze / Dify 更偏应用层、低代码和可视化交付，LangChain / LangGrap
 
 **考察点：**是否看过平台 API 的真实调用链，而不是只会点界面。
 
-**对应章节：**[4 Python调用Dify平台工作流 §4、请求格式](4-Python调用Dify平台工作流.md#_4、请求格式)；[5 Python调用Coze平台工作流 §3、通过 Python 代码调用工作流](5-Python调用Coze平台工作流.md#_3-通过-python-代码调用工作流)
+**对应章节：**[6 Python调用Dify平台工作流 §4、请求格式](/2026/10/26/llm/1-6-calling-dify-workflows-with-python/#_4、请求格式)；[7 Python调用Coze平台工作流 §3、通过 Python 代码调用工作流](/2026/10/26/llm/1-7-calling-coze-workflows-with-python/#_3-通过-python-代码调用工作流)
 
 ### Q8-5. 开源 RAG 平台比如 RAGFlow，应该如何选型？和 Dify 或自研链路怎么比较？
 
@@ -1415,7 +1415,7 @@ Coze / Dify 更偏应用层、低代码和可视化交付，LangChain / LangGrap
 
 **考察点：**是否有评测闭环意识。
 
-**对应章节：**[19 RAG检索增强生成 §3、RAG 综合案例：智能运维助手](19-RAG检索增强生成.md#_3、rag-综合案例：智能运维助手)；[21 Agent智能体 §5、实操与案例](21-Agent智能体.md#_5、实操与案例)
+**对应章节：**[21 RAG检索增强生成 §3、RAG 综合案例：智能运维助手](/2026/10/26/llm/1-21-rag-retrieval-augmented-generation/#_3、rag-综合案例：智能运维助手)；[23 Agent智能体 §5、实操与案例](/2026/10/26/llm/1-23-agent/#_5、实操与案例)
 
 ### Q9-2. 什么是“幻觉”？应用层应该怎么缓解？
 
@@ -1440,7 +1440,7 @@ Coze / Dify 更偏应用层、低代码和可视化交付，LangChain / LangGrap
 
 **考察点：**是否理解“模型能力问题”和“应用链路治理问题”的边界。
 
-**对应章节：**[19 RAG检索增强生成 §1、RAG 简介](19-RAG检索增强生成.md#_1、rag-简介)；[14 输出解析器 §4、结构化输出](14-输出解析器.md#_4、结构化输出)
+**对应章节：**[21 RAG检索增强生成 §1、RAG 简介](/2026/10/26/llm/1-21-rag-retrieval-augmented-generation/#_1、rag-简介)；[16 输出解析器 §4、结构化输出](/2026/10/26/llm/1-16-output-parsers/#_4、结构化输出)
 
 ### Q9-3. 多用户场景下，如何为 Agent 做安全沙箱隔离？
 
@@ -1458,7 +1458,7 @@ Coze / Dify 更偏应用层、低代码和可视化交付，LangChain / LangGrap
 
 **考察点：**多用户 Agent 的安全隔离设计，以及协议层控制和环境层隔离的分工。
 
-**对应章节：**[7 企业级大模型部署 §1、企业级大模型部署概述](7-企业级大模型部署.md#_1、企业级大模型部署概述)；[17 Tools工具调用 §6、从课程案例走向真实项目](17-Tools工具调用.md#_6、从课程案例走向真实项目)
+**对应章节：**[9 企业级大模型部署 §1、企业级大模型部署概述](/2026/10/26/llm/1-9-enterprise-llm-deployment/#_1、企业级大模型部署概述)；[19 Tools工具调用 §6、从课程案例走向真实项目](/2026/10/26/llm/1-19-tools-and-tool-calling/#_6、从课程案例走向真实项目)
 
 ### Q9-4. Agent 部署和运维有哪些指标？
 
@@ -1476,7 +1476,7 @@ Agent 运维至少要看五类指标：
 
 **考察点：**从 Demo 到生产的运维视角。
 
-**对应章节：**[7 企业级大模型部署 §1、企业级大模型部署概述](7-企业级大模型部署.md#_1、企业级大模型部署概述)；[21 Agent智能体 §5、实操与案例](21-Agent智能体.md#_5、实操与案例)
+**对应章节：**[9 企业级大模型部署 §1、企业级大模型部署概述](/2026/10/26/llm/1-9-enterprise-llm-deployment/#_1、企业级大模型部署概述)；[23 Agent智能体 §5、实操与案例](/2026/10/26/llm/1-23-agent/#_5、实操与案例)
 
 ### Q9-5. RAG 系统在实际部署中可能面临哪些挑战？
 
@@ -1504,7 +1504,7 @@ RAG 真正上线后，难点通常不在“能不能检索”，而在“这条�
 
 **考察点：**是否有生产系统思维。
 
-**对应章节：**[19 RAG检索增强生成 §2、RAG 文本处理核心知识](19-RAG检索增强生成.md#_2、rag-文本处理核心知识)；[7 企业级大模型部署 §1、企业级大模型部署概述](7-企业级大模型部署.md#_1、企业级大模型部署概述)
+**对应章节：**[21 RAG检索增强生成 §2、RAG 文本处理核心知识](/2026/10/26/llm/1-21-rag-retrieval-augmented-generation/#_2、rag-文本处理核心知识)；[9 企业级大模型部署 §1、企业级大模型部署概述](/2026/10/26/llm/1-9-enterprise-llm-deployment/#_1、企业级大模型部署概述)
 
 ### Q9-6. 如何确保 Agent 的行为安全、可控且符合人类意图？
 
@@ -1583,7 +1583,7 @@ Agent 一条链路跑到几分钟，不能只说“模型太慢”，要先把�
 
 **考察点：**分层路由能力、意图识别落地能力，以及把 FAQ / RAG / Tool / Agent 串成统一入口的系统设计意识。
 
-**对应章节：**[17 Tools工具调用 §6、从课程案例走向真实项目](17-Tools工具调用.md#_6、从课程案例走向真实项目)；[19 RAG检索增强生成 §3、RAG 综合案例：智能运维助手](19-RAG检索增强生成.md#_3、rag-综合案例：智能运维助手)
+**对应章节：**[19 Tools工具调用 §6、从课程案例走向真实项目](/2026/10/26/llm/1-19-tools-and-tool-calling/#_6、从课程案例走向真实项目)；[21 RAG检索增强生成 §3、RAG 综合案例：智能运维助手](/2026/10/26/llm/1-21-rag-retrieval-augmented-generation/#_3、rag-综合案例：智能运维助手)
 
 ### Q9-9. 你会怎么做大模型应用的可观测性？
 
@@ -1618,7 +1618,7 @@ Agent 一条链路跑到几分钟，不能只说“模型太慢”，要先把�
 
 **考察点：**成本优化思维。
 
-**对应章节：**[1-1 大模型认知与工程概览 §4、大模型的工程实现（概览）](1-1-大模型认知与工程概览.md#_4、大模型的工程实现%EF%BC%88概览%EF%BC%89)；[7 企业级大模型部署 §1、企业级大模型部署概述](7-企业级大模型部署.md#_1、企业级大模型部署概述)
+**对应章节：**[1-1 大模型认知与工程概览 §4、大模型的工程实现（概览）](/2026/10/26/llm/1-1-llm-basics-engineering-overview/#_4、大模型的工程实现%EF%BC%88概览%EF%BC%89)；[9 企业级大模型部署 §1、企业级大模型部署概述](/2026/10/26/llm/1-9-enterprise-llm-deployment/#_1、企业级大模型部署概述)
 
 ### Q9-11. 模型路由应该怎么做？
 
@@ -1648,7 +1648,7 @@ Agent 一条链路跑到几分钟，不能只说“模型太慢”，要先把�
 
 **考察点：**成本治理、模型分层和路由策略设计能力。
 
-**对应章节：**[11 Model I/O 与模型接入 §2、LangChain 模型分类、参数与返回](11-Model-I-O与模型接入.md#_2、langchain-模型分类、参数与返回)；[7 企业级大模型部署 §1、企业级大模型部署概述](7-企业级大模型部署.md#_1、企业级大模型部署概述)
+**对应章节：**[13 Model I/O 与模型接入 §2、LangChain 模型分类、参数与返回](/2026/10/26/llm/1-13-model-io-and-model-access/#_2、langchain-模型分类、参数与返回)；[9 企业级大模型部署 §1、企业级大模型部署概述](/2026/10/26/llm/1-9-enterprise-llm-deployment/#_1、企业级大模型部署概述)
 
 ### Q9-12. 内网环境下怎么设计 Agent / RAG 系统？
 
@@ -1680,7 +1680,7 @@ Agent 一条链路跑到几分钟，不能只说“模型太慢”，要先把�
 
 **考察点：**企业私有化部署理解、应用层与推理层解耦意识，以及内网 Agent / RAG 的安全与运维设计能力。
 
-**对应章节：**[7 企业级大模型部署 §1、企业级大模型部署概述](7-企业级大模型部署.md#_1、企业级大模型部署概述)；[7 企业级大模型部署 §3、模型部署](7-企业级大模型部署.md#_3、模型部署)；[12 Ollama本地部署与调用 §5、LangChain 整合 Ollama](12-Ollama本地部署与调用.md#_5、langchain-整合-ollama)
+**对应章节：**[9 企业级大模型部署 §1、企业级大模型部署概述](/2026/10/26/llm/1-9-enterprise-llm-deployment/#_1、企业级大模型部署概述)；[9 企业级大模型部署 §3、模型部署](/2026/10/26/llm/1-9-enterprise-llm-deployment/#_3、模型部署)；[14 Ollama本地部署与调用 §5、LangChain 整合 Ollama](/2026/10/26/llm/1-14-ollama-local-deployment-and-usage/#_5、langchain-整合-ollama)
 
 ---
 
@@ -1704,7 +1704,7 @@ Agent 一条链路跑到几分钟，不能只说“模型太慢”，要先把�
 
 **考察点：**从需求到架构的完整表达能力。
 
-**对应章节：**[2-RAG 搭建企业私有&个人知识库 §5、使用 Dify 搭建知识库](2-RAG-搭建企业私有&个人知识库.md#_5、使用-dify-搭建知识库)；[19 RAG检索增强生成 §3、RAG 综合案例：智能运维助手](19-RAG检索增强生成.md#_3、rag-综合案例：智能运维助手)
+**对应章节：**[4-RAG 搭建企业私有&个人知识库 §5、使用 Dify 搭建知识库](/2026/10/26/llm/1-4-rag-private-and-personal-knowledge-base/#_5、使用-dify-搭建知识库)；[21 RAG检索增强生成 §3、RAG 综合案例：智能运维助手](/2026/10/26/llm/1-21-rag-retrieval-augmented-generation/#_3、rag-综合案例：智能运维助手)
 
 ### Q10-2. 如果让你设计一个 NL2SQL Agent，你会重点控制哪些风险？
 
@@ -1740,7 +1740,7 @@ Agent 一条链路跑到几分钟，不能只说“模型太慢”，要先把�
 
 **考察点：**业务型 Agent 设计能力。
 
-**对应章节：**[3 基于Coze&Dify平台的智能体开发 §7、项目：商户运营管家](3-基于Coze&Dify平台的智能体开发.md#_7、项目：商户运营管家)；[21 Agent智能体 §5、实操与案例](21-Agent智能体.md#_5、实操与案例)
+**对应章节：**[5 基于Coze&Dify平台的智能体开发 §7、项目：商户运营管家](/2026/10/26/llm/1-5-agent-development-on-coze-and-dify/#_7、项目：商户运营管家)；[23 Agent智能体 §5、实操与案例](/2026/10/26/llm/1-23-agent/#_5、实操与案例)
 
 ### Q10-4. 如何设计 Agent 的完成判断与终止条件，避免过早结束？
 
@@ -1765,7 +1765,7 @@ Agent 的“结束”不能只靠感觉，也不能只靠看日志或一个宽�
 
 **考察点：**Agent 终止条件设计、状态机思维，以及 Supervisor / 工具结果 / 状态字段的组合使用能力。
 
-**对应章节：**[24 LangGraphAPI：节点、边与进阶 §2、Graph API 之 Edge](24-LangGraphAPI：节点、边与进阶.md#_2、graph-api-之-edge%EF%BC%88边%EF%BC%89)；[21 Agent智能体 §4、Agent 工作原理（V1.0）](21-Agent智能体.md#_4、agent-工作原理%EF%BC%88v1.0%EF%BC%89)
+**对应章节：**[26 LangGraphAPI：节点、边与进阶 §2、Graph API 之 Edge](/2026/10/27/llm/1-26-langgraph-api-nodes-edges-and-advanced/#_2、graph-api-之-edge%EF%BC%88边%EF%BC%89)；[23 Agent智能体 §4、Agent 工作原理（V1.0）](/2026/10/26/llm/1-23-agent/#_4、agent-工作原理%EF%BC%88v1.0%EF%BC%89)
 
 ### Q10-5. Code Agent 怎么设计？
 
@@ -1863,7 +1863,7 @@ Python 代码解释器本质上是“模型生成代码 + 安全执行 + 回传�
 
 **考察点：**执行型智能体和安全沙箱设计。
 
-**对应章节：**[17 Tools工具调用 §6、从课程案例走向真实项目](17-Tools工具调用.md#_6、从课程案例走向真实项目)；[21 Agent智能体 §5、实操与案例](21-Agent智能体.md#_5、实操与案例)
+**对应章节：**[19 Tools工具调用 §6、从课程案例走向真实项目](/2026/10/26/llm/1-19-tools-and-tool-calling/#_6、从课程案例走向真实项目)；[23 Agent智能体 §5、实操与案例](/2026/10/26/llm/1-23-agent/#_5、实操与案例)
 
 ### Q10-9. 如何设计类 Manus 通用智能体？
 
@@ -1947,7 +1947,7 @@ Python 代码解释器本质上是“模型生成代码 + 安全执行 + 回传�
 
 **考察点：**项目表达能力。
 
-**对应章节：**[19 RAG检索增强生成 §3、RAG 综合案例：智能运维助手](19-RAG检索增强生成.md#_3、rag-综合案例：智能运维助手)；[21 Agent智能体 §5、实操与案例](21-Agent智能体.md#_5、实操与案例)
+**对应章节：**[21 RAG检索增强生成 §3、RAG 综合案例：智能运维助手](/2026/10/26/llm/1-21-rag-retrieval-augmented-generation/#_3、rag-综合案例：智能运维助手)；[23 Agent智能体 §5、实操与案例](/2026/10/26/llm/1-23-agent/#_5、实操与案例)
 
 ### Q11-2. 如果面试官问“你们为什么不用某个更热门的框架或模型”，怎么回答更稳？
 
@@ -1978,7 +1978,7 @@ Python 代码解释器本质上是“模型生成代码 + 安全执行 + 回传�
 
 **考察点：**技术判断和表达成熟度。
 
-**对应章节：**[9 LangChain概述与架构 §2、LangChain 定位](9-LangChain概述与架构.md#_2、langchain-定位)；[7 企业级大模型部署 §1、企业级大模型部署概述](7-企业级大模型部署.md#_1、企业级大模型部署概述)
+**对应章节：**[11 LangChain概述与架构 §2、LangChain 定位](/2026/10/26/llm/1-11-langchain-overview-and-architecture/#_2、langchain-定位)；[9 企业级大模型部署 §1、企业级大模型部署概述](/2026/10/26/llm/1-9-enterprise-llm-deployment/#_1、企业级大模型部署概述)
 
 ### Q11-3. 如果线上效果波动很大，你怎么向面试官展示你的排障能力？
 

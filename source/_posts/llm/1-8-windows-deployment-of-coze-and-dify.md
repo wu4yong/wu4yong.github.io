@@ -13,7 +13,7 @@ tags:
 
 # 1-8 Coze 与 Dify 的 Windows 平台部署
 
-本章偏**实操部署**：在 Windows 上把常见低代码智能体平台跑起来。Docker Desktop 的安装与通用排障已经统一放到第 8 章，本章直接进入 **Coze Studio**、**Dify** 和 **Coze Loop（扣子罗盘）** 的部署流程。
+本章偏**实操部署**：在 Windows 上把常见低代码智能体平台跑起来。Docker Desktop 的安装与通用排障已经统一放到第 10 章，本章直接进入 **Coze Studio**、**Dify** 和 **Coze Loop（扣子罗盘）** 的部署流程。
 
 ---
 
@@ -25,7 +25,7 @@ tags:
 - 完成 **Dify** 在 Windows 上的最小部署：确认 Docker 环境 -> 获取代码 -> 配置 `.env` -> `docker compose up -d` -> 浏览器访问。
 - 理解两条常见模型接入路线：**云端 API 模型** 与 **本地 Ollama 模型**，知道它们分别适合什么场景。
 
-**学习建议：** 这篇不要贪多，先选一条路线跑通。还没安装 Docker Desktop 的同学，先看 [第 8 章 Windows 安装前准备](8-Docker快速入门与Dify部署排障.md#_22-windows-安装前准备)。只想体验 Coze，就先完成 Coze Studio 和模型配置；只想体验 Dify，就先把 Dify 服务启动并能登录。Coze Loop 可以等 Studio 跑通后再看。模型配置是最容易卡住的地方：选火山方舟就提前准备 API Key 和 Endpoint，选 Ollama 就先确认本地模型已经拉取成功。
+**学习建议：** 这篇不要贪多，先选一条路线跑通。还没安装 Docker Desktop 的同学，先看 [第 10 章 Windows 安装前准备](/2026/10/26/llm/1-10-docker-quickstart-and-dify-deployment-troubleshooting/#_22-windows-安装前准备)。只想体验 Coze，就先完成 Coze Studio 和模型配置；只想体验 Dify，就先把 Dify 服务启动并能登录。Coze Loop 可以等 Studio 跑通后再看。模型配置是最容易卡住的地方：选火山方舟就提前准备 API Key 和 Endpoint，选 Ollama 就先确认本地模型已经拉取成功。
 
 ---
 
@@ -229,7 +229,7 @@ docker compose --profile '*' up -d
 
 <div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/6/6-2-3-4.png" alt="在 Docker 中启动 Coze Studio 的命令行界面"></div>
 
-这条命令会通过 Compose 启用所有 profile，并在后台启动服务。`docker compose up -d` 的通用含义见 [第 8 章 Compose](8-Docker快速入门与Dify部署排障.md#_32-compose)。
+这条命令会通过 Compose 启用所有 profile，并在后台启动服务。`docker compose up -d` 的通用含义见 [第 10 章 Compose](/2026/10/26/llm/1-10-docker-quickstart-and-dify-deployment-troubleshooting/#_32-compose)。
 
 首次启动可能需要 5-10 分钟，具体取决于网络和镜像拉取速度。看到类似下面的结果，说明服务已经启动。
 
@@ -267,13 +267,13 @@ http://localhost:8888/
 
 Dify 的 Windows 本地部署比 Coze Studio 更直接。它不需要先在代码里配置模型文件，核心流程就是：**获取项目 -> 进入 `docker` 目录 -> 复制 `.env` -> 启动 Compose -> 浏览器访问**。
 
-本节只讲最小部署流程。Docker 通用概念、镜像拉取失败、容器状态异常、数据位置、备份升级和数据库连接，统一放在 [第 8 章 Docker 快速入门与 Dify 部署排障](8-Docker快速入门与Dify部署排障.md)。
+本节只讲最小部署流程。Docker 通用概念、镜像拉取失败、容器状态异常、数据位置、备份升级和数据库连接，统一放在 [第 10 章 Docker 快速入门与 Dify 部署排障](/2026/10/26/llm/1-10-docker-quickstart-and-dify-deployment-troubleshooting/)。
 
 ### 3.1 部署前准备
 
 Windows 本地部署 Dify，核心依赖只有两个：
 
-- **Docker Desktop**：已按第 8 章完成安装与验证，并保持 Docker Desktop 处于 Running 状态。
+- **Docker Desktop**：已按第 10 章完成安装与验证，并保持 Docker Desktop 处于 Running 状态。
 - **Dify 项目代码**：后续真正操作的是仓库里的 `docker` 目录。
 
 Dify 不是单一程序，而是一整套协同服务。启动后通常会包含 Web 前端、API 服务、Worker、数据库、Redis、向量数据库等容器。
@@ -298,7 +298,7 @@ https://docs.dify.ai/zh-hans/getting-started/install-self-hosted/docker-compose
 
 第一次部署最常改的是端口。如果本机 `80` 端口被其他程序占用，可以改成 `8100`、`8080` 或其他未被占用端口。
 
-可以把 `.env` 理解为这套部署环境的运行参数表。Docker / Compose / 数据卷的关系，以及 Dify 场景下的排障方式，见 [第 8 章](8-Docker快速入门与Dify部署排障.md)。
+可以把 `.env` 理解为这套部署环境的运行参数表。Docker / Compose / 数据卷的关系，以及 Dify 场景下的排障方式，见 [第 10 章](/2026/10/26/llm/1-10-docker-quickstart-and-dify-deployment-troubleshooting/)。
 
 ### 3.4 启动 Dify
 
@@ -569,7 +569,7 @@ Trace 用于记录运行链路里的详细信息，适合排查模型调用、�
 5. **容器是否在运行**：用 `docker compose ps` 或 Docker Desktop 查看状态。
 6. **日志里有没有明确报错**：重点看 API、Web、数据库、模型服务相关日志。
 
-本章只负责跑通最小链路。更系统的 Docker 命令、Dify 数据位置、升级备份和数据库连接，继续看 [第 8 章 Docker 快速入门与 Dify 部署排障](8-Docker快速入门与Dify部署排障.md)。
+本章只负责跑通最小链路。更系统的 Docker 命令、Dify 数据位置、升级备份和数据库连接，继续看 [第 10 章 Docker 快速入门与 Dify 部署排障](/2026/10/26/llm/1-10-docker-quickstart-and-dify-deployment-troubleshooting/)。
 
 ---
 
@@ -593,4 +593,4 @@ Trace 用于记录运行链路里的详细信息，适合排查模型调用、�
 - **核心组件**：Coze Studio 负责智能体开发，Dify 负责工作流、知识库和应用发布，Coze Loop 更偏评测、实验、Trace 和运维。
 - **实操主线**：这章最关键的不是记住所有截图，而是掌握一条部署逻辑：**准备环境 -> 获取代码 -> 修改配置 -> 启动服务 -> 浏览器验证**。
 
-**建议下一步：** 如果你要继续看 Dify 部署后的 Docker 概念、数据位置、升级备份和排障，进入 [第 8 章 Docker 快速入门与 Dify 部署排障](8-Docker快速入门与Dify部署排障.md)；如果你要继续看更完整的企业部署链路，再进入 [第 7 章 企业级大模型部署](7-企业级大模型部署.md)。
+**建议下一步：** 如果你要继续看 Dify 部署后的 Docker 概念、数据位置、升级备份和排障，进入 [第 10 章 Docker 快速入门与 Dify 部署排障](/2026/10/26/llm/1-10-docker-quickstart-and-dify-deployment-troubleshooting/)；如果你要继续看更完整的企业部署链路，再进入 [第 9 章 企业级大模型部署](/2026/10/26/llm/1-9-enterprise-llm-deployment/)。

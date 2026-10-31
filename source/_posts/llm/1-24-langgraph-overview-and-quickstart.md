@@ -1,6 +1,6 @@
 ---
 title: 二十四、LangGraph 概述与快速入门
-date: 2026-10-26 23:05:00
+date: 2026-10-27 00:00:00
 categories:
   - llm
 tags:
@@ -21,9 +21,9 @@ tags:
 - 理清 **LangGraph、LangChain、Chain、Agent、Workflow** 之间的关系，知道什么时候该直接用 LangChain，什么时候应该上 LangGraph。
 - 掌握 LangGraph 入门最核心的四个概念：**State（状态）、Nodes（节点）、Edges（边）、Graph（图）**，并能按“定义状态 → 编写节点 → 连接边 → 编译 → 执行 → 可视化”的顺序跑通本章 3 个入门案例。
 
-**学习建议：** 这一章先跑通第一张 LangGraph 图，不急着背完所有 API。先抓住四个词：State 保存数据，Node 处理任务，Edge 决定流转，Graph 把它们编排起来。状态合并放到 [第 23 章](23-LangGraphAPI：图与状态.md)，节点和控制流放到 [第 24 章](24-LangGraphAPI：节点、边与进阶.md)，高级能力再看 [第 25 章](25-LangGraph高级特性.md) 和 [第 26 章](26-LangGraph多智能体与A2A.md)。
+**学习建议：** 这一章先跑通第一张 LangGraph 图，不急着背完所有 API。先抓住四个词：State 保存数据，Node 处理任务，Edge 决定流转，Graph 把它们编排起来。状态合并放到 [第 25 章](/2026/10/27/llm/1-25-langgraph-api-graph-and-state/)，节点和控制流放到 [第 26 章](/2026/10/27/llm/1-26-langgraph-api-nodes-edges-and-advanced/)，高级能力再看 [第 27 章](/2026/10/27/llm/1-27-langgraph-advanced-features/) 和 [第 28 章](/2026/10/27/llm/1-28-langgraph-multi-agent-and-a2a/)。
 
-**官方文档与资源**：详见 [工具导航与参考资料索引 - LangGraph](工具导航与参考资料索引.md#LangGraph)。
+**官方文档与资源**：详见 [工具导航与参考资料索引 - LangGraph](/2026/10/26/llm/tools-and-references-index/#LangGraph)。
 
 ---
 
@@ -52,7 +52,7 @@ tags:
 | **流式处理**           | 希望边执行边看到中间过程、Token 输出或自定义进度事件     | 让用户和开发者不用一直“等最后一刻”                  |
 | **生产级部署与可观测** | 想把图变成可运维、可追踪、可调试的线上应用               | 不只是本地 demo，而是更接近线上工作流运行时         |
 
-这一章先建立“**图 + 状态 + 最小运行方式**”的入门认知。上表里的持久化、流式、人机介入等能力，会在 [第 25 章](25-LangGraph高级特性.md) 展开。
+这一章先建立“**图 + 状态 + 最小运行方式**”的入门认知。上表里的持久化、流式、人机介入等能力，会在 [第 27 章](/2026/10/27/llm/1-27-langgraph-advanced-features/) 展开。
 
 ### 1.2 为什么需要 LangGraph
 
@@ -124,9 +124,9 @@ LangGraph 入门最重要的不是先背很多 API，而是先把这四个词的
 这四个概念里，下面几处最容易误解：
 
 - **节点不一定非得是大模型调用。** 节点本质是函数，它可以调 LLM，也可以只是做加减法、查数据库、调用 API、做格式转换。
-- **边不一定只是固定顺序。** `A → B` 是最简单的普通边，后面第 24 章还会讲条件边、动态分发、`Command` 等更灵活的控制方式。
+- **边不一定只是固定顺序。** `A → B` 是最简单的普通边，后面第 26 章还会讲条件边、动态分发、`Command` 等更灵活的控制方式。
 - **状态更新通常是“节点返回局部字段更新”，不是每次手动拼完整状态。** 比如节点只返回 `{"greeting": "你好,z3"}`，框架会按规则合并回全局 State。
-- **如果某个字段要“追加”而不是“覆盖”，就要考虑 Reducer。** 本章会通过 `add_messages` 先建立直觉，完整的 Schema / Reducer 机制会在 [第 23 章](23-LangGraphAPI：图与状态.md) 系统讲。
+- **如果某个字段要“追加”而不是“覆盖”，就要考虑 Reducer。** 本章会通过 `add_messages` 先建立直觉，完整的 Schema / Reducer 机制会在 [第 25 章](/2026/10/27/llm/1-25-langgraph-api-graph-and-state/) 系统讲。
 
 ### 1.5 使用场景
 
@@ -155,7 +155,7 @@ LangGraph 官方现在主要有两套写法：**Graph API** 和 **Functional API
 - **Graph API**：把流程显式写成 **State + Nodes + Edges + Graph**。优点是结构清楚、适合画图、适合教学，也更容易帮助你理解状态怎么在节点之间流动。
 - **Functional API**：用 `@entrypoint` / `@task` 这类函数式写法组织流程，更接近“在一个函数里编排任务”。优点是对已有 Python 代码的改造成本可能更低，但在入门阶段，流程结构不如显式图那么直观。
 
-**本教程第 22～26 章主线先采用 Graph API。** 先把“状态、节点、边、图”这套显式结构建立起来，后面学习条件边、子图、持久化、多智能体协作会更顺。Functional API 不是不重要，只是更适合在你已经理解 LangGraph 核心思想后，再作为另一种写法补充学习。
+**本教程第 24～28 章主线先采用 Graph API。** 先把“状态、节点、边、图”这套显式结构建立起来，后面学习条件边、子图、持久化、多智能体协作会更顺。Functional API 不是不重要，只是更适合在你已经理解 LangGraph 核心思想后，再作为另一种写法补充学习。
 
 <div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/22/22-2-1-1.jpeg" alt="Quickstart 关键步骤示意：官方提供 Graph API 与 Functional API 两种方式，图中红框突出 Graph API（本教程采用）"></div>
 
@@ -169,7 +169,7 @@ LangGraph 官方现在主要有两套写法：**Graph API** 和 **Functional API
 
 <div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/22/22-2-2-1.jpeg" alt="LangGraph 核心功能划分：预构建 Agent API、Agent Node API、构建图语法与 API"></div>
 
-**本章和后续第 23～25 章，主线优先学的是最底下这一层“构建图语法与 API”。** 因为只有先理解这层，后面你才知道 LangGraph 为什么能做条件跳转、状态持久化、多分支并行和人机中断。
+**本章和后续第 25～27 章，主线优先学的是最底下这一层“构建图语法与 API”。** 因为只有先理解这层，后面你才知道 LangGraph 为什么能做条件跳转、状态持久化、多分支并行和人机中断。
 
 ### 2.3 Graph 最小构建流程
 
@@ -210,7 +210,7 @@ print(result)
 
 这里有一个值得提前知道的小细节：`compile()` 之后得到的 app，才是真正可运行的图应用对象。图必须先编译后才能使用；编译这一步除了生成可执行对象，还会做一些基础结构检查，并为后面的持久化、中断恢复等运行时能力留出接入位置。入门阶段先把它理解成“**先搭图，再编译，最后才能运行**”就够了。
 
-换句话说，LangGraph 不是按你写代码的文本顺序一行行执行节点。你先写出业务逻辑图，`compile()` 再把它交给运行时调度；运行时会根据节点、边、状态通道和配置决定每一步该执行哪些节点。第 23 章讲 State 和 Reducer 时，我们会继续把这件事拆开看。
+换句话说，LangGraph 不是按你写代码的文本顺序一行行执行节点。你先写出业务逻辑图，`compile()` 再把它交给运行时调度；运行时会根据节点、边、状态通道和配置决定每一步该执行哪些节点。第 25 章讲 State 和 Reducer 时，我们会继续把这件事拆开看。
 
 ### 2.4 图结构可视化
 
@@ -290,7 +290,7 @@ messages: Annotated[List, add_messages]
 **这个案例重点看什么：**
 
 - `add_messages` 为什么适合用在对话消息列表上。
-- `init_chat_model(...)` 这一段其实复用了 [第 10 章](10-LangChain快速上手与HelloWorld.md) 的“调用三件套”思维：**模型名、API Key、Base URL**。
+- `init_chat_model(...)` 这一段其实复用了 [第 12 章](/2026/10/26/llm/1-12-langchain-quickstart-and-helloworld/) 的“调用三件套”思维：**模型名、API Key、Base URL**。
 - `model_node(state)` 为什么直接把 `state["messages"]` 交给模型，再返回 `{"messages": [reply]}`。
 - 最终结果为什么从 `result["messages"][-1].content` 读取模型最新回复。
 - 这张图虽然只有一个 `model` 节点，但它已经是后面“多节点对话图、工具调用图、Agent 图”的最小雏形。
@@ -394,4 +394,4 @@ print(graph.get_graph().print_ascii())
 - **本章三个案例是递进关系**：`LangGraphHello.py` 先理解最小图，`LangGraphBiz.py` 理解业务状态流，`LangGraphLLM.py` 再把聊天模型和 `add_messages` 接进图里。
 - 学完本章后，你至少应该能做到三件事：用“**图 + 状态**”概括 LangGraph 的核心思想，而不是把它理解成“把流程画出来”；说清 **Graph API** 和 **Functional API** 的区别，并理解为什么本教程先走 Graph API 主线；记住 LangGraph 最小落地五步：**定义状态 → 写节点 → 连边 → 编译 → 执行**。
 
-**建议下一步：** 先在本地把 `案例与源码-3-LangGraph框架/01-helloworld` 这 3 个脚本都跑一遍，然后做两个小改造：给 `LangGraphBiz.py` 再加一个乘法节点；给 `LangGraphLLM.py` 多传一轮历史消息，观察 `messages` 列表是怎么增长的。做完之后，再进入 [第 23 章 - LangGraph API：图与状态](23-LangGraphAPI：图与状态.md)，系统学习 State Schema 和 Reducer。
+**建议下一步：** 先在本地把 `案例与源码-3-LangGraph框架/01-helloworld` 这 3 个脚本都跑一遍，然后做两个小改造：给 `LangGraphBiz.py` 再加一个乘法节点；给 `LangGraphLLM.py` 多传一轮历史消息，观察 `messages` 列表是怎么增长的。做完之后，再进入 [第 25 章 - LangGraph API：图与状态](/2026/10/27/llm/1-25-langgraph-api-graph-and-state/)，系统学习 State Schema 和 Reducer。
