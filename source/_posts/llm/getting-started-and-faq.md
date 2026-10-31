@@ -158,8 +158,19 @@ python3.10 -m venv .venv
 # macOS / Linux：
 source .venv/bin/activate
 ```
+然后激活虚拟环境（Mac/Linux 命令）
+```bash
+source .venv/bin/activate
 
+```
 激活成功后，终端前面通常会出现 `(.venv)`。
+
+退出虚拟环境命令（以后要用）
+
+```bash
+deactivate
+```
+
 
 ### 3.3 安装依赖
 
