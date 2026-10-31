@@ -1662,7 +1662,7 @@ document.addEventListener('DOMContentLoaded', function() {
 <li>对 Redis 在本章中的定位建立清晰认识：它不是让模型“变聪明”，而是让<strong>会话历史可持久化、可跨进程、可跨实例共享</strong>。</li>
 </ul>
 <p><strong>学习建议：</strong> 这章最好用两轮对话来学：先看没有记忆时模型为什么“忘事”，再看同一个 <code>session_id</code> 下历史消息如何被读出、拼进提示词、调用模型、写回存储。Redis 先别当重点，它只是把内存版的历史保存得更持久。只要能讲清“读历史 -&gt; 拼提示 -&gt; 调模型 -&gt; 写历史”，后面的实现类就不散。</p>
-<p><strong>官方文档与资源</strong>：详见 <a href="/2026/10/26/llm/tools-and-references-index/#LangGraph">工具导航与参考资料索引 - LangGraph</a>。</p>
+<p><strong>官方文档与资源</strong>：详见 <a href="/2026/10/01/llm/tools-and-references-index/#LangGraph">工具导航与参考资料索引 - LangGraph</a>。</p>
 <hr>
 <h2 id="1、记忆简介"><a href="#1、记忆简介" class="headerlink" title="1、记忆简介"></a>1、记忆简介</h2><h3 id="1-1-为什么需要记忆"><a href="#1-1-为什么需要记忆" class="headerlink" title="1.1 为什么需要记忆"></a>1.1 为什么需要记忆</h3><p>如果你只做单轮问答，那么每次请求都是一次独立调用，模型只看当前输入，答完就结束。<br>但只要你开始做聊天机器人、客服助手、学习助手、企业知识问答，多轮上下文就会立刻成为刚需。</p>
 <p>最典型的现象就是：</p>
@@ -1712,7 +1712,7 @@ document.addEventListener('DOMContentLoaded', function() {
 </li>
 <li><p><strong>保存当前会话上下文</strong>：例如用户正在做一份简历、正在学习 Python、正在整理某份报告，后续问题不必每轮都重述背景。</p>
 </li>
-<li><p><strong>为链式流程提供上下文</strong>：历史消息最终通常通过 <a href="/2026/10/26/llm/1-15-prompts-and-message-templates/">第 15 章</a> 的 <code>MessagesPlaceholder</code> 注入模板，与 <a href="/2026/10/26/llm/1-17-lcel-and-chaining/">第 17 章</a> 中的链组合在一起使用。</p>
+<li><p><strong>为链式流程提供上下文</strong>：历史消息最终通常通过 <a href="/2026/10/15/llm/1-15-prompts-and-message-templates/">第 15 章</a> 的 <code>MessagesPlaceholder</code> 注入模板，与 <a href="/2026/10/17/llm/1-17-lcel-and-chaining/">第 17 章</a> 中的链组合在一起使用。</p>
 </li>
 <li><p><strong>为后续 Agent &#x2F; Tool &#x2F; LangGraph 打基础</strong>：你后面会发现，工具调用、Agent、多步决策几乎都离不开“当前线程 &#x2F; 当前会话”的状态保存。</p>
 </li>
@@ -1721,9 +1721,9 @@ document.addEventListener('DOMContentLoaded', function() {
 <ul>
 <li><p><strong>不是长期知识记忆</strong>：比如用户永久画像、跨很多天的长期偏好管理，这不属于本章核心。</p>
 </li>
-<li><p><strong>不是 RAG 检索记忆</strong>：把外部文档查出来再回答，属于 <a href="/2026/10/26/llm/1-21-rag-retrieval-augmented-generation/">第 21 章 RAG</a> 的主线。</p>
+<li><p><strong>不是 RAG 检索记忆</strong>：把外部文档查出来再回答，属于 <a href="/2026/10/21/llm/1-21-rag-retrieval-augmented-generation/">第 21 章 RAG</a> 的主线。</p>
 </li>
-<li><p><strong>不是 Agent 决策状态机</strong>：更复杂的循环式状态与持久化，会在 <a href="/2026/10/26/llm/1-23-agent/">Agent</a> 与 LangGraph 相关章节里更自然地出现。</p>
+<li><p><strong>不是 Agent 决策状态机</strong>：更复杂的循环式状态与持久化，会在 <a href="/2026/10/23/llm/1-23-agent/">Agent</a> 与 LangGraph 相关章节里更自然地出现。</p>
 </li>
 </ul>
 <p>所以你可以先把本章聚焦成一句话：<strong>本章主要讲“当前会话里，怎么把历史消息保存起来并重新喂给模型”。</strong></p>
@@ -1752,10 +1752,10 @@ document.addEventListener('DOMContentLoaded', function() {
 
 <h3 id="3-2-工程化表达"><a href="#3-2-工程化表达" class="headerlink" title="3.2 工程化表达"></a>3.2 工程化表达</h3><p>如果用更接近程序的方式来描述，一次带记忆的调用通常是这样发生的：</p>
 <p><strong>第一步：根据会话标识找到对应历史。</strong><br>比如通过 <code>session_id=&quot;user-001&quot;</code> 找到这位用户当前会话的消息列表。</p>
-<p><strong>第二步：把历史消息插入 Prompt。</strong><br>这一步通常会和 <a href="/2026/10/26/llm/1-15-prompts-and-message-templates/">第 15 章</a> 里的 <code>MessagesPlaceholder(&quot;history&quot;)</code> 配合使用。</p>
+<p><strong>第二步：把历史消息插入 Prompt。</strong><br>这一步通常会和 <a href="/2026/10/15/llm/1-15-prompts-and-message-templates/">第 15 章</a> 里的 <code>MessagesPlaceholder(&quot;history&quot;)</code> 配合使用。</p>
 <p><strong>第三步：把“历史 + 当前问题”一起交给模型。</strong><br>这样模型看到的就不再只是当前一句话，而是完整上下文。</p>
 <p><strong>第四步：把本轮消息写回历史存储。</strong><br>也就是把：用户这一轮输入、模型这一轮回复，都追加进去，供下一轮再读取。</p>
-<h3 id="3-3-MessagesPlaceholder-与模板的关系"><a href="#3-3-MessagesPlaceholder-与模板的关系" class="headerlink" title="3.3 MessagesPlaceholder 与模板的关系"></a>3.3 MessagesPlaceholder 与模板的关系</h3><p>在对话历史场景里，你通常不会把历史消息一条条手写死在模板中，因为历史轮数与内容每轮都在变。更合理的做法是在模板里留一个“历史消息插槽”，运行时再把当前会话历史整块塞进去——这正是 <a href="/2026/10/26/llm/1-15-prompts-and-message-templates/">第 15 章</a> 中 <code>MessagesPlaceholder</code> 的典型用法，与本章的“读写历史”前后衔接。</p>
+<h3 id="3-3-MessagesPlaceholder-与模板的关系"><a href="#3-3-MessagesPlaceholder-与模板的关系" class="headerlink" title="3.3 MessagesPlaceholder 与模板的关系"></a>3.3 MessagesPlaceholder 与模板的关系</h3><p>在对话历史场景里，你通常不会把历史消息一条条手写死在模板中，因为历史轮数与内容每轮都在变。更合理的做法是在模板里留一个“历史消息插槽”，运行时再把当前会话历史整块塞进去——这正是 <a href="/2026/10/15/llm/1-15-prompts-and-message-templates/">第 15 章</a> 中 <code>MessagesPlaceholder</code> 的典型用法，与本章的“读写历史”前后衔接。</p>
 <h3 id="3-4-session-id-的意义"><a href="#3-4-session-id-的意义" class="headerlink" title="3.4 session_id 的意义"></a>3.4 session_id 的意义</h3><p>只要涉及记忆，就会涉及一个关键问题：<strong>你怎么知道哪份历史属于哪位用户、哪次会话？</strong></p>
 <p>最常见的做法就是使用 <code>session_id</code>，它就是“当前会话的编号”。</p>
 <p>例如：</p>
@@ -2118,7 +2118,7 @@ document.addEventListener('DOMContentLoaded', function() {
 <li><strong>存储怎么选</strong>：<code>InMemoryChatMessageHistory</code> 适合单进程学习和演示，进程一停就丢；<code>RedisChatMessageHistory</code> 适合持久化、多实例共享和跨进程会话恢复。</li>
 <li><strong>版本关系</strong>：本章用 <code>RunnableWithMessageHistory + BaseChatMessageHistory</code> 讲清链级记忆；复杂 Agent 的长期运行状态，后面再看 LangGraph 的 thread、persistence 和 checkpointer。</li>
 </ul>
-<p><strong>建议下一步：</strong> 先把无记忆、内存版、多 session 版、Redis 版案例都跑一遍，重点观察“同一个 <code>session_id</code> 下历史是怎么被延续的”；然后继续学习 <a href="/2026/10/26/llm/1-19-tools-and-tool-calling/">第 19 章 Tools 工具调用</a>，你会更容易理解为什么 Agent 场景不仅需要工具，还需要会话状态与历史管理。</p>
+<p><strong>建议下一步：</strong> 先把无记忆、内存版、多 session 版、Redis 版案例都跑一遍，重点观察“同一个 <code>session_id</code> 下历史是怎么被延续的”；然后继续学习 <a href="/2026/10/19/llm/1-19-tools-and-tool-calling/">第 19 章 Tools 工具调用</a>，你会更容易理解为什么 Agent 场景不仅需要工具，还需要会话状态与历史管理。</p>
 </div>
         </div>
       </main>
