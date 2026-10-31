@@ -1,6 +1,6 @@
 ---
 title: 5. Spring生态（Spring、SpringBoot、@Transactional、循环依赖、AOP）
-date: 2026-10-25 05:00:00
+date: 2025-12-05 01:00:00
 categories:
   - interview
 tags:

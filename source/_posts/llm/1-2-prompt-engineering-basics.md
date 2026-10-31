@@ -1,6 +1,6 @@
 ---
 title: 二、提示词工程基础
-date: 2026-10-26 02:00:00
+date: 2026-10-02 02:00:00
 categories:
   - llm
 tags:

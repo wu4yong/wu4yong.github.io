@@ -1,6 +1,6 @@
 ---
 title: 二、SpringAi快速使用
-date: 2026-10-26 02:00:00
+date: 2026-09-02 01:00:00
 categories:
   - ai
 tags:

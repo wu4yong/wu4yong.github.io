@@ -1,6 +1,6 @@
 ---
 title: 2. JVM
-date: 2026-10-25 02:00:00
+date: 2025-12-02 01:00:00
 categories:
   - interview
 tags:

@@ -1,6 +1,6 @@
 ---
 title: 二十六、LangGraph API：节点、边与进阶
-date: 2026-10-27 02:00:00
+date: 2026-10-26 02:00:00
 categories:
   - llm
 tags:

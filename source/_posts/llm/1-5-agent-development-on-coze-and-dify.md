@@ -1,6 +1,6 @@
 ---
 title: 五、基于 Coze&Dify 平台的智能体开发
-date: 2026-10-26 05:00:00
+date: 2026-10-05 05:00:00
 categories:
   - llm
 tags:

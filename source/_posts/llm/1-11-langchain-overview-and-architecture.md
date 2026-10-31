@@ -1,6 +1,6 @@
 ---
 title: 十一、LangChain 概述与架构
-date: 2026-10-26 11:00:00
+date: 2026-10-11 11:00:00
 categories:
   - llm
 tags:

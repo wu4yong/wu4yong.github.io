@@ -1,6 +1,6 @@
 ---
 title: 八、Coze 与 Dify 的 Windows 平台部署
-date: 2026-10-26 08:00:00
+date: 2026-10-08 08:00:00
 categories:
   - llm
 tags:

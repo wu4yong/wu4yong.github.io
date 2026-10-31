@@ -1,6 +1,6 @@
 ---
 title: 十八、记忆与对话历史（含 Redis 基础）
-date: 2026-10-26 18:00:00
+date: 2026-10-18 18:00:00
 categories:
   - llm
 tags:

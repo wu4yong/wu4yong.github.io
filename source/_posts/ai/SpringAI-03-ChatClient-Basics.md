@@ -1,6 +1,6 @@
 ---
 title: 三、ChatClient的基本使用及实战
-date: 2026-10-26 03:00:00
+date: 2026-09-03 01:00:00
 categories:
   - ai
 tags:

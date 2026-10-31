@@ -1,6 +1,6 @@
 ---
 title: 三、RAG、微调、续训与智能体选型
-date: 2026-10-26 03:00:00
+date: 2026-10-03 03:00:00
 categories:
   - llm
 tags:

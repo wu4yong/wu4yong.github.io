@@ -1,6 +1,6 @@
 ---
 title: 十七、LCEL 与链式调用
-date: 2026-10-26 17:00:00
+date: 2026-10-17 17:00:00
 categories:
   - llm
 tags:

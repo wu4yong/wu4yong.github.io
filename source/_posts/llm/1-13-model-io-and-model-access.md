@@ -1,6 +1,6 @@
 ---
 title: 十三、Model I/O 与模型接入
-date: 2026-10-26 13:00:00
+date: 2026-10-13 13:00:00
 categories:
   - llm
 tags:

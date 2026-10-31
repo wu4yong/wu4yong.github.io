@@ -1,6 +1,6 @@
 ---
 title: 十二、LangChain 快速上手与 HelloWorld
-date: 2026-10-26 12:00:00
+date: 2026-10-12 12:00:00
 categories:
   - llm
 tags:

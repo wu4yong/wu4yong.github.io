@@ -1,6 +1,6 @@
 ---
 title: 四、RAG 搭建企业私有&个人知识库
-date: 2026-10-26 04:00:00
+date: 2026-10-04 04:00:00
 categories:
   - llm
 tags:

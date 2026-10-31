@@ -1,6 +1,6 @@
 ---
 title: Mysql数据类型
-date: 2026-10-26 04:00:00
+date: 2026-06-04 01:00:00
 categories:
   - database
 tags:

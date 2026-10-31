@@ -1,6 +1,6 @@
 ---
 title: 一、SpringAi特性介绍
-date: 2026-10-26 01:00:00
+date: 2026-09-01 01:00:00
 categories:
   - ai
 tags:

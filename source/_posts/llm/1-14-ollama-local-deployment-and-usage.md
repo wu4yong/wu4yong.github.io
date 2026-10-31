@@ -1,6 +1,6 @@
 ---
 title: 十四、Ollama 本地部署与调用
-date: 2026-10-26 14:00:00
+date: 2026-10-14 14:00:00
 categories:
   - llm
 tags:

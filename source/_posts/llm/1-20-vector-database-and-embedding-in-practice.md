@@ -1,6 +1,6 @@
 ---
 title: 二十、向量数据库与 Embedding 实战
-date: 2026-10-26 20:00:00
+date: 2026-10-20 20:00:00
 categories:
   - llm
 tags:
