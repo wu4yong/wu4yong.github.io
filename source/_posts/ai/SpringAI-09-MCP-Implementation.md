@@ -4,7 +4,7 @@ date: 2026-09-09 01:00:00
 categories:
   - ai
 tags:
-  - Spring AI
+  - SpringAi
 ---
 
 <div class="essay-banner essay-image11">
