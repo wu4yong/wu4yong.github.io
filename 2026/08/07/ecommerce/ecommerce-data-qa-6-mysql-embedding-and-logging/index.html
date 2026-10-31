@@ -1,0 +1,2235 @@
+<!--
+  ============================================
+  文章详情页面模板
+  文件：post.njk
+  作用：展示单篇文章正文、左侧侧边栏、返回顶部悬浮按钮
+  样式依赖：_css/common.css、_css/post-layout.css、_css/sidebar.css
+  脚本依赖：_js/post-float-btn.js
+  组件依赖：_components/Particles.njk、_components/Sidebar.njk
+  ============================================
+-->
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="UTF-8">
+    <title> 时空秘境 - 六、电商问数：MySQL、Embedding 接入与日志管理 </title>
+    <style>
+      /**
+ * ============================================
+ * 公共样式
+ * 作用：重置样式、星空背景、通用组件样式
+ * 适用于：所有页面
+ * ============================================
+ */
+
+/* ----- 重置所有元素边距和盒模型 ----- */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+/* ----- 页面主体 ----- */
+body {
+  background: #020817;              /* 深空蓝背景色 */
+  color: #fff;
+  font-family: "Microsoft Yahei", -apple-system, BlinkMacSystemFont, sans-serif;
+}
+
+/* ----- 星空粒子容器（固定定位，全屏覆盖）----- */
+#particles {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 0;                       /* 置于最底层，内容在上面 */
+}
+
+/* ----- 通用内容容器（归档页、标签页等使用）----- */
+.container {
+  position: relative;
+  z-index: 10;                      /* 在粒子层之上 */
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 80px 20px;
+}
+
+/* ----- 页面头部 ----- */
+.header {
+  text-align: center;
+  margin-bottom: 40px;
+}
+.header h1 {
+  color: #00eeff;
+  font-size: 42px;
+  text-shadow: 0 0 20px #00eeff;    /* 青色发光效果 */
+}
+
+/* ----- 通用返回首页按钮 ----- */
+.back-home {
+  display: inline-block;
+  margin-top: 20px;
+  padding: 10px 25px;
+  background: rgba(0, 32, 65, 0.8);
+  border: 1px solid #00eeff;
+  border-radius: 30px;
+  color: #00eeff;
+  text-decoration: none;
+  transition: all 0.3s ease;
+}
+.back-home:hover {
+  background: #00eeff;
+  color: #020817;
+}
+
+/* ----- 文章/页面列表容器（归档页使用）----- */
+.post-list {
+  background: rgba(0, 22, 45, 0.85);
+  border-radius: 18px;
+  padding: 30px;
+  border: 1px solid #00eeff;
+}
+
+/* ----- 列表项 ----- */
+.post-item {
+  margin: 20px 0;
+  padding: 15px;
+  border-bottom: 1px solid #00eeff33;
+}
+.post-item a {
+  color: #00eeff;
+  text-decoration: none;
+  font-size: 20px;
+  transition: all 0.3s ease;
+}
+.post-item a:hover {
+  text-shadow: 0 0 8px #00eeff;
+}
+
+/* ============================================
+   移动端图片和视频自适应
+   ============================================ */
+
+/* 所有图片自适应 */
+.article-content img {
+  max-width: 100%;
+  height: auto;
+  display: block;
+  margin: 10px auto;
+  border-radius: 8px;
+}
+
+/* 所有视频和 iframe 自适应 */
+.article-content video,
+.article-content iframe {
+  max-width: 100%;
+  height: auto;
+  display: block;
+  margin: 10px auto;
+  border-radius: 8px;
+}
+
+/* 视频容器 - 保持 16:9 比例 */
+.video-container {
+  position: relative;
+  width: 100%;
+  padding-bottom: 56.25%;  /* 16:9 */
+  height: 0;
+  overflow: hidden;
+  border-radius: 8px;
+  margin: 10px 0;
+}
+
+.video-container video,
+.video-container iframe {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  border: none;
+}
+
+/* B站 iframe 自适应 */
+.article-content iframe[src*="bilibili"] {
+  width: 100%;
+  height: 400px;
+  max-height: 50vh;
+  border-radius: 8px;
+}
+
+/* 移动端适配 */
+@media (max-width: 768px) {
+  .article-content iframe[src*="bilibili"] {
+    height: 250px;
+  }
+  
+  .article-content video,
+  .article-content iframe {
+    border-radius: 6px;
+  }
+}
+
+/* ===== 手机端代码块和表格滚动 ===== */
+@media (max-width: 768px) {
+  /* 代码块水平滚动 */
+  .article-content pre {
+    overflow-x: auto;
+    white-space: pre-wrap;
+    word-break: break-all;
+    font-size: 13px;
+    padding: 12px;
+  }
+  
+  .article-content code {
+    font-size: 13px;
+    word-break: break-all;
+  }
+  
+  /* 表格水平滚动 */
+  .article-content table {
+    display: block;
+    overflow-x: auto;
+    white-space: nowrap;
+    font-size: 13px;
+  }
+  
+  .article-content table th,
+  .article-content table td {
+    padding: 6px 10px;
+    font-size: 12px;
+  }
+  
+  /* 图片自适应 */
+  .article-content img {
+    max-width: 100%;
+    height: auto;
+  }
+}
+
+/* ===== 移动端代码块水平滚动 ===== */
+@media (max-width: 768px) {
+  .article-content pre,
+  .article-content .highlight {
+    overflow-x: auto !important;
+    white-space: pre !important;
+    word-break: normal !important;
+    padding: 12px !important;
+    font-size: 13px !important;
+    -webkit-overflow-scrolling: touch;
+  }
+  
+  .article-content code {
+    font-size: 13px !important;
+    word-break: normal !important;
+  }
+  
+  .article-content table {
+    display: block !important;
+    overflow-x: auto !important;
+    white-space: nowrap !important;
+    -webkit-overflow-scrolling: touch;
+  }
+}
+
+/* ===== 移动端代码块水平滚动 ===== */
+@media (max-width: 768px) {
+  .article-content pre,
+  .article-content .highlight {
+    overflow-x: auto !important;
+    white-space: pre !important;
+    word-break: normal !important;
+    padding: 12px !important;
+    font-size: 13px !important;
+    -webkit-overflow-scrolling: touch;
+  }
+  
+  .article-content code {
+    font-size: 13px !important;
+    word-break: normal !important;
+  }
+  
+  .article-content table {
+    display: block !important;
+    overflow-x: auto !important;
+    white-space: nowrap !important;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .essay-image {
+    height: 160px;
+    font-size: 18px;
+    letter-spacing: 2px;
+  }
+}
+
+
+      /**
+ * ============================================
+ * 页面归属：post.njk 文章详情页面模板
+ * ============================================
+ */
+.app-layout {
+  position: relative;
+  z-index: 10;
+  display: flex;
+  height: 100vh;
+  overflow: hidden;
+}
+
+.main-content {
+  flex: 1;
+  overflow-y: auto;
+  padding: 40px 60px;
+}
+
+.article-card {
+  width: 100%;
+  background: rgba(0, 22, 45, 0.6);
+  border-radius: 18px;
+  padding: 40px;
+  border: 1px solid #00eeff;
+}
+
+.article-title {
+  color: #5cd0f0;
+  font-size: 32px;
+  margin-bottom: 20px;
+  padding-bottom: 15px;
+  border-bottom: 1px solid #00eeff33;
+}
+
+.article-meta {
+  color: #99ccff;
+  font-size: 14px;
+  margin-bottom: 30px;
+}
+
+/* ========== 文章正文样式 ========== */
+.article-content {
+  line-height: 1.8;
+}
+
+/* ---------- 标题（保持纯色） ---------- */
+.article-content h1 {
+  color: #5cd0f0;
+  font-size: 28px;
+  margin: 30px 0 15px;
+  border-left: 3px solid #00eeff;
+  padding-left: 12px;
+}
+.article-content h2 {
+  color: #5cd0f0;
+  font-size: 24px;
+  margin: 25px 0 12px;
+}
+.article-content h3 {
+  color: #99ccff;
+  font-size: 20px;
+  margin: 20px 0 10px;
+}
+
+/* ---------- 引用块（保持原来的浅青色） ---------- */
+.article-content blockquote {
+  color: #e0fcff;                   /* 引用块本身的颜色 */
+  border-left: 4px solid #00eeff;
+  background: rgba(0, 22, 45, 0.4);
+  padding: 10px 20px;
+  margin: 16px 0;
+}
+.article-content blockquote p {
+  color: #e0fcff !important;        /* 引用块内文字保持原色 */
+}
+
+/* ---------- 彩虹渐变（静态，无动画） ---------- */
+/* 正文段落 */
+.article-content p {
+  background: linear-gradient(
+    90deg,
+    #00ff88,   /* 绿 */
+    #ff6b6b,   /* 红 */
+    #ffd93d,   /* 黄 */
+    #4dabf7,   /* 蓝 */
+    #ff922b,   /* 橙 */
+    #00ff88    /* 绿（循环） */
+  );
+  background-size: 300% 100%;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  font-weight: 500;
+  margin: 0 0 16px;
+}
+
+/* 列表项 */
+.article-content ul li,
+.article-content ol li {
+  background: linear-gradient(
+    90deg,
+    #00ff88,
+    #ff6b6b,
+    #ffd93d,
+    #4dabf7,
+    #ff922b,
+    #00ff88
+  );
+  background-size: 300% 100%;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* 加粗文字 */
+.article-content strong {
+  background: linear-gradient(
+    90deg,
+    #ffd93d,
+    #ff922b,
+    #ff6b6b,
+    #ffd93d
+  );
+  background-size: 300% 100%;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* 链接 */
+.article-content a {
+  background: linear-gradient(
+    90deg,
+    #4dabf7,
+    #00ff88,
+    #ffd93d,
+    #4dabf7
+  );
+  background-size: 300% 100%;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  border-bottom: 1px solid rgba(77, 171, 247, 0.3);
+}
+
+/* ---------- 代码块（保持暗色背景，文字亮色） ---------- */
+.article-content code {
+  background: #001a33;
+  padding: 3px 8px;
+  border-radius: 6px;
+  font-family: monospace;
+  -webkit-text-fill-color: #a8d8a8;  /* 代码文字浅绿色 */
+}
+.article-content pre {
+  background: #001a33;
+  padding: 15px;
+  border-radius: 10px;
+  overflow-x: auto;
+}
+.article-content pre code {
+  -webkit-text-fill-color: #a8d8a8;
+}
+
+/* ========== 右下角悬浮按钮 ========== */
+.float-buttons {
+  position: fixed;
+  bottom: 30px;
+  right: 30px;
+  z-index: 100;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.float-btn {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: rgba(0, 32, 65, 0.9);
+  border: 1px solid #00eeff;
+  color: #5cd0f0;
+  font-size: 20px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.3s ease;
+  text-decoration: none;
+}
+
+.float-btn:hover {
+  transform: scale(1.1);
+  background: #00eeff;
+  color: #020817;
+  box-shadow: 0 0 15px #00eeff;
+}
+
+#back-to-top {
+  opacity: 0;
+  visibility: hidden;
+  transition: all 0.3s ease;
+}
+#back-to-top.show {
+  opacity: 1;
+  visibility: visible;
+}
+
+@media (max-width: 768px) {
+  .main-content {
+    padding: 20px;
+  }
+  .float-buttons {
+    bottom: 15px;
+    right: 15px;
+  }
+  .float-btn {
+    width: 40px;
+    height: 40px;
+    font-size: 16px;
+  }
+}
+
+      /**
+ * ============================================
+ * 侧边栏样式
+ * 作用：左侧导航栏的所有样式
+ * 适用于：Sidebar.njk 组件
+ * ============================================
+ */
+
+/* ----- 左侧导航栏容器 ----- */
+.sidebar {
+  width: 320px;                     /* 固定宽度 */
+  background: rgba(0, 22, 45, 0.6);
+  backdrop-filter: blur(10px);      /* 毛玻璃效果 */
+  border-right: 1px solid #00eeff33;
+  overflow-y: auto;                 /* 内容过多时滚动 */
+  padding: 20px;
+  flex-shrink: 0;                   /* 防止被压缩 */
+}
+
+/* ========== 个人资料卡片 ========== */
+.profile-card {
+  text-align: center;
+  padding: 20px;
+  background: rgba(0, 22, 45, 0.7);
+  border-radius: 16px;
+  margin-bottom: 20px;
+}
+
+/* ----- 头像 ----- */
+.avatar img {
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;              /* 圆形头像 */
+  border: 2px solid #00eeff;
+}
+
+/* ----- 昵称 ----- */
+.nickname {
+  color: #00eeff;
+  font-size: 18px;
+  margin: 10px 0 5px;
+}
+
+/* ----- 个人简介 ----- */
+.bio {
+  color: #88aaff;
+  font-size: 12px;
+}
+
+/* ----- 统计数据（文章数、粉丝数、关注数）----- */
+.stats {
+  display: flex;
+  justify-content: space-around;
+  margin: 15px 0;
+}
+.stat-item {
+  text-align: center;
+}
+.stat-num {
+  display: block;
+  color: #00eeff;
+  font-size: 20px;
+  font-weight: bold;
+}
+.stat-label {
+  color: #88aaff;
+  font-size: 12px;
+}
+
+/* ----- 关注按钮 ----- */
+.follow-btn {
+  background: rgba(0, 238, 255, 0.2);
+  border: 1px solid #00eeff;
+  color: #00eeff;
+  padding: 6px 20px;
+  border-radius: 20px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+.follow-btn:hover {
+  background: #00eeff;
+  color: #020817;
+}
+
+/* ========== 搜索框 ========== */
+.search-box {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 20px;
+}
+.search-box input {
+  flex: 1;
+  padding: 10px;
+  background: rgba(0, 22, 45, 0.7);
+  border: 1px solid #00eeff;
+  border-radius: 8px;
+  color: #fff;
+}
+.search-box input::placeholder {
+  color: #88aaff;
+}
+.search-box button {
+  padding: 10px 15px;
+  background: rgba(0, 238, 255, 0.2);
+  border: 1px solid #00eeff;
+  border-radius: 8px;
+  color: #00eeff;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+.search-box button:hover {
+  background: #00eeff;
+  color: #020817;
+}
+
+/* ========== 卡片通用样式 ========== */
+.links-card,
+.tags-card,
+.archive-card {
+  background: rgba(0, 22, 45, 0.7);
+  border-radius: 16px;
+  padding: 15px;
+  margin-bottom: 20px;
+}
+.links-card h4,
+.tags-card h4,
+.archive-card h4 {
+  color: #00eeff;
+  margin-bottom: 10px;
+  padding-bottom: 5px;
+  border-bottom: 1px solid #00eeff33;
+}
+
+/* ----- 链接列表 ----- */
+.links-card ul,
+.archive-list {
+  list-style: none;
+  padding: 0;
+}
+.links-card li,
+.archive-list li {
+  margin: 8px 0;
+}
+.links-card a,
+.archive-list a {
+  color: #ccddff;
+  text-decoration: none;
+  font-size: 13px;
+  transition: all 0.3s ease;
+}
+.links-card a:hover,
+.archive-list a:hover {
+  color: #00eeff;
+  padding-left: 4px;
+}
+
+/* ========== 标签云 ========== */
+.tag-cloud {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.tag-link {
+  color: #ccddff;
+  text-decoration: none;
+  font-size: 12px;
+  padding: 4px 8px;
+  background: rgba(0, 0, 0, 0.3);
+  border-radius: 15px;
+  transition: all 0.3s ease;
+}
+.tag-link:hover {
+  color: #00eeff;
+  background: rgba(0, 238, 255, 0.2);
+}
+
+/* ========== 移动端适配：小屏幕隐藏侧边栏 ========== */
+@media (max-width: 768px) {
+  .sidebar {
+    display: none;
+  }
+}
+
+/* ==========侧边栏折叠｜按钮右上角顶角｜圆形、单图标不切换 ========== */
+aside#sidebar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 320px;
+  height: 100vh;
+  z-index: 999;
+  transition: left 0.3s ease;
+  overflow-y: auto;
+}
+/* 折叠：侧边栏向左滑出屏幕 */
+body.sidebar-collapsed aside#sidebar {
+  left: -320px;
+}
+
+/* 折叠按钮：紧贴右上角顶角，圆形40px，和右下角按钮尺寸统一 */
+.sidebar-toggle {
+  position: fixed;
+  z-index: 10000;
+  right: 12px;
+  top: 12px;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  border: 1px solid rgba(0, 238, 255, 0.45);
+  background: rgba(10, 28, 56, 0.88);
+  color: #00eeff;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.25s ease;
+  box-shadow:
+    0 0 12px rgba(0, 238, 255, 0.35),
+    inset 0 0 10px rgba(0, 238, 255, 0.12);
+  padding: 0;
+  font-size: 20px;
+}
+/* 只用before一个图标，打开/收起图标保持不变 */
+.sidebar-toggle::before {
+  content: "⤢";
+}
+.sidebar-toggle::after {
+  content: "";
+}
+
+.sidebar-toggle:hover {
+  background: rgba(0, 238, 255, 0.18);
+  border-color: #00eeff;
+  box-shadow:
+    0 0 18px rgba(0, 238, 255, 0.55),
+    inset 0 0 14px rgba(0, 238, 255, 0.25);
+  transform: translateY(-1px);
+}
+
+/* 折叠状态图标保持不变 */
+body.sidebar-collapsed .sidebar-toggle::before {
+  content: "⤢";
+}
+
+/* post页面正文边距 */
+.main-content {
+  margin-left: 340px;
+  transition: margin-left 0.3s ease;
+}
+body.sidebar-collapsed .main-content {
+  margin-left: 0 !important;
+}
+
+/* ========== 右下角悬浮按钮统一样式｜和右上角折叠按钮尺寸风格完全对齐 ========== */
+.float-buttons {
+  position: fixed;
+  right: 12px;
+  bottom: 12px;
+  z-index: 10000;
+  display: flex;
+  flex-direction: column;
+  gap:10px;
+}
+.float-btn {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  border: 1px solid rgba(0, 238, 255, 0.45);
+  background: rgba(10, 28, 56, 0.88);
+  color: #00eeff;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size:18px;
+  transition: all 0.25s ease;
+  box-shadow:
+    0 0 12px rgba(0, 238, 255, 0.35),
+    inset 0 0 10px rgba(0, 238, 255, 0.12);
+  padding:0;
+  text-decoration: none;
+}
+.float-btn:hover {
+  background: rgba(0, 238, 255, 0.18);
+  border-color: #00eeff;
+  box-shadow:
+    0 0 18px rgba(0, 238, 255, 0.55),
+    inset 0 0 14px rgba(0, 238, 255, 0.25);
+  transform: translateY(-1px);
+}
+
+/* 移动端隐藏两个区域的按钮 */
+@media (max-width:768px){
+  .sidebar-toggle {
+    display: none !important;
+  }
+  .float-buttons{
+    display:none !important;
+  }
+}
+       
+/* ===== DPlayer 播放器移动端适配 ===== */
+.dplayer {
+  max-width: 100%;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.dplayer-video-wrap {
+  position: relative;
+  padding-bottom: 56.25%;
+  height: 0;
+}
+
+.dplayer-video-wrap video {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+}
+
+@media (max-width: 768px) {
+  .dplayer {
+    border-radius: 6px;
+  }
+}
+
+/* 代码块在正文容器内铺满整行，不向外溢出 */
+.article-content figure.highlight {
+  width: 100% !important;
+  max-width: 100% !important;
+  margin: 1rem 0;
+}
+.article-content .highlight table {
+  width: 100% !important;
+  table-layout: auto;
+}
+/* 重点：收紧行号gutter，不要留巨大空白 */
+.article-content .highlight .gutter {
+  width: 48px !important;
+  min-width: 48px !important;
+  text-align: right;
+  padding-right: 8px !important;
+}
+.article-content .highlight .code pre {
+  overflow-x: auto;
+}
+
+/* 头部横幅样式 */
+.essay-banner {
+  width: 100%;
+  height: 240px;
+  background: linear-gradient(135deg, #1a1a2e, #16213e, #0f3460);
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #88aaff;
+  font-size: 24px;
+  font-family: "STKaiti", "KaiTi", "楷体", serif;
+  letter-spacing: 4px;
+  margin-bottom: 20px;
+}
+
+/* 公共头部横幅样式 */
+.essay-chapter-header {
+  width: 100%;
+  height: 210px;
+  background-size: cover;
+  background-position: left center;
+  background-repeat: no-repeat;
+  background-color: #020817;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #88aaff;
+  font-size: 24px;
+  font-family: "STKaiti", "KaiTi", "楷体", serif;
+  letter-spacing: 4px;
+  margin-bottom: 20px;
+}
+
+/* 各自只写背景图 */
+.essay-image1 {
+  background-image: url("/assets/img/interview/00-ChapterHeader-1-java-concurrency.jpg");
+}
+.essay-image2 {
+  background-image: url("/assets/img/interview/00-ChapterHeader-2-jvm.jpg");
+}
+.essay-image3 {
+  background-image: url("/assets/img/interview/00-ChapterHeader-3-mysql.jpg");
+}
+.essay-image4 {
+  background-image: url("/assets/img/interview/00-ChapterHeader-4-redis.jpg");
+}
+
+.essay-image5 {
+  background-image: url("/assets/img/interview/00-ChapterHeader-5-spring.jpg");
+}
+
+.essay-image6 {
+  background-image: url("/assets/img/interview/00-ChapterHeader-6-middleware.jpg");
+}
+
+.essay-image7 {
+  background-image: url("/assets/img/interview/00-ChapterHeader-7-distributed.jpg");
+}
+
+.essay-image8 {
+  background-image: url("/assets/img/interview/00-ChapterHeader-8-high-availability.jpg");
+}
+
+.essay-image9 {
+  background-image: url("/assets/img/interview/00-ChapterHeader-9-architecture.jpg");
+}
+
+.essay-image10 {
+  background-image: url("/assets/img/interview/00-ChapterHeader-10-troubleshooting.jpg");
+}
+
+.essay-image11 {
+  background-image: url("/assets/img/interview/00-ChapterHeader-11-engineering-ai.jpg");
+}
+
+.essay-image12 {
+  background-image: url("/assets/img/interview/00-ChapterHeader-12-netty.png");
+}
+
+
+/* 各自只写背景图 */
+.essay-image1 {
+  background-image: url("/assets/img/interview/00-ChapterHeader-1-java-concurrency.jpg");
+}
+.essay-image2 {
+  background-image: url("/assets/img/interview/00-ChapterHeader-2-jvm.jpg");
+}
+.essay-image3 {
+  background-image: url("/assets/img/interview/00-ChapterHeader-3-mysql.jpg");
+}
+.essay-image4 {
+  background-image: url("/assets/img/interview/00-ChapterHeader-4-redis.jpg");
+}
+
+/* 全局文章左对齐图片通用样式 */
+.left-img {
+  width: 90%;
+  max-width: 1000px;
+  object-fit: contain;
+  /* margin: 10px 0; 上下留空隙，左右0，实现靠左，覆盖全局auto居中 */
+  margin: 10px 0 !important;
+
+}
+
+.img-wrap-left {
+  /* text-align: left; 删除 text-align:left，对block图片不起作用 */
+  margin: 10px 0;
+}
+
+/* 全局自定义代码容器 */
+.full-code-box {
+  width: 100%;
+  background: #0a2035;
+  padding: 16px;
+}
+.full-code-box pre {
+  margin: 0;
+  font-family: Consolas;
+}
+
+/* 列表序号修复：保持上一版 counter + ::before，序号改为绿色 */
+/* 有序列表：绿色序号 */
+.article-content ol {
+  counter-reset: li-counter;
+  list-style: none !important;
+  padding-left: 1.6em !important;
+}
+/* 无序列表：绿色圆点 */
+.article-content ul {
+  list-style: none !important;
+  padding-left: 1.6em !important;
+}
+.article-content ol li,
+.article-content ul li {
+  counter-increment: li-counter;
+  position: relative !important;
+  margin: 0.3rem 0;
+}
+/* 有序列表序号颜色 */
+.article-content ol li::before {
+  content: counter(li-counter) ". ";
+  color: #00ff88;
+  position: absolute;
+  left: -1.6em;
+  top: 0;
+  font-size: 1em;
+  -webkit-text-fill-color: initial !important;
+}
+/* 子列表圆点颜色 */
+.article-content ul li::before {
+  content: "• ";
+  color: #00ff88;
+  position: absolute;
+  left: -1.6em;
+  top: 0;
+  -webkit-text-fill-color: initial !important;
+}
+/* 嵌套子ul缩进缩小，防止挤在一起 */
+.article-content ol li ul {
+  padding-left: 1.4em !important;
+  margin: 0.2rem 0 !important;
+}
+.article-content ol li ul li::before {
+  left: -1.4em;
+}
+ 
+    </style>
+  <meta name="generator" content="Hexo 8.1.2"></head>
+  <body>
+    <!--
+  ============================================
+  星空粒子组件（升级版 - 带鼠标互动）
+  文件：_components/Particles.njk
+  作用：全站统一的星空动画背景，鼠标悬停时粒子产生互动
+  ============================================
+-->
+<div id="particles"></div>
+<script src="https://cdn.jsdelivr.net/particles.js/2.0.0/particles.min.js"></script>
+<script>
+particlesJS("particles", {
+  particles: {
+    number: {
+      value: 120,
+      density: {
+        enable: true,
+        value_area: 800
+      }
+    },
+    color: {
+      value: "#00eeff"
+    },
+    shape: {
+      type: "circle",
+      stroke: {
+        width: 0,
+        color: "#000000"
+      }
+    },
+    opacity: {
+      value: 0.6,
+      random: true,
+      anim: {
+        enable: true,
+        speed: 0.5,
+        opacity_min: 0.1,
+        sync: false
+      }
+    },
+    size: {
+      value: 3,
+      random: true,
+      anim: {
+        enable: true,
+        speed: 2,
+        size_min: 0.1,
+        sync: false
+      }
+    },
+    line_linked: {
+      enable: true,
+      distance: 150,
+      color: "#00eeff",
+      opacity: 0.4,
+      width: 1
+    },
+    move: {
+      enable: true,
+      speed: 0.8,
+      direction: "none",
+      random: true,
+      straight: false,
+      out_mode: "out",
+      bounce: false,
+      attract: {
+        enable: true,
+        rotateX: 600,
+        rotateY: 1200
+      }
+    }
+  },
+  interactivity: {
+    detect_on: "canvas",
+    events: {
+      onhover: {
+        enable: true,
+        mode: "grab"       // 鼠标悬停时粒子聚集
+      },
+      onclick: {
+        enable: true,
+        mode: "push"       // 点击时产生新粒子
+      },
+      resize: true
+    },
+    modes: {
+      grab: {
+        distance: 200,
+        line_linked: {
+          opacity: 1
+        }
+      },
+      push: {
+        particles_nb: 6
+      }
+    }
+  },
+  retina_detect: true
+});
+</script>
+
+
+    <div class="app-layout">
+      <aside class="sidebar" id="sidebar">
+  <div class="profile-card">
+    <div class="avatar">
+      <div style="width:80px;height:80px;border-radius:50%;background:linear-gradient(135deg,#0a0e27,#1a1a4e);display:flex;align-items:center;justify-content:center;margin:0 auto;font-size:40px;border:2px solid #00eeff;box-shadow:0 0 30px rgba(0,238,255,0.3);">✨</div>
+    </div>
+    <h3 class="nickname">时空行者</h3>
+    <p class="bio">星辰大海，代码为舟</p>
+    <div class="stats">
+      <div class="stat-item">
+        <span class="stat-num">120</span>
+        <span class="stat-label">文章</span>
+      </div>
+      <div class="stat-item">
+        <span class="stat-num" id="fans-count" style="cursor:pointer;">1088</span>
+        <span class="stat-label">粉丝</span>
+      </div>
+      <div class="stat-item">
+        <span class="stat-num" id="follow-count" style="cursor:pointer;">66</span>
+        <span class="stat-label">关注</span>
+      </div>
+    </div>
+    <button class="follow-btn">+ 关注</button>
+  </div>
+
+  <div class="search-box">
+    <input type="text" placeholder="找找看..." id="search-input">
+    <button id="search-btn">🔍</button>
+  </div>
+
+  <div class="links-card">
+    <h4>常用链接</h4>
+    <ul>
+      <li><a href="/archives/">我的随笔</a></li>
+      <li><a href="/about/">关于我</a></li>
+      <li><a href="/tags/">我的标签</a></li>
+    </ul>
+  </div>
+
+  <div class="tags-card">
+    <h4>热门标签</h4>
+    <div class="tag-cloud">
+      
+    </div>
+  </div>
+
+  <div class="archive-card">
+    <h4>按月归档</h4>
+    <ul class="archive-list">
+      
+      
+        
+        
+          
+          <li>
+            <a href="/archives/2025/12/">
+              2025年12月
+            </a>
+          </li>
+        
+      
+        
+        
+      
+        
+        
+      
+        
+        
+      
+        
+        
+      
+        
+        
+      
+        
+        
+      
+        
+        
+      
+        
+        
+      
+        
+        
+      
+        
+        
+      
+        
+        
+          
+          <li>
+            <a href="/archives/2026/01/">
+              2026年01月
+            </a>
+          </li>
+        
+      
+        
+        
+      
+        
+        
+      
+        
+        
+      
+        
+        
+      
+        
+        
+      
+        
+        
+      
+        
+        
+      
+        
+        
+          
+          <li>
+            <a href="/archives/2026/02/">
+              2026年02月
+            </a>
+          </li>
+        
+      
+        
+        
+      
+        
+        
+      
+        
+        
+      
+        
+        
+      
+        
+        
+      
+        
+        
+      
+        
+        
+          
+          <li>
+            <a href="/archives/2026/03/">
+              2026年03月
+            </a>
+          </li>
+        
+      
+        
+        
+      
+        
+        
+      
+        
+        
+      
+        
+        
+          
+          <li>
+            <a href="/archives/2026/04/">
+              2026年04月
+            </a>
+          </li>
+        
+      
+        
+        
+      
+        
+        
+      
+        
+        
+      
+        
+        
+          
+          <li>
+            <a href="/archives/2026/05/">
+              2026年05月
+            </a>
+          </li>
+        
+      
+        
+        
+      
+        
+        
+      
+        
+        
+      
+        
+        
+      
+        
+        
+      
+        
+        
+          
+          <li>
+            <a href="/archives/2026/06/">
+              2026年06月
+            </a>
+          </li>
+        
+      
+        
+        
+      
+        
+        
+      
+        
+        
+      
+        
+        
+      
+        
+        
+      
+        
+        
+      
+        
+        
+          
+          <li>
+            <a href="/archives/2026/07/">
+              2026年07月
+            </a>
+          </li>
+        
+      
+        
+        
+      
+        
+        
+      
+        
+        
+      
+        
+        
+      
+        
+        
+          
+          <li>
+            <a href="/archives/2026/08/">
+              2026年08月
+            </a>
+          </li>
+        
+      
+        
+        
+      
+        
+        
+      
+        
+        
+      
+        
+        
+      
+        
+        
+      
+        
+        
+      
+        
+        
+      
+        
+        
+      
+        
+        
+      
+        
+        
+      
+        
+        
+      
+        
+        
+      
+        
+        
+      
+        
+        
+      
+        
+        
+      
+        
+        
+      
+        
+        
+      
+        
+        
+          
+          <li>
+            <a href="/archives/2026/09/">
+              2026年09月
+            </a>
+          </li>
+        
+      
+        
+        
+      
+        
+        
+      
+        
+        
+      
+        
+        
+      
+        
+        
+      
+        
+        
+      
+        
+        
+      
+        
+        
+      
+        
+        
+      
+        
+        
+      
+        
+        
+      
+        
+        
+      
+        
+        
+      
+        
+        
+      
+        
+        
+          
+          <li>
+            <a href="/archives/2026/10/">
+              2026年10月
+            </a>
+          </li>
+        
+      
+        
+        
+      
+        
+        
+      
+        
+        
+      
+        
+        
+      
+        
+        
+      
+        
+        
+      
+        
+        
+      
+        
+        
+      
+        
+        
+      
+        
+        
+      
+        
+        
+      
+        
+        
+      
+        
+        
+      
+        
+        
+      
+        
+        
+      
+        
+        
+      
+        
+        
+      
+        
+        
+      
+        
+        
+      
+        
+        
+      
+        
+        
+      
+        
+        
+      
+        
+        
+      
+        
+        
+      
+        
+        
+      
+        
+        
+      
+        
+        
+      
+        
+        
+      
+        
+        
+      
+        
+        
+      
+        
+        
+      
+        
+        
+      
+        
+        
+      
+        
+        
+      
+    </ul>
+  </div>
+</aside>
+
+<!-- 引入侧边栏交互脚本 -->
+<script>
+  /**
+ * ============================================
+ * 侧边栏交互脚本
+ * 文件：_js/sidebar.js
+ * 作用：搜索功能、粉丝数点击 +1、关注数点击 +1、侧边栏折叠展开
+ * ============================================
+ */
+document.addEventListener('DOMContentLoaded', function() {
+  // ===== 搜索功能 =====
+  var searchBtn = document.getElementById('search-btn');
+  var searchInput = document.getElementById('search-input');
+  
+  if (searchBtn) {
+    searchBtn.addEventListener('click', function() {
+      var keyword = searchInput.value.trim();
+      if (keyword) {
+        window.location.href = '/search/?q=' + encodeURIComponent(keyword);
+      }
+    });
+  }
+  
+  if (searchInput) {
+    searchInput.addEventListener('keypress', function(e) {
+      if (e.key === 'Enter') {
+        var keyword = searchInput.value.trim();
+        if (keyword) {
+          window.location.href = '/search/?q=' + encodeURIComponent(keyword);
+        }
+      }
+    });
+  }
+  // ===== 粉丝数点击 +1（起始 1088） =====
+  var fansEl = document.getElementById('fans-count');
+  if (fansEl) {
+    fansEl.addEventListener('click', function() {
+      var current = parseInt(this.textContent);
+      this.textContent = current + 1;
+      this.style.transform = 'scale(1.3)';
+      this.style.color = '#ff6b6b';
+      setTimeout(function() {
+        fansEl.style.transform = 'scale(1)';
+        fansEl.style.color = '#00eeff';
+      }, 300);
+    });
+  }
+  // ===== 关注数点击 +1（起始 66） =====
+  var followEl = document.getElementById('follow-count');
+  if (followEl) {
+    followEl.addEventListener('click', function() {
+      var current = parseInt(this.textContent);
+      this.textContent = current + 1;
+      this.style.transform = 'scale(1.3)';
+      this.style.color = '#ff6b6b';
+      setTimeout(function() {
+        followEl.style.transform = 'scale(1)';
+        followEl.style.color = '#00eeff';
+      }, 300);
+    });
+  }
+
+
+  // =========侧边栏折叠展开逻辑=========
+  const toggleBtn = document.getElementById('sidebarToggle');
+  const sidebar = document.getElementById('sidebar');
+  const mainContent = document.querySelector('.main-content');
+
+  // 首页、归档、分类页面没有元素直接退出
+  if(!toggleBtn || !sidebar || !mainContent){
+    return;
+  }
+
+  let isCollapsed = localStorage.getItem('sidebarCollapsed') === '1';
+
+  function setUi(collapsed){
+    if(collapsed){
+      document.body.classList.add('sidebar-collapsed');
+    }else{
+      document.body.classList.remove('sidebar-collapsed');
+    }
+    localStorage.setItem('sidebarCollapsed', collapsed ? '1':'0');
+  }
+
+  setUi(isCollapsed);
+
+  toggleBtn.addEventListener('click',function(e){
+    e.stopPropagation();
+    isCollapsed = !isCollapsed;
+    setUi(isCollapsed);
+  });
+
+});
+</script>
+
+
+      
+        <button id="sidebarToggle" class="sidebar-toggle"></button>
+        
+      <main class="main-content">
+        <div class="article-card">
+          <h1 class="article-title">六、电商问数：MySQL、Embedding 接入与日志管理</h1>
+          <div class="article-meta">📅 2026-08-07</div>
+          <div class="article-content"><div class="essay-banner essay-image11">
+    mysql-embedding-and-logging
+</div>
+
+<h1 id="6-电商问数：MySQL、Embedding-接入与日志管理"><a href="#6-电商问数：MySQL、Embedding-接入与日志管理" class="headerlink" title="6 电商问数：MySQL、Embedding 接入与日志管理"></a>6 电商问数：MySQL、Embedding 接入与日志管理</h1><hr>
+<p><strong>本章课程目标：</strong></p>
+<ul>
+<li>看懂 <code>Embedding</code> 客户端管理器的作用，以及它与后续向量检索之间的衔接关系。</li>
+<li>理解 <code>MySQL</code> 在当前项目里同时承担元数据库和数据仓库模拟库两类角色。</li>
+<li>了解项目如何通过统一日志配置支撑调试、排障和运行观察。</li>
+</ul>
+<p><strong>学习建议：</strong> 这一章是三块基础能力的接线图：Embedding 负责把文本变向量，MySQL 负责存和查结构化数据，日志负责让你知道系统跑到哪一步。读代码时别只看封装类本身，要追它们在哪里初始化、如何注入到业务层、出了错能不能通过日志定位到请求。</p>
+<p><strong>对应代码分支：</strong> <code>06-mysql-embedding-log</code></p>
+<hr>
+<p>上一章我们已经把 <code>Qdrant</code> 和 <code>Elasticsearch</code> 接进来了，但其实还有两个关键问题没闭环：</p>
+<ol>
+<li><code>Qdrant</code> 里要写的向量，到底从哪里来？</li>
+<li>检索、建库、执行 SQL 的过程中，结构化数据和运行日志怎么统一管理？</li>
+</ol>
+<p>这一章讲的正是这两个问题。</p>
+<p>把它们放回整体架构里，可以概括成下面这条链：</p>
+<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line">文本</span><br><span class="line">  -&gt; Embedding 服务</span><br><span class="line">  -&gt; 向量</span><br><span class="line">  -&gt; Qdrant 检索</span><br><span class="line"></span><br><span class="line">结构化元数据 / 数仓数据</span><br><span class="line">  -&gt; MySQL</span><br><span class="line"></span><br><span class="line">运行过程</span><br><span class="line">  -&gt; Loguru + request_id + contextvars</span><br></pre></td></tr></table></figure>
+
+<p>也就是说：</p>
+<ul>
+<li><code>Embedding</code> 负责“把文本变成向量”</li>
+<li><code>MySQL</code> 负责“把结构化信息存好、查好”</li>
+<li>日志系统负责“把每一步做了什么记清楚”</li>
+</ul>
+<p>把这三类能力放在一起看，它们不是三条孤立支线，而是共同支撑后续的建库、检索、生成和排障。</p>
+<!-- ![Embedding、MySQL 和日志三类基础能力如何支撑元数据知识库与问数链路](/assets/img/ecommerce/6/6-0-0-1.svg) -->
+
+<div class="img-wrap-left"><img class="left-img" src="/assets/img/ecommerce/6/6-0-0-1.svg" alt="Embedding、MySQL 和日志三类基础能力如何支撑元数据知识库与问数链路"></div>
+只有这三部分都接起来，后面的元知识构建、混合召回、SQL 生成与执行，才会真正形成闭环。
+
+<hr>
+<h2 id="1、Embedding-客户端管理"><a href="#1、Embedding-客户端管理" class="headerlink" title="1、Embedding 客户端管理"></a>1、Embedding 客户端管理</h2><h3 id="1-1-Embedding-简介"><a href="#1-1-Embedding-简介" class="headerlink" title="1.1 Embedding 简介"></a>1.1 Embedding 简介</h3><p><code>Embedding</code> 就是：<strong>把一句话、一段字段描述、一个指标名称，转换成一组可以参与向量计算的数字。</strong></p>
+<p>例如：</p>
+<ul>
+<li>用户问题里的关键词，需要先做向量化，才能去 <code>Qdrant</code> 检索相似字段和指标</li>
+<li>元数据库中的表描述、字段描述、指标描述，也需要先做向量化，才能提前写入向量库</li>
+</ul>
+<p>所以这一层并不是“附属功能”，而是整个检索链路里的基础能力。</p>
+<p>在「电商问数」里，我们并不是直接把自然语言问题交给大模型就结束了。在字段召回、指标召回、元知识构建这些环节里，系统都需要先把文本转成向量，再交给 <code>Qdrant</code> 做相似度检索。也就是说，这里有一条很重要的链路：<strong>文本 -&gt; Embedding 服务 -&gt; 向量 -&gt; Qdrant 检索</strong>。如果没有这一层，后面的向量召回链路就跑不起来。</p>
+<h3 id="1-2-TEI-简介"><a href="#1-2-TEI-简介" class="headerlink" title="1.2 TEI 简介"></a>1.2 TEI 简介</h3><p>当前项目选择的不是“在业务代码里直接加载 Embedding 模型权重”，而是：</p>
+<ul>
+<li><strong>服务端组件</strong>：<code>Text Embeddings Inference</code>，简称 <code>TEI</code></li>
+<li><strong>嵌入模型</strong>：<code>BAAI/bge-large-zh-v1.5</code></li>
+</ul>
+<p><code>Text Embeddings Inference</code>，通常简称 <code>TEI</code>。它本质上就是一个专门用来部署 Embedding 模型、并通过 HTTP 接口对外提供向量推理能力的服务框架。</p>
+<p>对应官方文档：<a target="_blank" rel="noopener" href="https://huggingface.co/docs/text-embeddings-inference/index">https://huggingface.co/docs/text-embeddings-inference/index</a> （英）</p>
+<p>放到当前项目里，可以按下面这条链来理解：</p>
+<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">BAAI/bge-large-zh-v1.5</span><br><span class="line">  -&gt; TEI 服务</span><br><span class="line">  -&gt; EmbeddingClientManager</span><br><span class="line">  -&gt; 字段召回 / 指标召回 / 元知识构建</span><br></pre></td></tr></table></figure>
+
+<p>也就是说：</p>
+<ul>
+<li><code>BAAI/bge-large-zh-v1.5</code> 是真正负责把文本转成向量的模型</li>
+<li><code>TEI</code> 负责把这个模型跑起来，并暴露成一个可调用的服务</li>
+<li><code>EmbeddingClientManager</code> 负责在项目里把这层服务接进来</li>
+</ul>
+<p>如果从工程视角看，<code>TEI</code> 在这里解决的是两个实际问题：不需要在业务代码里自己加载模型权重，后端只要通过 HTTP 地址访问服务，就能拿到 Embedding 结果。</p>
+<p>在当前项目中，<code>TEI</code> 还是以一个<strong>独立服务</strong>的方式运行的。更具体地说，它不是写在后端代码里的普通 Python 类，而是作为这套项目 Docker 基础服务环境中的一个容器服务启动起来，后端再通过配置里的 <code>host</code> 和 <code>port</code> 去调用它。</p>
+<h3 id="1-3-常见服务端组件说明"><a href="#1-3-常见服务端组件说明" class="headerlink" title="1.3 常见服务端组件说明"></a>1.3 常见服务端组件说明</h3><p>当前项目使用的服务端组件是 <code>Text Embeddings Inference（TEI）</code>。它很适合当前这套教程，因为定位非常明确：<strong>专门服务 Embedding 模型推理</strong>。</p>
+<p>除了 <code>TEI</code>，市面上常见的服务端组件还可以大致分成几类：</p>
+<ul>
+<li><strong>通用模型服务平台</strong><br>例如 <code>Xinference</code>、<code>Ollama</code>、<code>BentoML</code>、<code>Ray Serve</code></li>
+<li><strong>偏大模型推理框架</strong><br>例如 <code>vLLM</code>、<code>TGI</code>、<code>SGLang</code>、<code>LMDeploy</code>、<code>Triton Inference Server</code></li>
+<li><strong>云厂商托管服务</strong><br>例如 <code>OpenAI Embeddings API</code>、<code>Azure OpenAI</code>、<code>阿里云百炼</code>、<code>火山方舟</code>、<code>百度千帆</code>、<code>AWS Bedrock</code></li>
+</ul>
+<p>如果只从当前项目的需求出发，这里最重要的判断是：</p>
+<ul>
+<li>如果希望<strong>本地或自托管部署 Embedding 服务</strong>，<code>TEI</code> 是很贴合的选择</li>
+<li>如果希望<strong>统一托管多类模型服务</strong>，<code>Xinference</code> 这类平台会更常见</li>
+<li>如果希望<strong>直接调用云端 Embedding API</strong>，则会走各家云厂商或模型服务商提供的托管接口</li>
+</ul>
+<p>所以这一章用 <code>TEI</code>，不是因为它是唯一方案，而是因为它最贴合当前项目“<strong>部署 Embedding 服务 -&gt; 暴露 HTTP 接口 -&gt; 后端统一接入</strong>”这条链路。</p>
+<h3 id="1-5-TEI-的访问方式"><a href="#1-5-TEI-的访问方式" class="headerlink" title="1.5 TEI 的访问方式"></a>1.5 TEI 的访问方式</h3><p>官方文档：<a target="_blank" rel="noopener" href="https://huggingface.co/docs/text-embeddings-inference/quick_tour">https://huggingface.co/docs/text-embeddings-inference/quick_tour</a> （英）</p>
+<p><code>TEI</code> 的推理访问主要有 <strong>3 种方式</strong>：</p>
+<ul>
+<li><strong>直接调用原生 HTTP 接口</strong>：例如用 <code>curl</code> 直接请求 <code>/embed</code></li>
+<li><strong>使用 Hugging Face 的 Python 客户端</strong>：也就是 <code>huggingface_hub</code> 里的 <code>InferenceClient</code></li>
+<li><strong>使用 OpenAI 兼容方式访问</strong>：也就是把 <code>TEI</code> 暴露出来的接口当成 OpenAI 风格的 <code>/v1/embeddings</code> 来调用</li>
+</ul>
+<p>但在当前项目里，并没有直接采用这些原生调用方式，而是选择了更贴近整套教程技术栈的方案：使用 LangChain 提供的 <code>HuggingFaceEndpointEmbeddings</code>。</p>
+<p>这样做有两个明显好处：和前面已经学过的 <code>LangChain / LangGraph</code> 体系保持一致；后续在服务层、Agent 节点里调用时，接口更统一。也就是说，当前项目不是不能直接调用 <code>TEI</code>，而是有意选择了一个更贴近整套教程技术栈的接入层。</p>
+<h3 id="1-6-封装-Embedding-客户端"><a href="#1-6-封装-Embedding-客户端" class="headerlink" title="1.6 封装 Embedding 客户端"></a>1.6 封装 Embedding 客户端</h3><p>项目对应文件路径：<code>shopkeeper-agent/app/clients/embedding_client_manager.py</code></p>
+<p>代码如下：</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">import</span> asyncio</span><br><span class="line"><span class="keyword">from</span> typing <span class="keyword">import</span> <span class="type">Optional</span></span><br><span class="line"></span><br><span class="line"><span class="keyword">from</span> langchain_huggingface <span class="keyword">import</span> HuggingFaceEndpointEmbeddings</span><br><span class="line"></span><br><span class="line"><span class="keyword">from</span> app.conf.app_config <span class="keyword">import</span> EmbeddingConfig, app_config</span><br><span class="line"></span><br><span class="line"></span><br><span class="line"><span class="keyword">class</span> <span class="title class_">EmbeddingClientManager</span>:</span><br><span class="line">    <span class="keyword">def</span> <span class="title function_">__init__</span>(<span class="params">self, config: EmbeddingConfig</span>):</span><br><span class="line">        <span class="comment"># 客户端在模块导入阶段先不立即创建，避免启动时就发起外部依赖连接</span></span><br><span class="line">        <span class="variable language_">self</span>.client: <span class="type">Optional</span>[HuggingFaceEndpointEmbeddings] = <span class="literal">None</span></span><br><span class="line">        <span class="comment"># 保存 Embedding 服务配置，供 init() 时组装服务访问地址使用</span></span><br><span class="line">        <span class="variable language_">self</span>.config = config</span><br><span class="line"></span><br><span class="line">    <span class="keyword">def</span> <span class="title function_">_get_url</span>(<span class="params">self</span>):</span><br><span class="line">        <span class="comment"># 当前项目通过 host + port 访问外部已启动的 Embedding 推理服务</span></span><br><span class="line">        <span class="keyword">return</span> <span class="string">f&quot;http://<span class="subst">&#123;self.config.host&#125;</span>:<span class="subst">&#123;self.config.port&#125;</span>&quot;</span></span><br><span class="line"></span><br><span class="line">    <span class="keyword">def</span> <span class="title function_">init</span>(<span class="params">self</span>):</span><br><span class="line">        <span class="comment"># 在应用启动阶段显式调用，完成真正的客户端初始化</span></span><br><span class="line">        <span class="variable language_">self</span>.client = HuggingFaceEndpointEmbeddings(model=<span class="variable language_">self</span>._get_url())</span><br><span class="line"></span><br><span class="line"></span><br><span class="line"><span class="comment"># 模块级单例，供其他模块按需复用同一个客户端管理器</span></span><br><span class="line">embedding_client_manager = EmbeddingClientManager(app_config.embedding)</span><br><span class="line"></span><br><span class="line"></span><br><span class="line"><span class="keyword">if</span> __name__ == <span class="string">&quot;__main__&quot;</span>:</span><br><span class="line">    <span class="comment"># 本地调试入口：初始化客户端后执行一次最小化向量化调用</span></span><br><span class="line">    embedding_client_manager.init()</span><br><span class="line">    client = embedding_client_manager.client</span><br><span class="line"></span><br><span class="line">    <span class="keyword">async</span> <span class="keyword">def</span> <span class="title function_">test</span>():</span><br><span class="line">        <span class="comment"># 使用示例文本验证 Embedding 服务是否可正常响应</span></span><br><span class="line">        text = <span class="string">&quot;What is deep learning?&quot;</span></span><br><span class="line">        query_result = <span class="keyword">await</span> client.aembed_query(text)</span><br><span class="line">        <span class="comment"># 只打印前 3 个维度，便于快速确认返回结果结构正确</span></span><br><span class="line">        <span class="built_in">print</span>(query_result[:<span class="number">3</span>])</span><br><span class="line"></span><br><span class="line">    <span class="comment"># 运行调试测试</span></span><br><span class="line">    asyncio.run(test())</span><br></pre></td></tr></table></figure>
+
+<p>执行文件验证，成功：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">(shopkeeper-agent) didilili@DidililiMacBook-Pro shopkeeper-agent % python3 -m app.clients.embedding_client_manager</span><br><span class="line"></span><br><span class="line">[-0.005919582676142454, 0.005813124123960733, 0.018300632014870644]</span><br><span class="line"></span><br></pre></td></tr></table></figure>
+
+<h4 id="1-6-1-这一层封装的职责"><a href="#1-6-1-这一层封装的职责" class="headerlink" title="1.6.1 这一层封装的职责"></a>1.6.1 这一层封装的职责</h4><p>如果先不看细节，这个管理器只做了三件事：</p>
+<ol>
+<li>保存 Embedding 服务配置</li>
+<li>根据 <code>host + port</code> 拼出服务地址</li>
+<li>创建全局可复用的 Embedding 客户端</li>
+</ol>
+<p>它没有承担：模型训练，模型下载，向量后处理。它只承担一件事：把“项目怎么访问 Embedding 服务”这件事统一收口。</p>
+<h4 id="1-6-2-config-与-client-的职责"><a href="#1-6-2-config-与-client-的职责" class="headerlink" title="1.6.2 config 与 client 的职责"></a>1.6.2 config 与 client 的职责</h4><figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">class</span> <span class="title class_">EmbeddingClientManager</span>:</span><br><span class="line">    <span class="keyword">def</span> <span class="title function_">__init__</span>(<span class="params">self, config: EmbeddingConfig</span>):</span><br><span class="line">        <span class="variable language_">self</span>.client: <span class="type">Optional</span>[HuggingFaceEndpointEmbeddings] = <span class="literal">None</span></span><br><span class="line">        <span class="variable language_">self</span>.config = config</span><br></pre></td></tr></table></figure>
+
+<p>这里有两个核心属性：</p>
+<ul>
+<li><code>self.config</code>：保存配置对象，里面有 <code>host</code>、<code>port</code>、<code>model</code></li>
+<li><code>self.client</code>：保存真正可调用的 Embedding 客户端实例</li>
+</ul>
+<p>和前面几类客户端管理器一样，这里也没有在构造函数里立刻完成初始化，而是先把对象创建出来，后面在 <code>init()</code> 里再真正生成客户端。</p>
+<h4 id="1-6-3-get-url-的作用与-URL-组成"><a href="#1-6-3-get-url-的作用与-URL-组成" class="headerlink" title="1.6.3 _get_url() 的作用与 URL 组成"></a>1.6.3 _get_url() 的作用与 URL 组成</h4><figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">def</span> <span class="title function_">_get_url</span>(<span class="params">self</span>):</span><br><span class="line">    <span class="keyword">return</span> <span class="string">f&quot;http://<span class="subst">&#123;self.config.host&#125;</span>:<span class="subst">&#123;self.config.port&#125;</span>&quot;</span></span><br></pre></td></tr></table></figure>
+
+<p>这里做的事情并不复杂，但很关键：<strong>把配置文件中的 <code>host</code> 和 <code>port</code> 统一拼成服务地址</strong>。</p>
+<p>这一层单独抽成方法有两个好处：服务地址的构造逻辑只维护一处；后面如果部署方式变化，修改会更集中。</p>
+<p>在当前项目里，这个地址通常会指向 Docker 环境中已经启动好的 <code>TEI</code> 服务。</p>
+<h4 id="1-6-4-init-的初始化过程"><a href="#1-6-4-init-的初始化过程" class="headerlink" title="1.6.4 init() 的初始化过程"></a>1.6.4 init() 的初始化过程</h4><figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">def</span> <span class="title function_">init</span>(<span class="params">self</span>):</span><br><span class="line">    <span class="variable language_">self</span>.client = HuggingFaceEndpointEmbeddings(model=<span class="variable language_">self</span>._get_url())</span><br></pre></td></tr></table></figure>
+
+<p>这里最值得注意的是：<code>model=</code> 传进去的并不是 Hugging Face 上的模型名称，而是<strong>本地已经部署好的 Embedding 服务地址</strong>。</p>
+<p>也就是说，这个客户端的调用方式可以理解成：</p>
+<ul>
+<li>不直接去联网访问 Hugging Face</li>
+<li>不自己加载模型权重</li>
+<li>而是把请求发给本地已经启动好的 TEI 服务</li>
+</ul>
+<p>这也是为什么这一层更像“服务接入”，而不是“模型训练”或“模型加载”。</p>
+<h4 id="1-6-5-不单独提供-close-方法的原因"><a href="#1-6-5-不单独提供-close-方法的原因" class="headerlink" title="1.6.5 不单独提供 close() 方法的原因"></a>1.6.5 不单独提供 close() 方法的原因</h4><p>前面的 <code>Qdrant</code>、<code>Elasticsearch</code>、<code>MySQL</code> 客户端，很多都需要显式初始化和关闭，是因为它们更接近：长连接、连接池、持久化数据库连接。</p>
+<p>而当前这个 Embedding 客户端，本质上更接近<strong>一个无状态的 HTTP 调用封装</strong>。它不像数据库连接那样需要长期持有连接资源，所以这里没有专门去写一个 <code>close()</code> 方法。这也是为什么它的实现会明显更轻。</p>
+<hr>
+<h2 id="2、MySQL-客户端管理"><a href="#2、MySQL-客户端管理" class="headerlink" title="2、MySQL 客户端管理"></a>2、MySQL 客户端管理</h2><h3 id="2-1-为什么是两套-MySQL"><a href="#2-1-为什么是两套-MySQL" class="headerlink" title="2.1 为什么是两套 MySQL"></a>2.1 为什么是两套 MySQL</h3><p>很多读者第一次看项目配置时，最容易疑惑的点就是：为什么明明都叫 MySQL，却要写两组配置？</p>
+<p>答案很简单，因为它们承担的是两种不同职责：</p>
+<table>
+<thead>
+<tr>
+<th>配置项</th>
+<th>连接到哪里</th>
+<th>主要职责</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>db_meta</code></td>
+<td>元数据库</td>
+<td>保存表信息、字段信息、指标信息、字段与指标关系等元数据</td>
+</tr>
+<tr>
+<td><code>db_dw</code></td>
+<td>数仓模拟库</td>
+<td>提供真实业务查询要访问的数据，用来验证 SQL、执行 SQL</td>
+</tr>
+</tbody></table>
+<p>所以这里的关键理解不是“为什么麻烦”，而是：</p>
+<blockquote>
+<p><strong>一个负责“系统知道库里有什么”，一个负责“系统最终去查什么”。</strong></p>
+</blockquote>
+<p>这也是为什么项目最终不是只创建一个 MySQL 客户端，而是创建两份：</p>
+<ul>
+<li><code>meta_mysql_client_manager</code></li>
+<li><code>dw_mysql_client_manager</code></li>
+</ul>
+<h3 id="2-2-SQLAlchemy-简介"><a href="#2-2-SQLAlchemy-简介" class="headerlink" title="2.2 SQLAlchemy 简介"></a>2.2 SQLAlchemy 简介</h3><p>官方文档：<a target="_blank" rel="noopener" href="https://www.sqlalchemy.org/">https://www.sqlalchemy.org/</a></p>
+<p>在进入 MySQL 客户端实现之前，先单独理解一下 <code>SQLAlchemy</code> 会更顺。因为当前项目里的 MySQL 接入并不是直接手写底层连接，而是建立在 <code>SQLAlchemy</code> 之上。</p>
+<p>抓住三个关键词：</p>
+<ul>
+<li><strong>ORM</strong>：数据库表和 Python 类之间的翻译层。你在代码里操作类和对象，ORM 会把这些操作翻译成数据库能执行的 SQL。</li>
+<li><strong>Engine</strong>：程序连接数据库的总入口，负责和数据库建立连接，并维护一组可复用的连接。</li>
+<li><strong>Session</strong>：一次具体数据库操作的工作窗口，这一轮查询、写入和提交通常都通过它完成。</li>
+</ul>
+<p>如果只记一句话，可以概括成：<code>Engine</code> 更像“连接基础设施”，<code>Session</code> 更像“这次数据库操作的工作上下文”</p>
+<h3 id="2-3-SQLAlchemy-快速入门案例"><a href="#2-3-SQLAlchemy-快速入门案例" class="headerlink" title="2.3 SQLAlchemy 快速入门案例"></a>2.3 SQLAlchemy 快速入门案例</h3><p>官方文档：<a target="_blank" rel="noopener" href="https://docs.sqlalchemy.org/en/20/orm/quickstart.html">https://docs.sqlalchemy.org/en/20/orm/quickstart.html</a></p>
+<p>这份 quickstart 可以帮助我们先建立下面这条最基本的认知链：</p>
+<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">声明模型</span><br><span class="line">  -&gt; 创建 Engine</span><br><span class="line">  -&gt; 建表</span><br><span class="line">  -&gt; 创建 Session</span><br><span class="line">  -&gt; 写入对象</span><br><span class="line">  -&gt; 查询对象</span><br></pre></td></tr></table></figure>
+
+<p>官方示例为了学习方便，使用的是：同步写法，SQLite 内存数据库。而我们的项目最终使用的是：异步写法，MySQL。也就是说，<strong>场景不同，但核心概念是一致的</strong>。所以这一节最适合拿来帮助我们理解 <code>ORM / Engine / Session / 模型映射</code> 这些基本概念。</p>
+<p>先看官方示例里的模型声明：</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">from</span> typing <span class="keyword">import</span> <span class="type">List</span>, <span class="type">Optional</span></span><br><span class="line"></span><br><span class="line"><span class="keyword">from</span> sqlalchemy <span class="keyword">import</span> ForeignKey, String</span><br><span class="line"><span class="keyword">from</span> sqlalchemy.orm <span class="keyword">import</span> DeclarativeBase, Mapped, mapped_column, relationship</span><br><span class="line"></span><br><span class="line"></span><br><span class="line"><span class="keyword">class</span> <span class="title class_">Base</span>(<span class="title class_ inherited__">DeclarativeBase</span>):</span><br><span class="line">    <span class="keyword">pass</span></span><br><span class="line"></span><br><span class="line"></span><br><span class="line"><span class="keyword">class</span> <span class="title class_">User</span>(<span class="title class_ inherited__">Base</span>):</span><br><span class="line">    __tablename__ = <span class="string">&quot;user_account&quot;</span></span><br><span class="line"></span><br><span class="line">    <span class="built_in">id</span>: Mapped[<span class="built_in">int</span>] = mapped_column(primary_key=<span class="literal">True</span>)</span><br><span class="line">    name: Mapped[<span class="built_in">str</span>] = mapped_column(String(<span class="number">30</span>))</span><br><span class="line">    fullname: Mapped[<span class="type">Optional</span>[<span class="built_in">str</span>]]</span><br><span class="line"></span><br><span class="line">    addresses: Mapped[<span class="type">List</span>[<span class="string">&quot;Address&quot;</span>]] = relationship(</span><br><span class="line">        back_populates=<span class="string">&quot;user&quot;</span>,</span><br><span class="line">        cascade=<span class="string">&quot;all, delete-orphan&quot;</span>,</span><br><span class="line">    )</span><br><span class="line"></span><br><span class="line"></span><br><span class="line"><span class="keyword">class</span> <span class="title class_">Address</span>(<span class="title class_ inherited__">Base</span>):</span><br><span class="line">    __tablename__ = <span class="string">&quot;address&quot;</span></span><br><span class="line"></span><br><span class="line">    <span class="built_in">id</span>: Mapped[<span class="built_in">int</span>] = mapped_column(primary_key=<span class="literal">True</span>)</span><br><span class="line">    email_address: Mapped[<span class="built_in">str</span>]</span><br><span class="line">    user_id: Mapped[<span class="built_in">int</span>] = mapped_column(ForeignKey(<span class="string">&quot;user_account.id&quot;</span>))</span><br><span class="line"></span><br><span class="line">    user: Mapped[<span class="string">&quot;User&quot;</span>] = relationship(back_populates=<span class="string">&quot;addresses&quot;</span>)</span><br></pre></td></tr></table></figure>
+
+<p>理解它在表达什么：</p>
+<ul>
+<li><code>Base</code>：是所有 ORM 模型共同继承的基类</li>
+<li><code>User</code>、<code>Address</code>：是程序里的类，同时也分别对应数据库里的两张表</li>
+<li><code>__tablename__</code>：指定这个类映射到数据库中的哪张表</li>
+<li><code>mapped_column(...)</code>：定义字段类型、主键等信息</li>
+<li><code>relationship(...)</code>：用来描述表和表之间的关联关系</li>
+</ul>
+<p>接着，创建 <code>Engine</code>：</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">from</span> sqlalchemy <span class="keyword">import</span> create_engine</span><br><span class="line"></span><br><span class="line">engine = create_engine(<span class="string">&quot;sqlite://&quot;</span>, echo=<span class="literal">True</span>)</span><br></pre></td></tr></table></figure>
+
+<p>这里特别值得补一句：<code>Engine</code> 不是“某次查询”，它更像数据库连接层的核心对象，底层会帮我们维护连接池。</p>
+<p>再往后，直接根据模型去建表：</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">Base.metadata.create_all(engine)</span><br></pre></td></tr></table></figure>
+
+<p>这行代码的意思是：<strong>根据前面声明好的模型，自动生成对应的数据表结构</strong>。不过这里也要顺手提醒一下：在我们的项目里，并没有走这条“由 ORM 自动建表”的路线。因为当前项目的数据库和表结构在前面的环境准备阶段就已经初始化好了，所以这里更多是帮助你理解 SQLAlchemy 的能力边界，而不是项目运行时真正依赖的建表方式。</p>
+<p>然后是写数据，这样使用 <code>Session</code>：</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">from</span> sqlalchemy.orm <span class="keyword">import</span> Session</span><br><span class="line"></span><br><span class="line"><span class="keyword">with</span> Session(engine) <span class="keyword">as</span> session:</span><br><span class="line">    spongebob = User(</span><br><span class="line">        name=<span class="string">&quot;spongebob&quot;</span>,</span><br><span class="line">        fullname=<span class="string">&quot;Spongebob Squarepants&quot;</span>,</span><br><span class="line">        addresses=[Address(email_address=<span class="string">&quot;spongebob@sqlalchemy.org&quot;</span>)],</span><br><span class="line">    )</span><br><span class="line">    sandy = User(</span><br><span class="line">        name=<span class="string">&quot;sandy&quot;</span>,</span><br><span class="line">        fullname=<span class="string">&quot;Sandy Cheeks&quot;</span>,</span><br><span class="line">        addresses=[</span><br><span class="line">            Address(email_address=<span class="string">&quot;sandy@sqlalchemy.org&quot;</span>),</span><br><span class="line">            Address(email_address=<span class="string">&quot;sandy@squirrelpower.org&quot;</span>),</span><br><span class="line">        ],</span><br><span class="line">    )</span><br><span class="line">    patrick = User(name=<span class="string">&quot;patrick&quot;</span>, fullname=<span class="string">&quot;Patrick Star&quot;</span>)</span><br><span class="line"></span><br><span class="line">    session.add_all([spongebob, sandy, patrick])</span><br><span class="line">    session.commit()</span><br></pre></td></tr></table></figure>
+
+<p>这一段重点是在说明两件事：</p>
+<ul>
+<li>往数据库写数据时，真正和数据库交互的是 <code>Session</code></li>
+<li>ORM 的写法看起来像在操作 Python 对象，但底层最终还是会生成 SQL 并发给数据库</li>
+</ul>
+<p>这里也正好能对应到 <code>add_all()</code>、<code>commit()</code> 这两个关键动作。</p>
+<p>最后，做一次简单查询：</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">from</span> sqlalchemy <span class="keyword">import</span> select</span><br><span class="line"></span><br><span class="line">session = Session(engine)</span><br><span class="line"></span><br><span class="line">stmt = select(User).where(User.name.in_([<span class="string">&quot;spongebob&quot;</span>, <span class="string">&quot;sandy&quot;</span>]))</span><br><span class="line"></span><br><span class="line"><span class="keyword">for</span> user <span class="keyword">in</span> session.scalars(stmt):</span><br><span class="line">    <span class="built_in">print</span>(user)</span><br></pre></td></tr></table></figure>
+
+<p>这段代码表达的是：</p>
+<ul>
+<li>先构造一条查询语句 <code>stmt</code></li>
+<li>再通过 <code>Session</code> 执行这条语句</li>
+<li>最终把查出来的 ORM 对象遍历出来</li>
+</ul>
+<p>这里你也能看到，官方 quickstart 更偏向展示 ORM 风格的查询写法。这里的 ORM 风格，可以理解成：<strong>不自己手写 SQL 字符串，而是用 Python 里的类、属性和方法去表达“我要查什么”</strong>。但真正落到当前项目时，并不会强制把所有查询都写成这种形式。因为对于复杂 SQL，尤其是数据仓库查询场景，直接写原生 SQL 往往更直观，也更方便控制细节。</p>
+<p>所以，这份 quickstart 在当前教程里的价值，可以概括成一句话：它主要帮助我们先理解 SQLAlchemy 的基本组成和使用顺序，后面项目代码再根据异步 MySQL 的真实需求做取舍和落地</p>
+<h3 id="2-4-封装-MySQL-客户端"><a href="#2-4-封装-MySQL-客户端" class="headerlink" title="2.4 封装 MySQL 客户端"></a>2.4 封装 MySQL 客户端</h3><p>项目对应文件路径：<code>shopkeeper-agent/app/clients/mysql_client_manager.py</code></p>
+<p>这一部分的中心代码就是当前项目里的 MySQL 客户端封装。前面的 <code>SQLAlchemy</code> 基础、quickstart、Engine 与 Session，最终都是为了帮助我们把这段代码看懂。</p>
+<p>这里还要先补一个课程里容易被忽略、但代码里已经真实用到的点：<code>asyncmy</code> 是当前项目使用的 MySQL 异步驱动。更具体地说，<code>SQLAlchemy</code> 负责提供数据库抽象层，而真正和 MySQL 异步通信的底层驱动，是 <code>asyncmy</code>。</p>
+<h4 id="2-4-1-MySQL-客户端代码实现"><a href="#2-4-1-MySQL-客户端代码实现" class="headerlink" title="2.4.1 MySQL 客户端代码实现"></a>2.4.1 MySQL 客户端代码实现</h4><figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">import</span> asyncio</span><br><span class="line"></span><br><span class="line"><span class="keyword">from</span> sqlalchemy <span class="keyword">import</span> text</span><br><span class="line"><span class="keyword">from</span> sqlalchemy.ext.asyncio <span class="keyword">import</span> (</span><br><span class="line">    AsyncEngine,</span><br><span class="line">    async_sessionmaker,</span><br><span class="line">    create_async_engine,</span><br><span class="line">)</span><br><span class="line"></span><br><span class="line"><span class="keyword">from</span> app.conf.app_config <span class="keyword">import</span> DBConfig, app_config</span><br><span class="line"></span><br><span class="line"></span><br><span class="line"><span class="keyword">class</span> <span class="title class_">MySQLClientManager</span>:</span><br><span class="line">    <span class="keyword">def</span> <span class="title function_">__init__</span>(<span class="params">self, config: DBConfig</span>):</span><br><span class="line">        <span class="comment"># Engine 是数据库连接层核心对象，底层会维护连接池</span></span><br><span class="line">        <span class="variable language_">self</span>.engine: AsyncEngine | <span class="literal">None</span> = <span class="literal">None</span></span><br><span class="line">        <span class="comment"># session_factory 用来按需创建新的 AsyncSession</span></span><br><span class="line">        <span class="variable language_">self</span>.session_factory = <span class="literal">None</span></span><br><span class="line">        <span class="comment"># 保存数据库配置，后面拼接连接地址要用</span></span><br><span class="line">        <span class="variable language_">self</span>.config = config</span><br><span class="line"></span><br><span class="line">    <span class="keyword">def</span> <span class="title function_">_get_url</span>(<span class="params">self</span>):</span><br><span class="line">        <span class="comment"># mysql+asyncmy 表示：连接 MySQL，并使用 asyncmy 作为异步驱动</span></span><br><span class="line">        <span class="keyword">return</span> <span class="string">f&quot;mysql+asyncmy://<span class="subst">&#123;self.config.user&#125;</span>:<span class="subst">&#123;self.config.password&#125;</span>@<span class="subst">&#123;self.config.host&#125;</span>:<span class="subst">&#123;self.config.port&#125;</span>/<span class="subst">&#123;self.config.database&#125;</span>?charset=utf8mb4&quot;</span></span><br><span class="line"></span><br><span class="line">    <span class="keyword">def</span> <span class="title function_">init</span>(<span class="params">self</span>):</span><br><span class="line">        <span class="comment"># 创建异步 Engine，相当于先把“数据库连接能力”准备好</span></span><br><span class="line">        <span class="variable language_">self</span>.engine = create_async_engine(</span><br><span class="line">            <span class="variable language_">self</span>._get_url(), pool_size=<span class="number">10</span>, pool_pre_ping=<span class="literal">True</span></span><br><span class="line">        )</span><br><span class="line">        <span class="comment"># 基于 Engine 创建 Session 工厂，后面真正查库时再拿 session</span></span><br><span class="line">        <span class="variable language_">self</span>.session_factory = async_sessionmaker(</span><br><span class="line">            <span class="variable language_">self</span>.engine, autoflush=<span class="literal">True</span>, expire_on_commit=<span class="literal">False</span></span><br><span class="line">        )</span><br><span class="line"></span><br><span class="line">    <span class="keyword">async</span> <span class="keyword">def</span> <span class="title function_">close</span>(<span class="params">self</span>):</span><br><span class="line">        <span class="comment"># 程序结束时释放连接池资源</span></span><br><span class="line">        <span class="keyword">await</span> <span class="variable language_">self</span>.engine.dispose()</span><br><span class="line"></span><br><span class="line"></span><br><span class="line"><span class="comment"># 一套连元数据库，一套连数仓模拟库</span></span><br><span class="line">meta_mysql_client_manager = MySQLClientManager(app_config.db_meta)</span><br><span class="line">dw_mysql_client_manager = MySQLClientManager(app_config.db_dw)</span><br><span class="line"></span><br><span class="line"><span class="keyword">if</span> __name__ == <span class="string">&quot;__main__&quot;</span>:</span><br><span class="line">    <span class="comment"># 这里演示的是数仓库查询，所以先初始化 dw 这一套客户端</span></span><br><span class="line">    dw_mysql_client_manager.init()</span><br><span class="line"></span><br><span class="line">    <span class="keyword">async</span> <span class="keyword">def</span> <span class="title function_">test</span>():</span><br><span class="line">        <span class="comment"># 通过 session_factory 创建一次数据库会话</span></span><br><span class="line">        <span class="keyword">async</span> <span class="keyword">with</span> dw_mysql_client_manager.session_factory() <span class="keyword">as</span> session:</span><br><span class="line">            sql = <span class="string">&quot;select * from fact_order limit 10&quot;</span></span><br><span class="line">            <span class="comment"># text(sql) 表示把原生 SQL 语句交给 SQLAlchemy 执行</span></span><br><span class="line">            result = <span class="keyword">await</span> session.execute(text(sql))</span><br><span class="line"></span><br><span class="line">            <span class="comment"># mappings().fetchall() 会把结果转成“按列名访问”的行对象列表</span></span><br><span class="line">            rows = result.mappings().fetchall()</span><br><span class="line"></span><br><span class="line">            <span class="comment"># 下面三行只是为了帮助观察返回结果的结构</span></span><br><span class="line">            <span class="built_in">print</span>(<span class="built_in">type</span>(rows))</span><br><span class="line">            <span class="built_in">print</span>(<span class="built_in">type</span>(rows[<span class="number">0</span>]))</span><br><span class="line">            <span class="built_in">print</span>(rows[<span class="number">0</span>][<span class="string">&quot;order_id&quot;</span>])</span><br><span class="line"></span><br><span class="line">    asyncio.run(test())</span><br><span class="line"></span><br></pre></td></tr></table></figure>
+
+<p>执行文件验证，成功：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">(shopkeeper-agent) didilili@DidililiMacBook-Pro shopkeeper-agent % python3 -m app.clients.mysql_client_manager</span><br><span class="line">&lt;class <span class="string">&#x27;list&#x27;</span>&gt;</span><br><span class="line">&lt;class <span class="string">&#x27;sqlalchemy.engine.row.RowMapping&#x27;</span>&gt;</span><br><span class="line">ORD20250101001</span><br></pre></td></tr></table></figure>
+
+<p>这个管理器主要做了四件事：</p>
+<ol>
+<li>保存数据库配置</li>
+<li>创建 <code>Engine</code></li>
+<li>创建 <code>Session</code> 工厂</li>
+<li>在程序退出时关闭连接池</li>
+</ol>
+<p>它和前面的 <code>QdrantClientManager</code>、<code>ESClientManager</code> 的思路是一致的：都属于“统一初始化、统一关闭、统一对外提供基础能力”的基础设施层。</p>
+<h4 id="2-4-2-为什么-Engine-适合全局复用"><a href="#2-4-2-为什么-Engine-适合全局复用" class="headerlink" title="2.4.2 为什么 Engine 适合全局复用"></a>2.4.2 为什么 Engine 适合全局复用</h4><p>这里有一个非常关键的点：<code>Engine</code> 可以理解成全局单例，但 <code>Session</code> 不应该做成全局单例。</p>
+<p>原因是这样的：</p>
+<ul>
+<li><code>Engine</code> 底层维护数据库连接池</li>
+<li>连接池这种东西，本来就应该全局复用</li>
+<li>如果每次请求都重新创建一个 <code>Engine</code>，等于每次都新建一套连接池，成本很高，也没有必要</li>
+</ul>
+<p>而 <code>Session</code> 不一样。<code>Session</code> 更像一次数据库交互对应的会话上下文，它通常应该是<strong>按请求、按使用场景来创建</strong>，而不是全局只保留一个。因为：</p>
+<ul>
+<li>一个 <code>Session</code> 往往会绑定事务上下文</li>
+<li>不同请求之间不应该共用同一个事务会话</li>
+<li>什么时候需要访问数据库，什么时候再基于 <code>Engine</code> 创建 <code>Session</code></li>
+</ul>
+<p>如果用一句更直白的话概括：<code>Engine</code> 负责长期维护连接能力，<code>Session</code> 负责一次具体数据库操作。</p>
+<h4 id="2-4-3-为什么真正对外暴露的是-session-factory"><a href="#2-4-3-为什么真正对外暴露的是-session-factory" class="headerlink" title="2.4.3 为什么真正对外暴露的是 session_factory"></a>2.4.3 为什么真正对外暴露的是 session_factory</h4><p>这一点也是很多初学者第一次看代码时不太容易立刻理解的地方。当前项目里没有“先在全局创建一个 <code>Session</code> 对象再到处传”，而是这样做：</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="variable language_">self</span>.session_factory = async_sessionmaker(</span><br><span class="line">    <span class="variable language_">self</span>.engine,</span><br><span class="line">    autoflush=<span class="literal">True</span>,</span><br><span class="line">    expire_on_commit=<span class="literal">False</span>,</span><br><span class="line">    autobegin=<span class="literal">True</span>,</span><br><span class="line">)</span><br></pre></td></tr></table></figure>
+
+<p>原因很简单：项目整体是异步风格，后面会在很多地方反复创建 Session，与其每次都手写一遍创建逻辑，不如先做一个统一的 <strong>Session 工厂</strong>。这样后面无论是 API 依赖注入、构建元知识脚本、Agent 执行链路都可以通过：</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">async</span> <span class="keyword">with</span> xxx_mysql_client_manager.session_factory() <span class="keyword">as</span> session:</span><br><span class="line">    ...</span><br></pre></td></tr></table></figure>
+
+<p>来得到一份新的异步会话对象。</p>
+<p>所以这里的 <code>session_factory</code> 可以看作：<strong>一个专门用来批量、统一、稳定地创建 <code>AsyncSession</code> 的工厂。</strong></p>
+<h4 id="2-4-4-pool-size、pool-pre-ping、autoflush-参数配置说明"><a href="#2-4-4-pool-size、pool-pre-ping、autoflush-参数配置说明" class="headerlink" title="2.4.4 pool_size、pool_pre_ping、autoflush 参数配置说明"></a>2.4.4 pool_size、pool_pre_ping、autoflush 参数配置说明</h4><p>这一部分有两个层面的重点：<strong>Engine 参数</strong> 和 <strong>Session 参数</strong>。</p>
+<p>先看 <code>Engine</code> 这层：</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="variable language_">self</span>.engine = create_async_engine(</span><br><span class="line">    url=<span class="variable language_">self</span>._get_url(),</span><br><span class="line">    pool_size=<span class="number">10</span>,</span><br><span class="line">    pool_pre_ping=<span class="literal">True</span>,</span><br><span class="line">)</span><br></pre></td></tr></table></figure>
+
+<h5 id="2-4-4-1-pool-size-10"><a href="#2-4-4-1-pool-size-10" class="headerlink" title="2.4.4.1 pool_size&#x3D;10"></a>2.4.4.1 pool_size&#x3D;10</h5><p>表示连接池里默认维持多少个可复用连接。这个值不是越大越好，而是要结合你的并发量、数据库承载能力和部署环境去权衡。当前教程项目里先给一个教学友好的默认值即可。</p>
+<h5 id="2-4-4-2-pool-pre-ping-True"><a href="#2-4-4-2-pool-pre-ping-True" class="headerlink" title="2.4.4.2 pool_pre_ping&#x3D;True"></a>2.4.4.2 pool_pre_ping&#x3D;True</h5><p>表示在取出连接时，先做一次可用性检测。</p>
+<p>为什么这个参数很重要？因为数据库服务端有时会主动断开长时间闲置的连接。如果我们从连接池里取到一个“看起来还在、实际上已经失效”的连接，后续查询就会报错。<code>pre_ping</code> 做的事情，就是在真正使用前先测一下这个连接是不是还活着。</p>
+<p>再看 <code>Session</code> 这层：</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="variable language_">self</span>.session_factory = async_sessionmaker(</span><br><span class="line">    <span class="variable language_">self</span>.engine,</span><br><span class="line">    autoflush=<span class="literal">True</span>,</span><br><span class="line">    expire_on_commit=<span class="literal">False</span>,</span><br><span class="line">    autobegin=<span class="literal">True</span>,</span><br><span class="line">)</span><br></pre></td></tr></table></figure>
+
+<h5 id="2-4-4-3-autoflush-True"><a href="#2-4-4-3-autoflush-True" class="headerlink" title="2.4.4.3 autoflush&#x3D;True"></a>2.4.4.3 autoflush&#x3D;True</h5><p>先这样理解会比较顺：</p>
+<ul>
+<li><code>add()</code> 并不等于立刻把数据最终提交到数据库</li>
+<li>在真正提交事务前，很多变更还停留在当前 <code>Session</code> 中</li>
+<li><code>flush()</code> 的作用是把这些待写入变更同步到数据库连接层，但事务还没最终提交</li>
+</ul>
+<p>所以 <code>autoflush=True</code> 的意义是：在执行查询之前，框架会自动帮我们做一次 <code>flush</code>，避免出现“明明前面已经 add 了对象，但后面查询时还看不到”的困惑。</p>
+<p>这里顺手再区分一下：</p>
+<ul>
+<li><code>flush</code>：把当前 Session 中待写入的变更同步到数据库连接层</li>
+<li><code>commit</code>：在 <code>flush</code> 的基础上真正提交事务</li>
+</ul>
+<p>也就是说，<code>flush</code> 不等于最终提交。</p>
+<h5 id="2-4-4-4-expire-on-commit-False"><a href="#2-4-4-4-expire-on-commit-False" class="headerlink" title="2.4.4.4 expire_on_commit&#x3D;False"></a>2.4.4.4 expire_on_commit&#x3D;False</h5><p>如果保持默认行为，事务提交后，对象状态会被标记为“过期”；你后面再次访问对象属性时，ORM 可能会尝试重新查数据库。但在异步项目里，这种隐式重新查询并不适合作为默认行为，所以这里显式设成 <code>False</code>，是为了让使用过程更稳定、更容易预测。</p>
+<h5 id="2-4-4-5-autobegin-True"><a href="#2-4-4-5-autobegin-True" class="headerlink" title="2.4.4.5 autobegin&#x3D;True"></a>2.4.4.5 autobegin&#x3D;True</h5><p>表示需要时自动开启事务。这样在大多数业务代码里，不需要每次都手动先写一段“开始事务”的样板代码。</p>
+<p>所以把这几个参数合在一起看，它们其实分别在解决三类问题：</p>
+<ul>
+<li><code>pool_pre_ping=True</code>：解决连接池里旧连接失效的问题</li>
+<li><code>autoflush=True</code>：解决“写了对象但查询看不到”的一致性体验问题</li>
+<li><code>expire_on_commit=False</code>：解决异步场景下对象属性访问的不确定性问题</li>
+</ul>
+<h3 id="2-5-为什么不用-ORM-查询语法"><a href="#2-5-为什么不用-ORM-查询语法" class="headerlink" title="2.5 为什么不用 ORM 查询语法"></a>2.5 为什么不用 ORM 查询语法</h3><p>前面已经对照过 <code>SQLAlchemy</code> 官方 quickstart，也看了 ORM 风格的查询写法。但落实到当前项目时，并没有把所有查询都改写成 ORM 查询表达式。</p>
+<p>原因很现实：</p>
+<ul>
+<li>简单查询，用 ORM 当然没问题</li>
+<li>复杂查询，尤其是偏数据仓库分析型的查询，用原生 SQL 往往更直接</li>
+<li>当前项目的重点不是“全面展示 ORM 语法”，而是“把数据库能力稳定接进后端”</li>
+</ul>
+<p>所以这里的策略其实很清楚：</p>
+<ul>
+<li><strong>连接管理、Session 管理</strong> 用 <code>SQLAlchemy</code></li>
+<li><strong>复杂查询语句</strong> 仍然可以直接写原生 SQL</li>
+</ul>
+<p>这也是为什么测试代码里直接用了：</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">await</span> session.execute(text(<span class="string">&quot;select * from table_info limit 10&quot;</span>))</span><br></pre></td></tr></table></figure>
+
+<hr>
+<h2 id="3、日志管理"><a href="#3、日志管理" class="headerlink" title="3、日志管理"></a>3、日志管理</h2><h3 id="3-1-为什么不用-print"><a href="#3-1-为什么不用-print" class="headerlink" title="3.1 为什么不用 print"></a>3.1 为什么不用 print</h3><p>这里先强调一个很现实的问题：如果只是本地临时测试，<code>print</code> 当然能用；但一旦进入正式项目，它很快就不够用了。</p>
+<p>原因主要有两类：</p>
+<ul>
+<li><strong>输出信息不够规范</strong>：如果只用 <code>print</code>，你通常还得自己拼接时间、模块名、函数名、行号、日志级别等信息。</li>
+<li><strong>输出目的地不够灵活</strong>：项目上线后，日志往往不只是输出到控制台，还需要同时写入日志文件，方便排查和归档。</li>
+</ul>
+<p>所以这里的重点不是“<code>print</code> 完全不能用”，而是：<strong>项目需要一套更稳定、更可配置的日志方案</strong>。</p>
+<h3 id="3-2-loguru-简介"><a href="#3-2-loguru-简介" class="headerlink" title="3.2 loguru 简介"></a>3.2 loguru 简介</h3><p>官方文档：<a target="_blank" rel="noopener" href="https://loguru.readthedocs.io/en/stable/#readme">https://loguru.readthedocs.io/en/stable/#readme</a></p>
+<p>当前项目选择的是 <code>loguru</code> 管理日志。先看它的一个最小示例，会更容易理解为什么这里选它：</p>
+<p>例如：</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">from</span> loguru <span class="keyword">import</span> logger</span><br><span class="line"></span><br><span class="line">logger.info(<span class="string">&quot;starting&quot;</span>)</span><br><span class="line">logger.warning(<span class="string">&quot;warning&quot;</span>)</span><br><span class="line">logger.error(<span class="string">&quot;error&quot;</span>)</span><br></pre></td></tr></table></figure>
+
+<p>直接运行后，就能看到带时间、级别、位置、颜色的日志输出。</p>
+<p>不过这里还有一个关键点：<strong>开箱即用不等于项目就可以直接照抄默认配置</strong>。因为真正的项目通常还会有这些需求：</p>
+<ul>
+<li>要不要输出到控制台</li>
+<li>要不要写入日志文件</li>
+<li>日志文件写到哪里</li>
+<li>多大体积就切分新文件</li>
+<li>保留多久</li>
+<li>日志格式要不要加额外字段</li>
+</ul>
+<p>所以当前项目并没有停留在“直接 <code>import logger</code> 然后打印”，而是继续往前做了一步：<strong>把日志做成可配置的基础能力</strong>。</p>
+<h3 id="3-3-配置文件中的日志描述"><a href="#3-3-配置文件中的日志描述" class="headerlink" title="3.3 配置文件中的日志描述"></a>3.3 配置文件中的日志描述</h3><p>项目对应文件路径：<code>shopkeeper-agent/conf/app_config.yaml</code></p>
+<p>对应配置如下：</p>
+<figure class="highlight yaml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line"><span class="attr">logging:</span></span><br><span class="line">  <span class="attr">file:</span></span><br><span class="line">    <span class="attr">enable:</span> <span class="literal">true</span></span><br><span class="line">    <span class="attr">level:</span> <span class="string">INFO</span></span><br><span class="line">    <span class="attr">path:</span> <span class="string">logs</span></span><br><span class="line">    <span class="attr">rotation:</span> <span class="string">&quot;10 MB&quot;</span></span><br><span class="line">    <span class="attr">retention:</span> <span class="string">&quot;7 days&quot;</span></span><br><span class="line">  <span class="attr">console:</span></span><br><span class="line">    <span class="attr">enable:</span> <span class="literal">true</span></span><br><span class="line">    <span class="attr">level:</span> <span class="string">INFO</span></span><br></pre></td></tr></table></figure>
+
+<p>这里的设计思路很值得先理解清楚：日志最终可以有两个“输出目的地”：<code>console</code>：输出到控制台；<code>file</code>：输出到日志文件。</p>
+<p>而 <code>enable</code> 的作用，就是决定这个输出通道是否启用。</p>
+<p>如果再拆细一点，这几个字段可以这样理解：</p>
+<ul>
+<li><code>level</code>：设定这个输出通道的最低日志级别</li>
+<li><code>path</code>：指定日志文件目录</li>
+<li><code>rotation</code>：指定多大体积后切分新文件</li>
+<li><code>retention</code>：指定日志保留多久</li>
+</ul>
+<p>这里最容易第一次没概念的两个参数，是 <code>rotation</code> 和 <code>retention</code>。</p>
+<ul>
+<li><code>rotation: &quot;10 MB&quot;</code>：表示日志文件写到大约 10MB 时，自动切分成新文件</li>
+<li><code>retention: &quot;7 days&quot;</code>：表示只保留最近 7 天的日志</li>
+</ul>
+<p>为什么要有这两个参数？因为如果一直往同一个文件里写，日志文件会越来越大，不方便查；如果日志永远不清理，磁盘空间最终会被慢慢吃满。所以这两个参数，其实是在解决<strong>日志文件长期运行时的可维护性问题</strong>。</p>
+<h3 id="3-4-封装日志配置"><a href="#3-4-封装日志配置" class="headerlink" title="3.4 封装日志配置"></a>3.4 封装日志配置</h3><p>项目对应文件路径：<code>shopkeeper-agent/app/core/log.py</code></p>
+<p>代码如下：</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">import</span> sys</span><br><span class="line"><span class="keyword">from</span> pathlib <span class="keyword">import</span> Path</span><br><span class="line"></span><br><span class="line"><span class="keyword">from</span> loguru <span class="keyword">import</span> logger</span><br><span class="line"></span><br><span class="line"><span class="keyword">from</span> app.conf.app_config <span class="keyword">import</span> app_config</span><br><span class="line"><span class="keyword">from</span> app.core.context <span class="keyword">import</span> request_id_ctx_var</span><br><span class="line"></span><br><span class="line"><span class="comment"># 统一日志展示格式，包含时间、级别、请求 ID 和调用位置等关键信息</span></span><br><span class="line">log_format = (</span><br><span class="line">    <span class="string">&quot;&lt;green&gt;&#123;time:YYYY-MM-DD HH:mm:ss.SSS&#125;&lt;/green&gt; | &quot;</span></span><br><span class="line">    <span class="string">&quot;&lt;level&gt;&#123;level: &lt;8&#125;&lt;/level&gt; | &quot;</span></span><br><span class="line">    <span class="string">&quot;&lt;magenta&gt;request_id - &#123;extra[request_id]&#125;&lt;/magenta&gt; | &quot;</span></span><br><span class="line">    <span class="string">&quot;&lt;cyan&gt;&#123;name&#125;&lt;/cyan&gt;:&lt;cyan&gt;&#123;function&#125;&lt;/cyan&gt;:&lt;cyan&gt;&#123;line&#125;&lt;/cyan&gt; - &quot;</span></span><br><span class="line">    <span class="string">&quot;&lt;level&gt;&#123;message&#125;&lt;/level&gt;&quot;</span></span><br><span class="line">)</span><br><span class="line"></span><br><span class="line"></span><br><span class="line"><span class="comment"># 通过 Loguru patch 钩子，把上下文中的 request_id 写入每条日志的 extra 字段</span></span><br><span class="line"><span class="keyword">def</span> <span class="title function_">inject_request_id</span>(<span class="params">record</span>):</span><br><span class="line">    request_id = request_id_ctx_var.get()</span><br><span class="line">    record[<span class="string">&quot;extra&quot;</span>][<span class="string">&quot;request_id&quot;</span>] = request_id</span><br><span class="line"></span><br><span class="line"></span><br><span class="line"><span class="comment"># 移除 Loguru 默认的输出目标，避免和项目自定义配置重复打印</span></span><br><span class="line">logger.remove()</span><br><span class="line"></span><br><span class="line"><span class="comment"># 生成带 request_id 注入能力的 logger，后续业务代码统一使用这个实例</span></span><br><span class="line">logger = logger.patch(inject_request_id)</span><br><span class="line"></span><br><span class="line"><span class="comment"># 根据配置决定是否输出控制台日志，适合本地开发和容器标准输出采集</span></span><br><span class="line"><span class="keyword">if</span> app_config.logging.console.enable:</span><br><span class="line">    logger.add(</span><br><span class="line">        sink=sys.stdout,</span><br><span class="line">        level=app_config.logging.console.level,</span><br><span class="line">        <span class="built_in">format</span>=log_format,</span><br><span class="line">    )</span><br><span class="line"></span><br><span class="line"><span class="comment"># 根据配置决定是否写入文件日志，并在启动时确保日志目录存在</span></span><br><span class="line"><span class="keyword">if</span> app_config.logging.file.enable:</span><br><span class="line">    path = Path(app_config.logging.file.path)</span><br><span class="line">    path.mkdir(parents=<span class="literal">True</span>, exist_ok=<span class="literal">True</span>)</span><br><span class="line">    logger.add(</span><br><span class="line">        sink=path / <span class="string">&quot;app.log&quot;</span>,</span><br><span class="line">        level=app_config.logging.file.level,</span><br><span class="line">        <span class="built_in">format</span>=log_format,</span><br><span class="line">        rotation=app_config.logging.file.rotation,</span><br><span class="line">        retention=app_config.logging.file.retention,</span><br><span class="line">        encoding=<span class="string">&quot;utf-8&quot;</span>,</span><br><span class="line">    )</span><br><span class="line"></span><br></pre></td></tr></table></figure>
+
+<h4 id="3-4-1-这一层封装在做什么"><a href="#3-4-1-这一层封装在做什么" class="headerlink" title="3.4.1 这一层封装在做什么"></a>3.4.1 这一层封装在做什么</h4><p>如果先不看细节，这段日志封装代码主要是在统一四类能力：</p>
+<ol>
+<li>定义统一日志格式</li>
+<li>决定日志输出到控制台还是文件</li>
+<li>根据配置文件启用或关闭不同输出通道</li>
+<li>给每条日志自动补充 <code>request_id</code></li>
+</ol>
+<p>所以这里的重点不是“怎么打印一条日志”，而是：<strong>怎么把日志能力做成整个后端项目可复用的基础设施</strong>。</p>
+<h4 id="3-4-2-logger-remove-与-logger-add-…-的作用"><a href="#3-4-2-logger-remove-与-logger-add-…-的作用" class="headerlink" title="3.4.2 logger.remove() 与 logger.add(…) 的作用"></a>3.4.2 logger.remove() 与 logger.add(…) 的作用</h4><p><code>loguru</code> 之所以“开箱即用”，是因为它自带了一套默认配置。所以，项目如果想使用自己的日志格式和输出策略，第一步通常就要先做：</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">logger.remove()</span><br></pre></td></tr></table></figure>
+
+<p>它的作用就是：<strong>先把默认日志配置移除掉</strong>。</p>
+<p>然后再通过：</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">logger.add(...)</span><br></pre></td></tr></table></figure>
+
+<p>把我们自己的输出通道加回来。也就是说，这里的整体逻辑是：</p>
+<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">移除默认配置</span><br><span class="line">  -&gt; 判断是否启用 console</span><br><span class="line">  -&gt; 判断是否启用 file</span><br><span class="line">  -&gt; 分别添加自己的日志输出规则</span><br></pre></td></tr></table></figure>
+
+<p>这套日志能力的核心目标就是“可配置”。不是写死“永远打印到控制台”，也不是写死“永远输出到文件”，而是让用户通过配置文件决定到底要启用哪些输出通道。</p>
+<h4 id="3-4-3-日志格式设计"><a href="#3-4-3-日志格式设计" class="headerlink" title="3.4.3 日志格式设计"></a>3.4.3 日志格式设计</h4><p>这一段里，最值得认真看的其实是 <code>log_format</code>。</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">log_format = (</span><br><span class="line">    <span class="string">&quot;&lt;green&gt;&#123;time:YYYY-MM-DD HH:mm:ss.SSS&#125;&lt;/green&gt; | &quot;</span></span><br><span class="line">    <span class="string">&quot;&lt;level&gt;&#123;level: &lt;8&#125;&lt;/level&gt; | &quot;</span></span><br><span class="line">    <span class="string">&quot;&lt;magenta&gt;request_id - &#123;extra[request_id]&#125;&lt;/magenta&gt; | &quot;</span></span><br><span class="line">    <span class="string">&quot;&lt;cyan&gt;&#123;name&#125;&lt;/cyan&gt;:&lt;cyan&gt;&#123;function&#125;&lt;/cyan&gt;:&lt;cyan&gt;&#123;line&#125;&lt;/cyan&gt; - &quot;</span></span><br><span class="line">    <span class="string">&quot;&lt;level&gt;&#123;message&#125;&lt;/level&gt;&quot;</span></span><br><span class="line">)</span><br></pre></td></tr></table></figure>
+
+<p>这里不是随便拼一个字符串，而是在定义：<strong>每一条日志最后长什么样</strong>。</p>
+<p>其中几个字段最重要：</p>
+<ul>
+<li><code>{time:YYYY-MM-DD HH:mm:ss.SSS}</code>：时间</li>
+<li><code>{level: &lt;8}</code>：日志级别，并按固定宽度对齐</li>
+<li><code>{name}</code>：模块名</li>
+<li><code>{function}</code>：函数名</li>
+<li><code>{line}</code>：行号</li>
+<li><code>{message}</code>：具体日志内容</li>
+<li><code>{extra[request_id]}</code>：额外注入的请求标识</li>
+</ul>
+<p>这里要解决的是一个非常实际的问题：如果没有统一格式，日志就只是“能看”；但有了这些字段，日志才会变成“能排查问题”。</p>
+<h4 id="3-4-4-request-id-注入机制"><a href="#3-4-4-request-id-注入机制" class="headerlink" title="3.4.4 request_id 注入机制"></a>3.4.4 request_id 注入机制</h4><p>项目对应文件路径：<code>shopkeeper-agent/app/core/context.py</code></p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">from</span> contextvars <span class="keyword">import</span> ContextVar</span><br><span class="line"></span><br><span class="line">request_id_ctx_var = ContextVar(<span class="string">&quot;request_id&quot;</span>, default=<span class="string">&quot;1&quot;</span>)</span><br></pre></td></tr></table></figure>
+
+<p>在日志模块里，通过下面这段逻辑把它写进日志的 <code>extra</code> 字段：</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">def</span> <span class="title function_">inject_request_id</span>(<span class="params">record</span>):</span><br><span class="line">    request_id = request_id_ctx_var.get()</span><br><span class="line">    record[<span class="string">&quot;extra&quot;</span>][<span class="string">&quot;request_id&quot;</span>] = request_id</span><br></pre></td></tr></table></figure>
+
+<p>这一层非常重要。在并发场景下，如果多个请求同时在跑，日志会交错在一起。如果没有一个统一标识，你很难把“同一个请求”的所有日志串起来。</p>
+<p>所以 <code>request_id</code> 的作用可以概括成一句话：<strong>用来把同一次请求相关的所有日志串成一条链路。</strong></p>
+<p>这也是为什么当前项目的日志格式里专门加了：</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">&lt;magenta&gt;request_id - &#123;extra[request_id]&#125;&lt;/magenta&gt;</span><br></pre></td></tr></table></figure>
+
+<h4 id="3-4-5-文件日志输出策略"><a href="#3-4-5-文件日志输出策略" class="headerlink" title="3.4.5 文件日志输出策略"></a>3.4.5 文件日志输出策略</h4><figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line">path = Path(app_config.logging.file.path)</span><br><span class="line">path.mkdir(parents=<span class="literal">True</span>, exist_ok=<span class="literal">True</span>)</span><br><span class="line">logger.add(</span><br><span class="line">    sink=path / <span class="string">&quot;app.log&quot;</span>,</span><br><span class="line">    level=app_config.logging.file.level,</span><br><span class="line">    <span class="built_in">format</span>=log_format,</span><br><span class="line">    rotation=app_config.logging.file.rotation,</span><br><span class="line">    retention=app_config.logging.file.retention,</span><br><span class="line">    encoding=<span class="string">&quot;utf-8&quot;</span>,</span><br><span class="line">)</span><br></pre></td></tr></table></figure>
+
+<p>它表达的意思是：</p>
+<ul>
+<li>先从配置文件里读取日志目录</li>
+<li>如果目录不存在，就自动创建</li>
+<li>再把日志写到这个目录下的 <code>app.log</code></li>
+<li>同时应用前面配置好的级别、格式、切分策略和保留策略</li>
+</ul>
+<p>这块的设计意图其实很明确：<strong>不是让日志系统只能工作，而是让它能长期稳定地工作。</strong></p>
+<hr>
+<p><strong>本章小结：</strong></p>
+<ul>
+<li><strong>Embedding</strong> 这一部分，核心是把<strong>模型、推理服务、客户端封装、业务调用</strong>这四层关系串起来。</li>
+<li><strong>MySQL</strong> 这一部分，核心是把 <strong>SQLAlchemy、Engine、Session、Session 工厂</strong>之间的分工理顺。</li>
+<li><strong>日志</strong> 这一部分，核心是看清<strong>为什么正式项目需要统一日志配置，以及 <code>request_id</code> 为什么重要</strong>。</li>
+<li>到这里为止，<code>Qdrant / Elasticsearch / Embedding / MySQL / 日志</code> 这几块基础服务已经基本接齐，后面就可以继续进入元数据知识库的构建链路。</li>
+</ul>
+<p>下一篇会正式进入<strong>元数据知识库</strong>部分，先从整体目标、脚本入口、配置结构和代码分层开始，把“元数据如何被组织、如何被构建、为什么这样设计”这条主线先搭起来。</p>
+</div>
+        </div>
+      </main>
+    </div>
+
+    <div class="float-buttons">
+      <button id="back-to-top" class="float-btn" title="返回顶部">↑</button>
+      <a href="/" class="float-btn" title="返回首页">🏠</a>
+    </div>
+
+    <script>
+      /**
+ * ============================================
+ * 页面归属：post.njk 文章详情页
+ * 功能说明：监听页面滚动，控制返回顶部按钮显示/隐藏、点击返回顶部平滑滚动
+ * 引入位置：post.njk script 内部抽取
+ * ============================================
+ */
+var backToTopBtn = document.getElementById('back-to-top');
+window.addEventListener('scroll', function () {
+  if (window.scrollY > 300)
+    backToTopBtn
+      .classList
+      .add('show');
+  else
+    backToTopBtn
+      .classList
+      .remove('show');
+});
+backToTopBtn.addEventListener('click', function () {
+  window.scrollTo({top: 0, behavior: 'smooth'});
+});
+      /**
+ * ============================================
+ * 侧边栏交互脚本
+ * 文件：_js/sidebar.js
+ * 作用：搜索功能、粉丝数点击 +1、关注数点击 +1、侧边栏折叠展开
+ * ============================================
+ */
+document.addEventListener('DOMContentLoaded', function() {
+  // ===== 搜索功能 =====
+  var searchBtn = document.getElementById('search-btn');
+  var searchInput = document.getElementById('search-input');
+  
+  if (searchBtn) {
+    searchBtn.addEventListener('click', function() {
+      var keyword = searchInput.value.trim();
+      if (keyword) {
+        window.location.href = '/search/?q=' + encodeURIComponent(keyword);
+      }
+    });
+  }
+  
+  if (searchInput) {
+    searchInput.addEventListener('keypress', function(e) {
+      if (e.key === 'Enter') {
+        var keyword = searchInput.value.trim();
+        if (keyword) {
+          window.location.href = '/search/?q=' + encodeURIComponent(keyword);
+        }
+      }
+    });
+  }
+  // ===== 粉丝数点击 +1（起始 1088） =====
+  var fansEl = document.getElementById('fans-count');
+  if (fansEl) {
+    fansEl.addEventListener('click', function() {
+      var current = parseInt(this.textContent);
+      this.textContent = current + 1;
+      this.style.transform = 'scale(1.3)';
+      this.style.color = '#ff6b6b';
+      setTimeout(function() {
+        fansEl.style.transform = 'scale(1)';
+        fansEl.style.color = '#00eeff';
+      }, 300);
+    });
+  }
+  // ===== 关注数点击 +1（起始 66） =====
+  var followEl = document.getElementById('follow-count');
+  if (followEl) {
+    followEl.addEventListener('click', function() {
+      var current = parseInt(this.textContent);
+      this.textContent = current + 1;
+      this.style.transform = 'scale(1.3)';
+      this.style.color = '#ff6b6b';
+      setTimeout(function() {
+        followEl.style.transform = 'scale(1)';
+        followEl.style.color = '#00eeff';
+      }, 300);
+    });
+  }
+
+
+  // =========侧边栏折叠展开逻辑=========
+  const toggleBtn = document.getElementById('sidebarToggle');
+  const sidebar = document.getElementById('sidebar');
+  const mainContent = document.querySelector('.main-content');
+
+  // 首页、归档、分类页面没有元素直接退出
+  if(!toggleBtn || !sidebar || !mainContent){
+    return;
+  }
+
+  let isCollapsed = localStorage.getItem('sidebarCollapsed') === '1';
+
+  function setUi(collapsed){
+    if(collapsed){
+      document.body.classList.add('sidebar-collapsed');
+    }else{
+      document.body.classList.remove('sidebar-collapsed');
+    }
+    localStorage.setItem('sidebarCollapsed', collapsed ? '1':'0');
+  }
+
+  setUi(isCollapsed);
+
+  toggleBtn.addEventListener('click',function(e){
+    e.stopPropagation();
+    isCollapsed = !isCollapsed;
+    setUi(isCollapsed);
+  });
+
+});
+    </script>
+  </body>
+</html>

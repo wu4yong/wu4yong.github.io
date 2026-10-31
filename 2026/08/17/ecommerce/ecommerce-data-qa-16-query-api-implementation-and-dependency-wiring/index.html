@@ -1,0 +1,2038 @@
+<!--
+  ============================================
+  文章详情页面模板
+  文件：post.njk
+  作用：展示单篇文章正文、左侧侧边栏、返回顶部悬浮按钮
+  样式依赖：_css/common.css、_css/post-layout.css、_css/sidebar.css
+  脚本依赖：_js/post-float-btn.js
+  组件依赖：_components/Particles.njk、_components/Sidebar.njk
+  ============================================
+-->
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="UTF-8">
+    <title> 时空秘境 - 十六、电商问数：查询接口实现与依赖组装 </title>
+    <style>
+      /**
+ * ============================================
+ * 公共样式
+ * 作用：重置样式、星空背景、通用组件样式
+ * 适用于：所有页面
+ * ============================================
+ */
+
+/* ----- 重置所有元素边距和盒模型 ----- */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+/* ----- 页面主体 ----- */
+body {
+  background: #020817;              /* 深空蓝背景色 */
+  color: #fff;
+  font-family: "Microsoft Yahei", -apple-system, BlinkMacSystemFont, sans-serif;
+}
+
+/* ----- 星空粒子容器（固定定位，全屏覆盖）----- */
+#particles {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 0;                       /* 置于最底层，内容在上面 */
+}
+
+/* ----- 通用内容容器（归档页、标签页等使用）----- */
+.container {
+  position: relative;
+  z-index: 10;                      /* 在粒子层之上 */
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 80px 20px;
+}
+
+/* ----- 页面头部 ----- */
+.header {
+  text-align: center;
+  margin-bottom: 40px;
+}
+.header h1 {
+  color: #00eeff;
+  font-size: 42px;
+  text-shadow: 0 0 20px #00eeff;    /* 青色发光效果 */
+}
+
+/* ----- 通用返回首页按钮 ----- */
+.back-home {
+  display: inline-block;
+  margin-top: 20px;
+  padding: 10px 25px;
+  background: rgba(0, 32, 65, 0.8);
+  border: 1px solid #00eeff;
+  border-radius: 30px;
+  color: #00eeff;
+  text-decoration: none;
+  transition: all 0.3s ease;
+}
+.back-home:hover {
+  background: #00eeff;
+  color: #020817;
+}
+
+/* ----- 文章/页面列表容器（归档页使用）----- */
+.post-list {
+  background: rgba(0, 22, 45, 0.85);
+  border-radius: 18px;
+  padding: 30px;
+  border: 1px solid #00eeff;
+}
+
+/* ----- 列表项 ----- */
+.post-item {
+  margin: 20px 0;
+  padding: 15px;
+  border-bottom: 1px solid #00eeff33;
+}
+.post-item a {
+  color: #00eeff;
+  text-decoration: none;
+  font-size: 20px;
+  transition: all 0.3s ease;
+}
+.post-item a:hover {
+  text-shadow: 0 0 8px #00eeff;
+}
+
+/* ============================================
+   移动端图片和视频自适应
+   ============================================ */
+
+/* 所有图片自适应 */
+.article-content img {
+  max-width: 100%;
+  height: auto;
+  display: block;
+  margin: 10px auto;
+  border-radius: 8px;
+}
+
+/* 所有视频和 iframe 自适应 */
+.article-content video,
+.article-content iframe {
+  max-width: 100%;
+  height: auto;
+  display: block;
+  margin: 10px auto;
+  border-radius: 8px;
+}
+
+/* 视频容器 - 保持 16:9 比例 */
+.video-container {
+  position: relative;
+  width: 100%;
+  padding-bottom: 56.25%;  /* 16:9 */
+  height: 0;
+  overflow: hidden;
+  border-radius: 8px;
+  margin: 10px 0;
+}
+
+.video-container video,
+.video-container iframe {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  border: none;
+}
+
+/* B站 iframe 自适应 */
+.article-content iframe[src*="bilibili"] {
+  width: 100%;
+  height: 400px;
+  max-height: 50vh;
+  border-radius: 8px;
+}
+
+/* 移动端适配 */
+@media (max-width: 768px) {
+  .article-content iframe[src*="bilibili"] {
+    height: 250px;
+  }
+  
+  .article-content video,
+  .article-content iframe {
+    border-radius: 6px;
+  }
+}
+
+/* ===== 手机端代码块和表格滚动 ===== */
+@media (max-width: 768px) {
+  /* 代码块水平滚动 */
+  .article-content pre {
+    overflow-x: auto;
+    white-space: pre-wrap;
+    word-break: break-all;
+    font-size: 13px;
+    padding: 12px;
+  }
+  
+  .article-content code {
+    font-size: 13px;
+    word-break: break-all;
+  }
+  
+  /* 表格水平滚动 */
+  .article-content table {
+    display: block;
+    overflow-x: auto;
+    white-space: nowrap;
+    font-size: 13px;
+  }
+  
+  .article-content table th,
+  .article-content table td {
+    padding: 6px 10px;
+    font-size: 12px;
+  }
+  
+  /* 图片自适应 */
+  .article-content img {
+    max-width: 100%;
+    height: auto;
+  }
+}
+
+/* ===== 移动端代码块水平滚动 ===== */
+@media (max-width: 768px) {
+  .article-content pre,
+  .article-content .highlight {
+    overflow-x: auto !important;
+    white-space: pre !important;
+    word-break: normal !important;
+    padding: 12px !important;
+    font-size: 13px !important;
+    -webkit-overflow-scrolling: touch;
+  }
+  
+  .article-content code {
+    font-size: 13px !important;
+    word-break: normal !important;
+  }
+  
+  .article-content table {
+    display: block !important;
+    overflow-x: auto !important;
+    white-space: nowrap !important;
+    -webkit-overflow-scrolling: touch;
+  }
+}
+
+/* ===== 移动端代码块水平滚动 ===== */
+@media (max-width: 768px) {
+  .article-content pre,
+  .article-content .highlight {
+    overflow-x: auto !important;
+    white-space: pre !important;
+    word-break: normal !important;
+    padding: 12px !important;
+    font-size: 13px !important;
+    -webkit-overflow-scrolling: touch;
+  }
+  
+  .article-content code {
+    font-size: 13px !important;
+    word-break: normal !important;
+  }
+  
+  .article-content table {
+    display: block !important;
+    overflow-x: auto !important;
+    white-space: nowrap !important;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .essay-image {
+    height: 160px;
+    font-size: 18px;
+    letter-spacing: 2px;
+  }
+}
+
+
+      /**
+ * ============================================
+ * 页面归属：post.njk 文章详情页面模板
+ * ============================================
+ */
+.app-layout {
+  position: relative;
+  z-index: 10;
+  display: flex;
+  height: 100vh;
+  overflow: hidden;
+}
+
+.main-content {
+  flex: 1;
+  overflow-y: auto;
+  padding: 40px 60px;
+}
+
+.article-card {
+  width: 100%;
+  background: rgba(0, 22, 45, 0.6);
+  border-radius: 18px;
+  padding: 40px;
+  border: 1px solid #00eeff;
+}
+
+.article-title {
+  color: #5cd0f0;
+  font-size: 32px;
+  margin-bottom: 20px;
+  padding-bottom: 15px;
+  border-bottom: 1px solid #00eeff33;
+}
+
+.article-meta {
+  color: #99ccff;
+  font-size: 14px;
+  margin-bottom: 30px;
+}
+
+/* ========== 文章正文样式 ========== */
+.article-content {
+  line-height: 1.8;
+}
+
+/* ---------- 标题（保持纯色） ---------- */
+.article-content h1 {
+  color: #5cd0f0;
+  font-size: 28px;
+  margin: 30px 0 15px;
+  border-left: 3px solid #00eeff;
+  padding-left: 12px;
+}
+.article-content h2 {
+  color: #5cd0f0;
+  font-size: 24px;
+  margin: 25px 0 12px;
+}
+.article-content h3 {
+  color: #99ccff;
+  font-size: 20px;
+  margin: 20px 0 10px;
+}
+
+/* ---------- 引用块（保持原来的浅青色） ---------- */
+.article-content blockquote {
+  color: #e0fcff;                   /* 引用块本身的颜色 */
+  border-left: 4px solid #00eeff;
+  background: rgba(0, 22, 45, 0.4);
+  padding: 10px 20px;
+  margin: 16px 0;
+}
+.article-content blockquote p {
+  color: #e0fcff !important;        /* 引用块内文字保持原色 */
+}
+
+/* ---------- 彩虹渐变（静态，无动画） ---------- */
+/* 正文段落 */
+.article-content p {
+  background: linear-gradient(
+    90deg,
+    #00ff88,   /* 绿 */
+    #ff6b6b,   /* 红 */
+    #ffd93d,   /* 黄 */
+    #4dabf7,   /* 蓝 */
+    #ff922b,   /* 橙 */
+    #00ff88    /* 绿（循环） */
+  );
+  background-size: 300% 100%;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  font-weight: 500;
+  margin: 0 0 16px;
+}
+
+/* 列表项 */
+.article-content ul li,
+.article-content ol li {
+  background: linear-gradient(
+    90deg,
+    #00ff88,
+    #ff6b6b,
+    #ffd93d,
+    #4dabf7,
+    #ff922b,
+    #00ff88
+  );
+  background-size: 300% 100%;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* 加粗文字 */
+.article-content strong {
+  background: linear-gradient(
+    90deg,
+    #ffd93d,
+    #ff922b,
+    #ff6b6b,
+    #ffd93d
+  );
+  background-size: 300% 100%;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* 链接 */
+.article-content a {
+  background: linear-gradient(
+    90deg,
+    #4dabf7,
+    #00ff88,
+    #ffd93d,
+    #4dabf7
+  );
+  background-size: 300% 100%;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  border-bottom: 1px solid rgba(77, 171, 247, 0.3);
+}
+
+/* ---------- 代码块（保持暗色背景，文字亮色） ---------- */
+.article-content code {
+  background: #001a33;
+  padding: 3px 8px;
+  border-radius: 6px;
+  font-family: monospace;
+  -webkit-text-fill-color: #a8d8a8;  /* 代码文字浅绿色 */
+}
+.article-content pre {
+  background: #001a33;
+  padding: 15px;
+  border-radius: 10px;
+  overflow-x: auto;
+}
+.article-content pre code {
+  -webkit-text-fill-color: #a8d8a8;
+}
+
+/* ========== 右下角悬浮按钮 ========== */
+.float-buttons {
+  position: fixed;
+  bottom: 30px;
+  right: 30px;
+  z-index: 100;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.float-btn {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: rgba(0, 32, 65, 0.9);
+  border: 1px solid #00eeff;
+  color: #5cd0f0;
+  font-size: 20px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.3s ease;
+  text-decoration: none;
+}
+
+.float-btn:hover {
+  transform: scale(1.1);
+  background: #00eeff;
+  color: #020817;
+  box-shadow: 0 0 15px #00eeff;
+}
+
+#back-to-top {
+  opacity: 0;
+  visibility: hidden;
+  transition: all 0.3s ease;
+}
+#back-to-top.show {
+  opacity: 1;
+  visibility: visible;
+}
+
+@media (max-width: 768px) {
+  .main-content {
+    padding: 20px;
+  }
+  .float-buttons {
+    bottom: 15px;
+    right: 15px;
+  }
+  .float-btn {
+    width: 40px;
+    height: 40px;
+    font-size: 16px;
+  }
+}
+
+      /**
+ * ============================================
+ * 侧边栏样式
+ * 作用：左侧导航栏的所有样式
+ * 适用于：Sidebar.njk 组件
+ * ============================================
+ */
+
+/* ----- 左侧导航栏容器 ----- */
+.sidebar {
+  width: 320px;                     /* 固定宽度 */
+  background: rgba(0, 22, 45, 0.6);
+  backdrop-filter: blur(10px);      /* 毛玻璃效果 */
+  border-right: 1px solid #00eeff33;
+  overflow-y: auto;                 /* 内容过多时滚动 */
+  padding: 20px;
+  flex-shrink: 0;                   /* 防止被压缩 */
+}
+
+/* ========== 个人资料卡片 ========== */
+.profile-card {
+  text-align: center;
+  padding: 20px;
+  background: rgba(0, 22, 45, 0.7);
+  border-radius: 16px;
+  margin-bottom: 20px;
+}
+
+/* ----- 头像 ----- */
+.avatar img {
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;              /* 圆形头像 */
+  border: 2px solid #00eeff;
+}
+
+/* ----- 昵称 ----- */
+.nickname {
+  color: #00eeff;
+  font-size: 18px;
+  margin: 10px 0 5px;
+}
+
+/* ----- 个人简介 ----- */
+.bio {
+  color: #88aaff;
+  font-size: 12px;
+}
+
+/* ----- 统计数据（文章数、粉丝数、关注数）----- */
+.stats {
+  display: flex;
+  justify-content: space-around;
+  margin: 15px 0;
+}
+.stat-item {
+  text-align: center;
+}
+.stat-num {
+  display: block;
+  color: #00eeff;
+  font-size: 20px;
+  font-weight: bold;
+}
+.stat-label {
+  color: #88aaff;
+  font-size: 12px;
+}
+
+/* ----- 关注按钮 ----- */
+.follow-btn {
+  background: rgba(0, 238, 255, 0.2);
+  border: 1px solid #00eeff;
+  color: #00eeff;
+  padding: 6px 20px;
+  border-radius: 20px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+.follow-btn:hover {
+  background: #00eeff;
+  color: #020817;
+}
+
+/* ========== 搜索框 ========== */
+.search-box {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 20px;
+}
+.search-box input {
+  flex: 1;
+  padding: 10px;
+  background: rgba(0, 22, 45, 0.7);
+  border: 1px solid #00eeff;
+  border-radius: 8px;
+  color: #fff;
+}
+.search-box input::placeholder {
+  color: #88aaff;
+}
+.search-box button {
+  padding: 10px 15px;
+  background: rgba(0, 238, 255, 0.2);
+  border: 1px solid #00eeff;
+  border-radius: 8px;
+  color: #00eeff;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+.search-box button:hover {
+  background: #00eeff;
+  color: #020817;
+}
+
+/* ========== 卡片通用样式 ========== */
+.links-card,
+.tags-card,
+.archive-card {
+  background: rgba(0, 22, 45, 0.7);
+  border-radius: 16px;
+  padding: 15px;
+  margin-bottom: 20px;
+}
+.links-card h4,
+.tags-card h4,
+.archive-card h4 {
+  color: #00eeff;
+  margin-bottom: 10px;
+  padding-bottom: 5px;
+  border-bottom: 1px solid #00eeff33;
+}
+
+/* ----- 链接列表 ----- */
+.links-card ul,
+.archive-list {
+  list-style: none;
+  padding: 0;
+}
+.links-card li,
+.archive-list li {
+  margin: 8px 0;
+}
+.links-card a,
+.archive-list a {
+  color: #ccddff;
+  text-decoration: none;
+  font-size: 13px;
+  transition: all 0.3s ease;
+}
+.links-card a:hover,
+.archive-list a:hover {
+  color: #00eeff;
+  padding-left: 4px;
+}
+
+/* ========== 标签云 ========== */
+.tag-cloud {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.tag-link {
+  color: #ccddff;
+  text-decoration: none;
+  font-size: 12px;
+  padding: 4px 8px;
+  background: rgba(0, 0, 0, 0.3);
+  border-radius: 15px;
+  transition: all 0.3s ease;
+}
+.tag-link:hover {
+  color: #00eeff;
+  background: rgba(0, 238, 255, 0.2);
+}
+
+/* ========== 移动端适配：小屏幕隐藏侧边栏 ========== */
+@media (max-width: 768px) {
+  .sidebar {
+    display: none;
+  }
+}
+
+/* ==========侧边栏折叠｜按钮右上角顶角｜圆形、单图标不切换 ========== */
+aside#sidebar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 320px;
+  height: 100vh;
+  z-index: 999;
+  transition: left 0.3s ease;
+  overflow-y: auto;
+}
+/* 折叠：侧边栏向左滑出屏幕 */
+body.sidebar-collapsed aside#sidebar {
+  left: -320px;
+}
+
+/* 折叠按钮：紧贴右上角顶角，圆形40px，和右下角按钮尺寸统一 */
+.sidebar-toggle {
+  position: fixed;
+  z-index: 10000;
+  right: 12px;
+  top: 12px;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  border: 1px solid rgba(0, 238, 255, 0.45);
+  background: rgba(10, 28, 56, 0.88);
+  color: #00eeff;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.25s ease;
+  box-shadow:
+    0 0 12px rgba(0, 238, 255, 0.35),
+    inset 0 0 10px rgba(0, 238, 255, 0.12);
+  padding: 0;
+  font-size: 20px;
+}
+/* 只用before一个图标，打开/收起图标保持不变 */
+.sidebar-toggle::before {
+  content: "⤢";
+}
+.sidebar-toggle::after {
+  content: "";
+}
+
+.sidebar-toggle:hover {
+  background: rgba(0, 238, 255, 0.18);
+  border-color: #00eeff;
+  box-shadow:
+    0 0 18px rgba(0, 238, 255, 0.55),
+    inset 0 0 14px rgba(0, 238, 255, 0.25);
+  transform: translateY(-1px);
+}
+
+/* 折叠状态图标保持不变 */
+body.sidebar-collapsed .sidebar-toggle::before {
+  content: "⤢";
+}
+
+/* post页面正文边距 */
+.main-content {
+  margin-left: 340px;
+  transition: margin-left 0.3s ease;
+}
+body.sidebar-collapsed .main-content {
+  margin-left: 0 !important;
+}
+
+/* ========== 右下角悬浮按钮统一样式｜和右上角折叠按钮尺寸风格完全对齐 ========== */
+.float-buttons {
+  position: fixed;
+  right: 12px;
+  bottom: 12px;
+  z-index: 10000;
+  display: flex;
+  flex-direction: column;
+  gap:10px;
+}
+.float-btn {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  border: 1px solid rgba(0, 238, 255, 0.45);
+  background: rgba(10, 28, 56, 0.88);
+  color: #00eeff;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size:18px;
+  transition: all 0.25s ease;
+  box-shadow:
+    0 0 12px rgba(0, 238, 255, 0.35),
+    inset 0 0 10px rgba(0, 238, 255, 0.12);
+  padding:0;
+  text-decoration: none;
+}
+.float-btn:hover {
+  background: rgba(0, 238, 255, 0.18);
+  border-color: #00eeff;
+  box-shadow:
+    0 0 18px rgba(0, 238, 255, 0.55),
+    inset 0 0 14px rgba(0, 238, 255, 0.25);
+  transform: translateY(-1px);
+}
+
+/* 移动端隐藏两个区域的按钮 */
+@media (max-width:768px){
+  .sidebar-toggle {
+    display: none !important;
+  }
+  .float-buttons{
+    display:none !important;
+  }
+}
+       
+/* ===== DPlayer 播放器移动端适配 ===== */
+.dplayer {
+  max-width: 100%;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.dplayer-video-wrap {
+  position: relative;
+  padding-bottom: 56.25%;
+  height: 0;
+}
+
+.dplayer-video-wrap video {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+}
+
+@media (max-width: 768px) {
+  .dplayer {
+    border-radius: 6px;
+  }
+}
+
+/* 代码块在正文容器内铺满整行，不向外溢出 */
+.article-content figure.highlight {
+  width: 100% !important;
+  max-width: 100% !important;
+  margin: 1rem 0;
+}
+.article-content .highlight table {
+  width: 100% !important;
+  table-layout: auto;
+}
+/* 重点：收紧行号gutter，不要留巨大空白 */
+.article-content .highlight .gutter {
+  width: 48px !important;
+  min-width: 48px !important;
+  text-align: right;
+  padding-right: 8px !important;
+}
+.article-content .highlight .code pre {
+  overflow-x: auto;
+}
+
+/* 头部横幅样式 */
+.essay-banner {
+  width: 100%;
+  height: 240px;
+  background: linear-gradient(135deg, #1a1a2e, #16213e, #0f3460);
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #88aaff;
+  font-size: 24px;
+  font-family: "STKaiti", "KaiTi", "楷体", serif;
+  letter-spacing: 4px;
+  margin-bottom: 20px;
+}
+
+/* 公共头部横幅样式 */
+.essay-chapter-header {
+  width: 100%;
+  height: 210px;
+  background-size: cover;
+  background-position: left center;
+  background-repeat: no-repeat;
+  background-color: #020817;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #88aaff;
+  font-size: 24px;
+  font-family: "STKaiti", "KaiTi", "楷体", serif;
+  letter-spacing: 4px;
+  margin-bottom: 20px;
+}
+
+/* 各自只写背景图 */
+.essay-image1 {
+  background-image: url("/assets/img/interview/00-ChapterHeader-1-java-concurrency.jpg");
+}
+.essay-image2 {
+  background-image: url("/assets/img/interview/00-ChapterHeader-2-jvm.jpg");
+}
+.essay-image3 {
+  background-image: url("/assets/img/interview/00-ChapterHeader-3-mysql.jpg");
+}
+.essay-image4 {
+  background-image: url("/assets/img/interview/00-ChapterHeader-4-redis.jpg");
+}
+
+.essay-image5 {
+  background-image: url("/assets/img/interview/00-ChapterHeader-5-spring.jpg");
+}
+
+.essay-image6 {
+  background-image: url("/assets/img/interview/00-ChapterHeader-6-middleware.jpg");
+}
+
+.essay-image7 {
+  background-image: url("/assets/img/interview/00-ChapterHeader-7-distributed.jpg");
+}
+
+.essay-image8 {
+  background-image: url("/assets/img/interview/00-ChapterHeader-8-high-availability.jpg");
+}
+
+.essay-image9 {
+  background-image: url("/assets/img/interview/00-ChapterHeader-9-architecture.jpg");
+}
+
+.essay-image10 {
+  background-image: url("/assets/img/interview/00-ChapterHeader-10-troubleshooting.jpg");
+}
+
+.essay-image11 {
+  background-image: url("/assets/img/interview/00-ChapterHeader-11-engineering-ai.jpg");
+}
+
+.essay-image12 {
+  background-image: url("/assets/img/interview/00-ChapterHeader-12-netty.png");
+}
+
+
+/* 各自只写背景图 */
+.essay-image1 {
+  background-image: url("/assets/img/interview/00-ChapterHeader-1-java-concurrency.jpg");
+}
+.essay-image2 {
+  background-image: url("/assets/img/interview/00-ChapterHeader-2-jvm.jpg");
+}
+.essay-image3 {
+  background-image: url("/assets/img/interview/00-ChapterHeader-3-mysql.jpg");
+}
+.essay-image4 {
+  background-image: url("/assets/img/interview/00-ChapterHeader-4-redis.jpg");
+}
+
+/* 全局文章左对齐图片通用样式 */
+.left-img {
+  width: 90%;
+  max-width: 1000px;
+  object-fit: contain;
+  /* margin: 10px 0; 上下留空隙，左右0，实现靠左，覆盖全局auto居中 */
+  margin: 10px 0 !important;
+
+}
+
+.img-wrap-left {
+  /* text-align: left; 删除 text-align:left，对block图片不起作用 */
+  margin: 10px 0;
+}
+
+/* 全局自定义代码容器 */
+.full-code-box {
+  width: 100%;
+  background: #0a2035;
+  padding: 16px;
+}
+.full-code-box pre {
+  margin: 0;
+  font-family: Consolas;
+}
+
+/* 列表序号修复：保持上一版 counter + ::before，序号改为绿色 */
+/* 有序列表：绿色序号 */
+.article-content ol {
+  counter-reset: li-counter;
+  list-style: none !important;
+  padding-left: 1.6em !important;
+}
+/* 无序列表：绿色圆点 */
+.article-content ul {
+  list-style: none !important;
+  padding-left: 1.6em !important;
+}
+.article-content ol li,
+.article-content ul li {
+  counter-increment: li-counter;
+  position: relative !important;
+  margin: 0.3rem 0;
+}
+/* 有序列表序号颜色 */
+.article-content ol li::before {
+  content: counter(li-counter) ". ";
+  color: #00ff88;
+  position: absolute;
+  left: -1.6em;
+  top: 0;
+  font-size: 1em;
+  -webkit-text-fill-color: initial !important;
+}
+/* 子列表圆点颜色 */
+.article-content ul li::before {
+  content: "• ";
+  color: #00ff88;
+  position: absolute;
+  left: -1.6em;
+  top: 0;
+  -webkit-text-fill-color: initial !important;
+}
+/* 嵌套子ul缩进缩小，防止挤在一起 */
+.article-content ol li ul {
+  padding-left: 1.4em !important;
+  margin: 0.2rem 0 !important;
+}
+.article-content ol li ul li::before {
+  left: -1.4em;
+}
+ 
+    </style>
+  <meta name="generator" content="Hexo 8.1.2"></head>
+  <body>
+    <!--
+  ============================================
+  星空粒子组件（升级版 - 带鼠标互动）
+  文件：_components/Particles.njk
+  作用：全站统一的星空动画背景，鼠标悬停时粒子产生互动
+  ============================================
+-->
+<div id="particles"></div>
+<script src="https://cdn.jsdelivr.net/particles.js/2.0.0/particles.min.js"></script>
+<script>
+particlesJS("particles", {
+  particles: {
+    number: {
+      value: 120,
+      density: {
+        enable: true,
+        value_area: 800
+      }
+    },
+    color: {
+      value: "#00eeff"
+    },
+    shape: {
+      type: "circle",
+      stroke: {
+        width: 0,
+        color: "#000000"
+      }
+    },
+    opacity: {
+      value: 0.6,
+      random: true,
+      anim: {
+        enable: true,
+        speed: 0.5,
+        opacity_min: 0.1,
+        sync: false
+      }
+    },
+    size: {
+      value: 3,
+      random: true,
+      anim: {
+        enable: true,
+        speed: 2,
+        size_min: 0.1,
+        sync: false
+      }
+    },
+    line_linked: {
+      enable: true,
+      distance: 150,
+      color: "#00eeff",
+      opacity: 0.4,
+      width: 1
+    },
+    move: {
+      enable: true,
+      speed: 0.8,
+      direction: "none",
+      random: true,
+      straight: false,
+      out_mode: "out",
+      bounce: false,
+      attract: {
+        enable: true,
+        rotateX: 600,
+        rotateY: 1200
+      }
+    }
+  },
+  interactivity: {
+    detect_on: "canvas",
+    events: {
+      onhover: {
+        enable: true,
+        mode: "grab"       // 鼠标悬停时粒子聚集
+      },
+      onclick: {
+        enable: true,
+        mode: "push"       // 点击时产生新粒子
+      },
+      resize: true
+    },
+    modes: {
+      grab: {
+        distance: 200,
+        line_linked: {
+          opacity: 1
+        }
+      },
+      push: {
+        particles_nb: 6
+      }
+    }
+  },
+  retina_detect: true
+});
+</script>
+
+
+    <div class="app-layout">
+      <aside class="sidebar" id="sidebar">
+  <div class="profile-card">
+    <div class="avatar">
+      <div style="width:80px;height:80px;border-radius:50%;background:linear-gradient(135deg,#0a0e27,#1a1a4e);display:flex;align-items:center;justify-content:center;margin:0 auto;font-size:40px;border:2px solid #00eeff;box-shadow:0 0 30px rgba(0,238,255,0.3);">✨</div>
+    </div>
+    <h3 class="nickname">时空行者</h3>
+    <p class="bio">星辰大海，代码为舟</p>
+    <div class="stats">
+      <div class="stat-item">
+        <span class="stat-num">120</span>
+        <span class="stat-label">文章</span>
+      </div>
+      <div class="stat-item">
+        <span class="stat-num" id="fans-count" style="cursor:pointer;">1088</span>
+        <span class="stat-label">粉丝</span>
+      </div>
+      <div class="stat-item">
+        <span class="stat-num" id="follow-count" style="cursor:pointer;">66</span>
+        <span class="stat-label">关注</span>
+      </div>
+    </div>
+    <button class="follow-btn">+ 关注</button>
+  </div>
+
+  <div class="search-box">
+    <input type="text" placeholder="找找看..." id="search-input">
+    <button id="search-btn">🔍</button>
+  </div>
+
+  <div class="links-card">
+    <h4>常用链接</h4>
+    <ul>
+      <li><a href="/archives/">我的随笔</a></li>
+      <li><a href="/about/">关于我</a></li>
+      <li><a href="/tags/">我的标签</a></li>
+    </ul>
+  </div>
+
+  <div class="tags-card">
+    <h4>热门标签</h4>
+    <div class="tag-cloud">
+      
+    </div>
+  </div>
+
+  <div class="archive-card">
+    <h4>按月归档</h4>
+    <ul class="archive-list">
+      
+      
+        
+        
+          
+          <li>
+            <a href="/archives/2025/12/">
+              2025年12月
+            </a>
+          </li>
+        
+      
+        
+        
+      
+        
+        
+      
+        
+        
+      
+        
+        
+      
+        
+        
+      
+        
+        
+      
+        
+        
+      
+        
+        
+      
+        
+        
+      
+        
+        
+      
+        
+        
+          
+          <li>
+            <a href="/archives/2026/01/">
+              2026年01月
+            </a>
+          </li>
+        
+      
+        
+        
+      
+        
+        
+      
+        
+        
+      
+        
+        
+      
+        
+        
+      
+        
+        
+      
+        
+        
+      
+        
+        
+          
+          <li>
+            <a href="/archives/2026/02/">
+              2026年02月
+            </a>
+          </li>
+        
+      
+        
+        
+      
+        
+        
+      
+        
+        
+      
+        
+        
+      
+        
+        
+      
+        
+        
+      
+        
+        
+          
+          <li>
+            <a href="/archives/2026/03/">
+              2026年03月
+            </a>
+          </li>
+        
+      
+        
+        
+      
+        
+        
+      
+        
+        
+      
+        
+        
+          
+          <li>
+            <a href="/archives/2026/04/">
+              2026年04月
+            </a>
+          </li>
+        
+      
+        
+        
+      
+        
+        
+      
+        
+        
+      
+        
+        
+          
+          <li>
+            <a href="/archives/2026/05/">
+              2026年05月
+            </a>
+          </li>
+        
+      
+        
+        
+      
+        
+        
+      
+        
+        
+      
+        
+        
+      
+        
+        
+      
+        
+        
+          
+          <li>
+            <a href="/archives/2026/06/">
+              2026年06月
+            </a>
+          </li>
+        
+      
+        
+        
+      
+        
+        
+      
+        
+        
+      
+        
+        
+      
+        
+        
+      
+        
+        
+      
+        
+        
+          
+          <li>
+            <a href="/archives/2026/07/">
+              2026年07月
+            </a>
+          </li>
+        
+      
+        
+        
+      
+        
+        
+      
+        
+        
+      
+        
+        
+      
+        
+        
+          
+          <li>
+            <a href="/archives/2026/08/">
+              2026年08月
+            </a>
+          </li>
+        
+      
+        
+        
+      
+        
+        
+      
+        
+        
+      
+        
+        
+      
+        
+        
+      
+        
+        
+      
+        
+        
+      
+        
+        
+      
+        
+        
+      
+        
+        
+      
+        
+        
+      
+        
+        
+      
+        
+        
+      
+        
+        
+      
+        
+        
+      
+        
+        
+      
+        
+        
+      
+        
+        
+          
+          <li>
+            <a href="/archives/2026/09/">
+              2026年09月
+            </a>
+          </li>
+        
+      
+        
+        
+      
+        
+        
+      
+        
+        
+      
+        
+        
+      
+        
+        
+      
+        
+        
+      
+        
+        
+      
+        
+        
+      
+        
+        
+      
+        
+        
+      
+        
+        
+      
+        
+        
+      
+        
+        
+      
+        
+        
+      
+        
+        
+          
+          <li>
+            <a href="/archives/2026/10/">
+              2026年10月
+            </a>
+          </li>
+        
+      
+        
+        
+      
+        
+        
+      
+        
+        
+      
+        
+        
+      
+        
+        
+      
+        
+        
+      
+        
+        
+      
+        
+        
+      
+        
+        
+      
+        
+        
+      
+        
+        
+      
+        
+        
+      
+        
+        
+      
+        
+        
+      
+        
+        
+      
+        
+        
+      
+        
+        
+      
+        
+        
+      
+        
+        
+      
+        
+        
+      
+        
+        
+      
+        
+        
+      
+        
+        
+      
+        
+        
+      
+        
+        
+      
+        
+        
+      
+        
+        
+      
+        
+        
+      
+        
+        
+      
+        
+        
+      
+        
+        
+      
+        
+        
+      
+        
+        
+      
+        
+        
+      
+    </ul>
+  </div>
+</aside>
+
+<!-- 引入侧边栏交互脚本 -->
+<script>
+  /**
+ * ============================================
+ * 侧边栏交互脚本
+ * 文件：_js/sidebar.js
+ * 作用：搜索功能、粉丝数点击 +1、关注数点击 +1、侧边栏折叠展开
+ * ============================================
+ */
+document.addEventListener('DOMContentLoaded', function() {
+  // ===== 搜索功能 =====
+  var searchBtn = document.getElementById('search-btn');
+  var searchInput = document.getElementById('search-input');
+  
+  if (searchBtn) {
+    searchBtn.addEventListener('click', function() {
+      var keyword = searchInput.value.trim();
+      if (keyword) {
+        window.location.href = '/search/?q=' + encodeURIComponent(keyword);
+      }
+    });
+  }
+  
+  if (searchInput) {
+    searchInput.addEventListener('keypress', function(e) {
+      if (e.key === 'Enter') {
+        var keyword = searchInput.value.trim();
+        if (keyword) {
+          window.location.href = '/search/?q=' + encodeURIComponent(keyword);
+        }
+      }
+    });
+  }
+  // ===== 粉丝数点击 +1（起始 1088） =====
+  var fansEl = document.getElementById('fans-count');
+  if (fansEl) {
+    fansEl.addEventListener('click', function() {
+      var current = parseInt(this.textContent);
+      this.textContent = current + 1;
+      this.style.transform = 'scale(1.3)';
+      this.style.color = '#ff6b6b';
+      setTimeout(function() {
+        fansEl.style.transform = 'scale(1)';
+        fansEl.style.color = '#00eeff';
+      }, 300);
+    });
+  }
+  // ===== 关注数点击 +1（起始 66） =====
+  var followEl = document.getElementById('follow-count');
+  if (followEl) {
+    followEl.addEventListener('click', function() {
+      var current = parseInt(this.textContent);
+      this.textContent = current + 1;
+      this.style.transform = 'scale(1.3)';
+      this.style.color = '#ff6b6b';
+      setTimeout(function() {
+        followEl.style.transform = 'scale(1)';
+        followEl.style.color = '#00eeff';
+      }, 300);
+    });
+  }
+
+
+  // =========侧边栏折叠展开逻辑=========
+  const toggleBtn = document.getElementById('sidebarToggle');
+  const sidebar = document.getElementById('sidebar');
+  const mainContent = document.querySelector('.main-content');
+
+  // 首页、归档、分类页面没有元素直接退出
+  if(!toggleBtn || !sidebar || !mainContent){
+    return;
+  }
+
+  let isCollapsed = localStorage.getItem('sidebarCollapsed') === '1';
+
+  function setUi(collapsed){
+    if(collapsed){
+      document.body.classList.add('sidebar-collapsed');
+    }else{
+      document.body.classList.remove('sidebar-collapsed');
+    }
+    localStorage.setItem('sidebarCollapsed', collapsed ? '1':'0');
+  }
+
+  setUi(isCollapsed);
+
+  toggleBtn.addEventListener('click',function(e){
+    e.stopPropagation();
+    isCollapsed = !isCollapsed;
+    setUi(isCollapsed);
+  });
+
+});
+</script>
+
+
+      
+        <button id="sidebarToggle" class="sidebar-toggle"></button>
+        
+      <main class="main-content">
+        <div class="article-card">
+          <h1 class="article-title">十六、电商问数：查询接口实现与依赖组装</h1>
+          <div class="article-meta">📅 2026-08-17</div>
+          <div class="article-content"><div class="essay-banner essay-image11">
+    query-api-implementation-and-dependency-wiring
+</div>
+
+<h1 id="16-电商问数：查询接口实现与依赖组装"><a href="#16-电商问数：查询接口实现与依赖组装" class="headerlink" title="16 电商问数：查询接口实现与依赖组装"></a>16 电商问数：查询接口实现与依赖组装</h1><hr>
+<p><strong>本章课程目标：</strong></p>
+<ul>
+<li>把第 15 章的假流式接口替换成真实问数工作流。</li>
+<li>使用 FastAPI 依赖注入组装 Repository、Session、Client 和 Service。</li>
+<li>使用 <code>lifespan</code> 管理 Qdrant、ES、MySQL、Embedding 等应用级资源。</li>
+</ul>
+<p><strong>学习建议：</strong> 这一章开始把 API 和问数工作流接起来。读的时候沿着一条请求走：HTTP 进入路由，路由拿到 <code>QueryService</code>，<code>QueryService</code> 调用 LangGraph，执行进度再通过 SSE 返回前端。依赖函数看起来多，但本质是在按层次组装底层对象；别把装配代码误读成业务逻辑。</p>
+<p><strong>对应代码分支：</strong> <code>16-api-query-service</code></p>
+<hr>
+<p>第 15 章已经验证了 <code>StreamingResponse + SSE</code> 可以正常工作，但当时返回的是 <code>fake_streamer()</code> 模拟数据。本章要把它换成真实的问数智能体。</p>
+<p>最终调用链路如下：</p>
+<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">前端 / Apifox</span><br><span class="line">  -&gt; POST /api/query</span><br><span class="line">  -&gt; query_router.py 接收请求</span><br><span class="line">  -&gt; Depends(get_query_service) 获取 QueryService</span><br><span class="line">  -&gt; QueryService.query(...)</span><br><span class="line">  -&gt; graph.astream(...)</span><br><span class="line">  -&gt; StreamingResponse 按 SSE 格式持续返回</span><br></pre></td></tr></table></figure>
+
+<p>完成这一章后，问数智能体就不再只是命令行里的内部脚本，而是一个可以通过 HTTP 调用的后端接口。</p>
+<hr>
+<h2 id="1、API-代码目录结构"><a href="#1、API-代码目录结构" class="headerlink" title="1、API 代码目录结构"></a>1、API 代码目录结构</h2><p>这一阶段 API 代码主要涉及下面几个文件：</p>
+<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line">shopkeeper-agent/</span><br><span class="line">├─ main.py  # FastAPI 入口脚本，负责创建应用并注册路由</span><br><span class="line">└─ app/</span><br><span class="line">   ├─ api/</span><br><span class="line">   │  ├─ routers/</span><br><span class="line">   │  │  └─ query_router.py  # 查询接口路由，接收请求并返回流式响应</span><br><span class="line">   │  ├─ schemas/</span><br><span class="line">   │  │  └─ query_schema.py  # 查询接口请求体结构</span><br><span class="line">   │  ├─ dependencies.py  # 查询接口依赖项，负责组装 QueryService</span><br><span class="line">   │  └─ lifespan.py  # FastAPI 生命周期事件，负责初始化和关闭外部客户端</span><br><span class="line">   └─ services/</span><br><span class="line">      └─ query_service.py  # 查询接口核心业务逻辑，负责调用问数工作流</span><br></pre></td></tr></table></figure>
+
+<p>可以先把它们分成五层：</p>
+<table>
+<thead>
+<tr>
+<th>层次</th>
+<th>文件</th>
+<th>主要职责</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>入口层</td>
+<td><code>main.py</code></td>
+<td>创建 FastAPI 应用，注册生命周期和路由</td>
+</tr>
+<tr>
+<td>HTTP 层</td>
+<td><code>query_router.py</code></td>
+<td>定义 <code>/api/query</code>，接收请求，返回流式响应</td>
+</tr>
+<tr>
+<td>业务层</td>
+<td><code>query_service.py</code></td>
+<td>创建 <code>State</code> &#x2F; <code>Context</code>，调用 LangGraph，并包装 SSE 消息</td>
+</tr>
+<tr>
+<td>依赖层</td>
+<td><code>dependencies.py</code></td>
+<td>组装 Service、Repository、Session、Client</td>
+</tr>
+<tr>
+<td>生命周期</td>
+<td><code>lifespan.py</code></td>
+<td>应用启动时初始化客户端，应用关闭时释放连接</td>
+</tr>
+</tbody></table>
+<p>这几个文件的关系可以记成一句话：</p>
+<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">main 挂路由</span><br><span class="line">router 接请求</span><br><span class="line">service 调工作流</span><br><span class="line">dependencies 组装对象</span><br><span class="line">lifespan 管理应用级资源</span><br></pre></td></tr></table></figure>
+
+<hr>
+<h2 id="2、入口和路由：让-HTTP-请求先进来"><a href="#2、入口和路由：让-HTTP-请求先进来" class="headerlink" title="2、入口和路由：让 HTTP 请求先进来"></a>2、入口和路由：让 HTTP 请求先进来</h2><p>这一部分只解决一个问题：外部请求怎样进入我们的 Python 代码。</p>
+<h3 id="2-1-main-py：创建应用并挂载路由"><a href="#2-1-main-py：创建应用并挂载路由" class="headerlink" title="2.1 main.py：创建应用并挂载路由"></a>2.1 main.py：创建应用并挂载路由</h3><p>项目对应文件路径：<code>shopkeeper-agent/main.py</code></p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">from</span> fastapi <span class="keyword">import</span> FastAPI</span><br><span class="line"></span><br><span class="line"><span class="keyword">from</span> app.api.lifespan <span class="keyword">import</span> lifespan</span><br><span class="line"><span class="keyword">from</span> app.api.routers.query_router <span class="keyword">import</span> query_router</span><br><span class="line"></span><br><span class="line"><span class="comment"># lifespan 交给 FastAPI 管理，用于在服务启动和关闭时统一初始化与释放外部客户端</span></span><br><span class="line">app = FastAPI(lifespan=lifespan)</span><br><span class="line"></span><br><span class="line"><span class="comment"># 把查询路由注册进应用；没有挂载时，/docs 和真实 HTTP 请求都访问不到该接口</span></span><br><span class="line">app.include_router(query_router)</span><br></pre></td></tr></table></figure>
+
+<p>这里最关键的是两行：</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">app = FastAPI(lifespan=lifespan)</span><br><span class="line">app.include_router(query_router)</span><br></pre></td></tr></table></figure>
+
+<p><code>lifespan</code> 负责服务启动和关闭时的资源管理，<code>include_router</code> 负责把 <code>query_router.py</code> 中定义的接口挂到 FastAPI 应用上。</p>
+<p>如果忘了 <code>app.include_router(query_router)</code>，即使 <code>query_router.py</code> 里写了 <code>/api/query</code>，FastAPI 应用也不知道这个接口存在，<code>/docs</code> 页面里自然也看不到它。</p>
+<h3 id="2-2-query-router-py：路由层只做-HTTP-相关的事"><a href="#2-2-query-router-py：路由层只做-HTTP-相关的事" class="headerlink" title="2.2 query_router.py：路由层只做 HTTP 相关的事"></a>2.2 query_router.py：路由层只做 HTTP 相关的事</h3><p>项目对应文件路径：<code>shopkeeper-agent/app/api/routers/query_router.py</code></p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">from</span> typing <span class="keyword">import</span> Annotated</span><br><span class="line"></span><br><span class="line"><span class="keyword">from</span> fastapi <span class="keyword">import</span> APIRouter, Depends</span><br><span class="line"><span class="keyword">from</span> starlette.responses <span class="keyword">import</span> StreamingResponse</span><br><span class="line"></span><br><span class="line"><span class="keyword">from</span> app.api.dependencies <span class="keyword">import</span> get_query_service</span><br><span class="line"><span class="keyword">from</span> app.api.schemas.query_schema <span class="keyword">import</span> QuerySchema</span><br><span class="line"><span class="keyword">from</span> app.services.query_service <span class="keyword">import</span> QueryService</span><br><span class="line"></span><br><span class="line"><span class="comment"># 当前模块只维护查询相关接口，避免后续所有 API 都挤在 main.py 中</span></span><br><span class="line">query_router = APIRouter()</span><br><span class="line"></span><br><span class="line"></span><br><span class="line"><span class="meta">@query_router.post(<span class="params"><span class="string">&quot;/api/query&quot;</span></span>)</span></span><br><span class="line"><span class="keyword">async</span> <span class="keyword">def</span> <span class="title function_">query_handler</span>(<span class="params"></span></span><br><span class="line"><span class="params">    <span class="comment"># FastAPI 会把前端 JSON 请求体自动解析成 QuerySchema</span></span></span><br><span class="line"><span class="params">    query: QuerySchema,</span></span><br><span class="line"><span class="params">    <span class="comment"># FastAPI 会调用 get_query_service，递归组装它依赖的仓储和客户端</span></span></span><br><span class="line"><span class="params">    query_service: Annotated[QueryService, Depends(<span class="params">get_query_service</span>)],</span></span><br><span class="line"><span class="params"></span>):</span><br><span class="line">    <span class="keyword">return</span> StreamingResponse(</span><br><span class="line">        <span class="comment"># query.query 是用户问题字符串；QueryService.query 返回异步生成器</span></span><br><span class="line">        query_service.query(query.query),</span><br><span class="line">        media_type=<span class="string">&quot;text/event-stream&quot;</span>,</span><br><span class="line">    )</span><br></pre></td></tr></table></figure>
+
+<p>路由层只做三件事：</p>
+<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">1. 接收 QuerySchema 请求体</span><br><span class="line">2. 通过 Depends 拿到 QueryService</span><br><span class="line">3. 把 QueryService.query(...) 交给 StreamingResponse</span><br></pre></td></tr></table></figure>
+
+<p>它不直接创建 Qdrant、ES、MySQL Repository，也不直接执行图节点。路由层越薄，后续接口越容易维护。</p>
+<p>本节最重要的是这一行：</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">query_service: Annotated[QueryService, Depends(get_query_service)]</span><br></pre></td></tr></table></figure>
+
+<p>它表达的是：当前接口需要一个 <code>QueryService</code>，这个对象由 <code>get_query_service()</code> 提供。路由只声明“我需要什么”，至于怎么创建，交给 <code>dependencies.py</code>。</p>
+<hr>
+<h2 id="3、QueryService：把一次请求变成一次图执行"><a href="#3、QueryService：把一次请求变成一次图执行" class="headerlink" title="3、QueryService：把一次请求变成一次图执行"></a>3、QueryService：把一次请求变成一次图执行</h2><p><code>QueryService</code> 是这一章的核心。它把 HTTP 层传入的自然语言问题，转换成一次 LangGraph 工作流执行。</p>
+<p>如果不抽出 <code>QueryService</code>，路由函数里就会堆满这些逻辑：</p>
+<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">解析请求体</span><br><span class="line">创建 DataAgentState</span><br><span class="line">创建 DataAgentContext</span><br><span class="line">准备 Repository 和 Client</span><br><span class="line">调用 graph.astream(...)</span><br><span class="line">把 chunk 包成 SSE</span><br><span class="line">处理异常</span><br></pre></td></tr></table></figure>
+
+<p>这会让路由层既懂 HTTP，又懂工作流，又懂底层依赖，边界很快就乱了。抽出 <code>QueryService</code> 后，分工会清楚很多：</p>
+<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">query_router.py</span><br><span class="line">  -&gt; 负责 HTTP 层：接请求、返响应</span><br><span class="line"></span><br><span class="line">query_service.py</span><br><span class="line">  -&gt; 负责业务层：调问数智能体、组织流式输出</span><br></pre></td></tr></table></figure>
+
+<h3 id="3-1-从测试脚本迁移到-API"><a href="#3-1-从测试脚本迁移到-API" class="headerlink" title="3.1 从测试脚本迁移到 API"></a>3.1 从测试脚本迁移到 API</h3><p>前面测试 LangGraph 工作流时，核心代码大致是：</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line">state = DataAgentState(query=<span class="string">&quot;统计华北地区的销售总额&quot;</span>)</span><br><span class="line">context = DataAgentContext(...)</span><br><span class="line"></span><br><span class="line"><span class="keyword">async</span> <span class="keyword">for</span> chunk <span class="keyword">in</span> graph.astream(</span><br><span class="line">    <span class="built_in">input</span>=state,</span><br><span class="line">    context=context,</span><br><span class="line">    stream_mode=<span class="string">&quot;custom&quot;</span>,</span><br><span class="line">):</span><br><span class="line">    <span class="built_in">print</span>(chunk)</span><br></pre></td></tr></table></figure>
+
+<p>迁移到 API 后，变化主要有三处：</p>
+<table>
+<thead>
+<tr>
+<th>测试脚本</th>
+<th>API 接口版本</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>用户问题写死在代码里</td>
+<td>使用请求体传入的 <code>query</code></td>
+</tr>
+<tr>
+<td>上下文在测试脚本里手动创建</td>
+<td>由 <code>QueryService</code> 接收依赖后创建</td>
+</tr>
+<tr>
+<td><code>print(chunk)</code> 输出到控制台</td>
+<td><code>yield data: ...\n\n</code> 流式写给前端</td>
+</tr>
+</tbody></table>
+<h3 id="3-2-QueryService-核心代码"><a href="#3-2-QueryService-核心代码" class="headerlink" title="3.2 QueryService 核心代码"></a>3.2 QueryService 核心代码</h3><p>项目对应文件路径：<code>shopkeeper-agent/app/services/query_service.py</code></p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">import</span> json</span><br><span class="line"></span><br><span class="line"><span class="keyword">from</span> langchain_huggingface <span class="keyword">import</span> HuggingFaceEndpointEmbeddings</span><br><span class="line"></span><br><span class="line"><span class="keyword">from</span> app.agent.context <span class="keyword">import</span> DataAgentContext</span><br><span class="line"><span class="keyword">from</span> app.agent.graph <span class="keyword">import</span> graph</span><br><span class="line"><span class="keyword">from</span> app.agent.state <span class="keyword">import</span> DataAgentState</span><br><span class="line"><span class="keyword">from</span> app.repositories.es.value_es_repository <span class="keyword">import</span> ValueESRepository</span><br><span class="line"><span class="keyword">from</span> app.repositories.mysql.dw.dw_mysql_repository <span class="keyword">import</span> DWMySQLRepository</span><br><span class="line"><span class="keyword">from</span> app.repositories.mysql.meta.meta_mysql_repository <span class="keyword">import</span> MetaMySQLRepository</span><br><span class="line"><span class="keyword">from</span> app.repositories.qdrant.column_qdrant_repository <span class="keyword">import</span> ColumnQdrantRepository</span><br><span class="line"><span class="keyword">from</span> app.repositories.qdrant.metric_qdrant_repository <span class="keyword">import</span> MetricQdrantRepository</span><br><span class="line"></span><br><span class="line"></span><br><span class="line"><span class="keyword">class</span> <span class="title class_">QueryService</span>:</span><br><span class="line">    <span class="keyword">def</span> <span class="title function_">__init__</span>(<span class="params"></span></span><br><span class="line"><span class="params">        self,</span></span><br><span class="line"><span class="params">        meta_mysql_repository: MetaMySQLRepository,</span></span><br><span class="line"><span class="params">        embedding_client: HuggingFaceEndpointEmbeddings,</span></span><br><span class="line"><span class="params">        dw_mysql_repository: DWMySQLRepository,</span></span><br><span class="line"><span class="params">        column_qdrant_repository: ColumnQdrantRepository,</span></span><br><span class="line"><span class="params">        metric_qdrant_repository: MetricQdrantRepository,</span></span><br><span class="line"><span class="params">        value_es_repository: ValueESRepository,</span></span><br><span class="line"><span class="params">    </span>):</span><br><span class="line">        <span class="comment"># MySQL 仓储分别负责元数据补全和真实数仓环境信息读取</span></span><br><span class="line">        <span class="variable language_">self</span>.meta_mysql_repository = meta_mysql_repository</span><br><span class="line">        <span class="variable language_">self</span>.dw_mysql_repository = dw_mysql_repository</span><br><span class="line"></span><br><span class="line">        <span class="comment"># 召回链路依赖的向量检索、Embedding 和全文检索能力由依赖层注入</span></span><br><span class="line">        <span class="variable language_">self</span>.embedding_client = embedding_client</span><br><span class="line">        <span class="variable language_">self</span>.column_qdrant_repository = column_qdrant_repository</span><br><span class="line">        <span class="variable language_">self</span>.metric_qdrant_repository = metric_qdrant_repository</span><br><span class="line">        <span class="variable language_">self</span>.value_es_repository = value_es_repository</span><br><span class="line"></span><br><span class="line">    <span class="keyword">async</span> <span class="keyword">def</span> <span class="title function_">query</span>(<span class="params">self, query: <span class="built_in">str</span></span>):</span><br><span class="line">        <span class="comment"># State 只放会被图节点读写和合并的业务数据，外部工具对象不塞进 State</span></span><br><span class="line">        state = DataAgentState(query=query)</span><br><span class="line"></span><br><span class="line">        <span class="comment"># Context 保存本次图执行需要复用的外部依赖，节点通过 runtime.context 读取</span></span><br><span class="line">        context = DataAgentContext(</span><br><span class="line">            column_qdrant_repository=<span class="variable language_">self</span>.column_qdrant_repository,</span><br><span class="line">            embedding_client=<span class="variable language_">self</span>.embedding_client,</span><br><span class="line">            metric_qdrant_repository=<span class="variable language_">self</span>.metric_qdrant_repository,</span><br><span class="line">            value_es_repository=<span class="variable language_">self</span>.value_es_repository,</span><br><span class="line">            meta_mysql_repository=<span class="variable language_">self</span>.meta_mysql_repository,</span><br><span class="line">            dw_mysql_repository=<span class="variable language_">self</span>.dw_mysql_repository,</span><br><span class="line">        )</span><br><span class="line"></span><br><span class="line">        <span class="keyword">try</span>:</span><br><span class="line">            <span class="comment"># stream_mode=&quot;custom&quot; 对应节点内部 writer(...) 写出的进度消息</span></span><br><span class="line">            <span class="keyword">async</span> <span class="keyword">for</span> chunk <span class="keyword">in</span> graph.astream(</span><br><span class="line">                <span class="built_in">input</span>=state,</span><br><span class="line">                context=context,</span><br><span class="line">                stream_mode=<span class="string">&quot;custom&quot;</span>,</span><br><span class="line">            ):</span><br><span class="line">                <span class="comment"># SSE 要求每条消息以 data: 开头，并以两个换行符结束</span></span><br><span class="line">                <span class="comment"># ensure_ascii=False 保留中文进度文案，default=str 兜底处理日期等非 JSON 类型</span></span><br><span class="line">                <span class="keyword">yield</span> <span class="string">f&quot;data: <span class="subst">&#123;json.dumps(chunk, ensure_ascii=<span class="literal">False</span>, default=<span class="built_in">str</span>)&#125;</span>\n\n&quot;</span></span><br><span class="line">        <span class="keyword">except</span> Exception <span class="keyword">as</span> e:</span><br><span class="line">            <span class="comment"># 流式接口已经开始返回后不能再改 HTTP 状态码，因此把异常也包装成一条 SSE 消息</span></span><br><span class="line">            error = &#123;<span class="string">&quot;type&quot;</span>: <span class="string">&quot;error&quot;</span>, <span class="string">&quot;message&quot;</span>: <span class="built_in">str</span>(e)&#125;</span><br><span class="line">            <span class="keyword">yield</span> <span class="string">f&quot;data: <span class="subst">&#123;json.dumps(error, ensure_ascii=<span class="literal">False</span>, default=<span class="built_in">str</span>)&#125;</span>\n\n&quot;</span></span><br></pre></td></tr></table></figure>
+
+<p>这段代码里最重要的不是 <code>json.dumps</code>，而是两个对象：<code>state</code> 和 <code>context</code>。</p>
+<h3 id="3-3-state-和-context-怎么区分"><a href="#3-3-state-和-context-怎么区分" class="headerlink" title="3.3 state 和 context 怎么区分"></a>3.3 state 和 context 怎么区分</h3><p><code>state</code> 保存的是本次任务会不断变化的业务数据，例如：</p>
+<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line">query</span><br><span class="line">keywords</span><br><span class="line">retrieved_column_infos</span><br><span class="line">retrieved_metric_infos</span><br><span class="line">table_infos</span><br><span class="line">metric_infos</span><br><span class="line">sql</span><br><span class="line">result</span><br></pre></td></tr></table></figure>
+
+<p><code>context</code> 保存的是节点运行时需要使用的外部能力，例如：</p>
+<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">Embedding Client</span><br><span class="line">ColumnQdrantRepository</span><br><span class="line">MetricQdrantRepository</span><br><span class="line">ValueESRepository</span><br><span class="line">MetaMySQLRepository</span><br><span class="line">DWMySQLRepository</span><br></pre></td></tr></table></figure>
+
+<p>可以这样记：</p>
+<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">state：任务数据，图执行过程中会变</span><br><span class="line">context：工具资源，节点执行时拿来用</span><br></pre></td></tr></table></figure>
+
+<p>不要把 Repository、Client 这类对象塞进 <code>state</code>。它们不是业务中间结果，而是节点执行时需要调用的外部能力，更适合放在 <code>context</code> 里。</p>
+<h3 id="3-4-为什么异常也要包装成-SSE"><a href="#3-4-为什么异常也要包装成-SSE" class="headerlink" title="3.4 为什么异常也要包装成 SSE"></a>3.4 为什么异常也要包装成 SSE</h3><p>普通接口出错时，可以直接返回 500 状态码。但流式接口不太一样：一旦 <code>StreamingResponse</code> 开始往外写数据，HTTP 响应头通常已经发送出去了，后面就不能再随便改状态码。</p>
+<p>所以当前版本先把异常包装成一条 SSE 消息：</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">error = &#123;<span class="string">&quot;type&quot;</span>: <span class="string">&quot;error&quot;</span>, <span class="string">&quot;message&quot;</span>: <span class="built_in">str</span>(e)&#125;</span><br><span class="line"><span class="keyword">yield</span> <span class="string">f&quot;data: <span class="subst">&#123;json.dumps(error, ensure_ascii=<span class="literal">False</span>, default=<span class="built_in">str</span>)&#125;</span>\n\n&quot;</span></span><br></pre></td></tr></table></figure>
+
+<p>前端拿到这条消息后，可以按 <code>type=error</code> 展示错误状态。下一章会继续完善节点级异常处理、前后端联调和 <code>request_id</code> 日志追踪。</p>
+<hr>
+<h2 id="4、dependencies-py：把对象创建交给依赖层"><a href="#4、dependencies-py：把对象创建交给依赖层" class="headerlink" title="4、dependencies.py：把对象创建交给依赖层"></a>4、dependencies.py：把对象创建交给依赖层</h2><p>现在路由里已经声明了：</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">query_service: Annotated[QueryService, Depends(get_query_service)]</span><br></pre></td></tr></table></figure>
+
+<p>这意味着项目必须提供 <code>get_query_service()</code>。</p>
+<p>如果直接在路由里创建 <code>QueryService</code>，路由就会知道太多底层细节：</p>
+<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">Qdrant 客户端怎么取</span><br><span class="line">ES 客户端怎么取</span><br><span class="line">MySQL Session 怎么创建和释放</span><br><span class="line">Repository 怎么实例化</span><br><span class="line">QueryService 需要哪些参数</span><br></pre></td></tr></table></figure>
+
+<p>这些不是 HTTP 层该关心的事。所以本项目把依赖组装统一放到：</p>
+<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">shopkeeper-agent/app/api/dependencies.py</span><br></pre></td></tr></table></figure>
+
+<h3 id="4-1-先看最终依赖树"><a href="#4-1-先看最终依赖树" class="headerlink" title="4.1 先看最终依赖树"></a>4.1 先看最终依赖树</h3><p>本章最终要组装的是 <code>QueryService</code>，依赖树大致如下：</p>
+<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line">get_query_service</span><br><span class="line">  -&gt; get_meta_mysql_repository</span><br><span class="line">      -&gt; get_meta_session</span><br><span class="line">  -&gt; get_embedding_client</span><br><span class="line">  -&gt; get_dw_mysql_repository</span><br><span class="line">      -&gt; get_dw_session</span><br><span class="line">  -&gt; get_column_qdrant_repository</span><br><span class="line">  -&gt; get_metric_qdrant_repository</span><br><span class="line">  -&gt; get_value_es_repository</span><br></pre></td></tr></table></figure>
+
+<p>再往底层，这些依赖会使用生命周期中初始化好的客户端管理器：</p>
+<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">embedding_client_manager.client</span><br><span class="line">qdrant_client_manager.client</span><br><span class="line">es_client_manager.client</span><br><span class="line">meta_mysql_client_manager.session_factory</span><br><span class="line">dw_mysql_client_manager.session_factory</span><br></pre></td></tr></table></figure>
+
+<p>所以 <code>dependencies.py</code> 和 <code>lifespan.py</code> 是一组配合关系：</p>
+<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">lifespan.py</span><br><span class="line">  -&gt; 应用启动时初始化客户端管理器</span><br><span class="line"></span><br><span class="line">dependencies.py</span><br><span class="line">  -&gt; 每次请求中取出客户端或 Session，组装 Repository 和 QueryService</span><br></pre></td></tr></table></figure>
+
+<h3 id="4-2-MySQL-Session-是请求级资源"><a href="#4-2-MySQL-Session-是请求级资源" class="headerlink" title="4.2 MySQL Session 是请求级资源"></a>4.2 MySQL Session 是请求级资源</h3><p>项目中的 MySQL Session 用带 <code>yield</code> 的依赖项管理：</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">async</span> <span class="keyword">def</span> <span class="title function_">get_meta_session</span>():</span><br><span class="line">    <span class="string">&quot;&quot;&quot;创建一次请求内使用的元数据库 Session&quot;&quot;&quot;</span></span><br><span class="line"></span><br><span class="line">    <span class="comment"># yield 之后的清理逻辑由 async with 负责，FastAPI 会在请求结束后继续执行退出流程</span></span><br><span class="line">    <span class="keyword">async</span> <span class="keyword">with</span> meta_mysql_client_manager.session_factory() <span class="keyword">as</span> meta_session:</span><br><span class="line">        <span class="keyword">yield</span> meta_session</span><br><span class="line"></span><br><span class="line"></span><br><span class="line"><span class="keyword">async</span> <span class="keyword">def</span> <span class="title function_">get_dw_session</span>():</span><br><span class="line">    <span class="string">&quot;&quot;&quot;创建一次请求内使用的数仓 Session&quot;&quot;&quot;</span></span><br><span class="line"></span><br><span class="line">    <span class="keyword">async</span> <span class="keyword">with</span> dw_mysql_client_manager.session_factory() <span class="keyword">as</span> dw_session:</span><br><span class="line">        <span class="keyword">yield</span> dw_session</span><br></pre></td></tr></table></figure>
+
+<p>执行顺序可以理解成：</p>
+<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">请求需要 Session</span><br><span class="line">  -&gt; 创建 Session</span><br><span class="line">  -&gt; yield 给 Repository 使用</span><br><span class="line">  -&gt; 请求结束</span><br><span class="line">  -&gt; 退出 async with，释放 Session</span><br></pre></td></tr></table></figure>
+
+<p>这里不要把 Session 做成全局对象。数据库 Session 通常属于一次请求的工作单元，而客户端管理器、连接池这类才适合放到应用生命周期里。</p>
+<h3 id="4-3-Repository-和-Client-怎么组装"><a href="#4-3-Repository-和-Client-怎么组装" class="headerlink" title="4.3 Repository 和 Client 怎么组装"></a>4.3 Repository 和 Client 怎么组装</h3><p>有了 Session，就可以创建 MySQL Repository：</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">async</span> <span class="keyword">def</span> <span class="title function_">get_meta_mysql_repository</span>(<span class="params"></span></span><br><span class="line"><span class="params">    session: Annotated[AsyncSession, Depends(<span class="params">get_meta_session</span>)],</span></span><br><span class="line"><span class="params"></span>) -&gt; MetaMySQLRepository:</span><br><span class="line">    <span class="string">&quot;&quot;&quot;基于请求级 Session 创建元数据仓储&quot;&quot;&quot;</span></span><br><span class="line"></span><br><span class="line">    <span class="keyword">return</span> MetaMySQLRepository(session)</span><br><span class="line"></span><br><span class="line"></span><br><span class="line"><span class="keyword">async</span> <span class="keyword">def</span> <span class="title function_">get_dw_mysql_repository</span>(<span class="params"></span></span><br><span class="line"><span class="params">    session: Annotated[AsyncSession, Depends(<span class="params">get_dw_session</span>)],</span></span><br><span class="line"><span class="params"></span>) -&gt; DWMySQLRepository:</span><br><span class="line">    <span class="string">&quot;&quot;&quot;基于请求级 Session 创建数仓仓储&quot;&quot;&quot;</span></span><br><span class="line"></span><br><span class="line">    <span class="keyword">return</span> DWMySQLRepository(session)</span><br></pre></td></tr></table></figure>
+
+<p>Qdrant 和 ES Repository 使用的是应用启动阶段已经初始化好的客户端：</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">async</span> <span class="keyword">def</span> <span class="title function_">get_column_qdrant_repository</span>() -&gt; ColumnQdrantRepository:</span><br><span class="line">    <span class="string">&quot;&quot;&quot;创建字段向量检索仓储&quot;&quot;&quot;</span></span><br><span class="line"></span><br><span class="line">    <span class="keyword">return</span> ColumnQdrantRepository(qdrant_client_manager.client)</span><br><span class="line"></span><br><span class="line"></span><br><span class="line"><span class="keyword">async</span> <span class="keyword">def</span> <span class="title function_">get_metric_qdrant_repository</span>() -&gt; MetricQdrantRepository:</span><br><span class="line">    <span class="string">&quot;&quot;&quot;创建指标向量检索仓储&quot;&quot;&quot;</span></span><br><span class="line"></span><br><span class="line">    <span class="keyword">return</span> MetricQdrantRepository(qdrant_client_manager.client)</span><br><span class="line"></span><br><span class="line"></span><br><span class="line"><span class="keyword">async</span> <span class="keyword">def</span> <span class="title function_">get_value_es_repository</span>() -&gt; ValueESRepository:</span><br><span class="line">    <span class="string">&quot;&quot;&quot;创建字段取值全文检索仓储&quot;&quot;&quot;</span></span><br><span class="line"></span><br><span class="line">    <span class="keyword">return</span> ValueESRepository(es_client_manager.client)</span><br></pre></td></tr></table></figure>
+
+<p>Embedding 客户端也是同样的思路：</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">async</span> <span class="keyword">def</span> <span class="title function_">get_embedding_client</span>() -&gt; HuggingFaceEndpointEmbeddings:</span><br><span class="line">    <span class="string">&quot;&quot;&quot;获取应用启动阶段初始化好的 Embedding 客户端&quot;&quot;&quot;</span></span><br><span class="line"></span><br><span class="line">    <span class="keyword">return</span> embedding_client_manager.client</span><br></pre></td></tr></table></figure>
+
+<h3 id="4-4-最后组装-QueryService"><a href="#4-4-最后组装-QueryService" class="headerlink" title="4.4 最后组装 QueryService"></a>4.4 最后组装 QueryService</h3><p>所有依赖最终收拢到 <code>get_query_service()</code>：</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">async</span> <span class="keyword">def</span> <span class="title function_">get_query_service</span>(<span class="params"></span></span><br><span class="line"><span class="params">    meta_mysql_repository: Annotated[</span></span><br><span class="line"><span class="params">        MetaMySQLRepository, Depends(<span class="params">get_meta_mysql_repository</span>)</span></span><br><span class="line"><span class="params">    ],</span></span><br><span class="line"><span class="params">    embedding_client: Annotated[</span></span><br><span class="line"><span class="params">        HuggingFaceEndpointEmbeddings, Depends(<span class="params">get_embedding_client</span>)</span></span><br><span class="line"><span class="params">    ],</span></span><br><span class="line"><span class="params">    dw_mysql_repository: Annotated[DWMySQLRepository, Depends(<span class="params">get_dw_mysql_repository</span>)],</span></span><br><span class="line"><span class="params">    column_qdrant_repository: Annotated[</span></span><br><span class="line"><span class="params">        ColumnQdrantRepository, Depends(<span class="params">get_column_qdrant_repository</span>)</span></span><br><span class="line"><span class="params">    ],</span></span><br><span class="line"><span class="params">    metric_qdrant_repository: Annotated[</span></span><br><span class="line"><span class="params">        MetricQdrantRepository, Depends(<span class="params">get_metric_qdrant_repository</span>)</span></span><br><span class="line"><span class="params">    ],</span></span><br><span class="line"><span class="params">    value_es_repository: Annotated[ValueESRepository, Depends(<span class="params">get_value_es_repository</span>)],</span></span><br><span class="line"><span class="params"></span>) -&gt; QueryService:</span><br><span class="line">    <span class="string">&quot;&quot;&quot;组装一次查询所需的业务服务&quot;&quot;&quot;</span></span><br><span class="line"></span><br><span class="line">    <span class="comment"># QueryService 只接收已经创建好的依赖对象，不关心这些对象具体来自哪里</span></span><br><span class="line">    <span class="keyword">return</span> QueryService(</span><br><span class="line">        meta_mysql_repository=meta_mysql_repository,</span><br><span class="line">        embedding_client=embedding_client,</span><br><span class="line">        dw_mysql_repository=dw_mysql_repository,</span><br><span class="line">        column_qdrant_repository=column_qdrant_repository,</span><br><span class="line">        metric_qdrant_repository=metric_qdrant_repository,</span><br><span class="line">        value_es_repository=value_es_repository,</span><br><span class="line">    )</span><br></pre></td></tr></table></figure>
+
+<p>这就是 FastAPI 子依赖的价值：我们只声明依赖关系，FastAPI 会自动从叶子节点往上解析整棵依赖树。</p>
+<hr>
+<h2 id="5、lifespan-py：在应用启动时准备外部客户端"><a href="#5、lifespan-py：在应用启动时准备外部客户端" class="headerlink" title="5、lifespan.py：在应用启动时准备外部客户端"></a>5、lifespan.py：在应用启动时准备外部客户端</h2><p><code>dependencies.py</code> 能拿到 <code>qdrant_client_manager.client</code>、<code>es_client_manager.client</code>，前提是这些 manager 已经初始化。</p>
+<p>所以需要在应用启动阶段执行：</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">qdrant_client_manager.init()</span><br><span class="line">embedding_client_manager.init()</span><br><span class="line">es_client_manager.init()</span><br><span class="line">meta_mysql_client_manager.init()</span><br><span class="line">dw_mysql_client_manager.init()</span><br></pre></td></tr></table></figure>
+
+<p>项目对应文件路径：<code>shopkeeper-agent/app/api/lifespan.py</code></p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">from</span> contextlib <span class="keyword">import</span> asynccontextmanager</span><br><span class="line"></span><br><span class="line"><span class="keyword">from</span> fastapi <span class="keyword">import</span> FastAPI</span><br><span class="line"></span><br><span class="line"><span class="keyword">from</span> app.clients.embedding_client_manager <span class="keyword">import</span> embedding_client_manager</span><br><span class="line"><span class="keyword">from</span> app.clients.es_client_manager <span class="keyword">import</span> es_client_manager</span><br><span class="line"><span class="keyword">from</span> app.clients.mysql_client_manager <span class="keyword">import</span> (</span><br><span class="line">    dw_mysql_client_manager,</span><br><span class="line">    meta_mysql_client_manager,</span><br><span class="line">)</span><br><span class="line"><span class="keyword">from</span> app.clients.qdrant_client_manager <span class="keyword">import</span> qdrant_client_manager</span><br><span class="line"></span><br><span class="line"></span><br><span class="line"><span class="meta">@asynccontextmanager</span></span><br><span class="line"><span class="keyword">async</span> <span class="keyword">def</span> <span class="title function_">lifespan</span>(<span class="params">app: FastAPI</span>):</span><br><span class="line">    <span class="string">&quot;&quot;&quot;管理应用启动和关闭两个阶段的外部资源&quot;&quot;&quot;</span></span><br><span class="line"></span><br><span class="line">    <span class="comment"># 启动阶段：先建立各类外部服务客户端，后续依赖函数会从 manager 中取已初始化对象</span></span><br><span class="line">    qdrant_client_manager.init()</span><br><span class="line">    embedding_client_manager.init()</span><br><span class="line">    es_client_manager.init()</span><br><span class="line">    meta_mysql_client_manager.init()</span><br><span class="line">    dw_mysql_client_manager.init()</span><br><span class="line"></span><br><span class="line">    <span class="comment"># yield 之前是启动逻辑，yield 之后是关闭逻辑；中间阶段由 FastAPI 正常处理请求</span></span><br><span class="line">    <span class="keyword">yield</span></span><br><span class="line"></span><br><span class="line">    <span class="comment"># 关闭阶段：统一释放外部连接，避免进程退出前留下未关闭的网络连接</span></span><br><span class="line">    <span class="keyword">await</span> qdrant_client_manager.close()</span><br><span class="line">    <span class="keyword">await</span> es_client_manager.close()</span><br><span class="line">    <span class="keyword">await</span> meta_mysql_client_manager.close()</span><br><span class="line">    <span class="keyword">await</span> dw_mysql_client_manager.close()</span><br></pre></td></tr></table></figure>
+
+<p>按 <code>yield</code> 拆开看：</p>
+<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line">yield 前：</span><br><span class="line">  FastAPI 应用启动时执行</span><br><span class="line">  初始化 Qdrant、Embedding、ES、MySQL 客户端管理器</span><br><span class="line"></span><br><span class="line">yield 处：</span><br><span class="line">  应用进入运行状态</span><br><span class="line">  开始接收请求</span><br><span class="line"></span><br><span class="line">yield 后：</span><br><span class="line">  应用关闭前执行</span><br><span class="line">  释放外部客户端连接</span><br></pre></td></tr></table></figure>
+
+<p>注意这里没有关闭 <code>embedding_client_manager</code>，因为当前项目代码里只对 Qdrant、ES、MySQL manager 提供了异步关闭逻辑。文档跟着实际代码走，不额外虚构关闭方法。</p>
+<hr>
+<h2 id="6、启动后端并测试真实查询接口"><a href="#6、启动后端并测试真实查询接口" class="headerlink" title="6、启动后端并测试真实查询接口"></a>6、启动后端并测试真实查询接口</h2><p>在 <code>shopkeeper-agent</code> 项目根目录启动后端：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">uv run fastapi dev main.py</span><br></pre></td></tr></table></figure>
+
+<p>启动前要确认 MySQL、Qdrant、Elasticsearch 等外部服务可用，Embedding 相关配置也已经准备好。</p>
+<p>用 Apifox 测试：</p>
+<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">POST http://127.0.0.1:8000/api/query</span><br><span class="line">Content-Type: application/json</span><br></pre></td></tr></table></figure>
+
+<p>请求体示例：</p>
+<figure class="highlight json"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="punctuation">&#123;</span></span><br><span class="line">  <span class="attr">&quot;query&quot;</span><span class="punctuation">:</span> <span class="string">&quot;统计华北地区销售额&quot;</span></span><br><span class="line"><span class="punctuation">&#125;</span></span><br></pre></td></tr></table></figure>
+
+<p>如果一切正常，接口不会一次性返回完整结果，而是持续返回多段 SSE 消息。前端或 Apifox 能看到问数智能体执行过程中的进度输出。</p>
+<!-- ![API 代码目录结构](/assets/img/llm/ecommerce-data-qa/16/16-6-1-1.png) -->
+<div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/ecommerce-data-qa/16/16-6-1-1.png" alt="API 代码目录结构"></div>
+
+<hr>
+<p><strong>本章小结：</strong></p>
+<p>本章把 <code>/api/query</code> 从协议验证推进到了真实业务执行。</p>
+<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br></pre></td><td class="code"><pre><span class="line">main.py</span><br><span class="line">  -&gt; 创建 FastAPI 应用</span><br><span class="line">  -&gt; 注册 lifespan 和 query_router</span><br><span class="line"></span><br><span class="line">query_router.py</span><br><span class="line">  -&gt; 接收 QuerySchema</span><br><span class="line">  -&gt; 通过 Depends 获取 QueryService</span><br><span class="line">  -&gt; 用 StreamingResponse 返回 query_service.query(...)</span><br><span class="line"></span><br><span class="line">QueryService</span><br><span class="line">  -&gt; 创建 DataAgentState</span><br><span class="line">  -&gt; 创建 DataAgentContext</span><br><span class="line">  -&gt; 调用 graph.astream(..., stream_mode=&quot;custom&quot;)</span><br><span class="line">  -&gt; 把 chunk 转成 JSON 并包装成 SSE</span><br><span class="line"></span><br><span class="line">dependencies.py</span><br><span class="line">  -&gt; 组装 Session、Repository、Client、Service</span><br><span class="line"></span><br><span class="line">lifespan.py</span><br><span class="line">  -&gt; 应用启动时初始化客户端</span><br><span class="line">  -&gt; 应用关闭时释放客户端</span><br></pre></td></tr></table></figure>
+
+<p>这一章完成后，后端查询接口已经能跑真实问数流程。下一章要继续处理交付级问题：节点失败时如何停止工作流、前端如何稳定消费消息，以及并发请求时如何通过 <code>request_id</code> 追踪日志。</p>
+</div>
+        </div>
+      </main>
+    </div>
+
+    <div class="float-buttons">
+      <button id="back-to-top" class="float-btn" title="返回顶部">↑</button>
+      <a href="/" class="float-btn" title="返回首页">🏠</a>
+    </div>
+
+    <script>
+      /**
+ * ============================================
+ * 页面归属：post.njk 文章详情页
+ * 功能说明：监听页面滚动，控制返回顶部按钮显示/隐藏、点击返回顶部平滑滚动
+ * 引入位置：post.njk script 内部抽取
+ * ============================================
+ */
+var backToTopBtn = document.getElementById('back-to-top');
+window.addEventListener('scroll', function () {
+  if (window.scrollY > 300)
+    backToTopBtn
+      .classList
+      .add('show');
+  else
+    backToTopBtn
+      .classList
+      .remove('show');
+});
+backToTopBtn.addEventListener('click', function () {
+  window.scrollTo({top: 0, behavior: 'smooth'});
+});
+      /**
+ * ============================================
+ * 侧边栏交互脚本
+ * 文件：_js/sidebar.js
+ * 作用：搜索功能、粉丝数点击 +1、关注数点击 +1、侧边栏折叠展开
+ * ============================================
+ */
+document.addEventListener('DOMContentLoaded', function() {
+  // ===== 搜索功能 =====
+  var searchBtn = document.getElementById('search-btn');
+  var searchInput = document.getElementById('search-input');
+  
+  if (searchBtn) {
+    searchBtn.addEventListener('click', function() {
+      var keyword = searchInput.value.trim();
+      if (keyword) {
+        window.location.href = '/search/?q=' + encodeURIComponent(keyword);
+      }
+    });
+  }
+  
+  if (searchInput) {
+    searchInput.addEventListener('keypress', function(e) {
+      if (e.key === 'Enter') {
+        var keyword = searchInput.value.trim();
+        if (keyword) {
+          window.location.href = '/search/?q=' + encodeURIComponent(keyword);
+        }
+      }
+    });
+  }
+  // ===== 粉丝数点击 +1（起始 1088） =====
+  var fansEl = document.getElementById('fans-count');
+  if (fansEl) {
+    fansEl.addEventListener('click', function() {
+      var current = parseInt(this.textContent);
+      this.textContent = current + 1;
+      this.style.transform = 'scale(1.3)';
+      this.style.color = '#ff6b6b';
+      setTimeout(function() {
+        fansEl.style.transform = 'scale(1)';
+        fansEl.style.color = '#00eeff';
+      }, 300);
+    });
+  }
+  // ===== 关注数点击 +1（起始 66） =====
+  var followEl = document.getElementById('follow-count');
+  if (followEl) {
+    followEl.addEventListener('click', function() {
+      var current = parseInt(this.textContent);
+      this.textContent = current + 1;
+      this.style.transform = 'scale(1.3)';
+      this.style.color = '#ff6b6b';
+      setTimeout(function() {
+        followEl.style.transform = 'scale(1)';
+        followEl.style.color = '#00eeff';
+      }, 300);
+    });
+  }
+
+
+  // =========侧边栏折叠展开逻辑=========
+  const toggleBtn = document.getElementById('sidebarToggle');
+  const sidebar = document.getElementById('sidebar');
+  const mainContent = document.querySelector('.main-content');
+
+  // 首页、归档、分类页面没有元素直接退出
+  if(!toggleBtn || !sidebar || !mainContent){
+    return;
+  }
+
+  let isCollapsed = localStorage.getItem('sidebarCollapsed') === '1';
+
+  function setUi(collapsed){
+    if(collapsed){
+      document.body.classList.add('sidebar-collapsed');
+    }else{
+      document.body.classList.remove('sidebar-collapsed');
+    }
+    localStorage.setItem('sidebarCollapsed', collapsed ? '1':'0');
+  }
+
+  setUi(isCollapsed);
+
+  toggleBtn.addEventListener('click',function(e){
+    e.stopPropagation();
+    isCollapsed = !isCollapsed;
+    setUi(isCollapsed);
+  });
+
+});
+    </script>
+  </body>
+</html>
