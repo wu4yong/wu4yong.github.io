@@ -1,6 +1,6 @@
 ---
-title: JUC多线程篇(二)
-date: 2026-06-05 02:00:00
+title: JUC多线程篇(二) Thread
+date: 2026-05-02 01:00:00
 categories:
   - java
 tags:

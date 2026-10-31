@@ -1,6 +1,6 @@
 ---
-title: JUC多线程篇(一)
-date: 2026-06-05 01:00:00
+title: JUC多线程篇(一) 进程
+date: 2026-05-01 01:00:00
 categories:
   - java
 tags:

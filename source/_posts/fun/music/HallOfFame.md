@@ -1,8 +1,8 @@
 ---
 title: Hall Of Fame
-date: 2026-06-01 05:00:00
+date: 2026-01-08 01:00:00
 categories:
-  - music  # 多级分类用 / 拼接
+  - music  
 tags:
   - 音乐 
 order: 3

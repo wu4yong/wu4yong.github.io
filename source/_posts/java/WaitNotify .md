@@ -1,6 +1,6 @@
 ---
-title: JUC多线程篇(五)
-date: 2026-06-05 05:00:00
+title: JUC多线程篇(五) Wait/Notif
+date: 2026-05-05 01:00:00
 categories:
   - java
 tags:

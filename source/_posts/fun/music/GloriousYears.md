@@ -1,6 +1,6 @@
 ---
 title: 光辉岁月
-date: 2026-06-01 02:00:00
+date: 2026-01-03 01:00:00
 categories:
   - music  # 多级分类用 / 拼接
 tags:

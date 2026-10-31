@@ -1,6 +1,6 @@
 ---
 title: Stay Alive
-date: 2026-06-01 08:01:00
+date: 2026-01-06 01:00:00
 categories:
   - music  # 多级分类用 / 拼接
 tags:
