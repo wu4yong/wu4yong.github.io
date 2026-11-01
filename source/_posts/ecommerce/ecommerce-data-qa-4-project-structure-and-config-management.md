@@ -177,24 +177,26 @@ llm:
 
 从这份配置里，也可以先快速对照每个**配置分组**的默认地址与作用：
 
-| 配置分组             | 默认地址                                               | 作用                                                                          |
-| -------------------- | ------------------------------------------------------ | ----------------------------------------------------------------------------- |
-| `logging`            | `—`（无对外服务端口）                                  | 控制日志输出到文件还是控制台，以及日志级别、轮转策略                          |
-| `db_meta`            | `localhost:3306`（库 `meta`）                          | 元数据库连接信息                                                              |
-| `db_dw`              | `localhost:3306`（库 `dw`）                            | 数据仓库模拟库连接信息                                                        |
-| `qdrant`             | `localhost:6333`                                       | 向量数据库连接信息与向量维度                                                  |
-| `embedding`          | `localhost:8081`                                       | Embedding 推理服务地址与模型名                                                |
-| `es`                 | `localhost:9200`                                       | Elasticsearch 地址与索引名                                                    |
-| `llm`                | `—`（远程 API，地址见 `llm.base_url`，无本机固定端口） | 大模型名称、密钥与服务地址                                                    |
-| 后端 API（运行端口） | `localhost:8000`                                       | 问数后端 HTTP 服务（由启动方式决定，一般不在 `app_config.yaml` 顶层单独成组） |
+{% autogrid data-grid-link-table nofix %}
+配置分组|默认地址|作用
+`logging`|`—`（无对外服务端口）|控制日志输出到文件还是控制台，以及日志级别、轮转策略
+`db_meta`|`localhost:3306`（库 `meta`）|元数据库连接信息
+`db_dw`|`localhost:3306`（库 `dw`）|数据仓库模拟库连接信息
+`qdrant`|`localhost:6333`|向量数据库连接信息与向量维度
+`embedding`|`localhost:8081`|Embedding 推理服务地址与模型名
+`es`|`localhost:9200`|Elasticsearch 地址与索引名
+`llm`|`—`（远程 API，地址见 `llm.base_url`，无本机固定端口）|大模型名称、密钥与服务地址
+后端 API（运行端口）|`localhost:8000`|问数后端 HTTP 服务（由启动方式决定，一般不在 `app_config.yaml` 顶层单独成组）
+{% endautogrid %}
 
 浏览器访问地址：
 
-| 服务        | 浏览器访问地址                                        | 说明                                                     |
-| ----------- | ----------------------------------------------------- | -------------------------------------------------------- |
-| `qdrant`    | http://localhost:6333/dashboard#/collections          | `Qdrant` 自带的 Dashboard，可直接查看 collection         |
-| `embedding` | http://localhost:8081/docs                            | `Embedding` 服务的接口文档页，可用来确认服务是否启动成功 |
-| `es`        | http://localhost:5601/app/elasticsearch/elasticsearch | `Kibana`调试 `Elasticsearch` 的控制台入口                |
+{% autogrid data-grid-link-table nofix %}
+服务|浏览器访问地址|说明
+`qdrant`|http://localhost:6333/dashboard#/collections|`Qdrant` 自带的 Dashboard，可直接查看 collection
+`embedding`|http://localhost:8081/docs|`Embedding` 服务的接口文档页，可用来确认服务是否启动成功
+`es`|http://localhost:5601/app/elasticsearch/elasticsearch|`Kibana`调试 `Elasticsearch` 的控制台入口
+{% endautogrid %}
 
 像 `db_meta`、`db_dw` 这类 `MySQL` 服务，本身并没有浏览器管理页面，通常还是通过 `Navicat`、`DBeaver`、命令行客户端等方式连接查看。
 

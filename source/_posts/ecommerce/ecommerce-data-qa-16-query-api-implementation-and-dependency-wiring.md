@@ -66,13 +66,14 @@ shopkeeper-agent/
 
 可以先把它们分成五层：
 
-| 层次     | 文件               | 主要职责                                                  |
-| -------- | ------------------ | --------------------------------------------------------- |
-| 入口层   | `main.py`          | 创建 FastAPI 应用，注册生命周期和路由                     |
-| HTTP 层  | `query_router.py`  | 定义 `/api/query`，接收请求，返回流式响应                 |
-| 业务层   | `query_service.py` | 创建 `State` / `Context`，调用 LangGraph，并包装 SSE 消息 |
-| 依赖层   | `dependencies.py`  | 组装 Service、Repository、Session、Client                 |
-| 生命周期 | `lifespan.py`      | 应用启动时初始化客户端，应用关闭时释放连接                |
+{% autogrid data-grid-link-table nofix %}
+层次|文件|主要职责
+入口层|`main.py`|创建 FastAPI 应用，注册生命周期和路由
+HTTP 层|`query_router.py`|定义 `/api/query`，接收请求，返回流式响应
+业务层|`query_service.py`|创建 `State` / `Context`，调用 LangGraph，并包装 SSE 消息
+依赖层|`dependencies.py`|组装 Service、Repository、Session、Client
+生命周期|`lifespan.py`|应用启动时初始化客户端，应用关闭时释放连接
+{% endautogrid %}
 
 这几个文件的关系可以记成一句话：
 
@@ -214,11 +215,12 @@ async for chunk in graph.astream(
 
 迁移到 API 后，变化主要有三处：
 
-| 测试脚本                    | API 接口版本                       |
-| --------------------------- | ---------------------------------- |
-| 用户问题写死在代码里        | 使用请求体传入的 `query`           |
-| 上下文在测试脚本里手动创建  | 由 `QueryService` 接收依赖后创建   |
-| `print(chunk)` 输出到控制台 | `yield data: ...\n\n` 流式写给前端 |
+{% autogrid data-grid-link-table nofix %}
+测试脚本|API 接口版本
+用户问题写死在代码里|使用请求体传入的 `query`
+上下文在测试脚本里手动创建|由 `QueryService` 接收依赖后创建
+`print(chunk)` 输出到控制台|`yield data: ...\n\n` 流式写给前端
+{% endautogrid %}
 
 ### 3.2 QueryService 核心代码
 

@@ -77,14 +77,15 @@ uv sync
 
 `uv sync` 会根据项目中的 `pyproject.toml` 和 `uv.lock` 自动创建 `.venv`，并安装锁定好的依赖版本。当前项目核心依赖如下：
 
-| 依赖               | 当前版本 | 作用                                   |
-| ------------------ | -------- | -------------------------------------- |
-| `deepagents`       | `0.5.7`  | 创建 DeepAgent 的核心框架              |
-| `langchain`        | `1.2.17` | 提供工具封装、消息结构和模型初始化入口 |
-| `langchain-openai` | `1.2.1`  | 通过 OpenAI 兼容协议连接模型服务       |
-| `langgraph`        | `1.1.10` | DeepAgents 底层图执行与状态流转能力    |
-| `python-dotenv`    | `1.2.2`  | 从 `.env` 文件读取环境变量             |
-| `tavily-python`    | `0.7.24` | 调用 Tavily 联网搜索                   |
+{% autogrid data-grid-link-table nofix %}
+依赖|当前版本|作用
+`deepagents`|`0.5.7`|创建 DeepAgent 的核心框架
+`langchain`|`1.2.17`|提供工具封装、消息结构和模型初始化入口
+`langchain-openai`|`1.2.1`|通过 OpenAI 兼容协议连接模型服务
+`langgraph`|`1.1.10`|DeepAgents 底层图执行与状态流转能力
+`python-dotenv`|`1.2.2`|从 `.env` 文件读取环境变量
+`tavily-python`|`0.7.24`|调用 Tavily 联网搜索
+{% endautogrid %}
 
 如果你后面需要新增依赖，再使用 `uv add 包名`；如果只是运行当前仓库中的教学示例，通常执行 `uv sync` 就可以了。
 
@@ -220,12 +221,13 @@ deep_agent = create_deep_agent(
 
 先看四个核心参数：
 
-| 参数            | 含义                                                   |
-| --------------- | ------------------------------------------------------ |
-| `model`         | 智能体使用的大模型                                     |
-| `tools`         | 主智能体可以直接调用的工具列表                         |
-| `subagents`     | 子智能体列表，本节先留空                               |
-| `system_prompt` | 主智能体的系统提示词，用来定义角色、目标和工具使用边界 |
+{% autogrid data-grid-link-table nofix %}
+参数|含义
+`model`|智能体使用的大模型
+`tools`|主智能体可以直接调用的工具列表
+`subagents`|子智能体列表，本节先留空
+`system_prompt`|主智能体的系统提示词，用来定义角色、目标和工具使用边界
+{% endautogrid %}
 
 这一版代码中虽然 `subagents=[]`，但它依然是 DeepAgent。只是当前示例先用一个搜索工具帮助我们理解 Agent 的执行过程，子智能体会在后面单独讲。
 
@@ -315,11 +317,12 @@ LangChainPendingDeprecationWarning: The default value of `allowed_objects` will 
 
 这段输出可以按三层来看：
 
-| 输出位置                         | 说明                                                   |
-| -------------------------------- | ------------------------------------------------------ |
-| `开始调用网络搜索工具...`        | 工具函数内部的 `print()`，说明 `internet_search` 被真正执行 |
-| `result["messages"]`             | 完整执行轨迹，包含用户消息、模型工具调用、工具返回和最终回答 |
-| 最后的 Markdown 报告             | `result["messages"][-1].content`，也就是最终展示给用户的内容 |
+{% autogrid data-grid-link-table nofix %}
+输出位置|说明
+`开始调用网络搜索工具...`|工具函数内部的 `print()`，说明 `internet_search` 被真正执行
+`result["messages"]`|完整执行轨迹，包含用户消息、模型工具调用、工具返回和最终回答
+最后的 Markdown 报告|`result["messages"][-1].content`，也就是最终展示给用户的内容
+{% endautogrid %}
 
 这里先建立一个直觉：`invoke()` 虽然最后拿到的是一份报告，但它内部并不是“一次模型回答”，而是经历了“模型决定调工具 -> 工具返回结果 -> 模型整理答案”的完整链路。
 
@@ -441,16 +444,17 @@ def internet_search(query: str, max_results: int = 5, ...):
 
 结合实际输出，`ToolMessage(content=...)` 里的 JSON 主要包含这些字段：
 
-| 字段             | 含义                         |
-| ---------------- | ---------------------------- |
-| `query`          | 本次传给 Tavily 的搜索关键词 |
-| `results`        | 搜索结果列表                 |
-| `url`            | 单条搜索结果的网页链接       |
-| `title`          | 单条搜索结果的标题           |
-| `content`        | 单条搜索结果的摘要内容       |
-| `published_date` | 新闻发布时间                 |
-| `response_time`  | Tavily 本次请求耗时          |
-| `request_id`     | Tavily 本次请求 ID           |
+{% autogrid data-grid-link-table nofix %}
+字段|含义
+`query`|本次传给 Tavily 的搜索关键词
+`results`|搜索结果列表
+`url`|单条搜索结果的网页链接
+`title`|单条搜索结果的标题
+`content`|单条搜索结果的摘要内容
+`published_date`|新闻发布时间
+`response_time`|Tavily 本次请求耗时
+`request_id`|Tavily 本次请求 ID
+{% endautogrid %}
 
 第四步，工具结果不会直接返回给用户。Agent 会把 `ToolMessage` 再交给大模型，让模型根据搜索结果进行整理、翻译、筛选和润色。比如 Tavily 返回的结果可能包含英文网页摘要，但用户提问是中文，所以最终结果通常会被模型整理成中文报告。
 
@@ -505,12 +509,13 @@ deep_agent = create_deep_agent(
 
 为了读懂 `result["messages"]`，可以先记住下面这张表：
 
-| 消息类型       | 在执行链路中的作用                           | 常见特征                         |
-| -------------- | -------------------------------------------- | -------------------------------- |
-| `HumanMessage` | 用户输入的问题                               | `content` 是用户原始问题         |
-| `AIMessage`    | 模型的思考结果，可能是调用工具，也可能是回复 | 有 `tool_calls` 时表示准备调工具 |
-| `ToolMessage`  | 工具真实执行后的返回结果                     | `name` 通常是工具名              |
-| `AIMessage`    | 模型基于工具结果整理出的最终回答             | `content` 有最终自然语言结果     |
+{% autogrid data-grid-link-table nofix %}
+消息类型|在执行链路中的作用|常见特征
+`HumanMessage`|用户输入的问题|`content` 是用户原始问题
+`AIMessage`|模型的思考结果，可能是调用工具，也可能是回复|有 `tool_calls` 时表示准备调工具
+`ToolMessage`|工具真实执行后的返回结果|`name` 通常是工具名
+`AIMessage`|模型基于工具结果整理出的最终回答|`content` 有最终自然语言结果
+{% endautogrid %}
 
 其中最容易混淆的是 `AIMessage`。它有两种情况：
 
@@ -599,12 +604,13 @@ for chunk in stream:
 
 ### 3.3 chunk 的四种关键状态
 
-| 状态                 | 如何识别                                                                 | 含义                                     |
-| -------------------- | ------------------------------------------------------------------------ | ---------------------------------------- |
-| 模型决定调用工具     | `node_name == "model"` 且 `last_msg.tool_calls` 中工具名不是 `task`      | 模型判断下一步要调用某个普通工具         |
-| 模型决定调用子智能体 | `node_name == "model"` 且 `tool_call["name"] == "task"`                  | 模型判断下一步要把任务分派给某个子智能体 |
-| 工具执行完成         | `node_name == "tools"`                                                   | Agent 真正调用工具，并拿到了工具返回结果 |
-| 模型返回最终结果     | `node_name == "model"` 且没有 `tool_calls`，但 `last_msg.content` 有内容 | 模型基于前面结果生成最终回复             |
+{% autogrid data-grid-link-table nofix %}
+状态|如何识别|含义
+模型决定调用工具|`node_name == "model"` 且 `last_msg.tool_calls` 中工具名不是 `task`|模型判断下一步要调用某个普通工具
+模型决定调用子智能体|`node_name == "model"` 且 `tool_call["name"] == "task"`|模型判断下一步要把任务分派给某个子智能体
+工具执行完成|`node_name == "tools"`|Agent 真正调用工具，并拿到了工具返回结果
+模型返回最终结果|`node_name == "model"` 且没有 `tool_calls`，但 `last_msg.content` 有内容|模型基于前面结果生成最终回复
+{% endautogrid %}
 
 本章的示例只配置了 `internet_search`，所以运行时主要会看到“普通工具调用”。表格中的子智能体状态是先给后面留一个入口：等第 3 章真正配置 `subagents` 后，流式输出里就可能出现这类调度事件。
 
@@ -837,12 +843,13 @@ LangChainPendingDeprecationWarning: The default value of `allowed_objects` will 
 
 这段输出比 `invoke()` 更适合观察执行过程，可以按顺序读：
 
-| 输出片段                                | 对应的执行阶段                                         |
-| --------------------------------------- | ------------------------------------------------------ |
-| `【大模型】决定调用工具...`             | `model` 节点输出，模型决定下一步调用 `internet_search` |
-| `开始调用网络搜索工具...`               | Python 工具函数真正开始执行                            |
-| `【agent】调用了internet_search工具...` | `tools` 节点输出，工具结果已经返回                     |
-| `【大模型】最终执行的结果...`           | `model` 节点再次输出，模型基于工具结果生成最终回答     |
+{% autogrid data-grid-link-table nofix %}
+输出片段|对应的执行阶段
+`【大模型】决定调用工具...`|`model` 节点输出，模型决定下一步调用 `internet_search`
+`开始调用网络搜索工具...`|Python 工具函数真正开始执行
+`【agent】调用了internet_search工具...`|`tools` 节点输出，工具结果已经返回
+`【大模型】最终执行的结果...`|`model` 节点再次输出，模型基于工具结果生成最终回答
+{% endautogrid %}
 
 这就是流式解析最核心的价值：不用等到最终报告生成，开发者和前端都能看到 Agent 当前走到了哪一步。
 
@@ -850,12 +857,13 @@ LangChainPendingDeprecationWarning: The default value of `allowed_objects` will 
 
 虽然本章还没有写 FastAPI 接口，但可以提前建立后端事件和前端展示之间的对应关系。
 
-| 后端解析出的事件                   | 前端可以展示成什么       |
-| ---------------------------------- | ------------------------ |
-| 模型决定调用工具 `internet_search` | 正在搜索网络资料         |
-| 工具返回搜索结果                   | 已获取搜索结果，正在整理 |
-| 模型决定调用子智能体               | 正在分派给某个专业助手   |
-| 模型返回最终结果                   | 展示最终答案或报告       |
+{% autogrid data-grid-link-table nofix %}
+后端解析出的事件|前端可以展示成什么
+模型决定调用工具 `internet_search`|正在搜索网络资料
+工具返回搜索结果|已获取搜索结果，正在整理
+模型决定调用子智能体|正在分派给某个专业助手
+模型返回最终结果|展示最终答案或报告
+{% endautogrid %}
 
 这也是为什么流式解析很重要。企业级智能体项目不只看最终答案，还要让用户能感知执行过程，开发者也能定位每一步做了什么。
 

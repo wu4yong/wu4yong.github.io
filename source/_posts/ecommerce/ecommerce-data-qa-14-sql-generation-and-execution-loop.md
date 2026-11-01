@@ -563,10 +563,11 @@ class DataAgentState(TypedDict):
 
 它们分别由不同节点读写：
 
-| 字段    | 谁写入                        | 谁读取                                   | 作用                   |
-| ------- | ----------------------------- | ---------------------------------------- | ---------------------- |
-| `sql`   | `generate_sql`、`correct_sql` | `validate_sql`、`correct_sql`、`run_sql` | 保存候选或修正后的 SQL |
-| `error` | `validate_sql`                | `graph` 条件分支、`correct_sql`          | 保存 SQL 校验错误      |
+{% autogrid data-grid-link-table nofix %}
+字段|谁写入|谁读取|作用
+`sql`|`generate_sql`、`correct_sql`|`validate_sql`、`correct_sql`、`run_sql`|保存候选或修正后的 SQL
+`error`|`validate_sql`|`graph` 条件分支、`correct_sql`|保存 SQL 校验错误
+{% endautogrid %}
 
 可以按下面的流向理解：
 

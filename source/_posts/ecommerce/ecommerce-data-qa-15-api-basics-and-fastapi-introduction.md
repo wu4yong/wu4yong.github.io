@@ -57,12 +57,13 @@ tags:
 
 这个接口至少要满足四个要求：
 
-| 要求           | 说明                                 |
-| -------------- | ------------------------------------ |
-| 接收用户问题   | 前端通过请求体传入 `query`           |
-| 执行问数工作流 | 后端调用 `graph.astream(...)`        |
-| 实时返回进度   | 每执行到关键节点，就把进度推给前端   |
-| 返回最终结果   | SQL 执行完成后，把查询结果返回给前端 |
+{% autogrid data-grid-link-table nofix %}
+要求|说明
+接收用户问题|前端通过请求体传入 `query`
+执行问数工作流|后端调用 `graph.astream(...)`
+实时返回进度|每执行到关键节点，就把进度推给前端
+返回最终结果|SQL 执行完成后，把查询结果返回给前端
+{% endautogrid %}
 
 这里最关键的是“实时返回进度”。问数智能体不是普通 CRUD 接口，它中间会经过多个步骤。如果后端等所有节点都执行完再一次性返回，用户只能看到页面一直转圈，不知道系统是在正常执行、卡住了，还是已经失败了。
 
@@ -102,11 +103,12 @@ async def health_check():
 
 这里有三个关键信息：
 
-| 代码                      | 含义                            |
-| ------------------------- | ------------------------------- |
-| `app = FastAPI()`         | 创建 FastAPI 应用实例           |
-| `@app.get("/health")`     | 声明一个 GET 接口               |
-| `return {"status": "ok"}` | 返回字典，FastAPI 自动转成 JSON |
+{% autogrid data-grid-link-table nofix %}
+代码|含义
+`app = FastAPI()`|创建 FastAPI 应用实例
+`@app.get("/health")`|声明一个 GET 接口
+`return {"status": "ok"}`|返回字典，FastAPI 自动转成 JSON
+{% endautogrid %}
 
 本项目不会把所有接口都堆在 `main.py` 里，而是先按下面的结构拆开：
 
@@ -121,11 +123,12 @@ shopkeeper-agent/
          └─ query_schema.py
 ```
 
-| 文件              | 职责                              |
-| ----------------- | --------------------------------- |
-| `main.py`         | 创建 FastAPI 应用，并挂载路由     |
-| `query_router.py` | 定义查询接口，例如 `/api/query`   |
-| `query_schema.py` | 定义请求体结构，例如 `query: str` |
+{% autogrid data-grid-link-table nofix %}
+文件|职责
+`main.py`|创建 FastAPI 应用，并挂载路由
+`query_router.py`|定义查询接口，例如 `/api/query`
+`query_schema.py`|定义请求体结构，例如 `query: str`
+{% endautogrid %}
 
 ### 2.1 定义请求体 QuerySchema
 
@@ -346,10 +349,11 @@ SSE 全称是 `Server-Sent Events`，可以理解成“服务端向客户端持�
 <!-- ![SSE 和 WebSocket 在问数接口中的选择：SSE 更适合任务进度和结果持续返回，WebSocket 更适合复杂双向实时交互](/assets/img/llm/ecommerce-data-qa/15/15-5-1-1.svg) -->
 <div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/ecommerce-data-qa/15/15-5-1-1.svg" alt="SSE 和 WebSocket 在问数接口中的选择：SSE 更适合任务进度和结果持续返回，WebSocket 更适合复杂双向实时交互"></div>
 
-| 方案      | 特点                                     | 适合场景                     |
-| --------- | ---------------------------------------- | ---------------------------- |
-| WebSocket | 双向通信，客户端和服务端都能持续发送消息 | 在线协作、聊天、游戏         |
-| SSE       | 主要是服务端持续向客户端推送消息         | 任务进度、日志流、模型输出流 |
+{% autogrid data-grid-link-table nofix %}
+方案|特点|适合场景
+WebSocket|双向通信，客户端和服务端都能持续发送消息|在线协作、聊天、游戏
+SSE|主要是服务端持续向客户端推送消息|任务进度、日志流、模型输出流
+{% endautogrid %}
 
 本项目里，前端只需要先提交一次问题，后续接收服务端推送即可。因此用 SSE 更轻量，也更贴合当前需求。
 
@@ -398,11 +402,12 @@ JSON 字符串  # 本项目自己的业务消息
 
 本项目后续会把流式消息设计成几类：
 
-| 类型       | 用途             | 示例                       |
-| ---------- | ---------------- | -------------------------- |
-| `progress` | 返回节点执行进度 | `抽取关键词`、`生成SQL`    |
-| `result`   | 返回最终查询结果 | SQL 查询出的数据           |
-| `error`    | 返回异常信息     | SQL 执行失败、模型调用失败 |
+{% autogrid data-grid-link-table nofix %}
+类型|用途|示例
+`progress`|返回节点执行进度|`抽取关键词`、`生成SQL`
+`result`|返回最终查询结果|SQL 查询出的数据
+`error`|返回异常信息|SQL 执行失败、模型调用失败
+{% endautogrid %}
 
 也就是说，外层是 SSE：
 
@@ -447,10 +452,11 @@ Swagger 中可能会发现页面一直 loading，等全部结束后才一次性�
 
 想观察真实流式效果，可以用两种方式：
 
-| 工具             | 观察方式                                        |
-| ---------------- | ----------------------------------------------- |
-| 浏览器开发者工具 | Network 面板查看响应是否持续增长                |
-| Apifox / Postman | 选择 POST `/api/query`，观察 SSE 是否一条条出现 |
+{% autogrid data-grid-link-table nofix %}
+工具|观察方式
+浏览器开发者工具|Network 面板查看响应是否持续增长
+Apifox / Postman|选择 POST `/api/query`，观察 SSE 是否一条条出现
+{% endautogrid %}
 
 <!-- ![Apifox](/assets/img/llm/ecommerce-data-qa/15/15-6-1-2.png) -->
 <div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/ecommerce-data-qa/15/15-6-1-2.png" alt="Apifox"></div>
@@ -465,11 +471,12 @@ Swagger 中可能会发现页面一直 loading，等全部结束后才一次性�
 
 它们分别解决不同问题：
 
-| 工程问题                     | FastAPI 能力 | 本项目中的用途                           |
-| ---------------------------- | ------------ | ---------------------------------------- |
-| 应用启动和关闭时如何管理资源 | `lifespan`   | 初始化和关闭外部客户端                   |
-| 每个请求前后如何统一执行逻辑 | middleware   | 生成 `request_id`，辅助日志追踪          |
-| 路由函数依赖的对象如何创建   | `Depends`    | 组装 `QueryService`、Repository、Session |
+{% autogrid data-grid-link-table nofix %}
+工程问题|FastAPI 能力|本项目中的用途
+应用启动和关闭时如何管理资源|`lifespan`|初始化和关闭外部客户端
+每个请求前后如何统一执行逻辑|middleware|生成 `request_id`，辅助日志追踪
+路由函数依赖的对象如何创建|`Depends`|组装 `QueryService`、Repository、Session
+{% endautogrid %}
 
 这三个概念本章先理解到“各自管什么”就够了，具体代码会在后面两章展开。
 
@@ -582,10 +589,11 @@ async def add_process_time_header(request: Request, call_next):
 
 这里两个参数很重要：
 
-| 参数        | 含义                                       |
-| ----------- | ------------------------------------------ |
-| `request`   | 当前请求对象，可以读取路径、方法、请求头等 |
-| `call_next` | 把请求继续交给后续路由处理函数             |
+{% autogrid data-grid-link-table nofix %}
+参数|含义
+`request`|当前请求对象，可以读取路径、方法、请求头等
+`call_next`|把请求继续交给后续路由处理函数
+{% endautogrid %}
 
 中间件适合放所有接口都需要的横切逻辑，例如：
 
@@ -708,11 +716,12 @@ async def get_meta_session():
 
 这里也要区分 `lifespan` 和带 `yield` 的依赖项：
 
-| 对比项       | `lifespan`                       | 带 `yield` 的依赖项                      |
-| ------------ | -------------------------------- | ---------------------------------------- |
-| 生命周期范围 | 整个应用                         | 单次请求                                 |
-| 典型资源     | 客户端、连接池、全局配置         | 数据库 Session、请求级临时资源           |
-| 本项目例子   | 初始化 Qdrant、ES、MySQL manager | `get_meta_session()`、`get_dw_session()` |
+{% autogrid data-grid-link-table nofix %}
+对比项|`lifespan`|带 `yield` 的依赖项
+生命周期范围|整个应用|单次请求
+典型资源|客户端、连接池、全局配置|数据库 Session、请求级临时资源
+本项目例子|初始化 Qdrant、ES、MySQL manager|`get_meta_session()`、`get_dw_session()`
+{% endautogrid %}
 
 简单记：
 

@@ -310,25 +310,26 @@ dependencies = [
 
 ### 2.6 核心依赖说明
 
-| 依赖                    | 主要作用                                                              |
-| ----------------------- | --------------------------------------------------------------------- |
-| `fastapi[standard]`     | 高性能异步 Web 框架，作为整个服务的 API 入口                          |
-| `sqlalchemy`            | Python 常用 ORM，用统一模型管理数据库读写与事务                       |
-| `asyncmy`               | MySQL 的高性能 `asyncio` 驱动，配合 `SQLAlchemy` 实现全异步数据库访问 |
-| `qdrant-client`         | 向量数据库客户端，用于 Embedding 向量存储与相似度检索                 |
-| `elasticsearch[async]`  | 异步 Elasticsearch 客户端，用于全文检索                               |
-| `langchain`             | LLM 应用编排框架，用于构建 RAG、工具调用和 Prompt 链路                |
-| `langchain-deepseek`    | LangChain 与 DeepSeek 模型的接入层，用于连接项目实际使用的大模型服务  |
-| `langchain-huggingface` | LangChain 与 HuggingFace 模型的桥接层，主要用于 Embedding 或模型加载  |
-| `langgraph`             | 用图结构构建可控的 Agent 流程                                         |
-| `jieba`                 | 中文分词与关键词提取工具                                              |
-| `omegaconf`             | 分层配置管理工具，适合多环境、多模型、多参数场景                      |
-| `python-dotenv`         | 从 `.env` 文件读取环境变量，避免把密钥写死在代码中                    |
-| `pyyaml`                | 用于 YAML 文件的读取与写入                                            |
-| `loguru`                | 更简洁的日志库，适合工程化项目统一管理日志输出                        |
-| `cryptography`          | 加密与证书基础库，也是很多网络、数据库和安全相关依赖的底层基础        |
-| `greenlet`              | SQLAlchemy 等异步/同步协作场景中的底层协程支持库                      |
-| `huggingface-hub`       | 用于模型下载以及 HuggingFace 生态接入                                 |
+{% autogrid data-grid-link-table nofix %}
+依赖|主要作用
+`fastapi[standard]`|高性能异步 Web 框架，作为整个服务的 API 入口
+`sqlalchemy`|Python 常用 ORM，用统一模型管理数据库读写与事务
+`asyncmy`|MySQL 的高性能 `asyncio` 驱动，配合 `SQLAlchemy` 实现全异步数据库访问
+`qdrant-client`|向量数据库客户端，用于 Embedding 向量存储与相似度检索
+`elasticsearch[async]`|异步 Elasticsearch 客户端，用于全文检索
+`langchain`|LLM 应用编排框架，用于构建 RAG、工具调用和 Prompt 链路
+`langchain-deepseek`|LangChain 与 DeepSeek 模型的接入层，用于连接项目实际使用的大模型服务
+`langchain-huggingface`|LangChain 与 HuggingFace 模型的桥接层，主要用于 Embedding 或模型加载
+`langgraph`|用图结构构建可控的 Agent 流程
+`jieba`|中文分词与关键词提取工具
+`omegaconf`|分层配置管理工具，适合多环境、多模型、多参数场景
+`python-dotenv`|从 `.env` 文件读取环境变量，避免把密钥写死在代码中
+`pyyaml`|用于 YAML 文件的读取与写入
+`loguru`|更简洁的日志库，适合工程化项目统一管理日志输出
+`cryptography`|加密与证书基础库，也是很多网络、数据库和安全相关依赖的底层基础
+`greenlet`|SQLAlchemy 等异步/同步协作场景中的底层协程支持库
+`huggingface-hub`|用于模型下载以及 HuggingFace 生态接入
+{% endautogrid %}
 
 现阶段你只需要先知道：
 
@@ -349,13 +350,14 @@ dependencies = [
 
 本项目主要会用到下面这些服务：
 
-| 服务                       | 主要作用                                                                                                                                                                                             |
-| -------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `MySQL`                    | 用于存储数据仓库的元数据信息，包括表信息、字段信息和指标信息；同时也充当业务数据仓库使用，用来模拟真实数仓场景                                                                                       |
-| `Qdrant`                   | 作为向量数据库，用于存储字段信息和指标信息的向量表示；当用户提问时，系统会通过语义相似度检索出最相关的元数据，为生成 SQL 提供高相关性的上下文                                                        |
-| `Elasticsearch`            | 对各维度字段的实际取值建立倒排索引；当用户问题中出现“华北地区”“数码品类”这类自然语言描述时，可以通过全文检索匹配到数据库中真实存在的字段取值，为生成 SQL 时的 `WHERE` 条件或 `GROUP BY` 分组提供依据 |
-| `Kibana`                   | Elasticsearch 的可视化管理与调试界面，用于索引管理、查询语句调试以及检索效果验证，方便在开发过程中观察和优化检索行为                                                                                 |
-| `Text Embedding Inference` | 用于部署 Embedding 模型推理服务，将元数据文本和用户问题转换成向量表示，为 `Qdrant` 提供向量数据来源，是语义检索能力的基础                                                                            |
+{% autogrid data-grid-link-table nofix %}
+服务|主要作用
+`MySQL`|用于存储数据仓库的元数据信息，包括表信息、字段信息和指标信息；同时也充当业务数据仓库使用，用来模拟真实数仓场景
+`Qdrant`|作为向量数据库，用于存储字段信息和指标信息的向量表示；当用户提问时，系统会通过语义相似度检索出最相关的元数据，为生成 SQL 提供高相关性的上下文
+`Elasticsearch`|对各维度字段的实际取值建立倒排索引；当用户问题中出现“华北地区”“数码品类”这类自然语言描述时，可以通过全文检索匹配到数据库中真实存在的字段取值，为生成 SQL 时的 `WHERE` 条件或 `GROUP BY` 分组提供依据
+`Kibana`|Elasticsearch 的可视化管理与调试界面，用于索引管理、查询语句调试以及检索效果验证，方便在开发过程中观察和优化检索行为
+`Text Embedding Inference`|用于部署 Embedding 模型推理服务，将元数据文本和用户问题转换成向量表示，为 `Qdrant` 提供向量数据来源，是语义检索能力的基础
+{% endautogrid %}
 
 从整体分工上看，它们本质上是一套互相配合的基础服务：`MySQL` 负责保存结构化数据，`Qdrant` 负责语义相似度检索，`Elasticsearch` 负责全文匹配，`Kibana` 负责调试和验证检索效果，Embedding 服务负责把文本转换成向量。
 

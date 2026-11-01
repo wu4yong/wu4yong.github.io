@@ -41,10 +41,11 @@ tags:
 
 本章对应两个示例文件：
 
-| 文件                                    | 主题           | 本章示例的业务含义                                 |
-| --------------------------------------- | -------------- | -------------------------------------------------- |
-| `6-langgraph-subagent-wrapper.py`       | 兼容 LangGraph | 把“研究任务规划” LangGraph 工作流封装成子智能体    |
-| `7-langchain-agent-subagent-wrapper.py` | 兼容 LangChain | 把“资料检索” LangChain 工具型 Agent 封装成子智能体 |
+{% autogrid data-grid-link-table nofix %}
+文件|主题|本章示例的业务含义
+`6-langgraph-subagent-wrapper.py`|兼容 LangGraph|把“研究任务规划” LangGraph 工作流封装成子智能体
+`7-langchain-agent-subagent-wrapper.py`|兼容 LangChain|把“资料检索” LangChain 工具型 Agent 封装成子智能体
+{% endautogrid %}
 
 ---
 
@@ -77,10 +78,11 @@ tags:
 
 DeepAgents 中常见的子智能体配置方式有两种。
 
-| 方式               | 适合场景     | 特点                                          |
-| ------------------ | ------------ | --------------------------------------------- |
-| 字典配置           | 简单子智能体 | 写法简单，适合只配置提示词和工具              |
-| `CompiledSubAgent` | 复杂子智能体 | 可以接入已有 LangGraph / LangChain / Runnable |
+{% autogrid data-grid-link-table nofix %}
+方式|适合场景|特点
+字典配置|简单子智能体|写法简单，适合只配置提示词和工具
+`CompiledSubAgent`|复杂子智能体|可以接入已有 LangGraph / LangChain / Runnable
+{% endautogrid %}
 
 字典方式更像“直接声明一个助手”：
 
@@ -107,11 +109,12 @@ sub_agent = CompiledSubAgent(
 
 `CompiledSubAgent` 最核心的是三个参数：
 
-| 参数          | 说明                                                              |
-| ------------- | ----------------------------------------------------------------- |
-| `name`        | 子智能体名称，主智能体通过它识别子智能体                          |
-| `description` | 子智能体能力说明，主智能体靠它判断什么时候调用                    |
-| `runnable`    | 真正执行任务的对象，可以是编译后的 LangGraph 图或 LangChain Agent |
+{% autogrid data-grid-link-table nofix %}
+参数|说明
+`name`|子智能体名称，主智能体通过它识别子智能体
+`description`|子智能体能力说明，主智能体靠它判断什么时候调用
+`runnable`|真正执行任务的对象，可以是编译后的 LangGraph 图或 LangChain Agent
+{% endautogrid %}
 
 也就是说，`CompiledSubAgent` 自己不负责写业务逻辑。业务逻辑在 `runnable` 里，它只负责把这个能力包装成 DeepAgents 能识别的子智能体。
 
@@ -139,11 +142,12 @@ sub_agent = CompiledSubAgent(
 
 这一节会用到你前面已经学过的 LangGraph 知识点：
 
-| 本章用法                  | 对应仓库案例                                                               |
-| ------------------------- | -------------------------------------------------------------------------- |
-| `messages + add_messages` | `案例与源码-3-LangGraph框架/03-state/reducers/StateReducer_AddMessages.py` |
-| 条件边                    | `案例与源码-3-LangGraph框架/05-edge/Edge_Conditional.py`                   |
-| 多节点业务流              | `案例与源码-3-LangGraph框架/01-helloworld/LangGraphBiz.py`                 |
+{% autogrid data-grid-link-table nofix %}
+本章用法|对应仓库案例
+`messages + add_messages`|`案例与源码-3-LangGraph框架/03-state/reducers/StateReducer_AddMessages.py`
+条件边|`案例与源码-3-LangGraph框架/05-edge/Edge_Conditional.py`
+多节点业务流|`案例与源码-3-LangGraph框架/01-helloworld/LangGraphBiz.py`
+{% endautogrid %}
 
 ### 3.2 State 为什么必须包含 messages
 
@@ -325,12 +329,13 @@ LangChainPendingDeprecationWarning: The default value of `allowed_objects` will 
 
 这段输出可以按四个位置来看：
 
-| 输出片段                               | 说明                                                |
-| -------------------------------------- | --------------------------------------------------- |
-| `tool_calls -> research_planner_graph` | 主智能体决定通过 `task` 调用 LangGraph 子智能体     |
-| `【LangGraph】提取研究主题...`         | 子图内部节点正在执行，这是 LangGraph 自己的业务流程 |
-| `ToolMessage(content='研究主题...')`   | 子图执行完成，结果作为 `task` 工具返回给主智能体    |
-| 最后一条 `AIMessage(content=...)`      | 主智能体基于子图结果整理最终回复                    |
+{% autogrid data-grid-link-table nofix %}
+输出片段|说明
+`tool_calls -> research_planner_graph`|主智能体决定通过 `task` 调用 LangGraph 子智能体
+`【LangGraph】提取研究主题...`|子图内部节点正在执行，这是 LangGraph 自己的业务流程
+`ToolMessage(content='研究主题...')`|子图执行完成，结果作为 `task` 工具返回给主智能体
+最后一条 `AIMessage(content=...)`|主智能体基于子图结果整理最终回复
+{% endautogrid %}
 
 这里最重要的是：DeepAgents 主智能体不需要知道 LangGraph 子图内部有几个节点，它只需要知道有一个叫 `research_planner_graph` 的子智能体可以完成“研究规划”。
 
@@ -357,11 +362,12 @@ LangChainPendingDeprecationWarning: The default value of `allowed_objects` will 
 
 这一节会用到你前面已经学过的 LangChain 知识点：
 
-| 本章用法         | 对应仓库案例                                                         |
-| ---------------- | -------------------------------------------------------------------- |
-| `@tool` 工具封装 | `案例与源码-2-LangChain框架/08-tools/QueryWeatherTool.py`            |
-| `create_agent()` | `案例与源码-2-LangChain框架/12-agent/AgentSmartSelectV1.0.py`        |
-| 结构化结果意识   | `案例与源码-2-LangChain框架/05_parser/StructuredOutput_TypedDict.py` |
+{% autogrid data-grid-link-table nofix %}
+本章用法|对应仓库案例
+`@tool` 工具封装|`案例与源码-2-LangChain框架/08-tools/QueryWeatherTool.py`
+`create_agent()`|`案例与源码-2-LangChain框架/12-agent/AgentSmartSelectV1.0.py`
+结构化结果意识|`案例与源码-2-LangChain框架/05_parser/StructuredOutput_TypedDict.py`
+{% endautogrid %}
 
 ### 4.2 定义资料检索工具
 
@@ -505,13 +511,14 @@ LangChainPendingDeprecationWarning: The default value of `allowed_objects` will 
 
 这段输出对应的含义是：
 
-| 输出片段                              | 说明                                                 |
-| ------------------------------------- | ---------------------------------------------------- |
-| `task -> research_retriever_agent`    | DeepAgents 主智能体把检索任务交给 LangChain Agent    |
-| `【LangChain Tool】检索公开资料...`   | LangChain Agent 调用了公开资料工具                   |
-| `【LangChain Tool】检索内部知识库...` | LangChain Agent 调用了内部知识库工具                 |
-| `ToolMessage(content=...)`            | LangChain Agent 的最终结果返回给 DeepAgents 主智能体 |
-| 最后一条 `AIMessage(content=...)`     | 主智能体整理最终答复                                 |
+{% autogrid data-grid-link-table nofix %}
+输出片段|说明
+`task -> research_retriever_agent`|DeepAgents 主智能体把检索任务交给 LangChain Agent
+`【LangChain Tool】检索公开资料...`|LangChain Agent 调用了公开资料工具
+`【LangChain Tool】检索内部知识库...`|LangChain Agent 调用了内部知识库工具
+`ToolMessage(content=...)`|LangChain Agent 的最终结果返回给 DeepAgents 主智能体
+最后一条 `AIMessage(content=...)`|主智能体整理最终答复
+{% endautogrid %}
 
 这个例子里，主智能体一次生成了两个 `task` 调用：一个检索公开趋势，一个检索内部经验。真正选择并执行 `search_public_web`、`search_internal_knowledge_base` 的，是被封装进去的 LangChain Agent。
 
@@ -549,13 +556,14 @@ LangChainPendingDeprecationWarning: The default value of `allowed_objects` will 
 
 可以用下面这张表快速判断。
 
-| 问题                         | 推荐方式                             |
-| ---------------------------- | ------------------------------------ |
-| 子任务流程固定、有多个步骤   | LangGraph + `CompiledSubAgent`       |
-| 子任务需要条件分支和状态流转 | LangGraph                            |
-| 子任务是已有 LangChain Agent | LangChain Agent + `CompiledSubAgent` |
-| 子任务核心是工具选择         | LangChain Agent                      |
-| 子任务只是简单提示词和工具   | 字典式子智能体                       |
+{% autogrid data-grid-link-table nofix %}
+问题|推荐方式
+子任务流程固定、有多个步骤|LangGraph + `CompiledSubAgent`
+子任务需要条件分支和状态流转|LangGraph
+子任务是已有 LangChain Agent|LangChain Agent + `CompiledSubAgent`
+子任务核心是工具选择|LangChain Agent
+子任务只是简单提示词和工具|字典式子智能体
+{% endautogrid %}
 
 ```mermaid
 flowchart TD
@@ -581,13 +589,14 @@ LangChain Agent：承接工具型子任务，例如公开资料检索、知识�
 
 ### 5.4 容易踩坑的地方
 
-| 问题                                  | 建议                                                                 |
-| ------------------------------------- | -------------------------------------------------------------------- |
-| LangGraph 子图没有 `messages` 字段    | 接入 DeepAgents 时必须保留 `messages: Annotated[list, add_messages]` |
-| 主智能体和子智能体都挂同一批工具      | 尽量让工具归属于真正执行任务的那一层，主智能体保持调度职责           |
-| `description` 写得太泛                | 写清楚“适合什么任务”，主智能体才更容易选对子智能体                   |
-| 子任务只是一次确定函数调用            | 优先做成普通工具，不必为了拆分而拆分                                 |
-| 已有 LangGraph / LangChain 能力能复用 | 优先用 `CompiledSubAgent` 包装，不要重复造一套                       |
+{% autogrid data-grid-link-table nofix %}
+问题|建议
+LangGraph 子图没有 `messages` 字段|接入 DeepAgents 时必须保留 `messages: Annotated[list, add_messages]`
+主智能体和子智能体都挂同一批工具|尽量让工具归属于真正执行任务的那一层，主智能体保持调度职责
+`description` 写得太泛|写清楚“适合什么任务”，主智能体才更容易选对子智能体
+子任务只是一次确定函数调用|优先做成普通工具，不必为了拆分而拆分
+已有 LangGraph / LangChain 能力能复用|优先用 `CompiledSubAgent` 包装，不要重复造一套
+{% endautogrid %}
 
 ---
 

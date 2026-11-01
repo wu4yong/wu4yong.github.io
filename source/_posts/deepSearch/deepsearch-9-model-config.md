@@ -33,16 +33,17 @@ tags:
 
 本章继续往下走，但不急着写网络搜索、数据库查询或 RAGFlow 工具。我们先把这些工具会依赖的基础模块准备好：
 
-| 模块                      | 解决什么问题                                       |
-| ------------------------- | -------------------------------------------------- |
-| `.env`                    | 把模型、搜索、数据库、RAGFlow 等配置集中管理       |
-| `api/context.py`          | 在一次请求链路中保存当前任务身份和会话目录         |
-| `api/monitor.py`          | 把工具调用、助手调用和最终结果推送给前端           |
-| `utils/path_utils.py`     | 统一解析模型、工具和用户传入的文件路径             |
-| `utils/word_converter.py` | 基于 ReportLab 提供 Markdown 转 PDF 的底层转换能力 |
-| `agent/llm.py`            | 统一创建大模型对象                                 |
-| `prompt/prompts.yml`      | 用 YAML 管理主智能体和子智能体提示词               |
-| `agent/prompts.py`        | 从 YAML 中读取提示词配置，供智能体组装时使用       |
+{% autogrid data-grid-link-table nofix %}
+模块|解决什么问题
+`.env`|把模型、搜索、数据库、RAGFlow 等配置集中管理
+`api/context.py`|在一次请求链路中保存当前任务身份和会话目录
+`api/monitor.py`|把工具调用、助手调用和最终结果推送给前端
+`utils/path_utils.py`|统一解析模型、工具和用户传入的文件路径
+`utils/word_converter.py`|基于 ReportLab 提供 Markdown 转 PDF 的底层转换能力
+`agent/llm.py`|统一创建大模型对象
+`prompt/prompts.yml`|用 YAML 管理主智能体和子智能体提示词
+`agent/prompts.py`|从 YAML 中读取提示词配置，供智能体组装时使用
+{% endautogrid %}
 
 可以把本章看成“业务工具之前的地基”。这些模块写清楚以后，后面新增工具、子智能体和接口时，就不用在每个文件里重复处理配置、路径、上下文和模型初始化。
 
@@ -141,11 +142,12 @@ MYSQL_PORT=3306
 
 所以这里不能简单依赖“线程隔离”来保存请求数据：
 
-| 方案              | 为什么不合适或适合                                    |
-| ----------------- | ----------------------------------------------------- |
-| 全局变量          | 所有请求共用一份值，后来的请求会覆盖前面的请求        |
-| `threading.local` | 只能隔离线程，不能隔离同一线程里的多个 `asyncio Task` |
-| `ContextVar`      | 隔离当前异步上下文，适合保存每个请求自己的上下文数据  |
+{% autogrid data-grid-link-table nofix %}
+方案|为什么不合适或适合
+全局变量|所有请求共用一份值，后来的请求会覆盖前面的请求
+`threading.local`|只能隔离线程，不能隔离同一线程里的多个 `asyncio Task`
+`ContextVar`|隔离当前异步上下文，适合保存每个请求自己的上下文数据
+{% endautogrid %}
 
 `ContextVar` 是 Python 3.7+ 为异步编程设计的上下文变量。可以先把它理解成“当前异步任务上下文里的本地变量（协程级别的本地变量）”：同一个请求链路里，深层函数可以拿到前面设置的值；另一个请求进来时，拿到的是自己那份值。
 
@@ -176,10 +178,11 @@ _thread_id_ctx: ContextVar[Optional[str]] = ContextVar(
 
 这两个变量分别保存：
 
-| 上下文        | 作用                                    |
-| ------------- | --------------------------------------- |
-| `session_dir` | 当前任务生成文件的会话目录              |
-| `thread_id`   | 当前任务对应的前端连接和 Agent 执行线程 |
+{% autogrid data-grid-link-table nofix %}
+上下文|作用
+`session_dir`|当前任务生成文件的会话目录
+`thread_id`|当前任务对应的前端连接和 Agent 执行线程
+{% endautogrid %}
 
 常用函数是：
 
@@ -271,12 +274,13 @@ flowchart LR
 
 常见事件包括：
 
-| 方法                 | 作用                     |
-| -------------------- | ------------------------ |
-| `report_tool`        | 报告开始执行某个工具     |
-| `report_assistant`   | 报告正在调用某个子智能体 |
-| `report_task_result` | 报告任务最终结果         |
-| `report_session_dir` | 报告当前会话输出目录     |
+{% autogrid data-grid-link-table nofix %}
+方法|作用
+`report_tool`|报告开始执行某个工具
+`report_assistant`|报告正在调用某个子智能体
+`report_task_result`|报告任务最终结果
+`report_session_dir`|报告当前会话输出目录
+{% endautogrid %}
 
 内部会先构造统一消息，再根据当前上下文里的 `thread_id` 定向推送。这样工具函数不需要知道前端连接对象，只要调用 `monitor.report_tool(...)` 之类的方法即可：
 
@@ -410,10 +414,11 @@ updated/upload/file.pdf
 
 `resolve_path(filename, session_dir)` 的两个参数可以这样理解：
 
-| 参数          | 含义                                                 |
-| ------------- | ---------------------------------------------------- |
-| `filename`    | 模型、工具或用户传入的文件名 / 路径                  |
-| `session_dir` | 当前任务的会话目录，用来隔离不同任务生成和读取的文件 |
+{% autogrid data-grid-link-table nofix %}
+参数|含义
+`filename`|模型、工具或用户传入的文件名 / 路径
+`session_dir`|当前任务的会话目录，用来隔离不同任务生成和读取的文件
+{% endautogrid %}
 
 核心功能可以概括成四件事：
 
@@ -424,19 +429,20 @@ updated/upload/file.pdf
 
 下面用一组场景把它讲透。假设当前环境是 Windows，项目根目录是 `D:/Project`，当前会话目录是 `D:/Project/output/session_123`：
 
-| 场景                   | 输入 `filename`                                       | 核心处理                                                 | 解析结果                                          |
-| ---------------------- | ----------------------------------------------------- | -------------------------------------------------------- | ------------------------------------------------- |
-| 虚拟路径清洗           | `/workspace/report.md`                                | 剥离 `/workspace`，再拼到会话目录                        | `D:/Project/output/session_123/report.md`         |
-| 上传目录处理           | `abc/updated/upload/file.pdf`                         | 提取 `updated/` 之后的路径，按项目根目录解析             | `D:/Project/updated/upload/file.pdf`              |
-| 无会话目录             | `sub/test.md`                                         | 没有 `session_dir`，直接按当前工作目录解析               | `D:/Project/sub/test.md`                          |
-| 会话内绝对路径         | `D:/Project/output/session_123/sub/report.md`         | 确认在会话目录内，检查是否嵌套后返回                     | `D:/Project/output/session_123/sub/report.md`     |
-| 会话外绝对路径         | `D:/OtherDir/file.md`                                 | 不在会话目录内，保留真实绝对路径                         | `D:/OtherDir/file.md`                             |
-| Windows Unix 风格路径  | `/sub/test.md`                                        | Windows 下 `/sub/test.md` 没有盘符，按会话内相对路径处理 | `D:/Project/output/session_123/sub/test.md`       |
-| 路径嵌套防护           | `D:/Project/output/session_123/session_123/report.md` | 检测连续 `session_123`，修正为会话目录下文件             | `D:/Project/output/session_123/report.md`         |
-| 相对路径含会话名       | `session_123/report.md`                               | 避免重复拼接会话目录，只保留文件名                       | `D:/Project/output/session_123/report.md`         |
-| 相对路径含 output 前缀 | `output/report.md`                                    | 避免把 `output` 再嵌进会话目录，只保留文件名             | `D:/Project/output/session_123/report.md`         |
-| 普通相对路径           | `sub1/sub2/test.md`                                   | 直接拼到当前会话目录                                     | `D:/Project/output/session_123/sub1/sub2/test.md` |
-| 虚拟路径加上传目录     | `/mnt/data/updated/doc.md`                            | 先剥离 `/mnt/data`，再触发 `updated/` 处理               | `D:/Project/updated/doc.md`                       |
+{% autogrid data-grid-link-table nofix %}
+场景|输入 `filename`|核心处理|解析结果
+虚拟路径清洗|`/workspace/report.md`|剥离 `/workspace`，再拼到会话目录|`D:/Project/output/session_123/report.md`
+上传目录处理|`abc/updated/upload/file.pdf`|提取 `updated/` 之后的路径，按项目根目录解析|`D:/Project/updated/upload/file.pdf`
+无会话目录|`sub/test.md`|没有 `session_dir`，直接按当前工作目录解析|`D:/Project/sub/test.md`
+会话内绝对路径|`D:/Project/output/session_123/sub/report.md`|确认在会话目录内，检查是否嵌套后返回|`D:/Project/output/session_123/sub/report.md`
+会话外绝对路径|`D:/OtherDir/file.md`|不在会话目录内，保留真实绝对路径|`D:/OtherDir/file.md`
+Windows Unix 风格路径|`/sub/test.md`|Windows 下 `/sub/test.md` 没有盘符，按会话内相对路径处理|`D:/Project/output/session_123/sub/test.md`
+路径嵌套防护|`D:/Project/output/session_123/session_123/report.md`|检测连续 `session_123`，修正为会话目录下文件|`D:/Project/output/session_123/report.md`
+相对路径含会话名|`session_123/report.md`|避免重复拼接会话目录，只保留文件名|`D:/Project/output/session_123/report.md`
+相对路径含 output 前缀|`output/report.md`|避免把 `output` 再嵌进会话目录，只保留文件名|`D:/Project/output/session_123/report.md`
+普通相对路径|`sub1/sub2/test.md`|直接拼到当前会话目录|`D:/Project/output/session_123/sub1/sub2/test.md`
+虚拟路径加上传目录|`/mnt/data/updated/doc.md`|先剥离 `/mnt/data`，再触发 `updated/` 处理|`D:/Project/updated/doc.md`
+{% endautogrid %}
 
 如果运行在 Linux 上，`/home/user/test.md` 会先被剥离 `/home/user`，再拼到 Linux 的会话目录里，例如 `/data/session_123/test.md`。所以这里不是简单地判断“是不是 `/` 开头”，而是要结合操作系统、虚拟路径前缀和 `session_dir` 一起看。
 
@@ -733,11 +739,12 @@ sub_agents:
 
 子智能体配置里这三个字段不要混：
 
-| 字段            | 给谁看             | 作用                     |
-| --------------- | ------------------ | ------------------------ |
-| `name`          | 框架和主智能体     | 子智能体名称             |
-| `description`   | 主智能体           | 判断什么时候调用这个助手 |
-| `system_prompt` | 子智能体自己的模型 | 约束这个助手如何完成任务 |
+{% autogrid data-grid-link-table nofix %}
+字段|给谁看|作用
+`name`|框架和主智能体|子智能体名称
+`description`|主智能体|判断什么时候调用这个助手
+`system_prompt`|子智能体自己的模型|约束这个助手如何完成任务
+{% endautogrid %}
 
 `description` 尤其重要。它不是随便写一句“这是一个助手”，而是告诉主智能体什么时候应该调用它。
 

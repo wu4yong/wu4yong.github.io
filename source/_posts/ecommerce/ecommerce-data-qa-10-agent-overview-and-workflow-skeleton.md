@@ -244,11 +244,12 @@ class DataAgentState(TypedDict):
 
 官方文档里也提到，State Schema 常见有三种写法：
 
-| 写法                 | 适合场景                                                 |
-| -------------------- | -------------------------------------------------------- |
-| `TypedDict`          | 最轻量，适合教程和大多数工程场景，类型清楚，运行时成本低 |
-| `dataclass`          | 需要默认值时比较方便                                     |
-| `Pydantic BaseModel` | 需要更强运行时校验时使用，但性能成本更高                 |
+{% autogrid data-grid-link-table nofix %}
+写法|适合场景
+`TypedDict`|最轻量，适合教程和大多数工程场景，类型清楚，运行时成本低
+`dataclass`|需要默认值时比较方便
+`Pydantic BaseModel`|需要更强运行时校验时使用，但性能成本更高
+{% endautogrid %}
 
 本项目当前选择 `TypedDict`，原因很简单：问数链路里的状态字段比较明确，教程阶段也更希望读者把注意力放在“状态如何在节点之间流动”，而不是一开始就陷入复杂的数据校验模型。等后面进入生产级接口时，如果需要更严格的入参/出参校验，再单独引入 Pydantic 会更自然。
 
@@ -306,11 +307,12 @@ async def extract_keywords(
 
 对照官方文档，节点函数还可以接收 `config`。放到本项目里，可以先这样区分：
 
-| 参数      | 含义                                                  | 本项目当前是否重点使用 |
-| --------- | ----------------------------------------------------- | ---------------------- |
-| `state`   | 当前图状态，节点读取它并返回局部更新                  | 重点使用               |
-| `runtime` | 运行时上下文，包含 `context`、`stream_writer` 等能力  | 重点使用               |
-| `config`  | 本次运行的配置信息，例如线程 ID、可配置参数、追踪信息 | 暂时不重点展开         |
+{% autogrid data-grid-link-table nofix %}
+参数|含义|本项目当前是否重点使用
+`state`|当前图状态，节点读取它并返回局部更新|重点使用
+`runtime`|运行时上下文，包含 `context`、`stream_writer` 等能力|重点使用
+`config`|本次运行的配置信息，例如线程 ID、可配置参数、追踪信息|暂时不重点展开
+{% endautogrid %}
 
 读节点代码时，先抓住一条主线就够了：
 
@@ -442,13 +444,14 @@ graph_builder.add_edge("run_sql", END)
 
 LangGraph 的 `stream_mode` 有多种模式：
 
-| 模式       | 适合看什么                                      |
-| ---------- | ----------------------------------------------- |
-| `values`   | 每个节点执行后的完整 State 快照                 |
-| `updates`  | 每个节点本次更新了哪些字段                      |
-| `messages` | 大模型逐 token 输出                             |
-| `custom`   | 节点里通过 `stream_writer` 主动写出的自定义事件 |
-| `debug`    | 调试信息                                        |
+{% autogrid data-grid-link-table nofix %}
+模式|适合看什么
+`values`|每个节点执行后的完整 State 快照
+`updates`|每个节点本次更新了哪些字段
+`messages`|大模型逐 token 输出
+`custom`|节点里通过 `stream_writer` 主动写出的自定义事件
+`debug`|调试信息
+{% endautogrid %}
 
 本项目当前选择：
 
@@ -799,13 +802,14 @@ context = DataAgentContext()
 
 常见的流式模式可以先记住这几种：
 
-| 模式       | 含义                                  |
-| ---------- | ------------------------------------- |
-| `values`   | 每个节点执行后输出完整状态快照        |
-| `updates`  | 每个节点执行后只输出本节点更新的状态  |
-| `custom`   | 输出 `stream_writer` 写出的自定义数据 |
-| `messages` | 输出大模型生成过程中的 token          |
-| `debug`    | 输出调试信息                          |
+{% autogrid data-grid-link-table nofix %}
+模式|含义
+`values`|每个节点执行后输出完整状态快照
+`updates`|每个节点执行后只输出本节点更新的状态
+`custom`|输出 `stream_writer` 写出的自定义数据
+`messages`|输出大模型生成过程中的 token
+`debug`|输出调试信息
+{% endautogrid %}
 
 当前项目主要关注前端进度展示，所以使用 `custom`。
 

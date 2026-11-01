@@ -33,11 +33,12 @@ tags:
 
 前面三章已经分别完成了三个专家助手：
 
-| 子智能体       | 负责内容                   | 底层工具    |
-| -------------- | -------------------------- | ----------- |
-| 网络搜索助手   | 查询互联网公开信息         | Tavily      |
-| 数据库查询助手 | 查询企业内部结构化数据     | MySQL       |
-| RAGFlow 助手   | 查询企业内部非结构化知识库 | RAGFlow API |
+{% autogrid data-grid-link-table nofix %}
+子智能体|负责内容|底层工具
+网络搜索助手|查询互联网公开信息|Tavily
+数据库查询助手|查询企业内部结构化数据|MySQL
+RAGFlow 助手|查询企业内部非结构化知识库|RAGFlow API
+{% endautogrid %}
 
 现在要把它们交给一个“总负责人”统一调度，这个总负责人就是主智能体。
 
@@ -79,13 +80,14 @@ tags:
 
 主智能体要负责几件事：
 
-| 主智能体职责   | 说明                                                  |
-| -------------- | ----------------------------------------------------- |
-| 理解用户任务   | 判断用户到底要查资料、查数据、读文档，还是生成文件    |
-| 调度子智能体   | 根据任务边界调用网络、数据库、RAGFlow 助手            |
-| 汇总信息       | 把不同助手返回的信息整理成最终答案                    |
-| 文件交付       | 根据用户要求生成 Markdown 或 PDF                      |
-| 维持会话上下文 | 通过 `thread_id` 和 checkpointer 支持同一会话持续执行 |
+{% autogrid data-grid-link-table nofix %}
+主智能体职责|说明
+理解用户任务|判断用户到底要查资料、查数据、读文档，还是生成文件
+调度子智能体|根据任务边界调用网络、数据库、RAGFlow 助手
+汇总信息|把不同助手返回的信息整理成最终答案
+文件交付|根据用户要求生成 Markdown 或 PDF
+维持会话上下文|通过 `thread_id` 和 checkpointer 支持同一会话持续执行
+{% endautogrid %}
 
 所以主智能体比子智能体多了一个关键能力：**它能持有多个子智能体，并把任务分派给它们。**
 
@@ -101,11 +103,12 @@ tags:
 
 这时主智能体就需要三个自己的工具：
 
-| 工具                | 文件                                 | 作用                      |
-| ------------------- | ------------------------------------ | ------------------------- |
-| `read_file_content` | `app/tools/upload_file_read_tool.py` | 读取用户上传的附件内容    |
-| `generate_markdown` | `app/tools/markdown_tools.py`        | 把最终内容写入 `.md` 文件 |
-| `convert_md_to_pdf` | `app/tools/pdf_tools.py`             | 把 Markdown 转成 PDF      |
+{% autogrid data-grid-link-table nofix %}
+工具|文件|作用
+`read_file_content`|`app/tools/upload_file_read_tool.py`|读取用户上传的附件内容
+`generate_markdown`|`app/tools/markdown_tools.py`|把最终内容写入 `.md` 文件
+`convert_md_to_pdf`|`app/tools/pdf_tools.py`|把 Markdown 转成 PDF
+{% endautogrid %}
 
 这三个工具都不是网络搜索、数据库查询、知识库问答，所以不应该放到某个子智能体里。它们属于最终交付环节，因此由主智能体直接掌握。
 
@@ -144,13 +147,14 @@ tags:
 
 `read_file_content` 负责把用户本次上传的附件读出来，交给主智能体继续分析。它支持常见格式：
 
-| 文件类型         | 处理方式                                                |
-| ---------------- | ------------------------------------------------------- |
-| `.md` / `.txt`   | 直接按 UTF-8 文本读取                                   |
-| `.docx`          | 使用 `python-docx` 读取段落                             |
-| `.pdf`           | 使用 `pypdf` 提取页面文本                               |
-| `.xlsx` / `.xls` | 使用 `pandas` 读取，并输出行数、列名、前 5 行和统计描述 |
-| 其他文本文件     | 尝试按 UTF-8 文本读取                                   |
+{% autogrid data-grid-link-table nofix %}
+文件类型|处理方式
+`.md` / `.txt`|直接按 UTF-8 文本读取
+`.docx`|使用 `python-docx` 读取段落
+`.pdf`|使用 `pypdf` 提取页面文本
+`.xlsx` / `.xls`|使用 `pandas` 读取，并输出行数、列名、前 5 行和统计描述
+其他文本文件|尝试按 UTF-8 文本读取
+{% endautogrid %}
 
 核心代码可以这样看：
 
@@ -214,11 +218,12 @@ def read_file_content(
 
 核心参数有三个：
 
-| 参数       | 说明                                       |
-| ---------- | ------------------------------------------ |
-| `content`  | 要写入 Markdown 的正文                     |
-| `filename` | 文件名，可以带 `.md`，也可以不带           |
-| `path`     | 保存路径，通常由提示词约束在当前工作目录下 |
+{% autogrid data-grid-link-table nofix %}
+参数|说明
+`content`|要写入 Markdown 的正文
+`filename`|文件名，可以带 `.md`，也可以不带
+`path`|保存路径，通常由提示词约束在当前工作目录下
+{% endautogrid %}
 
 核心代码如下：
 
@@ -396,13 +401,14 @@ from app.tools.upload_file_read_tool import read_file_content
 
 这几组导入可以分成五类：
 
-| 导入内容                                | 作用                                                |
-| --------------------------------------- | --------------------------------------------------- |
-| `shutil` / `Path`                       | 创建会话目录、复制上传文件                          |
-| 三个子智能体                            | 让主智能体可以委派专业任务                          |
-| 三个文件工具                            | 让主智能体可以读取上传文件、生成 Markdown、转换 PDF |
-| `create_deep_agent` / `InMemorySaver`   | 创建 DeepAgents 主智能体并启用会话检查点            |
-| `model` / `main_agent_content` / 上下文 | 注入模型、系统提示词、运行时会话上下文和监控上报    |
+{% autogrid data-grid-link-table nofix %}
+导入内容|作用
+`shutil` / `Path`|创建会话目录、复制上传文件
+三个子智能体|让主智能体可以委派专业任务
+三个文件工具|让主智能体可以读取上传文件、生成 Markdown、转换 PDF
+`create_deep_agent` / `InMemorySaver`|创建 DeepAgents 主智能体并启用会话检查点
+`model` / `main_agent_content` / 上下文|注入模型、系统提示词、运行时会话上下文和监控上报
+{% endautogrid %}
 
 然后创建主智能体：
 
@@ -424,13 +430,14 @@ main_agent = create_deep_agent(
 
 ### 6.1 create_deep_agent 参数说明
 
-| 参数            | 作用                 | 本项目配置                                    |
-| --------------- | -------------------- | --------------------------------------------- |
-| `model`         | 主智能体使用的大模型 | 第 9 章配置好的 `model`                       |
-| `system_prompt` | 主智能体行为约束     | `prompts.yml` 中的 `main_agent.system_prompt` |
-| `tools`         | 主智能体自己的工具   | 文件读取、Markdown、PDF                       |
-| `checkpointer`  | 会话状态检查点       | `InMemorySaver()`                             |
-| `subagents`     | 可调度的子智能体     | 数据库、网络搜索、RAGFlow                     |
+{% autogrid data-grid-link-table nofix %}
+参数|作用|本项目配置
+`model`|主智能体使用的大模型|第 9 章配置好的 `model`
+`system_prompt`|主智能体行为约束|`prompts.yml` 中的 `main_agent.system_prompt`
+`tools`|主智能体自己的工具|文件读取、Markdown、PDF
+`checkpointer`|会话状态检查点|`InMemorySaver()`
+`subagents`|可调度的子智能体|数据库、网络搜索、RAGFlow
+{% endautogrid %}
 
 这里的 `checkpointer=InMemorySaver()` 是为了配合后续的 `thread_id`。同一个前端会话会带着同一个 `thread_id` 来调用，主智能体就可以在这个会话维度上维持状态。
 
@@ -450,12 +457,13 @@ subagents=[
 
 例如：
 
-| 用户需求                     | 更可能调用                                           |
-| ---------------------------- | ---------------------------------------------------- |
-| 查询某个商品库存             | 数据库查询助手                                       |
-| 查询机器人行业公开信息       | 网络搜索助手                                         |
-| 查询企业内部制度或知识库文档 | RAGFlow 助手                                         |
-| 查询资料并生成 PDF           | 先调用相关子智能体，再由主智能体生成 Markdown 和 PDF |
+{% autogrid data-grid-link-table nofix %}
+用户需求|更可能调用
+查询某个商品库存|数据库查询助手
+查询机器人行业公开信息|网络搜索助手
+查询企业内部制度或知识库文档|RAGFlow 助手
+查询资料并生成 PDF|先调用相关子智能体，再由主智能体生成 Markdown 和 PDF
+{% endautogrid %}
 
 ---
 
@@ -487,11 +495,12 @@ main_agent:
 
 提示词里要告诉主智能体，三类信息分别找谁：
 
-| 信息类型                             | 调用对象       |
-| ------------------------------------ | -------------- |
-| 背景知识、外部知识、最新公开资料     | 网络搜索助手   |
-| 企业内部非公开文档知识               | RAGFlow 助手   |
-| 企业内部商品、库存、销售等结构化数据 | 数据库查询助手 |
+{% autogrid data-grid-link-table nofix %}
+信息类型|调用对象
+背景知识、外部知识、最新公开资料|网络搜索助手
+企业内部非公开文档知识|RAGFlow 助手
+企业内部商品、库存、销售等结构化数据|数据库查询助手
+{% endautogrid %}
 
 如果问题边界不清楚，可以让主智能体尝试多种方式获取信息。
 
@@ -566,11 +575,12 @@ flowchart TD
 
 DeepAgents 常见执行方式有三种：
 
-| 执行方式    | 特点           | 本项目是否使用           |
-| ----------- | -------------- | ------------------------ |
-| `invoke()`  | 同步一次性返回 | 不适合多客户端长任务     |
-| `stream()`  | 同步流式返回   | 仍然会阻塞当前同步调用链 |
-| `astream()` | 异步流式返回   | 本项目使用               |
+{% autogrid data-grid-link-table nofix %}
+执行方式|特点|本项目是否使用
+`invoke()`|同步一次性返回|不适合多客户端长任务
+`stream()`|同步流式返回|仍然会阻塞当前同步调用链
+`astream()`|异步流式返回|本项目使用
+{% endautogrid %}
 
 本项目是一个后端服务，而不是一个本地脚本。前端可能有多个会话同时提问：
 
@@ -605,10 +615,11 @@ DeepAgents 常见执行方式有三种：
 
 这条链路里有两个入口：
 
-| 入口              | 作用                                 | 调用时机           |
-| ----------------- | ------------------------------------ | ------------------ |
-| `/ws/{thread_id}` | 建立长连接，缓存当前会话的 WebSocket | 页面打开时先调用   |
-| `/api/task`       | 启动一次智能体任务                   | 用户点击发送时调用 |
+{% autogrid data-grid-link-table nofix %}
+入口|作用|调用时机
+`/ws/{thread_id}`|建立长连接，缓存当前会话的 WebSocket|页面打开时先调用
+`/api/task`|启动一次智能体任务|用户点击发送时调用
+{% endautogrid %}
 
 注意顺序：**通常先建立 WebSocket，再发起任务。**
 
@@ -656,13 +667,14 @@ WebSocket 负责实时推送主智能体执行过程中的事件。
 
 这些事件大致有五类：
 
-| 事件              | 触发时机                     | 前端展示                           |
-| ----------------- | ---------------------------- | ---------------------------------- |
-| `session_created` | 当前会话工作目录创建完成     | 前端记录文件目录，后续查询文件列表 |
-| `assistant_call`  | 主智能体准备调用某个子智能体 | 展示“正在调用网络搜索助手”等       |
-| `tool_start`      | 某个工具开始执行             | 展示工具名和参数                   |
-| `task_result`     | 主智能体返回最终答案         | 展示 AI 回复                       |
-| `error`           | 执行过程中出现异常           | 展示错误提示                       |
+{% autogrid data-grid-link-table nofix %}
+事件|触发时机|前端展示
+`session_created`|当前会话工作目录创建完成|前端记录文件目录，后续查询文件列表
+`assistant_call`|主智能体准备调用某个子智能体|展示“正在调用网络搜索助手”等
+`tool_start`|某个工具开始执行|展示工具名和参数
+`task_result`|主智能体返回最终答案|展示 AI 回复
+`error`|执行过程中出现异常|展示错误提示
+{% endautogrid %}
 
 在代码里，业务层不用直接操作 WebSocket。业务层只调用：
 
@@ -713,11 +725,12 @@ active_connections = {
 
 这个 ID 在项目里有三个作用：
 
-| 作用         | 说明                                                    |
-| ------------ | ------------------------------------------------------- |
-| 找 WebSocket | `monitor` 根据 `thread_id` 找到当前前端连接             |
-| 建工作目录   | 每个会话创建 `output/session_{thread_id}`，文件互不混淆 |
-| 取检查点     | `InMemorySaver()` 按 `thread_id` 维持同一会话状态       |
+{% autogrid data-grid-link-table nofix %}
+作用|说明
+找 WebSocket|`monitor` 根据 `thread_id` 找到当前前端连接
+建工作目录|每个会话创建 `output/session_{thread_id}`，文件互不混淆
+取检查点|`InMemorySaver()` 按 `thread_id` 维持同一会话状态
+{% endautogrid %}
 
 这就是多客户端系统的基本设计：**前端每次请求都带同一个会话标识，后端根据标识找到该会话对应的资源。**
 
@@ -747,10 +760,11 @@ _thread_id_ctx: ContextVar[Optional[str]] = ContextVar(
 
 它们分别保存：
 
-| ContextVar         | 保存内容           | 谁会使用                      |
-| ------------------ | ------------------ | ----------------------------- |
-| `_session_dir_ctx` | 当前会话的工作目录 | 文件读取、Markdown、PDF 工具  |
-| `_thread_id_ctx`   | 当前会话 ID        | `monitor` 推送 WebSocket 消息 |
+{% autogrid data-grid-link-table nofix %}
+ContextVar|保存内容|谁会使用
+`_session_dir_ctx`|当前会话的工作目录|文件读取、Markdown、PDF 工具
+`_thread_id_ctx`|当前会话 ID|`monitor` 推送 WebSocket 消息
+{% endautogrid %}
 
 设置和读取方法如下：
 
@@ -842,10 +856,11 @@ relative_session_dir_str = str(session_dir.relative_to(project_root_path)).repla
 
 这里生成了两个路径：
 
-| 路径                       | 示例                          | 给谁用             |
-| -------------------------- | ----------------------------- | ------------------ |
-| `session_dir_str`          | `/.../app/output/session_xxx` | 给前端和工具使用   |
-| `relative_session_dir_str` | `output/session_xxx`          | 给大模型提示词使用 |
+{% autogrid data-grid-link-table nofix %}
+路径|示例|给谁用
+`session_dir_str`|`/.../app/output/session_xxx`|给前端和工具使用
+`relative_session_dir_str`|`output/session_xxx`|给大模型提示词使用
+{% endautogrid %}
 
 为什么要有相对路径？
 
@@ -917,11 +932,12 @@ monitor.report_session_dir(session_dir_str)
 
 这三行分别做三件事：
 
-| 代码                                          | 作用                                      |
-| --------------------------------------------- | ----------------------------------------- |
-| `set_session_context(session_dir_str)`        | 让文件工具知道当前会话目录                |
-| `set_thread_context(session_id)`              | 让 `monitor` 知道当前要发给哪个 WebSocket |
-| `monitor.report_session_dir(session_dir_str)` | 把当前会话文件目录推给前端                |
+{% autogrid data-grid-link-table nofix %}
+代码|作用
+`set_session_context(session_dir_str)`|让文件工具知道当前会话目录
+`set_thread_context(session_id)`|让 `monitor` 知道当前要发给哪个 WebSocket
+`monitor.report_session_dir(session_dir_str)`|把当前会话文件目录推给前端
+{% endautogrid %}
 
 前端拿到 `session_created` 事件后，就能记录这个目录。后续查询文件列表时，会把这个目录传给 `/api/files`。
 
@@ -1059,10 +1075,11 @@ if node_name == "model":
 
 DeepAgents 内部会用一个特殊的 `task` 工具来委派子智能体。它的参数里通常会有：
 
-| 字段            | 说明                   |
-| --------------- | ---------------------- |
-| `subagent_type` | 要调用哪个子智能体     |
-| `description`   | 交给子智能体的任务描述 |
+{% autogrid data-grid-link-table nofix %}
+字段|说明
+`subagent_type`|要调用哪个子智能体
+`description`|交给子智能体的任务描述
+{% endautogrid %}
 
 前端收到 `assistant_call` 事件后，就可以展示：`正在调用助手：网络搜索助手`
 
@@ -1093,12 +1110,13 @@ monitor.report_tool(...)
 
 所以工具级进度在工具内部上报。`run_deep_agent()` 主要补充四类事件：
 
-| 事件         | 谁负责上报                                    |
-| ------------ | --------------------------------------------- |
-| 工具开始执行 | 工具内部的 `monitor.report_tool(...)`         |
-| 调用子智能体 | `run_deep_agent()` 解析 `task` 工具调用后上报 |
-| 最终结果     | `run_deep_agent()` 解析最终 `content` 后上报  |
-| 会话目录     | `run_deep_agent()` 准备阶段上报               |
+{% autogrid data-grid-link-table nofix %}
+事件|谁负责上报
+工具开始执行|工具内部的 `monitor.report_tool(...)`
+调用子智能体|`run_deep_agent()` 解析 `task` 工具调用后上报
+最终结果|`run_deep_agent()` 解析最终 `content` 后上报
+会话目录|`run_deep_agent()` 准备阶段上报
+{% endautogrid %}
 
 ---
 

@@ -35,11 +35,12 @@ tags:
 
 在「电商问数」里，这几个基础设施的分工可以概括成下面这张表：
 
-| 组件            | 在项目中的核心职责             | 最擅长解决的问题                                 |
-| --------------- | ------------------------------ | ------------------------------------------------ |
-| `MySQL`         | 存储权威结构化元数据与数仓数据 | 表、字段、指标、关系、样例值等结构化信息怎么保存 |
-| `Qdrant`        | 存储字段和指标的向量索引       | “语义上谁更像”                                   |
-| `Elasticsearch` | 存储字段取值的全文索引         | “文本上谁能匹配上”                               |
+{% autogrid data-grid-link-table nofix %}
+组件|在项目中的核心职责|最擅长解决的问题
+`MySQL`|存储权威结构化元数据与数仓数据|表、字段、指标、关系、样例值等结构化信息怎么保存
+`Qdrant`|存储字段和指标的向量索引|“语义上谁更像”
+`Elasticsearch`|存储字段取值的全文索引|“文本上谁能匹配上”
+{% endautogrid %}
 
 把它们放回问数链路，职责会更清楚：
 
@@ -102,11 +103,12 @@ tags:
 
 先把三类数据库粗略理解成下面这样：
 
-| 类型          | 典型代表                        | 主要用途               | 数据组织方式                                 |
-| ------------- | ------------------------------- | ---------------------- | -------------------------------------------- |
-| `OLTP` 数据库 | `MySQL`、`PostgreSQL`、`Oracle` | 支撑日常业务交易       | 通常以表的行列结构为主，更偏按行读写         |
-| `OLAP` 数据库 | `Hive`、`ClickHouse`、`Doris`   | 支撑统计分析和报表计算 | 也是表结构，但更适合分析型查询，常见按列存储 |
-| 向量数据库    | `Qdrant`                        | 支撑语义相似度检索     | 以向量点为核心数据单位                       |
+{% autogrid data-grid-link-table nofix %}
+类型|典型代表|主要用途|数据组织方式
+`OLTP` 数据库|`MySQL`、`PostgreSQL`、`Oracle`|支撑日常业务交易|通常以表的行列结构为主，更偏按行读写
+`OLAP` 数据库|`Hive`、`ClickHouse`、`Doris`|支撑统计分析和报表计算|也是表结构，但更适合分析型查询，常见按列存储
+向量数据库|`Qdrant`|支撑语义相似度检索|以向量点为核心数据单位
+{% endautogrid %}
 
 如果再压缩成一句最容易记忆的话，可以这样区分：
 
@@ -141,13 +143,14 @@ Qdrant 官方对 `collection` 的描述很清楚：**同一个 collection 里的
 
 如果是第一次接触向量数据库，先掌握下面几个概念：
 
-| 概念         | 可以怎样理解                                   |
-| ------------ | ---------------------------------------------- |
-| `collection` | 一组向量点的集合，可以类比成“同类向量的一张表” |
-| `point`      | 集合中的一条记录                               |
-| `vector`     | 这条记录对应的向量                             |
-| `payload`    | 跟着向量一起保存的业务字段                     |
-| `distance`   | 用什么方式比较“像不像”                         |
+{% autogrid data-grid-link-table nofix %}
+概念|可以怎样理解
+`collection`|一组向量点的集合，可以类比成“同类向量的一张表”
+`point`|集合中的一条记录
+`vector`|这条记录对应的向量
+`payload`|跟着向量一起保存的业务字段
+`distance`|用什么方式比较“像不像”
+{% endautogrid %}
 
 一个 `point` 最常见的结构如下：
 
@@ -484,20 +487,22 @@ points=[ScoredPoint(id=33, version=4, score=0.9287777, payload={}, vector=None, 
 
 在 Elasticsearch 里，先掌握四个词：
 
-| 概念       | 可以怎样理解                       |
-| ---------- | ---------------------------------- |
-| `index`    | 一组同类文档的逻辑容器             |
-| `document` | index 中的一条 JSON 文档           |
-| `field`    | document 中的一个字段              |
-| `mapping`  | 定义字段结构、字段类型以及索引行为 |
+{% autogrid data-grid-link-table nofix %}
+概念|可以怎样理解
+`index`|一组同类文档的逻辑容器
+`document`|index 中的一条 JSON 文档
+`field`|document 中的一个字段
+`mapping`|定义字段结构、字段类型以及索引行为
+{% endautogrid %}
 
 如果和其他基础设施做类比：
 
-| 系统            | 结构类比                                |
-| --------------- | --------------------------------------- |
-| `MySQL`         | 表 -> 行 -> 列                          |
-| `Qdrant`        | collection -> point -> vector / payload |
-| `Elasticsearch` | index -> document -> field              |
+{% autogrid data-grid-link-table nofix %}
+系统|结构类比
+`MySQL`|表 -> 行 -> 列
+`Qdrant`|collection -> point -> vector / payload
+`Elasticsearch`|index -> document -> field
+{% endautogrid %}
 
 也就是说，虽然三者都在“存数据”，但它们组织数据的方式并不一样：
 

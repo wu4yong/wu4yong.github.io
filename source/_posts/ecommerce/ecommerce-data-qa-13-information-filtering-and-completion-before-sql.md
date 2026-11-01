@@ -131,11 +131,12 @@ flowchart LR
 
 过滤不是重新检索，而是在召回和合并之后，把“可能相关”的上下文压缩成“本次 SQL 真正需要”的上下文。
 
-| 节点                | 处理对象             | 输出结果               | 作用                           |
-| ------------------- | -------------------- | ---------------------- | ------------------------------ |
-| `filter_table`      | `table_infos`        | 过滤后的表和字段       | 保留本次查询真正需要的 schema  |
-| `filter_metric`     | `metric_infos`       | 过滤后的指标           | 保留本次查询真正需要的业务指标 |
-| `add_extra_context` | 当前日期、数据库连接 | `date_info`、`db_info` | 补齐相对时间和 SQL 方言信息    |
+{% autogrid data-grid-link-table nofix %}
+节点|处理对象|输出结果|作用
+`filter_table`|`table_infos`|过滤后的表和字段|保留本次查询真正需要的 schema
+`filter_metric`|`metric_infos`|过滤后的指标|保留本次查询真正需要的业务指标
+`add_extra_context`|当前日期、数据库连接|`date_info`、`db_info`|补齐相对时间和 SQL 方言信息
+{% endautogrid %}
 
 可以把它们理解成两类动作：
 

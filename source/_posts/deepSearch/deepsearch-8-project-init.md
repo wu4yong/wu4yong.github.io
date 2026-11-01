@@ -75,13 +75,14 @@ tags:
 
 本项目主要接入五类信息来源：
 
-| 信息来源     | 适合解决什么问题                        | 在项目中的承接方式                         |
-| ------------ | --------------------------------------- | ------------------------------------------ |
-| 模型自身知识 | 通用知识、简单解释、已有常识            | 主智能体直接回答或参与综合分析             |
-| 网络搜索     | 最新公开资料、网页内容、外部信息        | 网络搜索助手，底层使用 Tavily              |
-| 数据库       | 企业业务数据，如药品表、销售表          | 数据库查询助手，负责查表、查结构、执行 SQL |
-| RAG 知识库   | 企业内部文档、制度、私有知识库          | RAGFlow 助手，负责和知识库助手交互         |
-| 上传文件     | 用户本次上传的 PDF、Word、Excel、文本等 | 主智能体通过文件读取工具读取               |
+{% autogrid data-grid-link-table nofix %}
+信息来源|适合解决什么问题|在项目中的承接方式
+模型自身知识|通用知识、简单解释、已有常识|主智能体直接回答或参与综合分析
+网络搜索|最新公开资料、网页内容、外部信息|网络搜索助手，底层使用 Tavily
+数据库|企业业务数据，如药品表、销售表|数据库查询助手，负责查表、查结构、执行 SQL
+RAG 知识库|企业内部文档、制度、私有知识库|RAGFlow 助手，负责和知识库助手交互
+上传文件|用户本次上传的 PDF、Word、Excel、文本等|主智能体通过文件读取工具读取
+{% endautogrid %}
 
 这里有两个容易混的点：
 
@@ -146,11 +147,12 @@ tags:
 
 本项目先规划 3 个子智能体：
 
-| 子智能体       | 负责内容                                                 | 典型工具               |
-| -------------- | -------------------------------------------------------- | ---------------------- |
-| 网络搜索助手   | 查询公开网络资料，适合最新信息、公开网页、外部知识       | Tavily 搜索工具        |
-| 数据库查询助手 | 查询企业业务数据库，读取表名、表结构、数据预览并执行 SQL | 查表、查结构、执行 SQL |
-| RAGFlow 助手   | 查询企业内部知识库，先获取可用助手，再向知识库提问       | 创建会话、向知识库提问 |
+{% autogrid data-grid-link-table nofix %}
+子智能体|负责内容|典型工具
+网络搜索助手|查询公开网络资料，适合最新信息、公开网页、外部知识|Tavily 搜索工具
+数据库查询助手|查询企业业务数据库，读取表名、表结构、数据预览并执行 SQL|查表、查结构、执行 SQL
+RAGFlow 助手|查询企业内部知识库，先获取可用助手，再向知识库提问|创建会话、向知识库提问
+{% endautogrid %}
 
 主智能体和子智能体之间的关系可以这样理解：
 
@@ -221,21 +223,23 @@ flowchart TD
 
 4 个智能体分别是：
 
-| 类型     | 名称           | 作用                                               |
-| -------- | -------------- | -------------------------------------------------- |
-| 主智能体 | Main Agent     | 理解任务、规划步骤、调度助手、汇总结果、生成交付物 |
-| 子智能体 | 网络搜索助手   | 查询公开网络资料                                   |
-| 子智能体 | 数据库查询助手 | 查询业务数据库                                     |
-| 子智能体 | RAGFlow 助手   | 查询企业内部知识库                                 |
+{% autogrid data-grid-link-table nofix %}
+类型|名称|作用
+主智能体|Main Agent|理解任务、规划步骤、调度助手、汇总结果、生成交付物
+子智能体|网络搜索助手|查询公开网络资料
+子智能体|数据库查询助手|查询业务数据库
+子智能体|RAGFlow 助手|查询企业内部知识库
+{% endautogrid %}
 
 9 个工具按归属拆开看：
 
-| 归属           | 工具数量 | 工具内容                                     |
-| -------------- | -------- | -------------------------------------------- |
-| 主智能体       | 3 个     | 读取上传文件、生成 Markdown、Markdown 转 PDF |
-| 网络搜索助手   | 1 个     | Tavily 网络搜索                              |
-| 数据库查询助手 | 3 个     | 获取表名、获取表结构和数据预览、执行 SQL     |
-| RAGFlow 助手   | 2 个     | 获取可用助手或会话、向知识库助手提问         |
+{% autogrid data-grid-link-table nofix %}
+归属|工具数量|工具内容
+主智能体|3 个|读取上传文件、生成 Markdown、Markdown 转 PDF
+网络搜索助手|1 个|Tavily 网络搜索
+数据库查询助手|3 个|获取表名、获取表结构和数据预览、执行 SQL
+RAGFlow 助手|2 个|获取可用助手或会话、向知识库助手提问
+{% endautogrid %}
 
 这里先建立分工，不需要马上记住每个工具的具体代码。后面章节真正写工具时，再回到这张表里找它属于谁、解决什么问题。
 
@@ -248,32 +252,36 @@ flowchart TD
 
 主智能体常用工具：
 
-| 工具名                  | 作用                             |
-| ----------------------- | -------------------------------- |
-| `upload_file_read_tool` | 读取用户本次上传的文件内容       |
-| `generate_markdown`     | 把最终结果写成标准 Markdown 文档 |
-| `convert_md_to_pdf`     | 将 Markdown 文件转换为 PDF       |
+{% autogrid data-grid-link-table nofix %}
+工具名|作用
+`upload_file_read_tool`|读取用户本次上传的文件内容
+`generate_markdown`|把最终结果写成标准 Markdown 文档
+`convert_md_to_pdf`|将 Markdown 文件转换为 PDF
+{% endautogrid %}
 
 网络搜索助手工具：
 
-| 工具名            | 作用                                                     |
-| ----------------- | -------------------------------------------------------- |
-| `internet_search` | 基于 Tavily 查询互联网公开信息，适合最新资料和多角度检索 |
+{% autogrid data-grid-link-table nofix %}
+工具名|作用
+`internet_search`|基于 Tavily 查询互联网公开信息，适合最新资料和多角度检索
+{% endautogrid %}
 
 数据库查询助手工具：
 
-| 工具名              | 作用                                             |
-| ------------------- | ------------------------------------------------ |
-| `list_sql_tables`   | 列出数据库中的可用表                             |
-| `get_table_data`    | 读取表结构和部分数据预览，帮助模型理解表里有什么 |
-| `execute_sql_query` | 执行模型生成或整理后的 SQL 查询                  |
+{% autogrid data-grid-link-table nofix %}
+工具名|作用
+`list_sql_tables`|列出数据库中的可用表
+`get_table_data`|读取表结构和部分数据预览，帮助模型理解表里有什么
+`execute_sql_query`|执行模型生成或整理后的 SQL 查询
+{% endautogrid %}
 
 RAGFlow 知识库助手工具：
 
-| 工具名               | 作用                                       |
-| -------------------- | ------------------------------------------ |
-| `get_assistant_list` | 获取 RAGFlow 中可用的知识库助手            |
-| `create_ask_delete`  | 创建会话、向知识库提问，并在完成后清理会话 |
+{% autogrid data-grid-link-table nofix %}
+工具名|作用
+`get_assistant_list`|获取 RAGFlow 中可用的知识库助手
+`create_ask_delete`|创建会话、向知识库提问，并在完成后清理会话
+{% endautogrid %}
 
 这些名字现在只需要先有印象。后面写到具体工具文件时，再逐个看函数入参、返回值和异常处理。
 
@@ -281,21 +289,22 @@ RAGFlow 知识库助手工具：
 
 这个项目涉及的技术比较多，可以按“智能体、接口、数据源、文件处理、工程辅助”五层理解。
 
-| 层次       | 技术                                               | 在项目中的作用                                       |
-| ---------- | -------------------------------------------------- | ---------------------------------------------------- |
-| 智能体框架 | DeepAgents、LangChain、LangGraph、`langchain-core` | 组织主智能体、子智能体、工具调用和思考循环           |
-| 模型接口   | OpenAI 兼容接口、`init_chat_model`                 | 统一创建大模型对象，供所有智能体使用                 |
-| Web 服务   | FastAPI、Uvicorn                                   | 提供任务提交、文件上传、下载等后端接口               |
-| 实时通信   | WebSocket                                          | 将 Agent 执行过程实时推送给前端                      |
-| 参数校验   | Pydantic、`typing-extensions`                      | 定义请求参数、状态结构或工具入参，并提供类型兼容能力 |
-| 网络搜索   | Tavily Search API                                  | 查询互联网公开信息，并返回结构化搜索结果             |
-| 私有知识库 | RAGFlow、`ragflow_sdk`                             | 连接企业内部知识库，查询私有文档内容                 |
-| 数据库     | MySQL、`mysql-connector-python`                    | 查询业务数据、表结构和 SQL 结果                      |
-| 文件处理   | File IO、python-docx、pypdf、pandas、ReportLab     | 生成报告、读取上传文件或解析文档内容                 |
-| 环境配置   | `python-dotenv`                                    | 从 `.env` 读取模型、搜索、数据库和 RAGFlow 连接配置  |
-| HTTP 请求  | `requests`                                         | 做外部服务连通性检查，或在需要时直接访问 HTTP 接口   |
-| 异步执行   | `asyncio`、`ContextVar`                            | 支持并发请求隔离和跨步骤传递上下文                   |
-| 路径管理   | `pathlib`、`shutil`                                | 处理路径拼接、文件移动、上传文件归档                 |
+{% autogrid data-grid-link-table nofix %}
+层次|技术|在项目中的作用
+智能体框架|DeepAgents、LangChain、LangGraph、`langchain-core`|组织主智能体、子智能体、工具调用和思考循环
+模型接口|OpenAI 兼容接口、`init_chat_model`|统一创建大模型对象，供所有智能体使用
+Web 服务|FastAPI、Uvicorn|提供任务提交、文件上传、下载等后端接口
+实时通信|WebSocket|将 Agent 执行过程实时推送给前端
+参数校验|Pydantic、`typing-extensions`|定义请求参数、状态结构或工具入参，并提供类型兼容能力
+网络搜索|Tavily Search API|查询互联网公开信息，并返回结构化搜索结果
+私有知识库|RAGFlow、`ragflow_sdk`|连接企业内部知识库，查询私有文档内容
+数据库|MySQL、`mysql-connector-python`|查询业务数据、表结构和 SQL 结果
+文件处理|File IO、python-docx、pypdf、pandas、ReportLab|生成报告、读取上传文件或解析文档内容
+环境配置|`python-dotenv`|从 `.env` 读取模型、搜索、数据库和 RAGFlow 连接配置
+HTTP 请求|`requests`|做外部服务连通性检查，或在需要时直接访问 HTTP 接口
+异步执行|`asyncio`、`ContextVar`|支持并发请求隔离和跨步骤传递上下文
+路径管理|`pathlib`、`shutil`|处理路径拼接、文件移动、上传文件归档
+{% endautogrid %}
 
 当前阶段最重要的是三件事：DeepAgents 负责“智能体怎么组织”，FastAPI + WebSocket 负责“前后端怎么通信”，`ContextVar` + 会话目录负责“多用户任务怎么不串台”。
 
@@ -330,10 +339,11 @@ RAGFlow 知识库助手工具：
 
 从前端到后端，有两个值非常关键：
 
-| 名称          | 解决的问题                         | 可以怎么理解          |
-| ------------- | ---------------------------------- | --------------------- |
-| `thread_id`   | 当前任务的进度应该推给哪个前端连接 | 本次对话任务的身份 ID |
-| `session_dir` | 当前任务生成的文件应该放在哪个目录 | 本次任务的工作文件夹  |
+{% autogrid data-grid-link-table nofix %}
+名称|解决的问题|可以怎么理解
+`thread_id`|当前任务的进度应该推给哪个前端连接|本次对话任务的身份 ID
+`session_dir`|当前任务生成的文件应该放在哪个目录|本次任务的工作文件夹
+{% endautogrid %}
 
 完整链路可以这样看：
 
@@ -369,10 +379,11 @@ monitor 根据 thread_id 找到对应 WebSocket
 
 这两个文件很容易混在一起，可以先这样分：
 
-| 文件                 | 负责什么                                       | 一句话记忆             |
-| -------------------- | ---------------------------------------------- | ---------------------- |
-| `app/api/context.py` | 保存当前任务的 `thread_id` 和 `session_dir`    | 我是谁，我的文件夹在哪 |
-| `app/api/monitor.py` | 把工具调用、助手调用、最终结果等事件推送给前端 | 我现在正在做什么       |
+{% autogrid data-grid-link-table nofix %}
+文件|负责什么|一句话记忆
+`app/api/context.py`|保存当前任务的 `thread_id` 和 `session_dir`|我是谁，我的文件夹在哪
+`app/api/monitor.py`|把工具调用、助手调用、最终结果等事件推送给前端|我现在正在做什么
+{% endautogrid %}
 
 也就是说，`context.py` 负责保存身份，`monitor.py` 负责对外汇报进度。后面写工具时，只要工具里调用 `monitor.report_tool(...)`，前端就有机会看到执行过程。
 
@@ -395,10 +406,11 @@ uv sync
 
 这两条命令分别负责“把依赖纳入项目管理”和“同步本地虚拟环境”：
 
-| 命令                         | 作用                                                                                |
-| ---------------------------- | ----------------------------------------------------------------------------------- |
-| `uv add -r requirements.txt` | 读取 `requirements.txt`，把依赖写入 `pyproject.toml`，并更新 `uv.lock`              |
-| `uv sync`                    | 根据 `pyproject.toml` 和 `uv.lock` 创建或更新 `.venv`，让本地环境和项目声明保持一致 |
+{% autogrid data-grid-link-table nofix %}
+命令|作用
+`uv add -r requirements.txt`|读取 `requirements.txt`，把依赖写入 `pyproject.toml`，并更新 `uv.lock`
+`uv sync`|根据 `pyproject.toml` 和 `uv.lock` 创建或更新 `.venv`，让本地环境和项目声明保持一致
+{% endautogrid %}
 
 所以这里不再使用 `pip install -r requirements.txt` 作为主要安装方式。`requirements.txt` 可以看作按职责整理过的依赖清单；真正负责依赖声明、锁定和环境同步的是 `uv`。
 
@@ -443,10 +455,11 @@ deepsearch-agents/
 
 这里要区分两类“工具”：
 
-| 类型         | 给谁用     | 例子                                     |
-| ------------ | ---------- | ---------------------------------------- |
-| Agent Tool   | 给模型调用 | 网络搜索、查数据库、读取文件、生成报告   |
-| Python Utils | 给代码调用 | 路径解析、Markdown 转 PDF 的底层转换函数 |
+{% autogrid data-grid-link-table nofix %}
+类型|给谁用|例子
+Agent Tool|给模型调用|网络搜索、查数据库、读取文件、生成报告
+Python Utils|给代码调用|路径解析、Markdown 转 PDF 的底层转换函数
+{% endautogrid %}
 
 `app/utils/` 不是给模型直接调的。它更像后端代码自己的工具箱；后续某个 Agent Tool 可以在内部调用这些普通函数。比如 `convert_md_to_pdf` 这个 Agent Tool 可以调用 `app/utils/word_converter.py`，但模型看到的是工具函数，不需要关心底层怎么解析 Markdown、怎么调用 ReportLab 或怎么处理路径。
 

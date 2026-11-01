@@ -75,13 +75,14 @@ tags:
 
 再看支撑这些模块运行的基础服务：
 
-| 基础服务            | 当前项目使用什么                 | 主要作用                                                                                                                                                                                       |
-| ------------------- | -------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 数据仓库 / 元数据库 | `MySQL`                          | 在当前项目里，`MySQL` 同时承担两类角色：一套是教学数仓库 `dw`，负责存放分析数据；另一套是 `meta` 元数据库，负责保存 `table_info`、`column_info`、`metric_info`、`column_metric` 等结构化元数据 |
-| 向量数据库          | `Qdrant`                         | 保存字段信息和指标信息的向量，用于语义相似度检索                                                                                                                                               |
-| 全文检索服务        | `Elasticsearch`                  | 保存字段取值索引，用于把“华北”“黄金会员”这类自然语言值映射到真实字段取值                                                                                                                       |
-| Embedding 服务      | `TEI` + `BAAI/bge-large-zh-v1.5` | 负责把字段名、字段描述、指标描述、用户问题等文本转成向量，供 `Qdrant` 检索使用                                                                                                                 |
-| 智能体编排框架      | `LangGraph`                      | 负责把关键词抽取、多路召回、合并过滤、生成 SQL、校验 SQL、执行 SQL 串成可分步骤运行的工作流                                                                                                    |
+{% autogrid data-grid-link-table nofix %}
+基础服务|当前项目使用什么|主要作用
+数据仓库 / 元数据库|`MySQL`|在当前项目里，`MySQL` 同时承担两类角色：一套是教学数仓库 `dw`，负责存放分析数据；另一套是 `meta` 元数据库，负责保存 `table_info`、`column_info`、`metric_info`、`column_metric` 等结构化元数据
+向量数据库|`Qdrant`|保存字段信息和指标信息的向量，用于语义相似度检索
+全文检索服务|`Elasticsearch`|保存字段取值索引，用于把“华北”“黄金会员”这类自然语言值映射到真实字段取值
+Embedding 服务|`TEI` + `BAAI/bge-large-zh-v1.5`|负责把字段名、字段描述、指标描述、用户问题等文本转成向量，供 `Qdrant` 检索使用
+智能体编排框架|`LangGraph`|负责把关键词抽取、多路召回、合并过滤、生成 SQL、校验 SQL、执行 SQL 串成可分步骤运行的工作流
+{% endautogrid %}
 
 如果只记一句话，也可以概括为：`MySQL` 管结构化存储，`Qdrant` 管语义召回，`Elasticsearch` 管字段取值检索，`TEI` 负责向量化，`LangGraph` 负责把整条问数流程组织起来。
 
@@ -118,15 +119,16 @@ tags:
 
 如果你更喜欢用“模块 + 技术栈”的方式去记，可以直接看下面这张表：
 
-| 模块       | 作用                                     | 当前项目使用什么                  |
-| ---------- | ---------------------------------------- | --------------------------------- |
-| 数据仓库   | 存放真实分析数据                         | `MySQL`（教学环境中用来模拟数仓） |
-| 同步脚本   | 从数据仓库抽取元数据                     | Python 脚本 + 配置驱动            |
-| 元数据库   | 保存结构化元数据                         | `MySQL`                           |
-| 向量检索   | 召回相关字段和指标                       | `Qdrant`                          |
-| 全文检索   | 检索字段真实取值                         | `Elasticsearch`                   |
-| 向量化服务 | 把字段描述、指标描述、用户问题转成向量   | `TEI` + `BAAI/bge-large-zh-v1.5`  |
-| 智能体编排 | 把召回、过滤、生成 SQL、校验、执行串起来 | `LangGraph`                       |
+{% autogrid data-grid-link-table nofix %}
+模块|作用|当前项目使用什么
+数据仓库|存放真实分析数据|`MySQL`（教学环境中用来模拟数仓）
+同步脚本|从数据仓库抽取元数据|Python 脚本 + 配置驱动
+元数据库|保存结构化元数据|`MySQL`
+向量检索|召回相关字段和指标|`Qdrant`
+全文检索|检索字段真实取值|`Elasticsearch`
+向量化服务|把字段描述、指标描述、用户问题转成向量|`TEI` + `BAAI/bge-large-zh-v1.5`
+智能体编排|把召回、过滤、生成 SQL、校验、执行串起来|`LangGraph`
+{% endautogrid %}
 
 把它们连成一句最容易记住的话，就是：
 
@@ -167,11 +169,12 @@ tags:
 
 如果你更习惯用“表格”来记忆，先看下面这个总表：
 
-| 组件                     | 主要存什么                                 | 解决什么问题                                       | 典型使用时机             |
-| ------------------------ | ------------------------------------------ | -------------------------------------------------- | ------------------------ |
-| `MySQL` 元数据库         | 表信息、字段信息、指标信息、字段与指标关系 | 保存最完整、最权威的结构化元数据                   | 召回完成后回表取完整信息 |
-| `Qdrant` 向量索引        | 字段与指标的向量表示                       | 解决“用户换个说法也能召回”的问题                   | 字段召回、指标召回       |
-| `Elasticsearch` 全文索引 | 字段的实际取值                             | 解决“问题里的自然语言值如何映射到真实字段值”的问题 | 字段值检索               |
+{% autogrid data-grid-link-table nofix %}
+组件|主要存什么|解决什么问题|典型使用时机
+`MySQL` 元数据库|表信息、字段信息、指标信息、字段与指标关系|保存最完整、最权威的结构化元数据|召回完成后回表取完整信息
+`Qdrant` 向量索引|字段与指标的向量表示|解决“用户换个说法也能召回”的问题|字段召回、指标召回
+`Elasticsearch` 全文索引|字段的实际取值|解决“问题里的自然语言值如何映射到真实字段值”的问题|字段值检索
+{% endautogrid %}
 
 ### 2.2 元数据库
 
@@ -207,56 +210,60 @@ tags:
 
 **`metric_info` 示例（指标信息表）：**
 
-| id（指标 ID） | name（指标名） | description（指标说明）                                    | relevant_columns（相关字段）  | alias（指标别名）            |
-| ------------- | -------------- | ---------------------------------------------------------- | ----------------------------- | ---------------------------- |
-| AOV           | AOV            | 全称 Average Order Value，表示所有订单的成交金额平均值。   | ["fact_order.order_quantity"] | ["平均单价", "平均订单金额"] |
-| GMV           | GMV            | 全称 Gross Merchandise Value，表示所有订单的成交金额总和。 | ["fact_order.order_amount"]   | ["成交总额", "订单总额"]     |
+{% autogrid data-grid-link-table nofix %}
+id（指标 ID）|name（指标名）|description（指标说明）|relevant_columns（相关字段）|alias（指标别名）
+AOV|AOV|全称 Average Order Value，表示所有订单的成交金额平均值。|["fact_order.order_quantity"]|["平均单价", "平均订单金额"]
+GMV|GMV|全称 Gross Merchandise Value，表示所有订单的成交金额总和。|["fact_order.order_amount"]|["成交总额", "订单总额"]
+{% endautogrid %}
 
 **`column_metric` 示例（字段与指标关联表）：**
 
-| column_id（字段 ID）      | metric_id（指标 ID） |
-| ------------------------- | -------------------- |
-| fact_order.order_amount   | GMV                  |
-| fact_order.order_quantity | AOV                  |
+{% autogrid data-grid-link-table nofix %}
+column_id（字段 ID）|metric_id（指标 ID）
+fact_order.order_amount|GMV
+fact_order.order_quantity|AOV
+{% endautogrid %}
 
 **`column_info` 示例（字段信息表）：**
 
-| id（列编号）               | name（列名称） | type（数据类型） | role（字段角色） | examples（示例值）                                                                                                                                                                                                       | description（字段说明）              | alias（字段别名）              | table_id（所属表 ID） |
-| -------------------------- | -------------- | ---------------- | ---------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------ | ------------------------------ | --------------------- |
-| dim_customer.customer_id   | customer_id    | varchar(64)      | primary_key      | ["C001", "C002", "C003", "C004", "C005", "C006", "C007", "C008", "C009", "C010"]                                                                                                                                         | 客户唯一标识。                       | ["客户ID", "用户ID"]           | dim_customer          |
-| dim_customer.customer_name | customer_name  | varchar(128)     | dimension        | ["李伟", "王芳", "张敏", "刘洋", "陈静", "赵磊", "黄秀英", "吴斌", "周燕", "徐浩"]                                                                                                                                       | 客户名称。                           | ["客户名称", "用户名称"]       | dim_customer          |
-| dim_customer.gender        | gender         | varchar(16)      | dimension        | ["男", "女"]                                                                                                                                                                                                             | 客户性别。                           | ["性别"]                       | dim_customer          |
-| dim_customer.member_level  | member_level   | varchar(32)      | dimension        | ["黄金", "白银", "青铜", "铂金"]                                                                                                                                                                                         | 客户会员等级。                       | ["会员等级", "用户等级"]       | dim_customer          |
-| dim_date.date_id           | date_id        | int              | primary_key      | [20250101, 20250102, 20250103, 20250104, 20250105, 20250106, 20250107, 20250108, 20250109, 20250110]                                                                                                                     | 日期唯一标识，格式 yyyyMMdd。        | ["日期ID", "日期"]             | dim_date              |
-| dim_date.day               | day            | int              | dimension        | [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]                                                                                                                                                                                          | 日。                                 | ["日", "天"]                   | dim_date              |
-| dim_date.month             | month          | int              | dimension        | [1, 2, 3]                                                                                                                                                                                                                | 月份。                               | ["月", "月份"]                 | dim_date              |
-| dim_date.quarter           | quarter        | varchar(8)       | dimension        | ["Q1"]                                                                                                                                                                                                                   | 季度。                               | ["季度"]                       | dim_date              |
-| dim_date.year              | year           | int              | dimension        | [2025]                                                                                                                                                                                                                   | 年份。                               | ["年", "年份"]                 | dim_date              |
-| dim_product.brand          | brand          | varchar(64)      | dimension        | ["苹果", "三星", "华为", "戴森", "美的", "耐克", "阿迪达斯", "优衣库", "李维斯", "雀巢"]                                                                                                                                 | 商品品牌名称。                       | ["品牌", "品牌名称"]           | dim_product           |
-| dim_product.category       | category       | varchar(64)      | dimension        | ["手机数码", "家用电器", "鞋靴", "服饰", "食品饮料", "休闲零食"]                                                                                                                                                         | 商品所属品类。                       | ["商品类别", "品类", "分类"]   | dim_product           |
-| dim_product.product_id     | product_id     | varchar(64)      | primary_key      | ["P001", "P002", "P003", "P004", "P005", "P006", "P007", "P008", "P009", "P010"]                                                                                                                                         | 商品唯一标识。                       | ["商品ID", "产品ID"]           | dim_product           |
-| dim_product.product_name   | product_name   | varchar(128)     | dimension        | ["iPhone 15 Pro", "Galaxy S24 Ultra", "Mate 60 Pro", "戴森 V15 吸尘器", "美的空调 KFR-35GW", "耐克 Air Max 270 运动鞋", "阿迪达斯 Ultraboost 跑鞋", "优衣库 Heattech 保暖夹克", "李维斯 501 牛仔裤", "雀巢金牌速溶咖啡"] | 商品名称。                           | ["商品名称", "产品名称"]       | dim_product           |
-| dim_region.country         | country        | varchar(64)      | dimension        | ["中国"]                                                                                                                                                                                                                 | 地区所属国家名称。                   | ["国家", "国家名称"]           | dim_region            |
-| dim_region.province        | province       | varchar(64)      | dimension        | ["广东省", "浙江省", "四川省", "北京市", "上海市", "湖北省"]                                                                                                                                                             | 订单所属的省份名称。                 | ["省份", "省", "所在省份"]     | dim_region            |
-| dim_region.region_id       | region_id      | varchar(64)      | primary_key      | ["R001", "R002", "R003", "R004", "R005", "R006"]                                                                                                                                                                         | 地区唯一标识。                       | ["地区ID", "区域ID"]           | dim_region            |
-| dim_region.region_name     | region_name    | varchar(64)      | dimension        | ["华南", "华东", "西南", "华北", "华中"]                                                                                                                                                                                 | 订单所属的大区名称，如华东、华南等。 | ["地区", "区域", "大区"]       | dim_region            |
-| fact_order.customer_id     | customer_id    | varchar(64)      | foreign_key      | ["C001", "C005", "C003", "C008", "C012", "C015", "C002", "C007", "C010", "C019"]                                                                                                                                         | 关联客户维度的外键。                 | ["客户ID", "用户ID"]           | fact_order            |
-| fact_order.date_id         | date_id        | int              | foreign_key      | [20250101, 20250102, 20250103, 20250104, 20250105, 20250106, 20250107, 20250108, 20250109, 20250110]                                                                                                                     | 关联时间维度的外键。                 | ["日期", "下单日期"]           | fact_order            |
-| fact_order.order_amount    | order_amount   | decimal(10,2)    | measure          | [8999.0, 6999.0, 125.0, 899.0, 60.0, 1399.0, 40.0, 299.0, 200.0, 9499.0]                                                                                                                                                 | 订单金额。                           | ["销售额", "订单金额", "收入"] | fact_order            |
-| fact_order.order_id        | order_id       | varchar(64)      | primary_key      | ["ORD20250101001", "ORD20250101002", "ORD20250102001", "ORD20250102002", "ORD20250103001", "ORD20250103002", "ORD20250104001", "ORD20250105001", "ORD20250105002", "ORD20250106001"]                                     | 订单唯一标识。                       | ["订单ID"]                     | fact_order            |
-| fact_order.order_quantity  | order_quantity | int              | measure          | [1, 5, 12, 8, 2, 10, 3, 6, 25, 4]                                                                                                                                                                                        | 订单中商品的购买数量。               | ["销量", "购买数量", "件数"]   | fact_order            |
-| fact_order.product_id      | product_id     | varchar(64)      | foreign_key      | ["P001", "P003", "P010", "P006", "P011", "P014", "P012", "P008", "P002", "P013"]                                                                                                                                         | 关联商品维度的外键。                 | ["商品ID", "产品ID"]           | fact_order            |
-| fact_order.region_id       | region_id      | varchar(64)      | foreign_key      | ["R001", "R005", "R002", "R004", "R003", "R006"]                                                                                                                                                                         | 关联地区维度的外键。                 | ["地区ID", "区域ID"]           | fact_order            |
+{% autogrid data-grid-link-table nofix %}
+id（列编号）|name（列名称）|type（数据类型）|role（字段角色）|examples（示例值）|description（字段说明）|alias（字段别名）|table_id（所属表 ID）
+dim_customer.customer_id|customer_id|varchar(64)|primary_key|["C001", "C002", "C003", "C004", "C005", "C006", "C007", "C008", "C009", "C010"]|客户唯一标识。|["客户ID", "用户ID"]|dim_customer
+dim_customer.customer_name|customer_name|varchar(128)|dimension|["李伟", "王芳", "张敏", "刘洋", "陈静", "赵磊", "黄秀英", "吴斌", "周燕", "徐浩"]|客户名称。|["客户名称", "用户名称"]|dim_customer
+dim_customer.gender|gender|varchar(16)|dimension|["男", "女"]|客户性别。|["性别"]|dim_customer
+dim_customer.member_level|member_level|varchar(32)|dimension|["黄金", "白银", "青铜", "铂金"]|客户会员等级。|["会员等级", "用户等级"]|dim_customer
+dim_date.date_id|date_id|int|primary_key|[20250101, 20250102, 20250103, 20250104, 20250105, 20250106, 20250107, 20250108, 20250109, 20250110]|日期唯一标识，格式 yyyyMMdd。|["日期ID", "日期"]|dim_date
+dim_date.day|day|int|dimension|[1, 2, 3, 4, 5, 6, 7, 8, 9, 10]|日。|["日", "天"]|dim_date
+dim_date.month|month|int|dimension|[1, 2, 3]|月份。|["月", "月份"]|dim_date
+dim_date.quarter|quarter|varchar(8)|dimension|["Q1"]|季度。|["季度"]|dim_date
+dim_date.year|year|int|dimension|[2025]|年份。|["年", "年份"]|dim_date
+dim_product.brand|brand|varchar(64)|dimension|["苹果", "三星", "华为", "戴森", "美的", "耐克", "阿迪达斯", "优衣库", "李维斯", "雀巢"]|商品品牌名称。|["品牌", "品牌名称"]|dim_product
+dim_product.category|category|varchar(64)|dimension|["手机数码", "家用电器", "鞋靴", "服饰", "食品饮料", "休闲零食"]|商品所属品类。|["商品类别", "品类", "分类"]|dim_product
+dim_product.product_id|product_id|varchar(64)|primary_key|["P001", "P002", "P003", "P004", "P005", "P006", "P007", "P008", "P009", "P010"]|商品唯一标识。|["商品ID", "产品ID"]|dim_product
+dim_product.product_name|product_name|varchar(128)|dimension|["iPhone 15 Pro", "Galaxy S24 Ultra", "Mate 60 Pro", "戴森 V15 吸尘器", "美的空调 KFR-35GW", "耐克 Air Max 270 运动鞋", "阿迪达斯 Ultraboost 跑鞋", "优衣库 Heattech 保暖夹克", "李维斯 501 牛仔裤", "雀巢金牌速溶咖啡"]|商品名称。|["商品名称", "产品名称"]|dim_product
+dim_region.country|country|varchar(64)|dimension|["中国"]|地区所属国家名称。|["国家", "国家名称"]|dim_region
+dim_region.province|province|varchar(64)|dimension|["广东省", "浙江省", "四川省", "北京市", "上海市", "湖北省"]|订单所属的省份名称。|["省份", "省", "所在省份"]|dim_region
+dim_region.region_id|region_id|varchar(64)|primary_key|["R001", "R002", "R003", "R004", "R005", "R006"]|地区唯一标识。|["地区ID", "区域ID"]|dim_region
+dim_region.region_name|region_name|varchar(64)|dimension|["华南", "华东", "西南", "华北", "华中"]|订单所属的大区名称，如华东、华南等。|["地区", "区域", "大区"]|dim_region
+fact_order.customer_id|customer_id|varchar(64)|foreign_key|["C001", "C005", "C003", "C008", "C012", "C015", "C002", "C007", "C010", "C019"]|关联客户维度的外键。|["客户ID", "用户ID"]|fact_order
+fact_order.date_id|date_id|int|foreign_key|[20250101, 20250102, 20250103, 20250104, 20250105, 20250106, 20250107, 20250108, 20250109, 20250110]|关联时间维度的外键。|["日期", "下单日期"]|fact_order
+fact_order.order_amount|order_amount|decimal(10,2)|measure|[8999.0, 6999.0, 125.0, 899.0, 60.0, 1399.0, 40.0, 299.0, 200.0, 9499.0]|订单金额。|["销售额", "订单金额", "收入"]|fact_order
+fact_order.order_id|order_id|varchar(64)|primary_key|["ORD20250101001", "ORD20250101002", "ORD20250102001", "ORD20250102002", "ORD20250103001", "ORD20250103002", "ORD20250104001", "ORD20250105001", "ORD20250105002", "ORD20250106001"]|订单唯一标识。|["订单ID"]|fact_order
+fact_order.order_quantity|order_quantity|int|measure|[1, 5, 12, 8, 2, 10, 3, 6, 25, 4]|订单中商品的购买数量。|["销量", "购买数量", "件数"]|fact_order
+fact_order.product_id|product_id|varchar(64)|foreign_key|["P001", "P003", "P010", "P006", "P011", "P014", "P012", "P008", "P002", "P013"]|关联商品维度的外键。|["商品ID", "产品ID"]|fact_order
+fact_order.region_id|region_id|varchar(64)|foreign_key|["R001", "R005", "R002", "R004", "R003", "R006"]|关联地区维度的外键。|["地区ID", "区域ID"]|fact_order
+{% endautogrid %}
 
 **`table_info` 示例（表信息表）：**
 
-| id（表 ID）  | name（表名） | role（表角色） | description（表说明）                        |
-| ------------ | ------------ | -------------- | -------------------------------------------- |
-| dim_customer | dim_customer | dim            | 客户维度表，描述下单客户的基本属性。         |
-| dim_date     | dim_date     | dim            | 时间维度表，用于多时间粒度分析。             |
-| dim_product  | dim_product  | dim            | 商品维度表，描述商品的基本属性信息。         |
-| dim_region   | dim_region   | dim            | 地区维度表，用于描述订单发生的地理区域信息。 |
-| fact_order   | fact_order   | fact           | 订单事实表，记录订单数量和金额等核心指标。   |
+{% autogrid data-grid-link-table nofix %}
+id（表 ID）|name（表名）|role（表角色）|description（表说明）
+dim_customer|dim_customer|dim|客户维度表，描述下单客户的基本属性。
+dim_date|dim_date|dim|时间维度表，用于多时间粒度分析。
+dim_product|dim_product|dim|商品维度表，描述商品的基本属性信息。
+dim_region|dim_region|dim|地区维度表，用于描述订单发生的地理区域信息。
+fact_order|fact_order|fact|订单事实表，记录订单数量和金额等核心指标。
+{% endautogrid %}
 
 从设计思路上看，这四张表并不是随意拆出来的，而是各自承担了不同职责。与其把它们混在一起记，不如结合上面的示例表格，按表来理解。
 

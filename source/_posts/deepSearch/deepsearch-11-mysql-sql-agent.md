@@ -62,12 +62,13 @@ tags:
 
 数据库中保存的是结构化业务数据，不保存概括性知识。
 
-| 用户问题                         | 应该交给谁     |
-| -------------------------------- | -------------- |
-| 某个药品当前库存是多少           | 数据库查询助手 |
-| 某个药品最近公开政策有什么变化   | 网络搜索助手   |
-| 公司内部制度里对报销怎么规定     | RAGFlow 助手   |
-| 把查询结果整理成 Markdown 或 PDF | 主智能体       |
+{% autogrid data-grid-link-table nofix %}
+用户问题|应该交给谁
+某个药品当前库存是多少|数据库查询助手
+某个药品最近公开政策有什么变化|网络搜索助手
+公司内部制度里对报销怎么规定|RAGFlow 助手
+把查询结果整理成 Markdown 或 PDF|主智能体
+{% endautogrid %}
 
 所以数据库助手的 `description` 里，要写清它只负责企业内部结构化数据。
 
@@ -87,11 +88,12 @@ tags:
 
 数据库助手有三个工具：
 
-| 工具名              | 作用                                            |
-| ------------------- | ----------------------------------------------- |
-| `list_sql_tables`   | 先看数据库里有哪些表                            |
-| `get_table_data`    | 查看某张表的列名和前 100 行数据，理解字段和格式 |
-| `execute_sql_query` | 在确认表名、字段和格式后，执行自定义 SQL 查询   |
+{% autogrid data-grid-link-table nofix %}
+工具名|作用
+`list_sql_tables`|先看数据库里有哪些表
+`get_table_data`|查看某张表的列名和前 100 行数据，理解字段和格式
+`execute_sql_query`|在确认表名、字段和格式后，执行自定义 SQL 查询
+{% endautogrid %}
 
 这三个工具不是平级乱用的，而是有顺序的：
 
@@ -174,21 +176,23 @@ sub_agents:
 
 课程素材里准备的是医药业务数据，核心有三张表：
 
-| 表名            | 作用                   |
-| --------------- | ---------------------- |
-| `drugs`         | 药品基础信息           |
-| `inventory`     | 药品库存和批次信息     |
-| `sales_records` | 药品销售记录和区域信息 |
+{% autogrid data-grid-link-table nofix %}
+表名|作用
+`drugs`|药品基础信息
+`inventory`|药品库存和批次信息
+`sales_records`|药品销售记录和区域信息
+{% endautogrid %}
 
 对应的初始化 SQL 放在：`deepsearch-agents/docker/mysql/mysql.sql`
 
 这个脚本会创建 `deepsearch_db`，并写入一批教学模拟数据：
 
-| 表名            | 数据规模 | 主要用途                            |
-| --------------- | -------- | ----------------------------------- |
-| `drugs`         | 50 条    | 药品主数据                          |
-| `inventory`     | 150 条   | 每种药品 3 个库存批次               |
-| `sales_records` | 100 条   | 每种药品 2 条销售记录，覆盖区域分析 |
+{% autogrid data-grid-link-table nofix %}
+表名|数据规模|主要用途
+`drugs`|50 条|药品主数据
+`inventory`|150 条|每种药品 3 个库存批次
+`sales_records`|100 条|每种药品 2 条销售记录，覆盖区域分析
+{% endautogrid %}
 
 三张表的关系可以简单理解为下面这张图。
 
@@ -205,11 +209,12 @@ flowchart LR
 
 再把三张表的核心字段展开看一下：
 
-| 表名            | 关键字段                                                                                           | 适合回答的问题                         |
-| --------------- | -------------------------------------------------------------------------------------------------- | -------------------------------------- |
-| `drugs`         | `drug_id`、`generic_name`、`brand_name`、`approval_number`、`dosage_form`、`therapeutic_area`      | 某个药品是什么、属于什么治疗领域       |
-| `inventory`     | `inventory_id`、`drug_id`、`batch_number`、`quantity_on_hand`、`warehouse_location`、`expiry_date` | 某个药品库存多少、在哪个仓库、何时过期 |
-| `sales_records` | `sale_id`、`drug_id`、`sale_date`、`quantity_sold`、`unit_price`、`total_amount`、`region`         | 某个药品卖了多少、销售额多少、区域表现 |
+{% autogrid data-grid-link-table nofix %}
+表名|关键字段|适合回答的问题
+`drugs`|`drug_id`、`generic_name`、`brand_name`、`approval_number`、`dosage_form`、`therapeutic_area`|某个药品是什么、属于什么治疗领域
+`inventory`|`inventory_id`、`drug_id`、`batch_number`、`quantity_on_hand`、`warehouse_location`、`expiry_date`|某个药品库存多少、在哪个仓库、何时过期
+`sales_records`|`sale_id`、`drug_id`、`sale_date`、`quantity_sold`、`unit_price`、`total_amount`、`region`|某个药品卖了多少、销售额多少、区域表现
+{% endautogrid %}
 
 这样模型在预览数据时，就能把用户问题映射到具体字段。例如“哪个区域销售额最高”更可能查 `sales_records.region` 和 `sales_records.total_amount`；“某个药还有多少库存”更可能查 `inventory.quantity_on_hand`。
 
@@ -294,13 +299,14 @@ docker compose --env-file .env -f docs/docker-compose.yaml up -d
 
 这条命令会做几件事：
 
-| 动作                         | 说明                                           |
-| ---------------------------- | ---------------------------------------------- |
-| 拉取 `mysql:8.4`             | 本地没有镜像时会自动下载                       |
-| 创建 `deepsearch-mysql` 容器 | 后续可以通过容器名查看日志或进入容器           |
-| 创建 `deepsearch_db`         | 由 `MYSQL_DATABASE` 控制                       |
-| 导入 `mysql.sql`             | 只在数据卷第一次创建、数据库目录为空时自动执行 |
-| 暴露本机端口 `3307`          | Python 代码通过 `localhost:3307` 连接 MySQL    |
+{% autogrid data-grid-link-table nofix %}
+动作|说明
+拉取 `mysql:8.4`|本地没有镜像时会自动下载
+创建 `deepsearch-mysql` 容器|后续可以通过容器名查看日志或进入容器
+创建 `deepsearch_db`|由 `MYSQL_DATABASE` 控制
+导入 `mysql.sql`|只在数据卷第一次创建、数据库目录为空时自动执行
+暴露本机端口 `3307`|Python 代码通过 `localhost:3307` 连接 MySQL
+{% endautogrid %}
 
 检查容器状态：
 
@@ -605,11 +611,12 @@ cursor.execute(f"SELECT * FROM {safe_table_name} LIMIT 100")
 
 这段代码做了三件事：
 
-| 处理动作              | 作用                              |
-| --------------------- | --------------------------------- |
-| 去掉反引号字符        | 避免通过反引号构造异常表名        |
-| 去掉分号 `;`          | 降低一条输入里拼接多条 SQL 的风险 |
-| `split()[0]` 取第一段 | 避免表名后面继续夹带额外 SQL 片段 |
+{% autogrid data-grid-link-table nofix %}
+处理动作|作用
+去掉反引号字符|避免通过反引号构造异常表名
+去掉分号 `;`|降低一条输入里拼接多条 SQL 的风险
+`split()[0]` 取第一段|避免表名后面继续夹带额外 SQL 片段
+{% endautogrid %}
 
 在生产环境里，建议增加表名白名单校验，例如先调用 `list_sql_tables` 得到真实表名，然后只允许查询白名单里的表。对于自定义 SQL，也建议限制为只读查询，避免执行 `UPDATE`、`DELETE`、`DROP` 之类高风险语句。
 
@@ -693,10 +700,11 @@ def execute_sql_query(query) -> str:
 
 这段代码和 `get_table_data` 很像。区别是：
 
-| 工具                | SQL 来源                       |
-| ------------------- | ------------------------------ |
-| `get_table_data`    | 系统固定生成 `SELECT * ...`    |
-| `execute_sql_query` | 模型根据用户问题生成或整理出来 |
+{% autogrid data-grid-link-table nofix %}
+工具|SQL 来源
+`get_table_data`|系统固定生成 `SELECT * ...`
+`execute_sql_query`|模型根据用户问题生成或整理出来
+{% endautogrid %}
 
 当前项目主要依靠提示词约束它执行查询类 SQL。真实企业项目里，建议在工具层再加一层只读校验，例如只允许 `SELECT` 或 `SHOW` 开头的语句。
 
@@ -724,15 +732,16 @@ drug_id,generic_name,brand_name,approval_number,specifications,dosage_form,manuf
 
 这段输出里有几个很值得注意的点：
 
-| 现象                                                          | 说明                                                                              |
-| ------------------------------------------------------------- | --------------------------------------------------------------------------------- |
-| 先出现 `[Monitor:tool_start]`                                 | 说明工具层埋点正常，后续接入前端时可以看到数据库查询进度                          |
-| 输出第一行是 CSV 表头                                         | 工具返回的不是自然语言，而是模型容易继续读取和整理的结构化文本                    |
-| 表头里出现两次 `drug_id`                                      | 这是因为调试 SQL 同时查询了 `drugs` 和 `sales_records`，两张表都有 `drug_id` 字段 |
-| 能看到 `generic_name`、`brand_name`、`therapeutic_area`       | 说明药品主表 `drugs` 已经成功导入                                                 |
-| 能看到 `sale_date`、`quantity_sold`、`total_amount`、`region` | 说明销售记录表 `sales_records` 已经成功导入，并且关联查询可用                     |
-| `created_at` 是本次初始化时间                                 | 这是 Docker MySQL 首次导入数据时写入的时间，不是药品销售日期                      |
-| 销售日期集中在 `2025` 年                                      | 这是教学 SQL 中准备的模拟销售记录，适合后续练习按日期、区域、药品做统计           |
+{% autogrid data-grid-link-table nofix %}
+现象|说明
+先出现 `[Monitor:tool_start]`|说明工具层埋点正常，后续接入前端时可以看到数据库查询进度
+输出第一行是 CSV 表头|工具返回的不是自然语言，而是模型容易继续读取和整理的结构化文本
+表头里出现两次 `drug_id`|这是因为调试 SQL 同时查询了 `drugs` 和 `sales_records`，两张表都有 `drug_id` 字段
+能看到 `generic_name`、`brand_name`、`therapeutic_area`|说明药品主表 `drugs` 已经成功导入
+能看到 `sale_date`、`quantity_sold`、`total_amount`、`region`|说明销售记录表 `sales_records` 已经成功导入，并且关联查询可用
+`created_at` 是本次初始化时间|这是 Docker MySQL 首次导入数据时写入的时间，不是药品销售日期
+销售日期集中在 `2025` 年|这是教学 SQL 中准备的模拟销售记录，适合后续练习按日期、区域、药品做统计
+{% endautogrid %}
 
 如果能看到类似这样的带列名 CSV 文本，说明数据库容器、初始化数据、`.env` 连接配置和工具链路都已经可用。
 
@@ -778,10 +787,11 @@ execute_sql_query
 
 可以这样对比：
 
-| 项目     | 数据库访问方式                                       | 适合场景                                                    |
-| -------- | ---------------------------------------------------- | ----------------------------------------------------------- |
-| 电商问数 | SQLAlchemy + asyncmy + Session + ORM / 原生 SQL 混合 | 完整后端工程、元数据管理、Repository 分层、请求级数据库会话 |
-| 深度研搜 | `mysql.connector` + 3 个 LangChain 小工具            | 子智能体直接查三张教学表，重点是工具调用链路                |
+{% autogrid data-grid-link-table nofix %}
+项目|数据库访问方式|适合场景
+电商问数|SQLAlchemy + asyncmy + Session + ORM / 原生 SQL 混合|完整后端工程、元数据管理、Repository 分层、请求级数据库会话
+深度研搜|`mysql.connector` + 3 个 LangChain 小工具|子智能体直接查三张教学表，重点是工具调用链路
+{% endautogrid %}
 
 不是 SQLAlchemy 不好，而是这一章暂时不需要这么重的访问层。等项目需要维护大量表、复杂事务、统一 Repository 或请求级 Session 时，再引入 SQLAlchemy 会更合适。
 
@@ -809,15 +819,16 @@ execute_sql_query
 
 「电商问数」解决的是另一类问题。它不是给主智能体挂一个临时查库工具，而是在做一套相对完整的 `NL2SQL` 问数系统。它要面对更多表、更多字段、更多指标口径，还要考虑召回、过滤、SQL 校验、SQL 纠错、前端流式展示和长期运行的工程分层。
 
-| 对比维度   | 深度研搜数据库助手                       | 电商问数                                                                 |
-| ---------- | ---------------------------------------- | ------------------------------------------------------------------------ |
-| 项目定位   | 深度研究 Agent 的一个数据库工具能力      | 专门面向企业数据分析的问数系统                                           |
-| 数据规模   | 三张教学业务表                           | 数仓表、元数据表、字段、指标、字段取值                                   |
-| 上下文获取 | 运行时直接看表名和样例数据               | 先构建元数据知识库，再按问题召回相关上下文                               |
-| 检索能力   | 主要依赖 MySQL 工具返回的表结构和样例    | Qdrant 召回字段/指标，Elasticsearch 检索字段取值                         |
-| 流程编排   | DeepAgents 子智能体自行决定工具调用      | LangGraph 拆成关键词抽取、召回、过滤、补全、生成、校验、纠错、执行等节点 |
-| 数据访问层 | `mysql.connector` 直接连接查询           | SQLAlchemy + asyncmy + Session + Repository 分层                         |
-| 适合场景   | 小型数据库查询、教学演示、Agent 工具接入 | 可扩展的企业问数、复杂指标和数仓语义理解                                 |
+{% autogrid data-grid-link-table nofix %}
+对比维度|深度研搜数据库助手|电商问数
+项目定位|深度研究 Agent 的一个数据库工具能力|专门面向企业数据分析的问数系统
+数据规模|三张教学业务表|数仓表、元数据表、字段、指标、字段取值
+上下文获取|运行时直接看表名和样例数据|先构建元数据知识库，再按问题召回相关上下文
+检索能力|主要依赖 MySQL 工具返回的表结构和样例|Qdrant 召回字段/指标，Elasticsearch 检索字段取值
+流程编排|DeepAgents 子智能体自行决定工具调用|LangGraph 拆成关键词抽取、召回、过滤、补全、生成、校验、纠错、执行等节点
+数据访问层|`mysql.connector` 直接连接查询|SQLAlchemy + asyncmy + Session + Repository 分层
+适合场景|小型数据库查询、教学演示、Agent 工具接入|可扩展的企业问数、复杂指标和数仓语义理解
+{% endautogrid %}
 
 如果前面学过「电商问数」，这里可以这样理解：**只查三张固定表时，电商问数那套工程会显得偏重；但要做完整问数系统时，深度研搜这里的小工具方案又会显得太轻。**
 

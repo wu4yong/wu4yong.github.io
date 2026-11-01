@@ -66,10 +66,11 @@ tags:
 
 可以先把它理解成两条通道：
 
-| 通道      | 负责什么                         | 本章对应接口                                                        |
-| --------- | -------------------------------- | ------------------------------------------------------------------- |
-| HTTP      | 发命令、传文件、查文件、下载文件 | `/api/task`、`/api/upload`、`/api/files`、`/api/download`、取消接口 |
-| WebSocket | 回传实时进度和最终结果           | `/ws/{thread_id}`                                                   |
+{% autogrid data-grid-link-table nofix %}
+通道|负责什么|本章对应接口
+HTTP|发命令、传文件、查文件、下载文件|`/api/task`、`/api/upload`、`/api/files`、`/api/download`、取消接口
+WebSocket|回传实时进度和最终结果|`/ws/{thread_id}`
+{% endautogrid %}
 
 HTTP 更像“我现在要做什么”，WebSocket 更像“后端现在做到哪一步了”。
 
@@ -77,14 +78,15 @@ HTTP 更像“我现在要做什么”，WebSocket 更像“后端现在做到�
 
 先把六个入口放在一张表里：
 
-| 前端动作         | 后端接口                            | 作用                           |
-| ---------------- | ----------------------------------- | ------------------------------ |
-| 页面打开或刷新   | `WebSocket /ws/{thread_id}`         | 建立长连接，实时接收执行进度   |
-| 用户点击发送     | `POST /api/task`                    | 启动一次主智能体任务           |
-| 用户点击取消     | `POST /api/task/{thread_id}/cancel` | 取消指定会话里正在执行的任务   |
-| 用户上传附件     | `POST /api/upload`                  | 把一个或多个文件暂存到当前会话 |
-| 前端刷新文件列表 | `GET /api/files`                    | 查询当前会话输出目录下的文件   |
-| 用户点击下载     | `GET /api/download`                 | 下载指定输出文件               |
+{% autogrid data-grid-link-table nofix %}
+前端动作|后端接口|作用
+页面打开或刷新|`WebSocket /ws/{thread_id}`|建立长连接，实时接收执行进度
+用户点击发送|`POST /api/task`|启动一次主智能体任务
+用户点击取消|`POST /api/task/{thread_id}/cancel`|取消指定会话里正在执行的任务
+用户上传附件|`POST /api/upload`|把一个或多个文件暂存到当前会话
+前端刷新文件列表|`GET /api/files`|查询当前会话输出目录下的文件
+用户点击下载|`GET /api/download`|下载指定输出文件
+{% endautogrid %}
 
 这里最容易误解的是 `/api/task`。它返回 `started` 并不代表任务已经执行完，只代表任务已经被交给后台协程。后续的工具调用、子智能体调用、最终回答和异常，都要看 WebSocket 推送。
 
@@ -127,24 +129,26 @@ sequenceDiagram
 
 读图时抓住四个点进行了解：
 
-| 编号 | 动作             | 要点                                                       |
-| ---- | ---------------- | ---------------------------------------------------------- |
-| 1    | 建立 WebSocket   | 先把当前会话的连接存起来                                   |
-| 2    | 调用 `/api/task` | HTTP 只启动任务，不等最终结果                              |
-| 3    | 后台执行主智能体 | `run_deep_agent()` 写入上下文并调用 `main_agent.astream()` |
-| 4    | 推送实时事件     | 工具、子智能体、结果和异常都通过 WebSocket 回前端          |
+{% autogrid data-grid-link-table nofix %}
+编号|动作|要点
+1|建立 WebSocket|先把当前会话的连接存起来
+2|调用 `/api/task`|HTTP 只启动任务，不等最终结果
+3|后台执行主智能体|`run_deep_agent()` 写入上下文并调用 `main_agent.astream()`
+4|推送实时事件|工具、子智能体、结果和异常都通过 WebSocket 回前端
+{% endautogrid %}
 
 ### 1.3 thread_id 是整条链路的钥匙
 
 本章里会反复看到 `thread_id`。它不是随便起的字符串，而是把几件事串在一起的同一个会话 ID：
 
-| 用在什么地方                  | 作用                           |
-| ----------------------------- | ------------------------------ |
-| WebSocket                     | 找到当前页面的长连接           |
-| `active_tasks`                | 找到当前会话正在执行的后台任务 |
-| `output/session_{thread_id}`  | 隔离本次任务的输出目录         |
-| `updated/session_{thread_id}` | 隔离本次任务上传的附件         |
-| LangGraph checkpointer        | 区分同一会话的执行上下文       |
+{% autogrid data-grid-link-table nofix %}
+用在什么地方|作用
+WebSocket|找到当前页面的长连接
+`active_tasks`|找到当前会话正在执行的后台任务
+`output/session_{thread_id}`|隔离本次任务的输出目录
+`updated/session_{thread_id}`|隔离本次任务上传的附件
+LangGraph checkpointer|区分同一会话的执行上下文
+{% endautogrid %}
 
 如果没有 `thread_id`，前端页面、后台任务、生成文件和 WebSocket 消息就很容易串台。
 
@@ -217,12 +221,13 @@ updated_dir.mkdir(exist_ok=True)
 
 这一段里最重要的是四个对象：
 
-| 对象           | 作用                                                               |
-| -------------- | ------------------------------------------------------------------ |
-| `lifespan`     | 服务生命周期入口，启动时把 FastAPI 事件循环绑定到 WebSocket 管理器 |
-| `active_tasks` | 保存 `thread_id -> asyncio.Task`，后面取消任务要靠它找任务         |
-| `updated/`     | 项目里的上传暂存目录，用户上传的附件先放这里                       |
-| `output/`      | 每个会话最终工作区，生成的 Markdown、PDF 和复制后的附件都在这里    |
+{% autogrid data-grid-link-table nofix %}
+对象|作用
+`lifespan`|服务生命周期入口，启动时把 FastAPI 事件循环绑定到 WebSocket 管理器
+`active_tasks`|保存 `thread_id -> asyncio.Task`，后面取消任务要靠它找任务
+`updated/`|项目里的上传暂存目录，用户上传的附件先放这里
+`output/`|每个会话最终工作区，生成的 Markdown、PDF 和复制后的附件都在这里
+{% endautogrid %}
 
 `updated` 这个名字容易让人以为是“更新后的文件”，在本项目里可以直接理解成“upload staging”，也就是上传文件的临时落点。真正给前端浏览和下载的是 `output`。
 
@@ -380,10 +385,11 @@ asyncio.run(run_deep_agent(request.query, thread_id))
 
 原因很简单：FastAPI/uvicorn 已经在运行事件循环了。`asyncio.run()` 的职责是创建一个新的事件循环并运行协程，它适合脚本入口，不适合放在一个已经处于事件循环里的接口函数中。
 
-| 写法                        | 做什么                         | 是否适合本接口              |
-| --------------------------- | ------------------------------ | --------------------------- |
-| `asyncio.run(coro)`         | 创建事件循环并跑完协程         | 不适合，FastAPI 已经有 loop |
-| `asyncio.create_task(coro)` | 把协程放进当前事件循环后台执行 | 适合                        |
+{% autogrid data-grid-link-table nofix %}
+写法|做什么|是否适合本接口
+`asyncio.run(coro)`|创建事件循环并跑完协程|不适合，FastAPI 已经有 loop
+`asyncio.create_task(coro)`|把协程放进当前事件循环后台执行|适合
+{% endautogrid %}
 
 可以这样理解：
 
@@ -464,10 +470,11 @@ except asyncio.CancelledError:
 
 这里有两个目录：
 
-| 目录                          | 什么时候写入             | 谁读取                              |
-| ----------------------------- | ------------------------ | ----------------------------------- |
-| `updated/session_{thread_id}` | 用户上传文件时写入       | `run_deep_agent()` 启动时读取并复制 |
-| `output/session_{thread_id}`  | 主智能体执行时创建和写入 | 前端查询文件列表、浏览器下载文件    |
+{% autogrid data-grid-link-table nofix %}
+目录|什么时候写入|谁读取
+`updated/session_{thread_id}`|用户上传文件时写入|`run_deep_agent()` 启动时读取并复制
+`output/session_{thread_id}`|主智能体执行时创建和写入|前端查询文件列表、浏览器下载文件
+{% endautogrid %}
 
 ### 4.1 图示：文件从上传到下载
 
@@ -520,10 +527,11 @@ async def upload_files(files: List[UploadFile] = File(...), thread_id: str = For
 
 请求参数很简单：
 
-| 参数        | 类型     | 是否必填 | 说明               |
-| ----------- | -------- | -------- | ------------------ |
-| `files`     | `file[]` | 是       | 一个或多个上传文件 |
-| `thread_id` | `string` | 是       | 当前会话 ID        |
+{% autogrid data-grid-link-table nofix %}
+参数|类型|是否必填|说明
+`files`|`file[]`|是|一个或多个上传文件
+`thread_id`|`string`|是|当前会话 ID
+{% endautogrid %}
 
 上传完成后，文件先保存在：
 
@@ -604,12 +612,13 @@ GET /api/files?path=/.../output/session_xxx
 
 返回的每个文件会带上：
 
-| 字段    | 作用                          |
-| ------- | ----------------------------- |
-| `name`  | 文件名，例如 `机器人信息.pdf` |
-| `path`  | 下载接口需要用到的真实路径    |
-| `size`  | 文件大小                      |
-| `mtime` | 修改时间，用于排序            |
+{% autogrid data-grid-link-table nofix %}
+字段|作用
+`name`|文件名，例如 `机器人信息.pdf`
+`path`|下载接口需要用到的真实路径
+`size`|文件大小
+`mtime`|修改时间，用于排序
+{% endautogrid %}
 
 ### 4.4 路径安全检查为什么必须保留
 
@@ -760,14 +769,15 @@ else:
 
 常见事件如下：
 
-| event             | 触发时机             | data 示例                                           |
-| ----------------- | -------------------- | --------------------------------------------------- |
-| `session_created` | 工作目录创建成功     | `{"path": ".../output/session_xxx"}`                |
-| `tool_start`      | 工具开始执行         | `{"tool_name": "网络搜索工具", "args": {...}}`      |
-| `assistant_call`  | 主智能体调用子智能体 | `{"assistant_name": "网络搜索助手", "args": {...}}` |
-| `task_result`     | 任务完成             | `{"result": "最终回答..."}`                         |
-| `task_cancelled`  | 任务被用户取消       | `{}`                                                |
-| `error`           | 执行异常             | `{}`                                                |
+{% autogrid data-grid-link-table nofix %}
+event|触发时机|data 示例
+`session_created`|工作目录创建成功|`{"path": ".../output/session_xxx"}`
+`tool_start`|工具开始执行|`{"tool_name": "网络搜索工具", "args": {...}}`
+`assistant_call`|主智能体调用子智能体|`{"assistant_name": "网络搜索助手", "args": {...}}`
+`task_result`|任务完成|`{"result": "最终回答..."}`
+`task_cancelled`|任务被用户取消|`{}`
+`error`|执行异常|`{}`
+{% endautogrid %}
 
 前端只需要根据 `event` 做不同展示：
 
@@ -853,10 +863,11 @@ else:
 
 在普通本地调试里，你可能感觉所有代码都跑在一个地方。但真实运行中，FastAPI、异步流式执行、工具调用、第三方库封装之间可能有不同的执行上下文。WebSocket 发送动作最好回到它创建时所在的 loop。
 
-| 情况                                     | 做法                                                        |
-| ---------------------------------------- | ----------------------------------------------------------- |
-| 当前 loop 就是 WebSocket 所在 loop       | `current_loop.create_task(coroutine)`                       |
-| 当前不在同一个 loop，或没有 running loop | `asyncio.run_coroutine_threadsafe(coroutine, manager_loop)` |
+{% autogrid data-grid-link-table nofix %}
+情况|做法
+当前 loop 就是 WebSocket 所在 loop|`current_loop.create_task(coroutine)`
+当前不在同一个 loop，或没有 running loop|`asyncio.run_coroutine_threadsafe(coroutine, manager_loop)`
+{% endautogrid %}
 
 `run_coroutine_threadsafe()` 可以理解成：
 
@@ -1011,16 +1022,17 @@ GET /api/download?path=.../机器人信息.pdf
 
 这条链路里，每一层都有明确分工：
 
-| 层次       | 主要内容                                                                            |
-| ---------- | ----------------------------------------------------------------------------------- |
-| 配置层     | `.env`、`prompts.yml`、`llm.py`、`prompts.py`，集中管理模型、提示词和外部服务配置   |
-| 上下文层   | `context.py` 保存 `thread_id` 和 `session_dir`，让深层工具不用层层传参              |
-| 监控层     | `monitor.py` 统一包装 `tool_start`、`assistant_call`、`task_result`、`error` 等事件 |
-| 专家层     | 网络搜索助手、数据库查询助手、RAGFlow 知识库助手，各自只处理一种信息来源            |
-| 工具层     | Tavily、MySQL、RAGFlow、文件读取、Markdown 生成、PDF 转换等真实能力                 |
-| 主智能体层 | `main_agent.py` 负责统筹任务、选择助手、汇总信息和调用文件工具                      |
-| API 层     | `server.py` 提供任务启动、取消、上传、文件列表、下载和 WebSocket 连接               |
-| 前端层     | 发送任务、上传文件、展示实时事件、查看和下载最终产物                                |
+{% autogrid data-grid-link-table nofix %}
+层次|主要内容
+配置层|`.env`、`prompts.yml`、`llm.py`、`prompts.py`，集中管理模型、提示词和外部服务配置
+上下文层|`context.py` 保存 `thread_id` 和 `session_dir`，让深层工具不用层层传参
+监控层|`monitor.py` 统一包装 `tool_start`、`assistant_call`、`task_result`、`error` 等事件
+专家层|网络搜索助手、数据库查询助手、RAGFlow 知识库助手，各自只处理一种信息来源
+工具层|Tavily、MySQL、RAGFlow、文件读取、Markdown 生成、PDF 转换等真实能力
+主智能体层|`main_agent.py` 负责统筹任务、选择助手、汇总信息和调用文件工具
+API 层|`server.py` 提供任务启动、取消、上传、文件列表、下载和 WebSocket 连接
+前端层|发送任务、上传文件、展示实时事件、查看和下载最终产物
+{% endautogrid %}
 
 这也是本项目和普通 RAG 示例最大的区别：它不是单一路径的“检索后回答”，而是把公开网络、结构化数据库、私有知识库和临时上传文件都放进了同一条可运行的研究链路里。
 
@@ -1083,16 +1095,17 @@ DeepAgents 会根据子智能体的描述决定是否调用它。网络搜索助
 
 如果要继续把「深度研搜」往生产级方向推进，可以沿着这些方向加能力：
 
-| 方向       | 可以继续补充的能力                                                         |
-| ---------- | -------------------------------------------------------------------------- |
-| 任务队列   | 把后台任务交给队列系统，支持排队、重试、超时和失败恢复                     |
-| 权限控制   | 用户只能查看自己的任务、上传文件和生成文件                                 |
-| 文件治理   | 增加大小限制、类型校验、对象存储、过期清理和下载鉴权                       |
-| SQL 安全   | 限制只读查询、表名白名单、查询超时、结果行数上限                           |
-| 事件持久化 | 保存 WebSocket 历史事件，前端刷新后可以恢复进度                            |
-| 评测体系   | 构建任务集，评估搜索质量、数据库查询准确率、知识库回答质量和文件生成成功率 |
-| 生产部署   | 容器化部署，接入日志平台、监控告警、链路追踪和配置中心                     |
-| 前端体验   | 增加任务历史、文件预览、事件筛选、结果对比和报告编辑                       |
+{% autogrid data-grid-link-table nofix %}
+方向|可以继续补充的能力
+任务队列|把后台任务交给队列系统，支持排队、重试、超时和失败恢复
+权限控制|用户只能查看自己的任务、上传文件和生成文件
+文件治理|增加大小限制、类型校验、对象存储、过期清理和下载鉴权
+SQL 安全|限制只读查询、表名白名单、查询超时、结果行数上限
+事件持久化|保存 WebSocket 历史事件，前端刷新后可以恢复进度
+评测体系|构建任务集，评估搜索质量、数据库查询准确率、知识库回答质量和文件生成成功率
+生产部署|容器化部署，接入日志平台、监控告警、链路追踪和配置中心
+前端体验|增加任务历史、文件预览、事件筛选、结果对比和报告编辑
+{% endautogrid %}
 
 这些扩展都不是推翻当前架构，而是在当前架构上继续加层。只要 `thread_id`、`session_dir`、主从智能体分工、工具边界和事件协议这些基础设计保住，项目就有继续生长的空间。
 

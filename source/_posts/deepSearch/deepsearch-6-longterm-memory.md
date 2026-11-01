@@ -44,10 +44,11 @@ DeepAgents 后端存储：https://docs.langchain.com/oss/python/deepagents/backe
 
 短期记忆和长期记忆的核心区别，不是“一个保存时间短，一个保存时间长”，而是**保存的内容不同**。
 
-| 类型     | 主要保存什么                             | 典型用途                   | 本章对应概念   |
-| -------- | ---------------------------------------- | -------------------------- | -------------- |
-| 短期记忆 | 一次调用的执行过程、节点状态、中断位置   | 人机协作中断恢复、流程续跑 | `checkpointer` |
-| 长期记忆 | 一次或多次会话产生的结果、文件、用户偏好 | 跨线程、跨会话共享信息     | `Backend`      |
+{% autogrid data-grid-link-table nofix %}
+类型|主要保存什么|典型用途|本章对应概念
+短期记忆|一次调用的执行过程、节点状态、中断位置|人机协作中断恢复、流程续跑|`checkpointer`
+长期记忆|一次或多次会话产生的结果、文件、用户偏好|跨线程、跨会话共享信息|`Backend`
+{% endautogrid %}
 
 所以，即使把短期记忆存到 Redis 或数据库里，只要它保存的是“一次执行流程到哪一步了”，它仍然是短期记忆。反过来，`InMemoryStore` 虽然也存在内存里，但它保存的是 `user_profile.txt` 这类文件式结果，因此在语义上属于长期记忆的一种实现。
 
@@ -62,22 +63,24 @@ gent 仍然通过文件系统工具读写文件，但文件不一定真的落在
 
 这里需要先明确一点：Backend 不是“自动保存所有聊天记录”。它通常是被文件工具触发的。
 
-| Agent 行为                                                                   | Backend 是否参与     |
-| ---------------------------------------------------------------------------- | -------------------- |
-| 普通聊天回复                                                                 | 通常不参与           |
-| 模型内部思考或规划                                                           | 不会自动写入 Backend |
-| 调用 `ls`、`read_file`、`write_file`、`edit_file`、`glob`、`grep` 等文件工具 | 会由 Backend 处理    |
+{% autogrid data-grid-link-table nofix %}
+Agent 行为|Backend 是否参与
+普通聊天回复|通常不参与
+模型内部思考或规划|不会自动写入 Backend
+调用 `ls`、`read_file`、`write_file`、`edit_file`、`glob`、`grep` 等文件工具|会由 Backend 处理
+{% endautogrid %}
 
 也就是说，只有当 Agent 显式进行文件读写时，Backend 才会决定这些虚拟文件最终落到哪里。普通问答如果没有触发文件工具，就不会自动沉淀成长期记忆。
 
 本章主要关注下面四类 Backend：
 
-| Backend             | 存储位置     | 生命周期                       | 适合场景                       |
-| ------------------- | ------------ | ------------------------------ | ------------------------------ |
-| `StateBackend`      | 当前运行状态 | 同一 `thread` 内可随检查点保留 | 默认临时文件、中间结果         |
-| `FilesystemBackend` | 本地磁盘     | 文件长期存在于本机             | 本地调试、生成报告、查看文件   |
-| `StoreBackend`      | KV Store     | 取决于 Store 实现              | 跨线程共享、长期记忆、生产存储 |
-| `CompositeBackend`  | 混合路由     | 按路由决定                     | 不同路径走不同存储、生产项目   |
+{% autogrid data-grid-link-table nofix %}
+Backend|存储位置|生命周期|适合场景
+`StateBackend`|当前运行状态|同一 `thread` 内可随检查点保留|默认临时文件、中间结果
+`FilesystemBackend`|本地磁盘|文件长期存在于本机|本地调试、生成报告、查看文件
+`StoreBackend`|KV Store|取决于 Store 实现|跨线程共享、长期记忆、生产存储
+`CompositeBackend`|混合路由|按路由决定|不同路径走不同存储、生产项目
+{% endautogrid %}
 
 后面三个代码示例会分别演示 `FilesystemBackend`、`StoreBackend` 和 `CompositeBackend`。`StateBackend` 是默认临时后端，前面第 2 节会单独说明，不再写独立示例。
 
@@ -87,11 +90,12 @@ gent 仍然通过文件系统工具读写文件，但文件不一定真的落在
 
 对应到代码，本章主要看三个示例：
 
-| 文件                                       | 主题                | 说明                       |
-| ------------------------------------------ | ------------------- | -------------------------- |
-| `10-filesystem-backend-memory.py`          | `FilesystemBackend` | 把 Agent 文件写入本地目录  |
-| `11-store-backend-cross-session-memory.py` | `StoreBackend`      | 把文件操作映射到 KV Store  |
-| `12-composite-backend-routing.py`          | `CompositeBackend`  | 根据路径前缀路由到不同存储 |
+{% autogrid data-grid-link-table nofix %}
+文件|主题|说明
+`10-filesystem-backend-memory.py`|`FilesystemBackend`|把 Agent 文件写入本地目录
+`11-store-backend-cross-session-memory.py`|`StoreBackend`|把文件操作映射到 KV Store
+`12-composite-backend-routing.py`|`CompositeBackend`|根据路径前缀路由到不同存储
+{% endautogrid %}
 
 ---
 
@@ -121,10 +125,11 @@ gent 仍然通过文件系统工具读写文件，但文件不一定真的落在
 
 第 5 章用过 `InMemorySaver`，本章会用到 `InMemoryStore`。它们名字很像，而且都可以把数据放在 Python 进程内存里，但语义完全不同。
 
-| 对象            | 用在哪里       | 保存什么                           | 记忆类型           |
-| --------------- | -------------- | ---------------------------------- | ------------------ |
-| `InMemorySaver` | `checkpointer` | Agent 执行过程、中断位置、恢复状态 | 短期记忆           |
-| `InMemoryStore` | `StoreBackend` | 文件式结果、用户信息、长期偏好     | 长期记忆的一种实现 |
+{% autogrid data-grid-link-table nofix %}
+对象|用在哪里|保存什么|记忆类型
+`InMemorySaver`|`checkpointer`|Agent 执行过程、中断位置、恢复状态|短期记忆
+`InMemoryStore`|`StoreBackend`|文件式结果、用户信息、长期偏好|长期记忆的一种实现
+{% endautogrid %}
 
 所以判断一段“记忆”属于短期还是长期，不要只看它是不是存在内存里，而要看它保存的是什么。
 
@@ -141,12 +146,13 @@ Backend 关注的是 Agent 的文件读写结果。
 
 可以这样区分：
 
-| 对比项   | checkpointer           | Backend                      |
-| -------- | ---------------------- | ---------------------------- |
-| 主要作用 | 保存执行过程状态       | 保存文件和长期信息           |
-| 生命周期 | 通常服务于一次线程恢复 | 可以跨线程、跨会话存在       |
-| 典型用途 | 人机协作中断恢复       | 报告文件、用户画像、长期记忆 |
-| 关注对象 | Agent 执行状态         | Agent 文件系统               |
+{% autogrid data-grid-link-table nofix %}
+对比项|checkpointer|Backend
+主要作用|保存执行过程状态|保存文件和长期信息
+生命周期|通常服务于一次线程恢复|可以跨线程、跨会话存在
+典型用途|人机协作中断恢复|报告文件、用户画像、长期记忆
+关注对象|Agent 执行状态|Agent 文件系统
+{% endautogrid %}
 
 ### 2.4 StateBackend：默认的临时文件后端
 
@@ -204,10 +210,11 @@ file_backend = FilesystemBackend(
 
 这里有两个关键参数：
 
-| 参数                | 说明                                          |
-| ------------------- | --------------------------------------------- |
-| `root_dir`          | 本地文件实际存储目录                          |
-| `virtual_mode=True` | 开启虚拟沙箱模式，限制 Agent 只能访问指定目录 |
+{% autogrid data-grid-link-table nofix %}
+参数|说明
+`root_dir`|本地文件实际存储目录
+`virtual_mode=True`|开启虚拟沙箱模式，限制 Agent 只能访问指定目录
+{% endautogrid %}
 
 `virtual_mode=True` 很重要。它可以避免 Agent 随意读写项目之外的文件。
 
@@ -278,11 +285,12 @@ Java 是一种广泛使用的面向对象的编程语言......适用于桌面、
 
 看这段输出时，抓住下面几个现象就够了：
 
-| 输出片段                                | 代表的含义                                                      |
-| --------------------------------------- | --------------------------------------------------------------- |
-| `第 1 次调用：用户没有明确要求创建文件` | 只是普通问答，Agent 不应该主动创建文件                          |
-| `第 2 次调用：用户明确要求创建文件`     | 用户明确要求写入 `java.txt`，文件工具才会被使用                 |
-| `这是写入到 java.txt 文件中的...`       | `FilesystemBackend` 已把 Agent 的文件写入动作映射到本地工作目录 |
+{% autogrid data-grid-link-table nofix %}
+输出片段|代表的含义
+`第 1 次调用：用户没有明确要求创建文件`|只是普通问答，Agent 不应该主动创建文件
+`第 2 次调用：用户明确要求创建文件`|用户明确要求写入 `java.txt`，文件工具才会被使用
+`这是写入到 java.txt 文件中的...`|`FilesystemBackend` 已把 Agent 的文件写入动作映射到本地工作目录
+{% endautogrid %}
 
 ### 3.6 适用场景与限制
 
@@ -335,12 +343,13 @@ value = {'content': 'Name: 乌萨奇\nAge: 16', 'encoding': 'utf-8', ...}
 
 `StoreBackend` 本身更像一个适配器：它负责把“读写文件”转换成“读写 Store”。真正存到哪里，取决于传进去的 `store` 是什么。
 
-| Store 类型      | 实际保存位置         |
-| --------------- | -------------------- |
-| `InMemoryStore` | 当前 Python 进程内存 |
-| Redis Store     | Redis                |
-| Postgres Store  | Postgres 数据库      |
-| 自定义 Store    | 企业自己的存储系统   |
+{% autogrid data-grid-link-table nofix %}
+Store 类型|实际保存位置
+`InMemoryStore`|当前 Python 进程内存
+Redis Store|Redis
+Postgres Store|Postgres 数据库
+自定义 Store|企业自己的存储系统
+{% endautogrid %}
 
 本章示例使用的是 `InMemoryStore`，所以数据保存在当前 Python 进程内存中，程序退出后会丢失。生产环境如果需要真正持久化，可以替换成 Redis、Postgres 或其他支持的 Store 实现。
 
@@ -390,12 +399,13 @@ main_agent = create_deep_agent(
 
 可以先这样理解：
 
-| namespace 设计     | 记忆共享范围               | 适合场景           |
-| ------------------ | -------------------------- | ------------------ |
-| 按用户隔离         | 同一个用户的不同会话共享   | 用户偏好、个人资料 |
-| 按助手隔离         | 同一个助手下的用户共享     | 公共说明、团队知识 |
-| 按 thread 隔离     | 只在当前会话内共享         | 会话草稿、临时资料 |
-| 用户 + thread 组合 | 同一用户的某个会话独立保存 | 更细粒度的会话记忆 |
+{% autogrid data-grid-link-table nofix %}
+namespace 设计|记忆共享范围|适合场景
+按用户隔离|同一个用户的不同会话共享|用户偏好、个人资料
+按助手隔离|同一个助手下的用户共享|公共说明、团队知识
+按 thread 隔离|只在当前会话内共享|会话草稿、临时资料
+用户 + thread 组合|同一用户的某个会话独立保存|更细粒度的会话记忆
+{% endautogrid %}
 
 本章示例为了演示方便，没有展开 `namespace` 配置。真实的多用户系统中，建议显式设置隔离范围，避免不同用户的记忆串在一起。
 
@@ -475,12 +485,13 @@ value = {'content': 'Name: 乌萨奇\nAge: 16', 'encoding': 'utf-8', ...}
 
 这段输出对应的含义如下：
 
-| 输出片段                              | 代表的含义                                                      |
-| ------------------------------------- | --------------------------------------------------------------- |
-| `第一次回复结果：我已经记录...`       | 线程 A 根据用户信息写入 `user_profile.txt`                      |
-| `key = /user_profile.txt`             | `StoreBackend` 把文件路径映射成 Store 里的 key                  |
-| `Name: 乌萨奇\nAge: 16`               | 文件内容被保存成 Store 里的 value                               |
-| `第二次回复结果：您的名字是乌萨奇...` | 线程 B 能读到线程 A 写入的信息，说明记忆已经跨 `thread_id` 共享 |
+{% autogrid data-grid-link-table nofix %}
+输出片段|代表的含义
+`第一次回复结果：我已经记录...`|线程 A 根据用户信息写入 `user_profile.txt`
+`key = /user_profile.txt`|`StoreBackend` 把文件路径映射成 Store 里的 key
+`Name: 乌萨奇\nAge: 16`|文件内容被保存成 Store 里的 value
+`第二次回复结果：您的名字是乌萨奇...`|线程 B 能读到线程 A 写入的信息，说明记忆已经跨 `thread_id` 共享
+{% endautogrid %}
 
 ### 4.7 为什么继续使用文件路径
 
@@ -565,10 +576,11 @@ def create_composite_backend(runtime):
 
 这里有两个路由规则：
 
-| 路径                 | 后端                |
-| -------------------- | ------------------- |
-| 普通路径             | `FilesystemBackend` |
-| `/store/` 开头的路径 | `StoreBackend`      |
+{% autogrid data-grid-link-table nofix %}
+路径|后端
+普通路径|`FilesystemBackend`
+`/store/` 开头的路径|`StoreBackend`
+{% endautogrid %}
 
 也就是说：
 
@@ -660,12 +672,13 @@ Item(namespace=['filesystem'], key='/memory.txt', value={'content': '重要记�
 
 这段输出里，最关键的是最后一行：
 
-| 输出片段                             | 代表的含义                                     |
-| ------------------------------------ | ---------------------------------------------- |
-| `local.txt`                          | 普通路径命中默认后端，写入 `FilesystemBackend` |
-| `/store/memory.txt`                  | `/store/` 前缀命中 Store 路由                  |
-| `key='/memory.txt'`                  | 进入 Store 时，路由前缀 `/store/` 被剥离       |
-| `value={'content': '重要记忆', ...}` | 重要记忆确实保存到了 Store 中                  |
+{% autogrid data-grid-link-table nofix %}
+输出片段|代表的含义
+`local.txt`|普通路径命中默认后端，写入 `FilesystemBackend`
+`/store/memory.txt`|`/store/` 前缀命中 Store 路由
+`key='/memory.txt'`|进入 Store 时，路由前缀 `/store/` 被剥离
+`value={'content': '重要记忆', ...}`|重要记忆确实保存到了 Store 中
+{% endautogrid %}
 
 这个例子验证了 `CompositeBackend` 的核心价值：同一个 Agent 仍然用“写文件”的方式工作，但不同路径可以进入不同存储后端。普通交付物落本地，长期记忆进 Store。
 

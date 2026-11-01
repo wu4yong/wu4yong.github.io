@@ -47,20 +47,22 @@ Agent 先正常规划任务；一旦遇到被 `interrupt_on` 标记的高风险�
 
 先把本章会反复出现的几个词对齐一下：
 
-| 名称                  | 可以先这样理解                              |
-| --------------------- | ------------------------------------------- |
-| `interrupt_on`        | 哪些工具需要在执行前停下来，交给人工审批    |
-| `checkpointer`        | 保存“Agent 暂停在哪里”的短期状态            |
-| `thread_id`           | 找回同一次执行线程的 ID，恢复时必须保持一致 |
-| `__interrupt__`       | 第一次执行后返回的中断信息                  |
-| `Command(resume=...)` | 第二次恢复执行时传入的恢复指令              |
+{% autogrid data-grid-link-table nofix %}
+名称|可以先这样理解
+`interrupt_on`|哪些工具需要在执行前停下来，交给人工审批
+`checkpointer`|保存“Agent 暂停在哪里”的短期状态
+`thread_id`|找回同一次执行线程的 ID，恢复时必须保持一致
+`__interrupt__`|第一次执行后返回的中断信息
+`Command(resume=...)`|第二次恢复执行时传入的恢复指令
+{% endautogrid %}
 
 本章主要对应两个示例文件：
 
-| 文件                                   | 主题       | 说明                                 |
-| -------------------------------------- | ---------- | ------------------------------------ |
-| `8-human-approval-interrupt-resume.py` | 中断与审批 | 配置高危工具中断，人工确认后恢复执行 |
-| `9-human-edit-tool-args-resume.py`     | 编辑参数   | 人工修改工具参数后再恢复执行         |
+{% autogrid data-grid-link-table nofix %}
+文件|主题|说明
+`8-human-approval-interrupt-resume.py`|中断与审批|配置高危工具中断，人工确认后恢复执行
+`9-human-edit-tool-args-resume.py`|编辑参数|人工修改工具参数后再恢复执行
+{% endautogrid %}
 
 ---
 
@@ -70,12 +72,13 @@ Agent 先正常规划任务；一旦遇到被 `interrupt_on` 标记的高风险�
 
 实际开发中，可以先按 `CRUD` 思路来判断工具风险。
 
-| 类型     | 含义           | 是否通常需要审批 |
-| -------- | -------------- | ---------------- |
-| `Create` | 创建数据或资源 | 视情况而定       |
-| `Read`   | 查询、读取数据 | 通常不需要       |
-| `Update` | 修改数据或配置 | 通常需要         |
-| `Delete` | 删除数据或资源 | 强烈建议需要     |
+{% autogrid data-grid-link-table nofix %}
+类型|含义|是否通常需要审批
+`Create`|创建数据或资源|视情况而定
+`Read`|查询、读取数据|通常不需要
+`Update`|修改数据或配置|通常需要
+`Delete`|删除数据或资源|强烈建议需要
+{% endautogrid %}
 
 比如 `select_database` 只是查询数据，一般不需要审批。
 
@@ -333,12 +336,13 @@ uv run examples/8-human-approval-interrupt-resume.py
 
 以这次输出为例，几行关键日志分别对应下面几件事：
 
-| 输出片段                                               | 代表的含义                                                          |
-| ------------------------------------------------------ | ------------------------------------------------------------------- |
-| `本次需要审核的工具数量：2`                            | 本轮有两个工具调用被拦截，分别是 `delete_database` 和 `delete_file` |
-| `调用 select_database 工具，查询 product 表数据`       | 查询工具没有配置中断，所以可以直接执行                              |
-| `调用 delete_file 工具，准备删除 zhaoweifeng.txt 文件` | 恢复执行后，`delete_file` 收到 `approve` 决策，所以继续执行         |
-| `删除 user 表的操作被拒绝了`                           | `delete_database` 收到 `reject` 决策，危险删除动作没有真正执行      |
+{% autogrid data-grid-link-table nofix %}
+输出片段|代表的含义
+`本次需要审核的工具数量：2`|本轮有两个工具调用被拦截，分别是 `delete_database` 和 `delete_file`
+`调用 select_database 工具，查询 product 表数据`|查询工具没有配置中断，所以可以直接执行
+`调用 delete_file 工具，准备删除 zhaoweifeng.txt 文件`|恢复执行后，`delete_file` 收到 `approve` 决策，所以继续执行
+`删除 user 表的操作被拒绝了`|`delete_database` 收到 `reject` 决策，危险删除动作没有真正执行
+{% endautogrid %}
 
 所以本节示例的主线可以理解为：
 
@@ -367,11 +371,12 @@ uv run examples/8-human-approval-interrupt-resume.py
 
 上一节已经跑通了中断恢复。现在再把人工可以做的三类决策单独拆开看。
 
-| 决策类型  | 含义                     | 适合场景                               |
-| --------- | ------------------------ | -------------------------------------- |
-| `approve` | 按模型原计划继续执行工具 | 工具和参数都没问题，人工确认可以执行   |
-| `reject`  | 拒绝这次工具调用         | 动作风险太高，或者模型理解错了用户意图 |
-| `edit`    | 修改工具名或参数后再执行 | 工具选对了，但参数需要人工修正         |
+{% autogrid data-grid-link-table nofix %}
+决策类型|含义|适合场景
+`approve`|按模型原计划继续执行工具|工具和参数都没问题，人工确认可以执行
+`reject`|拒绝这次工具调用|动作风险太高，或者模型理解错了用户意图
+`edit`|修改工具名或参数后再执行|工具选对了，但参数需要人工修正
+{% endautogrid %}
 
 ### 4.1 approve：放行
 
@@ -469,13 +474,14 @@ uv run examples/9-human-edit-tool-args-resume.py
 
 以这次输出为例，关键日志可以这样理解：
 
-| 输出片段                                               | 代表的含义                                                             |
-| ------------------------------------------------------ | ---------------------------------------------------------------------- |
-| `本次需要审核的工具数量：2`                            | `delete_database` 和 `delete_file` 仍然会先进入人工审核                |
-| `调用 select_database 工具，查询 product 表数据`       | 查询动作不需要人工审批，仍然可以直接执行                               |
-| `调用 delete_database 工具，准备删除 archived_user 表` | `edit` 决策已经生效，工具收到的是人工改写后的 `table_name`             |
-| `调用 delete_file 工具，准备删除 zhaoweifeng.txt 文件` | `delete_file` 收到 `approve` 决策，按原计划继续执行                    |
-| `已完成以下操作`                                       | 第二次 `invoke(Command(...))` 从中断点恢复，并基于人工决策完成后续流程 |
+{% autogrid data-grid-link-table nofix %}
+输出片段|代表的含义
+`本次需要审核的工具数量：2`|`delete_database` 和 `delete_file` 仍然会先进入人工审核
+`调用 select_database 工具，查询 product 表数据`|查询动作不需要人工审批，仍然可以直接执行
+`调用 delete_database 工具，准备删除 archived_user 表`|`edit` 决策已经生效，工具收到的是人工改写后的 `table_name`
+`调用 delete_file 工具，准备删除 zhaoweifeng.txt 文件`|`delete_file` 收到 `approve` 决策，按原计划继续执行
+`已完成以下操作`|第二次 `invoke(Command(...))` 从中断点恢复，并基于人工决策完成后续流程
+{% endautogrid %}
 
 用户原始问题里说的是删除 `user` 表，但人工审批阶段把工具参数编辑成了 `archived_user`。所以真正执行工具时，传入的是编辑后的参数，而不是模型最初准备使用的参数。
 
