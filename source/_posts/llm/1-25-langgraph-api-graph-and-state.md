@@ -141,11 +141,12 @@ tags:
 
 根据 LangGraph 官方 Graph API 文档，State Schema 常见可以用 **TypedDict**、**Pydantic BaseModel**，也可以用 **dataclass**。本仓库主线案例主要用 `TypedDict`，因为它轻量、直接，和“状态就是一份 dict 快照”这件事最贴近。
 
-| State Schema 写法      | 入门理解                         | 优点                                             | 更适合的场景                                     |
-| ---------------------- | -------------------------------- | ------------------------------------------------ | ------------------------------------------------ |
-| **TypedDict**          | 带类型标注的字典结构             | 轻量、写法简单、性能开销低、很适合教学和流程状态 | 大多数 LangGraph 状态建模起步场景                |
-| **Pydantic BaseModel** | 带运行时校验和字段约束的数据模型 | 能做更强的数据校验、默认值、嵌套模型、字段说明   | 对外接口更严格、数据结构更复杂、希望失败尽早暴露 |
-| **dataclass**          | Python 数据类                    | 适合需要默认值、字段写起来更像对象属性的场景     | 需要默认值，但不想引入 Pydantic 校验成本         |
+{% autogrid data-grid-link-table nofix %}
+State Schema 写法|入门理解|优点|更适合的场景
+**TypedDict**|带类型标注的字典结构|轻量、写法简单、性能开销低、很适合教学和流程状态|大多数 LangGraph 状态建模起步场景
+**Pydantic BaseModel**|带运行时校验和字段约束的数据模型|能做更强的数据校验、默认值、嵌套模型、字段说明|对外接口更严格、数据结构更复杂、希望失败尽早暴露
+**dataclass**|Python 数据类|适合需要默认值、字段写起来更像对象属性的场景|需要默认值，但不想引入 Pydantic 校验成本
+{% endautogrid %}
 
 **怎么选更贴近真实项目？**
 
@@ -160,11 +161,12 @@ tags:
 
 原因是：**图内部真正维护的完整状态，和这张图对外暴露的输入输出接口，不一定是一回事。**
 
-| 名称              | 作用                                          | 直观理解方式                                         |
-| ----------------- | --------------------------------------------- | ---------------------------------------------------- |
-| **state_schema**  | 定义图内部完整状态空间，节点通常围绕它读写    | “图内部完整工作台上有哪些数据”                       |
-| **input_schema**  | 限制调用方 `invoke(...)` 进图时允许传哪些字段 | “外部用户进门时只能带什么材料”                       |
-| **output_schema** | 限制图执行结束后最终对外返回哪些字段          | “最终只把哪些结果交给调用方，不把内部草稿全暴露出去” |
+{% autogrid data-grid-link-table nofix %}
+名称|作用|直观理解方式
+**state_schema**|定义图内部完整状态空间，节点通常围绕它读写|“图内部完整工作台上有哪些数据”
+**input_schema**|限制调用方 `invoke(...)` 进图时允许传哪些字段|“外部用户进门时只能带什么材料”
+**output_schema**|限制图执行结束后最终对外返回哪些字段|“最终只把哪些结果交给调用方，不把内部草稿全暴露出去”
+{% endautogrid %}
 
 <!-- ![StateGraph 输入输出隔离：外部调用先经过 input_schema 过滤，内部普通节点围绕 state_schema 运行，出图时再由 output_schema 过滤返回](/assets/img/llm/23/23-2-4-1.svg) -->
 <div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/23/23-2-4-1.svg" alt="StateGraph 输入输出隔离：外部调用先经过 input_schema 过滤，内部普通节点围绕 state_schema 运行，出图时再由 output_schema 过滤返回"></div>
@@ -367,13 +369,14 @@ def my_reducer(current_value, update_value):
 <!-- ![Reducer 选型示意：默认覆盖适合最新值，add_messages 适合消息历史，operator.add 适合列表或数值累加，自定义 Reducer 适合去重和按 ID 合并](/assets/img/llm/23/23-3-8-1.png) -->
 <div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/23/23-3-8-1.png" alt="Reducer 选型示意：默认覆盖适合最新值，add_messages 适合消息历史，operator.add 适合列表或数值累加，自定义 Reducer 适合去重和按 ID 合并"></div>
 
-| 业务字段类型                                         | 更适合的 Reducer                      | 典型例子                                             |
-| ---------------------------------------------------- | ------------------------------------- | ---------------------------------------------------- |
-| 只关心最新结果                                       | 默认覆盖                              | `latest_answer`、`current_route`、`final_summary`    |
-| 聊天消息历史                                         | `add_messages`                        | `messages`、Agent 轨迹、人工修正后的消息状态         |
-| 候选列表 / 标签列表 / 文档片段列表                   | `operator.add` 或自定义去重版 Reducer | `retrieved_docs`、`tags`、`candidate_items`          |
-| 计数 / 分数 / token 成本累计                         | `operator.add`                        | `retry_count`、`total_score`、`token_cost`           |
-| 乘积、最大值、去重合并、按时间戳保留最新值等特殊逻辑 | 自定义 Reducer                        | 风险分数聚合、按 ID 合并对象列表、保留优先级最高结果 |
+{% autogrid data-grid-link-table nofix %}
+业务字段类型|更适合的 Reducer|典型例子
+只关心最新结果|默认覆盖|`latest_answer`、`current_route`、`final_summary`
+聊天消息历史|`add_messages`|`messages`、Agent 轨迹、人工修正后的消息状态
+候选列表 / 标签列表 / 文档片段列表|`operator.add` 或自定义去重版 Reducer|`retrieved_docs`、`tags`、`candidate_items`
+计数 / 分数 / token 成本累计|`operator.add`|`retry_count`、`total_score`、`token_cost`
+乘积、最大值、去重合并、按时间戳保留最新值等特殊逻辑|自定义 Reducer|风险分数聚合、按 ID 合并对象列表、保留优先级最高结果
+{% endautogrid %}
 
 实践时重点看这几条：
 
@@ -468,14 +471,15 @@ Pregel 模型里还有一个很关键的词：**Superstep**。你可以先把它
 
 这些快照通常可以理解成 **StateSnapshot**，里面最值得关注的不是只有 `values`，还包括：
 
-| 字段            | 入门理解                                                        |
-| --------------- | --------------------------------------------------------------- |
-| `values`        | 当前状态值，也就是这一刻 State 里保存了什么                     |
-| `next`          | 下一步准备执行哪些节点                                          |
-| `config`        | 这份快照对应的运行配置，通常包含 `thread_id` 和 checkpoint 信息 |
-| `metadata`      | 与快照相关的来源、步骤等元数据                                  |
-| `parent_config` | 父快照配置，用来串起历史链路                                    |
-| `interrupts`    | 当前未解决的中断信息，常见于人机协作场景                        |
+{% autogrid data-grid-link-table nofix %}
+字段|入门理解
+`values`|当前状态值，也就是这一刻 State 里保存了什么
+`next`|下一步准备执行哪些节点
+`config`|这份快照对应的运行配置，通常包含 `thread_id` 和 checkpoint 信息
+`metadata`|与快照相关的来源、步骤等元数据
+`parent_config`|父快照配置，用来串起历史链路
+`interrupts`|当前未解决的中断信息，常见于人机协作场景
+{% endautogrid %}
 
 `next` 这个字段尤其关键：它告诉你“如果从这份快照继续跑，下一步会去哪里”。这就是状态历史对断点恢复、时间回溯和人工介入有价值的原因。它不是普通日志，而是一份可以被运行时继续使用的执行现场。
 

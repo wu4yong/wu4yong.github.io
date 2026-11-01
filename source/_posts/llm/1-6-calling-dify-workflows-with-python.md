@@ -102,10 +102,11 @@ http://localhost/v1/workflows/run
 
 ### 2.2 请求头
 
-| 键            | 值                 |
-| ------------- | ------------------ |
-| Authorization | `Bearer {api_key}` |
-| Content-Type  | `application/json` |
+{% autogrid data-grid-link-table nofix %}
+键|值
+Authorization|`Bearer {api_key}`
+Content-Type|`application/json`
+{% endautogrid %}
 
 其中 `api_key` 替换为上一步创建的密钥。
 

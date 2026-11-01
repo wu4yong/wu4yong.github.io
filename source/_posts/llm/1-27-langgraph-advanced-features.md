@@ -72,13 +72,14 @@ LangGraph 通过 `stream_mode` 指定“到底想流什么”。
 
 当前最常见、最值得你先掌握的模式有这些：
 
-| 模式       | 含义                                  |
-| ---------- | ------------------------------------- |
-| `values`   | 每一步结束后输出当前完整状态快照      |
-| `updates`  | 每一步结束后只输出本步的增量更新      |
-| `messages` | 输出 LLM 生成过程中的消息片段 / token |
-| `custom`   | 输出节点内部主动写出的自定义消息      |
-| `debug`    | 输出更完整、更底层的调试信息          |
+{% autogrid data-grid-link-table nofix %}
+模式|含义
+`values`|每一步结束后输出当前完整状态快照
+`updates`|每一步结束后只输出本步的增量更新
+`messages`|输出 LLM 生成过程中的消息片段 / token
+`custom`|输出节点内部主动写出的自定义消息
+`debug`|输出更完整、更底层的调试信息
+{% endautogrid %}
 
 如果你想同时拿到多种流，可以直接传列表，例如：
 
@@ -154,13 +155,14 @@ stream_mode=["updates", "custom"]
 
 ### 1.10 小结：什么时候该用哪种流
 
-| 需求                   | 更适合的模式 |
-| ---------------------- | ------------ |
-| 想看整张图当前完整状态 | `values`     |
-| 想看每一步改了什么     | `updates`    |
-| 想看 LLM token         | `messages`   |
-| 想推送业务自定义进度   | `custom`     |
-| 想详细调试图内部执行   | `debug`      |
+{% autogrid data-grid-link-table nofix %}
+需求|更适合的模式
+想看整张图当前完整状态|`values`
+想看每一步改了什么|`updates`
+想看 LLM token|`messages`
+想推送业务自定义进度|`custom`
+想详细调试图内部执行|`debug`
+{% endautogrid %}
 
 ---
 

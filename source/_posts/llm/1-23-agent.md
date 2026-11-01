@@ -115,10 +115,11 @@ ReAct 只是最经典、最适合入门的一种理解方式，因为它最容�
 
 所以两者关系可以概括成：**Tool = 能力；Agent = 决策 + 使用这些能力。**
 
-| 对象      | 本质定位 | 一句话理解                         |
-| --------- | -------- | ---------------------------------- |
-| **Tool**  | 能力层   | 我能做什么                         |
-| **Agent** | 决策层   | 我什么时候、按什么顺序去用这些能力 |
+{% autogrid data-grid-link-table nofix %}
+对象|本质定位|一句话理解
+**Tool**|能力层|我能做什么
+**Agent**|决策层|我什么时候、按什么顺序去用这些能力
+{% endautogrid %}
 
 也正因为如此，**不是“有 Tool 就有 Agent”**。比如“查一下北京天气”这种一步问题，直接调一个天气工具就够了，完全可以不需要 Agent。
 
@@ -151,10 +152,11 @@ ReAct 只是最经典、最适合入门的一种理解方式，因为它最容�
 
 所以更贴近实际项目的判断标准可以写成：
 
-| 场景                                                   | 更适合什么  |
-| ------------------------------------------------------ | ----------- |
-| 路径固定、步骤明确、顺序可提前写死                     | 链 / 工作流 |
-| 路径不固定、工具选择依赖上下文、中间结果会影响后续决策 | Agent       |
+{% autogrid data-grid-link-table nofix %}
+场景|更适合什么
+路径固定、步骤明确、顺序可提前写死|链 / 工作流
+路径不固定、工具选择依赖上下文、中间结果会影响后续决策|Agent
+{% endautogrid %}
 
 这也是为什么今天很多企业项目其实是：**Workflow 负责固定骨架，Agent 负责不确定节点的决策。**
 
@@ -228,13 +230,14 @@ from langchain.agents import create_agent
 
 ### 2.4 V0.3 与 V1.x 的对比速览
 
-| 维度       | V0.3 / classic                                | V1.x / `create_agent`  |
-| ---------- | --------------------------------------------- | ---------------------- |
-| 核心入口   | `create_tool_calling_agent` + `AgentExecutor` | `create_agent`         |
-| 代码组织   | 手动拼更多组件                                | 统一入口更简洁         |
-| 学习价值   | 更容易看清内部结构                            | 更接近当前官方主线     |
-| 运行方式   | Agent 决策，Executor 驱动循环                 | graph runtime 驱动循环 |
-| 更适合     | 理解原理、维护旧案例                          | 新项目、快速搭建       |
+{% autogrid data-grid-link-table nofix %}
+维度|V0.3 / classic|V1.x / `create_agent`
+核心入口|`create_tool_calling_agent` + `AgentExecutor`|`create_agent`
+代码组织|手动拼更多组件|统一入口更简洁
+学习价值|更容易看清内部结构|更接近当前官方主线
+运行方式|Agent 决策，Executor 驱动循环|graph runtime 驱动循环
+更适合|理解原理、维护旧案例|新项目、快速搭建
+{% endautogrid %}
 
 还有一个实践补充：
 
@@ -325,14 +328,15 @@ from langchain.agents import create_agent
 
 在入门阶段，先看 `create_agent` 常见的 6 个参数：
 
-| 参数              | 是否常见     | 作用                                         |
-| ----------------- | ------------ | -------------------------------------------- |
-| `model`           | 必备         | 让谁来做推理与决策                           |
-| `tools`           | 很常见       | 给 Agent 哪些可调用能力                      |
-| `system_prompt`   | 很常见       | 约束 Agent 的角色、风格和工作规则            |
-| `response_format` | 很常见       | 让最终结果更适合结构化输出                   |
-| `checkpointer`    | 工程化能力   | 保存运行状态，可支撑短期记忆                 |
-| `middleware`      | 工程化能力   | 在模型调用、工具调用等阶段插入自定义控制逻辑 |
+{% autogrid data-grid-link-table nofix %}
+参数|是否常见|作用
+`model`|必备|让谁来做推理与决策
+`tools`|很常见|给 Agent 哪些可调用能力
+`system_prompt`|很常见|约束 Agent 的角色、风格和工作规则
+`response_format`|很常见|让最终结果更适合结构化输出
+`checkpointer`|工程化能力|保存运行状态，可支撑短期记忆
+`middleware`|工程化能力|在模型调用、工具调用等阶段插入自定义控制逻辑
+{% endautogrid %}
 
 放到项目开发里，可以这样对应：
 
@@ -447,12 +451,13 @@ Agent 的问题，往往不是“有没有报错”这么简单，而是：
 
 总体差异已在上文 **2.4 节（V0.3 与 V1.x 对比速览）** 从 API 与运行时角度概括过；下表仅对照本仓库**同一业务（双城气温比较）**下的两个文件，便于你并排阅读代码。
 
-| 维度     | `AgentSmartSelectV0.3.py`               | `AgentSmartSelectV1.0.py`            |
-| -------- | --------------------------------------- | ------------------------------------ |
-| 教学重点 | 看懂 Agent + Executor 怎么配合          | 看懂 `create_agent` 统一入口         |
-| 代码风格 | 显式组装                                | 一步创建                             |
-| 中间机制 | `agent_scratchpad`、Executor 循环更明显 | 运行时被更高层封装                   |
-| 输出重点 | 最终自然语言回答                        | `structured_response` 更适合程序处理 |
+{% autogrid data-grid-link-table nofix %}
+维度|`AgentSmartSelectV0.3.py`|`AgentSmartSelectV1.0.py`
+教学重点|看懂 Agent + Executor 怎么配合|看懂 `create_agent` 统一入口
+代码风格|显式组装|一步创建
+中间机制|`agent_scratchpad`、Executor 循环更明显|运行时被更高层封装
+输出重点|最终自然语言回答|`structured_response` 更适合程序处理
+{% endautogrid %}
 
 一句总结：**V0.3 更适合理解“Agent 是怎么转起来的”，V1.x 更适合理解“今天项目里通常怎么写”。**
 
@@ -480,13 +485,14 @@ Agent 的问题，往往不是“有没有报错”这么简单，而是：
 
 ### 5.1 全部案例先建立一张总览表
 
-| 案例                      | 主要学习点                         | 工具来自哪里 | 更适合放在什么语境里理解 |
-| ------------------------- | ---------------------------------- | ------------ | ------------------------ |
-| `AgentSmartSelectV0.3.py` | classic Agent + AgentExecutor      | 本地 `@tool` | 理解 Agent 内部工作机制  |
-| `AgentSmartSelectV1.0.py` | `create_agent` + 结构化输出        | 本地 `@tool` | 理解当前 1.x 主线        |
-| `AgentReact.py`           | ReAct 循环、多步工具调用、消息轨迹 | 本地 `@tool` | 理解 Agent 的动态决策    |
-| `Agent2Agent.py`          | 多智能体协作 / A2A                 | 本地 `@tool` | 理解多角色分工           |
-| `McpClientAgent.py`       | Agent + MCP 工具接入               | MCP 服务     | 理解外部工具接入         |
+{% autogrid data-grid-link-table nofix %}
+案例|主要学习点|工具来自哪里|更适合放在什么语境里理解
+`AgentSmartSelectV0.3.py`|classic Agent + AgentExecutor|本地 `@tool`|理解 Agent 内部工作机制
+`AgentSmartSelectV1.0.py`|`create_agent` + 结构化输出|本地 `@tool`|理解当前 1.x 主线
+`AgentReact.py`|ReAct 循环、多步工具调用、消息轨迹|本地 `@tool`|理解 Agent 的动态决策
+`Agent2Agent.py`|多智能体协作 / A2A|本地 `@tool`|理解多角色分工
+`McpClientAgent.py`|Agent + MCP 工具接入|MCP 服务|理解外部工具接入
+{% endautogrid %}
 
 也就是说，这一章不是在用 5 个案例重复讲一件事，而是在从 5 个不同角度，把 Agent 的完整能力拼出来。
 
@@ -586,13 +592,14 @@ Agent 的问题，往往不是“有没有报错”这么简单，而是：
 
 ### 6.1 一张总表先记住
 
-| 概念                 | 它解决什么问题                      | 一句话理解   |
-| -------------------- | ----------------------------------- | ------------ |
-| **Tool**             | 系统有哪些可调用能力                | 能力层       |
-| **Function Calling** | 模型怎么把“调工具”表达出来          | 调用机制     |
-| **RAG**              | 模型缺知识时怎么拿上下文            | 上下文增强   |
-| **MCP**              | 工具 / 资源 / Prompt 怎么标准化接入 | 连接协议     |
-| **Agent**            | 什么时候用什么能力、按什么顺序做    | 决策与编排层 |
+{% autogrid data-grid-link-table nofix %}
+概念|它解决什么问题|一句话理解
+**Tool**|系统有哪些可调用能力|能力层
+**Function Calling**|模型怎么把“调工具”表达出来|调用机制
+**RAG**|模型缺知识时怎么拿上下文|上下文增强
+**MCP**|工具 / 资源 / Prompt 怎么标准化接入|连接协议
+**Agent**|什么时候用什么能力、按什么顺序做|决策与编排层
+{% endautogrid %}
 
 ### 6.2 在真实项目里怎么配合
 

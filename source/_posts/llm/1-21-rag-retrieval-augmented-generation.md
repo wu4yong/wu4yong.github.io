@@ -62,12 +62,13 @@ RAG 主要是在解决 **知识冻结、私有知识缺失、最新信息不可�
 
 和其他方案的关系，仍然可以用下面这张表快速回顾：
 
-| 方案           | 本质                   | 优势                     | 局限                                |
-| -------------- | ---------------------- | ------------------------ | ----------------------------------- |
-| **直接问模型** | 不接外部知识，直接生成 | 上手最快                 | 容易不知道私有 / 最新知识，幻觉较多 |
-| **RAG**        | 先检索资料，再生成     | 更新快、改动小、可追溯   | 依赖文档质量、分块策略、检索效果    |
-| **微调**       | 调整模型参数           | 能改变回答风格、任务习惯 | 成本高、更新慢，不适合高频改知识    |
-| **RAG + 微调** | 外部知识 + 参数适配    | 兼顾知识与表达           | 成本和系统复杂度更高                |
+{% autogrid data-grid-link-table nofix %}
+方案|本质|优势|局限
+**直接问模型**|不接外部知识，直接生成|上手最快|容易不知道私有 / 最新知识，幻觉较多
+**RAG**|先检索资料，再生成|更新快、改动小、可追溯|依赖文档质量、分块策略、检索效果
+**微调**|调整模型参数|能改变回答风格、任务习惯|成本高、更新慢，不适合高频改知识
+**RAG + 微调**|外部知识 + 参数适配|兼顾知识与表达|成本和系统复杂度更高
+{% endautogrid %}
 
 同时也要知道，**RAG 不是没有代价的万能方案**。在真实项目里，它通常会带来几个现实权衡：
 
@@ -164,16 +165,17 @@ RAG 并不是某一个单独类就能完成的功能，它更像一条由多个�
 
 本章最常见的组件分工如下：
 
-| 组件           | 作用                                              | 常见类 / 说明                                                    |
-| -------------- | ------------------------------------------------- | ---------------------------------------------------------------- |
-| **Document**   | LangChain 中统一的文档对象                        | 由 `page_content` + `metadata` 组成                              |
-| **文档加载器** | 从 TXT、PDF、Word、Markdown、JSON、CSV 等读入文档 | `TextLoader`、`PyPDFLoader`、`UnstructuredWordDocumentLoader` 等 |
-| **文本分割器** | 把长文档切成较小片段                              | `RecursiveCharacterTextSplitter` 最常见                          |
-| **嵌入模型**   | 把文本片段转成向量                                | 本项目常见 `DashScopeEmbeddings`                                 |
-| **向量数据库** | 存储向量并支持相似检索                            | Redis / RedisStack、Chroma、FAISS 等                             |
-| **检索器**     | 用户提问时从向量库召回相关片段                    | 常见由 `vector_store.as_retriever()` 得到                        |
-| **提示词模板** | 把检索结果和用户问题组织成 Prompt                 | `PromptTemplate`、`ChatPromptTemplate`                           |
-| **聊天模型**   | 基于上下文生成最终答案                            | `ChatOpenAI`、`init_chat_model()` 等                             |
+{% autogrid data-grid-link-table nofix %}
+组件|作用|常见类 / 说明
+**Document**|LangChain 中统一的文档对象|由 `page_content` + `metadata` 组成
+**文档加载器**|从 TXT、PDF、Word、Markdown、JSON、CSV 等读入文档|`TextLoader`、`PyPDFLoader`、`UnstructuredWordDocumentLoader` 等
+**文本分割器**|把长文档切成较小片段|`RecursiveCharacterTextSplitter` 最常见
+**嵌入模型**|把文本片段转成向量|本项目常见 `DashScopeEmbeddings`
+**向量数据库**|存储向量并支持相似检索|Redis / RedisStack、Chroma、FAISS 等
+**检索器**|用户提问时从向量库召回相关片段|常见由 `vector_store.as_retriever()` 得到
+**提示词模板**|把检索结果和用户问题组织成 Prompt|`PromptTemplate`、`ChatPromptTemplate`
+**聊天模型**|基于上下文生成最终答案|`ChatOpenAI`、`init_chat_model()` 等
+{% endautogrid %}
 
 用面试里的说法，可以这样概括整个流程：
 
@@ -193,10 +195,11 @@ RAG 并不是某一个单独类就能完成的功能，它更像一条由多个�
 
 它们都能把内容写入向量库，但适合的输入形态和工程语义不一样。
 
-| 方法                 | 更适合什么场景                      | 你手里通常有什么数据       | 常见理解                   |
-| -------------------- | ----------------------------------- | -------------------------- | -------------------------- |
-| **`from_documents`** | 已经完成“加载 + 分割”之后的一步入库 | `Document` 列表            | 更像“把文档片段整批建库”   |
-| **`add_texts`**      | 已经有向量库实例，需要持续追加内容  | 字符串列表 + 可选 metadata | 更像“往现有索引里追加文本” |
+{% autogrid data-grid-link-table nofix %}
+方法|更适合什么场景|你手里通常有什么数据|常见理解
+**`from_documents`**|已经完成“加载 + 分割”之后的一步入库|`Document` 列表|更像“把文档片段整批建库”
+**`add_texts`**|已经有向量库实例，需要持续追加内容|字符串列表 + 可选 metadata|更像“往现有索引里追加文本”
+{% endautogrid %}
 
 可以把它们看作两种数据入口，并不冲突，只取决于**你手里现在是 `Document` 列表还是纯文本列表**：
 
@@ -396,15 +399,16 @@ LangChain 官方也明确建议：面对通用文本时，`RecursiveCharacterTex
 
 #### 2.3.2 常见分割器与适用场景
 
-| 分割器                             | 作用                                                                 |
-| ---------------------------------- | -------------------------------------------------------------------- |
-| **RecursiveCharacterTextSplitter** | 通用首选，优先保持较大语义单位，必要时递归切得更细                   |
-| **CharacterTextSplitter**          | 按指定分隔符切，简单直接                                             |
-| **MarkdownHeaderTextSplitter**     | 按 Markdown 标题层级切分                                             |
-| **HTMLHeaderTextSplitter**         | 按 HTML 标题结构切分                                                 |
-| **TokenTextSplitter**              | 按 token 数控制块大小，更贴近模型上下文限制                          |
-| **语义切分（Semantic Chunking）**  | 按语义变化切分，尽量让相关内容保留在同一块中，但成本更高、实现更复杂 |
-| **代码类分割器**                   | 按函数、类、逻辑块切分代码文本                                       |
+{% autogrid data-grid-link-table nofix %}
+分割器|作用
+**RecursiveCharacterTextSplitter**|通用首选，优先保持较大语义单位，必要时递归切得更细
+**CharacterTextSplitter**|按指定分隔符切，简单直接
+**MarkdownHeaderTextSplitter**|按 Markdown 标题层级切分
+**HTMLHeaderTextSplitter**|按 HTML 标题结构切分
+**TokenTextSplitter**|按 token 数控制块大小，更贴近模型上下文限制
+**语义切分（Semantic Chunking）**|按语义变化切分，尽量让相关内容保留在同一块中，但成本更高、实现更复杂
+**代码类分割器**|按函数、类、逻辑块切分代码文本
+{% endautogrid %}
 
 本章案例主线，还是以 **`RecursiveCharacterTextSplitter`** 为主，因为它最适合帮助你建立“分块”这件事的直觉。
 
@@ -414,12 +418,13 @@ LangChain 官方也明确建议：面对通用文本时，`RecursiveCharacterTex
 
 `RecursiveCharacterTextSplitter` 最常用的是下面几个参数：
 
-| 参数              | 含义           | 实践理解                                      |
-| ----------------- | -------------- | --------------------------------------------- |
-| `chunk_size`      | 单块最大长度   | 块太大不利于检索，块太小又容易语义碎片化      |
-| `chunk_overlap`   | 相邻块重叠长度 | 防止句子、语义被截断，常见取块大小的 10%～20% |
-| `length_function` | 长度计算方式   | 默认常用 `len`，即按字符数；也可按 token 数   |
-| `separators`      | 优先切分分隔符 | 决定先按段落、换行、句号还是更细粒度去切      |
+{% autogrid data-grid-link-table nofix %}
+参数|含义|实践理解
+`chunk_size`|单块最大长度|块太大不利于检索，块太小又容易语义碎片化
+`chunk_overlap`|相邻块重叠长度|防止句子、语义被截断，常见取块大小的 10%～20%
+`length_function`|长度计算方式|默认常用 `len`，即按字符数；也可按 token 数
+`separators`|优先切分分隔符|决定先按段落、换行、句号还是更细粒度去切
+{% endautogrid %}
 
 对初学者来说，先把下面这条经验记住就够用了：
 
@@ -479,13 +484,14 @@ LangChain 官方也明确建议：面对通用文本时，`RecursiveCharacterTex
 
 进一步看，生产级 RAG 的优化通常可以从五个方向入手：
 
-| 方向   | 常见做法                            | 主要解决什么                     |
-| ------ | ----------------------------------- | -------------------------------- |
-| 查询侧 | 查询改写、多查询、HyDE              | 用户问法和文档说法对不上         |
-| 索引侧 | 合理切块、Overlap、元数据、解析质量 | 入库内容太碎、太脏或缺少过滤字段 |
-| 检索侧 | 向量检索、BM25、混合检索、RRF       | 单一路径召回不稳定               |
-| 排序侧 | Rerank、阈值过滤、Top K 调整        | 候选片段多但质量参差不齐         |
-| 生成侧 | 引用来源、上下文压缩、答案约束      | 回答不可信或上下文太长           |
+{% autogrid data-grid-link-table nofix %}
+方向|常见做法|主要解决什么
+查询侧|查询改写、多查询、HyDE|用户问法和文档说法对不上
+索引侧|合理切块、Overlap、元数据、解析质量|入库内容太碎、太脏或缺少过滤字段
+检索侧|向量检索、BM25、混合检索、RRF|单一路径召回不稳定
+排序侧|Rerank、阈值过滤、Top K 调整|候选片段多但质量参差不齐
+生成侧|引用来源、上下文压缩、答案约束|回答不可信或上下文太长
+{% endautogrid %}
 
 学习时先把 Redis 向量检索链路跑通；等项目规模变大，再考虑 Milvus 这类专业向量库里的 HNSW、BM25、Analyzer、标量过滤和混合检索能力。
 

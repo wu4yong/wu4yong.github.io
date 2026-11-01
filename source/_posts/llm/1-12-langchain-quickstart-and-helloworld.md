@@ -113,14 +113,15 @@ python 案例与源码-2-LangChain框架/01-helloworld/LangChainV1.0.py
 
 下面列出当前学习中比较常见的平台。你不需要一开始全部注册，但至少要知道它们的角色：
 
-| 平台           | 入口                                                   | API Key 管理                                                        | 文档                                                                              | 模型                                                                         | 说明                                               |
-| -------------- | ------------------------------------------------------ | ------------------------------------------------------------------- | --------------------------------------------------------------------------------- | ---------------------------------------------------------------------------- | -------------------------------------------------- |
-| **阿里云百炼** | [平台](https://bailian.console.aliyun.com/)            | [API-Key](https://bailian.console.aliyun.com/?tab=model#/api-key)   | [文档](https://bailian.console.aliyun.com/?tab=doc#/doc/?type=model)              | [模型](https://bailian.console.aliyun.com/?tab=model#/model-market/all)      | 本课程主线平台，主要用于通义千问与 OpenAI 兼容接入 |
-| **DeepSeek**   | [平台](https://platform.deepseek.com/)                 | [API-Key](https://platform.deepseek.com/api_keys)                   | [文档](https://api-docs.deepseek.com/zh-cn/)                                      | [模型](https://platform.deepseek.com/usage)                                  | 推理与代码能力强，本章用于多模型共存示例           |
-| **OpenRouter** | [平台](https://openrouter.ai/)                         | [API-Key](https://openrouter.ai/settings/keys)                      | [文档](https://openrouter.ai/docs/community/frameworks-and-integrations-overview) | [模型](https://openrouter.ai/models)                                         | 多模型统一聚合平台，适合做“一个入口接多家模型”     |
-| **硅基流动**   | [平台](https://www.siliconflow.cn/)                    | [API-Key](https://cloud.siliconflow.cn/me/account/ak)               | [文档](https://docs.siliconflow.cn/cn/userguide/capabilities/text-generation)     | [模型](https://cloud.siliconflow.cn/me/models)                               | 国内常见 AI API 平台，适合练手与接入开源模型       |
-| **百度千帆**   | [平台](https://console.bce.baidu.com/qianfan/overview) | [API-Key](https://console.bce.baidu.com/qianfan/ais/console/apiKey) | [文档](https://cloud.baidu.com/doc/qianfan-docs/s/Mm8r1mejk)                      | [模型](https://console.bce.baidu.com/qianfan/modelcenter/model/buildIn/list) | 百度系模型平台                                     |
-| **CloseAI**    | [平台](https://platform.closeai-asia.com/)             | [API-Key](https://platform.closeai-asia.com/)                       | [文档](https://doc.closeai-asia.com/tutorial/api/openai.html)                     | [模型](https://doc.closeai-asia.com/)                                        | OpenAI / 国际模型兼容接入平台之一                  |
+{% autogrid data-grid-link-table nofix %}
+平台|入口|API Key 管理|文档|模型|说明
+**阿里云百炼**|[平台](https://bailian.console.aliyun.com/)|[API‑Key](https://bailian.console.aliyun.com/?tab=model#/api‑key)|[文档](https://bailian.console.aliyun.com/?tab=doc#/doc/?type=model)|[模型](https://bailian.console.aliyun.com/?tab=model#/model‑market/all)|本课程主线平台，主要用于通义千问与 OpenAI 兼容接入
+**DeepSeek**|[平台](https://platform.deepseek.com/)|[API‑Key](https://platform.deepseek.com/api_keys)|[文档](https://api‑docs.deepseek.com/zh‑cn/)|[模型](https://platform.deepseek.com/usage)|推理与代码能力强，本章用于多模型共存示例
+**OpenRouter**|[平台](https://openrouter.ai/)|[API‑Key](https://openrouter.ai/settings/keys)|[文档](https://openrouter.ai/docs/community/frameworks‑and‑integrations‑overview)|[模型](https://openrouter.ai/models)|多模型统一聚合平台，适合做“一个入口接多家模型”
+**硅基流动**|[平台](https://www.siliconflow.cn/)|[API‑Key](https://cloud.siliconflow.cn/me/account/ak)|[文档](https://docs.siliconflow.cn/cn/userguide/capabilities/text‑generation)|[模型](https://cloud.siliconflow.cn/me/models)|国内常见 AI API 平台，适合练手与接入开源模型
+**百度千帆**|[平台](https://console.bce.baidu.com/qianfan/overview)|[API‑Key](https://console.bce.baidu.com/qianfan/ais/console/apiKey)|[文档](https://cloud.baidu.com/doc/qianfan‑docs/s/Mm8r1mejk)|[模型](https://console.bce.baidu.com/qianfan/modelcenter/model/buildIn/list)|百度系模型平台
+**CloseAI**|[平台](https://platform.closeai‑asia.com/)|[API‑Key](https://platform.closeai‑asia.com/)|[文档](https://doc.closeai‑asia.com/tutorial/api/openai.html)|[模型](https://doc.closeai‑asia.com/)|OpenAI / 国际模型兼容接入平台之一
+{% endautogrid %}
 
 ---
 
@@ -239,11 +240,12 @@ https://dashscope.aliyuncs.com/compatible-mode/v1
 
 **本节小结**
 
-| 项目         | 示例 / 说明                                         |
-| ------------ | --------------------------------------------------- |
-| **API Key**  | `sk-xxx`（在控制台创建）                            |
-| **模型名**   | 如 `qwen-plus`、`qwen3-max`                         |
-| **Base URL** | `https://dashscope.aliyuncs.com/compatible-mode/v1` |
+{% autogrid data-grid-link-table nofix %}
+项目|示例 / 说明
+**API Key**|`sk-xxx`（在控制台创建）
+**模型名**|如 `qwen-plus`、`qwen3-max`
+**Base URL**|`https://dashscope.aliyuncs.com/compatible-mode/v1`
+{% endautogrid %}
 
 ### 4.2 HelloWorld 的最小调用链路
 
@@ -296,11 +298,12 @@ https://dashscope.aliyuncs.com/compatible-mode/v1
 
 在 1.x 主线里，先记住这个最小关系：
 
-| 写法                                    | 适合场景                          | 你该怎么学     |
-| --------------------------------------- | --------------------------------- | -------------- |
-| `init_chat_model(...)`                  | 新项目、多模型切换、课程主线      | 优先掌握       |
-| `ChatOpenAI(...)` / `ChatDeepSeek(...)` | 旧项目、特定 provider 能力        | 能读懂，会迁移 |
-| 厂商原生 SDK                            | 只调一次接口，不接 LangChain 链路 | 知道边界即可   |
+{% autogrid data-grid-link-table nofix %}
+写法|适合场景|你该怎么学
+`init_chat_model(...)`|新项目、多模型切换、课程主线|优先掌握
+`ChatOpenAI(...)` / `ChatDeepSeek(...)`|旧项目、特定 provider 能力|能读懂，会迁移
+厂商原生 SDK|只调一次接口，不接 LangChain 链路|知道边界即可
+{% endautogrid %}
 
 ### 4.4 0.3 与 1.x 写法差异
 
@@ -320,11 +323,12 @@ https://dashscope.aliyuncs.com/compatible-mode/v1
 
 你可以这样记：
 
-| 维度           | 0.3 / 经典写法             | 1.x / 推荐写法         |
-| -------------- | -------------------------- | ---------------------- |
-| **入口**       | `ChatOpenAI(...)` 等具体类 | `init_chat_model(...)` |
-| **特点**       | 简单直接、旧资料常见       | 统一入口、适合新项目   |
-| **适合做什么** | 读懂旧教程、兼容旧代码     | 作为当前主学习路线     |
+{% autogrid data-grid-link-table nofix %}
+维度|0.3 / 经典写法|1.x / 推荐写法
+**入口**|`ChatOpenAI(...)` 等具体类|`init_chat_model(...)`
+**特点**|简单直接、旧资料常见|统一入口、适合新项目
+**适合做什么**|读懂旧教程、兼容旧代码|作为当前主学习路线
+{% endautogrid %}
 
 这里补充一个真实项目建议：
 

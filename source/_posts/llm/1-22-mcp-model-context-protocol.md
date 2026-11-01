@@ -102,12 +102,13 @@ MCP（Model Context Protocol，模型上下文协议）是一套**开放的标�
 
 ### 2.2 和 Tool、RAG、Agent 有什么区别
 
-| 概念                        | 解决什么问题                   | 典型关注点                               |
-| --------------------------- | ------------------------------ | ---------------------------------------- |
-| **Tool / Function Calling** | 模型如何调用一个具体工具       | 工具 schema、参数、调用结果              |
-| **RAG**                     | 模型如何拿到外部知识上下文     | 文档加载、切块、检索、上下文拼接         |
-| **MCP**                     | 外部能力如何被标准化暴露与接入 | Host / Client / Server、协议、传输、发现 |
-| **Agent**                   | 谁来规划、决策、调用这些能力   | 推理、编排、记忆、执行闭环               |
+{% autogrid data-grid-link-table nofix %}
+概念|解决什么问题|典型关注点
+**Tool / Function Calling**|模型如何调用一个具体工具|工具 schema、参数、调用结果
+**RAG**|模型如何拿到外部知识上下文|文档加载、切块、检索、上下文拼接
+**MCP**|外部能力如何被标准化暴露与接入|Host / Client / Server、协议、传输、发现
+**Agent**|谁来规划、决策、调用这些能力|推理、编排、记忆、执行闭环
+{% endautogrid %}
 
 一句话速记：
 
@@ -142,11 +143,12 @@ MCP 最直观的价值，就是把原本分散的外部能力，用统一方式�
 
 根据官方文档，MCP 服务器最核心的三类能力是：
 
-| 类型          | 作用                                                | 控制方式                    | 对应案例                                       |
-| ------------- | --------------------------------------------------- | --------------------------- | ---------------------------------------------- |
-| **Tools**     | 可执行动作，例如查天气、查数据库、发请求            | **模型可触发**              | `McpServer.py`、`McpServerWeatherByFastMCP.py` |
-| **Resources** | 可读取内容，例如文件、配置、数据库 schema、API 响应 | **应用 / 宿主决定如何使用** | `McpServerByFastMCP.py` 的 `@mcp.resource()`   |
-| **Prompts**   | 可复用的提示词模板 / 工作流模板                     | **用户显式选择更常见**      | `McpServerByFastMCP.py` 的 `@mcp.prompt()`     |
+{% autogrid data-grid-link-table nofix %}
+类型|作用|控制方式|对应案例
+**Tools**|可执行动作，例如查天气、查数据库、发请求|**模型可触发**|`McpServer.py`、`McpServerWeatherByFastMCP.py`
+**Resources**|可读取内容，例如文件、配置、数据库 schema、API 响应|**应用 / 宿主决定如何使用**|`McpServerByFastMCP.py` 的 `@mcp.resource()`
+**Prompts**|可复用的提示词模板 / 工作流模板|**用户显式选择更常见**|`McpServerByFastMCP.py` 的 `@mcp.prompt()`
+{% endautogrid %}
 
 官方对三者的控制方式有明确区分：
 
@@ -284,12 +286,13 @@ MCP 采用典型的 **Host - Client - Server** 架构。
 <!-- ![MCP 架构：Host（用户应用）内的 Client 与远端或子进程中的 Server 通信，Server 再访问本地/远程资源](/assets/img/llm/20/20-5-1-1.jpeg) -->
 <div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/20/20-5-1-1.jpeg" alt="MCP 架构：Host（用户应用）内的 Client 与远端或子进程中的 Server 通信，Server 再访问本地/远程资源"></div>
 
-| 角色                         | 含义                                                             |
-| ---------------------------- | ---------------------------------------------------------------- |
-| **MCP Host（MCP 主机）**     | 用户真正交互的应用，例如 IDE、桌面客户端、聊天应用、自研 AI 平台 |
-| **MCP Client（MCP 客户端）** | Host 内部负责和某个 MCP Server 建立协议连接的组件                |
-| **MCP Server（MCP 服务器）** | 对外暴露 Tools / Resources / Prompts 等能力的服务                |
-| **本地 / 远程资源**          | 服务器可访问的文件、数据库、API、内部系统等                      |
+{% autogrid data-grid-link-table nofix %}
+角色|含义
+**MCP Host（MCP 主机）**|用户真正交互的应用，例如 IDE、桌面客户端、聊天应用、自研 AI 平台
+**MCP Client（MCP 客户端）**|Host 内部负责和某个 MCP Server 建立协议连接的组件
+**MCP Server（MCP 服务器）**|对外暴露 Tools / Resources / Prompts 等能力的服务
+**本地 / 远程资源**|服务器可访问的文件、数据库、API、内部系统等
+{% endautogrid %}
 
 官方文档里需要分清一个点：
 
@@ -377,11 +380,12 @@ MCP 更像是：**“AI 应用与外部能力之间的协议层 + 能力发现�
 
 结合仓库现有案例，可以这样看：
 
-| 传输方式                    | 更适合什么场景                     | 对应案例                                   |
-| --------------------------- | ---------------------------------- | ------------------------------------------ |
-| **STDIO**                   | 本地、轻量、由客户端拉起服务端进程 | `McpServerByFastMCP.py`                    |
-| **SSE / HTTP 兼容教学写法** | 理解历史资料、理解远程服务形态     | `McpServerWeatherByFastMCP.py`、`mcp.json` |
-| **当前规范重点**            | 优先理解为 `Streamable HTTP`       | 新项目应以官方规范为准                     |
+{% autogrid data-grid-link-table nofix %}
+传输方式|更适合什么场景|对应案例
+**STDIO**|本地、轻量、由客户端拉起服务端进程|`McpServerByFastMCP.py`
+**SSE / HTTP 兼容教学写法**|理解历史资料、理解远程服务形态|`McpServerWeatherByFastMCP.py`、`mcp.json`
+**当前规范重点**|优先理解为 `Streamable HTTP`|新项目应以官方规范为准
+{% endautogrid %}
 
 读仓库案例时记住两点：
 
@@ -545,14 +549,15 @@ asyncio.run(main())
 
 核心文件如下：
 
-| 文件                           | 作用                   | 你应该怎样理解它                                        |
-| ------------------------------ | ---------------------- | ------------------------------------------------------- |
-| `McpServer.py`                 | 极简教学版服务端       | **概念演示版**，帮助理解“工具如何注册和暴露”            |
-| `McpServerByFastMCP.py`        | FastMCP 正式写法示例   | 展示 `tool / resource / prompt + stdio`                 |
-| `McpServerWeatherByFastMCP.py` | 天气服务端             | 展示天气 Tool 和 HTTP/SSE 兼容写法                      |
-| `McpClient.py`                 | 简化版客户端           | **同进程教学版**，不是严格意义上的协议网络客户端        |
-| `mcp.json`                     | 客户端连接配置         | 声明要连接哪些 MCP 服务、怎么连接                       |
-| `McpClientAgent.py`            | LangChain + MCP 客户端 | 更贴近真实项目，读取 `mcp.json` 后把 MCP 工具交给 Agent |
+{% autogrid data-grid-link-table nofix %}
+文件|作用|你应该怎样理解它
+`McpServer.py`|极简教学版服务端|**概念演示版**，帮助理解“工具如何注册和暴露”
+`McpServerByFastMCP.py`|FastMCP 正式写法示例|展示 `tool / resource / prompt + stdio`
+`McpServerWeatherByFastMCP.py`|天气服务端|展示天气 Tool 和 HTTP/SSE 兼容写法
+`McpClient.py`|简化版客户端|**同进程教学版**，不是严格意义上的协议网络客户端
+`mcp.json`|客户端连接配置|声明要连接哪些 MCP 服务、怎么连接
+`McpClientAgent.py`|LangChain + MCP 客户端|更贴近真实项目，读取 `mcp.json` 后把 MCP 工具交给 Agent
+{% endautogrid %}
 
 ### 6.2 服务端案例区分理解
 

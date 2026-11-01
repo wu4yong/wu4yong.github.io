@@ -38,13 +38,14 @@ tags:
 
 所以企业部署的目标，从来都不只是“把 Dify 装上去”，而是把它变成一套可持续维护的基础设施。
 
-|              | 第三方 API                     | 企业级部署                                  |
-| ------------ | ------------------------------ | ------------------------------------------- |
-| **安全合规** | 敏感数据泄漏                   | 数据掌握在企业手中                          |
-| **成本预算** | 高频调用成本不可控             | 成本可预测（服务器购买/租赁和运维<br>成本） |
-| **能力可控** | 黑箱与版本漂移                 | 推理性能、模型版本可定制                    |
-| **可靠性**   | 延迟、吞吐不可控               | 内网低延迟、弹性扩缩容自由调整<br>吞吐量    |
-| **运维治理** | 模型服务不透明，不利于定位故障 | 模型服务可观测，支持故障定位和治理          |
+{% autogrid data-grid-link-table nofix %}
+|第三方 API|企业级部署
+**安全合规**|敏感数据泄漏|数据掌握在企业手中
+**成本预算**|高频调用成本不可控|成本可预测（服务器购买/租赁和运维<br>成本）
+**能力可控**|黑箱与版本漂移|推理性能、模型版本可定制
+**可靠性**|延迟、吞吐不可控|内网低延迟、弹性扩缩容自由调整<br>吞吐量
+**运维治理**|模型服务不透明，不利于定位故障|模型服务可观测，支持故障定位和治理
+{% endautogrid %}
 
 > 注：这里的“版本漂移”是指第三方服务升级后，接口行为、模型效果或系统输出发生不可控变化。
 
@@ -332,12 +333,13 @@ sudo systemctl status docker
 
 可以按如下操作步骤执行：
 
-| 步骤                           | 关键检查点/操作                                                                                                           | 预期结果/说明                                                                  |
-| :----------------------------- | :------------------------------------------------------------------------------------------------------------------------ | :----------------------------------------------------------------------------- |
-| 1. 验证 Docker 安装状态        | 运行 sudo systemctl status docker                                                                                         | 确认 Docker 服务当前的状态和错误日志。                                         |
-| 2. 检查并取消服务屏蔽          | 执行 sudo systemctl unmask docker.service                                                                                 | 解决服务被意外“屏蔽”导致无法启动的问题。                                       |
-| 3. 检查依赖服务状态            | 运行 systemctl list-dependencies docker.service.<br>如果 containerd 服务异常，尝试启动它：sudo systemctl start containerd | 查看 Docker 依赖的服务（如 containerd）是否正常。<br>如果启动失败，进入第 4 步 |
-| 4. 修复 containerd（关键步骤） | 执行：① sudo apt-get update<br>② sudo apt-get install --reinstall containerd.io                                           | 重新安装 Docker 的核心运行时依赖。                                             |
+{% autogrid data-grid-link-table nofix %}
+步骤|关键检查点/操作|预期结果/说明
+1. 验证 Docker 安装状态|运行 sudo systemctl status docker|确认 Docker 服务当前的状态和错误日志。
+2. 检查并取消服务屏蔽|执行 sudo systemctl unmask docker.service|解决服务被意外“屏蔽”导致无法启动的问题。
+3. 检查依赖服务状态|运行 systemctl list-dependencies docker.service.<br>如果 containerd 服务异常，尝试启动它：sudo systemctl start containerd|查看 Docker 依赖的服务（如 containerd）是否正常。<br>如果启动失败，进入第 4 步
+4. 修复 containerd（关键步骤）|执行：① sudo apt-get update<br>② sudo apt-get install --reinstall containerd.io|重新安装 Docker 的核心运行时依赖。
+{% endautogrid %}
 
 如果以上步骤均无效，可以考虑彻底清理 Docker 及其相关组件后重新安装。这是解决文件损坏或版本冲突的可靠方法。
 
@@ -686,16 +688,17 @@ DeepSeek 官网地址：https://www.deepseek.com/ ，在官网获取自己的 AP
 
 界面中的「框架」是 AutoDL 预装好的基础环境，不同框架用途不同，可做大致区分：
 
-| 框架             | 简要说明                                                                                                          |
-| ---------------- | ----------------------------------------------------------------------------------------------------------------- |
-| **PyTorch**      | 主流深度学习框架，用于训练和推理。vLLM、Xinference 等推理栈多基于 PyTorch，**本教程部署 Xinference 建议选此项**。 |
-| **TensorFlow**   | 另一大深度学习框架，生态多用于训练与部署，与 PyTorch 二选一即可。                                                 |
-| **Miniconda**    | 轻量版 conda，只提供 Python 与包管理，无预装深度学习框架，适合自己从零配环境。                                    |
-| **tritonserver** | NVIDIA Triton 推理服务，用于高性能模型部署，多与 TensorRT 等配合使用。                                            |
-| **JAX**          | 面向数值计算与研究的框架，强调高性能与函数式写法，偏研究/实验场景。                                               |
-| **PaddlePaddle** | 百度开源深度学习平台，国内生态常用。                                                                              |
-| **TensorRT**     | NVIDIA 的推理优化库，侧重在 NVIDIA GPU 上加速推理，常与推理服务一起用。                                           |
-| **Gromacs**      | 分子动力学模拟软件，与深度学习无直接关系，属科学计算/生物物理方向。                                               |
+{% autogrid data-grid-link-table nofix %}
+框架|简要说明
+**PyTorch**|主流深度学习框架，用于训练和推理。vLLM、Xinference 等推理栈多基于 PyTorch，**本教程部署 Xinference 建议选此项**。
+**TensorFlow**|另一大深度学习框架，生态多用于训练与部署，与 PyTorch 二选一即可。
+**Miniconda**|轻量版 conda，只提供 Python 与包管理，无预装深度学习框架，适合自己从零配环境。
+**tritonserver**|NVIDIA Triton 推理服务，用于高性能模型部署，多与 TensorRT 等配合使用。
+**JAX**|面向数值计算与研究的框架，强调高性能与函数式写法，偏研究/实验场景。
+**PaddlePaddle**|百度开源深度学习平台，国内生态常用。
+**TensorRT**|NVIDIA 的推理优化库，侧重在 NVIDIA GPU 上加速推理，常与推理服务一起用。
+**Gromacs**|分子动力学模拟软件，与深度学习无直接关系，属科学计算/生物物理方向。
+{% endautogrid %}
 
 **本教程建议**：选择 **PyTorch** 对应镜像，Python 选 **3.10**，CUDA 选 **11.8**（或与当前显卡驱动兼容的版本）。这样便于在实例中直接使用 conda 安装并运行 Xinference。
 

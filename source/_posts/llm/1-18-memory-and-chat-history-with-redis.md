@@ -255,12 +255,13 @@ LangChain 提供了多种聊天历史实现（如内存、文件、Redis、Elast
 
 常见实现的区别主要看存储位置：
 
-| 组件名称                     | 存储方式     | 适合什么场景                   |
-| ---------------------------- | ------------ | ------------------------------ |
-| `InMemoryChatMessageHistory` | 进程内内存   | 本地学习、单进程演示、临时会话 |
-| `FileChatMessageHistory`     | 本地文件     | 轻量持久化、小型脚本           |
-| `RedisChatMessageHistory`    | Redis        | 持久化、跨进程、多实例共享     |
-| 其他后端实现                 | ES、数据库等 | 和现有技术栈集成               |
+{% autogrid data-grid-link-table nofix %}
+组件名称|存储方式|适合什么场景
+`InMemoryChatMessageHistory`|进程内内存|本地学习、单进程演示、临时会话
+`FileChatMessageHistory`|本地文件|轻量持久化、小型脚本
+`RedisChatMessageHistory`|Redis|持久化、跨进程、多实例共享
+其他后端实现|ES、数据库等|和现有技术栈集成
+{% endautogrid %}
 
 对这一章来说，最重要的是前两个核心结论：
 
@@ -271,15 +272,16 @@ LangChain 提供了多种聊天历史实现（如内存、文件、Redis、Elast
 
 下面按学习顺序列出本章案例文件：
 
-| 文件                                     | 作用                              |
-| ---------------------------------------- | --------------------------------- |
-| `Memory_IDontKnow.py`                    | 先看无记忆时的问题                |
-| `Memory_RunnableWithMessageHistory.py`   | 最基础的内存版带历史对话          |
-| `Memory_RunnableWithMessageHistoryV2.py` | 多 session 版，对应真实多用户场景 |
-| `Memory_InMemoryChatMessageHistory.py`   | 不走包装器，直接手动操作 history  |
-| `RedisEnvCheck.py`                       | 跑 Redis 版前先做环境校验         |
-| `Memory_RedisChatMessageHistory.py`      | Redis 持久化主案例                |
-| `Memory_RedisStackChatMessageHistory.py` | Redis Stack 可选案例              |
+{% autogrid data-grid-link-table nofix %}
+文件|作用
+`Memory_IDontKnow.py`|先看无记忆时的问题
+`Memory_RunnableWithMessageHistory.py`|最基础的内存版带历史对话
+`Memory_RunnableWithMessageHistoryV2.py`|多 session 版，对应真实多用户场景
+`Memory_InMemoryChatMessageHistory.py`|不走包装器，直接手动操作 history
+`RedisEnvCheck.py`|跑 Redis 版前先做环境校验
+`Memory_RedisChatMessageHistory.py`|Redis 持久化主案例
+`Memory_RedisStackChatMessageHistory.py`|Redis Stack 可选案例
+{% endautogrid %}
 
 这样安排其实很合理：
 
@@ -393,12 +395,13 @@ LangChain 提供了多种聊天历史实现（如内存、文件、Redis、Elast
 
 本章之所以还保留 Redis Stack 小节，一方面是为了让你能用 RedisInsight 更直观地观察数据，另一方面也顺手为后面向量存储、搜索等更复杂的 Redis 用法做一点环境铺垫。
 
-| 功能维度 | 原生 Redis                 | Redis Stack 增强功能                                  |
-| :------- | :------------------------- | :---------------------------------------------------- |
-| 数据结构 | 字符串、列表、集合、哈希等 | 增加 JSON、图、时间序列、概率结构等高级类型           |
-| 查询能力 | 仅限键值查询               | 支持全文搜索、向量搜索、图查询、JSON 查询             |
-| 使用场景 | 缓存、消息队列、计数器等   | 实时推荐、时序分析、知识图谱、文档数据库、AI 向量检索 |
-| 开发体验 | 命令行操作，需手动拼装逻辑 | 提供 RedisInsight 和对象映射库，开发效率更高          |
+{% autogrid data-grid-link-table nofix %}
+功能维度|原生 Redis|Redis Stack 增强功能
+数据结构|字符串、列表、集合、哈希等|增加 JSON、图、时间序列、概率结构等高级类型
+查询能力|仅限键值查询|支持全文搜索、向量搜索、图查询、JSON 查询
+使用场景|缓存、消息队列、计数器等|实时推荐、时序分析、知识图谱、文档数据库、AI 向量检索
+开发体验|命令行操作，需手动拼装逻辑|提供 RedisInsight 和对象映射库，开发效率更高
+{% endautogrid %}
 
 #### 5.2.3 Docker 启动与宿主机连接
 
@@ -437,18 +440,19 @@ docker run -d --name redis-stack -p 26379:6379 -p 8001:8001 redis/redis-stack
 
 最常用的命令有这些：
 
-| 命令                 | 说明                       | 示例                             |
-| :------------------- | :------------------------- | :------------------------------- |
-| `PING`               | 检测服务是否存活           | `PING` → 返回 `PONG`             |
-| `SET key value`      | 设置字符串键值             | `SET mykey "hello"`              |
-| `GET key`            | 获取字符串值               | `GET mykey`                      |
-| `DEL key [key ...]`  | 删除一个或多个键           | `DEL mykey`                      |
-| `KEYS pattern`       | 按模式查找键（慎用于生产） | `KEYS *`、`KEYS message_store:*` |
-| `EXISTS key`         | 判断键是否存在             | `EXISTS mykey` → 1 或 0          |
-| `TTL key`            | 查看键的剩余过期时间（秒） | `TTL mykey`，-1 表示永不过期     |
-| `EXPIRE key seconds` | 设置键的过期时间           | `EXPIRE mykey 3600`              |
-| `DBSIZE`             | 当前数据库的键数量         | `DBSIZE`                         |
-| `FLUSHDB`            | 清空当前数据库（慎用）     | `FLUSHDB`                        |
+{% autogrid data-grid-link-table nofix %}
+命令|说明|示例
+`PING`|检测服务是否存活|`PING` → 返回 `PONG`
+`SET key value`|设置字符串键值|`SET mykey "hello"`
+`GET key`|获取字符串值|`GET mykey`
+`DEL key [key ...]`|删除一个或多个键|`DEL mykey`
+`KEYS pattern`|按模式查找键（慎用于生产）|`KEYS *`、`KEYS message_store:*`
+`EXISTS key`|判断键是否存在|`EXISTS mykey` → 1 或 0
+`TTL key`|查看键的剩余过期时间（秒）|`TTL mykey`，-1 表示永不过期
+`EXPIRE key seconds`|设置键的过期时间|`EXPIRE mykey 3600`
+`DBSIZE`|当前数据库的键数量|`DBSIZE`
+`FLUSHDB`|清空当前数据库（慎用）|`FLUSHDB`
+{% endautogrid %}
 
 本章 Redis 对话历史案例里，最值得你关注的是这一点：**LangChain 会按 `session_id` 写入不同的键。**
 

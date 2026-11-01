@@ -25,24 +25,25 @@ tags:
 
 ## 阅读路径
 
-| 现在遇到的问题                    | 建议先看                                           |
-| --------------------------------- | -------------------------------------------------- |
-| 还没安装 Docker Desktop           | 第 2.2～2.5 小节：Docker Desktop 安装与验证        |
-| 想在 Ubuntu 服务器安装 Docker     | 第 2.10 小节：Ubuntu 下 Docker 安装与卸载          |
-| 不知道 Docker 到底是什么          | 第 1.2 小节：Docker 是什么                         |
-| 分不清 Docker 和虚拟机            | 第 1.3 小节                                        |
-| 分不清镜像、容器、仓库、数据卷    | 第 1.5 小节                                        |
-| 想先跑一个最小 Docker 案例        | 第 2 部分：Docker 基础命令与第一个容器             |
-| 不知道 Dockerfile 和 Compose 区别 | 第 3 部分：从单容器到 Compose 多服务编排           |
-| 担心数据存放位置或误删数据        | 第 4 部分：数据持久化、网络、迁移与危险边界        |
-| 想把 Windows 环境迁移到 Ubuntu    | 第 4.5 小节：跨机器迁移与离线同步                  |
-| 想知道 Dify 到底跑了哪些容器      | 第 5 部分：把 Docker 知识迁移到 Dify 部署结构      |
-| 页面打不开，容器状态不对          | 第 6 部分：Dify 排障：状态、日志、数据与数据库连接 |
-| 想用 Navicat 连接 Dify 数据库     | 第 6.5 小节                                        |
-| 准备升级 Dify                     | 第 7 部分：Dify 升级、备份与源码改造               |
-| 改了 Dify 前端源码但没生效        | 第 7.2 小节                                        |
-| 准备清理 Docker 或重装环境        | 第 8.6 小节：危险操作清单                          |
-| 只想查命令                        | 第 8 部分：Docker 常用命令速查                     |
+{% autogrid data-grid-link-table nofix %}
+现在遇到的问题|建议先看
+还没安装 Docker Desktop|第 2.2～2.5 小节：Docker Desktop 安装与验证
+想在 Ubuntu 服务器安装 Docker|第 2.10 小节：Ubuntu 下 Docker 安装与卸载
+不知道 Docker 到底是什么|第 1.2 小节：Docker 是什么
+分不清 Docker 和虚拟机|第 1.3 小节
+分不清镜像、容器、仓库、数据卷|第 1.5 小节
+想先跑一个最小 Docker 案例|第 2 部分：Docker 基础命令与第一个容器
+不知道 Dockerfile 和 Compose 区别|第 3 部分：从单容器到 Compose 多服务编排
+担心数据存放位置或误删数据|第 4 部分：数据持久化、网络、迁移与危险边界
+想把 Windows 环境迁移到 Ubuntu|第 4.5 小节：跨机器迁移与离线同步
+想知道 Dify 到底跑了哪些容器|第 5 部分：把 Docker 知识迁移到 Dify 部署结构
+页面打不开，容器状态不对|第 6 部分：Dify 排障：状态、日志、数据与数据库连接
+想用 Navicat 连接 Dify 数据库|第 6.5 小节
+准备升级 Dify|第 7 部分：Dify 升级、备份与源码改造
+改了 Dify 前端源码但没生效|第 7.2 小节
+准备清理 Docker 或重装环境|第 8.6 小节：危险操作清单
+只想查命令|第 8 部分：Docker 常用命令速查
+{% endautogrid %}
 
 ---
 
@@ -74,13 +75,14 @@ Build, Ship and Run Any App, Anywhere
 
 和手工安装环境相比，Docker 的价值不只是少装几个软件，而是把应用交付从零散的安装步骤变成可复制的流程：
 
-| 能力     | 说明                                         | 课程中的例子                                      |
-| -------- | -------------------------------------------- | ------------------------------------------------- |
-| 可移植性 | 同一套镜像可以在本地、测试环境、服务器上运行 | 本地跑通的 MySQL / Redis / 向量库迁到 Ubuntu      |
-| 隔离性   | 不同容器有各自的进程、文件系统和依赖         | Dify 的 `api`、`worker`、`redis` 互不直接污染环境 |
-| 低开销   | 容器共享宿主机内核，通常比完整虚拟机更轻     | 一台机器上同时跑多个基础服务                      |
-| 可伸缩性 | 多实例服务可以更容易复制和扩展               | 后续生产部署中扩展 worker 处理后台任务            |
-| 可复现性 | 环境由镜像、Compose、环境变量描述            | 新同学拉起同一套 Dify 环境，排障口径一致          |
+{% autogrid data-grid-link-table nofix %}
+能力|说明|课程中的例子
+可移植性|同一套镜像可以在本地、测试环境、服务器上运行|本地跑通的 MySQL / Redis / 向量库迁到 Ubuntu
+隔离性|不同容器有各自的进程、文件系统和依赖|Dify 的 `api`、`worker`、`redis` 互不直接污染环境
+低开销|容器共享宿主机内核，通常比完整虚拟机更轻|一台机器上同时跑多个基础服务
+可伸缩性|多实例服务可以更容易复制和扩展|后续生产部署中扩展 worker 处理后台任务
+可复现性|环境由镜像、Compose、环境变量描述|新同学拉起同一套 Dify 环境，排障口径一致
+{% endautogrid %}
 
 当然，Docker 不是万能药。数据库备份、显卡驱动、网络代理、数据权限、云服务器安全组，这些还是要自己处理。但它能把“应用怎么跑”这件事先稳住，这对后面部署 Dify、本地模型和企业级项目很关键。
 
@@ -95,12 +97,13 @@ Build, Ship and Run Any App, Anywhere
 
 主要看三个区别：
 
-| 对比项   | 虚拟机 VM                        | Docker 容器                        |
-| -------- | -------------------------------- | ---------------------------------- |
-| 隔离方式 | 虚拟化整套操作系统               | 共享宿主机内核，隔离进程和文件系统 |
-| 启动速度 | 通常较慢                         | 通常更快                           |
-| 资源占用 | 更高                             | 更低                               |
-| 适合场景 | 强隔离、多系统环境、传统基础设施 | 应用交付、开发测试、微服务部署     |
+{% autogrid data-grid-link-table nofix %}
+对比项|虚拟机 VM|Docker 容器
+隔离方式|虚拟化整套操作系统|共享宿主机内核，隔离进程和文件系统
+启动速度|通常较慢|通常更快
+资源占用|更高|更低
+适合场景|强隔离、多系统环境、传统基础设施|应用交付、开发测试、微服务部署
+{% endautogrid %}
 
 因此，Docker 不是用来替代所有虚拟机的工具。它更适合解决应用交付、环境一致、多服务编排这类问题。
 
@@ -115,15 +118,16 @@ Docker 是典型的客户端和服务端架构。
 
 图里重点画出了四个对象：客户端、Docker 主机、镜像仓库、容器。为了后面能读懂 Dify 的 Compose 文件，这里再把 volume 和 Compose 一起补进来：
 
-| 对象                                      | 和谁发生关系                       | 关系说明                                                     |
-| ----------------------------------------- | ---------------------------------- | ------------------------------------------------------------ |
-| Docker Client（Docker 客户端）            | Docker Daemon                      | 终端里的 `docker` 命令会把操作请求发送给 Docker Daemon       |
-| Docker Daemon（Docker 守护进程 / 服务端） | Registry、Image、Container、Volume | 负责拉取镜像、创建容器、管理网络和数据卷                     |
-| Registry（镜像仓库）                      | Image                              | 存放和分发镜像，例如 Docker Hub 或企业私有仓库               |
-| Image（镜像）                             | Container                          | 容器基于镜像创建并运行；一个镜像可以启动多个容器             |
-| Container（容器）                         | Image、Volume、Network             | 运行应用进程，并把需要持久化的数据写入 volume 或挂载目录     |
-| Volume（数据卷）                          | Container                          | 保存数据库、上传文件、索引等数据，通常独立于容器生命周期     |
-| Docker Compose（多容器编排工具）          | Image、Container、Volume、Network  | 用一份 YAML 把镜像、容器、数据卷、网络和环境变量统一描述出来 |
+{% autogrid data-grid-link-table nofix %}
+对象|和谁发生关系|关系说明
+Docker Client（Docker 客户端）|Docker Daemon|终端里的 `docker` 命令会把操作请求发送给 Docker Daemon
+Docker Daemon（Docker 守护进程 / 服务端）|Registry、Image、Container、Volume|负责拉取镜像、创建容器、管理网络和数据卷
+Registry（镜像仓库）|Image|存放和分发镜像，例如 Docker Hub 或企业私有仓库
+Image（镜像）|Container|容器基于镜像创建并运行；一个镜像可以启动多个容器
+Container（容器）|Image、Volume、Network|运行应用进程，并把需要持久化的数据写入 volume 或挂载目录
+Volume（数据卷）|Container|保存数据库、上传文件、索引等数据，通常独立于容器生命周期
+Docker Compose（多容器编排工具）|Image、Container、Volume、Network|用一份 YAML 把镜像、容器、数据卷、网络和环境变量统一描述出来
+{% endautogrid %}
 
 所以执行一条命令时，要知道它在操作谁：
 
@@ -136,16 +140,17 @@ Docker 是典型的客户端和服务端架构。
 
 ### 1.5 镜像、容器、仓库、数据卷
 
-| 词              | 可以这样理解                 | 常见例子                                     |
-| --------------- | ---------------------------- | -------------------------------------------- |
-| Docker Engine   | 运行容器的引擎               | Docker Desktop、服务器上的 Docker 服务       |
-| 镜像 Image      | 应用的运行模板，像安装包     | `mysql:8.0.45`、`postgres:15-alpine`         |
-| 容器 Container  | 镜像运行后的实例             | `mysql-db`、`docker-api-1`                   |
-| 仓库 Repository | 存放和下载镜像的平台         | Docker Hub、企业私有镜像仓库                 |
-| 数据卷 Volume   | 独立于容器生命周期的数据存储 | `mysql_data`、`postgres_data`                |
-| Dockerfile      | 自定义镜像的构建脚本         | `FROM python:3.12`                           |
-| Docker Compose  | 用一份 YAML 管理一组容器     | `docker-compose.yaml`                        |
-| bind mount      | 把宿主机目录挂到容器里       | `./volumes/db/data:/var/lib/postgresql/data` |
+{% autogrid data-grid-link-table nofix %}
+词|可以这样理解|常见例子
+Docker Engine|运行容器的引擎|Docker Desktop、服务器上的 Docker 服务
+镜像 Image|应用的运行模板，像安装包|`mysql:8.0.45`、`postgres:15-alpine`
+容器 Container|镜像运行后的实例|`mysql-db`、`docker-api-1`
+仓库 Repository|存放和下载镜像的平台|Docker Hub、企业私有镜像仓库
+数据卷 Volume|独立于容器生命周期的数据存储|`mysql_data`、`postgres_data`
+Dockerfile|自定义镜像的构建脚本|`FROM python:3.12`
+Docker Compose|用一份 YAML 管理一组容器|`docker-compose.yaml`
+bind mount|把宿主机目录挂到容器里|`./volumes/db/data:/var/lib/postgresql/data`
+{% endautogrid %}
 
 可以这样理解：**镜像负责提供程序，容器负责把程序跑起来，仓库负责分发镜像，volume 负责保存数据，Compose 负责把一组容器编排起来。**
 
@@ -167,10 +172,11 @@ Dockerfile 和 Compose 经常一起出现，但它们解决的问题不同。
 
 学习 Docker 时，通常会碰到两种环境：
 
-| 环境             | 推荐安装方式                 | 适合场景                                 |
-| ---------------- | ---------------------------- | ---------------------------------------- |
-| Windows 本地电脑 | Docker Desktop + WSL 2       | 学习、演示、跑 Dify / Coze Studio 本地版 |
-| Ubuntu 云服务器  | Docker Engine + Compose 插件 | 企业部署、远程服务、后续项目上线         |
+{% autogrid data-grid-link-table nofix %}
+环境|推荐安装方式|适合场景
+Windows 本地电脑|Docker Desktop + WSL 2|学习、演示、跑 Dify / Coze Studio 本地版
+Ubuntu 云服务器|Docker Engine + Compose 插件|企业部署、远程服务、后续项目上线
+{% endautogrid %}
 
 如果只是跟着本章学习，先装 Docker Desktop 就够了；如果已经在准备云服务器部署，可以直接跳到第 2.10 小节。
 
@@ -191,12 +197,13 @@ Windows 本地部署 Coze Studio、Dify、Coze Loop 这类平台时，最常用�
 
 Windows 上可以按下面顺序检查：
 
-| 检查项   | 怎么看                                   | 说明                                                   |
-| -------- | ---------------------------------------- | ------------------------------------------------------ |
-| 系统版本 | `Win + R` 输入 `winver`                  | 建议 Windows 10 2004 及以上，Windows 11 更省心         |
-| 虚拟化   | 任务管理器 -> 性能 -> CPU -> 虚拟化      | 如果未启用，需要进 BIOS 开启 Virtualization Technology |
-| WSL 功能 | “启用或关闭 Windows 功能”                | 勾选“适用于 Linux 的 Windows 子系统”和“虚拟机平台”     |
-| WSL 内核 | Docker Desktop 启动提示或 `wsl --status` | 旧环境可能需要更新 WSL 内核                            |
+{% autogrid data-grid-link-table nofix %}
+检查项|怎么看|说明
+系统版本|`Win + R` 输入 `winver`|建议 Windows 10 2004 及以上，Windows 11 更省心
+虚拟化|任务管理器 -> 性能 -> CPU -> 虚拟化|如果未启用，需要进 BIOS 开启 Virtualization Technology
+WSL 功能|“启用或关闭 Windows 功能”|勾选“适用于 Linux 的 Windows 子系统”和“虚拟机平台”
+WSL 内核|Docker Desktop 启动提示或 `wsl --status`|旧环境可能需要更新 WSL 内核
+{% endautogrid %}
 
 虚拟化可以在任务管理器里看，确认状态显示为“已启用”：
 
@@ -307,13 +314,14 @@ docker run -d --name mysql-db -p 9999:3306 -e MYSQL_ROOT_PASSWORD=123456 mysql:8
 
 这条命令里最重要的是几个参数：
 
-| 参数                            | 含义                                            |
-| ------------------------------- | ----------------------------------------------- |
-| `-d`                            | 后台运行，不占用当前终端                        |
-| `--name mysql-db`               | 给容器起名，后续可以用这个名字 stop、logs、exec |
-| `-p 9999:3306`                  | 宿主机 9999 端口映射到容器内 3306 端口          |
-| `-e MYSQL_ROOT_PASSWORD=123456` | 给 MySQL 容器注入环境变量，设置 root 密码       |
-| `mysql:8.0.45`                  | 要运行的镜像名和版本                            |
+{% autogrid data-grid-link-table nofix %}
+参数|含义
+`-d`|后台运行，不占用当前终端
+`--name mysql-db`|给容器起名，后续可以用这个名字 stop、logs、exec
+`-p 9999:3306`|宿主机 9999 端口映射到容器内 3306 端口
+`-e MYSQL_ROOT_PASSWORD=123456`|给 MySQL 容器注入环境变量，设置 root 密码
+`mysql:8.0.45`|要运行的镜像名和版本
+{% endautogrid %}
 
 查看容器：
 
@@ -395,10 +403,11 @@ docker ps
 
 输出里常见两列：
 
-| 列    | 含义   | 示例                                                  |
-| ----- | ------ | ----------------------------------------------------- |
-| IMAGE | 镜像名 | `postgres:15-alpine`、`langgenius/dify-api:<version>` |
-| NAMES | 容器名 | `docker-db_postgres-1`、`docker-api-1`                |
+{% autogrid data-grid-link-table nofix %}
+列|含义|示例
+IMAGE|镜像名|`postgres:15-alpine`、`langgenius/dify-api:<version>`
+NAMES|容器名|`docker-db_postgres-1`、`docker-api-1`
+{% endautogrid %}
 
 看输出时可以先抓两个特征：
 
@@ -417,20 +426,21 @@ Docker Desktop 里也能直接区分：
 
 ### 2.9 基础命令速查
 
-| 目的              | 命令                          | 说明                     |
-| ----------------- | ----------------------------- | ------------------------ |
-| 查看 Docker 版本  | `docker --version`            | 检查 Docker CLI 是否可用 |
-| 查看 Compose 版本 | `docker compose version`      | 检查 Compose v2 是否可用 |
-| 拉取镜像          | `docker pull mysql:8.0.45`    | 从镜像仓库下载镜像       |
-| 查看镜像          | `docker images`               | 查看本地镜像             |
-| 启动容器          | `docker run ...`              | 基于镜像创建并启动容器   |
-| 查看运行中容器    | `docker ps`                   | 只看运行中的容器         |
-| 查看全部容器      | `docker ps -a`                | 包括已停止容器           |
-| 查看日志          | `docker logs -f mysql-db`     | 跟踪某个容器日志         |
-| 进入容器          | `docker exec -it mysql-db sh` | 进入容器内部             |
-| 停止容器          | `docker stop mysql-db`        | 停止运行中的容器         |
-| 删除容器          | `docker rm mysql-db`          | 删除已停止的容器         |
-| 删除镜像          | `docker rmi mysql:8.0.45`     | 删除本地镜像             |
+{% autogrid data-grid-link-table nofix %}
+目的|命令|说明
+查看 Docker 版本|`docker --version`|检查 Docker CLI 是否可用
+查看 Compose 版本|`docker compose version`|检查 Compose v2 是否可用
+拉取镜像|`docker pull mysql:8.0.45`|从镜像仓库下载镜像
+查看镜像|`docker images`|查看本地镜像
+启动容器|`docker run ...`|基于镜像创建并启动容器
+查看运行中容器|`docker ps`|只看运行中的容器
+查看全部容器|`docker ps -a`|包括已停止容器
+查看日志|`docker logs -f mysql-db`|跟踪某个容器日志
+进入容器|`docker exec -it mysql-db sh`|进入容器内部
+停止容器|`docker stop mysql-db`|停止运行中的容器
+删除容器|`docker rm mysql-db`|删除已停止的容器
+删除镜像|`docker rmi mysql:8.0.45`|删除本地镜像
+{% endautogrid %}
 
 日常排障时，先看 `docker ps`，再看 `docker logs`。在没确认数据位置之前，先别急着删除容器或清理 volume。
 
@@ -510,11 +520,12 @@ docker --version
 
 这一部分就往前走一步：不再手动敲一长串 `docker run`，而是用文件描述一组服务。
 
-| 阶段         | 解决的问题                 | 典型文件或命令                   |
-| ------------ | -------------------------- | -------------------------------- |
-| `docker run` | 快速启动一个现成镜像       | `docker run -d ... mysql:8.0.45` |
-| Dockerfile   | 把自己的代码和依赖打成镜像 | `FROM python:3.12`               |
-| Compose      | 一次启动多容器项目         | `docker compose up -d`           |
+{% autogrid data-grid-link-table nofix %}
+阶段|解决的问题|典型文件或命令
+`docker run`|快速启动一个现成镜像|`docker run -d ... mysql:8.0.45`
+Dockerfile|把自己的代码和依赖打成镜像|`FROM python:3.12`
+Compose|一次启动多容器项目|`docker compose up -d`
+{% endautogrid %}
 
 Dify 的 `docker/` 目录也可以按这个思路理解：它不是普通源码目录，更像一份多服务部署说明书。
 
@@ -538,13 +549,14 @@ CMD ["python", "test_mysql1.py"]
 
 逐行理解：
 
-| 指令                  | 作用                          |
-| --------------------- | ----------------------------- |
-| `FROM python:3.12`    | 以 Python 3.12 官方镜像为基础 |
-| `WORKDIR /app`        | 设置容器内工作目录            |
-| `COPY . /app`         | 把当前项目文件复制进镜像      |
-| `RUN pip install ...` | 构建镜像时安装依赖            |
-| `CMD [...]`           | 容器启动时默认执行的命令      |
+{% autogrid data-grid-link-table nofix %}
+指令|作用
+`FROM python:3.12`|以 Python 3.12 官方镜像为基础
+`WORKDIR /app`|设置容器内工作目录
+`COPY . /app`|把当前项目文件复制进镜像
+`RUN pip install ...`|构建镜像时安装依赖
+`CMD [...]`|容器启动时默认执行的命令
+{% endautogrid %}
 
 Dockerfile 解决的是“如何构建一个符合我项目需要的镜像”。它不是用来启动一组服务的，启动多服务要交给 Compose。
 
@@ -760,17 +772,18 @@ docker compose exec mysql-db mysql -uroot -p123456 test_db
 
 常见字段速查：
 
-| 字段             | 作用                       |
-| ---------------- | -------------------------- |
-| `image`          | 使用现成镜像               |
-| `build`          | 从 Dockerfile 构建镜像     |
-| `container_name` | 指定容器名                 |
-| `restart`        | 容器异常停止后的重启策略   |
-| `environment`    | 注入环境变量               |
-| `ports`          | 宿主机端口到容器端口的映射 |
-| `volumes`        | 数据持久化或目录挂载       |
-| `depends_on`     | 启动顺序依赖               |
-| `networks`       | 容器网络隔离与互通         |
+{% autogrid data-grid-link-table nofix %}
+字段|作用
+`image`|使用现成镜像
+`build`|从 Dockerfile 构建镜像
+`container_name`|指定容器名
+`restart`|容器异常停止后的重启策略
+`environment`|注入环境变量
+`ports`|宿主机端口到容器端口的映射
+`volumes`|数据持久化或目录挂载
+`depends_on`|启动顺序依赖
+`networks`|容器网络隔离与互通
+{% endautogrid %}
 
 读 Dify 的 compose 文件时，可以先画一条线：`nginx -> web/api -> db/redis/vector store`。先知道请求和数据大概怎么流动，再看具体变量，会比直接盯着几百行 YAML 更轻松。
 
@@ -778,19 +791,20 @@ docker compose exec mysql-db mysql -uroot -p123456 test_db
 
 下面命令默认在 `docker-compose.yaml` 所在目录执行。
 
-| 目的                         | 命令                               | 说明                   |
-| ---------------------------- | ---------------------------------- | ---------------------- |
-| 启动整套服务                 | `docker compose up -d`             | 后台启动               |
-| 查看服务状态                 | `docker compose ps`                | 看 Up、healthy、Exited |
-| 查看服务日志                 | `docker compose logs -f <服务名>`  | 跟踪日志               |
-| 临时停止服务                 | `docker compose stop`              | 不删除容器             |
-| 启动已停止的服务             | `docker compose start`             | 不重建容器             |
-| 停止并删除容器、网络         | `docker compose down`              | 默认不删 volume        |
-| 停止并删除容器、网络、volume | `docker compose down -v`           | 会删除 volume，谨慎    |
-| 拉取镜像                     | `docker compose pull`              | 更新镜像               |
-| 重新构建镜像                 | `docker compose build <服务名>`    | 本地 build 场景使用    |
-| 查看最终配置                 | `docker compose config`            | 用于确认变量展开后配置 |
-| 查看服务清单                 | `docker compose config --services` | 只列 service 名        |
+{% autogrid data-grid-link-table nofix %}
+目的|命令|说明
+启动整套服务|`docker compose up -d`|后台启动
+查看服务状态|`docker compose ps`|看 Up、healthy、Exited
+查看服务日志|`docker compose logs -f <服务名>`|跟踪日志
+临时停止服务|`docker compose stop`|不删除容器
+启动已停止的服务|`docker compose start`|不重建容器
+停止并删除容器、网络|`docker compose down`|默认不删 volume
+停止并删除容器、网络、volume|`docker compose down -v`|会删除 volume，谨慎
+拉取镜像|`docker compose pull`|更新镜像
+重新构建镜像|`docker compose build <服务名>`|本地 build 场景使用
+查看最终配置|`docker compose config`|用于确认变量展开后配置
+查看服务清单|`docker compose config --services`|只列 service 名
+{% endautogrid %}
 
 最容易混的是 `stop`、`down`、`down -v`：
 
@@ -931,11 +945,12 @@ Docker 学到后面，很可能会遇到迁移：本地 Windows 能跑了，要�
 
 以本章的 `MySQL + Python` Compose 小案例为例，迁移时别想着“把容器复制过去”。先分清三类东西：
 
-| 迁移对象 | 作用             | 示例                                                    |
-| -------- | ---------------- | ------------------------------------------------------- |
-| 配置文件 | 描述服务如何启动 | `docker-compose.yml`、`.env`                            |
-| 镜像     | 提供运行环境     | `mysql:8.0.45`、`docker-python-mysql-python-app:latest` |
-| 数据     | 保存业务状态     | MySQL 数据目录、Docker volume、备份 SQL                 |
+{% autogrid data-grid-link-table nofix %}
+迁移对象|作用|示例
+配置文件|描述服务如何启动|`docker-compose.yml`、`.env`
+镜像|提供运行环境|`mysql:8.0.45`、`docker-python-mysql-python-app:latest`
+数据|保存业务状态|MySQL 数据目录、Docker volume、备份 SQL
+{% endautogrid %}
 
 #### 4.5.1 在线迁移：目标服务器可以拉镜像
 
@@ -1010,13 +1025,14 @@ docker save docker-python-mysql-python-app:latest -o ./python-app.tar
 
 把这些文件上传到目标服务器：
 
-| 文件                 | 是否必需 | 说明                          |
-| -------------------- | -------- | ----------------------------- |
-| `mysql-8.0.45.tar`   | 必需     | MySQL 镜像包                  |
-| `python-app.tar`     | 必需     | 自定义 Python 镜像包          |
-| `docker-compose.yml` | 必需     | 服务编排配置                  |
-| `.env`               | 有则上传 | 环境变量配置                  |
-| 数据备份             | 视情况   | 数据库 SQL 备份或挂载目录备份 |
+{% autogrid data-grid-link-table nofix %}
+文件|是否必需|说明
+`mysql-8.0.45.tar`|必需|MySQL 镜像包
+`python-app.tar`|必需|自定义 Python 镜像包
+`docker-compose.yml`|必需|服务编排配置
+`.env`|有则上传|环境变量配置
+数据备份|视情况|数据库 SQL 备份或挂载目录备份
+{% endautogrid %}
 
 在目标服务器导入镜像：
 
@@ -1072,15 +1088,16 @@ Docker 里有些命令看起来像“清理环境”，实际是在删数据。D
 
 这些命令执行前，先停几秒确认：
 
-| 操作                          | 影响                                    | 风险等级 |
-| ----------------------------- | --------------------------------------- | -------- |
-| `docker compose stop`         | 停止服务，容器仍保留                    | 低       |
-| `docker compose down`         | 删除当前项目容器和网络，默认保留 volume | 中       |
-| `docker compose down -v`      | 删除当前项目容器、网络和 volume         | 高       |
-| `docker volume rm <volume>`   | 删除指定 volume                         | 高       |
-| `docker volume prune`         | 删除所有未使用 volume                   | 高       |
-| `rm -rf ./volumes`            | 删除当前目录下的挂载数据                | 高       |
-| `sudo rm -rf /var/lib/docker` | 删除 Docker 管理的全部数据              | 极高     |
+{% autogrid data-grid-link-table nofix %}
+操作|影响|风险等级
+`docker compose stop`|停止服务，容器仍保留|低
+`docker compose down`|删除当前项目容器和网络，默认保留 volume|中
+`docker compose down -v`|删除当前项目容器、网络和 volume|高
+`docker volume rm <volume>`|删除指定 volume|高
+`docker volume prune`|删除所有未使用 volume|高
+`rm -rf ./volumes`|删除当前目录下的挂载数据|高
+`sudo rm -rf /var/lib/docker`|删除 Docker 管理的全部数据|极高
+{% endautogrid %}
 
 本地练习时，清空数据有时只是重来一遍；服务器上就不能这么随意了。动手前先问三个问题：
 
@@ -1101,14 +1118,15 @@ ls -lah ./volumes
 
 进入 Dify 排障前，先把 Docker 自身的问题排掉。有些“平台启动失败”，实际还没到平台层。
 
-| 报错或现象                        | 常见原因                               | 处理方式                                                      |
-| --------------------------------- | -------------------------------------- | ------------------------------------------------------------- |
-| Docker Desktop 提示 WSL 2 未配置  | WSL、虚拟机平台或 WSL 内核缺失         | 回到第 2.2 小节检查虚拟化、WSL 功能和内核                     |
-| `Connection refused`              | 目标服务没启动、端口写错、服务还没就绪 | 先看 `docker ps`，再看 `docker logs` 或 `docker compose logs` |
-| Compose 提示 YAML 格式错误        | 缩进、冒号、引号或 Tab 问题            | YAML 使用空格缩进，冒号后保留空格，避免中文引号               |
-| Ubuntu 执行 `docker` 提示权限不足 | 当前用户不在 `docker` 用户组           | 执行 `sudo usermod -aG docker $USER` 后重新登录               |
-| `port is already allocated`       | 宿主机端口被其他进程或容器占用         | 换宿主机端口，或停掉占用端口的容器                            |
-| 镜像拉取超时                      | Docker Engine 网络或镜像源不可用       | 配置镜像源、代理，或走离线 `docker save/load`                 |
+{% autogrid data-grid-link-table nofix %}
+报错或现象|常见原因|处理方式
+Docker Desktop 提示 WSL 2 未配置|WSL、虚拟机平台或 WSL 内核缺失|回到第 2.2 小节检查虚拟化、WSL 功能和内核
+`Connection refused`|目标服务没启动、端口写错、服务还没就绪|先看 `docker ps`，再看 `docker logs` 或 `docker compose logs`
+Compose 提示 YAML 格式错误|缩进、冒号、引号或 Tab 问题|YAML 使用空格缩进，冒号后保留空格，避免中文引号
+Ubuntu 执行 `docker` 提示权限不足|当前用户不在 `docker` 用户组|执行 `sudo usermod -aG docker $USER` 后重新登录
+`port is already allocated`|宿主机端口被其他进程或容器占用|换宿主机端口，或停掉占用端口的容器
+镜像拉取超时|Docker Engine 网络或镜像源不可用|配置镜像源、代理，或走离线 `docker save/load`
+{% endautogrid %}
 
 排错时按这个顺序来：
 
@@ -1126,14 +1144,15 @@ Dify 使用 Docker Compose 启动时，通常会包含 `api`、`worker`、`worke
 
 前面讲过的 Docker 概念，放到 Dify 里大概是这样：
 
-| Docker 概念         | 在 Dify 里的对应物                                                   | 排障时看什么                           |
-| ------------------- | -------------------------------------------------------------------- | -------------------------------------- |
-| 镜像                | `langgenius/dify-api`、`langgenius/dify-web`、`postgres`、`redis` 等 | `docker images`、`docker compose pull` |
-| 容器 / 服务         | `api`、`worker`、`web`、`nginx`、`db_postgres` 等                    | `docker compose ps`、`docker ps`       |
-| 端口映射            | `EXPOSE_NGINX_PORT`、`EXPOSE_NGINX_SSL_PORT`                         | `docker compose ps`、`.env`            |
-| volume / bind mount | `./volumes/db/data`、`./volumes/app/storage` 等                      | `docker inspect ... Mounts`            |
-| 网络                | Compose 自动创建的项目网络、`ssrf_proxy_network` 等                  | 服务名互访、日志里的连接失败           |
-| 环境变量            | `.env`、`envs/*.env`                                                 | 数据库、Redis、URL、向量库、密钥配置   |
+{% autogrid data-grid-link-table nofix %}
+Docker 概念|在 Dify 里的对应物|排障时看什么
+镜像|`langgenius/dify-api`、`langgenius/dify-web`、`postgres`、`redis` 等|`docker images`、`docker compose pull`
+容器 / 服务|`api`、`worker`、`web`、`nginx`、`db_postgres` 等|`docker compose ps`、`docker ps`
+端口映射|`EXPOSE_NGINX_PORT`、`EXPOSE_NGINX_SSL_PORT`|`docker compose ps`、`.env`
+volume / bind mount|`./volumes/db/data`、`./volumes/app/storage` 等|`docker inspect ... Mounts`
+网络|Compose 自动创建的项目网络、`ssrf_proxy_network` 等|服务名互访、日志里的连接失败
+环境变量|`.env`、`envs/*.env`|数据库、Redis、URL、向量库、密钥配置
+{% endautogrid %}
 
 读 Dify 的 compose 文件，不用从第一行硬读到最后一行。先抓四类信息：
 
@@ -1175,21 +1194,22 @@ flowchart LR
 
 ### 5.2 典型容器分工
 
-| 层次   | 常见服务                                | 主要职责                             |
-| ------ | --------------------------------------- | ------------------------------------ |
-| 入口层 | `nginx`                                 | 对外提供 80/443 入口，转发到 web/api |
-| 应用层 | `web`                                   | Dify 控制台和应用页面                |
-| 应用层 | `api`                                   | 后端接口、鉴权、工作流、应用配置等   |
-| 应用层 | `api_websocket`                         | 协作、实时通信等可选能力             |
-| 任务层 | `worker`                                | 异步任务、知识库索引、队列消费       |
-| 任务层 | `worker_beat`                           | 定时任务调度                         |
-| 数据层 | `db_postgres` 或其他数据库服务          | 主业务数据库                         |
-| 数据层 | `redis`                                 | 缓存、队列、任务中间状态             |
-| 向量层 | `weaviate` / `milvus` / `opensearch` 等 | 知识库向量检索，取决于配置           |
-| 安全层 | `sandbox`                               | 安全执行代码节点                     |
-| 安全层 | `ssrf_proxy`                            | 代理外部访问，降低 SSRF 风险         |
-| 插件层 | `plugin_daemon`                         | 插件、工具、模型供应商等扩展能力支撑 |
-| 初始化 | `init_permissions`                      | 初始化挂载目录权限，通常执行后退出   |
+{% autogrid data-grid-link-table nofix %}
+层次|常见服务|主要职责
+入口层|`nginx`|对外提供 80/443 入口，转发到 web/api
+应用层|`web`|Dify 控制台和应用页面
+应用层|`api`|后端接口、鉴权、工作流、应用配置等
+应用层|`api_websocket`|协作、实时通信等可选能力
+任务层|`worker`|异步任务、知识库索引、队列消费
+任务层|`worker_beat`|定时任务调度
+数据层|`db_postgres` 或其他数据库服务|主业务数据库
+数据层|`redis`|缓存、队列、任务中间状态
+向量层|`weaviate` / `milvus` / `opensearch` 等|知识库向量检索，取决于配置
+安全层|`sandbox`|安全执行代码节点
+安全层|`ssrf_proxy`|代理外部访问，降低 SSRF 风险
+插件层|`plugin_daemon`|插件、工具、模型供应商等扩展能力支撑
+初始化|`init_permissions`|初始化挂载目录权限，通常执行后退出
+{% endautogrid %}
 
 实际环境中可以用：
 
@@ -1203,21 +1223,22 @@ docker ps
 
 读官方 compose 时，可以先按这几类服务来理解：
 
-| 服务                                   | 镜像或来源                                | 主要作用                       | 关键挂载 / 端口                                             |
-| -------------------------------------- | ----------------------------------------- | ------------------------------ | ----------------------------------------------------------- |
-| `nginx`                                | `nginx:latest`                            | 对外入口，转发到 web / api     | `${EXPOSE_NGINX_PORT:-80}`、`${EXPOSE_NGINX_SSL_PORT:-443}` |
-| `web`                                  | `langgenius/dify-web:<version>`           | 前端页面                       | 主要依赖环境变量                                            |
-| `api`                                  | `langgenius/dify-api:<version>`           | 后端接口                       | `./volumes/app/storage:/app/api/storage`                    |
-| `api_websocket`                        | `langgenius/dify-api:<version>`           | WebSocket / 协作能力，可选启用 | 取决于 `COMPOSE_PROFILES` 和当前版本                        |
-| `worker`                               | `langgenius/dify-api:<version>`           | 后台任务、知识库索引、队列消费 | `./volumes/app/storage:/app/api/storage`                    |
-| `worker_beat`                          | `langgenius/dify-api:<version>`           | 定时任务调度                   | 主要依赖数据库和 Redis                                      |
-| `db_postgres`                          | `postgres:15-alpine`                      | 主业务数据库                   | `./volumes/db/data:/var/lib/postgresql/data`                |
-| `db_mysql` / `oceanbase` / `seekdb` 等 | 数据库镜像或外部数据库配置                | 可选数据库后端                 | 取决于当前版本和 `.env` / `envs/` 配置                      |
-| `redis`                                | `redis:6-alpine`                          | 缓存、队列、中间状态           | `./volumes/redis/data:/data`                                |
-| `sandbox`                              | `langgenius/dify-sandbox:<version>`       | 代码节点隔离执行               | `./volumes/sandbox/...`                                     |
-| `plugin_daemon`                        | `langgenius/dify-plugin-daemon:<version>` | 插件服务                       | `./volumes/plugin_daemon:/app/storage`                      |
-| `ssrf_proxy`                           | `ubuntu/squid:latest`                     | 外部访问代理与 SSRF 防护       | `ssrf_proxy_network`                                        |
-| `weaviate` / `qdrant` / `pgvector` 等  | 向量库镜像                                | 知识库向量检索                 | 对应 `./volumes/<向量库>` 目录                              |
+{% autogrid data-grid-link-table nofix %}
+服务|镜像或来源|主要作用|关键挂载 / 端口
+`nginx`|`nginx:latest`|对外入口，转发到 web / api|`${EXPOSE_NGINX_PORT:-80}`、`${EXPOSE_NGINX_SSL_PORT:-443}`
+`web`|`langgenius/dify-web:<version>`|前端页面|主要依赖环境变量
+`api`|`langgenius/dify-api:<version>`|后端接口|`./volumes/app/storage:/app/api/storage`
+`api_websocket`|`langgenius/dify-api:<version>`|WebSocket / 协作能力，可选启用|取决于 `COMPOSE_PROFILES` 和当前版本
+`worker`|`langgenius/dify-api:<version>`|后台任务、知识库索引、队列消费|`./volumes/app/storage:/app/api/storage`
+`worker_beat`|`langgenius/dify-api:<version>`|定时任务调度|主要依赖数据库和 Redis
+`db_postgres`|`postgres:15-alpine`|主业务数据库|`./volumes/db/data:/var/lib/postgresql/data`
+`db_mysql` / `oceanbase` / `seekdb` 等|数据库镜像或外部数据库配置|可选数据库后端|取决于当前版本和 `.env` / `envs/` 配置
+`redis`|`redis:6-alpine`|缓存、队列、中间状态|`./volumes/redis/data:/data`
+`sandbox`|`langgenius/dify-sandbox:<version>`|代码节点隔离执行|`./volumes/sandbox/...`
+`plugin_daemon`|`langgenius/dify-plugin-daemon:<version>`|插件服务|`./volumes/plugin_daemon:/app/storage`
+`ssrf_proxy`|`ubuntu/squid:latest`|外部访问代理与 SSRF 防护|`ssrf_proxy_network`
+`weaviate` / `qdrant` / `pgvector` 等|向量库镜像|知识库向量检索|对应 `./volumes/<向量库>` 目录
+{% endautogrid %}
 
 读 compose 文件不是为了记住每一行，而是为了回答三个问题：启动了哪些服务，数据挂载在哪里，外部请求从哪个端口进入。
 
@@ -1287,16 +1308,17 @@ services:
 
 Dify 的关键数据通常包括：
 
-| 数据类型                   | 常见服务                          | 常见位置                                                   |
-| -------------------------- | --------------------------------- | ---------------------------------------------------------- |
-| 账号、应用、工作流、配置   | PostgreSQL                        | `./volumes/db/data` 或 named volume                        |
-| 缓存、队列状态             | Redis                             | `./volumes/redis/data` 或 named volume                     |
-| 知识库向量数据             | Weaviate / Milvus / OpenSearch 等 | `./volumes/weaviate` 或对应 volume                         |
-| 用户上传文件、应用运行文件 | API / Worker                      | `./volumes/app/storage`                                    |
-| 插件数据                   | plugin_daemon                     | `./volumes/plugin_daemon`                                  |
-| 代码节点依赖和配置         | sandbox                           | `./volumes/sandbox/dependencies`、`./volumes/sandbox/conf` |
-| Nginx 运行配置或证书       | nginx                             | `./nginx`、`./volumes/nginx`                               |
-| HTTPS 证书申请数据         | certbot                           | `./volumes/certbot/...`                                    |
+{% autogrid data-grid-link-table nofix %}
+数据类型|常见服务|常见位置
+账号、应用、工作流、配置|PostgreSQL|`./volumes/db/data` 或 named volume
+缓存、队列状态|Redis|`./volumes/redis/data` 或 named volume
+知识库向量数据|Weaviate / Milvus / OpenSearch 等|`./volumes/weaviate` 或对应 volume
+用户上传文件、应用运行文件|API / Worker|`./volumes/app/storage`
+插件数据|plugin_daemon|`./volumes/plugin_daemon`
+代码节点依赖和配置|sandbox|`./volumes/sandbox/dependencies`、`./volumes/sandbox/conf`
+Nginx 运行配置或证书|nginx|`./nginx`、`./volumes/nginx`
+HTTPS 证书申请数据|certbot|`./volumes/certbot/...`
+{% endautogrid %}
 
 具体路径以当前版本的 `docker-compose.yaml` 为准。要确认一个容器实际挂了什么目录，可以执行：
 
@@ -1346,13 +1368,14 @@ rm -rf ./volumes
 
 Dify 排障别一上来就改 `.env`，也别一上来就重装。先判断问题发生在哪一层，再看对应日志。
 
-| 现象                 | 优先检查                                        | 常用命令                                            |
-| -------------------- | ----------------------------------------------- | --------------------------------------------------- |
-| 浏览器完全打不开     | Docker 是否运行、`nginx` 是否启动、端口是否映射 | `docker compose ps`、`docker compose logs -f nginx` |
-| 页面能打开但接口报错 | `api` 日志、数据库和 Redis 连接                 | `docker compose logs -f api`                        |
-| 知识库索引卡住       | `worker`、向量库、Redis                         | `docker compose logs -f worker`                     |
-| 升级后进入初始化页   | PostgreSQL 是否读到旧数据、volume 是否变了      | `psql` 查询、`docker inspect ... Mounts`            |
-| 数据库工具连不上     | 端口映射、SSH 隧道、数据库账号密码              | `docker ps`、`ssh -L ...`                           |
+{% autogrid data-grid-link-table nofix %}
+现象|优先检查|常用命令
+浏览器完全打不开|Docker 是否运行、`nginx` 是否启动、端口是否映射|`docker compose ps`、`docker compose logs -f nginx`
+页面能打开但接口报错|`api` 日志、数据库和 Redis 连接|`docker compose logs -f api`
+知识库索引卡住|`worker`、向量库、Redis|`docker compose logs -f worker`
+升级后进入初始化页|PostgreSQL 是否读到旧数据、volume 是否变了|`psql` 查询、`docker inspect ... Mounts`
+数据库工具连不上|端口映射、SSH 隧道、数据库账号密码|`docker ps`、`ssh -L ...`
+{% endautogrid %}
 
 ### 6.1 常见排障路径
 
@@ -1505,13 +1528,14 @@ docker compose up -d db_postgres
 
 Navicat 连接参数通常类似：
 
-| 参数     | 示例                  |
-| -------- | --------------------- |
-| Host     | `127.0.0.1`           |
-| Port     | `5432`                |
-| User     | `.env` 中的数据库用户 |
-| Password | `.env` 中的数据库密码 |
-| Database | `dify`                |
+{% autogrid data-grid-link-table nofix %}
+参数|示例
+Host|`127.0.0.1`
+Port|`5432`
+User|`.env` 中的数据库用户
+Password|`.env` 中的数据库密码
+Database|`dify`
+{% endautogrid %}
 
 注意：生产环境不要把 5432 直接暴露到公网。
 
@@ -1538,13 +1562,14 @@ ssh -L 15432:127.0.0.1:5432 user@your-server
 
 然后 Navicat 连：
 
-| 参数     | 示例                  |
-| -------- | --------------------- |
-| Host     | `127.0.0.1`           |
-| Port     | `15432`               |
-| User     | `.env` 中的数据库用户 |
-| Password | `.env` 中的数据库密码 |
-| Database | `dify`                |
+{% autogrid data-grid-link-table nofix %}
+参数|示例
+Host|`127.0.0.1`
+Port|`15432`
+User|`.env` 中的数据库用户
+Password|`.env` 中的数据库密码
+Database|`dify`
+{% endautogrid %}
 
 如果数据库端口没有映射到宿主机，而只在容器网络里可见，需要先确认容器 IP 或临时使用跳板方式。生产环境建议由运维统一配置安全访问方式。
 
@@ -1593,13 +1618,14 @@ Navicat 里不要再勾选 SSH 选项，因为隧道已经由命令行建好了�
 
 常见填写方式：
 
-| 参数     | 示例                  |
-| -------- | --------------------- |
-| Host     | `127.0.0.1`           |
-| Port     | `15432`               |
-| User     | `.env` 中的数据库用户 |
-| Password | `.env` 中的数据库密码 |
-| Database | `dify`                |
+{% autogrid data-grid-link-table nofix %}
+参数|示例
+Host|`127.0.0.1`
+Port|`15432`
+User|`.env` 中的数据库用户
+Password|`.env` 中的数据库密码
+Database|`dify`
+{% endautogrid %}
 
 连接成功后，就可以像普通 PostgreSQL 一样查看 Dify 表结构和数据：
 
@@ -1616,13 +1642,14 @@ Dify 升级不是简单执行 `docker compose pull && docker compose up -d`。�
 
 升级前先按这个清单确认一遍：
 
-| 检查项                    | 为什么重要                   | 推荐动作                                    |
-| ------------------------- | ---------------------------- | ------------------------------------------- |
-| 旧环境是否健康            | 带着旧问题升级，会让排障更乱 | 先看 `docker compose ps` 和 `api` 日志      |
-| 数据库是否已备份          | migration 可能改表结构       | 用 `pg_dump` 导出 SQL                       |
-| volume / 挂载目录是否确认 | 新版本可能挂到新目录         | 用 `docker inspect` 看 Mounts               |
-| `.env` 是否对照新版本     | 新版本可能新增或废弃变量     | 对比 `.env.example` 和 `envs/*.env.example` |
-| 是否需要回滚              | 升级失败时要能退回           | 保留旧目录、旧 `.env`、备份文件             |
+{% autogrid data-grid-link-table nofix %}
+检查项|为什么重要|推荐动作
+旧环境是否健康|带着旧问题升级，会让排障更乱|先看 `docker compose ps` 和 `api` 日志
+数据库是否已备份|migration 可能改表结构|用 `pg_dump` 导出 SQL
+volume / 挂载目录是否确认|新版本可能挂到新目录|用 `docker inspect` 看 Mounts
+`.env` 是否对照新版本|新版本可能新增或废弃变量|对比 `.env.example` 和 `envs/*.env.example`
+是否需要回滚|升级失败时要能退回|保留旧目录、旧 `.env`、备份文件
+{% endautogrid %}
 
 ### 7.1 升级流程
 
@@ -1847,84 +1874,89 @@ docker compose up -d web
 
 ### 8.1 镜像管理
 
-| 目的             | 命令                                    |
-| ---------------- | --------------------------------------- |
-| 查看本地镜像     | `docker images`                         |
-| 拉取镜像         | `docker pull mysql:8.0.45`              |
-| 搜索镜像         | `docker search mysql`                   |
-| 删除镜像         | `docker rmi mysql:8.0.45`               |
-| 查看镜像详细信息 | `docker inspect mysql:8.0.45`           |
-| 构建自定义镜像   | `docker build -t my-app:1.0 .`          |
-| 打包镜像         | `docker save mysql:8.0.45 -o mysql.tar` |
-| 导入镜像         | `docker load -i mysql.tar`              |
+{% autogrid data-grid-link-table nofix %}
+目的|命令
+查看本地镜像|`docker images`
+拉取镜像|`docker pull mysql:8.0.45`
+搜索镜像|`docker search mysql`
+删除镜像|`docker rmi mysql:8.0.45`
+查看镜像详细信息|`docker inspect mysql:8.0.45`
+构建自定义镜像|`docker build -t my-app:1.0 .`
+打包镜像|`docker save mysql:8.0.45 -o mysql.tar`
+导入镜像|`docker load -i mysql.tar`
+{% endautogrid %}
 
 ### 8.2 容器管理
 
-| 目的           | 命令                                                  |
-| -------------- | ----------------------------------------------------- |
-| 查看运行中容器 | `docker ps`                                           |
-| 查看全部容器   | `docker ps -a`                                        |
-| 查看容器日志   | `docker logs -f <容器名>`                             |
-| 进入容器       | `docker exec -it <容器名> sh`                         |
-| 停止容器       | `docker stop <容器名>`                                |
-| 启动容器       | `docker start <容器名>`                               |
-| 重启容器       | `docker restart <容器名>`                             |
-| 删除已停止容器 | `docker rm <容器名>`                                  |
-| 查看容器挂载   | `docker inspect <容器名> --format '{{json .Mounts}}'` |
+{% autogrid data-grid-link-table nofix %}
+目的|命令
+查看运行中容器|`docker ps`
+查看全部容器|`docker ps -a`
+查看容器日志|`docker logs -f <容器名>`
+进入容器|`docker exec -it <容器名> sh`
+停止容器|`docker stop <容器名>`
+启动容器|`docker start <容器名>`
+重启容器|`docker restart <容器名>`
+删除已停止容器|`docker rm <容器名>`
+查看容器挂载|`docker inspect <容器名> --format '{{json .Mounts}}'`
+{% endautogrid %}
 
 ### 8.3 Compose 项目管理
 
-| 目的                         | 命令                               |
-| ---------------------------- | ---------------------------------- |
-| 启动整套服务                 | `docker compose up -d`             |
-| 启动并重新构建               | `docker compose up -d --build`     |
-| 查看服务状态                 | `docker compose ps`                |
-| 查看全部服务容器             | `docker compose ps -a`             |
-| 查看服务清单                 | `docker compose config --services` |
-| 查看某个服务日志             | `docker compose logs -f <服务名>`  |
-| 临时运行一个服务             | `docker compose run --rm <服务名>` |
-| 进入服务容器执行命令         | `docker compose exec <服务名> sh`  |
-| 拉取镜像                     | `docker compose pull`              |
-| 构建服务镜像                 | `docker compose build <服务名>`    |
-| 停止服务                     | `docker compose stop`              |
-| 停止并删除容器、网络         | `docker compose down`              |
-| 停止并删除容器、网络、volume | `docker compose down -v`           |
-| 停止并删除项目关联镜像       | `docker compose down --rmi all`    |
-| 查看最终配置                 | `docker compose config`            |
+{% autogrid data-grid-link-table nofix %}
+目的|命令
+启动整套服务|`docker compose up -d`
+启动并重新构建|`docker compose up -d --build`
+查看服务状态|`docker compose ps`
+查看全部服务容器|`docker compose ps -a`
+查看服务清单|`docker compose config --services`
+查看某个服务日志|`docker compose logs -f <服务名>`
+临时运行一个服务|`docker compose run --rm <服务名>`
+进入服务容器执行命令|`docker compose exec <服务名> sh`
+拉取镜像|`docker compose pull`
+构建服务镜像|`docker compose build <服务名>`
+停止服务|`docker compose stop`
+停止并删除容器、网络|`docker compose down`
+停止并删除容器、网络、volume|`docker compose down -v`
+停止并删除项目关联镜像|`docker compose down --rmi all`
+查看最终配置|`docker compose config`
+{% endautogrid %}
 
 ### 8.4 Dify 常用命令
 
 下面命令默认在 Dify 的 `docker` 目录执行。
 
-| 目的             | 命令                                                                             |
-| ---------------- | -------------------------------------------------------------------------------- |
-| 查看服务清单     | `docker compose config --services`                                               |
-| 查看全部容器     | `docker ps -a`                                                                   |
-| 查看 API 日志    | `docker compose logs -f api`                                                     |
-| 查看 worker 日志 | `docker compose logs -f worker`                                                  |
-| 查看 nginx 日志  | `docker compose logs -f nginx`                                                   |
-| 查看数据库日志   | `docker compose logs -f db_postgres`                                             |
-| 进入数据库容器   | `docker exec -it docker-db_postgres-1 sh`                                        |
-| 连接 PostgreSQL  | `docker exec -it docker-db_postgres-1 psql -U postgres -d dify`                  |
-| 查看容器挂载     | `docker inspect <容器名> --format '{{json .Mounts}}'`                            |
-| 查看 volume      | `docker volume ls`                                                               |
-| 备份数据库       | `docker exec -t docker-db_postgres-1 pg_dump -U postgres dify > dify_backup.sql` |
+{% autogrid data-grid-link-table nofix %}
+目的|命令
+查看服务清单|`docker compose config --services`
+查看全部容器|`docker ps -a`
+查看 API 日志|`docker compose logs -f api`
+查看 worker 日志|`docker compose logs -f worker`
+查看 nginx 日志|`docker compose logs -f nginx`
+查看数据库日志|`docker compose logs -f db_postgres`
+进入数据库容器|`docker exec -it docker-db_postgres-1 sh`
+连接 PostgreSQL|`docker exec -it docker-db_postgres-1 psql -U postgres -d dify`
+查看容器挂载|`docker inspect <容器名> --format '{{json .Mounts}}'`
+查看 volume|`docker volume ls`
+备份数据库|`docker exec -t docker-db_postgres-1 pg_dump -U postgres dify > dify_backup.sql`
+{% endautogrid %}
 
 容器名和服务名可能因 Dify 版本或 Compose 项目名不同而变化。命令执行失败时，先用 `docker compose ps` 或 `docker ps` 确认当前环境里的真实名称。
 
 ### 8.5 Ubuntu 服务器常用命令
 
-| 目的                     | 命令                                                                             |
-| ------------------------ | -------------------------------------------------------------------------------- |
-| 查看 Docker 服务状态     | `sudo systemctl status docker`                                                   |
-| 重启 Docker 服务         | `sudo systemctl restart docker`                                                  |
-| 配置当前用户免 sudo 使用 | `sudo usermod -aG docker $USER`                                                  |
-| 查看 Docker Engine 配置  | `docker info`                                                                    |
-| 编辑镜像源配置           | `sudo vim /etc/docker/daemon.json`                                               |
-| 重新加载 systemd 配置    | `sudo systemctl daemon-reload`                                                   |
-| 停止 Docker 服务         | `sudo systemctl stop docker`                                                     |
-| 卸载 Docker 软件包       | `sudo apt remove -y docker-ce docker-ce-cli containerd.io docker-compose-plugin` |
-| 删除 Docker 数据目录     | `sudo rm -rf /var/lib/docker /var/lib/containerd`                                |
+{% autogrid data-grid-link-table nofix %}
+目的|命令
+查看 Docker 服务状态|`sudo systemctl status docker`
+重启 Docker 服务|`sudo systemctl restart docker`
+配置当前用户免 sudo 使用|`sudo usermod -aG docker $USER`
+查看 Docker Engine 配置|`docker info`
+编辑镜像源配置|`sudo vim /etc/docker/daemon.json`
+重新加载 systemd 配置|`sudo systemctl daemon-reload`
+停止 Docker 服务|`sudo systemctl stop docker`
+卸载 Docker 软件包|`sudo apt remove -y docker-ce docker-ce-cli containerd.io docker-compose-plugin`
+删除 Docker 数据目录|`sudo rm -rf /var/lib/docker /var/lib/containerd`
+{% endautogrid %}
 
 最后一条是高风险清理命令，会删除本机 Docker 管理的数据。只在确认没有重要容器、镜像、volume 后使用。
 
@@ -1932,15 +1964,16 @@ docker compose up -d web
 
 这些命令不是不能用，而是不能在没备份、没确认环境的情况下随手用：
 
-| 命令                          | 可能后果                              | 使用前必须确认                         |
-| ----------------------------- | ------------------------------------- | -------------------------------------- |
-| `docker compose down -v`      | 删除当前 Compose 项目的 volume        | 数据库、向量库、上传文件是否已备份     |
-| `docker volume rm <volume名>` | 删除指定 volume                       | 这个 volume 是否真的是废弃数据         |
-| `docker volume prune`         | 删除所有未被容器使用的 volume         | 是否有停掉但还要保留数据的项目         |
-| `docker system prune -af`     | 清理未使用容器、网络、镜像、构建缓存  | 是否能接受重新拉镜像和重建缓存         |
-| `rm -rf ./volumes`            | 删除当前部署目录下的挂载数据          | 是否已经确认是测试环境或有备份         |
-| `sudo rm -rf /var/lib/docker` | 删除 Docker Engine 管理的全部本地数据 | 是否是在重装机器，且已迁出所有数据     |
-| `DROP DATABASE dify;`         | 删除 Dify 业务数据库                  | 是否已经停服务、备份、确认目标库可清空 |
+{% autogrid data-grid-link-table nofix %}
+命令|可能后果|使用前必须确认
+`docker compose down -v`|删除当前 Compose 项目的 volume|数据库、向量库、上传文件是否已备份
+`docker volume rm <volume名>`|删除指定 volume|这个 volume 是否真的是废弃数据
+`docker volume prune`|删除所有未被容器使用的 volume|是否有停掉但还要保留数据的项目
+`docker system prune -af`|清理未使用容器、网络、镜像、构建缓存|是否能接受重新拉镜像和重建缓存
+`rm -rf ./volumes`|删除当前部署目录下的挂载数据|是否已经确认是测试环境或有备份
+`sudo rm -rf /var/lib/docker`|删除 Docker Engine 管理的全部本地数据|是否是在重装机器，且已迁出所有数据
+`DROP DATABASE dify;`|删除 Dify 业务数据库|是否已经停服务、备份、确认目标库可清空
+{% endautogrid %}
 
 确实要清空测试环境时，建议先把“查看命令”和“删除命令”分开执行：
 

@@ -25,13 +25,14 @@ tags:
 
 它现在主要包含五类内容：
 
-| 内容                           | 位置                                                                                                                            | 什么时候看                                             |
-| ------------------------------ | ------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------ |
-| 系统教程正文                   | 根目录下的 `1-1` 到 `26` 章 Markdown 文档                                                                                       | 想系统学习大模型、RAG、Agent、LangChain / LangGraph 时 |
-| Coze / Dify 工作流案例         | `案例与源码-1-Coze&Dify工作流智能体/`                                                                                           | 想先用低代码平台做出可演示应用时                       |
-| LangChain / LangGraph 代码案例 | `案例与源码-2-LangChain框架/`、`案例与源码-3-LangGraph框架/`                                                                    | 想在本仓库里直接运行 Python 小案例时                   |
-| 企业级实战项目教程             | `实战项目-电商问数/`、`实战项目-深度研搜/`                                                                                      | 想把零散知识点串成完整项目时                           |
-| 导航、术语、面试与资料         | `教程目录大纲.md`、`章节索引与跳转指南.md`、`全书术语表.md`、`AI智能体与大模型应用开发面试题库.md`、`工具导航与参考资料索引.md` | 查漏补缺、复盘表达、准备面试时                         |
+{% autogrid data-grid-link-table nofix %}
+内容|位置|什么时候看
+系统教程正文|根目录下的 `1-1` 到 `26` 章 Markdown 文档|想系统学习大模型、RAG、Agent、LangChain / LangGraph 时
+Coze / Dify 工作流案例|`案例与源码-1-Coze&Dify工作流智能体/`|想先用低代码平台做出可演示应用时
+LangChain / LangGraph 代码案例|`案例与源码-2-LangChain框架/`、`案例与源码-3-LangGraph框架/`|想在本仓库里直接运行 Python 小案例时
+企业级实战项目教程|`实战项目-电商问数/`、`实战项目-深度研搜/`|想把零散知识点串成完整项目时
+导航、术语、面试与资料|`教程目录大纲.md`、`章节索引与跳转指南.md`、`全书术语表.md`、`AI智能体与大模型应用开发面试题库.md`、`工具导航与参考资料索引.md`|查漏补缺、复盘表达、准备面试时
+{% endautogrid %}
 
 ---
 
@@ -39,18 +40,19 @@ tags:
 
 ### 2.1 先按目标选路线
 
-| 你的目标               | 推荐起点                                        | 推荐主线                                             | 适合人群                                   |
-| ---------------------- | ----------------------------------------------- | ---------------------------------------------------- | ------------------------------------------ |
-| 零基础系统入门         | [第 1-1 章](/2026/10/01/llm/1-1-llm-basics-engineering-overview/)        | `1-1 -> 1-2 -> 1-3 -> 4 -> 5 -> 11 -> 12~23 -> 24~28` | 对大模型、RAG、Agent 还没有完整认知的同学  |
-| 尽快跑通第一个代码案例 | [第 12 章](/2026/10/12/llm/1-12-langchain-quickstart-and-helloworld/) | `12 -> 13 -> 15 -> 16 -> 17 -> 19 -> 23 -> 24`       | 已有 Python 基础，想快速进入代码实践的同学 |
-| 做项目或准备面试       | [第 11 章](/2026/10/11/llm/1-11-langchain-overview-and-architecture/)             | `11~28 -> 电商问数 -> 深度研搜 -> 面试题库`           | 需要“原理 + 实操 + 项目表达”一起建立的同学 |
+{% autogrid data-grid-link-table nofix %}
+你的目标|推荐起点|推荐主线|适合人群
+零基础系统入门|[第 1-1 章](/2026/10/01/llm/1-1-llm-basics-engineering-overview/)|`1-1 -> 1-2 -> 1-3 -> 4 -> 5 -> 11 -> 12~23 -> 24~28`|对大模型、RAG、Agent 还没有完整认知的同学
+尽快跑通第一个代码案例|[第 12 章](/2026/10/12/llm/1-12-langchain-quickstart-and-helloworld/)|`12 -> 13 -> 15 -> 16 -> 17 -> 19 -> 23 -> 24`|已有 Python 基础，想快速进入代码实践的同学
+做项目或准备面试|[第 11 章](/2026/10/11/llm/1-11-langchain-overview-and-architecture/)|`11~28 -> 电商问数 -> 深度研搜 -> 面试题库`|需要“原理 + 实操 + 项目表达”一起建立的同学
+{% endautogrid %}
 
 ### 2.2 零基础系统入门
 
 如果你还分不清大模型、提示词、RAG、Agent、LangChain、LangGraph，建议按下面顺序：
 
 ```text
-1-1 大模型认知
+->　1-1 大模型认知
 -> 1-2 提示词工程
 -> 1-3 RAG、微调、续训与智能体选型
 -> 2 RAG 知识库入门
@@ -67,7 +69,7 @@ tags:
 适合已经会基本 Python，希望尽快进入框架实践的同学。
 
 ```text
-9 LangChain 概述
+->　9 LangChain 概述
 -> 10 HelloWorld
 -> 11 Model I/O
 -> 13 Prompt
@@ -96,24 +98,26 @@ tags:
 
 如果时间比较紧，可以先按下面节奏安排：
 
-| 时间             | 建议学法                                                                                  |
-| ---------------- | ----------------------------------------------------------------------------------------- |
-| 7 天速通         | `1-1 -> 1-2 -> 11 -> 12 -> 13 -> 15 -> 16 -> 17 -> 19 -> 23 -> 24`，重点是跑通最小代码闭环 |
-| 15 天系统入门    | 前 3 天学基础认知，2 天体验 Coze / Dify，6 天吃透 LangChain 主线，最后 3 天进入 LangGraph |
-| 90 天项目 / 求职 | 第一周打基础，第二周跑 LangChain / RAG / Agent，第三周学 LangGraph、实战项目和面试题      |
+{% autogrid data-grid-link-table nofix %}
+时间|建议学法
+7 天速通|`1-1 -> 1-2 -> 11 -> 12 -> 13 -> 15 -> 16 -> 17 -> 19 -> 23 -> 24`，重点是跑通最小代码闭环
+15 天系统入门|前 3 天学基础认知，2 天体验 Coze / Dify，6 天吃透 LangChain 主线，最后 3 天进入 LangGraph
+90 天项目 / 求职|第一周打基础，第二周跑 LangChain / RAG / Agent，第三周学 LangGraph、实战项目和面试题
+{% endautogrid %}
 
 不管选哪条路线，最重要的动作都一样：**每学完一章，至少跑一个案例；每学完一个阶段，用自己的话复述一次。**
 
 ### 2.6 什么时候可以进入下一阶段
 
-| 当前阶段       | 进入下一阶段前，至少做到什么                                        |
-| -------------- | ------------------------------------------------------------------- |
-| 基础认知       | 能区分 Prompt、RAG、Agent、微调，不再把它们混成一个词               |
-| 低代码平台     | 能独立搭一个简单 Coze / Dify 工作流，并知道平台拖拽和代码开发的边界 |
-| LangChain 主线 | 能写出 `prompt -> model -> parser`，并接一个 Tool 或简单 RAG        |
-| Agent 阶段     | 能解释“固定流程”和“模型自主决策”的区别，知道什么时候该用 Agent      |
-| LangGraph 阶段 | 能把一个任务拆成 State、Node、Edge，而不是只写线性脚本              |
-| 多智能体阶段   | 能判断什么时候值得拆多个 Agent，什么时候保持单 Agent 更稳           |
+{% autogrid data-grid-link-table nofix %}
+当前阶段|进入下一阶段前，至少做到什么
+基础认知|能区分 Prompt、RAG、Agent、微调，不再把它们混成一个词
+低代码平台|能独立搭一个简单 Coze / Dify 工作流，并知道平台拖拽和代码开发的边界
+LangChain 主线|能写出 `prompt -> model -> parser`，并接一个 Tool 或简单 RAG
+Agent 阶段|能解释“固定流程”和“模型自主决策”的区别，知道什么时候该用 Agent
+LangGraph 阶段|能把一个任务拆成 State、Node、Edge，而不是只写线性脚本
+多智能体阶段|能判断什么时候值得拆多个 Agent，什么时候保持单 Agent 更稳
+{% endautogrid %}
 
 ---
 
@@ -123,11 +127,12 @@ tags:
 
 根目录的 `requirements.txt` 和 `pyproject.toml` 已经约束了 Python 版本：
 
-| 项目     | 说明                       |
-| -------- | -------------------------- |
-| 推荐版本 | Python 3.10                |
-| 支持范围 | Python 3.10 到 Python 3.13 |
-| 暂不支持 | Python 3.14                |
+{% autogrid data-grid-link-table nofix %}
+项目|说明
+推荐版本|Python 3.10
+支持范围|Python 3.10 到 Python 3.13
+暂不支持|Python 3.14
+{% endautogrid %}
 
 原因是根目录案例依赖了 `langchain-redis` 等包，这些依赖暂时还没有完整兼容 Python 3.14。
 
@@ -195,11 +200,12 @@ Windows 用户也可以直接手动复制 `.env-example`，然后重命名为 `.
 
 不同章节读取的变量名不完全一样。常见变量如下：
 
-| 变量名         | 用途                                                       |
-| -------------- | ---------------------------------------------------------- |
-| `QWEN_API_KEY` | 早期 HelloWorld 示例中调用通义千问                         |
-| `aliQwen-api`  | 多数 LangChain / LangGraph 示例中调用阿里云百炼 / 通义千问 |
-| `deepseek-api` | DeepSeek 相关示例                                          |
+{% autogrid data-grid-link-table nofix %}
+变量名|用途
+`QWEN_API_KEY`|早期 HelloWorld 示例中调用通义千问
+`aliQwen-api`|多数 LangChain / LangGraph 示例中调用阿里云百炼 / 通义千问
+`deepseek-api`|DeepSeek 相关示例
+{% endautogrid %}
 
 一个相对完整的 `.env` 示例：
 
@@ -248,11 +254,12 @@ OPENWEATHER_API_KEY='你的OpenWeatherKey'
 
 ### 5.1 依赖相关
 
-| 问题                                         | 常见原因                     | 处理办法                                                                  |
-| -------------------------------------------- | ---------------------------- | ------------------------------------------------------------------------- |
-| `ModuleNotFoundError: No module named 'xxx'` | 没装依赖，或没有激活 `.venv` | 激活虚拟环境后，在项目根目录执行 `pip install -r requirements.txt`        |
-| 安装时报 `requires-python <3.14`             | Python 版本过高              | 根目录普通案例换成 Python 3.10~3.13，推荐 3.10                            |
-| RAG、Memory、Redis 示例跑不通                | 依赖外部服务或系统包         | 先跑 HelloWorld，再按对应章节准备 Redis、Redis Stack、PDF / Word 解析依赖 |
+{% autogrid data-grid-link-table nofix　%}
+问题|常见原因|处理办法
+`ModuleNotFoundError: No module named 'xxx'`|没装依赖，或没有激活 `.venv`|激活虚拟环境后，在项目根目录执行 `pip install -r requirements.txt`
+安装时报 `requires-python <3.14`|Python 版本过高|根目录普通案例换成 Python 3.10~3.13，推荐 3.10
+RAG、Memory、Redis 示例跑不通|依赖外部服务或系统包|先跑 HelloWorld，再按对应章节准备 Redis、Redis Stack、PDF / Word 解析依赖
+{% endautogrid %}
 
 检查当前 Python：
 
@@ -274,20 +281,22 @@ pip show langchain
 
 ### 5.2 API Key 与 .env
 
-| 问题                   | 常见原因                                  | 处理办法                                    |
-| ---------------------- | ----------------------------------------- | ------------------------------------------- |
-| 401、403、API Key 无效 | Key 填错、平台额度不足、服务未开通        | 回平台控制台检查 Key、额度和模型服务状态    |
-| `os.getenv()` 读到空值 | `.env` 不存在、运行目录不对、变量名不一致 | 确认根目录有 `.env`，并在项目根目录运行脚本 |
+{% autogrid data-grid-link-table nofix %}
+问题|常见原因|处理办法
+401、403、API Key 无效|Key 填错、平台额度不足、服务未开通|回平台控制台检查 Key、额度和模型服务状态
+`os.getenv()` 读到空值|`.env` 不存在、运行目录不对、变量名不一致|确认根目录有 `.env`，并在项目根目录运行脚本
+{% endautogrid %}
 
 排查 `.env` 时，不要把真实 Key 发到 Issue、聊天窗口或截图里。只需要说明你配置了哪些变量名即可。
 
 ### 5.3 运行目录与编码
 
-| 问题                            | 常见原因               | 处理办法                                                        |
-| ------------------------------- | ---------------------- | --------------------------------------------------------------- |
-| 找不到 `.env`                   | 在案例子目录里运行脚本 | 回项目根目录执行 `python 案例与源码-2-LangChain框架/.../xxx.py` |
-| `UnicodeDecodeError` 或中文乱码 | 文件不是 UTF-8 编码    | 用 VS Code / Cursor 把 `.env`、`.py` 保存为 UTF-8               |
-| 相对路径找不到文件              | 当前工作目录不对       | 优先在项目根目录运行案例                                        |
+{% autogrid data-grid-link-table nofix　%}
+问题|常见原因|处理办法
+找不到 `.env`|在案例子目录里运行脚本|回项目根目录执行 `python 案例与源码-2-LangChain框架/.../xxx.py`
+`UnicodeDecodeError` 或中文乱码|文件不是 UTF-8 编码|用 VS Code / Cursor 把 `.env`、`.py` 保存为 UTF-8
+相对路径找不到文件|当前工作目录不对|优先在项目根目录运行案例
+{% endautogrid %}
 
 ### 5.4 Ollama 示例
 
@@ -359,19 +368,20 @@ black .
 
 本仓库的**在线阅读站点**基于 [Docsify](https://docsify.js.org/) 生成，并使用了以下扩展以提升阅读与检索体验：
 
-| 扩展 / 配置                       | 作用                                                                      |
-| --------------------------------- | ------------------------------------------------------------------------- |
-| **Docsify 4 + Vue 主题**          | 文档框架与默认样式，负责把 Markdown 文件渲染成在线文档站点                |
-| **docsify-darklight-theme**       | 提供白天 / 夜间模式切换                                                   |
-| **侧边栏导航**                    | 通过 `_sidebar.md` 组织章节目录，页面内标题最多展示到四级标题             |
-| **全文搜索**（search）            | 顶部搜索框，支持按关键词检索文档内容，当前搜索深度配置为 6                |
-| **zoom-image**                    | 正文中的图片可点击放大查看，适合查看截图、架构图和流程图                  |
-| **docsify-copy-code**             | 代码块右侧提供「复制」按钮，方便直接复制示例代码和命令                    |
-| **docsify-pagination**            | 页面底部提供「上一页 / 下一页」跨章节导航                                 |
-| **docsify-count**                 | 每页底部显示当前页字数，已按中文统计配置                                  |
-| **KaTeX + docsify-katex**         | 数学公式渲染，支持 Markdown 中的行内公式 `$...$` 和块级公式 `$$...$$`     |
-| **Prism + prism-python**          | 代码语法高亮，当前额外加载了 Python 语法高亮组件                          |
-| **Mermaid**                       | 渲染语言标识为 `mermaid` 的代码块，用于流程图、架构图、时序图等可视化内容 |
-| **docsify-giscus**                | 基于 GitHub Discussions 的评论区，每页底部可以承载读者讨论                |
-| **Google Analytics / gtag**       | 站点访问统计，用于观察页面访问情况                                        |
-| **docsify-sitemap / sitemap.xml** | 生成并维护 `sitemap.xml`，便于搜索引擎收录在线文档                        |
+{% autogrid data-grid-link-table nofix　%}
+扩展 / 配置|作用
+**Docsify 4 + Vue 主题**|文档框架与默认样式，负责把 Markdown 文件渲染成在线文档站点
+**docsify-darklight-theme**|提供白天 / 夜间模式切换
+**侧边栏导航**|通过 `_sidebar.md` 组织章节目录，页面内标题最多展示到四级标题
+**全文搜索**（search）|顶部搜索框，支持按关键词检索文档内容，当前搜索深度配置为 6
+**zoom-image**|正文中的图片可点击放大查看，适合查看截图、架构图和流程图
+**docsify-copy-code**|代码块右侧提供「复制」按钮，方便直接复制示例代码和命令
+**docsify-pagination**|页面底部提供「上一页 / 下一页」跨章节导航
+**docsify-count**|每页底部显示当前页字数，已按中文统计配置
+**KaTeX + docsify-katex**|数学公式渲染，支持 Markdown 中的行内公式 `$...$` 和块级公式 `$$...$$`
+**Prism + prism-python**|代码语法高亮，当前额外加载了 Python 语法高亮组件
+**Mermaid**|渲染语言标识为 `mermaid` 的代码块，用于流程图、架构图、时序图等可视化内容
+**docsify-giscus**|基于 GitHub Discussions 的评论区，每页底部可以承载读者讨论
+**Google Analytics / gtag**|站点访问统计，用于观察页面访问情况
+**docsify-sitemap / sitemap.xml**|生成并维护 `sitemap.xml`，便于搜索引擎收录在线文档
+{% endautogrid %}

@@ -90,11 +90,12 @@ tags:
 
 这是最容易混淆的地方。在工程里，这三者不是一回事：
 
-| 概念                   | 它是什么                 | 例子                                                                      |
-| ---------------------- | ------------------------ | ------------------------------------------------------------------------- |
-| **模型本身**           | 真正提供能力的模型       | `qwen-plus`、`deepseek-v4-flash`、`glm-4`                                 |
-| **模型提供商 / 平台**  | 提供 API 的厂商或平台    | 阿里百炼、DeepSeek、OpenAI、智谱                                          |
-| **LangChain 模型对象** | 你在代码里操作的封装对象 | `ChatOpenAI`、`ChatDeepSeek`、`ChatTongyi`、`init_chat_model(...)` 返回值 |
+{% autogrid data-grid-link-table nofix %}
+概念|它是什么|例子
+**模型本身**|真正提供能力的模型|`qwen-plus`、`deepseek-v4-flash`、`glm-4`
+**模型提供商 / 平台**|提供 API 的厂商或平台|阿里百炼、DeepSeek、OpenAI、智谱
+**LangChain 模型对象**|你在代码里操作的封装对象|`ChatOpenAI`、`ChatDeepSeek`、`ChatTongyi`、`init_chat_model(...)` 返回值
+{% endautogrid %}
 
 举个最直观的例子：
 
@@ -113,11 +114,12 @@ LangChain 不提供模型权重本身，它提供的是“**如何接这些模�
 
 从课程和实际项目的角度看，你最常碰到的是下面三类：
 
-| 模型类型       | 输入形式         | 输出形式    | 主要特点                                 | 典型场景                        |
-| -------------- | ---------------- | ----------- | ---------------------------------------- | ------------------------------- |
-| **LLM**        | 纯文本字符串     | 文本字符串  | 更偏传统“文本补全”接口，无天然多角色结构 | 单轮生成、摘要、改写、补全      |
-| **Chat Model** | 字符串或消息列表 | `AIMessage` | 更贴近对话，支持多角色消息与更丰富元数据 | 智能助手、客服、多轮对话、Agent |
-| **Embeddings** | 文本或文本列表   | 向量        | 把文本转成语义向量，不负责生成文本       | RAG、检索、相似度计算、聚类     |
+{% autogrid data-grid-link-table nofix %}
+模型类型|输入形式|输出形式|主要特点|典型场景
+**LLM**|纯文本字符串|文本字符串|更偏传统“文本补全”接口，无天然多角色结构|单轮生成、摘要、改写、补全
+**Chat Model**|字符串或消息列表|`AIMessage`|更贴近对话，支持多角色消息与更丰富元数据|智能助手、客服、多轮对话、Agent
+**Embeddings**|文本或文本列表|向量|把文本转成语义向量，不负责生成文本|RAG、检索、相似度计算、聚类
+{% endautogrid %}
 
 从“本课程重点”出发，直接记住一句话就够了：**实际开发中最常用、也是本课程主线重点，是 Chat Model。**
 
@@ -175,17 +177,18 @@ Embedding 不是“会说话”的模型，但它依然属于 Model I/O 体系�
 
 下面是最常见、也最值得先掌握的一组参数：
 
-| 参数名           | 作用                | 可以怎么理解                                                        |
-| ---------------- | ------------------- | ------------------------------------------------------------------- |
-| `model`          | 模型名称或标识符    | 你要调哪个模型，例如 `qwen-plus`、`deepseek-v4-flash`               |
-| `model_provider` | 提供商 / 协议来源   | 按哪种 provider 或协议创建底层客户端，例如 `"openai"`、`"deepseek"` |
-| `api_key`        | 接口鉴权凭证        | 没它通常就无法调用                                                  |
-| `base_url`       | 接口根地址          | 请求发到哪里，兼容接口时尤其常见                                    |
-| `temperature`    | 随机性 / 创造性控制 | 越低越稳定，越高越发散                                              |
-| `max_tokens`     | 最大生成长度        | 回答最多生成多少 token，也影响费用                                  |
-| `timeout`        | 超时时间            | 请求最长等多久                                                      |
-| `max_retries`    | 失败重试次数        | 临时异常时自动重试几次                                              |
-| `stop`           | 停止词              | 生成到某些位置时强制停止                                            |
+{% autogrid data-grid-link-table nofix %}
+参数名|作用|可以怎么理解
+`model`|模型名称或标识符|你要调哪个模型，例如 `qwen-plus`、`deepseek-v4-flash`
+`model_provider`|提供商 / 协议来源|按哪种 provider 或协议创建底层客户端，例如 `"openai"`、`"deepseek"`
+`api_key`|接口鉴权凭证|没它通常就无法调用
+`base_url`|接口根地址|请求发到哪里，兼容接口时尤其常见
+`temperature`|随机性 / 创造性控制|越低越稳定，越高越发散
+`max_tokens`|最大生成长度|回答最多生成多少 token，也影响费用
+`timeout`|超时时间|请求最长等多久
+`max_retries`|失败重试次数|临时异常时自动重试几次
+`stop`|停止词|生成到某些位置时强制停止
+{% endautogrid %}
 
 下面这张图很适合入门建立直觉：
 
@@ -268,13 +271,14 @@ print(type(response.content))  # str
 
 在入门阶段，下面几个字段最值得先掌握：
 
-| 字段 / 属性         | 作用                           | 你通常怎么用                            |
-| ------------------- | ------------------------------ | --------------------------------------- |
-| `content`           | 模型回复正文                   | 最常用，绝大多数业务先读它              |
-| `response_metadata` | 厂商返回的原始元数据           | 看模型名、finish_reason、token_usage 等 |
-| `usage_metadata`    | LangChain 统一整理后的用量信息 | 看 input/output/total tokens            |
-| `tool_calls`        | 工具调用信息                   | 做 Tools / Agent 时很关键               |
-| `additional_kwargs` | 厂商扩展字段                   | 按需使用                                |
+{% autogrid data-grid-link-table nofix %}
+字段 / 属性|作用|你通常怎么用
+`content`|模型回复正文|最常用，绝大多数业务先读它
+`response_metadata`|厂商返回的原始元数据|看模型名、finish_reason、token_usage 等
+`usage_metadata`|LangChain 统一整理后的用量信息|看 input/output/total tokens
+`tool_calls`|工具调用信息|做 Tools / Agent 时很关键
+`additional_kwargs`|厂商扩展字段|按需使用
+{% endautogrid %}
 
 一个典型的 `AIMessage`，可以先看成：
 
@@ -330,11 +334,12 @@ AIMessage(
 
 在真实项目里，最常见的模型接入方式其实可以归纳为三类：
 
-| 接法                            | 典型代表                                   | 适合什么                                              |
-| ------------------------------- | ------------------------------------------ | ----------------------------------------------------- |
-| **官方 SDK 直连**               | `openai.OpenAI`                            | 只做底层 API 调用，不打算用 LangChain 编排            |
-| **LangChain provider / 模型类** | `ChatOpenAI`、`ChatDeepSeek`、`ChatTongyi` | 已经决定使用某个 provider 包，希望结合 LangChain 生态 |
-| **LangChain 统一入口**          | `init_chat_model(...)`                     | 新项目推荐，适合统一风格、减少对具体类名的依赖        |
+{% autogrid data-grid-link-table nofix %}
+接法|典型代表|适合什么
+**官方 SDK 直连**|`openai.OpenAI`|只做底层 API 调用，不打算用 LangChain 编排
+**LangChain provider / 模型类**|`ChatOpenAI`、`ChatDeepSeek`、`ChatTongyi`|已经决定使用某个 provider 包，希望结合 LangChain 生态
+**LangChain 统一入口**|`init_chat_model(...)`|新项目推荐，适合统一风格、减少对具体类名的依赖
+{% endautogrid %}
 
 可以把它们看作三种不同层次：
 
@@ -369,12 +374,13 @@ AIMessage(
 
 这是非常常见的面试点，也是很多新手最容易混的点。
 
-| 对比项       | `openai.OpenAI`            | `langchain_openai.ChatOpenAI`        |
-| ------------ | -------------------------- | ------------------------------------ |
-| **所属生态** | OpenAI 官方 Python SDK     | LangChain 生态                       |
-| **定位**     | 更底层、直接发请求         | LangChain 中的聊天模型封装           |
-| **返回结果** | 更贴近 OpenAI 原生响应结构 | 更贴近 `AIMessage` 等 LangChain 结构 |
-| **适合场景** | 只想简单调 API             | 想继续接 Prompt、Parser、LCEL、Agent |
+{% autogrid data-grid-link-table nofix %}
+对比项|`openai.OpenAI`|`langchain_openai.ChatOpenAI`
+**所属生态**|OpenAI 官方 Python SDK|LangChain 生态
+**定位**|更底层、直接发请求|LangChain 中的聊天模型封装
+**返回结果**|更贴近 OpenAI 原生响应结构|更贴近 `AIMessage` 等 LangChain 结构
+**适合场景**|只想简单调 API|想继续接 Prompt、Parser、LCEL、Agent
+{% endautogrid %}
 
 两者的差别可以概括为：
 
@@ -602,13 +608,14 @@ print(model.invoke("你是谁？").content)
 
 模型初始化只是第一步。进入 LangChain 1.x 主线后，一个 Chat Model 通常还会继续承担下面这些能力：
 
-| 能力 | 常见写法 | 后续章节 |
-| ---- | -------- | -------- |
-| 普通调用 | `model.invoke(messages)` | 本章、第 15 章 |
-| 流式输出 | `model.stream(messages)` | 第 12 章、第 23 章 |
-| 结构化输出 | `model.with_structured_output(schema)` | 第 16 章 |
-| 绑定工具 | `model.bind_tools(tools)` | 第 19 章 |
-| 进入链路 | `prompt | model | parser` | 第 17 章 |
+{% autogrid data-grid-link-table nofix %}
+能力|常见写法|后续章节
+普通调用|`model.invoke(messages)`|本章、第 15 章
+流式输出|`model.stream(messages)`|第 12 章、第 23 章
+结构化输出|`model.with_structured_output(schema)`|第 16 章
+绑定工具|`model.bind_tools(tools)`|第 19 章
+进入链路|`prompt|model|parser`|第 17 章
+{% endautogrid %}
 
 所以本章不要只把模型对象看成“请求客户端”。在后面的 Prompt、Parser、LCEL、Tools、Agent 里，它会一直作为核心组件出现。
 
@@ -618,12 +625,13 @@ print(model.invoke("你是谁？").content)
 
 常见用途如下：
 
-| 配置项 | 作用 | 常见场景 |
-| ------ | ---- | -------- |
-| `tags` | 给本次调用打标签 | 区分 `rag`、`agent`、`demo` 等不同链路 |
-| `metadata` | 记录额外上下文 | 记录用户、业务、实验版本等信息 |
-| `callbacks` | 挂接回调处理器 | 调试、日志、观察调用过程 |
-| `configurable` | 运行时切换配置 | 在同一段代码里切换模型或参数 |
+{% autogrid data-grid-link-table nofix %}
+配置项|作用|常见场景
+`tags`|给本次调用打标签|区分 `rag`、`agent`、`demo` 等不同链路
+`metadata`|记录额外上下文|记录用户、业务、实验版本等信息
+`callbacks`|挂接回调处理器|调试、日志、观察调用过程
+`configurable`|运行时切换配置|在同一段代码里切换模型或参数
+{% endautogrid %}
 
 <!-- ![LangChain 调用时业务输入与 config 的分工：业务输入给模型理解，config 给运行时管理、观测和切换使用](/assets/img/llm/11/11-3-8-1.svg) -->
 <div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/11/11-3-8-1.svg" alt="LangChain 调用时业务输入与 config 的分工：业务输入给模型理解，config 给运行时管理、观测和切换使用"></div>
