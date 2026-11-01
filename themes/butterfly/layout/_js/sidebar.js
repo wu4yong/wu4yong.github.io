@@ -89,3 +89,31 @@ document.addEventListener('DOMContentLoaded', function() {
   });
 
 });
+
+
+// 搜索弹窗逻辑
+document.addEventListener('DOMContentLoaded', function () {
+  const searchModal = document.getElementById('searchModal');
+  const openBtn = document.getElementById('searchModalOpen');
+  const closeBtn = document.getElementById('searchModalClose');
+
+  openBtn.addEventListener('click', () => {
+    searchModal.classList.add('active');
+  });
+
+  closeBtn.addEventListener('click', () => {
+    searchModal.classList.remove('active');
+  });
+
+  searchModal.addEventListener('click', (e) => {
+    if (e.target === searchModal) {
+      searchModal.classList.remove('active');
+    }
+  });
+
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && searchModal.classList.contains('active')) {
+      searchModal.classList.remove('active');
+    }
+  });
+});
