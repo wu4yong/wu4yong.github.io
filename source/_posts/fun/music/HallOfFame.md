@@ -7,7 +7,7 @@ tags:
   - 音乐 
 order: 3
 ---
-<div class="essay-banner essay-image9">
+<div class="essay-banner essay-music">
 Hall Of Fame
 </div>
 <div style="width:100%;aspect-ratio:16/9;">

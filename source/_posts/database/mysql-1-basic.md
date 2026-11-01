@@ -156,24 +156,26 @@ LIMIT
 
 条件：
 
-| 比较运算符 | 功能 |
-| --- | --- |
-| > | 大于 |
-| >= | 大于等于 |
-| < | 小于 |
-| <= | 小于等于 |
-| = | 等于 |
-| <> 或 != | 不等于 |
-| BETWEEN … AND … | 在某个范围内（含最小、最大值） |
-| IN(…) | 在in之后的列表中的值，多选一 |
-| LIKE 占位符 | 模糊匹配（\_匹配单个字符，%匹配任意个字符） |
-| IS NULL | 是NULL |
+{% autogrid data-grid-link-table nofix %}
+比较运算符|功能
+>|大于
+>=|大于等于
+<|小于
+<=|小于等于
+=|等于
+<> 或 !=|不等于
+BETWEEN … AND …|在某个范围内（含最小、最大值）
+IN(…)|在in之后的列表中的值，多选一
+LIKE 占位符|模糊匹配（\_匹配单个字符，%匹配任意个字符）
+IS NULL|是NULL
+{% endautogrid %}
 
-| 逻辑运算符 | 功能 |
-| --- | --- |
-| AND 或 && | 并且（多个条件同时成立） |
-| OR 或 || | 或者（多个条件任意一个成立） |
-| NOT 或 ! | 非，不是 |
+{% autogrid data-grid-link-table nofix %}
+逻辑运算符|功能
+AND 或 &&|并且（多个条件同时成立）
+OR 或|||或者（多个条件任意一个成立）
+NOT 或 !|非，不是
+{% endautogrid %}
 
 例子：
 
@@ -211,13 +213,14 @@ select * from employee where idcard like '%X';
 
 常见聚合函数：
 
-| 函数 | 功能 |
-| --- | --- |
-| count | 统计数量 |
-| max | 最大值 |
-| min | 最小值 |
-| avg | 平均值 |
-| sum | 求和 |
+{% autogrid data-grid-link-table nofix %}
+函数|功能
+count|统计数量
+max|最大值
+min|最小值
+avg|平均值
+sum|求和
+{% endautogrid %}
 
 语法：  
 `SELECT 聚合函数(字段列表) FROM 表名;`  
@@ -344,16 +347,17 @@ drop user 'test'@'localhost';
 
 常用权限：
 
-| 权限 | 说明 |
-| --- | --- |
-| ALL, ALL PRIVILEGES | 所有权限 |
-| SELECT | 查询数据 |
-| INSERT | 插入数据 |
-| UPDATE | 修改数据 |
-| DELETE | 删除数据 |
-| ALTER | 修改表 |
-| DROP | 删除数据库/表/视图 |
-| CREATE | 创建数据库/表 |
+{% autogrid data-grid-link-table nofix %}
+权限|说明
+ALL, ALL PRIVILEGES|所有权限
+SELECT|查询数据
+INSERT|插入数据
+UPDATE|修改数据
+DELETE|删除数据
+ALTER|修改表
+DROP|删除数据库/表/视图
+CREATE|创建数据库/表
+{% endautogrid %}
 
 更多权限请看[权限一览表](#%E6%9D%83%E9%99%90%E4%B8%80%E8%A7%88%E8%A1%A8 "权限一览表")
 
@@ -382,16 +386,17 @@ drop user 'test'@'localhost';
 
 常用函数：
 
-| 函数 | 功能 |
-| --- | --- |
-| CONCAT(s1, s2, …, sn) | 字符串拼接，将s1, s2, …, sn拼接成一个字符串 |
-| LOWER(str) | 将字符串全部转为小写 |
-| UPPER(str) | 将字符串全部转为大写 |
-| LPAD(str, n, pad) | 左填充，用字符串pad对str的左边进行填充，达到n个字符串长度 |
-| RPAD(str, n, pad) | 右填充，用字符串pad对str的右边进行填充，达到n个字符串长度 |
-| TRIM(str) | 去掉字符串头部和尾部的空格 |
-| SUBSTRING(str, start, len) | 返回从字符串str从start位置起的len个长度的字符串 |
-| REPLACE(column, source, replace) | 替换字符串 |
+{% autogrid data-grid-link-table nofix %}
+函数|功能
+CONCAT(s1, s2, …, sn)|字符串拼接，将s1, s2, …, sn拼接成一个字符串
+LOWER(str)|将字符串全部转为小写
+UPPER(str)|将字符串全部转为大写
+LPAD(str, n, pad)|左填充，用字符串pad对str的左边进行填充，达到n个字符串长度
+RPAD(str, n, pad)|右填充，用字符串pad对str的右边进行填充，达到n个字符串长度
+TRIM(str)|去掉字符串头部和尾部的空格
+SUBSTRING(str, start, len)|返回从字符串str从start位置起的len个长度的字符串
+REPLACE(column, source, replace)|替换字符串
+{% endautogrid %}
 
 使用示例：
 
@@ -417,28 +422,30 @@ SELECT SUBSTRING('Hello World', 1, 5);
 
 常见函数：
 
-| 函数 | 功能 |
-| --- | --- |
-| CEIL(x) | 向上取整 |
-| FLOOR(x) | 向下取整 |
-| MOD(x, y) | 返回x/y的模 |
-| RAND() | 返回0~1内的随机数 |
-| ROUND(x, y) | 求参数x的四舍五入值，保留y位小数 |
+{% autogrid data-grid-link-table nofix %}
+函数|功能
+CEIL(x)|向上取整
+FLOOR(x)|向下取整
+MOD(x, y)|返回x/y的模
+RAND()|返回0~1内的随机数
+ROUND(x, y)|求参数x的四舍五入值，保留y位小数
+{% endautogrid %}
 
 ### 日期函数
 
 常用函数：
 
-| 函数 | 功能 |
-| --- | --- |
-| CURDATE() | 返回当前日期 |
-| CURTIME() | 返回当前时间 |
-| NOW() | 返回当前日期和时间 |
-| YEAR(date) | 获取指定date的年份 |
-| MONTH(date) | 获取指定date的月份 |
-| DAY(date) | 获取指定date的日期 |
-| DATE\_ADD(date, INTERVAL expr type) | 返回一个日期/时间值加上一个时间间隔expr后的时间值 |
-| DATEDIFF(date1, date2) | 返回起始时间date1和结束时间date2之间的天数 |
+{% autogrid data-grid-link-table nofix %}
+函数|功能
+CURDATE()|返回当前日期
+CURTIME()|返回当前时间
+NOW()|返回当前日期和时间
+YEAR(date)|获取指定date的年份
+MONTH(date)|获取指定date的月份
+DAY(date)|获取指定date的日期
+DATE\_ADD(date, INTERVAL expr type)|返回一个日期/时间值加上一个时间间隔expr后的时间值
+DATEDIFF(date1, date2)|返回起始时间date1和结束时间date2之间的天数
+{% endautogrid %}
 
 例子：
 
@@ -452,12 +459,13 @@ SELECT DATE_ADD(NOW(), INTERVAL 70 YEAR);
 
 常用函数：
 
-| 函数 | 功能 |
-| --- | --- |
-| IF(value, t, f) | 如果value为true，则返回t，否则返回f |
-| IFNULL(value1, value2) | 如果value1不为空，返回value1，否则返回value2 |
-| CASE WHEN [ val1 ] THEN [ res1 ] … ELSE [ default ] END | 如果val1为true，返回res1，… 否则返回default默认值 |
-| CASE [ expr ] WHEN [ val1 ] THEN [ res1 ] … ELSE [ default ] END | 如果expr的值等于val1，返回res1，… 否则返回default默认值 |
+{% autogrid data-grid-link-table nofix %}
+函数|功能
+IF(value, t, f)|如果value为true，则返回t，否则返回f
+IFNULL(value1, value2)|如果value1不为空，返回value1，否则返回value2
+CASE WHEN [ val1 ] THEN [ res1 ] … ELSE [ default ] END|如果val1为true，返回res1，… 否则返回default默认值
+CASE [ expr ] WHEN [ val1 ] THEN [ res1 ] … ELSE [ default ] END|如果expr的值等于val1，返回res1，… 否则返回default默认值
+{% endautogrid %}
 
 例子：
 
@@ -477,27 +485,29 @@ from employee;
 
 分类：
 
-| 约束 | 描述 | 关键字 |
-| --- | --- | --- |
-| 非空约束 | 限制该字段的数据不能为null | NOT NULL |
-| 唯一约束 | 保证该字段的所有数据都是唯一、不重复的 | UNIQUE |
-| 主键约束 | 主键是一行数据的唯一标识，要求非空且唯一 | PRIMARY KEY |
-| 默认约束 | 保存数据时，如果未指定该字段的值，则采用默认值 | DEFAULT |
-| 检查约束（8.0.1版本后） | 保证字段值满足某一个条件 | CHECK |
-| 外键约束 | 用来让两张图的数据之间建立连接，保证数据的一致性和完整性 | FOREIGN KEY |
+{% autogrid data-grid-link-table nofix %}
+约束|描述|关键字
+非空约束|限制该字段的数据不能为null|NOT NULL
+唯一约束|保证该字段的所有数据都是唯一、不重复的|UNIQUE
+主键约束|主键是一行数据的唯一标识，要求非空且唯一|PRIMARY KEY
+默认约束|保存数据时，如果未指定该字段的值，则采用默认值|DEFAULT
+检查约束（8.0.1版本后）|保证字段值满足某一个条件|CHECK
+外键约束|用来让两张图的数据之间建立连接，保证数据的一致性和完整性|FOREIGN KEY
+{% endautogrid %}
 
 约束是作用于表中字段上的，可以再创建表/修改表的时候添加约束。
 
 ### 常用约束
 
-| 约束条件 | 关键字 |
-| --- | --- |
-| 主键 | PRIMARY KEY |
-| 自动增长 | AUTO\_INCREMENT |
-| 不为空 | NOT NULL |
-| 唯一 | UNIQUE |
-| 逻辑条件 | CHECK |
-| 默认值 | DEFAULT |
+{% autogrid data-grid-link-table nofix %}
+约束条件|关键字
+主键|PRIMARY KEY
+自动增长|AUTO\_INCREMENT
+不为空|NOT NULL
+唯一|UNIQUE
+逻辑条件|CHECK
+默认值|DEFAULT
+{% endautogrid %}
 
 例子：
 
@@ -534,13 +544,14 @@ alter table emp add constraint fk_emp_dept_id foreign key(dept_id) references de
 
 #### 删除/更新行为
 
-| 行为 | 说明 |
-| --- | --- |
-| NO ACTION | 当在父表中删除/更新对应记录时，首先检查该记录是否有对应外键，如果有则不允许删除/更新（与RESTRICT一致） |
-| RESTRICT | 当在父表中删除/更新对应记录时，首先检查该记录是否有对应外键，如果有则不允许删除/更新（与NO ACTION一致） |
-| CASCADE | 当在父表中删除/更新对应记录时，首先检查该记录是否有对应外键，如果有则也删除/更新外键在子表中的记录 |
-| SET NULL | 当在父表中删除/更新对应记录时，首先检查该记录是否有对应外键，如果有则设置子表中该外键值为null（要求该外键允许为null） |
-| SET DEFAULT | 父表有变更时，子表将外键设为一个默认值（Innodb不支持） |
+{% autogrid data-grid-link-table nofix %}
+行为|说明
+NO ACTION|当在父表中删除/更新对应记录时，首先检查该记录是否有对应外键，如果有则不允许删除/更新（与RESTRICT一致）
+RESTRICT|当在父表中删除/更新对应记录时，首先检查该记录是否有对应外键，如果有则不允许删除/更新（与NO ACTION一致）
+CASCADE|当在父表中删除/更新对应记录时，首先检查该记录是否有对应外键，如果有则也删除/更新外键在子表中的记录
+SET NULL|当在父表中删除/更新对应记录时，首先检查该记录是否有对应外键，如果有则设置子表中该外键值为null（要求该外键允许为null）
+SET DEFAULT|父表有变更时，子表将外键设为一个默认值（Innodb不支持）
+{% endautogrid %}
 
 更改删除/更新行为：  
 `ALTER TABLE 表名 ADD CONSTRAINT 外键名称 FOREIGN KEY (外键字段) REFERENCES 主表名(主表字段名) ON UPDATE 行为 ON DELETE 行为;`
@@ -710,13 +721,14 @@ select * from employee where entrydate > (select entrydate from employee where n
 
 常用操作符：
 
-| 操作符 | 描述 |
-| --- | --- |
-| IN | 在指定的集合范围内，多选一 |
-| NOT IN | 不在指定的集合范围内 |
-| ANY | 子查询返回列表中，有任意一个满足即可 |
-| SOME | 与ANY等同，使用SOME的地方都可以使用ANY |
-| ALL | 子查询返回列表的所有值都必须满足 |
+{% autogrid data-grid-link-table nofix %}
+操作符|描述
+IN|在指定的集合范围内，多选一
+NOT IN|不在指定的集合范围内
+ANY|子查询返回列表中，有任意一个满足即可
+SOME|与ANY等同，使用SOME的地方都可以使用ANY
+ALL|子查询返回列表的所有值都必须满足
+{% endautogrid %}
 
 例子：
 
@@ -821,22 +833,24 @@ commit;
 
 ### 并发事务
 
-| 问题 | 描述 |
-| --- | --- |
-| 脏读 | 一个事务读到另一个事务还没提交的数据 |
-| 不可重复读 | 一个事务先后读取同一条记录，但两次读取的数据不同 |
-| 幻读 | 一个事务按照条件查询数据时，没有对应的数据行，但是再插入数据时，又发现这行数据已经存在 |
+{% autogrid data-grid-link-table nofix %}
+问题|描述
+脏读|一个事务读到另一个事务还没提交的数据
+不可重复读|一个事务先后读取同一条记录，但两次读取的数据不同
+幻读|一个事务按照条件查询数据时，没有对应的数据行，但是再插入数据时，又发现这行数据已经存在
+{% endautogrid %}
 
 > 这三个问题的详细演示：<https://www.bilibili.com/video/BV1Kr4y1i7ru?p=55cd>
 
 并发事务隔离级别：
 
-| 隔离级别 | 脏读 | 不可重复读 | 幻读 |
-| --- | --- | --- | --- |
-| Read uncommitted | √ | √ | √ |
-| Read committed | × | √ | √ |
-| Repeatable Read(默认) | × | × | √ |
-| Serializable | × | × | × |
+{% autogrid data-grid-link-table nofix %}
+隔离级别|脏读|不可重复读|幻读
+Read uncommitted|√|√|√
+Read committed|×|√|√
+Repeatable Read(默认)|×|×|√
+Serializable|×|×|×
+{% endautogrid %}
 
 - √表示在当前隔离级别下该问题会出现
 - Serializable 性能最低；Read uncommitted 性能最高，数据安全性最差

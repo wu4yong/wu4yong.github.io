@@ -19,7 +19,8 @@ tags:
 
 **结合一段 java 代码的执行理解内存划分**
 
-![image-20210831165728217](/assets/img/java/jvm/image-20210831165728217.png)
+<!-- ![image-20210831165728217](/assets/img/java/jvm/image-20210831165728217.png) -->
+<div class="img-wrap-left"><img class="left-img" src="/assets/img/java/jvm/image-20210831165728217.png" alt="image-20210831165728217"></div>
 
 * 执行 javac 命令编译源代码为字节码
 * 执行 java 命令
@@ -55,7 +56,8 @@ tags:
 * **永久代**是 Hotspot 虚拟机对 JVM 规范的实现（1.8 之前）
 * **元空间**是 Hotspot 虚拟机对 JVM 规范的另一种实现（1.8 以后），使用本地内存作为这些信息的存储空间
 
-![image-20210831170457337](/assets/img/java/jvm/image-20210831170457337.png)
+<!-- ![image-20210831170457337](/assets/img/java/jvm/image-20210831170457337.png) -->
+<div class="img-wrap-left"><img class="left-img" src="/assets/img/java/jvm/image-20210831170457337.png" alt="image-20210831170457337"></div>
 
 从这张图学到三点
 
@@ -63,7 +65,8 @@ tags:
 * X，Y 的类元信息是存储于元空间中，无法直接访问
 * 可以用 X.class，Y.class 间接访问类元信息，它们俩属于 java 对象，我们的代码中可以使用
 
-![image-20210831170512418](/assets/img/java/jvm/image-20210831170512418.png)
+<!-- ![image-20210831170512418](/assets/img/java/jvm/image-20210831170512418.png) -->
+<div class="img-wrap-left"><img class="left-img" src="/assets/img/java/jvm/image-20210831170512418.png" alt="image-20210831170512418"></div>
 
 从这张图可以学到
 
@@ -80,7 +83,8 @@ tags:
 
 **堆内存，按大小设置**
 
-![image-20210831173130717](/assets/img/java/jvm/image-20210831173130717.png)
+<!-- ![image-20210831173130717](/assets/img/java/jvm/image-20210831173130717.png) -->
+<div class="img-wrap-left"><img class="left-img" src="/assets/img/java/jvm/image-20210831173130717.png" alt="image-20210831173130717"></div>
 
 解释：
 
@@ -95,7 +99,8 @@ tags:
 
 **堆内存，按比例设置**
 
-![image-20210831173045700](/assets/img/java/jvm/image-20210831173045700.png)
+<!-- ![image-20210831173045700](/assets/img/java/jvm/image-20210831173045700.png) -->
+<div class="img-wrap-left"><img class="left-img" src="/assets/img/java/jvm/image-20210831173045700.png" alt="image-20210831173045700"></div>
 
 解释：
 
@@ -106,7 +111,8 @@ tags:
 
 **元空间内存设置**
 
-![image-20210831173118634](/assets/img/java/jvm/image-20210831173118634.png)
+<!-- ![image-20210831173118634](/assets/img/java/jvm/image-20210831173118634.png) -->
+<div class="img-wrap-left"><img class="left-img" src="/assets/img/java/jvm/image-20210831173118634.png" alt="image-20210831173118634"></div>
 
 解释：
 
@@ -122,7 +128,8 @@ tags:
 
 **代码缓存内存设置**
 
-![image-20210831173148816](/assets/img/java/jvm/image-20210831173148816.png)
+<!-- ![image-20210831173148816](/assets/img/java/jvm/image-20210831173148816.png) -->
+<div class="img-wrap-left"><img class="left-img" src="/assets/img/java/jvm/image-20210831173148816.png" alt="image-20210831173148816"></div>
 
 解释：
 
@@ -136,7 +143,8 @@ tags:
 
 **线程内存设置**
 
-![image-20210831173155481](/assets/img/java/jvm/image-20210831173155481.png)
+<!-- ![image-20210831173155481](/assets/img/java/jvm/image-20210831173155481.png) -->
+<div class="img-wrap-left"><img class="left-img" src="/assets/img/java/jvm/image-20210831173155481.png" alt="image-20210831173155481"></div>
 
 > ***官方参考文档***
 >
@@ -157,7 +165,8 @@ tags:
 
 标记清除法
 
-![image-20210831211008162](/assets/img/java/jvm/image-20210831211008162.png)
+<!-- ![image-20210831211008162](/assets/img/java/jvm/image-20210831211008162.png) -->
+<div class="img-wrap-left"><img class="left-img" src="/assets/img/java/jvm/image-20210831211008162.png" alt="image-20210831211008162"></div>
 
 解释：
 
@@ -175,7 +184,8 @@ tags:
 
 标记整理法
 
-![image-20210831211641241](/assets/img/java/jvm/image-20210831211641241.png)
+<!-- ![image-20210831211641241](/assets/img/java/jvm/image-20210831211641241.png) -->
+<div class="img-wrap-left"><img class="left-img" src="/assets/img/java/jvm/image-20210831211641241.png" alt="image-20210831211641241"></div>
 
 解释：
 
@@ -193,7 +203,8 @@ tags:
 
 标记复制法
 
-![image-20210831212125813](/assets/img/java/jvm/image-20210831212125813.png)
+<!-- ![image-20210831212125813](/assets/img/java/jvm/image-20210831212125813.png) -->
+<div class="img-wrap-left"><img class="left-img" src="/assets/img/java/jvm/image-20210831212125813.png" alt="image-20210831212125813"></div>
 
 解释：
 
@@ -229,39 +240,48 @@ GC 要点：
 
 1. 伊甸园 eden，最初对象都分配到这里，与幸存区 survivor（分成 from 和 to）合称新生代，
 
-![image-20210831213622704](/assets/img/java/jvm/image-20210831213622704.png)
+<!-- ![image-20210831213622704](/assets/img/java/jvm/image-20210831213622704.png) -->
+<div class="img-wrap-left"><img class="left-img" src="/assets/img/java/jvm/image-20210831213622704.png" alt="image-20210831213622704"></div>
 
 2. 当伊甸园内存不足，标记伊甸园与 from（现阶段没有）的存活对象
 
-![image-20210831213640110](/assets/img/java/jvm/image-20210831213640110.png)
+<!-- ![image-20210831213640110](/assets/img/java/jvm/image-20210831213640110.png) -->
+<div class="img-wrap-left"><img class="left-img" src="/assets/img/java/jvm/image-20210831213640110.png" alt="image-20210831213640110"></div>
 
 3. 将存活对象采用复制算法复制到 to 中，复制完毕后，伊甸园和 from 内存都得到释放
 
-![image-20210831213657861](/assets/img/java/jvm/image-20210831213657861.png)
+<!-- ![image-20210831213657861](/assets/img/java/jvm/image-20210831213657861.png) -->
+<div class="img-wrap-left"><img class="left-img" src="/assets/img/java/jvm/image-20210831213657861.png" alt="image-20210831213657861"></div>
 
 4. 将 from 和 to 交换位置
 
-![image-20210831213708776](/assets/img/java/jvm/image-20210831213708776.png)
+<!-- ![image-20210831213708776](/assets/img/java/jvm/image-20210831213708776.png) -->
+<div class="img-wrap-left"><img class="left-img" src="/assets/img/java/jvm/image-20210831213708776.png" alt="image-20210831213708776"></div>
 
 5. 经过一段时间后伊甸园的内存又出现不足
 
-![image-20210831213724858](/assets/img/java/jvm/image-20210831213724858.png)
+<!-- ![image-20210831213724858](/assets/img/java/jvm/image-20210831213724858.png) -->
+<div class="img-wrap-left"><img class="left-img" src="/assets/img/java/jvm/image-20210831213724858.png" alt="image-20210831213724858"></div>
 
 6. 标记伊甸园与 from（现阶段没有）的存活对象
 
-![image-20210831213737669](/assets/img/java/jvm/image-20210831213737669.png)
+<!-- ![image-20210831213737669](/assets/img/java/jvm/image-20210831213737669.png) -->
+<div class="img-wrap-left"><img class="left-img" src="/assets/img/java/jvm/image-20210831213737669.png" alt="image-20210831213737669"></div>
 
 7. 将存活对象采用复制算法复制到 to 中
 
-![image-20210831213804315](/assets/img/java/jvm/image-20210831213804315.png)
+<!-- ![image-20210831213804315](/assets/img/java/jvm/image-20210831213804315.png) -->
+<div class="img-wrap-left"><img class="left-img" src="/assets/img/java/jvm/image-20210831213804315.png" alt="image-20210831213804315"></div>
 
 8. 复制完毕后，伊甸园和 from 内存都得到释放
 
-![image-20210831213815371](/assets/img/java/jvm/image-20210831213815371.png)
+<!-- ![image-20210831213815371](/assets/img/java/jvm/image-20210831213815371.png) -->
+<div class="img-wrap-left"><img class="left-img" src="/assets/img/java/jvm/image-20210831213815371.png" alt="image-20210831213815371"></div>
 
 9. 将 from 和 to 交换位置
 
-![image-20210831213826017](/assets/img/java/jvm/image-20210831213826017.png)
+<!-- ![image-20210831213826017](/assets/img/java/jvm/image-20210831213826017.png) -->
+<div class="img-wrap-left"><img class="left-img" src="/assets/img/java/jvm/image-20210831213826017.png" alt="image-20210831213826017"></div>
 
 10. 老年代 old，当幸存区对象熬过几次回收（最多15次），晋升到老年代（幸存区内存不足或大对象会导致提前晋升）
 
@@ -486,12 +506,13 @@ GC 要点：
 
 **jdk 8 的类加载器**
 
-| **名称**                | **加载哪的类**        | **说明**                       |
-| ----------------------- | --------------------- | ------------------------------ |
-| Bootstrap ClassLoader   | JAVA_HOME/jre/lib     | 无法直接访问                   |
-| Extension ClassLoader   | JAVA_HOME/jre/lib/ext | 上级为 Bootstrap，显示为  null |
-| Application ClassLoader | classpath             | 上级为 Extension               |
-| 自定义类加载器          | 自定义                | 上级为 Application             |
+{% autogrid data-grid-link-table nofix %}
+**名称**|**加载哪的类**|**说明**
+Bootstrap ClassLoader|JAVA_HOME/jre/lib|无法直接访问
+Extension ClassLoader|JAVA_HOME/jre/lib/ext|上级为 Bootstrap，显示为  null
+Application ClassLoader|classpath|上级为 Extension
+自定义类加载器|自定义|上级为 Application
+{% endautogrid %}
 
 
 
@@ -514,7 +535,8 @@ GC 要点：
 
 下面面试题的回答是错误的
 
-![image-20210901110910016](/assets/img/java/jvm/image-20210901110910016.png)
+<!-- ![image-20210901110910016](/assets/img/java/jvm/image-20210901110910016.png) -->
+<div class="img-wrap-left"><img class="left-img" src="/assets/img/java/jvm/image-20210901110910016.png" alt="image-20210901110910016"></div>
 
 错在哪了？
 
@@ -619,13 +641,15 @@ GC 要点：
 1. 对 finalize 方法进行处理的核心逻辑位于 java.lang.ref.Finalizer 类中，它包含了名为 unfinalized 的静态变量（双向链表结构），Finalizer 也可被视为另一种引用对象（地位与软、弱、虚相当，只是不对外，无法直接使用）
 2. 当重写了 finalize 方法的对象，在构造方法调用之时，JVM 都会将其包装成一个 Finalizer 对象，并加入 unfinalized 链表中
 
-![image-20210901121032813](/assets/img/java/jvm/image-20210901121032813.png)
+<!-- ![image-20210901121032813](/assets/img/java/jvm/image-20210901121032813.png) -->
+<div class="img-wrap-left"><img class="left-img" src="/assets/img/java/jvm/image-20210901121032813.png" alt="image-20210901121032813"></div>
 
 3. Finalizer 类中还有另一个重要的静态变量，即 ReferenceQueue 引用队列，刚开始它是空的。当狗对象可以被当作垃圾回收时，就会把这些狗对象对应的 Finalizer 对象加入此引用队列
 4. 但此时 Dog 对象还没法被立刻回收，因为 unfinalized -> Finalizer 这一引用链还在引用它嘛，为的是【先别着急回收啊，等我调完 finalize 方法，再回收】
 5. FinalizerThread 线程会从 ReferenceQueue 中逐一取出每个 Finalizer 对象，把它们从链表断开并真正调用 finallize 方法
 
-![image-20210901122228916](/assets/img/java/jvm/image-20210901122228916.png)
+<!-- ![image-20210901122228916](/assets/img/java/jvm/image-20210901122228916.png) -->
+<div class="img-wrap-left"><img class="left-img" src="/assets/img/java/jvm/image-20210901122228916.png" alt="image-20210901122228916"></div>
 
 6. 由于整个 Finalizer 对象已经从 unfinalized 链表中断开，这样没谁能引用到它和狗对象，所以下次 gc 时就被回收了
 

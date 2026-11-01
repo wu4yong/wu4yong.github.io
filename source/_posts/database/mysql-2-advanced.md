@@ -94,18 +94,19 @@ Memory 引擎的表数据是存储在内存中的，受硬件问题、断电问�
 
 ### 存储引擎特点
 
-| 特点 | InnoDB | MyISAM | Memory |
-| --- | --- | --- | --- |
-| 存储限制 | 64TB | 有 | 有 |
-| 事务安全 | 支持 | - | - |
-| 锁机制 | 行锁 | 表锁 | 表锁 |
-| B+tree索引 | 支持 | 支持 | 支持 |
-| Hash索引 | - | - | 支持 |
-| 全文索引 | 支持（5.6版本之后） | 支持 | - |
-| 空间使用 | 高 | 低 | N/A |
-| 内存使用 | 高 | 低 | 中等 |
-| 批量插入速度 | 低 | 高 | 高 |
-| 支持外键 | 支持 | - | - |
+{% autogrid data-grid-link-table nofix %}
+特点|InnoDB|MyISAM|Memory
+存储限制|64TB|有|有
+事务安全|支持|-|-
+锁机制|行锁|表锁|表锁
+B+tree索引|支持|支持|支持
+Hash索引|-|-|支持
+全文索引|支持（5.6版本之后）|支持|-
+空间使用|高|低|N/A
+内存使用|高|低|中等
+批量插入速度|低|高|高
+支持外键|支持|-|-
+{% endautogrid %}
 
 ### 存储引擎的选择
 
@@ -187,19 +188,21 @@ EXPLAIN 各字段含义：
 
 ### 索引结构
 
-| 索引结构 | 描述 |
-| --- | --- |
-| B+Tree | 最常见的索引类型，大部分引擎都支持B+树索引 |
-| Hash | 底层数据结构是用哈希表实现，只有精确匹配索引列的查询才有效，不支持范围查询 |
-| R-Tree(空间索引) | 空间索引是 MyISAM 引擎的一个特殊索引类型，主要用于地理空间数据类型，通常使用较少 |
-| Full-Text(全文索引) | 是一种通过建立倒排索引，快速匹配文档的方式，类似于 Lucene, Solr, ES |
+{% autogrid data-grid-link-table nofix %}
+索引结构|描述
+B+Tree|最常见的索引类型，大部分引擎都支持B+树索引
+Hash|底层数据结构是用哈希表实现，只有精确匹配索引列的查询才有效，不支持范围查询
+R-Tree(空间索引)|空间索引是 MyISAM 引擎的一个特殊索引类型，主要用于地理空间数据类型，通常使用较少
+Full-Text(全文索引)|是一种通过建立倒排索引，快速匹配文档的方式，类似于 Lucene, Solr, ES
+{% endautogrid %}
 
-| 索引 | InnoDB | MyISAM | Memory |
-| --- | --- | --- | --- |
-| B+Tree索引 | 支持 | 支持 | 支持 |
-| Hash索引 | 不支持 | 不支持 | 支持 |
-| R-Tree索引 | 不支持 | 支持 | 不支持 |
-| Full-text | 5.6版本后支持 | 支持 | 不支持 |
+{% autogrid data-grid-link-table nofix %}
+索引|InnoDB|MyISAM|Memory
+B+Tree索引|支持|支持|支持
+Hash索引|不支持|不支持|支持
+R-Tree索引|不支持|支持|不支持
+Full-text|5.6版本后支持|支持|不支持
+{% endautogrid %}
 
 #### B-Tree
 
@@ -263,19 +266,21 @@ MySQL 索引数据结构对经典的 B+Tree 进行了优化。在原 B+Tree 的�
 
 ### 索引分类
 
-| 分类 | 含义 | 特点 | 关键字 |
-| --- | --- | --- | --- |
-| 主键索引 | 针对于表中主键创建的索引 | 默认自动创建，只能有一个 | PRIMARY |
-| 唯一索引 | 避免同一个表中某数据列中的值重复 | 可以有多个 | UNIQUE |
-| 常规索引 | 快速定位特定数据 | 可以有多个 |  |
-| 全文索引 | 全文索引查找的是文本中的关键词，而不是比较索引中的值 | 可以有多个 | FULLTEXT |
+{% autogrid data-grid-link-table nofix %}
+分类|含义|特点|关键字
+主键索引|针对于表中主键创建的索引|默认自动创建，只能有一个|PRIMARY
+唯一索引|避免同一个表中某数据列中的值重复|可以有多个|UNIQUE
+常规索引|快速定位特定数据|可以有多个|
+全文索引|全文索引查找的是文本中的关键词，而不是比较索引中的值|可以有多个|FULLTEXT
+{% endautogrid %}
 
 在 InnoDB 存储引擎中，根据索引的存储形式，又可以分为以下两种：
 
-| 分类 | 含义 | 特点 |
-| --- | --- | --- |
-| 聚集索引(Clustered Index) | 将数据存储与索引放一块，索引结构的叶子节点保存了行数据 | 必须有，而且只有一个 |
-| 二级索引(Secondary Index) | 将数据与索引分开存储，索引结构的叶子节点关联的是对应的主键 | 可以存在多个 |
+{% autogrid data-grid-link-table nofix %}
+分类|含义|特点
+聚集索引(Clustered Index)|将数据存储与索引放一块，索引结构的叶子节点保存了行数据|必须有，而且只有一个
+二级索引(Secondary Index)|将数据与索引分开存储，索引结构的叶子节点关联的是对应的主键|可以存在多个
+{% endautogrid %}
 
 演示图：
 
@@ -819,11 +824,12 @@ end;
 
 #### 参数（in, out, inout)
 
-| 类型 | 含义 | 备注 |
-| --- | --- | --- |
-| IN | 该类参数作为输入，也就是需要调用时传入值 | 默认 |
-| OUT | 该类参数作为输出，也就是该参数可以作为返回值 |  |
-| INOUT | 既可以作为输入参数，也可以作为输出参数\*\*\*\* |  |
+{% autogrid data-grid-link-table nofix %}
+类型|含义|备注
+IN|该类参数作为输入，也就是需要调用时传入值|默认
+OUT|该类参数作为输出，也就是该参数可以作为返回值|
+INOUT|既可以作为输入参数，也可以作为输出参数\*\*\*\*|
+{% endautogrid %}
 
 **用法：**
 
@@ -1197,11 +1203,12 @@ end;
 
 使用别名 OLD 和 NEW 来引用触发器中发生变化的记录内容，这与其他的数据库是相似的。现在触发器还只支持行级触发，不支持语句级触发。
 
-| 触发器类型 | NEW 和 OLD |
-| --- | --- |
-| insert 型触发器 | NEW 表示将要或者已经新增的数据 |
-| update 型触发器 | OLD 表示修改之前的数据，NEW 表示将要或已经修改后的数据 |
-| delete 型触发器 | OLD 表示将要或者已经删除的数据 |
+{% autogrid data-grid-link-table nofix %}
+触发器类型|NEW 和 OLD
+insert 型触发器|NEW 表示将要或者已经新增的数据
+update 型触发器|OLD 表示修改之前的数据，NEW 表示将要或已经修改后的数据
+delete 型触发器|OLD 表示将要或者已经删除的数据
+{% endautogrid %}
 
 **语法：**
 
@@ -1363,12 +1370,13 @@ MDL加锁过程是系统自动控制，无需显式使用，在访问一张表�
 - 对一张表进行 CRUD 操作时，加的是 **MDL 读锁**；
 - 对一张表做结构变更操作的时候，加的是 **MDL 写锁**；
 
-| 对应SQL | 锁类型 | 说明 |
-| --- | --- | --- |
-| lock tables xxx read /write | SHARED\_READ\_ONLY/SHARED\_NO\_READ\_WRITE |  |
-| select 、 select … lock in share mode | SHARED\_READ | 与SHARED\_READ、SHARED\_WRITE兼容，与EXCLUSIVE互斥 |
-| insert 、update、delete、select …for update | SHARED\_WRITE | 与SHARED\_READ、SHARED\_WRITE兼容，与EXCLUSIVE互斥 |
-| alter table … | EXCLYSIVE | 与其他的MDL都互斥 |
+{% autogrid data-grid-link-table nofix %}
+对应SQL|锁类型|说明
+lock tables xxx read /write|SHARED\_READ\_ONLY/SHARED\_NO\_READ\_WRITE|
+select 、 select … lock in share mode|SHARED\_READ|与SHARED\_READ、SHARED\_WRITE兼容，与EXCLUSIVE互斥
+insert 、update、delete、select …for update|SHARED\_WRITE|与SHARED\_READ、SHARED\_WRITE兼容，与EXCLUSIVE互斥
+alter table …|EXCLYSIVE|与其他的MDL都互斥
+{% endautogrid %}
 
 查看元数据锁：
 
@@ -1418,19 +1426,21 @@ InnoDB实现了以下两种类型的行锁：
 1. 共享锁(S)：允许一个事务去读一行，阻止其他事务获得相同数据集的排它锁。
 2. 排他锁(X)：允许获取排他锁的事务更新数据，阻止其他事务获得相同数据集的共享锁和排他锁。
 
-|  | S(共享锁) | X(排他锁) |
-| --- | --- | --- |
-| S(共享锁) | 兼容 | 冲突 |
-| X(排他锁) | 冲突 | 冲突 |
+{% autogrid data-grid-link-table nofix %}
+|S(共享锁)|X(排他锁)
+S(共享锁)|兼容|冲突
+X(排他锁)|冲突|冲突
+{% endautogrid %}
 
 行锁类型：
 
-| SQL | 行锁类型 | 说明 |
-| --- | --- | --- |
-| insert，update，delete … | 排他锁 | 自动加锁 |
-| select | 不加任何锁 |  |
-| select … lock in share mode | 共享锁 | 需要手动select之后加上lock in share mode |
-| select … for update | 排他锁 | 需要手动在select之后for update |
+{% autogrid data-grid-link-table nofix %}
+SQL|行锁类型|说明
+insert，update，delete …|排他锁|自动加锁
+select|不加任何锁|
+select … lock in share mode|共享锁|需要手动select之后加上lock in share mode
+select … for update|排他锁|需要手动在select之后for update
+{% endautogrid %}
 
 默认情况下，InnoDB在 REPEATABLE READ事务隔离级别运行，InnoDB使用 next-key锁进行搜索和索引扫描，以防止幻读。
 
@@ -1574,12 +1584,13 @@ ReadView(读视图)是 快照读 SOL执行时MVCC提取数据的依据，记录�
 
 ReadView中包含了四个核心字段:
 
-| 字段 | 含义 |
-| --- | --- |
-| m\_ids | 当前活跃的事务ID集合 |
-| min\_trx\_id | 最小活跃事务ID |
-| max\_trx\_id | 预分配事务ID，当前最大事务ID+1（因为事务ID是自增的） |
-| creator\_trx\_id | ReadView创建者的事务ID |
+{% autogrid data-grid-link-table nofix %}
+字段|含义
+m\_ids|当前活跃的事务ID集合
+min\_trx\_id|最小活跃事务ID
+max\_trx\_id|预分配事务ID，当前最大事务ID+1（因为事务ID是自增的）
+creator\_trx\_id|ReadView创建者的事务ID
+{% endautogrid %}
 
 <div class="img-wrap-left"><img class="left-img" src="/assets/img/mysql/84711022753.png" alt="84711022753.png"></div>
 
@@ -1593,12 +1604,13 @@ ReadView中包含了四个核心字段:
 
 Mysql数据库安装完成后，自带了一下四个数据库，具体作用如下：
 
-| 数据库 | 含义 |
-| --- | --- |
-| mysql | 存储MVSQL服务器正常运行所需要的各种信息(时区、主从、用户、权限等) |
-| information\_schema | 提供了访问数据库元数据的各种表和视图，包含数据库、表、字段类型及访问权限等 |
-| performance\_schema | 为MySQL服务器运行时状态提供了一个底层监控功能，主要用于收集数据库服务器性能参数 |
-| sys | 包含了一系列方便 DBA和开发人员利用 performance\_schema性能数据库进行性能调优和诊断的视图 |
+{% autogrid data-grid-link-table nofix %}
+数据库|含义
+mysql|存储MVSQL服务器正常运行所需要的各种信息(时区、主从、用户、权限等)
+information\_schema|提供了访问数据库元数据的各种表和视图，包含数据库、表、字段类型及访问权限等
+performance\_schema|为MySQL服务器运行时状态提供了一个底层监控功能，主要用于收集数据库服务器性能参数
+sys|包含了一系列方便 DBA和开发人员利用 performance\_schema性能数据库进行性能调优和诊断的视图
+{% endautogrid %}
 
 ### 常用工具
 

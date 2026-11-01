@@ -2212,11 +2212,11 @@ curl https://start.spring.io
 
 步骤1：创建模块，区别在于打包方式选择 war
 
-<img src="img/image-20211021160145072.png" alt="image-20211021160145072" style="zoom: 50%;" />
+<div class="img-wrap-left"><img class="left-img" src="img/image-20211021160145072.png" alt="image-20211021160145072" style="zoom: 50%;" /></div>
 
 接下来勾选 Spring Web 支持
 
-<img src="img/image-20211021162416525.png" alt="image-20211021162416525" style="zoom:50%;" />
+<div class="img-wrap-left"><img class="left-img" src="img/image-20211021162416525.png" alt="image-20211021162416525" style="zoom:50%;" /></div>
 
 步骤2：编写控制器
 

@@ -39,11 +39,12 @@ tags:
 
 MySQL服务器中提供了多种格式来记录二进制记录，具体格式及特点如下：
 
-| 日志格式 | 含义 |
-| --- | --- |
-| statement | 基于SQL语句的日志记录，记录的是SQL语句，对数据进行修改的SQL都会记录在日志文件中。 |
-| row | 基于行的日志记录，记录的是每一行的数据变更。(默认) |
-| mined | 混合了STATEMENT和ROW两种格式，默认采用STATEMENT，在某些特殊情况下会自动切换为ROW进行记录。 |
+{% autogrid data-grid-link-table nofix %}
+日志格式|含义
+statement|基于SQL语句的日志记录，记录的是SQL语句，对数据进行修改的SQL都会记录在日志文件中。
+row|基于行的日志记录，记录的是每一行的数据变更。(默认)
+mined|混合了STATEMENT和ROW两种格式，默认采用STATEMENT，在某些特殊情况下会自动切换为ROW进行记录。
+{% endautogrid %}
 
 查看参数方式：`show variables like '%binlog_format%';`
 
@@ -65,11 +66,12 @@ mysqlbinlog[参数选项]logfilename
 
 对于比较繁忙的业务系统，每天生成的binlog数据巨大，如果长时间不清除，将会占用大量磁盘空间。可以通过以下几种方式清理日志：
 
-| 指令 | 含义 |
-| --- | --- |
-| reset master | 删除全部 binlog 日志，删除之后，日志编号，将从 binlog.000001重新开始 |
-| purge master logs to ‘binlog.\*\*\*’ | 删除 \*\*\* 编号之前的所有日志 |
-| purge master logs before ‘yyyy-mm-dd hh24:mi:ss’ | 删除日志为”yyyy-mm-dd hh24:mi:ss”之前产生的所有日志 |
+{% autogrid data-grid-link-table nofix %}
+指令|含义
+reset master|删除全部 binlog 日志，删除之后，日志编号，将从 binlog.000001重新开始
+purge master logs to ‘binlog.\*\*\*’|删除 \*\*\* 编号之前的所有日志
+purge master logs before ‘yyyy-mm-dd hh24:mi:ss’|删除日志为”yyyy-mm-dd hh24:mi:ss”之前产生的所有日志
+{% endautogrid %}
 
 也可以在mysql的配置文件中配置二进制日志的过期时间，设置了之后，二进制日志过期会自动删除.
 

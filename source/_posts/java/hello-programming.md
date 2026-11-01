@@ -66,4 +66,5 @@ tags:
 可唯独关于你的心动逻辑，没有标准答案，没有万能算法，没有一键修复异常的代码。
 世间万千程序皆有解，唯独我爱你，只能等候你，递来唯一的返回值。</span>
 
-![代码配图](/assets/img/coder.png)
+<!-- ![代码配图](/assets/img/coder.png) -->
+<div class="img-wrap-left"><img class="left-img" src="/assets/img/coder.png" alt="代码配图"></div>

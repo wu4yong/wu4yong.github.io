@@ -235,33 +235,35 @@ Dcom.sun.management.jmxremote.authenticate=是否认证 java类
 
 ## 核心线程方法汇总
 
-|方法名|静态|功能说明|注意事项|
-|---|---|---|---|
-|start\(\)|否|启动新线程，在线程中执行run方法|仅让线程进入就绪状态，不保证立即执行；每个线程仅能调用一次，多次调用抛出IllegalStateException|
-|run\(\)|否|线程启动后执行的核心方法|构造线程时传入Runnable则执行其run方法，否则默认无操作；可被子类重写|
-|join\(\)|否|等待目标线程运行结束|会阻塞当前调用线程|
-|join\(long n\)|否|等待线程结束，最长等待n毫秒|超时则不再等待，当前线程自动恢复执行|
-|getId\(\)|否|获取线程唯一长整型ID|线程ID全局唯一|
-|getName\(\)|否|获取线程名称|\-|
-|setName\(String\)|否|修改线程名称|\-|
-|getPriority\(\)|否|获取线程优先级|\-|
-|setPriority\(int\)|否|修改线程优先级|优先级范围1\-10，仅为CPU调度提示，不保证强制生效|
-|getState\(\)|否|获取线程当前状态|Java定义6种线程状态：NEW、RUNNABLE、BLOCKED、WAITING、TIMED\_WAITING、TERMINATED|
-|isInterrupted\(\)|否|判断线程是否被打断|不会清除打断标记|
-|isAlive\(\)|否|判断线程是否存活（未执行完毕）|\-|
-|interrupt\(\)|否|打断线程|阻塞线程（sleep/wait/join）被打断会抛异常并清除标记；运行中/park线程被打断仅设置标记|
-|interrupted\(\)|是|判断当前线程是否被打断|会清除打断标记|
-|currentThread\(\)|是|获取当前正在执行的线程对象|静态方法，全局通用|
-|sleep\(long n\)|是|当前线程休眠n毫秒，让出CPU时间片|进入TIMED\_WAITING状态，可被interrupt打断|
-|yield\(\)|是|提示调度器让出CPU使用权|仅为调度提示，依赖系统实现，多用于测试调试|
+{% autogrid data-grid-link-table nofix %}
+方法名|静态|功能说明|注意事项
+start\(\)|否|启动新线程，在线程中执行run方法|仅让线程进入就绪状态，不保证立即执行；每个线程仅能调用一次，多次调用抛出IllegalStateException
+run\(\)|否|线程启动后执行的核心方法|构造线程时传入Runnable则执行其run方法，否则默认无操作；可被子类重写
+join\(\)|否|等待目标线程运行结束|会阻塞当前调用线程
+join\(long n\)|否|等待线程结束，最长等待n毫秒|超时则不再等待，当前线程自动恢复执行
+getId\(\)|否|获取线程唯一长整型ID|线程ID全局唯一
+getName\(\)|否|获取线程名称|\-
+setName\(String\)|否|修改线程名称|\-
+getPriority\(\)|否|获取线程优先级|\-
+setPriority\(int\)|否|修改线程优先级|优先级范围1\-10，仅为CPU调度提示，不保证强制生效
+getState\(\)|否|获取线程当前状态|Java定义6种线程状态：NEW、RUNNABLE、BLOCKED、WAITING、TIMED\_WAITING、TERMINATED
+isInterrupted\(\)|否|判断线程是否被打断|不会清除打断标记
+isAlive\(\)|否|判断线程是否存活（未执行完毕）|\-
+interrupt\(\)|否|打断线程|阻塞线程（sleep/wait/join）被打断会抛异常并清除标记；运行中/park线程被打断仅设置标记
+interrupted\(\)|是|判断当前线程是否被打断|会清除打断标记
+currentThread\(\)|是|获取当前正在执行的线程对象|静态方法，全局通用
+sleep\(long n\)|是|当前线程休眠n毫秒，让出CPU时间片|进入TIMED\_WAITING状态，可被interrupt打断
+yield\(\)|是|提示调度器让出CPU使用权|仅为调度提示，依赖系统实现，多用于测试调试
+{% endautogrid %}
 
 ## 废弃不推荐方法
 
-|方法名|功能说明|废弃原因|
-|---|---|---|
-|stop\(\)|强制停止线程运行|直接杀死线程，无法释放锁资源，易导致死锁、数据不一致|
-|suspend\(\)|挂起（暂停）线程运行|易引发死锁，线程挂起时持有锁不释放|
-|resume\(\)|恢复挂起的线程运行|与suspend搭配使用，存在线程安全隐患|
+{% autogrid data-grid-link-table nofix %}
+方法名|功能说明|废弃原因
+stop\(\)|强制停止线程运行|直接杀死线程，无法释放锁资源，易导致死锁、数据不一致
+suspend\(\)|挂起（暂停）线程运行|易引发死锁，线程挂起时持有锁不释放
+resume\(\)|恢复挂起的线程运行|与suspend搭配使用，存在线程安全隐患
+{% endautogrid %}
 
 # 2.6 start 与 run
 
