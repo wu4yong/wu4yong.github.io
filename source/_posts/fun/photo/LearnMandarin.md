@@ -7,7 +7,7 @@ tags:
   - 图片
 ---
 <div class="essay-banner essay-image9">
-   漫画-努力的理由
+   <!-- 漫画-努力的理由 -->
 </div>
 
 <div align="center">

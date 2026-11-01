@@ -8,7 +8,7 @@ tags:
 order: 4
 ---
 <div class="essay-banner essay-music">
-  Guitar Be with you
+  <!-- Guitar Be with you -->
 </div>
 <div style="width:100%;aspect-ratio:16/9;">
   <iframe 

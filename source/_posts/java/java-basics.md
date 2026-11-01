@@ -7,7 +7,7 @@ tags:
   - Java
 ---
 <div class="essay-banner essay-image1">
-    Java Basic
+    <!-- Java Basic -->
 </div>
 
 > ***基础篇要点：算法、数据结构、基础设计模式***

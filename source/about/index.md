@@ -3,11 +3,13 @@ title: 关于我的故事
 date: 2026-05-01 01:00:00
 type: "about"
 ---
+
+<div class="essay-banner essay-memory">
+    <!--编程在路上 -->
+</div>
+
 # 编程在路上
-<!-- >
- 2006年的那个夏天，高中毕业了，未来一片迷茫.
->![]( /assets/img/coder/biye.png) 
- -->
+
 ### 网瘾游戏少年
 <div align="center">
   <img src="/assets/img/about/wangba.png" style="width:90%;

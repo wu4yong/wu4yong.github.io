@@ -8,7 +8,7 @@ tags:
 ---
 
 <div class="essay-banner essay-image11">
-    ai-agent-interview-questions
+    <!-- ai-agent-interview-questions -->
 </div>
 
 # AI 智能体与大模型应用开发面试题库

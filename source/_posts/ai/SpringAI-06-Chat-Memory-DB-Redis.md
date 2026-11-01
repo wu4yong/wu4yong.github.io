@@ -8,7 +8,7 @@ tags:
 ---
 
 <div class="essay-banner essay-image11">
-   Chat Memory in DB & Redis
+   <!-- Chat Memory in DB & Redis -->
 </div>
 大型语言模型 (LLM) 是无状态的，这意味着它们不会保留先前交互的信息。
 

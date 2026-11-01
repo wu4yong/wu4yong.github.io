@@ -8,7 +8,7 @@ tags:
 ---
 
 <div class="essay-banner essay-image11">
-    prompts-and-message-templates
+    <!-- prompts-and-message-templates -->
 </div>
 
 # 1-15 提示词与消息模板

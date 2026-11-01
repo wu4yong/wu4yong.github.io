@@ -8,7 +8,7 @@ tags:
 ---
 
 <div class="essay-banner essay-image11">
-    table-and-column-sync-to-metadata-db
+    <!-- table-and-column-sync-to-metadata-db -->
 </div>
 
 # 8 电商问数：表与字段信息同步到元数据库

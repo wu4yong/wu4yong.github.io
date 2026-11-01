@@ -8,7 +8,7 @@ tags:
 ---
 
 <div class="essay-banner essay-image11">
-    memory-and-chat-history-with-redis
+    <!-- memory-and-chat-history-with-redis -->
 </div>
 
 # 1-18 记忆与对话历史（含 Redis 基础）

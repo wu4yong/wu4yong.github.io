@@ -7,7 +7,7 @@ tags:
   - interview
 ---
 <div class="essay-chapter-header essay-image7">
-    7. 分布式基础（分布式事务、分布式ID、分库分表、分布式调度）
+    <!-- 7. 分布式基础（分布式事务、分布式ID、分库分表、分布式调度） -->
 </div>
 
 ## 第 1 题　雪花算法时钟回拨导致订单 ID 重复，如何止损、根治分布式 ID 冲突问题

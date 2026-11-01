@@ -8,7 +8,7 @@ tags:
 ---
 
 <div class="essay-banner essay-image11">
-    mcp-model-context-protocol
+    <!-- mcp-model-context-protocol -->
 </div>
 
 # 1-22 MCP 模型上下文协议

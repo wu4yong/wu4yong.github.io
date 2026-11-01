@@ -8,7 +8,7 @@ tags:
 ---
 
 <div class="essay-banner essay-image11">
-    main-agent
+    <!-- main-agent -->
 </div>
 
 # 13 深度研搜：主智能体搭建与异步执行

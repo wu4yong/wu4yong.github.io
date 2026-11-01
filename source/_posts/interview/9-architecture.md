@@ -7,7 +7,7 @@ tags:
   - interview
 ---
 <div class="essay-chapter-header essay-image9">
-    9. 架构方案设计（秒杀、下单、支付、幂等、双写一致性）
+    <!-- 9. 架构方案设计（秒杀、下单、支付、幂等、双写一致性） -->
 </div>
 
 ## 第 1 题　接口幂等性，支付场景防止重复扣款、重复下单

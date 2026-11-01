@@ -8,7 +8,7 @@ tags:
 ---
 
 <div class="essay-banner essay-image11">
-    project-init
+    <!-- project-init -->
 </div>
 
 # 8 深度研搜：项目总览与工程初始化

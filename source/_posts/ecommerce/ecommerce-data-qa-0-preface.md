@@ -8,7 +8,7 @@ tags:
 ---
 
 <div class="essay-banner essay-image11">
-    preface
+    <!-- preface -->
 </div>
 
 # 0 电商问数：前言

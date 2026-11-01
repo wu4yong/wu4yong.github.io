@@ -8,7 +8,7 @@ tags:
 ---
 
 <div class="essay-banner essay-image11">
-   Tools & Function Call
+   <!-- Tools & Function Call -->
 </div>
 
 想做企业级智能应用开发，  你肯定会有需求要让大模型和你的企业API能够互连，  

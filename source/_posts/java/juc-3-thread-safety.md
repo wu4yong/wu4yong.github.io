@@ -7,7 +7,7 @@ tags:
   - Java
 ---
 <div class="essay-banner essay-image1">
-    多线程共享变量与线程安全  
+    <!-- 多线程共享变量与线程安全   -->
 </div>
 
 # 多线程共享变量与线程安全

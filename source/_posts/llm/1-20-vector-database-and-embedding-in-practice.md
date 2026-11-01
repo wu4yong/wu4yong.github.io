@@ -8,7 +8,7 @@ tags:
 ---
 
 <div class="essay-banner essay-image11">
-    vector-database-and-embedding-in-practice
+    <!-- vector-database-and-embedding-in-practice -->
 </div>
 
 # 1-20 向量数据库与 Embedding 实战

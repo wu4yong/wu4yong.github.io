@@ -8,7 +8,7 @@ tags:
 ---
 
 <div class="essay-banner essay-image11">
-   Airline Smart Customer Service (RAG)
+   <!-- Airline Smart Customer Service (RAG) -->
 </div>
 
 ## 《基于航空智能客服+RAG》实战

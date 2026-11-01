@@ -8,7 +8,7 @@ tags:
 order: 2
 ---
 <div class="essay-banner essay-music">
-  自学吉他: Truly love you 
+  <!-- 自学吉他: Truly love you  -->
 </div>
 <div style="width:100%;aspect-ratio:16/9;">
   <iframe 

@@ -7,7 +7,7 @@ tags:
   - MySQL数据库
 ---
 <div class="essay-banner essay-image3">
-   Mysql Advanced
+   <!-- Mysql Advanced -->
 </div>
 
 ## 存储引擎

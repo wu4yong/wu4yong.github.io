@@ -8,7 +8,7 @@ tags:
 ---
 
 <div class="essay-banner essay-image11">
-    architecture-and-agent-workflow
+    <!-- architecture-and-agent-workflow -->
 </div>
 
 # 2 电商问数：项目整体架构与智能体流程

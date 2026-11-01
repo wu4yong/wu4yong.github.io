@@ -8,7 +8,7 @@ tags:
 ---
 
 <div class="essay-banner essay-image11">
-    qdrant-and-elasticsearch-quickstart
+    <!-- qdrant-and-elasticsearch-quickstart -->
 </div>
 
 # 5 电商问数：Qdrant 与 ES 快速入门与接入

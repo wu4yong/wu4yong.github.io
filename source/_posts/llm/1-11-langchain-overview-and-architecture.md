@@ -8,7 +8,7 @@ tags:
 ---
 
 <div class="essay-banner essay-image11">
-    langchain-overview-and-architecture
+    <!-- langchain-overview-and-architecture -->
 </div>
 
 # 1-11 LangChain 概述与架构

@@ -8,7 +8,7 @@ tags:
 ---
 
 <div class="essay-banner essay-image11">
-    human-interrupt
+    <!-- human-interrupt -->
 </div>
 
 # 5 深度研搜：人机协作与中断恢复

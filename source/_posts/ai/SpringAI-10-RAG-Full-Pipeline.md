@@ -8,7 +8,7 @@ tags:
 ---
 
 <div class="essay-banner essay-image11">
-   RAG Full Pipeline
+   <!-- RAG Full Pipeline -->
 </div>
 
 ## RAG简介

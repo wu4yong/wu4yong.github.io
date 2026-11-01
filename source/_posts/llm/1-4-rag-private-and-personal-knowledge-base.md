@@ -8,7 +8,7 @@ tags:
 ---
 
 <div class="essay-banner essay-image11">
-    rag-private-and-personal-knowledge-base
+    <!-- rag-private-and-personal-knowledge-base -->
 </div>
 
 # 1-4 RAG 搭建企业私有&个人知识库

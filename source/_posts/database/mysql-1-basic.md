@@ -7,7 +7,7 @@ tags:
   - MySQL数据库
 ---
 <div class="essay-banner essay-image3">
-   Mysql Basic
+   <!-- Mysql Basic -->
 </div>
 
 ## 通用语法及分类

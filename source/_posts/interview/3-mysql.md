@@ -7,7 +7,7 @@ tags:
   - interview
 ---
 <div class="essay-chapter-header essay-image3">
-    3. MySQL（索引、事务、锁、主从、死锁、SQL优化）
+    <!-- 3. MySQL（索引、事务、锁、主从、死锁、SQL优化） -->
 </div>
 
 ## 第 1 题　为什么 InnoDB 索引选用 B+树，不用二叉树、AVL、红黑树

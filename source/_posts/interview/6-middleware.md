@@ -7,7 +7,7 @@ tags:
   - interview
 ---
 <div class="essay-chapter-header essay-image6">
-    6. 中间件（MQ、Dubbo、Nacos、Netty、Nginx）
+    <!-- 6. 中间件（MQ、Dubbo、Nacos、Netty、Nginx） -->
 </div>
 
 ## 第 1 题　Netty 高性能核心原理

@@ -8,7 +8,7 @@ tags:
 ---
 
 <div class="essay-banner essay-image11">
-    ragflow-knowledge
+    <!-- ragflow-knowledge -->
 </div>
 
 # 12 深度研搜：RAGFlow 子智能体与知识库准备

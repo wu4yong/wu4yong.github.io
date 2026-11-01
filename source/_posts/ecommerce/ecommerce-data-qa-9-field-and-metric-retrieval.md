@@ -8,7 +8,7 @@ tags:
 ---
 
 <div class="essay-banner essay-image11">
-    field-and-metric-retrieval
+    <!-- field-and-metric-retrieval -->
 </div>
 
 # 9 电商问数：字段与指标检索能力构建

@@ -8,7 +8,7 @@ tags:
 order: 1
 ---
 <div class="essay-banner essay-music">
-   Wings of Angels 
+   <!-- Wings of Angels  -->
 </div>
 <div style="width:100%;aspect-ratio:16/9;">
   <iframe 

@@ -8,7 +8,7 @@ tags:
 ---
 
 <div class="essay-banner essay-image11">
-    skills-and-ai-coding-tools
+    <!-- skills-and-ai-coding-tools -->
 </div>
 
 # 1-29 Skills 技能与 AI 编程工具实践

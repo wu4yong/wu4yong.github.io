@@ -8,7 +8,7 @@ tags:
 ---
 
 <div class="essay-banner essay-image11">
-    mysql-sql-agent
+    <!-- mysql-sql-agent -->
 </div>
 
 # 11 深度研搜：数据库查询子智能体与 MySQL 工具

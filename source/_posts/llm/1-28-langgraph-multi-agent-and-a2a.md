@@ -8,7 +8,7 @@ tags:
 ---
 
 <div class="essay-banner essay-image11">
-    langgraph-multi-agent-and-a2a
+    <!-- langgraph-multi-agent-and-a2a -->
 </div>
 
 # 1-28 LangGraph 多智能体与 A2A

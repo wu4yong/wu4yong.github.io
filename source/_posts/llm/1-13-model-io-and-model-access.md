@@ -8,7 +8,7 @@ tags:
 ---
 
 <div class="essay-banner essay-image11">
-    model-io-and-model-access
+    <!-- model-io-and-model-access -->
 </div>
 
 # 1-13 Model I/O 与模型接入

@@ -8,7 +8,7 @@ tags:
 ---
 
 <div class="essay-banner essay-image11">
-    tools-and-tool-calling
+    <!-- tools-and-tool-calling -->
 </div>
 
 # 1-19 Tools 工具调用

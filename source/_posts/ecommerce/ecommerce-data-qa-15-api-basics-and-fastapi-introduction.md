@@ -8,7 +8,7 @@ tags:
 ---
 
 <div class="essay-banner essay-image11">
-    api-basics-and-fastapi-introduction
+    <!-- api-basics-and-fastapi-introduction -->
 </div>
 
 # 15 电商问数：API 接口基础与 FastAPI 入门

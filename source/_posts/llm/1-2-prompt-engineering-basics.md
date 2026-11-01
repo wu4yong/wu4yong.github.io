@@ -8,7 +8,7 @@ tags:
 ---
 
 <div class="essay-banner essay-image11">
-    prompt-engineering-basics
+    <!-- prompt-engineering-basics -->
 </div>
 
 # 1-2 提示词工程基础

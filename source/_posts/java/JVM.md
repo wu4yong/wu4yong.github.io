@@ -7,7 +7,7 @@ tags:
   - Java
 ---
 <div class="essay-banner essay-image2">
-    JVM
+    <!-- JVM -->
 </div>
 
 ## 1. JVM 内存结构

@@ -7,7 +7,7 @@ tags:
   - MySQL数据库
 ---
 <div class="essay-banner essay-image3">
-   Mysql GUI Tools & Installation
+   <!-- Mysql GUI Tools & Installation -->
 </div>
 
 # 图形化界面工具

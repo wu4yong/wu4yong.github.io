@@ -8,7 +8,7 @@ tags:
 ---
 
 <div class="essay-banner essay-image11">
-    sql-generation-and-execution-loop
+    <!-- sql-generation-and-execution-loop -->
 </div>
 
 # 14 电商问数：SQL 生成与执行闭环

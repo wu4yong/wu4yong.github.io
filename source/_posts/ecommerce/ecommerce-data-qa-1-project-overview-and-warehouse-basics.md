@@ -8,7 +8,7 @@ tags:
 ---
 
 <div class="essay-banner essay-image11">
-    project-overview-and-warehouse-basics
+    <!-- project-overview-and-warehouse-basics -->
 </div>
 
 # 1 电商问数：项目概述与数仓基础

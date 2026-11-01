@@ -8,7 +8,7 @@ tags:
 ---
 
 <div class="essay-banner essay-image11">
-    langgraph-langchain
+    <!-- langgraph-langchain -->
 </div>
 
 # 4 深度研搜：接入 LangGraph 与 LangChain

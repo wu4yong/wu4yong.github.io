@@ -8,7 +8,7 @@ tags:
 ---
 
 <div class="essay-banner essay-image11">
-    query-api-implementation-and-dependency-wiring
+    <!-- query-api-implementation-and-dependency-wiring -->
 </div>
 
 # 16 电商问数：查询接口实现与依赖组装

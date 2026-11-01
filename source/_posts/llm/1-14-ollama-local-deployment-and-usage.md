@@ -8,7 +8,7 @@ tags:
 ---
 
 <div class="essay-banner essay-image11">
-    ollama-local-deployment-and-usage
+    <!-- ollama-local-deployment-and-usage -->
 </div>
 
 # 1-14 Ollama 本地部署与调用

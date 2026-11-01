@@ -8,7 +8,7 @@ tags:
 ---
 
 <div class="essay-banner essay-image11">
-    agent-development-on-coze-and-dify
+    <!-- agent-development-on-coze-and-dify -->
 </div>
 
 # 1-5 基于 Coze&Dify 平台的智能体开发

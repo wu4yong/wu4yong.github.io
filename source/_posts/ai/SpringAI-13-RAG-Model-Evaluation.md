@@ -8,7 +8,7 @@ tags:
 ---
 
 <div class="essay-banner essay-image11">
-   RAG Model Evaluation
+   <!-- RAG Model Evaluation -->
 </div>
 
 ## 模型理解力评测

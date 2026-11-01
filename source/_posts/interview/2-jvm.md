@@ -7,7 +7,7 @@ tags:
   - interview
 ---
 <div class="essay-chapter-header essay-image2">
-    2. JVM
+    <!-- 2. JVM -->
 </div>
 
 ## 第 1 题　JVM 堆内存参数配置

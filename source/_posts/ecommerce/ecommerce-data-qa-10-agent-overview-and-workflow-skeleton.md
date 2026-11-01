@@ -8,7 +8,7 @@ tags:
 ---
 
 <div class="essay-banner essay-image11">
-    agent-overview-and-workflow-skeleton
+    <!-- agent-overview-and-workflow-skeleton -->
 </div>
 
 # 10 电商问数：问数智能体总览与工作流骨架

@@ -7,7 +7,7 @@ tags:
   - interview
 ---
 <div class="essay-chapter-header essay-image4">
-    4. Redis（原理、缓存三大问题、分布式锁、持久化）
+    <!-- 4. Redis（原理、缓存三大问题、分布式锁、持久化） -->
 </div>
 
 ## 第 1 题　Redis 是单线程，性能却很高，可达十万级 QPS，如何理解？

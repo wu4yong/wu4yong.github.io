@@ -8,7 +8,7 @@ tags:
 ---
 
 <div class="essay-banner essay-image11">
-    basics-engineering-overview
+    <!-- basics-engineering-overview -->
 </div>
 
 # 1-1 大模型认知与工程概览

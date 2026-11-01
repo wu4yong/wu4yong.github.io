@@ -8,7 +8,7 @@ tags:
 ---
 
 <div class="essay-banner essay-image11">
-    rag-finetuning-continued-training-and-agent-selection
+    <!-- rag-finetuning-continued-training-and-agent-selection -->
 </div>
 
 # 1-3 RAG、微调、续训与智能体选型

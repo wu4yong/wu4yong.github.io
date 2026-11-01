@@ -8,7 +8,7 @@ tags:
 order: 3
 ---
 <div class="essay-banner essay-image11">
-   HBase 
+   <!-- HBase  -->
 </div>
 
 ## 一、HBase 基础介绍

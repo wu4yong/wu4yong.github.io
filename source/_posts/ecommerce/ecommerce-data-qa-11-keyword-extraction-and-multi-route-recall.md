@@ -8,7 +8,7 @@ tags:
 ---
 
 <div class="essay-banner essay-image11">
-    keyword-extraction-and-multi-route-recall
+    <!-- keyword-extraction-and-multi-route-recall -->
 </div>
 
 # 11 电商问数：关键词抽取与多路召回

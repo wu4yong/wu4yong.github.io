@@ -8,7 +8,7 @@ tags:
 ---
 
 <div class="essay-banner essay-image11">
-   ChatClient Basics
+   <!-- ChatClient Basics -->
 </div>
 
 ## ChatClient

@@ -8,7 +8,7 @@ tags:
 ---
 
 <div class="essay-banner essay-image11">
-    windows-deployment-of-coze-and-dify
+    <!-- windows-deployment-of-coze-and-dify -->
 </div>
 
 # 1-8 Coze 与 Dify 的 Windows 平台部署

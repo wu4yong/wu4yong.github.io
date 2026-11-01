@@ -8,7 +8,7 @@ tags:
 ---
 
 <div class="essay-banner essay-image11">
-    langgraph-api-graph-and-state
+    <!-- langgraph-api-graph-and-state -->
 </div>
 
 # 1-25 LangGraph API：图与状态

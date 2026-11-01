@@ -8,7 +8,7 @@ tags:
 ---
 
 <div class="essay-banner essay-image11">
-    lcel-and-chaining
+    <!-- lcel-and-chaining -->
 </div>
 
 # 1-17 LCEL 与链式调用

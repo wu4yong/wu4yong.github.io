@@ -8,7 +8,7 @@ tags:
 ---
 
 <div class="essay-banner essay-image11">
-    llm-finetuning-overview-and-training-loop
+    <!-- llm-finetuning-overview-and-training-loop -->
 </div>
 
 # 1-30 大模型微调概述与训练闭环

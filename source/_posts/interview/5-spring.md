@@ -7,7 +7,7 @@ tags:
   - interview
 ---
 <div class="essay-chapter-header essay-image5">
-    5. Spring生态（Spring、SpringBoot、@Transactional、循环依赖、AOP）
+    <!-- 5. Spring生态（Spring、SpringBoot、@Transactional、循环依赖、AOP） -->
 </div>
 
 ## 第 1 题　@Transactional 是什么？加了该注解就一定可以回滚事务吗？

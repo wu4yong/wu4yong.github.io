@@ -8,7 +8,7 @@ tags:
 ---
 
 <div class="essay-banner essay-image11">
-   Spring AI Observability
+   <!-- Spring AI Observability -->
 </div>
 
 ## 为什么Spring AI应用急需可观测性？

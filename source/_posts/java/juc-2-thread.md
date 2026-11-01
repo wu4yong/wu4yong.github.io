@@ -7,7 +7,7 @@ tags:
   - Java
 ---
 <div class="essay-banner essay-image1">
-    Thread Basic
+    <!-- Thread Basic -->
 </div>
 
 # Java线程基础

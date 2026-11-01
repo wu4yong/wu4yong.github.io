@@ -7,7 +7,7 @@ tags:
   - interview
 ---
 <div class="essay-chapter-header essay-image1">
-    1. Java 基础 & 并发编程
+    <!-- 1. Java 基础 & 并发编程 -->
 </div>
 
 ## 第 1 题　synchronized 锁只能从轻往重单向升级、不能反向降级，为什么压测高峰过后锁状态又变回轻量级？

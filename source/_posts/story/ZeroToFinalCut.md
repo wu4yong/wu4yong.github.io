@@ -7,6 +7,10 @@ tags:
   - 随笔杂谈
 ---
 
+<div class="essay-banner essay-image10">
+    <!--从零到出片实操手册 -->
+</div>
+
 # 从零到出片实操手册
 
 > 适用对象：零基础新手。  

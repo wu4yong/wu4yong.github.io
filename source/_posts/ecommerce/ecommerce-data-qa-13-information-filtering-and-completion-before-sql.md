@@ -8,7 +8,7 @@ tags:
 ---
 
 <div class="essay-banner essay-image11">
-    information-filtering-and-completion-before-sql
+    <!-- information-filtering-and-completion-before-sql -->
 </div>
 
 # 13 电商问数：SQL 生成前的信息过滤与补全

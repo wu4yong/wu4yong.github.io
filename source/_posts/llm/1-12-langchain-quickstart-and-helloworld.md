@@ -8,7 +8,7 @@ tags:
 ---
 
 <div class="essay-banner essay-image11">
-    langchain-quickstart-and-helloworld
+    <!-- langchain-quickstart-and-helloworld -->
 </div>
 
 # 1-12 LangChain 快速上手与 HelloWorld

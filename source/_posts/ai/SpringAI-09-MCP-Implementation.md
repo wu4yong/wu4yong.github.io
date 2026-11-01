@@ -8,7 +8,7 @@ tags:
 ---
 
 <div class="essay-banner essay-image11">
-   MCP Implementation
+   <!-- MCP Implementation -->
 </div>
 
 ## MCP

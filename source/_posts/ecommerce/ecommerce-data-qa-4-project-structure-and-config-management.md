@@ -8,7 +8,7 @@ tags:
 ---
 
 <div class="essay-banner essay-image11">
-    project-structure-and-config-management
+    <!-- project-structure-and-config-management -->
 </div>
 
 # 4 电商问数：项目结构与基础服务配置管理

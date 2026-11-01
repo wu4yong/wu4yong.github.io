@@ -8,7 +8,7 @@ tags:
 order: 3
 ---
 <div class="essay-banner essay-music">
-Hall Of Fame
+<!-- Hall Of Fame -->
 </div>
 <div style="width:100%;aspect-ratio:16/9;">
   <iframe 

@@ -8,7 +8,7 @@ tags:
 order: 1
 ---
 <div class="essay-banner essay-image11">
-   Hadoop HDFS 架构
+   <!-- Hadoop HDFS 架构 -->
 </div>
 
 ## 一、HDFS 整体架构模型

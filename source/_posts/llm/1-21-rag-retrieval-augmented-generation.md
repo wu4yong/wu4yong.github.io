@@ -8,7 +8,7 @@ tags:
 ---
 
 <div class="essay-banner essay-image11">
-    rag-retrieval-augmented-generation
+    <!-- rag-retrieval-augmented-generation -->
 </div>
 
 # 1-21 RAG 检索增强生成

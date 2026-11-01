@@ -8,7 +8,7 @@ tags:
 ---
 
 <div class="essay-banner essay-image11">
-    frontend-backend-integration-and-logging
+    <!-- frontend-backend-integration-and-logging -->
 </div>
 
 # 17 电商问数：前后端联调与日志追踪

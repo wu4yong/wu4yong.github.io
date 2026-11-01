@@ -8,7 +8,7 @@ tags:
 ---
 
 <div class="essay-banner essay-image11">
-   Structured Output & Tools
+   <!-- Structured Output & Tools -->
 </div>
 
 ## 结构化输出

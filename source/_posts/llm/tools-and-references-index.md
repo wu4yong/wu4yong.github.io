@@ -8,7 +8,7 @@ tags:
 ---
 
 <div class="essay-banner essay-image11">
-    tools-and-references-index
+    <!-- tools-and-references-index -->
 </div>
 
 # 工具导航与参考资料索引

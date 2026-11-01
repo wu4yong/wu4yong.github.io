@@ -7,7 +7,7 @@ tags:
   - MySQL数据库
 ---
 <div class="essay-banner essay-image3">
-   Mysql Privileges
+   <!-- Mysql Privileges -->
 </div>
 
 ## 具体权限的作用详见

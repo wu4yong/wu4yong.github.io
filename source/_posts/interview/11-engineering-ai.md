@@ -7,7 +7,7 @@ tags:
   - interview
 ---
 <div class="essay-chapter-header essay-image11">
-    11. 开放综合、工程素养、AI代码相关
+    <!-- 11. 开放综合、工程素养、AI代码相关 -->
 </div>
 
 ## 第 1 题　现在开发经常用 AI 生成 SpringBoot 接口、分布式事务、幂等性相关代码，接口规范、参数齐全，事务注解也加上了

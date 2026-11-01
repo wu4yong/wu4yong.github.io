@@ -7,7 +7,7 @@ tags:
   - Java
 ---
 <div class="essay-banner essay-image5">
-   Spring Source
+   <!-- Spring Source -->
 </div>
 
 

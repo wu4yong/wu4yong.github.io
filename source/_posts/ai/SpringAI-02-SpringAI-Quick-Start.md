@@ -8,7 +8,7 @@ tags:
 ---
 
 <div class="essay-banner essay-image11">
-   Spring AI Quick Start
+   <!-- Spring AI Quick Start -->
 </div>
 
 1. 创建项目

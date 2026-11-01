@@ -8,7 +8,7 @@ tags:
 order: 3
 ---
 <div class="essay-banner essay-music">
-Just Hold On
+<!-- Just Hold On -->
 </div>
 <div style="width:100%;aspect-ratio:16/9;">
   <iframe 

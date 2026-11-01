@@ -8,7 +8,7 @@ tags:
 ---
 
 <div class="essay-banner essay-image11">
-    mysql-embedding-and-logging
+    <!-- mysql-embedding-and-logging -->
 </div>
 
 # 6 电商问数：MySQL、Embedding 接入与日志管理

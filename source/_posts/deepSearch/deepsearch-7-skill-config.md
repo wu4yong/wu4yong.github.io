@@ -8,7 +8,7 @@ tags:
 ---
 
 <div class="essay-banner essay-image11">
-    skill-config
+    <!-- skill-config -->
 </div>
 
 # 7 深度研搜：中间件机制与 Skills 配置

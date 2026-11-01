@@ -7,7 +7,7 @@ tags:
   - MySQL数据库
 ---
 <div class="essay-banner essay-image3">
-   Mysql Data Types
+   <!-- Mysql Data Types -->
 </div>
 
 ## 整型

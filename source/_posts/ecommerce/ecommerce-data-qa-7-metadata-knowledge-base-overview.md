@@ -8,7 +8,7 @@ tags:
 ---
 
 <div class="essay-banner essay-image11">
-    metadata-knowledge-base-overview
+    <!-- metadata-knowledge-base-overview -->
 </div>
 
 # 7 电商问数：元数据知识库总览与构建入口

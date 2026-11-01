@@ -7,7 +7,7 @@ tags:
   - Java
 ---
 <div class="essay-banner essay-image1">
-    Wait  Notify   
+    <!-- Wait  Notify    -->
 </div>
 
 # **Wait/Notify** 线程等待唤醒机制

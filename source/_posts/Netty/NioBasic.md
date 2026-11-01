@@ -6,7 +6,7 @@ categories:
 tags:
   - netty
 ---
-<div class="essay-chapter-header essay-image8">
+<div class="essay-chapter-header essay-image12">
     Netty Basic
 </div>
 

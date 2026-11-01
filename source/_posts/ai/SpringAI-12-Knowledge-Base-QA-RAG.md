@@ -8,7 +8,7 @@ tags:
 ---
 
 <div class="essay-banner essay-image11">
-   Knowledge Base QA (RAG)
+   <!-- Knowledge Base QA (RAG) -->
 </div>
 
 ### V1.0

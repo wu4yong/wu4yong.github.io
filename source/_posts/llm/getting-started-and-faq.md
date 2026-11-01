@@ -8,7 +8,7 @@ tags:
 ---
 
 <div class="essay-banner essay-image11">
-    getting-started-and-faq
+    <!-- getting-started-and-faq -->
 </div>
 
 # 新手入门与常见问题

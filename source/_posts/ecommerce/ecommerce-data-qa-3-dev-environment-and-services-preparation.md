@@ -8,7 +8,7 @@ tags:
 ---
 
 <div class="essay-banner essay-image11">
-    dev-environment-and-services-preparation
+    <!-- dev-environment-and-services-preparation -->
 </div>
 
 # 3 电商问数：开发环境与基础服务准备

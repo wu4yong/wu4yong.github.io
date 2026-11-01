@@ -7,7 +7,7 @@ tags:
   - interview
 ---
 <div class="essay-chapter-header essay-image10">
-    10. 线上故障排查 & 复盘
+    <!-- 10. 线上故障排查 & 复盘 -->
 </div>
 
 ## 第 1 题　接口逐步变慢、偶发卡顿

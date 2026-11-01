@@ -8,7 +8,7 @@ tags:
 ---
 
 <div class="essay-banner essay-image11">
-    longterm-memory
+    <!-- longterm-memory -->
 </div>
 
 # 6 深度研搜：长期记忆与 Backend 存储

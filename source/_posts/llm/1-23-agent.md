@@ -8,7 +8,7 @@ tags:
 ---
 
 <div class="essay-banner essay-image11">
-    agent
+    <!-- agent -->
 </div>
 
 # 1-23 Agent 智能体
