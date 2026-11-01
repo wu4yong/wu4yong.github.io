@@ -89,14 +89,15 @@ springai 提供了5种agent模式的示例
 
 
 
-|  | <img src="/assets/img/springai/ch01_langchain_vs_springai_1.png" alt="ch01_langchain_vs_springai_1.png"> | <img src="/assets/img/springai/ch01_langchain_vs_springai_2.png" alt="ch01_langchain_vs_springai_2.png"> |
-| --- | --- | --- |
-| 生态 | 不依赖Spring，需要单独集成Spring | Spring官方，和Spring无缝集成 |
-| 诞生 | 更早，中国团队，受 LangChain 启发 | 稍晚，但是明显后来居上 |
-| jdk | v0.35.0 前的版本支持jdk8 ，后支持jdk17 | 全版本jdk17 |
-| 功能 | 没有mcp server, 官方建议使用[quarkus-mcp-server](https://github.com/quarkiverse/quarkus-mcp-server) | 早期落后langchain4j， 现在功能全面，并且生态活跃，开源贡献者众多 |
-| 易用性 | 尚可，中文文档 | 易用，api优雅 |
-| 最终 | 不需要spring选择！ | 无脑选！ |
+{% autogrid data-grid-link-table nofix %}
+|<img src="/assets/img/springai/ch01_langchain_vs_springai_1.png" alt="ch01_langchain_vs_springai_1.png">|<img src="/assets/img/springai/ch01_langchain_vs_springai_2.png" alt="ch01_langchain_vs_springai_2.png">
+生态|不依赖Spring，需要单独集成Spring|Spring官方，和Spring无缝集成
+诞生|更早，中国团队，受 LangChain 启发|稍晚，但是明显后来居上
+jdk|v0.35.0 前的版本支持jdk8 ，后支持jdk17|全版本jdk17
+功能|没有mcp server, 官方建议使用[quarkus-mcp-server](https://github.com/quarkiverse/quarkus-mcp-server)|早期落后langchain4j， 现在功能全面，并且生态活跃，开源贡献者众多
+易用性|尚可，中文文档|易用，api优雅
+最终|不需要spring选择！|无脑选！
+{% endautogrid %}
 
 ## 大模型选型
 
@@ -135,16 +136,17 @@ table.llm-bench th {background:#f4f4f4;}
 
 ### LLM Benchmark 评测基准汇总
 
-| 名称 | 全称 / 中文 | 用途说明 | 官网/仓库链接 | 备注 |
-| :------------ | :-------------------------------------------: | :--------------------------------------------------------------------------------------------------------------------------------------- | :---------------------------------------------------------------------------------------------------------------------------------------------------------------- | :---------------------------------------------------------------------------------------------------------------- |
-| ArenaHard | Arena Hard | 高难度通用对话推理评测，使用 LLM 作为裁判打分，考察模型复杂指令、综合推理能力，分数越高对话越强 | [github](https://github.com/lm-sys/arena-hard-auto) <br> [huggingface](https://huggingface.co/spaces/lmsys/arena-hard-browser) | LMSYS（Chatbot Arena）出品，可在线浏览样例 |
-| AIME'24 / AIME'25 | American Invitational Mathematics Examination | 美国数学邀请赛真题，专门测数学推理，AIME24 是 24 年真题、AIME25 是 25 年真题，数学能力核心指标 | [maa.org](https://www.maa.org/math-competitions/aime) | 美国数学邀请赛（MAA 官方），真题来源 |
-| LiveCodeBench | LiveCodeBench | 代码能力评测，全部是比赛新题、规避训练集污染，测算法代码生成、自我修复能力，v5 是版本号 | [主页](https://livecodebench.github.io/) <br> [github](https://github.com/livecodebench/livecodebench) <br> [v5榜单](https://livecodebench.github.io/leaderboard_v5.html) | 防污染代码评测，表中 v5 榜单页 |
-| CodeForces | CodeForces Elo Rating | 算法竞赛平台 Elo 分，和人类选手同一套评分体系，代表模型竞赛算法水平 | [codeforces](https://codeforces.com/) | 算法竞赛平台，Elo 评分体系原生站点 |
-| Aider | Aider Pass@2 | Aider 是真实项目代码助手基准，Pass@2：最多 2 次尝试通过项目级代码修复任务，测工程代码能力 | [aider.chat](https://aider.chat/) <br> [github](https://github.com/Aider-AI/aider) | 真实项目代码助手基准，测试仓库级代码修复 |
-| LiveBench | LiveBench | 防数据泄露的综合评测，包含推理、数据分析、工具调用等，题目持续更新，不容易刷分 | [livebench.ai](https://livebench.ai/) | 持续更新、规避训练集污染的综合评测 |
-| BFCL v3 | Berkeley Function Calling Leaderboard v3 | 伯克利函数调用榜单，专门测试模型工具调用、function call，单轮 / 多轮、并行调用、参数正确性，Agent 必备能力 | [博客页](https://gorilla.cs.berkeley.edu/blogs/8_berkeley_function_calling_leaderboard.html) <br> [github](https://github.com/ShishirPatil/gorilla) | 伯克利 Gorilla 团队函数调用榜单 |
-| MultiIF | Multi-IF | 多语言多轮指令跟随评测（Meta 出品），8 Languages = 覆盖 8 种语言，考察模型能不能严格遵守复杂指令、多轮对话不跑偏、多语言稳定性 | [arxiv](https://arxiv.org/abs/2410.15553) <br> [github](https://github.com/facebookresearch/Multi-IF) | Meta 的多语言多轮指令跟随评测 |
+{% autogrid data-grid-link-table nofix %}
+名称|全称 / 中文|用途说明|官网/仓库链接|备注
+ArenaHard|Arena Hard|高难度通用对话推理评测，使用 LLM 作为裁判打分，考察模型复杂指令、综合推理能力，分数越高对话越强|[github](https://github.com/lm-sys/arena-hard-auto) <br> [huggingface](https://huggingface.co/spaces/lmsys/arena-hard-browser)|LMSYS（Chatbot Arena）出品，可在线浏览样例
+AIME'24 / AIME'25|American Invitational Mathematics Examination|美国数学邀请赛真题，专门测数学推理，AIME24 是 24 年真题、AIME25 是 25 年真题，数学能力核心指标|[maa.org](https://www.maa.org/math-competitions/aime)|美国数学邀请赛（MAA 官方），真题来源
+LiveCodeBench|LiveCodeBench|代码能力评测，全部是比赛新题、规避训练集污染，测算法代码生成、自我修复能力，v5 是版本号|[主页](https://livecodebench.github.io/) <br> [github](https://github.com/livecodebench/livecodebench) <br> [v5榜单](https://livecodebench.github.io/leaderboard_v5.html)|防污染代码评测，表中 v5 榜单页
+CodeForces|CodeForces Elo Rating|算法竞赛平台 Elo 分，和人类选手同一套评分体系，代表模型竞赛算法水平|[codeforces](https://codeforces.com/)|算法竞赛平台，Elo 评分体系原生站点
+Aider|Aider Pass@2|Aider 是真实项目代码助手基准，Pass@2：最多 2 次尝试通过项目级代码修复任务，测工程代码能力|[aider.chat](https://aider.chat/) <br> [github](https://github.com/Aider-AI/aider)|真实项目代码助手基准，测试仓库级代码修复
+LiveBench|LiveBench|防数据泄露的综合评测，包含推理、数据分析、工具调用等，题目持续更新，不容易刷分|[livebench.ai](https://livebench.ai/)|持续更新、规避训练集污染的综合评测
+BFCL v3|Berkeley Function Calling Leaderboard v3|伯克利函数调用榜单，专门测试模型工具调用、function call，单轮 / 多轮、并行调用、参数正确性，Agent 必备能力|[博客页](https://gorilla.cs.berkeley.edu/blogs/8_berkeley_function_calling_leaderboard.html) <br> [github](https://github.com/ShishirPatil/gorilla)|伯克利 Gorilla 团队函数调用榜单
+MultiIF|Multi-IF|多语言多轮指令跟随评测（Meta 出品），8 Languages = 覆盖 8 种语言，考察模型能不能严格遵守复杂指令、多轮对话不跑偏、多语言稳定性|[arxiv](https://arxiv.org/abs/2410.15553) <br> [github](https://github.com/facebookresearch/Multi-IF)|Meta 的多语言多轮指令跟随评测
+{% endautogrid %}
 
 图 2：Qwen3 中小参数（30B MoE / 4B 稠密）官方自测，对标 GPT4o、Gemma3、DeepSeek V3
 
