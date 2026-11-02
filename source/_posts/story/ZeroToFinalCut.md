@@ -4,10 +4,10 @@ date: 2026-02-08 01:00:00
 categories:
   - essay
 tags:
-  - 随笔杂谈
+  - 视频剪辑
 ---
 
-<div class="essay-banner essay-image10">
+<div class="essay-banner essay-image11">
     <!--从零到出片实操手册 -->
 </div>
 
