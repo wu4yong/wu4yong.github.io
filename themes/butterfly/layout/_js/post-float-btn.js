@@ -6,16 +6,15 @@
  * ============================================
  */
 var backToTopBtn = document.getElementById('back-to-top');
-window.addEventListener('scroll', function () {
-  if (window.scrollY > 300)
-    backToTopBtn
-      .classList
-      .add('show');
-  else
-    backToTopBtn
-      .classList
-      .remove('show');
-});
-backToTopBtn.addEventListener('click', function () {
-  window.scrollTo({top: 0, behavior: 'smooth'});
-});
+var mainContent = document.querySelector('.main-content');
+if (backToTopBtn && mainContent) {
+  mainContent.addEventListener('scroll', function () {
+    if (mainContent.scrollTop > 300)
+      backToTopBtn.classList.add('show');
+    else
+      backToTopBtn.classList.remove('show');
+  });
+  backToTopBtn.addEventListener('click', function () {
+    mainContent.scrollTo({top: 0, behavior: 'smooth'});
+  });
+}
