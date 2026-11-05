@@ -6,7 +6,7 @@ categories:
 tags:
   - redis
 ---
-<div class="essay-banner essay-image3"></div>
+<div class="essay-banner essay-image4"></div>
 
 # 五、Redis最佳实践
 
