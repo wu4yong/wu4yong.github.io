@@ -4,7 +4,7 @@ date: 2025-12-05 01:00:00
 categories:
   - interview
 tags:
-  - interview
+  - 面试
 ---
 <div class="essay-chapter-header essay-image5">
     <!-- 5. Spring生态（Spring、SpringBoot、@Transactional、循环依赖、AOP） -->

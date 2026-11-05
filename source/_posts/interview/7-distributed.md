@@ -4,7 +4,7 @@ date: 2025-12-07 01:00:00
 categories:
   - interview
 tags:
-  - interview
+  - 面试
 ---
 <div class="essay-chapter-header essay-image7">
     <!-- 7. 分布式基础（分布式事务、分布式ID、分库分表、分布式调度） -->

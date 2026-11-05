@@ -4,7 +4,7 @@ date: 2026-10-04 04:00:00
 categories:
   - llm
 tags:
-  - llm
+  - 大模型
 ---
 
 <div class="essay-banner essay-image11">

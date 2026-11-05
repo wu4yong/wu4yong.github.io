@@ -4,7 +4,7 @@ date: 2025-12-09 01:00:00
 categories:
   - interview
 tags:
-  - interview
+  - 面试
 ---
 <div class="essay-chapter-header essay-image9">
     <!-- 9. 架构方案设计（秒杀、下单、支付、幂等、双写一致性） -->

@@ -4,7 +4,7 @@ date: 2025-12-08 01:00:00
 categories:
   - interview
 tags:
-  - interview
+  - 面试
 ---
 <div class="essay-chapter-header essay-image8">
     <!-- 8. 高可用防护（限流、熔断、降级、线程池、连接池、超时重试） -->

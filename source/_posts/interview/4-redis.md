@@ -4,7 +4,7 @@ date: 2025-12-04 01:00:00
 categories:
   - interview
 tags:
-  - interview
+  - 面试
 ---
 <div class="essay-chapter-header essay-image4">
     <!-- 4. Redis（原理、缓存三大问题、分布式锁、持久化） -->

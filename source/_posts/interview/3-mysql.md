@@ -4,7 +4,7 @@ date: 2025-12-03 01:00:00
 categories:
   - interview
 tags:
-  - interview
+  - 面试
 ---
 <div class="essay-chapter-header essay-image3">
     <!-- 3. MySQL（索引、事务、锁、主从、死锁、SQL优化） -->
