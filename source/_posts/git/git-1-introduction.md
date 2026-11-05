@@ -6,7 +6,7 @@ categories:
 tags:
   - git
 ---
-<div class="essay-banner essay-image3"></div>
+<div class="essay-banner essay-image1"></div>
 
 # 1. 前言
 

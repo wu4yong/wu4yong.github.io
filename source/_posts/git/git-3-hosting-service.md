@@ -6,7 +6,7 @@ categories:
 tags:
   - git
 ---
-<div class="essay-banner essay-image3"></div>
+<div class="essay-banner essay-image1"></div>
 
 # 3. Git代码托管服务
 
