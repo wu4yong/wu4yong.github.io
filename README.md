@@ -400,7 +400,7 @@ tag_map:
 | `source/_posts/web/` | `web` | `/categories/web/` |
 | `source/_posts/interview/` | `interview` | `/categories/interview/` |
 | `source/_posts/llm/` | `llm` | `/categories/llm/` |
-| `source/_posts/ai/` | `ai` | `/categories/ai/` |
+| `source/_posts/ai/` | `springai` | `/categories/springai/` |
 | `source/_posts/ecommerce/` | `ecommerce` | `/categories/ecommerce/` |
 | `source/_posts/deepSearch/` | `deepsearch` | `/categories/deepsearch/` |
 | `source/_posts/story/` | `story` | `/categories/story/` |
@@ -425,7 +425,7 @@ menu:
       大数据: /categories/bigdata/ || fas fa-chart-line
       Netty: /categories/netty/ || fas fa-bolt
       LLM大模型: /categories/llm/ || fas fa-brain
-      SpringAI: /categories/ai/ || fas fa-robot
+      SpringAI: /categories/springai/ || fas fa-robot
       电商问数: /categories/ecommerce/ || fas fa-cart-shopping
       深度研搜: /categories/deepsearch/ || fas fa-magnifying-glass-chart
       面试: /categories/interview/ || fas fa-user-graduate

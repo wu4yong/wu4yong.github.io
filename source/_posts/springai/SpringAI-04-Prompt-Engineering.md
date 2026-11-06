@@ -2,7 +2,7 @@
 title: 四、提示词使用和设置技巧
 date: 2026-09-04 01:00:00
 categories:
-  - ai
+  - springai
 tags:
   - SpringAi
 ---

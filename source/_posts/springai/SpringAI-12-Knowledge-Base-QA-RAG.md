@@ -2,7 +2,7 @@
 title: 十二、《基于RAG技术的个人知识库AI问答系统》实战
 date: 2026-09-12 01:00:00
 categories:
-  - ai
+  - springai
 tags:
   - SpringAi
 ---

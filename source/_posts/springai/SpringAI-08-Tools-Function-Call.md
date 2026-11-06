@@ -2,7 +2,7 @@
 title: 八、Tools/function-call使用+原理+7大痛点
 date: 2026-09-08 01:00:00
 categories:
-  - ai
+  - springai
 tags:
   - SpringAi
 ---

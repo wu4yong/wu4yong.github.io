@@ -2,7 +2,7 @@
 title: 十一、《基于航空智能客服+RAG》实战
 date: 2026-09-11 01:00:00
 categories:
-  - ai
+  - springai
 tags:
   - SpringAi
 ---

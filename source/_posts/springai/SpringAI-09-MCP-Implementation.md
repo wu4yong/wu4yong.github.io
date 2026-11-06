@@ -2,7 +2,7 @@
 title: 九、MCP实现+原理+源码+鉴权
 date: 2026-09-09 01:00:00
 categories:
-  - ai
+  - springai
 tags:
   - SpringAi
 ---

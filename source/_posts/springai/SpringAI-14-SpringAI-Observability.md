@@ -2,7 +2,7 @@
 title: 十四、SpringAI实时监控+观测性
 date: 2026-09-14 01:00:00
 categories:
-  - ai
+  - springai
 tags:
   - SpringAi
 ---

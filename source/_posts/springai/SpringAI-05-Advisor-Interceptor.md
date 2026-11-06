@@ -2,7 +2,7 @@
 title: 五、Advisor对话拦截的使用和自定义
 date: 2026-09-05 01:00:00
 categories:
-  - ai
+  - springai
 tags:
   - SpringAi
 ---
