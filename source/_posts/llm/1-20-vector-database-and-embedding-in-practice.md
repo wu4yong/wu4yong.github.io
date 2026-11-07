@@ -188,12 +188,12 @@ LangChain 官方概括非常直接：**向量存储（Vector Store）就是存�
 
 {% autogrid data-grid-link-table nofix %}
 名称|简要说明
-**FAISS**|偏本地、偏算法库，适合快速做向量检索实验
-**Chroma**|轻量、好上手，适合本地原型验证
-**Milvus**|开源专业向量数据库，适合大规模生产环境
-**Pgvector**|PostgreSQL 扩展，适合已有 PG 体系的项目
-**Redis / Redis Stack**|既能做缓存，也能做向量检索，适合工程整合
-**Elasticsearch / OpenSearch**|搜索体系成熟，也支持向量搜索
+FAISS|偏本地、偏算法库，适合快速做向量检索实验
+Chroma|轻量、好上手，适合本地原型验证
+Milvus|开源专业向量数据库，适合大规模生产环境
+Pgvector|PostgreSQL 扩展，适合已有 PG 体系的项目
+Redis / Redis Stack|既能做缓存，也能做向量检索，适合工程整合
+Elasticsearch / OpenSearch|搜索体系成熟，也支持向量搜索
 {% endautogrid %}
 
 ### 2.6 RAG 与向量数据库的关系
