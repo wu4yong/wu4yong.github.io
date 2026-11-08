@@ -1,0 +1,7 @@
+---
+title: link
+date: 2026-06-10 10:00:00
+type: "link"
+website:
+ - link
+---

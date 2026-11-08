@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>搜索 - 时空秘境</title>
+<style>
+{% include "_css/common.css" %}
+.search-container {
+  position: relative;
+  z-index: 10;
+  max-width: 800px;
+  margin: 60px auto;
+  padding: 0 20px;
+}
+.search-header {
+  text-align: center;
+  margin-bottom: 40px;
+}
+.search-header h1 {
+  color: #00eeff;
+  font-size: 42px;
+  text-shadow: 0 0 20px #00eeff;
+}
+.search-box {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 40px;
+}
+.search-box input {
+  flex: 1;
+  padding: 15px;
+  background: rgba(0, 22, 45, 0.7);
+  border: 2px solid #00eeff;
+  border-radius: 12px;
+  color: #fff;
+  font-size: 16px;
+}
+.search-box input:focus {
+  outline: none;
+  box-shadow: 0 0 20px rgba(0, 238, 255, 0.3);
+}
+.search-box button {
+  padding: 15px 30px;
+  background: rgba(0, 238, 255, 0.2);
+  border: 2px solid #00eeff;
+  border-radius: 12px;
+  color: #00eeff;
+  cursor: pointer;
+  font-size: 16px;
+  transition: all 0.3s;
+}
+.search-box button:hover {
+  background: #00eeff;
+  color: #020817;
+}
+.result-list {
+  background: rgba(0, 22, 45, 0.85);
+  border-radius: 18px;
+  padding: 30px;
+  border: 1px solid #00eeff;
+  min-height: 200px;
+}
+.result-item {
+  padding: 15px 0;
+  border-bottom: 1px solid rgba(0, 238, 255, 0.15);
+}
+.result-item:last-child {
+  border-bottom: none;
+}
+.result-item a {
+  color: #00eeff;
+  text-decoration: none;
+  font-size: 20px;
+}
+.result-item a:hover {
+  text-shadow: 0 0 8px #00eeff;
+}
+.result-date {
+  color: #88aaff;
+  font-size: 13px;
+  margin-top: 6px;
+}
+.no-result {
+  text-align: center;
+  color: #88aaff;
+  padding: 40px;
+  font-size: 18px;
+}
+.back-home {
+  display: inline-block;
+  margin-top: 20px;
+  padding: 10px 25px;
+  background: rgba(0, 32, 65, 0.8);
+  border: 1px solid #00eeff;
+  border-radius: 30px;
+  color: #00eeff;
+  text-decoration: none;
+  transition: all 0.3s;
+}
+.back-home:hover {
+  background: #00eeff;
+  color: #020817;
+}
+</style>
+</head>
+<body>
+{% include "_components/Particles.njk" %}
+
+<div class="search-container">
+  <div class="search-header">
+    <h1>��� 搜索</h1>
+    <a href="/" class="back-home">← 返回首页</a>
+  </div>
+
+  <div class="search-box">
+    <input type="text" id="search-keyword" placeholder="输入关键词...">
+    <button id="do-search">搜索</button>
+  </div>
+
+  <div class="result-list" id="search-results">
+    <div class="no-result">请输入关键词开始搜索</div>
+  </div>
+</div>
+
+<script>
+function getQueryParam(name) {
+  var urlParams = new URLSearchParams(window.location.search);
+  return urlParams.get(name);
+}
+
+function performSearch(keyword) {
+  var resultsDiv = document.getElementById('search-results');
+  if (!keyword) {
+    resultsDiv.innerHTML = '<div class="no-result">请输入关键词开始搜索</div>';
+    return;
+  }
+  
+  resultsDiv.innerHTML = '<div class="no-result">搜索中...</div>';
+  
+  fetch('/search.xml')
+    .then(function(response) {
+      if (!response.ok) {
+        throw new Error('搜索数据加载失败');
+      }
+      return response.text();
+    })
+    .then(function(xmlText) {
+      var parser = new DOMParser();
+      var xmlDoc = parser.parseFromString(xmlText, 'text/xml');
+      var entries = xmlDoc.querySelectorAll('entry');
+      var posts = [];
+      
+      for (var i = 0; i < entries.length; i++) {
+        var entry = entries[i];
+        var titleEl = entry.querySelector('title');
+        var urlEl = entry.querySelector('url');
+        var dateEl = entry.querySelector('date');
+        var contentEl = entry.querySelector('content');
+        posts.push({
+          title: titleEl ? titleEl.textContent : '',
+          url: urlEl ? urlEl.textContent : '',
+          date: dateEl ? dateEl.textContent : '',
+          content: contentEl ? contentEl.textContent : ''
+        });
+      }
+      
+      var keywordLower = keyword.toLowerCase();
+      var results = posts.filter(function(post) {
+        return post.title.toLowerCase().indexOf(keywordLower) > -1 ||
+               post.content.toLowerCase().indexOf(keywordLower) > -1;
+      });
+      
+      if (results.length === 0) {
+        resultsDiv.innerHTML = '<div class="no-result">没有找到与 "' + keyword + '" 相关的文章</div>';
+        return;
+      }
+      
+      var html = '';
+      for (var i = 0; i < results.length; i++) {
+        var post = results[i];
+        html += '<div class="result-item">';
+        html += '<a href="' + post.url + '">' + post.title + '</a>';
+        html += '<div class="result-date">' + post.date + '</div>';
+        html += '</div>';
+      }
+      resultsDiv.innerHTML = html;
+    })
+    .catch(function(err) {
+      console.error('搜索失败:', err);
+      resultsDiv.innerHTML = '<div class="no-result">搜索数据加载失败，请刷新重试</div>';
+    });
+}
+
+var query = getQueryParam('q');
+var searchInput = document.getElementById('search-keyword');
+
+if (query) {
+  searchInput.value = query;
+  performSearch(query);
+} else {
+  document.getElementById('search-results').innerHTML = '<div class="no-result">请输入关键词开始搜索</div>';
+}
+
+document.getElementById('do-search').addEventListener('click', function() {
+  var keyword = searchInput.value.trim();
+  if (keyword) {
+    window.location.href = '/search/?q=' + encodeURIComponent(keyword);
+  }
+});
+
+searchInput.addEventListener('keypress', function(e) {
+  if (e.key === 'Enter') {
+    var keyword = searchInput.value.trim();
+    if (keyword) {
+      window.location.href = '/search/?q=' + encodeURIComponent(keyword);
+    }
+  }
+});
+</script>
+</body>
+</html>
