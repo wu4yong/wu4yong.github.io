@@ -153,9 +153,9 @@ PyCharm 下载地址：https://www.jetbrains.com/zh-cn/pycharm/
 
 如果你的 `PyCharm` 版本较新，并且系统里已经安装了 `uv`，那么在新建项目时，通常可以直接看到 `uv` 这个解释器类型选项。
 
-<!-- ![PyCharm 中新建 uv 项目的界面示意](/assets/img/ecommerce/3/3-2-3-1.png) -->
+<!-- <div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/ecommerce/3/3-2-3-1.png" alt="PyCharm 中新建 uv 项目的界面示意"></div> -->
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/ecommerce/3/3-2-3-1.png" alt="PyCharm 中新建 uv 项目的界面示意"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/ecommerce/3/3-2-3-1.png" alt="PyCharm 中新建 uv 项目的界面示意"></div>
 创建时可以按下面这个顺序操作：
 
 1. 选择 `New Project`
@@ -164,9 +164,9 @@ PyCharm 下载地址：https://www.jetbrains.com/zh-cn/pycharm/
 4. 选择 Python 版本，建议与当前项目保持一致，使用 `3.14`
 5. 点击 `Create`
 
-<!-- ![uv 项目创建完成后生成 .venv、pyproject.toml 和 uv.lock 的目录示意](/assets/img/ecommerce/3/3-2-3-2.png) -->
+<!-- <div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/ecommerce/3/3-2-3-2.png" alt="uv 项目创建完成后生成 .venv、pyproject.toml 和 uv.lock 的目录示意"></div> -->
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/ecommerce/3/3-2-3-2.png" alt="uv 项目创建完成后生成 .venv、pyproject.toml 和 uv.lock 的目录示意"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/ecommerce/3/3-2-3-2.png" alt="uv 项目创建完成后生成 .venv、pyproject.toml 和 uv.lock 的目录示意"></div>
 创建完成后，你通常会看到项目目录中自动生成了这些内容：
 
 - `pyproject.toml`
@@ -423,9 +423,9 @@ wsl --version
 
 安装好 Docker Desktop 后，你既可以通过图形界面观察容器、镜像、卷。
 
-<!-- ![Docker Desktop 图形界面中的容器与资源管理入口](/assets/img/ecommerce/3/3-4-4-1.png) -->
+<!-- <div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/ecommerce/3/3-4-4-1.png" alt="Docker Desktop 图形界面中的容器与资源管理入口"></div> -->
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/ecommerce/3/3-4-4-1.png" alt="Docker Desktop 图形界面中的容器与资源管理入口"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/ecommerce/3/3-4-4-1.png" alt="Docker Desktop 图形界面中的容器与资源管理入口"></div>
 也可以继续使用命令行，例如：
 
 ```bash
@@ -500,14 +500,14 @@ volumes:
 
 第一次启动时，时间可能会比较长，因为需要下载镜像，之后再启动时，时间会非常快。
 
-<!-- ![执行 docker compose up -d 启动整套基础服务的终端界面](/assets/img/ecommerce/3/3-4-6-1.png) -->
+<!-- <div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/ecommerce/3/3-4-6-1.png" alt="执行 docker compose up -d 启动整套基础服务的终端界面"></div> -->
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/ecommerce/3/3-4-6-1.png" alt="执行 docker compose up -d 启动整套基础服务的终端界面"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/ecommerce/3/3-4-6-1.png" alt="执行 docker compose up -d 启动整套基础服务的终端界面"></div>
 启动成功后，可以在 Docker Desktop 中查看容器运行状态：
 
-<!-- ![执行 docker compose up -d 启动整套基础服务的终端界面](/assets/img/ecommerce/3/3-4-6-2.png) -->
+<!-- <div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/ecommerce/3/3-4-6-2.png" alt="执行 docker compose up -d 启动整套基础服务的终端界面"></div> -->
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/ecommerce/3/3-4-6-2.png" alt="执行 docker compose up -d 启动整套基础服务的终端界面"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/ecommerce/3/3-4-6-2.png" alt="执行 docker compose up -d 启动整套基础服务的终端界面"></div>
 如果要停止并删除这组容器，则执行：
 
 ```bash

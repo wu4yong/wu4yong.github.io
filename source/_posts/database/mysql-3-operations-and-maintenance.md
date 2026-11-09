@@ -112,31 +112,31 @@ log_queries_not_using_indexes = 1
 
 ## 主从复制
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/mysql/58131011726.png" alt="58131011726.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/mysql/58131011726.png" alt="58131011726.png"></div>
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/mysql/4454682776.png" alt="4454682776.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/mysql/4454682776.png" alt="4454682776.png"></div>
 
 ### 原理
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/mysql/7410105910882.png" alt="7410105910882.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/mysql/7410105910882.png" alt="7410105910882.png"></div>
 
 ### 搭建实现
 
 #### 主库配置
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/mysql/21103533211.png" alt="21103533211.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/mysql/21103533211.png" alt="21103533211.png"></div>
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/mysql/24794193710.png" alt="24794193710.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/mysql/24794193710.png" alt="24794193710.png"></div>
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/mysql/91294866110.png" alt="91294866110.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/mysql/91294866110.png" alt="91294866110.png"></div>
 
 #### 从库配置
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/mysql/10617439921.png" alt="10617439921.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/mysql/10617439921.png" alt="10617439921.png"></div>
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/mysql/21053341798.png" alt="21053341798.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/mysql/21053341798.png" alt="21053341798.png"></div>
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/mysql/6153782135.png" alt="6153782135.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/mysql/6153782135.png" alt="6153782135.png"></div>
 
 #### 测试
 
@@ -159,35 +159,35 @@ insert into tb_user(id, name, sex) valurs (null, 'Tom', '1'), (null, 'Trigger', 
 
 ### 介绍
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/mysql/4765397657.png" alt="4765397657.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/mysql/4765397657.png" alt="4765397657.png"></div>
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/mysql/35239910325.png" alt="35239910325.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/mysql/35239910325.png" alt="35239910325.png"></div>
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/mysql/106169108266.png" alt="106169108266.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/mysql/106169108266.png" alt="106169108266.png"></div>
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/mysql/4616215143.png" alt="4616215143.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/mysql/4616215143.png" alt="4616215143.png"></div>
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/mysql/86213810658.png" alt="86213810658.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/mysql/86213810658.png" alt="86213810658.png"></div>
 
 ### Mycat概述
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/mysql/81010325101039.png" alt="81010325101039.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/mysql/81010325101039.png" alt="81010325101039.png"></div>
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/mysql/6382138721.png" alt="6382138721.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/mysql/6382138721.png" alt="6382138721.png"></div>
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/mysql/101795210673.png" alt="101795210673.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/mysql/101795210673.png" alt="101795210673.png"></div>
 
 ### Mycat入门
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/mysql/96457210797.png" alt="96457210797.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/mysql/96457210797.png" alt="96457210797.png"></div>
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/mysql/1891042610310.png" alt="1891042610310.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/mysql/1891042610310.png" alt="1891042610310.png"></div>
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/mysql/qwe1324t14t.png" alt="qwe1324t14t.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/mysql/qwe1324t14t.png" alt="qwe1324t14t.png"></div>
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/mysql/10197188896.png" alt="10197188896.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/mysql/10197188896.png" alt="10197188896.png"></div>
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/mysql/59710648531.png" alt="59710648531.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/mysql/59710648531.png" alt="59710648531.png"></div>
 
 ### Mycat配置
 
@@ -201,133 +201,133 @@ schema.xml作为MyCat中最重要的配置文件之一,涵盖了MyCat的逻辑�
 - datanode标签
 - datahost标签
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/mysql/32368131027.png" alt="32368131027.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/mysql/32368131027.png" alt="32368131027.png"></div>
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/mysql/7484479134.png" alt="7484479134.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/mysql/7484479134.png" alt="7484479134.png"></div>
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/mysql/10769359339.png" alt="10769359339.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/mysql/10769359339.png" alt="10769359339.png"></div>
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/mysql/91315810623.png" alt="91315810623.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/mysql/91315810623.png" alt="91315810623.png"></div>
 
 #### rule.xml
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/mysql/951010415971.png" alt="951010415971.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/mysql/951010415971.png" alt="951010415971.png"></div>
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/mysql/84271093639.png" alt="84271093639.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/mysql/84271093639.png" alt="84271093639.png"></div>
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/mysql/3853211256.png" alt="3853211256.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/mysql/3853211256.png" alt="3853211256.png"></div>
 
 ### Mycat分片
 
 #### 垂直分库
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/mysql/9325751819.png" alt="9325751819.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/mysql/9325751819.png" alt="9325751819.png"></div>
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/mysql/21931016227.png" alt="21931016227.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/mysql/21931016227.png" alt="21931016227.png"></div>
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/mysql/9852726692.png" alt="9852726692.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/mysql/9852726692.png" alt="9852726692.png"></div>
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/mysql/58109378671.png" alt="58109378671.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/mysql/58109378671.png" alt="58109378671.png"></div>
 
 #### 水平分表
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/mysql/1269361453.png" alt="1269361453.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/mysql/1269361453.png" alt="1269361453.png"></div>
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/mysql/9977715254.png" alt="9977715254.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/mysql/9977715254.png" alt="9977715254.png"></div>
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/mysql/131081045236.png" alt="131081045236.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/mysql/131081045236.png" alt="131081045236.png"></div>
 
 #### 分片规则
 
 ##### 范围分片
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/mysql/34510781883.png" alt="34510781883.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/mysql/34510781883.png" alt="34510781883.png"></div>
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/mysql/2654319698.png" alt="2654319698.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/mysql/2654319698.png" alt="2654319698.png"></div>
 
 ##### 取模分片
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/mysql/22173110191.png" alt="22173110191.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/mysql/22173110191.png" alt="22173110191.png"></div>
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/mysql/7347361194.png" alt="7347361194.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/mysql/7347361194.png" alt="7347361194.png"></div>
 
 ##### 一致性hash算法
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/mysql/73610917872.png" alt="73610917872.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/mysql/73610917872.png" alt="73610917872.png"></div>
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/mysql/3171425417.png" alt="3171425417.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/mysql/3171425417.png" alt="3171425417.png"></div>
 
 ##### 枚举分片
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/mysql/667103121103.png" alt="667103121103.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/mysql/667103121103.png" alt="667103121103.png"></div>
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/mysql/11088699372.png" alt="11088699372.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/mysql/11088699372.png" alt="11088699372.png"></div>
 
 ##### 应用指定算法
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/mysql/2632725279.png" alt="2632725279.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/mysql/2632725279.png" alt="2632725279.png"></div>
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/mysql/1452119317.png" alt="1452119317.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/mysql/1452119317.png" alt="1452119317.png"></div>
 
 ##### 固定hash算法
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/mysql/2375113118.png" alt="2375113118.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/mysql/2375113118.png" alt="2375113118.png"></div>
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/mysql/1368697562.png" alt="1368697562.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/mysql/1368697562.png" alt="1368697562.png"></div>
 
 ##### 字符串hash解析
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/mysql/53710618932.png" alt="53710618932.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/mysql/53710618932.png" alt="53710618932.png"></div>
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/mysql/8619959324.png" alt="8619959324.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/mysql/8619959324.png" alt="8619959324.png"></div>
 
 ##### 按天分片
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/mysql/1010769110977.png" alt="1010769110977.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/mysql/1010769110977.png" alt="1010769110977.png"></div>
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/mysql/109109981999.png" alt="109109981999.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/mysql/109109981999.png" alt="109109981999.png"></div>
 
 ##### 按自然月分片
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/mysql/4762746916.png" alt="4762746916.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/mysql/4762746916.png" alt="4762746916.png"></div>
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/mysql/22673141012.png" alt="22673141012.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/mysql/22673141012.png" alt="22673141012.png"></div>
 
 ### Mycat管理及监控
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/mysql/73451065142.png" alt="73451065142.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/mysql/73451065142.png" alt="73451065142.png"></div>
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/mysql/7348156477.png" alt="7348156477.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/mysql/7348156477.png" alt="7348156477.png"></div>
 
 ## 读写分离
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/mysql/52510452433.png" alt="52510452433.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/mysql/52510452433.png" alt="52510452433.png"></div>
 
 ### 介绍
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/mysql/10918829811.png" alt="10918829811.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/mysql/10918829811.png" alt="10918829811.png"></div>
 
 ### 一主一从读写分离
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/mysql/52287271210.png" alt="52287271210.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/mysql/52287271210.png" alt="52287271210.png"></div>
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/mysql/4564143383.png" alt="4564143383.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/mysql/4564143383.png" alt="4564143383.png"></div>
 
 ### 双主双从
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/mysql/245101066682.png" alt="245101066682.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/mysql/245101066682.png" alt="245101066682.png"></div>
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/mysql/6338368756.png" alt="6338368756.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/mysql/6338368756.png" alt="6338368756.png"></div>
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/mysql/2677654314.png" alt="2677654314.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/mysql/2677654314.png" alt="2677654314.png"></div>
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/mysql/105101448841.png" alt="105101448841.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/mysql/105101448841.png" alt="105101448841.png"></div>
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/mysql/7237222812.png" alt="7237222812.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/mysql/7237222812.png" alt="7237222812.png"></div>
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/mysql/6246592973.png" alt="6246592973.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/mysql/6246592973.png" alt="6246592973.png"></div>
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/mysql/12919109752.png" alt="12919109752.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/mysql/12919109752.png" alt="12919109752.png"></div>
 
 测试：
 
@@ -352,9 +352,9 @@ insert into tb user(id,name,sex) values(6,'erry','1');
 
 ### 双主双从读写分离
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/mysql/8536419478.png" alt="8536419478.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/mysql/8536419478.png" alt="8536419478.png"></div>
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/mysql/15610682864.png" alt="15610682864.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/mysql/15610682864.png" alt="15610682864.png"></div>
 
 测试：
 

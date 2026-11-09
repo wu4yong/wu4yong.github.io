@@ -21,13 +21,13 @@ Java 锁的核心原理依托于**对象头**实现，以32位虚拟机为基础
     **Mark Word（4字节）**：存储对象运行时核心数据，包含哈希码、GC分代年龄、锁状态、偏向线程ID等，是锁实现的核心载体。
     **Klass Word（4字节）**：类型指针，指向对象对应的Class模板对象。
 <div class="img-wrap-left">
-  <img class="left-img" src="/assets/img/java/concurrent/monitor1.png" alt="monitor示意图">
+  <img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/java/concurrent/monitor1.png" alt="monitor示意图">
 </div>
 
 ### 4.1.2 数组对象头结构（32位JVM）
 数组对象相较于普通对象，额外新增**数组长度（4字节）**字段，用于记录数组元素个数，整体对象头占用12字节。
 <div class="img-wrap-left">
-  <img class="left-img" src="/assets/img/java/concurrent/monitor2.png" alt="monitor示意图">
+  <img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/java/concurrent/monitor2.png" alt="monitor示意图">
 </div>
 
 ### 4.1.3 Mark Word 核心结构
@@ -39,13 +39,13 @@ Java 锁的核心原理依托于**对象头**实现，以32位虚拟机为基础
 32位虚拟机 Mark Word：
 
 <div class="img-wrap-left">
-  <img class="left-img" src="/assets/img/java/concurrent/monitor3.png" alt="monitor示意图">
+  <img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/java/concurrent/monitor3.png" alt="monitor示意图">
 </div>
 
 64位虚拟机 Mark Word：
 
 <div class="img-wrap-left">
-  <img class="left-img" src="/assets/img/java/concurrent/monitor4.png" alt="monitor示意图">
+  <img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/java/concurrent/monitor4.png" alt="monitor示意图">
 </div>
 
 参考资料: 
@@ -62,7 +62,7 @@ Monitor 核心结构: 包含 Owner、EntryList、WaitSet 三大核心模块，�
 **EntryList（阻塞队列）**：未获取到锁的线程进入该队列，状态为BLOCKED，等待锁释放后竞争资源。
 **WaitSet（等待队列）**：持有锁后因条件不满足，调用wait()的线程进入该队列，状态为WAITING，需被notify/notifyAll唤醒后重新进入锁竞争。
 <div class="img-wrap-left">
-  <img class="left-img" src="/assets/img/java/concurrent/monitor5.png" alt="线程状态示意图">
+  <img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/java/concurrent/monitor5.png" alt="线程状态示意图">
 </div>
  
 > 注意：synchronized 必须是进入同一个对象的 monitor 才有上述的效果 ,不加 synchronized 的对象不会关联监视器，不遵从以上规则
@@ -89,10 +89,10 @@ public static void main(String[] args) {
 
 **对应的字节码为：**
 <div class="img-wrap-left">
-  <img class="left-img" src="/assets/img/java/concurrent/synchronized1.png" alt="synchronized示意图">
+  <img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/java/concurrent/synchronized1.png" alt="synchronized示意图">
 </div>
 <div class="img-wrap-left">
-  <img class="left-img" src="/assets/img/java/concurrent/synchronized2.png" alt="synchronized示意图">
+  <img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/java/concurrent/synchronized2.png" alt="synchronized示意图">
 </div>
 
 
@@ -184,17 +184,17 @@ public static void method2() {
 
 - 创建 **锁记录（Lock Record）对象**，每个线程的栈帧都会包含一个锁记录的结构，内部可以存储锁定对象的Mark Word.
 	<div class="img-wrap-left">
-	  <img class="left-img" src="/assets/img/java/concurrent/synchronized3.png" alt="synchronized3示意图">
+	  <img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/java/concurrent/synchronized3.png" alt="synchronized3示意图">
 	</div>
 
 - 让锁记录中 Object reference 指向锁对象，并尝试用 cas 替换 Object 的 Mark Word，将 Mark Word 的值存入锁记录.
 
 	<div class="img-wrap-left">
-	  <img class="left-img" src="/assets/img/java/concurrent/synchronized3.png" alt="synchronized4示意图">
+	  <img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/java/concurrent/synchronized3.png" alt="synchronized4示意图">
 	</div>
 - 如果 cas 替换成功，对象头中存储了 **锁记录地址和状态 00**，表示由该线程给对象加锁，这时图示如下.
 	<div class="img-wrap-left">
-	  <img class="left-img" src="/assets/img/java/concurrent/synchronized5.png" alt="synchronized5示意图">
+	  <img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/java/concurrent/synchronized5.png" alt="synchronized5示意图">
 	</div>
 
 - 如果 cas 失败，有**两种情况**: 
@@ -202,11 +202,11 @@ public static void method2() {
     2、如果是自己执行了 synchronized 锁重入，那么再添加一条 Lock Record 作为重入的计数.
   
 	<div class="img-wrap-left">
-		<img class="left-img" src="/assets/img/java/concurrent/synchronized6.png" alt="synchronized6示意图">
+		<img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/java/concurrent/synchronized6.png" alt="synchronized6示意图">
 	</div>
 - 当退出 synchronized 代码块（解锁时）如果有取值为 null 的锁记录，表示有重入，这时重置锁记录，表示重入计数减一	.
 	<div class="img-wrap-left">
-		<img class="left-img" src="/assets/img/java/concurrent/synchronized7.png" alt="synchronized7示意图">
+		<img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/java/concurrent/synchronized7.png" alt="synchronized7示意图">
 	</div>	
 - 当退出 synchronized 代码块（解锁时）锁记录的值不为 null，这时使用 cas 将 Mark Word 的值恢复给对象头 
   1、成功，则解锁成功 
@@ -242,13 +242,13 @@ public static void method1() {
 
 - 当 Thread-1 进行轻量级加锁时，Thread-0 已经对该对象加了轻量级锁.
 	<div class="img-wrap-left">
-		<img class="left-img" src="/assets/img/java/concurrent/轻量级锁0.png" alt="轻量级锁0示意图">
+		<img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/java/concurrent/轻量级锁0.png" alt="轻量级锁0示意图">
 	</div>	
 - 这时 Thread-1 加轻量级锁失败，进入锁膨胀流程 
   ○ 即为 Object 对象申请 Monitor 锁，让 Object 指向重量级锁地址 
   ○ 然后自己进入 Monitor 的 EntryList BLOCKED
   	<div class="img-wrap-left">
-		<img class="left-img" src="/assets/img/java/concurrent/轻量级锁1.png" alt="轻量级锁1示意图">
+		<img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/java/concurrent/轻量级锁1.png" alt="轻量级锁1示意图">
 	</div>	
 
 - 当 Thread-0 退出同步块解锁时，使用 cas 将 Mark Word 的值恢复给对象头，失败。这时会进入重量级解锁流程，即按照 Monitor 地址找到 Monitor 对象，设置 Owner 为 null，唤醒 EntryList 中 BLOCKED 线程
@@ -260,12 +260,12 @@ public static void method1() {
 
 **1、自旋重试成功的情况**
   	<div class="img-wrap-left">
-		<img class="left-img" src="/assets/img/java/concurrent/自旋优化1.png" alt="自旋优化1示意图">
+		<img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/java/concurrent/自旋优化1.png" alt="自旋优化1示意图">
 	</div>	
 
 **2、自旋重试失败的情况**
   	<div class="img-wrap-left">
-		<img class="left-img" src="/assets/img/java/concurrent/自旋优化2.png" alt="自旋优化2示意图">
+		<img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/java/concurrent/自旋优化2.png" alt="自旋优化2示意图">
 	</div>	
 
 **小结：**
@@ -310,17 +310,17 @@ public static void m3() {
 
 **轻量级锁示意图:**
 <div class="img-wrap-left">
-  <img class="left-img" src="/assets/img/java/concurrent/轻量级锁.png" alt="轻量级锁示意图">
+  <img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/java/concurrent/轻量级锁.png" alt="轻量级锁示意图">
 </div>
 
 **偏向锁示意图:**
 <div class="img-wrap-left">
-  <img class="left-img" src="/assets/img/java/concurrent/偏向锁.png" alt="偏向锁1示意图">
+  <img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/java/concurrent/偏向锁.png" alt="偏向锁1示意图">
 </div>
 
 **偏向状态** 回忆一下对象头格式
 <div class="img-wrap-left">
-  <img class="left-img" src="/assets/img/java/concurrent/对象头格式.png" alt="对象头格式示意图">
+  <img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/java/concurrent/对象头格式.png" alt="对象头格式示意图">
 </div>
 
 <br/>
@@ -470,7 +470,7 @@ private static void test2() throws InterruptedException {
 
 输出:
 <div class="img-wrap-left">
-  <img class="left-img" src="/assets/img/java/concurrent/测试1.png" alt="测试1示意图">
+  <img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/java/concurrent/测试1.png" alt="测试1示意图">
 </div>
 
 <br/>
@@ -510,7 +510,7 @@ public static void main(String[] args) throws InterruptedException {
 }
 
 	<div class="img-wrap-left">
-	  <img class="left-img" src="/assets/img/java/concurrent/测试1.png" alt="测试1示意图">
+	  <img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/java/concurrent/测试1.png" alt="测试1示意图">
 	</div>
 	
 输出:
@@ -689,7 +689,7 @@ public class MyBenchmark {
 **运行脚本：** java -jar benchmarks.jar,发现两部分的差别并不大,甚至b加了锁比a没加锁还快
 
 	<div class="img-wrap-left">
-		<img class="left-img" src="/assets/img/java/concurrent/benchmarks1.png" alt="benchmarks1示意图">
+		<img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/java/concurrent/benchmarks1.png" alt="benchmarks1示意图">
 	</div>	
 **XX:-EliminateLocks**: 是否使用锁消除
 java -XX:-EliminateLocks -jar benchmarks.jar
@@ -697,7 +697,7 @@ java -XX:-EliminateLocks -jar benchmarks.jar
 **结论：** 使用 -XX:-EliminateLocks禁用锁消除后就会发现 b性能比a差劲多了
 
 <div class="img-wrap-left">
-    <img class="left-img" src="/assets/img/java/concurrent/benchmarks2.png" alt="benchmarks2示意图">
+    <img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/java/concurrent/benchmarks2.png" alt="benchmarks2示意图">
 </div>	
 
 ### 4.3.5.2 锁粗化

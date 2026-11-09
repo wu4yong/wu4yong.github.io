@@ -22,20 +22,20 @@ Wait/notify 是 synchronized 内置的线程协作机制，依托 Monitor 的 Wa
 ● 但小南如果一直占用着锁，其它人就得一直阻塞，效率太低
 
 <div class="img-wrap-left">
-    <img class="left-img" src="/assets/img/java/concurrent/waitStory1.png" alt="waitStory1示意图">
+    <img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/java/concurrent/waitStory1.png" alt="waitStory1示意图">
 </div>
 
 ● 于是老王单开了一间休息室（调用 wait 方法），让小南到休息室（WaitSet）等着去了，但这时锁释放开，其它人可以由老王随机安排进屋 
 ● 直到小M将烟送来，大叫一声 [ 你的烟到了 ] （调用 notify 方法）
 
 <div class="img-wrap-left">
-    <img class="left-img" src="/assets/img/java/concurrent/waitStory2.png" alt="waitStory2示意图">
+    <img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/java/concurrent/waitStory2.png" alt="waitStory2示意图">
 </div>
 
 ● 小南于是可以离开休息室，重新进入竞争锁的队列
 
 <div class="img-wrap-left">
-    <img class="left-img" src="/assets/img/java/concurrent/waitStory3.png" alt="waitStory示意图">
+    <img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/java/concurrent/waitStory3.png" alt="waitStory示意图">
 </div>
 
 > ● 线程小南获取到对象锁（占用房间）后，发现自身执行条件不满足（没有烟无法干活），无法继续执行业务代码；
@@ -47,7 +47,7 @@ Wait/notify 是 synchronized 内置的线程协作机制，依托 Monitor 的 Wa
 ## 5.2 wait/notify 底层原理（Monitor 机制）
 
 <div class="img-wrap-left">
-    <img class="left-img" src="/assets/img/java/concurrent/wait原理.png" alt="wait原理示意图">
+    <img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/java/concurrent/wait原理.png" alt="wait原理示意图">
 </div>
 
 **Wait/Notify:**  所有操作都依托对象的 Monitor 监视器实现，核心涉及 Monitor 的 Owner、EntryList、WaitSet 三大核心模块，线程状态流转清晰明确：

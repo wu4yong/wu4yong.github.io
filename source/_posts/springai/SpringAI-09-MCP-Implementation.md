@@ -21,7 +21,7 @@ tags:
 可以把tools单独抽取出来，  由应用程序读取外部的tools。     那关键是怎么读呢？ 怎么解析呢？  如果每个提供商各用一种规则你能想象有多麻烦！ 所以MCP就诞生了，  他指定了标准规则，  以jsonrpc2.0的方式进行通讯。
 那问题又来了， 以什么方式通讯呢？   http?  rpc?  stdio?      mcp提供了sse和stdio这2种方式。
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/springai/ch09_1749538652064-fa3cda1e-d919-4e45-999c-db97817ba693_d2dfc9e867.png" alt="ch09_1749538652064-fa3cda1e-d919-4e45-999c-db97817ba693_d2dfc9e867.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/springai/ch09_1749538652064-fa3cda1e-d919-4e45-999c-db97817ba693_d2dfc9e867.png" alt="ch09_1749538652064-fa3cda1e-d919-4e45-999c-db97817ba693_d2dfc9e867.png"></div>
 
 ### 使用
 
@@ -30,7 +30,7 @@ Streamable http目前springai1.0版本不支持， 我们先掌握SSE和STDIO
 + **STDIO**更适合客户端桌面应用和辅助工具
 + **SSE**更适合web应用 、业务有关的公共tools
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/springai/ch09_1749543212615-6e6d670b-73d7-4c49-aab9-6640ee8b98c8_b84ced1e93.png" alt="ch09_1749543212615-6e6d670b-73d7-4c49-aab9-6640ee8b98c8_b84ced1e93.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/springai/ch09_1749543212615-6e6d670b-73d7-4c49-aab9-6640ee8b98c8_b84ced1e93.png" alt="ch09_1749543212615-6e6d670b-73d7-4c49-aab9-6640ee8b98c8_b84ced1e93.png"></div>
 
 ### STDIO
 
@@ -40,7 +40,7 @@ Streamable http目前springai1.0版本不支持， 我们先掌握SSE和STDIO
 
 现在有很多MCP 服务 给大家提供一个网站：[MCP Server（MCP 服务器）](https://mcp.so/zh)
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/springai/ch09_1743148612881-af22674d-a11a-4914-a3a0-eaf1f83a01aa_41669ac3b7.png" alt="ch09_1743148612881-af22674d-a11a-4914-a3a0-eaf1f83a01aa_41669ac3b7.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/springai/ch09_1743148612881-af22674d-a11a-4914-a3a0-eaf1f83a01aa_41669ac3b7.png" alt="ch09_1743148612881-af22674d-a11a-4914-a3a0-eaf1f83a01aa_41669ac3b7.png"></div>
 
 那MCP有了， 怎么调用呢？  这里介绍2种使用方式：
 
@@ -142,21 +142,21 @@ spring:
 
 CherryStudio、Cursor 、Claude Desktop、[Cline ](https://marketplace.visualstudio.com/items?itemName=saoudrizwan.claude-dev) 等等很多， 这里不一一演示， 不会的话自己找个文章， 工具使用都很简单!
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/springai/ch09_1743151169161-51d3e731-8ad4-48e3-85bc-2519460274ec_f511ecef49.png" alt="ch09_1743151169161-51d3e731-8ad4-48e3-85bc-2519460274ec_f511ecef49.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/springai/ch09_1743151169161-51d3e731-8ad4-48e3-85bc-2519460274ec_f511ecef49.png" alt="ch09_1743151169161-51d3e731-8ad4-48e3-85bc-2519460274ec_f511ecef49.png"></div>
 
 以Cline为例： 他是Vscode的插件
 1. 安装VSCode
 2. 安装插件：
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/springai/ch09_1743506292616-d840d75c-1ee7-4954-b3c1-80c472c23321_11dbd88bb8.png" alt="ch09_1743506292616-d840d75c-1ee7-4954-b3c1-80c472c23321_11dbd88bb8.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/springai/ch09_1743506292616-d840d75c-1ee7-4954-b3c1-80c472c23321_11dbd88bb8.png" alt="ch09_1743506292616-d840d75c-1ee7-4954-b3c1-80c472c23321_11dbd88bb8.png"></div>
 
 3. 配置cline的模型：
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/springai/ch09_1743506403789-4eedfc69-694e-4409-8b30-9711f3d5d5bb_eda7948c1d.png" alt="ch09_1743506403789-4eedfc69-694e-4409-8b30-9711f3d5d5bb_eda7948c1d.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/springai/ch09_1743506403789-4eedfc69-694e-4409-8b30-9711f3d5d5bb_eda7948c1d.png" alt="ch09_1743506403789-4eedfc69-694e-4409-8b30-9711f3d5d5bb_eda7948c1d.png"></div>
 
 4. 配置cline的mcpserver
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/springai/ch09_1743506882142-2aa504e7-2ff4-470a-a859-ba6428ae0673_413ab0762a.png" alt="ch09_1743506882142-2aa504e7-2ff4-470a-a859-ba6428ae0673_413ab0762a.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/springai/ch09_1743506882142-2aa504e7-2ff4-470a-a859-ba6428ae0673_413ab0762a.png" alt="ch09_1743506882142-2aa504e7-2ff4-470a-a859-ba6428ae0673_413ab0762a.png"></div>
 
 ```json
 {
@@ -199,13 +199,13 @@ CherryStudio、Cursor 、Claude Desktop、[Cline ](https://marketplace.visualstu
 
 5. 开启cline权限
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/springai/ch09_1743506993562-39b29cae-c7f0-4912-9d36-7ff5957347eb_df4b008111.png" alt="ch09_1743506993562-39b29cae-c7f0-4912-9d36-7ff5957347eb_df4b008111.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/springai/ch09_1743506993562-39b29cae-c7f0-4912-9d36-7ff5957347eb_df4b008111.png" alt="ch09_1743506993562-39b29cae-c7f0-4912-9d36-7ff5957347eb_df4b008111.png"></div>
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/springai/ch09_1743507041841-ad6dca07-fe24-41a4-af70-fa74e5300dda_fc65e678a6.png" alt="ch09_1743507041841-ad6dca07-fe24-41a4-af70-fa74e5300dda_fc65e678a6.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/springai/ch09_1743507041841-ad6dca07-fe24-41a4-af70-fa74e5300dda_fc65e678a6.png" alt="ch09_1743507041841-ad6dca07-fe24-41a4-af70-fa74e5300dda_fc65e678a6.png"></div>
 
 6.测试：
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/springai/ch09_1743507165047-e40b880f-ddd3-410a-ad0d-0d300bce963a_1cab5d4d10.png" alt="ch09_1743507165047-e40b880f-ddd3-410a-ad0d-0d300bce963a_1cab5d4d10.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/springai/ch09_1743507165047-e40b880f-ddd3-410a-ad0d-0d300bce963a_1cab5d4d10.png" alt="ch09_1743507165047-e40b880f-ddd3-410a-ad0d-0d300bce963a_1cab5d4d10.png"></div>
 
 ##### 通过Spring AI
 
@@ -350,7 +350,7 @@ logging:
 如果用：`<artifactId>spring-ai-starter-mcp-server-**webflux**</artifactId>`  
 会出现：
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/springai/ch09_1759203265265-9bd3c786-1835-42dd-b2f4-4cb200293726_efaf578694.png" alt="ch09_1759203265265-9bd3c786-1835-42dd-b2f4-4cb200293726_efaf578694.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/springai/ch09_1759203265265-9bd3c786-1835-42dd-b2f4-4cb200293726_efaf578694.png" alt="ch09_1759203265265-9bd3c786-1835-42dd-b2f4-4cb200293726_efaf578694.png"></div>
 
 根据官方：[https://github.com/spring-projects/spring-ai/pull/3511](https://github.com/spring-projects/spring-ai/pull/3511)
 建议加入： `spring.main.web-application-type=reactive  `
@@ -470,17 +470,17 @@ public class OpenAiController {
 
 1. STDIO 是基于标准输入\输出流的方式， 需要在MCP 客户端安装一个包（可以是jar包、python包、npm包等..）. 它是“客户端”的MCP Server。
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/springai/ch09_1752585876004-6075ff95-4059-4c69-a950-3a0c51f7a0d3_9e362dd9fc.png" alt="ch09_1752585876004-6075ff95-4059-4c69-a950-3a0c51f7a0d3_9e362dd9fc.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/springai/ch09_1752585876004-6075ff95-4059-4c69-a950-3a0c51f7a0d3_9e362dd9fc.png" alt="ch09_1752585876004-6075ff95-4059-4c69-a950-3a0c51f7a0d3_9e362dd9fc.png"></div>
 
 2. SSE  是基于Http的方式进行通讯， 需要将MCP Server部署为一个web服务. 它是服务端的MCP Server
 
 #### STDIO原理
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/springai/ch09_1752591174064-97591e76-da2c-4c04-81d4-6aebe59361fd_521455aebc.png" alt="ch09_1752591174064-97591e76-da2c-4c04-81d4-6aebe59361fd_521455aebc.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/springai/ch09_1752591174064-97591e76-da2c-4c04-81d4-6aebe59361fd_521455aebc.png" alt="ch09_1752591174064-97591e76-da2c-4c04-81d4-6aebe59361fd_521455aebc.png"></div>
 
 很多人不理解stdio到底什么意思， 为什么一定要把stdio server的banner关掉， 还要清空控制台？
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/springai/ch09_1749543942465-684dee68-7d74-4a28-aa11-914d178dd9e2_8987a776fb.png" alt="ch09_1749543942465-684dee68-7d74-4a28-aa11-914d178dd9e2_8987a776fb.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/springai/ch09_1749543942465-684dee68-7d74-4a28-aa11-914d178dd9e2_8987a776fb.png" alt="ch09_1749543942465-684dee68-7d74-4a28-aa11-914d178dd9e2_8987a776fb.png"></div>
 
 1. 首先SpringAi底层会读取到mcp-servers-config.json的信息
 2. 然后执行命令（其实聪明的小伙伴早就发现了，mcp-servers-config.json文件中就是一堆shell命令）
@@ -513,7 +513,7 @@ String[] commands={"java",
 
 其实你也完全可以自己通过mcd去执行命令
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/springai/ch09_1749544393733-af10cef8-2d9d-4fb9-a14b-1b61761afcda_d209c132b2.png" alt="ch09_1749544393733-af10cef8-2d9d-4fb9-a14b-1b61761afcda_d209c132b2.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/springai/ch09_1749544393733-af10cef8-2d9d-4fb9-a14b-1b61761afcda_d209c132b2.png" alt="ch09_1749544393733-af10cef8-2d9d-4fb9-a14b-1b61761afcda_d209c132b2.png"></div>
 
 1. 运行jar -jar mcp-stdio-server.jar
 2. 输入{"jsonrpc":"2.0","method":"tools/list","id":"3b3f3431-1","params":{}}
@@ -587,7 +587,7 @@ String[] commands={"java",
 
 ### STDIO源码
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/springai/ch09_1749543994705-06c671de-1be4-4d18-838f-2148c7eac45d_de4f38b3e9.png" alt="ch09_1749543994705-06c671de-1be4-4d18-838f-2148c7eac45d_de4f38b3e9.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/springai/ch09_1749543994705-06c671de-1be4-4d18-838f-2148c7eac45d_de4f38b3e9.png" alt="ch09_1749543994705-06c671de-1be4-4d18-838f-2148c7eac45d_de4f38b3e9.png"></div>
 
 ### MCP鉴权
 
@@ -598,7 +598,7 @@ String[] commands={"java",
 
 这种方式在本地运行,**它 将MCP Server作为子进程启动**。 我们称为标准输入输出， 其实就是利用运行命令的方式写入和读取控制台的信息，以达到传输。  
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/springai/ch09_1747376380238-74bfcf1f-4ed0-41f2-ac6a-39cdf3b54fd1_70a3c6a91b.png" alt="ch09_1747376380238-74bfcf1f-4ed0-41f2-ac6a-39cdf3b54fd1_70a3c6a91b.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/springai/ch09_1747376380238-74bfcf1f-4ed0-41f2-ac6a-39cdf3b54fd1_70a3c6a91b.png" alt="ch09_1747376380238-74bfcf1f-4ed0-41f2-ac6a-39cdf3b54fd1_70a3c6a91b.png"></div>
 
  通常我们会配置一段json，比如这里的百度地图MCP Server ：
 + 其中command和args代表运行的命令和参数。
@@ -644,7 +644,7 @@ String[] commands={"java",
 
 不过，如果你想把 MCP 服务器开放给外部使用，就需要暴露一些标准的 HTTP 接口。对于私有场景，MCP 服务器可能并不需要严格的身份认证，但在企业级部署下，对这些接口的安全和权限把控就非常重要了。为了解决这个问题，[2025 年 3 月发布的最新 MCP 规范](https://modelcontextprotocol.io/specification/2025-03-26/basic/authorization)引入了安全基础，借助了广泛使用的 [OAuth2 框架](https://modelcontextprotocol.io/specification/2025-03-26/basic/authorization)。
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/springai/ch09_1747373008252-ea86cf42-b7c5-49b2-96f4-9abdc4d986cf_67ceb074a7.webp" alt="ch09_1747373008252-ea86cf42-b7c5-49b2-96f4-9abdc4d986cf_67ceb074a7.webp"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/springai/ch09_1747373008252-ea86cf42-b7c5-49b2-96f4-9abdc4d986cf_67ceb074a7.webp" alt="ch09_1747373008252-ea86cf42-b7c5-49b2-96f4-9abdc4d986cf_67ceb074a7.webp"></div>
 
 本文不会详细介绍 OAuth2 的所有内容，不过简单回顾一下还是很有帮助。
 **在规范的草案中，MCP 服务器既是资源服务器，也是授权服务器。**
@@ -657,7 +657,7 @@ curl https://mcp.example.com/sse -H "Authorization: Bearer <有效的 access tok
 + **作为授权服务器**，MCP 还需要有能力为客户端安全地签发 `access_token`。在发放令牌前，服务器会校验客户端的凭据，有时还需要校验访问用户的身份。授权服务器决定令牌的有效期、权限范围、目标受众等特性。
 用 Spring Security 和 Spring Authorization Server，可以方便地为现有的 Spring MCP 服务器加上这两大安全能力。
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/springai/ch09_1747373008252-989690c4-f96d-4333-87a1-0b027a0f42f0_2c193481d9.webp" alt="ch09_1747373008252-989690c4-f96d-4333-87a1-0b027a0f42f0_2c193481d9.webp"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/springai/ch09_1747373008252-989690c4-f96d-4333-87a1-0b027a0f42f0_2c193481d9.webp" alt="ch09_1747373008252-989690c4-f96d-4333-87a1-0b027a0f42f0_2c193481d9.webp"></div>
 
 ##### 给 Spring MCP 服务器加上 OAuth2 支持
 
@@ -871,7 +871,7 @@ public class SseWebFluxTransportAutoConfiguration {
 
  使用：
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/springai/ch09_1747380936959-4787c998-23ca-4e5e-b3be-24fb49476be9_5346f8a3e2.png" alt="ch09_1747380936959-4787c998-23ca-4e5e-b3be-24fb49476be9_5346f8a3e2.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/springai/ch09_1747380936959-4787c998-23ca-4e5e-b3be-24fb49476be9_5346f8a3e2.png" alt="ch09_1747380936959-4787c998-23ca-4e5e-b3be-24fb49476be9_5346f8a3e2.png"></div>
 
 **设置WebClientCustomizer**
 在用Spring-ai-M8版本的时候， 发现提供了WebClientCustomizer进行扩展。 可以尝试：

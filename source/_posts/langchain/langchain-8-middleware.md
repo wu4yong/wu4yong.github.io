@@ -45,11 +45,11 @@ agent = create_agent(
 
 **情况1：没有中间件的Agent架构：**
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/langchain/8/page002_img001.png" alt="page002_img001.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/langchain/8/page002_img001.png" alt="page002_img001.png"></div>
 
 **情况2：添加中间件之后的Agent架构变为：**
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/langchain/8/page003_img001.png" alt="page003_img001.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/langchain/8/page003_img001.png" alt="page003_img001.png"></div>
 
 在 LangChain 的 Agent 执行循环中，比如 “模型调用前”、“模型调用后”、“工具调用前后” 设置一些钩子（hooks），让你在不改 Agent 主体逻辑的情况下实现策略与治理。
 
@@ -111,7 +111,7 @@ Agent 本身只需要关心“理解用户需求、决定是否调用工具、�
 
 链接：<https://docs.langchain.com/oss/python/langchain/middleware/overview>
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/langchain/8/page005_img001.png" alt="page005_img001.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/langchain/8/page005_img001.png" alt="page005_img001.png"></div>
 
 ### 1.4 和模型供应商无关的内置中间件分类
 
@@ -409,7 +409,7 @@ None
 
 1. 我们通过自定义profile指定了max_input_tokens，才能用fraction作为度量，否则报错。
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/langchain/8/page010_img001.png" alt="page010_img001.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/langchain/8/page010_img001.png" alt="page010_img001.png"></div>
 
 2. 三个条件触发条件至少有一个满足，触发了摘要。
 
@@ -1280,7 +1280,7 @@ pytest -q
 
 完整日志如下
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/langchain/8/page026_img001.png" alt="page026_img001.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/langchain/8/page026_img001.png" alt="page026_img001.png"></div>
 
 ```powershell
 (langchain) PS C:\Users\Lenovo\OneDrive\文档 \AI\langchain\todo_workspace> pytest -q
@@ -4086,7 +4086,7 @@ print("  - 类似洋葱模型：1→2→3→模型→3→2→1")
 
 Hook 函数，中文常叫钩子函数，指的是：在某个既定流程的特定时机，被框架、系统或主程序自动调用的扩展函数。
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/langchain/8/page081_img001.png" alt="page081_img001.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/langchain/8/page081_img001.png" alt="page081_img001.png"></div>
 
 > 因此，可以把它理解成：
 
@@ -4104,7 +4104,7 @@ Hook 函数，中文常叫钩子函数，指的是：在某个既定流程的特
 
 LangChain的中间件作用在Agent架构中，后者是基于LangGraph构建的流程图。如下列出了六个hook函数（钩子函数）：
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/langchain/8/page082_img001.png" alt="page082_img001.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/langchain/8/page082_img001.png" alt="page082_img001.png"></div>
 
 无论是官方内置中间件、自定义中间件、还是下文提到的便捷装饰器中间件，通常都是通过实现其中的一个或多个hook来生效的。
 

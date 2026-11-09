@@ -62,8 +62,8 @@ Agent -> 中间件 -> 子智能体
 子智能体自己的链路中|单独设置限制、日志或权限规则|讲配置方式
 {% endautogrid %}
 
-<!-- ![Agent 中间件可以在上下文、模型、工具和子智能体链路中充当检查口，负责摘要、限流、日志、权限和异常治理](/assets/img/deepSearch/7/7-1-2-1.svg) -->
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/deepSearch/7/7-1-2-1.svg" alt="Agent 中间件可以在上下文、模型、工具和子智能体链路中充当检查口，负责摘要、限流、日志、权限和异常治理"></div>
+<!-- <div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/deepSearch/7/7-1-2-1.svg" alt="Agent 中间件可以在上下文、模型、工具和子智能体链路中充当检查口，负责摘要、限流、日志、权限和异常治理"></div> -->
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/deepSearch/7/7-1-2-1.svg" alt="Agent 中间件可以在上下文、模型、工具和子智能体链路中充当检查口，负责摘要、限流、日志、权限和异常治理"></div>
 
 本章重点放在模型调用限制和工具调用中间件上，因为它们最容易观察，也最常用于控制成本、记录日志和治理工具执行链路。
 

@@ -73,8 +73,8 @@ tags:
 
 <strong>核心思想：</strong>这个题是典型面试陷阱，混淆「单个实例锁状态」和「同 Class 批量锁状态重置」；不是锁能自由降级，而是 JVM 在安全点做批量清理回收闲置 Monitor。
 
-<!-- ![图 1-1　答题要点结构图](/assets/img/interview/1-1synchronized.png) -->
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/interview/1-1synchronized.png" alt="并发编程答题要点结构图"></div>
+<!-- <div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/interview/1-1synchronized.png" alt="图 1-1　答题要点结构图"></div> -->
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/interview/1-1synchronized.png" alt="并发编程答题要点结构图"></div>
 
 ## 第 2 题　ThreadLocal 使用不当会内存泄漏，背后根本原因是什么？
 
@@ -140,8 +140,8 @@ value 的生命周期应该由业务逻辑控制，不能交给 GC 随机回收�
 
 <strong>核心思想：</strong>弱引用是缓解手段，长期存活的线程 + 忘记remove，才是内存泄漏真正元凶。
 
-<!-- ![图 1-2　答题要点结构图](/assets/img/interview/1-2threadlocal.png) -->
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/interview/1-2threadlocal.png" alt="并发编程答题要点结构图"></div>
+<!-- <div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/interview/1-2threadlocal.png" alt="图 1-2　答题要点结构图"></div> -->
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/interview/1-2threadlocal.png" alt="并发编程答题要点结构图"></div>
 
 ## 第 3 题　Java 并发全套连环问（线程安全、synchronized vs Lock、乐观悲观锁、线程池、线程池耗尽、死锁）
 
@@ -271,8 +271,8 @@ synchronized 是 JVM 内置锁，自动释放，能力简单；ReentrantLock 基
 
 死锁四个条件，排查用 jstack；工程上最好的办法就是统一锁顺序，其次 tryLock 超时，尽量不要嵌套多锁。
 
-<!-- ![图 1-3　答题要点结构图](/assets/img/interview/1-3concurrency.png) -->
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/interview/1-3concurrency.png" alt="并发编程答题要点结构图"></div>
+<!-- <div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/interview/1-3concurrency.png" alt="图 1-3　答题要点结构图"></div> -->
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/interview/1-3concurrency.png" alt="并发编程答题要点结构图"></div>
 
 ## 第 4 题　多线程并发场景，synchronized 和 Lock 的底层原理、功能特性、适用场景有什么核心区别？
 
@@ -349,8 +349,8 @@ synchronized 是 JVM 内置关键字，底层依靠对象头 MarkWord和 Monitor
 
 <strong>核心思想：</strong>synchronized 胜在简洁安全、自动管理；Lock 胜在功能丰富、灵活可控，但开发负担更高，必须手动释放锁。
 
-<!-- ![图 1-4　答题要点结构图](/assets/img/interview/1-4synchronized-vs-lock.png) -->
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/interview/1-4synchronized-vs-lock.png" alt="并发编程答题要点结构图"></div>
+<!-- <div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/interview/1-4synchronized-vs-lock.png" alt="图 1-4　答题要点结构图"></div> -->
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/interview/1-4synchronized-vs-lock.png" alt="并发编程答题要点结构图"></div>
 
 ## 第 5 题　接口和抽象类到底有什么区别？项目里该怎么选？
 
@@ -461,8 +461,8 @@ public class AliPay extends AbstractPayService{
 
 <strong>核心思想：</strong>接口定义契约，抽象类复用实现；接口做能力，抽象类做模板。
 
-<!-- ![图 1-5　答题要点结构图](/assets/img/interview/1-5interface-abstract.png) -->
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/interview/1-5interface-abstract.png" alt="并发编程答题要点结构图"></div>
+<!-- <div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/interview/1-5interface-abstract.png" alt="图 1-5　答题要点结构图"></div> -->
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/interview/1-5interface-abstract.png" alt="并发编程答题要点结构图"></div>
 
 ## 第 6 题　线程池线程集体卡住、队列堆满、CPU/DB 压力正常，服务假死，只能重启恢复
 
@@ -539,6 +539,6 @@ public class AliPay extends AbstractPayService{
 
 <strong>核心思想：</strong>线程池管控不是调参，是对线程生命周期、所有阻塞依赖、外部资源池的全链路风险管控，提前切断无限等待的可能性。
 
-<!-- ![图 1-6　答题要点结构图](/assets/img/interview/1-6threadpool-hang.png) -->
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/interview/1-6threadpool-hang.png" alt="并发编程答题要点结构图"></div>
+<!-- <div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/interview/1-6threadpool-hang.png" alt="图 1-6　答题要点结构图"></div> -->
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/interview/1-6threadpool-hang.png" alt="并发编程答题要点结构图"></div>
 

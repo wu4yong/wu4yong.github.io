@@ -969,8 +969,8 @@ GET /api/files?path=当前会话output目录
 GET /api/download?path=.../机器人信息.pdf
 ```
 
-<!-- ![深度研搜执行过程页面：前端实时展示网络搜索工具调用、tool_start 事件、task_result 事件和主智能体整理后的回答](/assets/img/deepSearch/0/0-2-0-2.png) -->
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/deepSearch/0/0-2-0-2.png" alt="深度研搜执行过程页面：前端实时展示网络搜索工具调用、tool_start 事件、task_result 事件和主智能体整理后的回答"></div>
+<!-- <div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/deepSearch/0/0-2-0-2.png" alt="深度研搜执行过程页面：前端实时展示网络搜索工具调用、tool_start 事件、task_result 事件和主智能体整理后的回答"></div> -->
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/deepSearch/0/0-2-0-2.png" alt="深度研搜执行过程页面：前端实时展示网络搜索工具调用、tool_start 事件、task_result 事件和主智能体整理后的回答"></div>
 
 浏览器触发下载。到这一步，前端、FastAPI、主智能体、文件工具和 WebSocket 推送就全部跑通了。
 
@@ -996,8 +996,8 @@ GET /api/download?path=.../机器人信息.pdf
 
 这里的“最小”不是功能很少，而是**只保留一条最关键、最必要的主链路**：用户提出研究任务，系统判断需要哪些信息来源，再把不同任务分派给对应助手，最后汇总答案并生成 Markdown 或 PDF 文件。整个过程既能在前端看到实时进度，也能在后端通过 `thread_id`、`session_dir` 和日志追踪到当前任务。
 
-<!-- ![深度研搜完整闭环：前端通过 HTTP 启动任务、通过 WebSocket 查看进度，后台主智能体调度子智能体和文件工具，最终返回回答、Markdown、PDF 和下载入口](/assets/img/deepSearch/14/14-summary-1.svg) -->
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/deepSearch/14/14-summary-1.svg" alt="深度研搜完整闭环：前端通过 HTTP 启动任务、通过 WebSocket 查看进度，后台主智能体调度子智能体和文件工具，最终返回回答、Markdown、PDF 和下载入口"></div>
+<!-- <div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/deepSearch/14/14-summary-1.svg" alt="深度研搜完整闭环：前端通过 HTTP 启动任务、通过 WebSocket 查看进度，后台主智能体调度子智能体和文件工具，最终返回回答、Markdown、PDF 和下载入口"></div> -->
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/deepSearch/14/14-summary-1.svg" alt="深度研搜完整闭环：前端通过 HTTP 启动任务、通过 WebSocket 查看进度，后台主智能体调度子智能体和文件工具，最终返回回答、Markdown、PDF 和下载入口"></div>
 
 从实际代码看，这条主线最终落在 `app/agent/main_agent.py`：主智能体通过 `create_deep_agent()` 组装模型、主提示词、三个文件工具、三个专家子智能体和 `InMemorySaver` 检查点；`run_deep_agent()` 则负责创建会话目录、复制上传文件、写入 `ContextVar`、调用 `main_agent.astream()`，并把子智能体调用、工具调用、最终结果和异常通过 `monitor` 推给前端。
 

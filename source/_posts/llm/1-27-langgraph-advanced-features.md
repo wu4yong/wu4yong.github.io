@@ -182,8 +182,8 @@ LangGraph 的持久化核心围绕 **checkpoint（检查点）** 展开。给图
 
 来区分不同对话、不同用户或不同执行线程。
 
-<!-- ![Checkpoint 持久化概念：自动存档、失败恢复、暂停与恢复、时间旅行与审计追踪](/assets/img/llm/25/25-2-1-1.svg) -->
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/25/25-2-1-1.svg" alt="Checkpoint 持久化概念：自动存档、失败恢复、暂停与恢复、时间旅行与审计追踪"></div>
+<!-- <div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/llm/25/25-2-1-1.svg" alt="Checkpoint 持久化概念：自动存档、失败恢复、暂停与恢复、时间旅行与审计追踪"></div> -->
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/llm/25/25-2-1-1.svg" alt="Checkpoint 持久化概念：自动存档、失败恢复、暂停与恢复、时间旅行与审计追踪"></div>
 
 **图注：** 上图概括 **Checkpoint 在生产场景中的价值**（存档、容错、断点续跑、回溯与审计）；`thread_id` 则用于在存储侧把同一对话/任务链的检查点归并到一条「线程」下，与图中「按步落盘」互补。
 
@@ -206,15 +206,15 @@ LangGraph 的很多高级能力，其实都建立在持久化之上。官方文�
 
 比如用户第一次问：“北京明天天气怎么样？”Agent 调用天气工具得到“晴，26 度”。第二次用户接着问：“适合出去玩吗？”如果没有持久化，第二次调用只看到当前问题，很可能不知道“出去玩”指的是北京明天；如果同一条会话共用同一个 `thread_id`，图就能从 checkpoint 里接上前面的消息和工具结果。
 
-<!-- ![同一 Agent 会话内通过 Checkpointer 保持上下文：第二次调用可以沿用第一次天气工具返回的结果](/assets/img/llm/25/25-2-3-1.png) -->
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/25/25-2-3-1.png" alt="同一 Agent 会话内通过 Checkpointer 保持上下文：第二次调用可以沿用第一次天气工具返回的结果"></div>
+<!-- <div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/llm/25/25-2-3-1.png" alt="同一 Agent 会话内通过 Checkpointer 保持上下文：第二次调用可以沿用第一次天气工具返回的结果"></div> -->
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/llm/25/25-2-3-1.png" alt="同一 Agent 会话内通过 Checkpointer 保持上下文：第二次调用可以沿用第一次天气工具返回的结果"></div>
 
 **场景二：图执行到一半时，某个节点报错、断电或网络故障，希望修好后从中间继续。**
 
 比如 `Node1` 已经正常写入了 `key_1`，`Node2` 报错了。我们通常不希望修复 `Node2` 后又从 `START` 全量重跑一次，尤其是前面节点可能很慢、很贵、或者已经产生了外部副作用。只要状态已经落到持久化后端，后续就有机会从最近的 checkpoint 继续。
 
-<!-- ![节点报错后的断点恢复场景：Node1 正常写入状态，Node2 报错，修复后希望从 checkpoint 继续执行](/assets/img/llm/25/25-2-3-2.png) -->
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/25/25-2-3-2.png" alt="节点报错后的断点恢复场景：Node1 正常写入状态，Node2 报错，修复后希望从 checkpoint 继续执行"></div>
+<!-- <div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/llm/25/25-2-3-2.png" alt="节点报错后的断点恢复场景：Node1 正常写入状态，Node2 报错，修复后希望从 checkpoint 继续执行"></div> -->
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/llm/25/25-2-3-2.png" alt="节点报错后的断点恢复场景：Node1 正常写入状态，Node2 报错，修复后希望从 checkpoint 继续执行"></div>
 
 这两个场景分别对应两种常见价值：
 
@@ -297,8 +297,8 @@ graph.invoke(None, config={"configurable": {"thread_id": "user-001"}})
 - **SQLite**：适合本地开发、小型项目、单机轻量部署
 - **Postgres / Redis / 其他数据库后端**：更适合生产环境
 
-<!-- ![LangGraph 持久化后端选型：从内存、SQLite 到 Postgres / Redis 的学习与生产部署演进路线](/assets/img/llm/25/25-2-8-1.png) -->
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/25/25-2-8-1.png" alt="LangGraph 持久化后端选型：从内存、SQLite 到 Postgres / Redis 的学习与生产部署演进路线"></div>
+<!-- <div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/llm/25/25-2-8-1.png" alt="LangGraph 持久化后端选型：从内存、SQLite 到 Postgres / Redis 的学习与生产部署演进路线"></div> -->
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/llm/25/25-2-8-1.png" alt="LangGraph 持久化后端选型：从内存、SQLite 到 Postgres / Redis 的学习与生产部署演进路线"></div>
 
 ### 2.9 案例：内存检查点（MemoryPersistence）
 
@@ -403,8 +403,8 @@ final = graph.invoke(Command(resume={"approved": True, "amount": 80}), config=co
 
 使用 `interrupt` 时要记住一条规则：**恢复执行时，包含 `interrupt` 的节点会从函数开头重新执行，直到再次走到 interrupt 位置，然后拿到 resume 值继续往下。**
 
-<!-- ![interrupt 恢复时节点会重新执行：副作用不要放在 interrupt 前，推荐在审核通过后的 execute_node 中真正执行](/assets/img/llm/25/25-3-4-1.png) -->
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/25/25-3-4-1.png" alt="interrupt 恢复时节点会重新执行：副作用不要放在 interrupt 前，推荐在审核通过后的 execute_node 中真正执行"></div>
+<!-- <div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/llm/25/25-3-4-1.png" alt="interrupt 恢复时节点会重新执行：副作用不要放在 interrupt 前，推荐在审核通过后的 execute_node 中真正执行"></div> -->
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/llm/25/25-3-4-1.png" alt="interrupt 恢复时节点会重新执行：副作用不要放在 interrupt 前，推荐在审核通过后的 execute_node 中真正执行"></div>
 
 这意味着，下面这些操作不要放在 `interrupt` 前面，除非它们是幂等的：
 

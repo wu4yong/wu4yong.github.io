@@ -73,8 +73,8 @@ tags:
 
 高级工程师认知：Netty 高性能是一整套组合优化，不是某一个黑科技；用错线程模型，再好框架也会性能崩坏。
 
-<!-- ![图 6-1　答题要点结构图](/assets/img/interview/6-1netty-high-performance.png) -->
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/interview/6-1netty-high-performance.png" alt="中间件答题要点结构图"></div>
+<!-- <div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/interview/6-1netty-high-performance.png" alt="图 6-1　答题要点结构图"></div> -->
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/interview/6-1netty-high-performance.png" alt="中间件答题要点结构图"></div>
 
 ## 第 2 题　Nginx Worker 单线程事件驱动模型
 
@@ -155,8 +155,8 @@ Redis 单进程单主线程；Nginx 是 Master + 多 Worker 进程，每个 Work
 
 <strong>核心思想：</strong>模型没有好坏，看业务负载；单线程适合 IO 密集轻逻辑，遇到阻塞、CPU 密集场景就不再适用。
 
-<!-- ![图 6-2　答题要点结构图](/assets/img/interview/6-2nginx-event-driven.png) -->
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/interview/6-2nginx-event-driven.png" alt="中间件答题要点结构图"></div>
+<!-- <div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/interview/6-2nginx-event-driven.png" alt="图 6-2　答题要点结构图"></div> -->
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/interview/6-2nginx-event-driven.png" alt="中间件答题要点结构图"></div>
 
 ## 第 3 题　Dubbo 调用超时问题
 
@@ -200,8 +200,8 @@ Redis 单进程单主线程；Nginx 是 Master + 多 Worker 进程，每个 Work
 
 很多人遇到超时只会调大超时时间，治标不治本。面试官希望看到完整排查思路：超时配置层级、重试、嵌套调用、序列化、注册中心等多维度分析，而不是只看业务方法本身执行时间。
 
-<!-- ![图 6-3　答题要点结构图](/assets/img/interview/6-3dubbo-call-timeout.png) -->
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/interview/6-3dubbo-call-timeout.png" alt="中间件答题要点结构图"></div>
+<!-- <div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/interview/6-3dubbo-call-timeout.png" alt="图 6-3　答题要点结构图"></div> -->
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/interview/6-3dubbo-call-timeout.png" alt="中间件答题要点结构图"></div>
 
 ## 第 4 题　Nacos 动态配置刷新事故，修改配置触发全量 Bean 重建，线程池打满、服务雪崩；如何管控动态配置刷新风险
 
@@ -266,8 +266,8 @@ Spring Cloud 中@RefreshScope 的底层机制：
 
 考察你不是会不会写注解，而是理解 Spring 配置刷新底层实现；懂得区分两种热更新方案的代价；建立配置变更的灰度、校验、隔离稳定性思维。
 
-<!-- ![图 6-4　答题要点结构图](/assets/img/interview/6-4nacos-config-refresh.png) -->
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/interview/6-4nacos-config-refresh.png" alt="中间件答题要点结构图"></div>
+<!-- <div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/interview/6-4nacos-config-refresh.png" alt="图 6-4　答题要点结构图"></div> -->
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/interview/6-4nacos-config-refresh.png" alt="中间件答题要点结构图"></div>
 
 ## 第 5 题　RabbitMQ 生产者 confirm 成功、交换机路由成功，但消费者收不到消息
 
@@ -343,8 +343,8 @@ Spring Cloud 中@RefreshScope 的底层机制：
 
 <strong>核心思想：</strong>消息在交换机之后还有很多关卡，队列、消息生命周期、消费者预取、权限都会阻断消费。
 
-<!-- ![图 6-5　答题要点结构图](/assets/img/interview/6-5rabbitmq-confirm-lost.png) -->
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/interview/6-5rabbitmq-confirm-lost.png" alt="中间件答题要点结构图"></div>
+<!-- <div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/interview/6-5rabbitmq-confirm-lost.png" alt="图 6-5　答题要点结构图"></div> -->
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/interview/6-5rabbitmq-confirm-lost.png" alt="中间件答题要点结构图"></div>
 
 ## 第 6 题　RocketMQ 异步通知，上千条消息凭空消失，用户收不到短信邮件；如何排查根因，如何搭建全链路消息防丢失体系
 
@@ -427,8 +427,8 @@ Spring Cloud 中@RefreshScope 的底层机制：
 
 初级开发者只记住开关配置，认为开启持久化、手动 ACK 就万事大吉。 高级工程师理解消息链路是分段的：生产、存储、投递、业务执行每个环节都有失效风险； 懂得区分：MQ 层面消息不丢 ≠ 业务效果一定成功（ACK 后下游外部服务失败依然会造成业务丢失）； 整套方案是：可靠发送 + 可靠存储 + 后置 ACK + 死信重试 + 定时对账兜底，形成闭环。
 
-<!-- ![图 6-6　答题要点结构图](/assets/img/interview/6-6rocketmq-message-lost.png) -->
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/interview/6-6rocketmq-message-lost.png" alt="中间件答题要点结构图"></div>
+<!-- <div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/interview/6-6rocketmq-message-lost.png" alt="图 6-6　答题要点结构图"></div> -->
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/interview/6-6rocketmq-message-lost.png" alt="中间件答题要点结构图"></div>
 
 ## 第 7 题　订单物流 MQ 场景，生产者收到 confirm、消费者无报错，但运单丢失
 
@@ -506,8 +506,8 @@ Spring Cloud 中@RefreshScope 的底层机制：
 3. 建立完整链路思维：前置规范、重试死信管控、定时对账三层闭环；
 4. 清楚第三方 RPC/HTTP 调用是 MQ 可靠性链路里最大的薄弱点，必须配套接口幂等。
 
-<!-- ![图 6-7　答题要点结构图](/assets/img/interview/6-7mq-waybill-lost.png) -->
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/interview/6-7mq-waybill-lost.png" alt="中间件答题要点结构图"></div>
+<!-- <div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/interview/6-7mq-waybill-lost.png" alt="图 6-7　答题要点结构图"></div> -->
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/interview/6-7mq-waybill-lost.png" alt="中间件答题要点结构图"></div>
 
 ## 第 8 题　消息队列消息丢失与可靠性保障
 
@@ -643,8 +643,8 @@ MQ 做不到绝对 100% 不丢消息，只能通过多套机制把丢消息概�
 2. 事中止损：先定位是热点队列还是容量不足；遇到 Rebalance 立刻停止扩容；脏消息直接丢死信；存量消息用临时 Topic 分流；
 3. 事后兜底：消费幂等 + 定时对账，保证消息不丢、业务数据一致。
 
-<!-- ![图 6-8　答题要点结构图](/assets/img/interview/6-8mq-reliability-guarantee.png) -->
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/interview/6-8mq-reliability-guarantee.png" alt="中间件答题要点结构图"></div>
+<!-- <div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/interview/6-8mq-reliability-guarantee.png" alt="图 6-8　答题要点结构图"></div> -->
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/interview/6-8mq-reliability-guarantee.png" alt="中间件答题要点结构图"></div>
 
 ## 第 9 题　RabbitMQ 防止消息丢失，全链路可靠性设计
 
@@ -720,8 +720,8 @@ MQ 做不到绝对 100% 不丢消息，只能通过多套机制把丢消息概�
 
 <strong>核心思想：</strong>MQ 只是中间件，消息可靠性不能完全依赖 MQ，业务侧本地消息表 + 幂等是兜底关键。
 
-<!-- ![图 6-9　答题要点结构图](/assets/img/interview/6-9rabbitmq-loss-prevention.png) -->
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/interview/6-9rabbitmq-loss-prevention.png" alt="中间件答题要点结构图"></div>
+<!-- <div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/interview/6-9rabbitmq-loss-prevention.png" alt="图 6-9　答题要点结构图"></div> -->
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/interview/6-9rabbitmq-loss-prevention.png" alt="中间件答题要点结构图"></div>
 
 ## 第 10 题　MQ 可靠性：confirm、持久化、手动 ACK 只是基础，如何解决刷盘、主从同步、幂等原子性、重试风暴问题
 
@@ -884,8 +884,8 @@ status='PAID', balance=balance-? WHERE id=?;COMMIT;
 
 收尾总结RabbitMQ 无法彻底杜绝消息重试投递，不要试图让 MQ 做到只投递一次；真正可靠的方案，是把业务做成天然幂等。 这套三层防御，就是保障订单支付、资金链路不出现重复资损的标准生产方案
 
-<!-- ![图 6-10　答题要点结构图](/assets/img/interview/6-10mq-reliability-advanced.png) -->
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/interview/6-10mq-reliability-advanced.png" alt="中间件答题要点结构图"></div>
+<!-- <div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/interview/6-10mq-reliability-advanced.png" alt="图 6-10　答题要点结构图"></div> -->
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/interview/6-10mq-reliability-advanced.png" alt="中间件答题要点结构图"></div>
 
 ## 第 11 题　消息队列如何避免消息丢失和重复消费
 
@@ -973,8 +973,8 @@ status='PAID', balance=balance-? WHERE id=?;COMMIT;
 2. 理解 At-Least-Once 语义，知道重复消费是网络超时带来的固有特性，不是BUG；
 3. 理解三层防护：链路规范、重试管控、对账补偿；知道死信、指数退避、对账兜底整套闭环。
 
-<!-- ![图 6-11　答题要点结构图](/assets/img/interview/6-11mq-loss-and-duplicate.png) -->
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/interview/6-11mq-loss-and-duplicate.png" alt="中间件答题要点结构图"></div>
+<!-- <div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/interview/6-11mq-loss-and-duplicate.png" alt="图 6-11　答题要点结构图"></div> -->
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/interview/6-11mq-loss-and-duplicate.png" alt="中间件答题要点结构图"></div>
 
 ## 第 12 题　支付发积分场景，消息只发送一次，积分服务却执行两次
 
@@ -1035,8 +1035,8 @@ WHERE user_id = ?;COMMIT;逻辑：
 3. 搭建三层闭环：源头控重、数据库原子幂等、定时对账兜底；
 4. 明白幂等不是简单加一个 ID 字段，是整套一致性保障体系。
 
-<!-- ![图 6-12　答题要点结构图](/assets/img/interview/6-12mq-duplicate-consumption.png) -->
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/interview/6-12mq-duplicate-consumption.png" alt="中间件答题要点结构图"></div>
+<!-- <div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/interview/6-12mq-duplicate-consumption.png" alt="图 6-12　答题要点结构图"></div> -->
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/interview/6-12mq-duplicate-consumption.png" alt="中间件答题要点结构图"></div>
 
 ## 第 13 题　MQ 全链路如何保障消息不丢失、重复消费兜底，规避资损
 
@@ -1119,8 +1119,8 @@ WHERE user_id = ?;COMMIT;逻辑：
 3. 理解单机收发和分布式的鸿沟：分布式一定会有网络超时、重传，重复是固有特性；
 4. 同时具备故障止损能力，不只会做正常流程，还知道积压、资损场景如何止血兜底。
 
-<!-- ![图 6-13　答题要点结构图](/assets/img/interview/6-13mq-end-to-end-reliability.png) -->
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/interview/6-13mq-end-to-end-reliability.png" alt="中间件答题要点结构图"></div>
+<!-- <div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/interview/6-13mq-end-to-end-reliability.png" alt="图 6-13　答题要点结构图"></div> -->
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/interview/6-13mq-end-to-end-reliability.png" alt="中间件答题要点结构图"></div>
 
 ## 第 14 题　MQ 百万消息积压，消费卡住、下游延迟，第一时间如何止血、定位、根治
 
@@ -1223,8 +1223,8 @@ Broker 磁盘水位达到高阈值后会拒绝写入，阻断所有生产。
 3. 优先限流、分流、降级止血，而不是重启；
 4. 依靠死信、资源隔离、独立集群做长效防护，而不是靠人工救火。
 
-<!-- ![图 6-14　答题要点结构图](/assets/img/interview/6-14mq-backlog-triage.png) -->
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/interview/6-14mq-backlog-triage.png" alt="中间件答题要点结构图"></div>
+<!-- <div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/interview/6-14mq-backlog-triage.png" alt="图 6-14　答题要点结构图"></div> -->
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/interview/6-14mq-backlog-triage.png" alt="中间件答题要点结构图"></div>
 
 ## 第 15 题　MQ 持续积压、延迟走高，线程打满消费吞吐触顶、Broker 写盘阻塞等场景如何处置
 
@@ -1306,8 +1306,8 @@ Broker 磁盘水位达到高阈值后会拒绝写入，阻断所有生产。
 3. 懂得消息分级，区分核心和离线日志消息，不是所有积压都必须立刻清零；
 4. 理解限流是紧急故障第一止血手段，防止雪崩，而不是一味扩容。
 
-<!-- ![图 6-15　答题要点结构图](/assets/img/interview/6-15mq-backlog-sustained.png) -->
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/interview/6-15mq-backlog-sustained.png" alt="中间件答题要点结构图"></div>
+<!-- <div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/interview/6-15mq-backlog-sustained.png" alt="图 6-15　答题要点结构图"></div> -->
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/interview/6-15mq-backlog-sustained.png" alt="中间件答题要点结构图"></div>
 
 ## 第 16 题　高并发 MQ 场景，消息丢失、重复消费、服务雪崩整套治理方案
 
@@ -1408,6 +1408,6 @@ Broker 磁盘水位达到高阈值后会拒绝写入，阻断所有生产。
 4. 理解死信也是业务资产，同样需要可靠性保障；
 5. 具备链路隔离、熔断意识，懂得阻断 MQ 故障向下游传导，防止雪崩。
 
-<!-- ![图 6-16　答题要点结构图](/assets/img/interview/6-16mq-high-concurrency-governance.png) -->
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/interview/6-16mq-high-concurrency-governance.png" alt="中间件答题要点结构图"></div>
+<!-- <div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/interview/6-16mq-high-concurrency-governance.png" alt="图 6-16　答题要点结构图"></div> -->
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/interview/6-16mq-high-concurrency-governance.png" alt="中间件答题要点结构图"></div>
 

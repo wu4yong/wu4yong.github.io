@@ -48,13 +48,13 @@ tags:
 
 > **大模型 = 用海量数据和强算力训练出来的超大规模深度神经网络模型。**
 
-<!-- ![大模型的四个典型特征：参数规模大、训练数据多、训练算力强、具备较强通用能力](/assets/img/llm/1-1/1-1-1-1-1.jpg) -->
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/1-1/1-1-1-1-1.jpg" alt="大模型的四个典型特征：参数规模大、训练数据多、训练算力强、具备较强通用能力"></div>
+<!-- <div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/llm/1-1/1-1-1-1-1.jpg" alt="大模型的四个典型特征：参数规模大、训练数据多、训练算力强、具备较强通用能力"></div> -->
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/llm/1-1/1-1-1-1-1.jpg" alt="大模型的四个典型特征：参数规模大、训练数据多、训练算力强、具备较强通用能力"></div>
 
 举例：
 
-<!-- ![BERT、BART 与 GPT、DeepSeek、Qwen 等模型在大模型语境中的位置示意](/assets/img/llm/1-1/1-1-1-1-2.png) -->
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/1-1/1-1-1-1-2.png" alt="BERT、BART 与 GPT、DeepSeek、Qwen 等模型在大模型语境中的位置示意"></div>
+<!-- <div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/llm/1-1/1-1-1-1-2.png" alt="BERT、BART 与 GPT、DeepSeek、Qwen 等模型在大模型语境中的位置示意"></div> -->
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/llm/1-1/1-1-1-1-2.png" alt="BERT、BART 与 GPT、DeepSeek、Qwen 等模型在大模型语境中的位置示意"></div>
 
 这里还要先澄清一个很常见的混淆：
 
@@ -90,8 +90,8 @@ tags:
 >
 > 放到训练里看，**范式不是某一个具体算法，而是一整套训练思路。**
 
-<!-- ![监督学习与自监督学习在可用训练数据规模上的差异示意图](/assets/img/llm/1-1/1-1-1-2-1.jpg) -->
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/1-1/1-1-1-2-1.jpg" alt="监督学习与自监督学习在可用训练数据规模上的差异示意图"></div>
+<!-- <div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/llm/1-1/1-1-1-2-1.jpg" alt="监督学习与自监督学习在可用训练数据规模上的差异示意图"></div> -->
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/llm/1-1/1-1-1-2-1.jpg" alt="监督学习与自监督学习在可用训练数据规模上的差异示意图"></div>
 
 传统机器学习和早期深度学习，通常更依赖**人工标注数据**。例如：
 
@@ -116,8 +116,8 @@ tags:
 
 深度学习训练本质上是大规模矩阵运算，而矩阵运算天然适合并行计算。GPU、TPU、NPU 这类芯片的发展，让这种计算终于变得现实。
 
-<!-- ![大模型训练所依赖的算力、GPU 集群与并行计算示意图](/assets/img/llm/1-1/1-1-1-2-2.jpg) -->
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/1-1/1-1-1-2-2.jpg" alt="大模型训练所依赖的算力、GPU 集群与并行计算示意图"></div>
+<!-- <div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/llm/1-1/1-1-1-2-2.jpg" alt="大模型训练所依赖的算力、GPU 集群与并行计算示意图"></div> -->
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/llm/1-1/1-1-1-2-2.jpg" alt="大模型训练所依赖的算力、GPU 集群与并行计算示意图"></div>
 
 随着硬件性能提升，单卡算力不断增强，同时分布式训练技术也越来越成熟。今天训练超大模型时，常见的并行方式包括：
 
@@ -139,8 +139,8 @@ Transformer 架构是大模型时代最关键的技术转折之一。它的重�
 
 > 当模型参数、数据规模和训练算力持续增加时，Transformer 的 **Test Loss** 会持续下降，而且下降趋势相对平滑、稳定。
 
-<!-- ![Transformer 在参数、数据和算力持续扩展时 Test Loss 下降的可扩展性曲线](/assets/img/llm/1-1/1-1-1-2-3.jpg) -->
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/1-1/1-1-1-2-3.jpg" alt="Transformer 在参数、数据和算力持续扩展时 Test Loss 下降的可扩展性曲线"></div>
+<!-- <div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/llm/1-1/1-1-1-2-3.jpg" alt="Transformer 在参数、数据和算力持续扩展时 Test Loss 下降的可扩展性曲线"></div> -->
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/llm/1-1/1-1-1-2-3.jpg" alt="Transformer 在参数、数据和算力持续扩展时 Test Loss 下降的可扩展性曲线"></div>
 
 这说明 Transformer 是一种适合“做大”的架构：
 
@@ -187,14 +187,14 @@ Transformer|用注意力机制直接建模任意 token 之间的关系|更适合
 
 RNN 的工作方式很像“按队伍顺序传话”：第 10 个词想理解第 1 个词的信息，需要一层层传过来。句子短时还能工作，序列一长，早期信息就容易被冲淡。
 
-<!-- ![RNN 按时间步逐个处理文本序列的结构示意图](/assets/img/llm/1-1/1-1-1-2-4.png) -->
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/1-1/1-1-1-2-4.png" alt="RNN 按时间步逐个处理文本序列的结构示意图"></div>
+<!-- <div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/llm/1-1/1-1-1-2-4.png" alt="RNN 按时间步逐个处理文本序列的结构示意图"></div> -->
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/llm/1-1/1-1-1-2-4.png" alt="RNN 按时间步逐个处理文本序列的结构示意图"></div>
 
 Attention 的关键变化，是让模型在生成或理解某个位置时，可以直接关注输入里的关键位置，不必完全依赖一个被压缩后的固定向量。
 Transformer 更进一步，把注意力机制作为主体结构，去掉 RNN 的串行依赖。
 
-<!-- ![Transformer 编码器与解码器结构示意图](/assets/img/llm/1-1/1-1-1-2-5.png) -->
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/1-1/1-1-1-2-5.png" alt="Transformer 编码器与解码器结构示意图"></div>
+<!-- <div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/llm/1-1/1-1-1-2-5.png" alt="Transformer 编码器与解码器结构示意图"></div> -->
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/llm/1-1/1-1-1-2-5.png" alt="Transformer 编码器与解码器结构示意图"></div>
 
 所以，Transformer 的意义可以概括成三点：
 
@@ -213,8 +213,8 @@ Encoder-Decoder|翻译、摘要等输入输出边界清晰的任务|先读懂输
 Decoder-Only|对话、写作、代码生成、通用生成|给定上下文，不断预测下一个 token
 {% endautogrid %}
 
-<!-- ![Encoder-Only、Decoder-Only 与 Encoder-Decoder 三种 Transformer 路线对比图](/assets/img/llm/1-1/1-1-1-2-6.png) -->
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/1-1/1-1-1-2-6.png" alt="Encoder-Only、Decoder-Only 与 Encoder-Decoder 三种 Transformer 路线对比图"></div>
+<!-- <div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/llm/1-1/1-1-1-2-6.png" alt="Encoder-Only、Decoder-Only 与 Encoder-Decoder 三种 Transformer 路线对比图"></div> -->
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/llm/1-1/1-1-1-2-6.png" alt="Encoder-Only、Decoder-Only 与 Encoder-Decoder 三种 Transformer 路线对比图"></div>
 
 现代通用 LLM 基本采用 Decoder-Only，核心原因是它天然适合“自回归生成”：
 
@@ -223,8 +223,8 @@ Decoder-Only|对话、写作、代码生成、通用生成|给定上下文，不
 3. 采样或选择出下一个 token。
 4. 把新 token 追加到上下文后面，继续预测下一个。
 
-<!-- ![Decoder-Only 模型从输入 token 到逐步生成新 token 的流程示意图](/assets/img/llm/1-1/1-1-1-2-7.png) -->
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/1-1/1-1-1-2-7.png" alt="Decoder-Only 模型从输入 token 到逐步生成新 token 的流程示意图"></div>
+<!-- <div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/llm/1-1/1-1-1-2-7.png" alt="Decoder-Only 模型从输入 token 到逐步生成新 token 的流程示意图"></div> -->
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/llm/1-1/1-1-1-2-7.png" alt="Decoder-Only 模型从输入 token 到逐步生成新 token 的流程示意图"></div>
 
 这套机制很适合对话、写作、代码生成和智能体决策，因为这些任务本质上都可以转成：
 
@@ -254,8 +254,8 @@ Decoder-Only|对话、写作、代码生成、通用生成|给定上下文，不
 
 先要纠正一个常见误区：模型参数不是“层数、神经元数量、超参数”的统称。更准确地说，**参数**主要指模型里通过训练学出来的**权重（weights）和偏置（biases）**。
 
-<!-- ![前馈神经网络中的输入层、隐藏层、输出层以及权重和偏置的关系示意图](/assets/img/llm/1-1/1-1-1-3-1.png) -->
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/1-1/1-1-1-3-1.png" alt="前馈神经网络中的输入层、隐藏层、输出层以及权重和偏置的关系示意图"></div>
+<!-- <div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/llm/1-1/1-1-1-3-1.png" alt="前馈神经网络中的输入层、隐藏层、输出层以及权重和偏置的关系示意图"></div> -->
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/llm/1-1/1-1-1-3-1.png" alt="前馈神经网络中的输入层、隐藏层、输出层以及权重和偏置的关系示意图"></div>
 
 上图展示的是一个简化的前馈神经网络。可以这样读：
 
@@ -333,8 +333,8 @@ token 是模型处理语言时的基本切分单位。对中文来说，一个�
 - **多模态理解模型**
 - **多模态生成模型**
 
-<!-- ![按照模态对大模型进行分类的总览图](/assets/img/llm/1-1/1-1-1-4-1.jpg) -->
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/1-1/1-1-1-4-1.jpg" alt="按照模态对大模型进行分类的总览图"></div>
+<!-- <div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/llm/1-1/1-1-1-4-1.jpg" alt="按照模态对大模型进行分类的总览图"></div> -->
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/llm/1-1/1-1-1-4-1.jpg" alt="按照模态对大模型进行分类的总览图"></div>
 
 如果没有特别说明，平时大家口中的“大模型”，多数时候默认指的是**语言大模型**。
 
@@ -342,15 +342,15 @@ token 是模型处理语言时的基本切分单位。对中文来说，一个�
 
 模态指的是机器感知和处理世界的不同信息形式，例如：文本、图像、音频 / 语音、视频等。
 
-<!-- ![文本、图像、音频、视频等常见模态示意图](/assets/img/llm/1-1/1-1-1-4-2.jpg) -->
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/1-1/1-1-1-4-2.jpg" alt="文本、图像、音频、视频等常见模态示意图"></div>
+<!-- <div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/llm/1-1/1-1-1-4-2.jpg" alt="文本、图像、音频、视频等常见模态示意图"></div> -->
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/llm/1-1/1-1-1-4-2.jpg" alt="文本、图像、音频、视频等常见模态示意图"></div>
 
 ##### 类型 1：语言大模型（Large Language Model，LLM）
 
 又称语言 / 文本大模型，专门处理文本序列。
 
-<!-- ![语言大模型输入文本并输出文本结果的示意图](/assets/img/llm/1-1/1-1-1-4-3.jpg) -->
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/1-1/1-1-1-4-3.jpg" alt="语言大模型输入文本并输出文本结果的示意图"></div>
+<!-- <div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/llm/1-1/1-1-1-4-3.jpg" alt="语言大模型输入文本并输出文本结果的示意图"></div> -->
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/llm/1-1/1-1-1-4-3.jpg" alt="语言大模型输入文本并输出文本结果的示意图"></div>
 
 **特点：**
 
@@ -362,8 +362,8 @@ token 是模型处理语言时的基本切分单位。对中文来说，一个�
 
 能够同时处理文本和图像、音频、视频等多种模态，并通常输出文本结果。
 
-<!-- ![多模态理解模型同时处理文本和图像等输入并输出文本结果的示意图](/assets/img/llm/1-1/1-1-1-4-4.jpg) -->
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/1-1/1-1-1-4-4.jpg" alt="多模态理解模型同时处理文本和图像等输入并输出文本结果的示意图"></div>
+<!-- <div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/llm/1-1/1-1-1-4-4.jpg" alt="多模态理解模型同时处理文本和图像等输入并输出文本结果的示意图"></div> -->
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/llm/1-1/1-1-1-4-4.jpg" alt="多模态理解模型同时处理文本和图像等输入并输出文本结果的示意图"></div>
 
 **特点：**
 
@@ -375,8 +375,8 @@ token 是模型处理语言时的基本切分单位。对中文来说，一个�
 
 不仅能理解多模态输入，还能生成图像、视频、音频等内容。
 
-<!-- ![多模态生成模型根据文本或图像生成图像、视频或音频内容的示意图](/assets/img/llm/1-1/1-1-1-4-5.jpg) -->
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/1-1/1-1-1-4-5.jpg" alt="多模态生成模型根据文本或图像生成图像、视频或音频内容的示意图"></div>
+<!-- <div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/llm/1-1/1-1-1-4-5.jpg" alt="多模态生成模型根据文本或图像生成图像、视频或音频内容的示意图"></div> -->
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/llm/1-1/1-1-1-4-5.jpg" alt="多模态生成模型根据文本或图像生成图像、视频或音频内容的示意图"></div>
 
 **特点：**
 
@@ -392,15 +392,15 @@ token 是模型处理语言时的基本切分单位。对中文来说，一个�
 
 按功能和输出形态来分，可以分成四类：`大语言模型 / 生成模型（LLM）`、`嵌入模型（Embedding Model）`、`重排序模型（Reranker）`、`分类模型（Classifier）`。
 
-<!-- ![按照功能划分大语言模型、嵌入模型、重排序模型和分类模型的总览图](/assets/img/llm/1-1/1-1-1-4-6.jpg) -->
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/1-1/1-1-1-4-6.jpg" alt="按照功能划分大语言模型、嵌入模型、重排序模型和分类模型的总览图"></div>
+<!-- <div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/llm/1-1/1-1-1-4-6.jpg" alt="按照功能划分大语言模型、嵌入模型、重排序模型和分类模型的总览图"></div> -->
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/llm/1-1/1-1-1-4-6.jpg" alt="按照功能划分大语言模型、嵌入模型、重排序模型和分类模型的总览图"></div>
 
 ##### 类型 1：大语言模型 / 生成模型（LLM）
 
 这里说的“生成模型”，指的是负责根据上下文生成文本结果的 LLM。对话模型可以理解为 LLM 在聊天场景中的一种常见使用形态，但不能把所有 LLM 都简单等同为对话模型。
 
-<!-- ![大语言模型基于上下文生成文本结果的示意图](/assets/img/llm/1-1/1-1-1-4-7.jpg) -->
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/1-1/1-1-1-4-7.jpg" alt="大语言模型基于上下文生成文本结果的示意图"></div>
+<!-- <div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/llm/1-1/1-1-1-4-7.jpg" alt="大语言模型基于上下文生成文本结果的示意图"></div> -->
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/llm/1-1/1-1-1-4-7.jpg" alt="大语言模型基于上下文生成文本结果的示意图"></div>
 
 **特点：**
 
@@ -412,8 +412,8 @@ token 是模型处理语言时的基本切分单位。对中文来说，一个�
 
 嵌入模型不负责生成文本，而是把文本或图像映射为向量表示。
 
-<!-- ![嵌入模型把文本映射为向量表示的示意图](/assets/img/llm/1-1/1-1-1-4-8.jpg) -->
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/1-1/1-1-1-4-8.jpg" alt="嵌入模型把文本映射为向量表示的示意图"></div>
+<!-- <div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/llm/1-1/1-1-1-4-8.jpg" alt="嵌入模型把文本映射为向量表示的示意图"></div> -->
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/llm/1-1/1-1-1-4-8.jpg" alt="嵌入模型把文本映射为向量表示的示意图"></div>
 
 **特点：**
 
@@ -424,8 +424,8 @@ token 是模型处理语言时的基本切分单位。对中文来说，一个�
 
 重排序模型会对初步检索到的候选结果重新打分和排序。
 
-<!-- ![重排序模型根据 query 和候选文档相关性重新打分排序的示意图](/assets/img/llm/1-1/1-1-1-4-9.jpg) -->
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/1-1/1-1-1-4-9.jpg" alt="重排序模型根据 query 和候选文档相关性重新打分排序的示意图"></div>
+<!-- <div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/llm/1-1/1-1-1-4-9.jpg" alt="重排序模型根据 query 和候选文档相关性重新打分排序的示意图"></div> -->
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/llm/1-1/1-1-1-4-9.jpg" alt="重排序模型根据 query 和候选文档相关性重新打分排序的示意图"></div>
 
 **特点：**
 
@@ -437,8 +437,8 @@ token 是模型处理语言时的基本切分单位。对中文来说，一个�
 
 分类模型负责把输入归到预定义类别里。
 
-<!-- ![分类模型把输入映射到标签类别的示意图](/assets/img/llm/1-1/1-1-1-4-10.jpg) -->
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/1-1/1-1-1-4-10.jpg" alt="分类模型把输入映射到标签类别的示意图"></div>
+<!-- <div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/llm/1-1/1-1-1-4-10.jpg" alt="分类模型把输入映射到标签类别的示意图"></div> -->
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/llm/1-1/1-1-1-4-10.jpg" alt="分类模型把输入映射到标签类别的示意图"></div>
 
 **特点：**
 
@@ -467,8 +467,8 @@ token 是模型处理语言时的基本切分单位。对中文来说，一个�
 
 这正是很多 RAG 系统的典型结构。
 
-<!-- ![RAG 系统中 Embedding、检索、Reranker 与 LLM 协同工作的架构图](/assets/img/llm/1-1/1-1-1-4-11.png) -->
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/1-1/1-1-1-4-11.png" alt="RAG 系统中 Embedding、检索、Reranker 与 LLM 协同工作的架构图"></div>
+<!-- <div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/llm/1-1/1-1-1-4-11.png" alt="RAG 系统中 Embedding、检索、Reranker 与 LLM 协同工作的架构图"></div> -->
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/llm/1-1/1-1-1-4-11.png" alt="RAG 系统中 Embedding、检索、Reranker 与 LLM 协同工作的架构图"></div>
 
 **具象理解：对话 / 嵌入 / 重排序 / 分类如何配合（以知识库 + 硅基流动为例）**
 
@@ -523,8 +523,8 @@ token 是模型处理语言时的基本切分单位。对中文来说，一个�
 
 **四个要素的调用关系：**
 
-<!-- ![模型权重、推理代码、训练代码和训练数据集四要素之间关系的示意图](/assets/img/llm/1-1/1-1-1-5-1.jpg) -->
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/1-1/1-1-1-5-1.jpg" alt="模型权重、推理代码、训练代码和训练数据集四要素之间关系的示意图"></div>
+<!-- <div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/llm/1-1/1-1-1-5-1.jpg" alt="模型权重、推理代码、训练代码和训练数据集四要素之间关系的示意图"></div> -->
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/llm/1-1/1-1-1-5-1.jpg" alt="模型权重、推理代码、训练代码和训练数据集四要素之间关系的示意图"></div>
 
 #### 1.5.2 开源 vs 闭源大模型
 
@@ -624,8 +624,8 @@ RLHF / RLAIF|学会更符合人类偏好和安全边界|“回答好不好、稳
 - 容易"走极端"：在回答敏感问题时，可能给出极端或不安全的建议
 - 缺乏价值观约束：没有经过人类价值观的校准，输出的内容可能违背伦理道德
 
-<!-- ![只有预训练、没有对齐优化的模型容易输出不安全建议的示意图](/assets/img/llm/1-1/1-1-2-1-1.jpg) -->
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/1-1/1-1-2-1-1.jpg" alt="只有预训练、没有对齐优化的模型容易输出不安全建议的示意图"></div>
+<!-- <div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/llm/1-1/1-1-2-1-1.jpg" alt="只有预训练、没有对齐优化的模型容易输出不安全建议的示意图"></div> -->
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/llm/1-1/1-1-2-1-1.jpg" alt="只有预训练、没有对齐优化的模型容易输出不安全建议的示意图"></div>
 
 ### 2.2 环节 1：预训练
 
@@ -761,8 +761,8 @@ Model：xxx（可能包含直接可用的运行脚本）。
 
 这个攻击之所以经典，就在于它没有直接问“给我序列号”，而是通过角色包装绕过安全边界。
 
-<!-- ![经典“奶奶漏洞”提示注入案例示意图](/assets/img/llm/1-1/1-1-2-4-1.png) -->
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/1-1/1-1-2-4-1.png" alt="经典“奶奶漏洞”提示注入案例示意图"></div>
+<!-- <div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/llm/1-1/1-1-2-4-1.png" alt="经典“奶奶漏洞”提示注入案例示意图"></div> -->
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/llm/1-1/1-1-2-4-1.png" alt="经典“奶奶漏洞”提示注入案例示意图"></div>
 
 这类案例也正说明：难点不在于拒绝直球问题，而在于模型能否在各种包装语境下依然保持边界。
 
@@ -832,8 +832,8 @@ Model：即使睡眠时间足够，如果睡眠结构被打断（比如深睡眠
 
 **推理：**参数固定，只做前向计算，基于输入逐步生成输出；目标是：**使用能力**。
 
-<!-- ![训练与推理在参数更新、计算流程和目标上的区别示意图](/assets/img/llm/1-1/1-1-3-1-1.jpg) -->
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/1-1/1-1-3-1-1.jpg" alt="训练与推理在参数更新、计算流程和目标上的区别示意图"></div>
+<!-- <div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/llm/1-1/1-1-3-1-1.jpg" alt="训练与推理在参数更新、计算流程和目标上的区别示意图"></div> -->
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/llm/1-1/1-1-3-1-1.jpg" alt="训练与推理在参数更新、计算流程和目标上的区别示意图"></div>
 
 记住这组区别：
 
@@ -862,8 +862,8 @@ Model：即使睡眠时间足够，如果睡眠结构被打断（比如深睡眠
 
 **1）CPU、GPU、TPU、NPU**
 
-<!-- ![CPU、GPU、TPU、NPU 四类计算硬件的对比图](/assets/img/llm/1-1/1-1-3-2-1.jpg) -->
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/1-1/1-1-3-2-1.jpg" alt="CPU、GPU、TPU、NPU 四类计算硬件的对比图"></div>
+<!-- <div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/llm/1-1/1-1-3-2-1.jpg" alt="CPU、GPU、TPU、NPU 四类计算硬件的对比图"></div> -->
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/llm/1-1/1-1-3-2-1.jpg" alt="CPU、GPU、TPU、NPU 四类计算硬件的对比图"></div>
 
 **（1）CPU**
 
@@ -871,11 +871,11 @@ CPU（Central Processing Unit，中央处理器）专为通用计算设计，`�
 
 CPU 的运算能力来源于`少量性能强大`的运算单元：`ALU（算数逻辑单元）`。
 
-<!-- ![CPU 作为通用串行计算核心的特点示意图](/assets/img/llm/1-1/1-1-3-2-2.jpg) -->
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/1-1/1-1-3-2-2.jpg" alt="CPU 作为通用串行计算核心的特点示意图"></div>
+<!-- <div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/llm/1-1/1-1-3-2-2.jpg" alt="CPU 作为通用串行计算核心的特点示意图"></div> -->
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/llm/1-1/1-1-3-2-2.jpg" alt="CPU 作为通用串行计算核心的特点示意图"></div>
 
-<!-- ![CPU 架构示意图](/assets/img/llm/1-1/1-1-3-2-3.png) -->
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/1-1/1-1-3-2-3.png" alt="CPU 架构示意图"></div>
+<!-- <div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/llm/1-1/1-1-3-2-3.png" alt="CPU 架构示意图"></div> -->
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/llm/1-1/1-1-3-2-3.png" alt="CPU 架构示意图"></div>
 
 **（2）传统 GPU**
 
@@ -883,11 +883,11 @@ GPU（Graphics Processing Unit，图形处理器）是专用于`数字图像处�
 
 GPU 拥有大量`功能单一`的计算单元（如 FP64（专门处理双精度浮点数运算）、FP32、FP16 等），适合大量简单任务并行处理。
 
-<!-- ![传统 GPU 依靠大量简单并行计算单元加速图形任务的示意图](/assets/img/llm/1-1/1-1-3-2-4.jpg) -->
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/1-1/1-1-3-2-4.jpg" alt="传统 GPU 依靠大量简单并行计算单元加速图形任务的示意图"></div>
+<!-- <div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/llm/1-1/1-1-3-2-4.jpg" alt="传统 GPU 依靠大量简单并行计算单元加速图形任务的示意图"></div> -->
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/llm/1-1/1-1-3-2-4.jpg" alt="传统 GPU 依靠大量简单并行计算单元加速图形任务的示意图"></div>
 
-<!-- ![GPU 架构示意图](/assets/img/llm/1-1/1-1-3-2-5.png) -->
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/1-1/1-1-3-2-5.png" alt="GPU 架构示意图"></div>
+<!-- <div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/llm/1-1/1-1-3-2-5.png" alt="GPU 架构示意图"></div> -->
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/llm/1-1/1-1-3-2-5.png" alt="GPU 架构示意图"></div>
 
 **（3）现代 GPU**
 
@@ -895,8 +895,8 @@ GPU 拥有大量`功能单一`的计算单元（如 FP64（专门处理双精度
 
 目前顶尖的大模型多数都是在英伟达的 GPU 上训练的。
 
-<!-- ![现代 GPU 增加 Tensor Core 以适配机器学习训练与推理的示意图](/assets/img/llm/1-1/1-1-3-2-6.jpg) -->
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/1-1/1-1-3-2-6.jpg" alt="现代 GPU 增加 Tensor Core 以适配机器学习训练与推理的示意图"></div>
+<!-- <div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/llm/1-1/1-1-3-2-6.jpg" alt="现代 GPU 增加 Tensor Core 以适配机器学习训练与推理的示意图"></div> -->
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/llm/1-1/1-1-3-2-6.jpg" alt="现代 GPU 增加 Tensor Core 以适配机器学习训练与推理的示意图"></div>
 
 **（4）NPU**
 
@@ -904,8 +904,8 @@ NPU（Neural Processing Unit，神经网络处理器），亦称 AI 加速器或
 
 NPU 砍掉了 FP64 等单一运算单元，通常只保留`矩阵运算单元`，并引入`向量处理单元`和`标量处理单元`。
 
-<!-- ![NPU 专门面向神经网络矩阵计算的芯片示意图](/assets/img/llm/1-1/1-1-3-2-7.jpg) -->
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/1-1/1-1-3-2-7.jpg" alt="NPU 专门面向神经网络矩阵计算的芯片示意图"></div>
+<!-- <div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/llm/1-1/1-1-3-2-7.jpg" alt="NPU 专门面向神经网络矩阵计算的芯片示意图"></div> -->
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/llm/1-1/1-1-3-2-7.jpg" alt="NPU 专门面向神经网络矩阵计算的芯片示意图"></div>
 
 **（5）TPU**
 
@@ -915,13 +915,13 @@ TPU（Tensor Processing Unit，张量处理器）是`谷歌`为`神经网络机�
 
 > 说明：本质上 TPU 也属于 NPU 的一种。
 
-<!-- ![Google TPU 张量处理器示意图](/assets/img/llm/1-1/1-1-3-2-8.png) -->
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/1-1/1-1-3-2-8.png" alt="Google TPU 张量处理器示意图"></div>
+<!-- <div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/llm/1-1/1-1-3-2-8.png" alt="Google TPU 张量处理器示意图"></div> -->
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/llm/1-1/1-1-3-2-8.png" alt="Google TPU 张量处理器示意图"></div>
 
 **2）内存和显存**
 
-<!-- ![内存 RAM 与显存 VRAM 分工示意图](/assets/img/llm/1-1/1-1-3-2-9.jpg) -->
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/1-1/1-1-3-2-9.jpg" alt="内存 RAM 与显存 VRAM 分工示意图"></div>
+<!-- <div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/llm/1-1/1-1-3-2-9.jpg" alt="内存 RAM 与显存 VRAM 分工示意图"></div> -->
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/llm/1-1/1-1-3-2-9.jpg" alt="内存 RAM 与显存 VRAM 分工示意图"></div>
 
 - **内存（RAM）**：CPU 使用的工作空间
 - **显存（VRAM）**：GPU 使用的工作空间
@@ -936,8 +936,8 @@ GPU 算力市场，`英伟达（NVIDIA）`一家独大。
 
 **4）英伟达显卡架构迭代和主要产品型号**
 
-<!-- ![英伟达 GPU 架构代际与代表型号演进图](/assets/img/llm/1-1/1-1-3-2-10.jpg) -->
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/1-1/1-1-3-2-10.jpg" alt="英伟达 GPU 架构代际与代表型号演进图"></div>
+<!-- <div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/llm/1-1/1-1-3-2-10.jpg" alt="英伟达 GPU 架构代际与代表型号演进图"></div> -->
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/llm/1-1/1-1-3-2-10.jpg" alt="英伟达 GPU 架构代际与代表型号演进图"></div>
 
 常见于训练、微调和高性能推理场景的 GPU 包括。下面按**首次公开发布时间从旧到新**排序：
 
@@ -960,8 +960,8 @@ B200|Blackwell|2024 年 3 月|新一代 Blackwell 平台核心型号，面向更
 
 **1）训练阶段的硬件瓶颈**
 
-<!-- ![训练阶段常见瓶颈：显存、通信与算力的示意图](/assets/img/llm/1-1/1-1-3-2-11.jpg) -->
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/1-1/1-1-3-2-11.jpg" alt="训练阶段常见瓶颈：显存、通信与算力的示意图"></div>
+<!-- <div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/llm/1-1/1-1-3-2-11.jpg" alt="训练阶段常见瓶颈：显存、通信与算力的示意图"></div> -->
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/llm/1-1/1-1-3-2-11.jpg" alt="训练阶段常见瓶颈：显存、通信与算力的示意图"></div>
 
 **情况 1：显存容量**
 
@@ -983,8 +983,8 @@ B200|Blackwell|2024 年 3 月|新一代 Blackwell 平台核心型号，面向更
 
 **2）推理阶段的硬件瓶颈**
 
-<!-- ![推理阶段常见瓶颈：显存、带宽、通信与算力的示意图](/assets/img/llm/1-1/1-1-3-2-12.jpg) -->
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/1-1/1-1-3-2-12.jpg" alt="推理阶段常见瓶颈：显存、带宽、通信与算力的示意图"></div>
+<!-- <div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/llm/1-1/1-1-3-2-12.jpg" alt="推理阶段常见瓶颈：显存、带宽、通信与算力的示意图"></div> -->
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/llm/1-1/1-1-3-2-12.jpg" alt="推理阶段常见瓶颈：显存、带宽、通信与算力的示意图"></div>
 
 推理虽然不需要反向传播，但它也并不“便宜”。
 
@@ -1072,15 +1072,15 @@ DeepSeek API 开放平台：https://platform.deepseek.com/usage
 
 （1）API 密钥和接口地址在官网获取
 
-<!-- ![DeepSeek 开放平台中 API Key 与接口地址配置界面](/assets/img/llm/1-1/1-1-4-2-1.png) -->
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/1-1/1-1-4-2-1.png" alt="DeepSeek 开放平台中 API Key 与接口地址配置界面"></div>
+<!-- <div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/llm/1-1/1-1-4-2-1.png" alt="DeepSeek 开放平台中 API Key 与接口地址配置界面"></div> -->
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/llm/1-1/1-1-4-2-1.png" alt="DeepSeek 开放平台中 API Key 与接口地址配置界面"></div>
 
 把示例里的 `${DEEPSEEK_API_KEY}` 换成自己的密钥，就可以在命令行里直接调用。
 
 日志如下：
 
-<!-- ![使用 curl 调用 DeepSeek API 的命令行日志示意图](/assets/img/llm/1-1/1-1-4-2-2.jpg) -->
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/1-1/1-1-4-2-2.jpg" alt="使用 curl 调用 DeepSeek API 的命令行日志示意图"></div>
+<!-- <div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/llm/1-1/1-1-4-2-2.jpg" alt="使用 curl 调用 DeepSeek API 的命令行日志示意图"></div> -->
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/llm/1-1/1-1-4-2-2.jpg" alt="使用 curl 调用 DeepSeek API 的命令行日志示意图"></div>
 
 除了直接使用 curl 命令，还可以用 Python 代码、接口调试工具（如 Postman）等调用大模型接口。总之，任何调用接口的方式都可以用于调用大模型接口。
 
@@ -1171,8 +1171,8 @@ Cherry Studio 下载链接：https://www.cherry-ai.com/download
 
 五个模块的关系如下：
 
-<!-- ![提示词工程、RAG、微调、续训与智能体五大工程模块关系图](/assets/img/llm/1-1/1-1-4-3-1.jpg) -->
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/1-1/1-1-4-3-1.jpg" alt="提示词工程、RAG、微调、续训与智能体五大工程模块关系图"></div>
+<!-- <div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/llm/1-1/1-1-4-3-1.jpg" alt="提示词工程、RAG、微调、续训与智能体五大工程模块关系图"></div> -->
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/llm/1-1/1-1-4-3-1.jpg" alt="提示词工程、RAG、微调、续训与智能体五大工程模块关系图"></div>
 
 为了帮助你和整个仓库对应起来，先记住下面这张学习映射表：
 

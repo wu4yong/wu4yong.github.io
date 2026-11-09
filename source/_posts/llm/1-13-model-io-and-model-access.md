@@ -43,8 +43,8 @@ tags:
 - **Predict（模型调用）**：通过 LangChain 的统一接口调用不同模型提供商，例如 OpenAI、DeepSeek、阿里百炼、Ollama 等。
 - **Parse（输出解析）**：把模型返回的自然语言结果转成更稳定、程序更好处理的形式，例如字符串、JSON、结构化对象等。
 
-<!-- ![Model I/O 三步流程：Format（模板与变量）→ Predict（LLM / Chat Model）→ Parse（输出解析为 JSON 等结构化数据）](/assets/img/llm/11/11-1-1-1.png) -->
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/11/11-1-1-1.png" alt="Model I/O 三步流程：Format（模板与变量）→ Predict（LLM / Chat Model）→ Parse（输出解析为 JSON 等结构化数据）"></div>
+<!-- <div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/llm/11/11-1-1-1.png" alt="Model I/O 三步流程：Format（模板与变量）→ Predict（LLM / Chat Model）→ Parse（输出解析为 JSON 等结构化数据）"></div> -->
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/llm/11/11-1-1-1.png" alt="Model I/O 三步流程：Format（模板与变量）→ Predict（LLM / Chat Model）→ Parse（输出解析为 JSON 等结构化数据）"></div>
 
 可以把这张图看作后续几章的总地图：
 
@@ -105,8 +105,8 @@ tags:
 
 只有把这三层分清楚，后面你才不会把“换模型”“换平台”“换 LangChain 写法”混成一件事。
 
-<!-- ![模型名、模型平台、LangChain 模型对象与 AIMessage 返回对象的分层关系](/assets/img/llm/11/11-2-1-1.svg) -->
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/11/11-2-1-1.svg" alt="模型名、模型平台、LangChain 模型对象与 AIMessage 返回对象的分层关系"></div>
+<!-- <div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/llm/11/11-2-1-1.svg" alt="模型名、模型平台、LangChain 模型对象与 AIMessage 返回对象的分层关系"></div> -->
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/llm/11/11-2-1-1.svg" alt="模型名、模型平台、LangChain 模型对象与 AIMessage 返回对象的分层关系"></div>
 
 ### 2.2 LangChain 常见模型分类
 
@@ -192,8 +192,8 @@ Embedding 不是“会说话”的模型，但它依然属于 Model I/O 体系�
 
 下面这张图很适合入门建立直觉：
 
-<!-- ![模型常用参数示意：Temperature 控制随机性/发散度，Max Tokens 控制单次生成长度与费用上限](/assets/img/llm/11/11-2-5-1.jpeg) -->
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/11/11-2-5-1.jpeg" alt="模型常用参数示意：Temperature 控制随机性/发散度，Max Tokens 控制单次生成长度与费用上限"></div>
+<!-- <div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/llm/11/11-2-5-1.jpeg" alt="模型常用参数示意：Temperature 控制随机性/发散度，Max Tokens 控制单次生成长度与费用上限"></div> -->
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/llm/11/11-2-5-1.jpeg" alt="模型常用参数示意：Temperature 控制随机性/发散度，Max Tokens 控制单次生成长度与费用上限"></div>
 
 - **`temperature`** 管“风格和发散度”
 - **`max_tokens`** 管“长度和成本”
@@ -633,8 +633,8 @@ print(model.invoke("你是谁？").content)
 `configurable`|运行时切换配置|在同一段代码里切换模型或参数
 {% endautogrid %}
 
-<!-- ![LangChain 调用时业务输入与 config 的分工：业务输入给模型理解，config 给运行时管理、观测和切换使用](/assets/img/llm/11/11-3-8-1.svg) -->
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/11/11-3-8-1.svg" alt="LangChain 调用时业务输入与 config 的分工：业务输入给模型理解，config 给运行时管理、观测和切换使用"></div>
+<!-- <div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/llm/11/11-3-8-1.svg" alt="LangChain 调用时业务输入与 config 的分工：业务输入给模型理解，config 给运行时管理、观测和切换使用"></div> -->
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/llm/11/11-3-8-1.svg" alt="LangChain 调用时业务输入与 config 的分工：业务输入给模型理解，config 给运行时管理、观测和切换使用"></div>
 
 一个最小例子：
 

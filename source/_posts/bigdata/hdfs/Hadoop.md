@@ -79,7 +79,7 @@ HDFS 数据分为两类：**文件元数据 MetaData**、**文件实际数据**
 ### 1. HDFS 写流程（Client 上传文件）
 <!-- 图片单独占行，与列表空行分隔 -->
 <div align="center">
-  <img src="/assets/img/hdfs/hdfs_write.png" style="width:90%; max-width:1000px; object-fit:contain;" alt="HDFS写入流程示意图">
+  <img src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/hdfs/hdfs_write.png" style="width:90%; max-width:1000px; object-fit:contain;" alt="HDFS写入流程示意图">
 </div>
 
 <!-- 列表与图片之间空一行，保证渲染分隔 -->

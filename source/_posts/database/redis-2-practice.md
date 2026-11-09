@@ -54,7 +54,7 @@ tb_voucher_order：优惠券的订单表
 
 打开浏览器，开启浏览器的手机模式，然后访问http://localhost:8080，就可以看到前端页面了：
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/redis/2/image13.png" alt="image13.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/redis/2/image13.png" alt="image13.png"></div>
 
 ### 1.2 基于Session实现登录
 
@@ -66,7 +66,7 @@ tb_voucher_order：优惠券的订单表
 
 **校验登录状态**：用户请求时，后台从Cookie获取sessionID，然后从session中获取用户信息，只有用户存在才保存用户信息到ThreadLocal并放行，否则不放行。
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/redis/2/image14.png" alt="image14.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/redis/2/image14.png" alt="image14.png"></div>
 
 ### 1.2.1 发送验证码
 
@@ -243,7 +243,7 @@ return Result.ok(user);
 
 Session共享即当任意一台服务器的session修改时，都会同步给其他的Tomcat服务器的session，此时就能解决集群分布下session失效问题。但是，这样会带来额外的开销，给服务器带来压力。
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/redis/2/image15.png" alt="image15.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/redis/2/image15.png" alt="image15.png"></div>
 
 ### 1.4 Redis代替Session共享
 
@@ -255,11 +255,11 @@ Session共享即当任意一台服务器的session修改时，都会同步给其
 
 **短信验证码登录、注册**：后端拿到手机号和验证码后，从redis中获取正确的验证码，然后和用户输入的验证码校对，不一致无法通过，一致就根据手机号从MySQL获取用户，用户不存在创建并保存一个新用户，然后同一致保存用户到Redis中。
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/redis/2/image16.png" alt="image16.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/redis/2/image16.png" alt="image16.png"></div>
 
 **校验登录状态**：和原来的业务逻辑基本一致，只是获取用户不再是从session获取，而是从Redis获取。
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/redis/2/image17.png" alt="image17.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/redis/2/image17.png" alt="image17.png"></div>
 
 ### 1.4.2 Key-Value的设计
 
@@ -433,7 +433,7 @@ registry.addInterceptor(new LoginInterceptor(stringRedisTemplate))
 
 可以在LoginInterceptor拦截器之前再定义一个拦截器，拦截所有请求，这个拦截器实现基本逻辑（用户存在性判断以外的其他逻辑），并更新token有效期：
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/redis/2/image18.png" alt="image18.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/redis/2/image18.png" alt="image18.png"></div>
 
 在utils包下新建一个拦截器RefreshTokenInterceptor：
 
@@ -534,11 +534,11 @@ return shopService.queryById(id);
 }
 ```
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/redis/2/image19.png" alt="image19.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/redis/2/image19.png" alt="image19.png"></div>
 
 当前端点击103茶餐厅选项后（其他也一样），后端就请求到queryShopById方法从数据库获取店铺信息，可以缓存对应的店铺信息到Redis中，后续请求时只要从Redis中取数据即可，从而降低数据库压力并提高效率，相应的缓存模型和业务逻辑为：
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/redis/2/image20.png" alt="image20.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/redis/2/image20.png" alt="image20.png"></div>
 
 ### 2.2.2 代码实现
 
@@ -679,7 +679,7 @@ return Result.ok(typeList);
 
 现有三种方案解决数据库不一致问题：
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/redis/2/image21.png" alt="image21.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/redis/2/image21.png" alt="image21.png"></div>
 
 如果使用Cache Aside Pattern方案，需要考虑三个问题：
 
@@ -707,7 +707,7 @@ return Result.ok(typeList);
 
 先操作数据库再操作缓存：假如此时缓存失效（比如超时），数据库中数据为10，线程1查询缓存，未命中，查询数据库，将要写入缓存时或写入缓存的过程中，此时线程2更新数据库内容为20，然后删除缓存，之后线程1将数据10写入缓存，此时缓存数据和数据库数据发生不一致。
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/redis/2/image22.png" alt="image22.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/redis/2/image22.png" alt="image22.png"></div>
 
 由于写入缓存的速度很快，这段时间基本不可能有其他线程完成业务逻辑，所以先操作数据库再操作缓存的不一致现象很难发生，而先删除缓存再操作数据库的不一致现象就很常见，所以先操作数据库再操作缓存胜出。
 
@@ -806,7 +806,7 @@ return Result.ok();
 
 布隆过滤：采用哈希思想，利用一个庞大的二进制数组，走哈希思想判断当前请求的数据是否存在（对应位置是0还是1），如果存在，则放行，如果不存在，则直接返回。布隆过滤虽然节约内存空间，但是由于哈希冲突，存在误判风险。
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/redis/2/image23.png" alt="image23.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/redis/2/image23.png" alt="image23.png"></div>
 
 缓存空对象
 
@@ -824,7 +824,7 @@ return Result.ok();
 
 在原来的逻辑中，如果这个数据在mysql中不存在，直接就返回404，这样会存在缓存穿透，我们使用缓存空对象解决，实现思路如下：
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/redis/2/image24.png" alt="image24.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/redis/2/image24.png" alt="image24.png"></div>
 
 ### 代码实现
 
@@ -877,7 +877,7 @@ return Result.ok(shop);
 
 给业务添加多级缓存
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/redis/2/image25.png" alt="image25.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/redis/2/image25.png" alt="image25.png"></div>
 
 ### 2.8 缓存击穿
 
@@ -885,7 +885,7 @@ return Result.ok(shop);
 
 详细解释：假设线程1在查询缓存之后，查询数据库并重建缓存数据，此时线程1正在执行，线程2、线程3、线程4...同时访问当前这个方法， 且都没有从缓存中查到数据，就会同一时刻访问查询访问数据库，同时执行数据库代码，数据库压力就会过大。
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/redis/2/image26.png" alt="image26.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/redis/2/image26.png" alt="image26.png"></div>
 
 常见的解决方案有两种：互斥锁、逻辑过期
 
@@ -897,7 +897,7 @@ return Result.ok(shop);
 
 如下图：线程1先过来访问，未命中缓存，获取互斥锁并查询数据库重建缓存，此时线程2访问，未命中缓存，尝试获取锁，由于互斥锁线程1未释放，就会获取失败，然后休眠等待不断尝试获取锁，只有线程1业务执行完释放锁后，线程2才能获取锁成功，命中缓存，返回缓存中的数据。
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/redis/2/image27.png" alt="image27.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/redis/2/image27.png" alt="image27.png"></div>
 
 ### 逻辑过期介绍
 
@@ -905,7 +905,7 @@ return Result.ok(shop);
 
 如下图：当线程1请求过来时，通过逻辑判断发现缓存过期，尝试获取互斥锁，获取成功，开启一个新的线程实现查询数据库并重建缓存，重置过期时间，而线程1先返回脏数据，即使其他线程插队，也会从缓存中获取过期数据，尝试获取互斥锁，获取失败，返回脏数据。
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/redis/2/image28.png" alt="image28.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/redis/2/image28.png" alt="image28.png"></div>
 
 | 解决方案 | 优点 | 缺点 |
 | --- | --- | --- |
@@ -916,7 +916,7 @@ return Result.ok(shop);
 
 使用**互斥锁**解决商品查询业务的缓存击穿问题，业务逻辑如下：
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/redis/2/image29.png" alt="image29.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/redis/2/image29.png" alt="image29.png"></div>
 
 如何获取全局唯一的互斥锁：利用redis的setnx方法，如果redis中没有这个key，则插入成功返回1，stringRedisTemplate中对应true；如果有这个key，则插入失败返回0，stringRedisTemplate中对应false，通过true或false，来表示是否成功获得互斥锁。
 
@@ -1035,7 +1035,7 @@ return Result.ok(shop);
 
 使用Postman实现100个请求：
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/redis/2/image30.png" alt="image30.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/redis/2/image30.png" alt="image30.png"></div>
 
 如果在控制台发现只有一次SQL语句，表示测试成功。
 
@@ -1043,7 +1043,7 @@ return Result.ok(shop);
 
 使用**逻辑过期**解决商品查询业务的缓存击穿问题，业务逻辑如下：
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/redis/2/image31.png" alt="image31.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/redis/2/image31.png" alt="image31.png"></div>
 
 现在有一个问题，逻辑过期时间字段是添加在原有pojo上还是新建一个类RedisData，并继承pojo？都不是，代码开发尽量不要修改源代码，所以使用一个Object字段或泛型字段定义真实数据：
 
@@ -1143,7 +1143,7 @@ shopService.saveShop2Redis(1L, 10L);
 
 启动项目后，使用Postman发送200条请求：
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/redis/2/image32.png" alt="image32.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/redis/2/image32.png" alt="image32.png"></div>
 
 最后看到前面的几条请求的响应数据是103茶餐厅（脏数据），后面的响应数据就都正确了。
 
@@ -1443,7 +1443,7 @@ snowflake算法
 
 对于long型id，占用8个字节64位，对这64位进行分解：
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/redis/2/image33.png" alt="image33.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/redis/2/image33.png" alt="image33.png"></div>
 
 最高位：符号位：1bit，永远为0
 
@@ -1558,7 +1558,7 @@ tb_seckill_voucher：优惠券的库存、开始抢购时间，结束抢购时�
 
 秒杀下单需要保证在秒杀时间范围内且库存充足，具体思路如下：
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/redis/2/image34.png" alt="image34.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/redis/2/image34.png" alt="image34.png"></div>
 
 修改VoucherOrderController类：
 
@@ -1643,13 +1643,13 @@ return Result.ok(orderId);
 
 原因分析：如下图，线程1查询出库存假设为1，操作数据库扣减库存，由于操作数据库较慢，此时线程2、线程3也查询库存，而此时线程1并没有更新库存完毕，所以也认为还有库存还有，就会更新数据库，最终导致库存超卖。
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/redis/2/image35.png" alt="image35.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/redis/2/image35.png" alt="image35.png"></div>
 
 ### 3.5.2 乐观锁和悲观锁分析
 
 解决库存超卖的方案就是加锁，但是锁分为悲观锁和乐观锁，两种锁都能解决库存超卖：
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/redis/2/image36.png" alt="image36.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/redis/2/image36.png" alt="image36.png"></div>
 
 **悲观锁**：实现对于数据的串行化执行，确保某一逻辑同一时间只能有一个线程执行，如Synchronized、Lock锁等都属于悲观锁。
 
@@ -1657,11 +1657,11 @@ return Result.ok(orderId);
 
 版本号法：通过版本号，每次更新数据库都使版本号加1，如果更新数据库时版本号还是原来的版本号，说明这段时间没有线程更新数据库，可以更新数据库，如果更新数据库时版本号已经改变，就说明这段时间已经有线程更新数据库，就不更新或重新处理请求逻辑。
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/redis/2/image37.png" alt="image37.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/redis/2/image37.png" alt="image37.png"></div>
 
 **CAS法**：CAS法就是利用数据本身有没有变化来判断拒绝更新还是重试，如果更新数据库时数据和原来的数据不一样，说明这段时间有线程操作了数据库，就不更新或重新处理请求逻辑，否则，说明这段时间没有线程插队，线程安全，可以更新。
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/redis/2/image38.png" alt="image38.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/redis/2/image38.png" alt="image38.png"></div>
 
 ### 3.5.3 乐观锁解决库存超卖
 
@@ -1697,7 +1697,7 @@ boolean success = seckillVoucherService.update()
 
 实现思路：如果秒杀开始，则进一步判断库存是否足够，然后再根据优惠卷id和用户id查询用户是否已经下过这个订单，如果下过这个订单，则不再下单，否则进行下单
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/redis/2/image39.png" alt="image39.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/redis/2/image39.png" alt="image39.png"></div>
 
 ### 3.6.2 代码实现
 
@@ -1887,11 +1887,11 @@ return proxy.createVoucherOrder(voucherId);
 
 首先复制一个服务器HmDianPingApplication2，并指定端口号为8082：
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/redis/2/image40.png" alt="image40.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/redis/2/image40.png" alt="image40.png"></div>
 
 然后修改nginx服务器的配置：
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/redis/2/image41.png" alt="image41.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/redis/2/image41.png" alt="image41.png"></div>
 
 进入nginx的目录的命令行，执行nginx.exe -s reload命令重启nginx。
 
@@ -1899,7 +1899,7 @@ return proxy.createVoucherOrder(voucherId);
 
 **锁失效原因分析**：如下图，两个服务器就有两个虚拟机，当JVM1中的线程1获取锁并查询订单不存在，与此同时JVM2也会尝试获取锁，虽然用户id一致，但是两台虚拟机是相互独立的，JVM2的线程3会在自己的范围内生成一个对象，JVM1和JVM2的对象是不同的，所以都能获取锁成功，线程3查询订单不存在，线程1和线程3同时插入订单，导致一人多单。
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/redis/2/image42.png" alt="image42.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/redis/2/image42.png" alt="image42.png"></div>
 
 ## 4.分布式锁
 
@@ -1907,7 +1907,7 @@ return proxy.createVoucherOrder(voucherId);
 
 分布式锁，满足分布式系统或集群模式下多进程可见并且互斥的锁。核心思想是让所有线程都使用同一把锁，这样就能保证所有线程串行化，而不会出现锁失效的情况。
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/redis/2/image43.png" alt="image43.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/redis/2/image43.png" alt="image43.png"></div>
 
 分布式锁应满足以下几点：
 
@@ -2040,17 +2040,17 @@ lock.unlock();
 
 如下图，线程1获取锁后业务发生阻塞，触发锁的超时释放，然后线程2获取锁，由于锁已经释放，线程2获取成功，执行业务过程中线程1好了，完成业务并释放了不属于自己的锁，释放完的同时线程3又可以获取锁执行业务，这时就有线程2和线程3并发执行业务。
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/redis/2/image44.png" alt="image44.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/redis/2/image44.png" alt="image44.png"></div>
 
 解决办法是线程释放锁时判断锁是否还是自己的，如果还是自己的锁，就说明这个过程没有其他线程执行，可以删除，否则就不删除：
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/redis/2/image45.png" alt="image45.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/redis/2/image45.png" alt="image45.png"></div>
 
 ### 代码实现
 
 实现思路：在存入锁时，放入自己线程的标识 ，在删除锁时，判断当前这把锁的标识是不是自己存入的，如果是，则进行删除，如果不是，则不进行删除。
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/redis/2/image46.png" alt="image46.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/redis/2/image46.png" alt="image46.png"></div>
 
 对于多台虚拟机，每台虚拟机相互独立，可能出现两个线程标识（如线程id）一致的情况，可以利用UUID类和static关键字实现为每台虚拟机生成唯一标识，再拼接线程标识就保证了分布式下线程的唯一标识。
 
@@ -2086,7 +2086,7 @@ stringRedisTemplate.delete(KEY_PREFIX + name);
 
 如下图，当线程1获取锁执行完业务后，判断锁是自己的，这时业务阻塞，导致锁超时释放，线程2就能成功获取锁，而线程1这时又结束阻塞直接删除线程2的锁，然后线程3就又能获取锁，这就是分布式锁的原子性问题。解决方案就是保证判断锁逻辑和释放锁逻辑保持原子性，同时成功。
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/redis/2/image47.png" alt="image47.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/redis/2/image47.png" alt="image47.png"></div>
 
 ### 4.2.5 Lua脚本
 
@@ -2146,7 +2146,7 @@ EVAL "return redis.call('set', KEYS[1], ARGV[1])" 1 name Rose
 
 RedisTemplate提供了execute方法执行Lua脚本：
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/redis/2/image48.png" alt="image48.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/redis/2/image48.png" alt="image48.png"></div>
 
 在resources目录下编写Lua脚本unlock.lua：
 
@@ -2338,7 +2338,7 @@ lock.unlock();
 
 可重入的具体实现流程如下：
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/redis/2/image49.png" alt="image49.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/redis/2/image49.png" alt="image49.png"></div>
 
 其中，获取锁的Lua脚本如下：
 
@@ -2392,11 +2392,11 @@ end;
 
 tryLock()方法支持传递参数，如下图，其中包含尝试锁重试时间waitTime和锁有效期leaseTime，第三个参数为时间单位，这里以两个参数讲解redission锁重试和WatchDog机制
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/redis/2/image50.png" alt="image50.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/redis/2/image50.png" alt="image50.png"></div>
 
 ### 锁重试
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/redis/2/image51.png" alt="image51.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/redis/2/image51.png" alt="image51.png"></div>
 
 调用tryLock()方法并指定锁重试时间后，进入tryAcquire()方法获取锁的剩余有效期：
 
@@ -2434,17 +2434,17 @@ return ttlRemainingFuture;
 
 进入tryLockInnerAsync()方法获取锁的信息，这里可以看到之前的获取锁Lua脚本，脚本nil即对应null，表示获取锁成 功，redis.call('pttl', KEYS[1])得到锁的剩余有效期，表示获取锁失败
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/redis/2/image52.png" alt="image52.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/redis/2/image52.png" alt="image52.png"></div>
 
 回到tryLock()源码，获取到锁的剩余有效期ttl后，如果ttl不为null，计算当前剩余等待时间time，如果time小于等于0，证明获取锁逻辑耗费完了等待获取锁时间，调用acquireFailed()方法处理。
 
 **订阅**：time大于0时，获取系统当前时间current，然后创建一个用于订阅锁释放通知的 subscribeFuture，调用 subscribe() 方法进行订阅。接下来调用subscribeFuture.await(time, TimeUnit.MILLISECONDS)等待 time 毫秒时间，等待订阅结果。如果在等待期间未收到订阅结果，表示等待超时。等待超时后代码会尝试取消订阅任务。如果取消失败，会在subscribeFuture.onComplete()方法中进行处理，判断是否需要取消订阅，并调用unsubscribe()方法进行处理。如果取消成功，则代码调用acquireFailed()方法进行处理，表示当前线程获取锁失败，最终返回false
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/redis/2/image53.png" alt="image53.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/redis/2/image53.png" alt="image53.png"></div>
 
 订阅的通知就是释放锁Lua脚本当中发布的通知：
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/redis/2/image54.png" alt="image54.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/redis/2/image54.png" alt="image54.png"></div>
 
 如果在time时间之内获得释放锁的通知，则会走以下代码逻辑，这也是**锁重试**的原理：
 
@@ -2522,11 +2522,11 @@ WatchDog机制就是用于解决业务阻塞导致锁**超时释放**的安全�
 
 如果回调函数中异常参数 e 为 null，表示获取结果成功。此时，代码判断返回的 ttlRemaining 是否为 null，如果为 null，表示锁的状态为有效，调用 scheduleExpirationRenewal() 方法进行锁的过期续约
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/redis/2/image55.png" alt="image55.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/redis/2/image55.png" alt="image55.png"></div>
 
 进入到scheduleExpirationRenewal()方法，EXPIRATION_RENEWAL_MAP.putIfAbsent(this.getEntryName(), entry)方法将这个新的Entry对象放入一个名为EXPIRATION_RENEWAL_MAP的map集合中，使用this.getEntryName()方法返回一个唯一的名称（可以理解为锁的名称）作为键。
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/redis/2/image56.png" alt="image56.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/redis/2/image56.png" alt="image56.png"></div>
 
 如果不是第一次获取锁，putIfAbsent()会返回旧的Entry，执行addThreadId()方法为当前线程的重入次数自增1，如果是第一次获取锁，除了执行addThreadId()方法新增Redis可重入锁，还会执行renewExpiration()方法，开启一个Timeout定时任务，每隔internalLockLeaseTime / 3 时间即10秒更新锁的有效期即续约。
 
@@ -2538,15 +2538,15 @@ WatchDog机制就是用于解决业务阻塞导致锁**超时释放**的安全�
 
 ### 释放锁流程
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/redis/2/image57.png" alt="image57.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/redis/2/image57.png" alt="image57.png"></div>
 
 unlock()释放锁会进入cancelExpirationRenewal()方法取消自动更新，如removeThreadId()删除锁，timeout.cancel()取消Timeout定时任务，最终remove()确保删除EXPIRATION_RENEWAL_MAP中的目标ExpirationEntry对象，即使释放锁出现异常，WatchDog也会通过判断后不再给锁续期。
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/redis/2/image58.png" alt="image58.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/redis/2/image58.png" alt="image58.png"></div>
 
 **总结下来**，获取锁和释放锁的业务流程如下：
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/redis/2/image59.png" alt="image59.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/redis/2/image59.png" alt="image59.png"></div>
 
 **可重入**：利用hash结构记录线程id和重入次数
 
@@ -2562,11 +2562,11 @@ unlock()释放锁会进入cancelExpirationRenewal()方法取消自动更新，�
 
 假设现在有一台主机和一台从机组成主从结构，假设主机还没来得及把数据写入到从机时，主机宕机，哨兵会发现主机宕机，并选举一个slave变成master，而此时新的master中并没有锁信息，导致锁信息丢失：
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/redis/2/image60.png" alt="image60.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/redis/2/image60.png" alt="image60.png"></div>
 
 为了解决这个问题，redission提出了MutiLock锁。建立多个主从结构，每个主节点的地位一致，MutiLock锁进行加锁时，仅当所有主节点都写入锁时才算加锁成功，只要有一个主节点没有写入锁，就算加锁失败，即使一个节点宕机了，其他主节点也有同样的锁，从而保证锁的可靠性：
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/redis/2/image61.png" alt="image61.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/redis/2/image61.png" alt="image61.png"></div>
 
 ### 基本使用
 
@@ -2657,7 +2657,7 @@ lock.unlock();
 
 当设置了多个锁时，redission会将多个锁添加到一个集合中，然后用while循环去不停地尝试拿锁，但是会有一个总共的加锁时间，这个时间是用 需要加锁的个数 * 1500ms ，假设有3个锁，那么时间就是4500ms，假设在这4500ms内，所有的锁都加锁成功， 那么此时才算是加锁成功，如果在4500ms有线程加锁失败，则会再次去进行重试：
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/redis/2/image62.png" alt="image62.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/redis/2/image62.png" alt="image62.png"></div>
 
 ## 5.秒杀优化
 
@@ -2679,7 +2679,7 @@ lock.unlock();
 
 我们可以把查询优惠券、判断库存、查询订单、校验一人一单交给Redis去做，而扣减库存和创建订单这些必须操作数据库的放到阻塞队列中开启一个线程慢慢执行。
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/redis/2/image63.png" alt="image63.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/redis/2/image63.png" alt="image63.png"></div>
 
 **Redis端**：当用户下单之后，判断库存是否充足只需要到redis中去根据key找对应的value是否大于0，如果不充足，则直接结束，如果充足，继续在redis中判断用户是否可以下单，如果set集合中没有这条数据，说明他可以下单，如果set集合中没有这条记录，则将userId和优惠卷存入到redis中，并且返回0，整个过程需要保证是原子性，所以使用lua来操作。
 
@@ -2939,7 +2939,7 @@ JVM的内存限制问题
 
 由于Redis的List数据结构是一个双向链表，设置当入口和出口在不同边时，就能模拟一个队列，为了实现阻塞效果，出口使用BRPOP或BLPOP，这样，就用List模拟出一个消息队列：
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/redis/2/image64.png" alt="image64.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/redis/2/image64.png" alt="image64.png"></div>
 
 优点：
 
@@ -2959,7 +2959,7 @@ JVM的内存限制问题
 
 PubSub是Redis2.0版本引入的消息传递模型。顾名思义，消费者可以订阅一个或多个channel，生产者向对应channel发送消息后，所有订阅者都能收到相关消息。
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/redis/2/image65.png" alt="image65.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/redis/2/image65.png" alt="image65.png"></div>
 
 SUBSCRIBE channel [channel] ：订阅一个或多个频道
 
@@ -2991,23 +2991,23 @@ Stream 是Redis 5.0引入的一种新数据类型，可以实现一个功能非�
 
 发送消息的命令：
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/redis/2/image66.png" alt="image66.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/redis/2/image66.png" alt="image66.png"></div>
 
 其中，key为消息队列名称，NOMKSTREAM参数一般不指定，常用写法为：
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/redis/2/image67.png" alt="image67.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/redis/2/image67.png" alt="image67.png"></div>
 
 读取消息的方式之一XREAD：
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/redis/2/image68.png" alt="image68.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/redis/2/image68.png" alt="image68.png"></div>
 
 例如从第一条消息开始读取users队列中的一条消息：
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/redis/2/image69.png" alt="image69.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/redis/2/image69.png" alt="image69.png"></div>
 
 读取users队列中的最新一条消息，并等待1秒：
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/redis/2/image70.png" alt="image70.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/redis/2/image70.png" alt="image70.png"></div>
 
 业务中通过XREAD阻塞结合循环就能实现持续监听队列的效果：
 
@@ -3400,7 +3400,7 @@ return Result.ok(orderId);
 
 当点击主页下方的加号时就能实现发布探店笔记：
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/redis/2/image71.png" alt="image71.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/redis/2/image71.png" alt="image71.png"></div>
 
 tb_blog：探店笔记表，包含笔记中的标题、文字、图片等
 
@@ -3564,7 +3564,7 @@ blog.setIsLike(BooleanUtil.isTrue(isMember));
 
 在探店笔记详情页面，需要按照点赞时间的前后顺序显示Top5点赞排行榜：
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/redis/2/image72.png" alt="image72.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/redis/2/image72.png" alt="image72.png"></div>
 
 由于需要按点赞时间排序，原来的Set集合就不能使用了，需要使用SortedSet集合进行存放点赞用户，score字段放置时间戳。
 
@@ -3714,7 +3714,7 @@ return Result.ok(count > 0);
 
 查询两个人的共同关注就是求两个人关注列表的交集，考虑到Redis的Set集合有求交集功能，这里用Set集合实现。
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/redis/2/image73.png" alt="image73.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/redis/2/image73.png" alt="image73.png"></div>
 
 UserController导入查询用户详情的代码：
 
@@ -3844,7 +3844,7 @@ Feed流的实现有两种模式：
 
 拉模式也叫读扩散，比如：张三、李四、王五各自有自己的发件箱，发送消息发送到自己的发件箱，如果赵六要读取，需要拉取三个人的发件箱信息到自己的收件箱，然后按照时间排序，读取完清除。
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/redis/2/image74.png" alt="image74.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/redis/2/image74.png" alt="image74.png"></div>
 
 优点：节约空间，没有重复读取，读完清除
 
@@ -3854,7 +3854,7 @@ Feed流的实现有两种模式：
 
 推模式也叫写扩散，比如：每个粉丝都有自己的收件箱，张三或李四发布内容要推送到所有粉丝的收件箱里。
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/redis/2/image75.png" alt="image75.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/redis/2/image75.png" alt="image75.png"></div>
 
 优点：时效快，不用临时拉取
 
@@ -3864,7 +3864,7 @@ Feed流的实现有两种模式：
 
 推拉结合模式也叫读写混合，兼具推和拉两种模式的优点，比如：普通用户粉丝少，就可以直接把消息推动给所有粉丝，而大V粉丝多，有一个自己的发件箱，发送消息写入发件箱的同时推送给活跃的粉丝，不活跃的粉丝查看时自己从发件箱读。
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/redis/2/image76.png" alt="image76.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/redis/2/image76.png" alt="image76.png"></div>
 
 Timeline模式三种实现模式对比：
 
@@ -3891,11 +3891,11 @@ Timeline模式三种实现模式对比：
 
 以传统的分页查询为例，如下图，t1时刻查询第一页数据到6，t2时刻Feed流推送了新的消息11，t3时再查询第二页数据理论上应该从5开始，但是实际是从6开始，所以原始的分页查询不适用，此时就要用到**滚动分页查询**。
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/redis/2/image77.png" alt="image77.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/redis/2/image77.png" alt="image77.png"></div>
 
 如下图，采用滚动分页时，t1时刻查询到6，此时记录下这一次查询的最后值6，t2时刻Feed流推动了新的消息11，但是此时我们从上一次查询的最后值6往后分页查询，就查询到了正确的数据。
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/redis/2/image78.png" alt="image78.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/redis/2/image78.png" alt="image78.png"></div>
 
 考虑到Set集合只能通过索引分页，所以这里使用SortedSet集合实现，以时间戳为score，每次记录最后的时间戳score，下次从这里开始，用到的命令如下：
 
@@ -3967,7 +3967,7 @@ return Result.ok(blog.getId());
 
 ### 7.3.3 实现分页查询收邮箱
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/redis/2/image79.png" alt="image79.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/redis/2/image79.png" alt="image79.png"></div>
 
 在dto包下创建实体类ScrollResult（已经实现）：
 
@@ -4062,7 +4062,7 @@ GEOSEARCHSTORE：与GEOSEARCH功能一致，不过可以把结果存储到一个
 
 首页点击某个频道，即可按照距离显示各个频道的店铺信息：
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/redis/2/image80.png" alt="image80.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/redis/2/image80.png" alt="image80.png"></div>
 
 现在的问题是怎么合理设置Redis的结构，我们可以以商铺类型id作为键key，key中存放每个店铺的坐标，店铺的值就使用店铺id，这样查询时只需要根据类型到指定key中查找店铺与当前位置的距离即可。
 
@@ -4204,7 +4204,7 @@ return Result.ok(shops);
 
 虽然可以使用tb_sign表存储用户的签到信息，但是每一次签到都要记录一条记录，对于巨大的用户和频繁的签到，那记录的数据量是难以想象的，所以，可以用一串由0、1构成的字符串存储用户这个月的签到情况，一个位置代表一天，0表示未签到，1表示已签到，这种思想也被成为**位图**。
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/redis/2/image81.png" alt="image81.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/redis/2/image81.png" alt="image81.png"></div>
 
 ### 9.1 BitMap
 

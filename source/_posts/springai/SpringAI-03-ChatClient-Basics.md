@@ -41,7 +41,7 @@ public class ChatClientTest {
 
 这种方式会在底层自动注入1个`ChatModel `， 如果你配置了多个模型依赖，  会无法注入。
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/springai/ch03_1748589278091-50435556-59e5-4967-8bba-c7aded90781a_aa8bc4b9f9.png" alt="ch03_1748589278091-50435556-59e5-4967-8bba-c7aded90781a_aa8bc4b9f9.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/springai/ch03_1748589278091-50435556-59e5-4967-8bba-c7aded90781a_aa8bc4b9f9.png" alt="ch03_1748589278091-50435556-59e5-4967-8bba-c7aded90781a_aa8bc4b9f9.png"></div>
 
 可以通过这种方式动态选择ChatModel：
 

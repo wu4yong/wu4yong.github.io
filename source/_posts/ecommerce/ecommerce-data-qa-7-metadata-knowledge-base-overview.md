@@ -48,9 +48,9 @@ tags:
 
 这里的元数据，主要包括四类：表信息、字段信息、字段取值、指标信息。一旦这些内容被结构化保存，并建立好向量索引和全文索引，后续智能体在生成 SQL 前，才能真正做到：**先理解上下文，再动手生成。**
 
-<!-- ![电商问数系统整体架构：数据仓库、配置与同步脚本、元数据知识库与问数智能体](/assets/img/ecommerce/2/2-1-2-1.png) -->
+<!-- <div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/ecommerce/2/2-1-2-1.png" alt="电商问数系统整体架构：数据仓库、配置与同步脚本、元数据知识库与问数智能体"></div> -->
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/ecommerce/2/2-1-2-1.png" alt="电商问数系统整体架构：数据仓库、配置与同步脚本、元数据知识库与问数智能体"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/ecommerce/2/2-1-2-1.png" alt="电商问数系统整体架构：数据仓库、配置与同步脚本、元数据知识库与问数智能体"></div>
 ---
 
 ## 2、元数据知识库入口说明
@@ -139,9 +139,9 @@ shopkeeper-agent/
 
 这些问题问得非常好，因为后面第 10 章真正展开代码时，主线其实就是在这 4 类角色之间流转。可以先把它们按下面这 4 层来看。
 
-<!-- ![4 类角色代码目录结构](/assets/img/ecommerce/7/7-2-1-1.png) -->
+<!-- <div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/ecommerce/7/7-2-1-1.png" alt="4 类角色代码目录结构"></div> -->
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/ecommerce/7/7-2-1-1.png" alt="4 类角色代码目录结构"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/ecommerce/7/7-2-1-1.png" alt="4 类角色代码目录结构"></div>
 **第一类：配置文件**
 
 配置文件是“外部输入”，告诉程序：**这次要处理什么。**
@@ -471,9 +471,9 @@ python3 app/scripts/build_meta_knowledge.py
 
 下图可以帮助你直观看清这个路径关系：直接执行脚本文件时，解释器更容易从 `app/scripts/` 开始找模块，而不是从项目根目录开始找。
 
-<!-- ![直接执行 build_meta_knowledge.py 时，解释器更容易从 app/scripts/ 开始查找模块，而 app 包实际位于项目根目录下](/assets/img/ecommerce/7/7-4-2-1.png) -->
+<!-- <div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/ecommerce/7/7-4-2-1.png" alt="直接执行 build_meta_knowledge.py 时，解释器更容易从 app/scripts/ 开始查找模块，而 app 包实际位于项目根目录下"></div> -->
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/ecommerce/7/7-4-2-1.png" alt="直接执行 build_meta_knowledge.py 时，解释器更容易从 app/scripts/ 开始查找模块，而 app 包实际位于项目根目录下"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/ecommerce/7/7-4-2-1.png" alt="直接执行 build_meta_knowledge.py 时，解释器更容易从 app/scripts/ 开始查找模块，而 app 包实际位于项目根目录下"></div>
 所以问题就变成了：解释器从 `app/scripts/` 开始找模块；但这个目录下面并没有一个上层包叫 `app`；于是 `from app...` 这样的绝对导入就失败了。
 
 也就是说，很多时候并不是代码错了，而是**启动方式不对**。

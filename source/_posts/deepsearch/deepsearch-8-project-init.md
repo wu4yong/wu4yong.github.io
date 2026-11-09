@@ -33,8 +33,8 @@ tags:
 
 「深度研搜」项目会提供一个类似研究助手的页面。用户可以输入研究任务，也可以上传文件，后端智能体会根据任务需要去查网络、查数据库、查私有知识库，最后整理回答或生成文件。
 
-<!-- ![深度研搜前端首页：输入框左侧支持上传附件，中间输入研究任务，右侧发送任务](/assets/img/deepSearch/8/8-1-1-1.png) -->
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/deepSearch/8/8-1-1-1.png" alt="深度研搜前端首页：输入框左侧支持上传附件，中间输入研究任务，右侧发送任务"></div>
+<!-- <div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/deepSearch/8/8-1-1-1.png" alt="深度研搜前端首页：输入框左侧支持上传附件，中间输入研究任务，右侧发送任务"></div> -->
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/deepSearch/8/8-1-1-1.png" alt="深度研搜前端首页：输入框左侧支持上传附件，中间输入研究任务，右侧发送任务"></div>
 
 先看两个入口：一个是文本输入，一个是附件上传。这也提醒我们，后端不能只处理一句 prompt，还要能处理上传文件、会话目录、执行进度和最终产物。
 
@@ -243,8 +243,8 @@ RAGFlow 助手|2 个|获取可用助手或会话、向知识库助手提问
 
 这里先建立分工，不需要马上记住每个工具的具体代码。后面章节真正写工具时，再回到这张表里找它属于谁、解决什么问题。
 
-<!-- ![深度研搜一主三从与九个工具：主智能体调度网络搜索助手、数据库查询助手、RAGFlow 助手，并直接掌握上传文件读取、Markdown 生成和 PDF 转换工具](/assets/img/deepSearch/8/8-3-4-1.svg) -->
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/deepSearch/8/8-3-4-1.svg" alt="深度研搜一主三从与九个工具：主智能体调度网络搜索助手、数据库查询助手、RAGFlow 助手，并直接掌握上传文件读取、Markdown 生成和 PDF 转换工具"></div>
+<!-- <div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/deepSearch/8/8-3-4-1.svg" alt="深度研搜一主三从与九个工具：主智能体调度网络搜索助手、数据库查询助手、RAGFlow 助手，并直接掌握上传文件读取、Markdown 生成和 PDF 转换工具"></div> -->
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/deepSearch/8/8-3-4-1.svg" alt="深度研搜一主三从与九个工具：主智能体调度网络搜索助手、数据库查询助手、RAGFlow 助手，并直接掌握上传文件读取、Markdown 生成和 PDF 转换工具"></div>
 
 ### 3.5 项目的工具体系
 
@@ -370,8 +370,8 @@ monitor 根据 thread_id 找到对应 WebSocket
 把执行进度推送给对应前端
 ```
 
-<!-- ![深度研搜 WebSocket 推送流程：任务发起、连接建立、Agent 执行和实时消息推送之间的关系](/assets/img/deepSearch/8/8-4-3-1.png) -->
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/deepSearch/8/8-4-3-1.png" alt="深度研搜 WebSocket 推送流程：任务发起、连接建立、Agent 执行和实时消息推送之间的关系"></div>
+<!-- <div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/deepSearch/8/8-4-3-1.png" alt="深度研搜 WebSocket 推送流程：任务发起、连接建立、Agent 执行和实时消息推送之间的关系"></div> -->
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/deepSearch/8/8-4-3-1.png" alt="深度研搜 WebSocket 推送流程：任务发起、连接建立、Agent 执行和实时消息推送之间的关系"></div>
 
 重点看四条泳道：浏览器、Server 主事件循环、Monitor 管理器、后台 Agent。前端不是等 Agent 完整结束才收到消息，而是在 Agent 执行工具或调用助手时，就会收到一条条监控事件。
 

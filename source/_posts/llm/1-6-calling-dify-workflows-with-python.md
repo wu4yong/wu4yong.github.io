@@ -34,8 +34,8 @@ tags:
 
 要通过 API 的方式启动工作流，**工作流必须处于已发布状态**。
 
-<!-- ![Dify 工作流发布入口与发布状态的界面示意图](/assets/img/llm/4/4-1-1-1.png) -->
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/4/4-1-1-1.png" alt="Dify 工作流发布入口与发布状态的界面示意图"></div>
+<!-- <div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/llm/4/4-1-1-1.png" alt="Dify 工作流发布入口与发布状态的界面示意图"></div> -->
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/llm/4/4-1-1-1.png" alt="Dify 工作流发布入口与发布状态的界面示意图"></div>
 
 这一步很好理解：未发布的工作流仍处于编辑态，节点、变量、提示词都可能随时变化，不适合作为外部代码依赖的服务接口。
 
@@ -43,8 +43,8 @@ tags:
 
 Dify 会为工作流提供对应的 API 文档入口。
 
-<!-- ![Dify 工作流 API 文档入口的界面示意图](/assets/img/llm/4/4-1-2-1.png) -->
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/4/4-1-2-1.png" alt="Dify 工作流 API 文档入口的界面示意图"></div>
+<!-- <div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/llm/4/4-1-2-1.png" alt="Dify 工作流 API 文档入口的界面示意图"></div> -->
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/llm/4/4-1-2-1.png" alt="Dify 工作流 API 文档入口的界面示意图"></div>
 
 第一次学习时，建议你不要跳过这一步。因为后面 Python 代码里用到的 URL、请求头、请求体结构，平台都已经给你说明了。
 
@@ -52,11 +52,11 @@ Dify 会为工作流提供对应的 API 文档入口。
 
 #### 1.3.1 创建密钥
 
-<!-- ![在 Dify 中创建工作流 API 密钥的界面](/assets/img/llm/4/4-1-3-1.png) -->
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/4/4-1-3-1.png" alt="在 Dify 中创建工作流 API 密钥的界面"></div>
+<!-- <div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/llm/4/4-1-3-1.png" alt="在 Dify 中创建工作流 API 密钥的界面"></div> -->
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/llm/4/4-1-3-1.png" alt="在 Dify 中创建工作流 API 密钥的界面"></div>
 
-<!-- ![在 Dify 中查看并复制 API 密钥的界面](/assets/img/llm/4/4-1-3-2.png) -->
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/4/4-1-3-2.png" alt="在 Dify 中查看并复制 API 密钥的界面"></div>
+<!-- <div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/llm/4/4-1-3-2.png" alt="在 Dify 中查看并复制 API 密钥的界面"></div> -->
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/llm/4/4-1-3-2.png" alt="在 Dify 中查看并复制 API 密钥的界面"></div>
 
 创建后复制即可。
 
@@ -64,8 +64,8 @@ Dify 会为工作流提供对应的 API 文档入口。
 
 Dify 的 API 密钥是**和工作流绑定**的。一个 API Key 只能用于**访问特定的工作流**，而一个工作流可以对应多个 API Key。
 
-<!-- ![Dify 工作流与 API Key 绑定关系的界面示意图](/assets/img/llm/4/4-1-3-3.png) -->
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/4/4-1-3-3.png" alt="Dify 工作流与 API Key 绑定关系的界面示意图"></div>
+<!-- <div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/llm/4/4-1-3-3.png" alt="Dify 工作流与 API Key 绑定关系的界面示意图"></div> -->
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/llm/4/4-1-3-3.png" alt="Dify 工作流与 API Key 绑定关系的界面示意图"></div>
 
 这和真实项目的权限控制很像：同一个工作流可以给不同环境、不同服务、不同调用方分发不同密钥，但密钥本身并不是“整个工作空间通用”的万能钥匙。
 
@@ -141,20 +141,20 @@ Content-Type|`application/json`
 
 ### 3.1 新建 POST 请求并填写 URL
 
-<!-- ![在 Postman 中新建 Dify 工作流 POST 请求的界面](/assets/img/llm/4/4-3-1-1.png) -->
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/4/4-3-1-1.png" alt="在 Postman 中新建 Dify 工作流 POST 请求的界面"></div>
+<!-- <div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/llm/4/4-3-1-1.png" alt="在 Postman 中新建 Dify 工作流 POST 请求的界面"></div> -->
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/llm/4/4-3-1-1.png" alt="在 Postman 中新建 Dify 工作流 POST 请求的界面"></div>
 
 ### 3.2 添加请求头
 
-<!-- ![在 Postman 中配置 Dify 工作流请求头的界面](/assets/img/llm/4/4-3-2-1.png) -->
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/4/4-3-2-1.png" alt="在 Postman 中配置 Dify 工作流请求头的界面"></div>
+<!-- <div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/llm/4/4-3-2-1.png" alt="在 Postman 中配置 Dify 工作流请求头的界面"></div> -->
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/llm/4/4-3-2-1.png" alt="在 Postman 中配置 Dify 工作流请求头的界面"></div>
 
 ### 3.3 添加请求体
 
 Body 选择 `raw`，格式选择 `JSON`。
 
-<!-- ![在 Postman 中填写 Dify 工作流 JSON 请求体的界面](/assets/img/llm/4/4-3-3-1.png) -->
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/4/4-3-3-1.png" alt="在 Postman 中填写 Dify 工作流 JSON 请求体的界面"></div>
+<!-- <div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/llm/4/4-3-3-1.png" alt="在 Postman 中填写 Dify 工作流 JSON 请求体的界面"></div> -->
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/llm/4/4-3-3-1.png" alt="在 Postman 中填写 Dify 工作流 JSON 请求体的界面"></div>
 
 示例请求体：
 
@@ -172,28 +172,28 @@ Body 选择 `raw`，格式选择 `JSON`。
 
 ### 3.4 发送请求
 
-<!-- ![在 Postman 中发送 Dify 工作流请求的界面](/assets/img/llm/4/4-3-4-1.png) -->
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/4/4-3-4-1.png" alt="在 Postman 中发送 Dify 工作流请求的界面"></div>
+<!-- <div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/llm/4/4-3-4-1.png" alt="在 Postman 中发送 Dify 工作流请求的界面"></div> -->
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/llm/4/4-3-4-1.png" alt="在 Postman 中发送 Dify 工作流请求的界面"></div>
 
 ### 3.5 看懂响应
 
-<!-- ![Postman 中查看 Dify 流式响应整体结果的界面](/assets/img/llm/4/4-3-5-1.png) -->
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/4/4-3-5-1.png" alt="Postman 中查看 Dify 流式响应整体结果的界面"></div>
+<!-- <div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/llm/4/4-3-5-1.png" alt="Postman 中查看 Dify 流式响应整体结果的界面"></div> -->
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/llm/4/4-3-5-1.png" alt="Postman 中查看 Dify 流式响应整体结果的界面"></div>
 
 响应开始标志：
 
-<!-- ![Dify 流式响应开始事件的界面示意图](/assets/img/llm/4/4-3-5-2.png) -->
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/4/4-3-5-2.png" alt="Dify 流式响应开始事件的界面示意图"></div>
+<!-- <div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/llm/4/4-3-5-2.png" alt="Dify 流式响应开始事件的界面示意图"></div> -->
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/llm/4/4-3-5-2.png" alt="Dify 流式响应开始事件的界面示意图"></div>
 
 响应结束标志：
 
-<!-- ![Dify 流式响应结束事件的界面示意图](/assets/img/llm/4/4-3-5-3.png) -->
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/4/4-3-5-3.png" alt="Dify 流式响应结束事件的界面示意图"></div>
+<!-- <div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/llm/4/4-3-5-3.png" alt="Dify 流式响应结束事件的界面示意图"></div> -->
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/llm/4/4-3-5-3.png" alt="Dify 流式响应结束事件的界面示意图"></div>
 
 最终响应体携带工作流的最终输出：
 
-<!-- ![Dify 工作流最终输出结果在响应体中的界面示意图](/assets/img/llm/4/4-3-5-4.png) -->
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/4/4-3-5-4.png" alt="Dify 工作流最终输出结果在响应体中的界面示意图"></div>
+<!-- <div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/llm/4/4-3-5-4.png" alt="Dify 工作流最终输出结果在响应体中的界面示意图"></div> -->
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/llm/4/4-3-5-4.png" alt="Dify 工作流最终输出结果在响应体中的界面示意图"></div>
 
 ### 3.6 怎么理解返回体
 
@@ -223,23 +223,23 @@ Body 选择 `raw`，格式选择 `JSON`。
 
 ### 4.1 打开日志页面
 
-<!-- ![Dify 工作流运行日志入口的界面示意图](/assets/img/llm/4/4-4-1-1.png) -->
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/4/4-4-1-1.png" alt="Dify 工作流运行日志入口的界面示意图"></div>
+<!-- <div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/llm/4/4-4-1-1.png" alt="Dify 工作流运行日志入口的界面示意图"></div> -->
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/llm/4/4-4-1-1.png" alt="Dify 工作流运行日志入口的界面示意图"></div>
 
 ### 4.2 查看结果
 
-<!-- ![Dify 工作流运行结果列表页的界面示意图](/assets/img/llm/4/4-4-2-1.png) -->
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/4/4-4-2-1.png" alt="Dify 工作流运行结果列表页的界面示意图"></div>
+<!-- <div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/llm/4/4-4-2-1.png" alt="Dify 工作流运行结果列表页的界面示意图"></div> -->
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/llm/4/4-4-2-1.png" alt="Dify 工作流运行结果列表页的界面示意图"></div>
 
 ### 4.3 查看详情
 
-<!-- ![Dify 工作流运行详情页的界面示意图](/assets/img/llm/4/4-4-3-1.png) -->
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/4/4-4-3-1.png" alt="Dify 工作流运行详情页的界面示意图"></div>
+<!-- <div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/llm/4/4-4-3-1.png" alt="Dify 工作流运行详情页的界面示意图"></div> -->
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/llm/4/4-4-3-1.png" alt="Dify 工作流运行详情页的界面示意图"></div>
 
 ### 4.4 查看追踪信息
 
-<!-- ![Dify 工作流追踪信息页面的界面示意图](/assets/img/llm/4/4-4-4-1.png) -->
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/4/4-4-4-1.png" alt="Dify 工作流追踪信息页面的界面示意图"></div>
+<!-- <div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/llm/4/4-4-4-1.png" alt="Dify 工作流追踪信息页面的界面示意图"></div> -->
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/llm/4/4-4-4-1.png" alt="Dify 工作流追踪信息页面的界面示意图"></div>
 
 平台日志的价值非常大，因为它能告诉你：这次请求有没有真正进到工作流；哪个节点报错了；输入变量有没有传对；最终输出是不是和代码侧拿到的一致。
 
@@ -457,11 +457,11 @@ print(final_text[:300])
 
 对比 Dify 后台日志和 Python 控制台日志，最终运行结果应该能互相对应。
 
-<!-- ![Dify 后台日志与 Python 控制台日志对照的界面示意图](/assets/img/llm/4/4-6-4-1.png) -->
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/4/4-6-4-1.png" alt="Dify 后台日志与 Python 控制台日志对照的界面示意图"></div>
+<!-- <div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/llm/4/4-6-4-1.png" alt="Dify 后台日志与 Python 控制台日志对照的界面示意图"></div> -->
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/llm/4/4-6-4-1.png" alt="Dify 后台日志与 Python 控制台日志对照的界面示意图"></div>
 
-<!-- ![Dify 后台详细运行日志与节点执行信息的界面示意图](/assets/img/llm/4/4-6-4-2.png) -->
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/4/4-6-4-2.png" alt="Dify 后台详细运行日志与节点执行信息的界面示意图"></div>
+<!-- <div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/llm/4/4-6-4-2.png" alt="Dify 后台详细运行日志与节点执行信息的界面示意图"></div> -->
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/llm/4/4-6-4-2.png" alt="Dify 后台详细运行日志与节点执行信息的界面示意图"></div>
 
 ---
 

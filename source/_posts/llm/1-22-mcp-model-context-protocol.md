@@ -45,8 +45,8 @@ tags:
 - **工具很难复用成“生态能力”**  
   没有统一协议时，一个工具即使写得很好，也往往只能服务于某个特定应用，迁移和复用成本很高。
 
-<!-- ![无 MCP 时：各 AI 应用需分别对接 GitHub、Slack、数据库等，重复开发与适配成本高](/assets/img/llm/20/20-1-1-1.jpeg) -->
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/20/20-1-1-1.jpeg" alt="无 MCP 时：各 AI 应用需分别对接 GitHub、Slack、数据库等，重复开发与适配成本高"></div>
+<!-- <div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/llm/20/20-1-1-1.jpeg" alt="无 MCP 时：各 AI 应用需分别对接 GitHub、Slack、数据库等，重复开发与适配成本高"></div> -->
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/llm/20/20-1-1-1.jpeg" alt="无 MCP 时：各 AI 应用需分别对接 GitHub、Slack、数据库等，重复开发与适配成本高"></div>
 
 所以，MCP 出现的背景，不是“以前没人会写工具”，而是：
 
@@ -74,8 +74,8 @@ MCP 解决的问题可以概括成一句话：**让“外部工具、资源、�
 
 现实中的 AI 应用也是一样。一个真正有用的 AI 助手，往往不仅要“说”，还要能：查本地文件、查数据库、搜 GitHub Issue、调天气接口、发消息到 Slack / 微信 / 邮件、调用内部业务系统。
 
-<!-- ![若缺乏统一协议，每接一类系统都要单独实现连接与鉴权，维护成本陡增](/assets/img/llm/20/20-1-3-1.jpeg) -->
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/20/20-1-3-1.jpeg" alt="若缺乏统一协议，每接一类系统都要单独实现连接与鉴权，维护成本陡增"></div>
+<!-- <div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/llm/20/20-1-3-1.jpeg" alt="若缺乏统一协议，每接一类系统都要单独实现连接与鉴权，维护成本陡增"></div> -->
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/llm/20/20-1-3-1.jpeg" alt="若缺乏统一协议，每接一类系统都要单独实现连接与鉴权，维护成本陡增"></div>
 
 如果每接一个系统都单独写一套连接逻辑，成本会非常高。MCP 的思路，就是给 AI 应用提供一个更像“**统一插口**”的东西。
 
@@ -127,13 +127,13 @@ MCP（Model Context Protocol，模型上下文协议）是一套**开放的标�
 
 MCP 最直观的价值，就是把原本分散的外部能力，用统一方式暴露给 AI 应用。
 
-<!-- ![分散接入：各工具、服务、客户端各自约定协议与 schema，重复适配多](/assets/img/llm/20/20-3-1-1.jpeg) -->
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/20/20-3-1-1.jpeg" alt="分散接入：各工具、服务、客户端各自约定协议与 schema，重复适配多"></div>
+<!-- <div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/llm/20/20-3-1-1.jpeg" alt="分散接入：各工具、服务、客户端各自约定协议与 schema，重复适配多"></div> -->
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/llm/20/20-3-1-1.jpeg" alt="分散接入：各工具、服务、客户端各自约定协议与 schema，重复适配多"></div>
 
 > **说明**：「分」——各应用、各数据源各自对接，重复开发、难以复用。
 
-<!-- ![MCP 统一层：标准化暴露后，由 Host 侧按同一套方式发现与调用能力](/assets/img/llm/20/20-3-1-2.jpeg) -->
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/20/20-3-1-2.jpeg" alt="MCP 统一层：标准化暴露后，由 Host 侧按同一套方式发现与调用能力"></div>
+<!-- <div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/llm/20/20-3-1-2.jpeg" alt="MCP 统一层：标准化暴露后，由 Host 侧按同一套方式发现与调用能力"></div> -->
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/llm/20/20-3-1-2.jpeg" alt="MCP 统一层：标准化暴露后，由 Host 侧按同一套方式发现与调用能力"></div>
 
 > **说明**：「合」——通过 MCP 等统一协议，一次开发、多端复用。
 
@@ -216,8 +216,8 @@ MCP 最直观的价值，就是把原本分散的外部能力，用统一方式�
 
 **很多能力无需一开始就自己写服务端，先学会怎么接、怎么配、怎么调试也很有必要。**
 
-<!-- ![通过 Registry 或目录浏览、发现已发布的 MCP 服务与能力（示意）](/assets/img/llm/20/20-4-1-1.jpeg) -->
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/20/20-4-1-1.jpeg" alt="通过 Registry 或目录浏览、发现已发布的 MCP 服务与能力（示意）"></div>
+<!-- <div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/llm/20/20-4-1-1.jpeg" alt="通过 Registry 或目录浏览、发现已发布的 MCP 服务与能力（示意）"></div> -->
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/llm/20/20-4-1-1.jpeg" alt="通过 Registry 或目录浏览、发现已发布的 MCP 服务与能力（示意）"></div>
 
 ### 4.2 本地自建 MCP 服务端
 
@@ -283,8 +283,8 @@ LangChain 官方已经提供了对 MCP 的适配支持。常见路线是：
 
 MCP 采用典型的 **Host - Client - Server** 架构。
 
-<!-- ![MCP 架构：Host（用户应用）内的 Client 与远端或子进程中的 Server 通信，Server 再访问本地/远程资源](/assets/img/llm/20/20-5-1-1.jpeg) -->
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/20/20-5-1-1.jpeg" alt="MCP 架构：Host（用户应用）内的 Client 与远端或子进程中的 Server 通信，Server 再访问本地/远程资源"></div>
+<!-- <div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/llm/20/20-5-1-1.jpeg" alt="MCP 架构：Host（用户应用）内的 Client 与远端或子进程中的 Server 通信，Server 再访问本地/远程资源"></div> -->
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/llm/20/20-5-1-1.jpeg" alt="MCP 架构：Host（用户应用）内的 Client 与远端或子进程中的 Server 通信，Server 再访问本地/远程资源"></div>
 
 {% autogrid data-grid-link-table nofix %}
 角色|含义
@@ -301,8 +301,8 @@ MCP 采用典型的 **Host - Client - Server** 架构。
 
 这也是为什么“一个 Host 可以连多台 Server”，但“一个具体 Client 通常对应一条到某台 Server 的直接连接”。
 
-<!-- ![多 Server 拓扑：同一 Host 可挂多个 Client，各 Client 分别维护到一台 Server 的会话](/assets/img/llm/20/20-5-1-2.jpeg) -->
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/20/20-5-1-2.jpeg" alt="多 Server 拓扑：同一 Host 可挂多个 Client，各 Client 分别维护到一台 Server 的会话"></div>
+<!-- <div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/llm/20/20-5-1-2.jpeg" alt="多 Server 拓扑：同一 Host 可挂多个 Client，各 Client 分别维护到一台 Server 的会话"></div> -->
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/llm/20/20-5-1-2.jpeg" alt="多 Server 拓扑：同一 Host 可挂多个 Client，各 Client 分别维护到一台 Server 的会话"></div>
 
 ### 5.2 MCP 协议层面大致怎么工作
 
@@ -375,8 +375,8 @@ MCP 更像是：**“AI 应用与外部能力之间的协议层 + 能力发现�
 - 或兼容写法
 - 或具体库层面对历史接口的保留
 
-<!-- ![传输方式对照：stdio（子进程管道）与 Streamable HTTP（独立 HTTP 服务，可含 SSE 流式）及历史 SSE 兼容语境](/assets/img/llm/20/20-5-3-1.jpeg) -->
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/20/20-5-3-1.jpeg" alt="传输方式对照：stdio（子进程管道）与 Streamable HTTP（独立 HTTP 服务，可含 SSE 流式）及历史 SSE 兼容语境"></div>
+<!-- <div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/llm/20/20-5-3-1.jpeg" alt="传输方式对照：stdio（子进程管道）与 Streamable HTTP（独立 HTTP 服务，可含 SSE 流式）及历史 SSE 兼容语境"></div> -->
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/llm/20/20-5-3-1.jpeg" alt="传输方式对照：stdio（子进程管道）与 Streamable HTTP（独立 HTTP 服务，可含 SSE 流式）及历史 SSE 兼容语境"></div>
 
 结合仓库现有案例，可以这样看：
 

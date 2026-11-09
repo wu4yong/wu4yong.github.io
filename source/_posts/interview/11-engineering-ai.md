@@ -36,8 +36,8 @@ AI 生成的代码可能隐藏很多线上风险：
 
 <strong>参考答案：</strong> 不只是简单使用 AI 生成代码，核心能力是能够识别 AI 产出代码的缺陷，能够对 AI 生成的代码做校验、修正，把控业务逻辑、分布式场景、异常兜底、安全规范，保障生产环境系统稳定可靠。
 
-<!-- ![图 11-1　答题要点结构图](/assets/img/interview/11-1ai-generated-code.png) -->
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/interview/11-1ai-generated-code.png" alt="综合答题要点结构图"></div>
+<!-- <div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/interview/11-1ai-generated-code.png" alt="图 11-1　答题要点结构图"></div> -->
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/interview/11-1ai-generated-code.png" alt="综合答题要点结构图"></div>
 
 ## 第 2 题　AI 生成代码线上故障应急排查
 
@@ -76,8 +76,8 @@ AI 代码特点是表层代码工整，边界场景漏洞多，堆栈信息杂�
 
 <strong>面试加分点：</strong>AI 只是生成初稿，不能把排错完全交给日志，要有预案、止损手段、标准化排查方法论。
 
-<!-- ![图 11-2　答题要点结构图](/assets/img/interview/11-2ai-code-incident.png) -->
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/interview/11-2ai-code-incident.png" alt="综合答题要点结构图"></div>
+<!-- <div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/interview/11-2ai-code-incident.png" alt="图 11-2　答题要点结构图"></div> -->
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/interview/11-2ai-code-incident.png" alt="综合答题要点结构图"></div>
 
 ## 第 3 题　AI 生成代码引发线上性能故障应急处理
 
@@ -122,8 +122,8 @@ AI 生成代码典型现象：单机测试环境运行正常，一旦接入线�
 3. 故障发生优先止损，而不是简单重启服务；
 4. 建立前置审核机制，上线前就把稳定性要素纳入评审，而不是故障发生后被动救火。
 
-<!-- ![图 11-3　答题要点结构图](/assets/img/interview/11-3ai-code-performance-incident.png) -->
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/interview/11-3ai-code-performance-incident.png" alt="综合答题要点结构图"></div>
+<!-- <div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/interview/11-3ai-code-performance-incident.png" alt="图 11-3　答题要点结构图"></div> -->
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/interview/11-3ai-code-performance-incident.png" alt="综合答题要点结构图"></div>
 
 ## 第 4 题　AI 图像推理服务线上故障
 
@@ -166,8 +166,8 @@ AI 生成代码典型现象：单机测试环境运行正常，一旦接入线�
 
 Q：动态 batch 的 tradeoff 是什么？ A：batch 越大单图平均推理越快，但凑批等待时延上升；batch_timeout 是核心参数，是吞吐和延迟的权衡。 Q：为什么 INT8 量化之后出现漏判？ A：量化误差，激活值分布偏移，校准集和线上真实分布不一致；解决：KL 校准、部分层保留 FP16、量化感知训练 QAT。 Q：GPU 利用率上不去怎么办？ A：优先排查：预处理在 CPU、动态 shape、batch 太小、流没有并行、请求流量稀疏。
 
-<!-- ![图 11-4　答题要点结构图](/assets/img/interview/11-4ai-inference-incident.png) -->
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/interview/11-4ai-inference-incident.png" alt="综合答题要点结构图"></div>
+<!-- <div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/interview/11-4ai-inference-incident.png" alt="图 11-4　答题要点结构图"></div> -->
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/interview/11-4ai-inference-incident.png" alt="综合答题要点结构图"></div>
 
 ## 第 5 题　API 接口异常处理：try-catch + 统一错误码为什么还不够？
 
@@ -210,8 +210,8 @@ Q：动态 batch 的 tradeoff 是什么？ A：batch 越大单图平均推理越
 
 <strong>参考答案：</strong> 这道题不考察会不会写 try‑catch，考察对真实线上接口异常场景的理解，是否具备容错机制、链路追溯、数据一致性的实战能力。 简单捕获异常只是语法层面，生产环境接口稳定性，需要兼顾异常处理、日志追溯、容错重试、数据兜底、监控告警整套体系。
 
-<!-- ![图 11-5　答题要点结构图](/assets/img/interview/11-5api-exception-handling.png) -->
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/interview/11-5api-exception-handling.png" alt="综合答题要点结构图"></div>
+<!-- <div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/interview/11-5api-exception-handling.png" alt="图 11-5　答题要点结构图"></div> -->
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/interview/11-5api-exception-handling.png" alt="综合答题要点结构图"></div>
 
 ## 第 6 题　大文件分片上传+断点续传，原理、坑点、异常容错完整解析
 
@@ -338,5 +338,5 @@ Q：动态 batch 的 tradeoff 是什么？ A：batch 越大单图平均推理越
 
 <strong>核心思想：</strong>分片上传不只是切割文件，核心是幂等、完整性校验、临时资源回收、合并原子性。
 
-<!-- ![图 11-6　答题要点结构图](/assets/img/interview/11-6large-file-upload.png) -->
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/interview/11-6large-file-upload.png" alt="综合答题要点结构图"></div>
+<!-- <div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/interview/11-6large-file-upload.png" alt="图 11-6　答题要点结构图"></div> -->
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/interview/11-6large-file-upload.png" alt="综合答题要点结构图"></div>

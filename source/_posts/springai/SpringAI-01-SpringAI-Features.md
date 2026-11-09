@@ -13,7 +13,7 @@ tags:
 
 ## 介绍
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/springai/ch01_springai_intro.png" alt="ch01_springai_intro.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/springai/ch01_springai_intro.png" alt="ch01_springai_intro.png"></div>
 
 Spring AI 是一个面向人工智能工程的应用框架。解决了 AI 集成的基本挑战：将企业数据和API与AI 模型连接起来。
 
@@ -25,7 +25,7 @@ Spring AI 是一个面向人工智能工程的应用框架。解决了 AI 集成
 
 ### 对话拦截advisors
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/springai/ch01_advisors_arch.png" alt="ch01_advisors_arch.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/springai/ch01_advisors_arch.png" alt="ch01_advisors_arch.png"></div>
 
 面向切面的思想对对模型对话和响应进行增强。
 
@@ -40,7 +40,7 @@ ChatMemoryRepository chatMemoryRepository;
 
 ### tools
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/springai/ch01_tools.png" alt="ch01_tools.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/springai/ch01_tools.png" alt="ch01_tools.png"></div>
 
 让大模型可以跟企业业务API进行互联 ，这一块实现起来也是非常的优雅
 
@@ -57,7 +57,7 @@ class DateTimeTools {
 
 ### RAG技术下的 ETL
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/springai/ch01_rag_etl.png" alt="ch01_rag_etl.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/springai/ch01_rag_etl.png" alt="ch01_rag_etl.png"></div>
 
 让大模型可以跟企业业务数据进行互联（包括读取文件、分隔文件、向量化） 向量数据库支持 目前支持20+种向量数据库的集成 这块我到时候也会详细去讲
 
@@ -78,7 +78,7 @@ class DateTimeTools {
 springai 提供了5种agent模式的示例
 1. [Evaluator Optimizer](https://github.com/spring-projects/spring-ai-examples/tree/main/agentic-patterns/evaluator-optimizer) – The model analyzes its own responses and refines them through a structured process of self-evaluation.
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/springai/ch01_agent_patterns.png" alt="ch01_agent_patterns.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/springai/ch01_agent_patterns.png" alt="ch01_agent_patterns.png"></div>
 
 2. [Routing](https://github.com/spring-projects/spring-ai-examples/tree/main/agentic-patterns/routing-workflow) – This pattern enables intelligent routing of inputs to specialized handlers based on classification of the user request and context.
 3. [Orchestrator Workers](https://github.com/spring-projects/spring-ai-examples/tree/main/agentic-patterns/orchestrator-workers) – This pattern is a flexible approach for handling complex tasks that require dynamic task decomposition and specialized processing
@@ -90,7 +90,7 @@ springai 提供了5种agent模式的示例
 
 
 {% autogrid data-grid-link-table nofix %}
-|<img src="/assets/img/springai/ch01_langchain_vs_springai_1.png" alt="ch01_langchain_vs_springai_1.png">|<img src="/assets/img/springai/ch01_langchain_vs_springai_2.png" alt="ch01_langchain_vs_springai_2.png">
+|<img src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/springai/ch01_langchain_vs_springai_1.png" alt="ch01_langchain_vs_springai_1.png">|<img src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/springai/ch01_langchain_vs_springai_2.png" alt="ch01_langchain_vs_springai_2.png">
 生态|不依赖Spring，需要单独集成Spring|Spring官方，和Spring无缝集成
 诞生|更早，中国团队，受 LangChain 启发|稍晚，但是明显后来居上
 jdk|v0.35.0 前的版本支持jdk8 ，后支持jdk17|全版本jdk17
@@ -124,7 +124,7 @@ jdk|v0.35.0 前的版本支持jdk8 ，后支持jdk17|全版本jdk17
 
 图 1：Qwen3 超大模型（235B/32B）官方自测，对标 o1/R1/Gemini2.5-Pro
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/springai/ch01_model_selection_1.png" alt="ch01_model_selection_1.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/springai/ch01_model_selection_1.png" alt="ch01_model_selection_1.png"></div>
 
 {% raw %}
 <style>
@@ -150,12 +150,12 @@ MultiIF|Multi-IF|多语言多轮指令跟随评测（Meta 出品），8 Language
 
 图 2：Qwen3 中小参数（30B MoE / 4B 稠密）官方自测，对标 GPT4o、Gemma3、DeepSeek V3
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/springai/ch01_model_selection_2.png" alt="ch01_model_selection_2.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/springai/ch01_model_selection_2.png" alt="ch01_model_selection_2.png"></div>
 
 图 3：第三方 AA 聚合总榜，全世界所有主流模型放一起比，商用 / 开源分开，统一标准打分[非官方图]
 
 仓库地址：https://github.com/jeinlee1991/chinese-llm-benchmark
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/springai/ch01_model_benchmark.png" alt="ch01_model_benchmark.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/springai/ch01_model_benchmark.png" alt="ch01_model_benchmark.png"></div>
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/springai/llm-top.png" alt="ch01_model_benchmark.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/springai/llm-top.png" alt="ch01_model_benchmark.png"></div>

@@ -22,11 +22,11 @@ tool calling也可以直接叫tool（也称为function-call）, 主要用于提�
 
 ## 需要使用tools必须要先保证大模型支持。   比如ollama列出了支持tool的模型
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/springai/ch08_1749392917151-41ed9d80-529d-49c2-93e9-abe22b2c4b94_b6e743950a.png" alt="ch08_1749392917151-41ed9d80-529d-49c2-93e9-abe22b2c4b94_b6e743950a.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/springai/ch08_1749392917151-41ed9d80-529d-49c2-93e9-abe22b2c4b94_b6e743950a.png" alt="ch08_1749392917151-41ed9d80-529d-49c2-93e9-abe22b2c4b94_b6e743950a.png"></div>
 
 ## 使用
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/springai/ch08_1751958667763-7a8e7375-fa12-44b8-8521-b219f9ba10e3_ca7022b5ac.png" alt="ch08_1751958667763-7a8e7375-fa12-44b8-8521-b219f9ba10e3_ca7022b5ac.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/springai/ch08_1751958667763-7a8e7375-fa12-44b8-8521-b219f9ba10e3_ca7022b5ac.png" alt="ch08_1751958667763-7a8e7375-fa12-44b8-8521-b219f9ba10e3_ca7022b5ac.png"></div>
 
 ### 1. 声明tools的类:
 
@@ -79,24 +79,24 @@ public class ToolTest {
 
 ```
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/springai/ch08_1749453132339-95c40010-427f-452a-8f6e-580b62b493eb_58a95e93e2.png" alt="ch08_1749453132339-95c40010-427f-452a-8f6e-580b62b493eb_58a95e93e2.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/springai/ch08_1749453132339-95c40010-427f-452a-8f6e-580b62b493eb_58a95e93e2.png" alt="ch08_1749453132339-95c40010-427f-452a-8f6e-580b62b493eb_58a95e93e2.png"></div>
 
 ### 原理
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/springai/ch08_1749454119801-20e17389-b5da-4af2-a683-af5ec9ee3bd3_b90db82ddb.png" alt="ch08_1749454119801-20e17389-b5da-4af2-a683-af5ec9ee3bd3_b90db82ddb.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/springai/ch08_1749454119801-20e17389-b5da-4af2-a683-af5ec9ee3bd3_b90db82ddb.png" alt="ch08_1749454119801-20e17389-b5da-4af2-a683-af5ec9ee3bd3_b90db82ddb.png"></div>
 
 1.  当我们设置了defaultTools 相当于就告诉了大模型我提供了什么工具， 你需要用我的工具必须给我什么参数， 底层实际就是将这些信息封装了json提供给大模型
 2. 当大模型识别到我们的对话需要用到工具， 就会响应需要调用tool
 
 ### 源码
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/springai/ch08_1749454861533-d726d036-c384-44c7-aa9c-25d084837e79_4c379e4cd2.png" alt="ch08_1749454861533-d726d036-c384-44c7-aa9c-25d084837e79_4c379e4cd2.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/springai/ch08_1749454861533-d726d036-c384-44c7-aa9c-25d084837e79_4c379e4cd2.png" alt="ch08_1749454861533-d726d036-c384-44c7-aa9c-25d084837e79_4c379e4cd2.png"></div>
 
 ### tools注意事项：
 
 ### 1. **参数或者返回值不支持**
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/springai/ch08_1751966390991-d75eacfb-c7ae-4b5f-91fb-d3c3f3f2f0ec_3edd990c50.png" alt="ch08_1751966390991-d75eacfb-c7ae-4b5f-91fb-d3c3f3f2f0ec_3edd990c50.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/springai/ch08_1751966390991-d75eacfb-c7ae-4b5f-91fb-d3c3f3f2f0ec_3edd990c50.png" alt="ch08_1751966390991-d75eacfb-c7ae-4b5f-91fb-d3c3f3f2f0ec_3edd990c50.png"></div>
 
 **推荐**：  pojo  record   java基础类型   list  map
 
@@ -224,14 +224,14 @@ tools的描述作用   保存  向量数据库。
 
 ### 角色预设：
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/springai/ch08_1752411906784-7e52fb76-0f69-4224-b4ec-8217d525bea6_ff12794ba3.png" alt="ch08_1752411906784-7e52fb76-0f69-4224-b4ec-8217d525bea6_ff12794ba3.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/springai/ch08_1752411906784-7e52fb76-0f69-4224-b4ec-8217d525bea6_ff12794ba3.png" alt="ch08_1752411906784-7e52fb76-0f69-4224-b4ec-8217d525bea6_ff12794ba3.png"></div>
 
 ### 记忆对话
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/springai/ch08_1752412010405-7e36f066-e742-4dec-9f1a-7f608e70f8e1_10f9cfe1ca.png" alt="ch08_1752412010405-7e36f066-e742-4dec-9f1a-7f608e70f8e1_10f9cfe1ca.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/springai/ch08_1752412010405-7e36f066-e742-4dec-9f1a-7f608e70f8e1_10f9cfe1ca.png" alt="ch08_1752412010405-7e36f066-e742-4dec-9f1a-7f608e70f8e1_10f9cfe1ca.png"></div>
 
 ### tools
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/springai/ch08_1752412032155-7ee5fea7-1003-42f5-9c87-951be3343f04_a42d5c5bb4.png" alt="ch08_1752412032155-7ee5fea7-1003-42f5-9c87-951be3343f04_a42d5c5bb4.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/springai/ch08_1752412032155-7ee5fea7-1003-42f5-9c87-951be3343f04_a42d5c5bb4.png" alt="ch08_1752412032155-7ee5fea7-1003-42f5-9c87-951be3343f04_a42d5c5bb4.png"></div>
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/springai/ch08_1751958968629-336b4ca5-3ea0-4ad3-bb1a-32b5c89ba5ae_f105b8f167.webp" alt="ch08_1751958968629-336b4ca5-3ea0-4ad3-bb1a-32b5c89ba5ae_f105b8f167.webp"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/springai/ch08_1751958968629-336b4ca5-3ea0-4ad3-bb1a-32b5c89ba5ae_f105b8f167.webp" alt="ch08_1751958968629-336b4ca5-3ea0-4ad3-bb1a-32b5c89ba5ae_f105b8f167.webp"></div>

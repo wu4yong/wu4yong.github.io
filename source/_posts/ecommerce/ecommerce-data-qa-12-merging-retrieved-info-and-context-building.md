@@ -29,8 +29,8 @@ tags:
 
 ## 1、本章在问数链路中的位置
 
-<!-- ![基于 LangGraph 的问数智能体全流程：关键词抽取、多路召回、合并过滤、生成与校验 SQL 等节点](/assets/img/llm/ecommerce-data-qa/2/2-3-1-1.jpg) -->
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/ecommerce-data-qa/2/2-3-1-1.jpg" alt="基于 LangGraph 的问数智能体全流程：关键词抽取、多路召回、合并过滤、生成与校验 SQL 等节点"></div>
+<!-- <div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/llm/ecommerce-data-qa/2/2-3-1-1.jpg" alt="基于 LangGraph 的问数智能体全流程：关键词抽取、多路召回、合并过滤、生成与校验 SQL 等节点"></div> -->
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/llm/ecommerce-data-qa/2/2-3-1-1.jpg" alt="基于 LangGraph 的问数智能体全流程：关键词抽取、多路召回、合并过滤、生成与校验 SQL 等节点"></div>
 
 上一章完成了关键词抽取和三路召回。三路召回结束后，`state` 里会有三份结果：
 
@@ -54,8 +54,8 @@ retrieved_value_infos   # 召回到的字段真实取值
   -> generate_sql
 ```
 
-<!-- ![问数智能体「合并召回信息」：将字段、指标与字段取值整理为按表分组的层次化上下文](/assets/img/llm/ecommerce-data-qa/2/2-3-3-1.png) -->
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/ecommerce-data-qa/2/2-3-3-1.png" alt="问数智能体「合并召回信息」：将字段、指标与字段取值整理为按表分组的层次化上下文"></div>
+<!-- <div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/llm/ecommerce-data-qa/2/2-3-3-1.png" alt="问数智能体「合并召回信息」：将字段、指标与字段取值整理为按表分组的层次化上下文"></div> -->
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/llm/ecommerce-data-qa/2/2-3-3-1.png" alt="问数智能体「合并召回信息」：将字段、指标与字段取值整理为按表分组的层次化上下文"></div>
 
 召回节点负责“找候选”，合并节点负责“整理候选”。整理后的结果会继续交给过滤节点和 SQL 生成节点使用。
 
@@ -166,8 +166,8 @@ region_name
 
 ## 3、合并后的目标结构
 
-<!-- ![召回信息合并为 SQL 上下文的结构化过程：字段、指标和字段取值经过去重、补齐、分组后形成 table_infos 与 metric_infos](/assets/img/llm/ecommerce-data-qa/12/12-3-0-1.svg) -->
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/ecommerce-data-qa/12/12-3-0-1.svg" alt="召回信息合并为 SQL 上下文的结构化过程：字段、指标和字段取值经过去重、补齐、分组后形成 table_infos 与 metric_infos"></div>
+<!-- <div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/llm/ecommerce-data-qa/12/12-3-0-1.svg" alt="召回信息合并为 SQL 上下文的结构化过程：字段、指标和字段取值经过去重、补齐、分组后形成 table_infos 与 metric_infos"></div> -->
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/llm/ecommerce-data-qa/12/12-3-0-1.svg" alt="召回信息合并为 SQL 上下文的结构化过程：字段、指标和字段取值经过去重、补齐、分组后形成 table_infos 与 metric_infos"></div>
 
 `merge_retrieved_info` 最终返回两个字段：
 

@@ -92,7 +92,7 @@ make && make install
 
 如果没有出错，应该就安装成功了。默认的安装路径是 /usr/local/bin目录：
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/redis/1/image1.png" alt="image1.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/redis/1/image1.png" alt="image1.png"></div>
 
 此时，任意目录下都能运行如下指令：
 
@@ -114,7 +114,7 @@ redis的启动方式有很多种：
 redis-server
 ```
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/redis/1/image2.png" alt="image2.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/redis/1/image2.png" alt="image2.png"></div>
 
 这种启动属于前台启动，会阻塞整个会话窗口，窗口关闭或者按下Ctrl + C则Redis停止。不推荐使用。
 
@@ -246,7 +246,7 @@ ping：与redis服务端做心跳测试，服务端正常会返回pong
 
 不指定commond时，会进入redis-cli的交互控制台：
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/redis/1/image3.png" alt="image3.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/redis/1/image3.png" alt="image3.png"></div>
 
 ### 1.4.2 图形化客户端
 
@@ -254,7 +254,7 @@ Redis的图形化桌面客户端的windows安装包：
 
 **[该类型的内容暂不支持下载]**
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/redis/1/image4.png" alt="image4.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/redis/1/image4.png" alt="image4.png"></div>
 
 ### 1.4.3 安装和使用
 
@@ -262,15 +262,15 @@ Redis的图形化桌面客户端的windows安装包：
 
 安装后双击打开rdm，点击左上角的连接到Redis服务器按钮，在弹出的窗口中填写Redis服务信息：
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/redis/1/image5.png" alt="image5.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/redis/1/image5.png" alt="image5.png"></div>
 
 点击确定后，在左侧菜单会出现这个链接：
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/redis/1/image6.png" alt="image6.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/redis/1/image6.png" alt="image6.png"></div>
 
 点击即可建立连接：
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/redis/1/image7.png" alt="image7.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/redis/1/image7.png" alt="image7.png"></div>
 
 Redis默认有16个仓库，编号从0至15. 通过配置文件可以设置仓库数量，但是不超过16，并且不能自定义仓库名称。
 
@@ -287,7 +287,7 @@ select 0
 
 Redis是典型的key-value数据库，key一般是字符串，而value包含很多不同的数据类型：
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/redis/1/image8.png" alt="image8.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/redis/1/image8.png" alt="image8.png"></div>
 
 不同类型的命令称为一个group，通过help命令可以查看各种不同group的命令，如以下命令可以查看通用命令：
 
@@ -375,7 +375,7 @@ String类型存放JSON数据时，操作某个字段很不方便，此时Hash类
 
 Hash类型也叫散列，其value是一个无序字典，类似于Java中的HashMap结构：
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/redis/1/image9.png" alt="image9.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/redis/1/image9.png" alt="image9.png"></div>
 
 **Hash的常见命令有**：
 
@@ -759,7 +759,7 @@ System.out.println("name = " + name);
 
 RedisTemplate可以接收任意Object作为值写入Redis，只不过写入前会把Object序列化为字节形式，默认是采用JDK序列化：
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/redis/1/image10.png" alt="image10.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/redis/1/image10.png" alt="image10.png"></div>
 
 但是JDK序列化后内存占用高、可读性差，所以自定义RedisTemplate的序列化方式：
 
@@ -789,7 +789,7 @@ return template;
 
 这样采用JSON序列化代替JDK序列化，可读性大大提高：
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/redis/1/image11.png" alt="image11.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/redis/1/image11.png" alt="image11.png"></div>
 
 但是会记录序列化时对应的class名称，以至于查询时实现自动反序列化。
 
@@ -797,7 +797,7 @@ return template;
 
 为了更加节省内存，可以不使用JSON序列化器，统一使用String序列化器，要求只能存储String类型的key和value。如果要存对象，可以手动实现序列化和反序列化：
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/redis/1/image12.png" alt="image12.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/redis/1/image12.png" alt="image12.png"></div>
 
 StringRedisTemplate是SpringDataRedis提供的RedisTemplate的子类，它的key和value的序列化方式默认就是String方式：
 

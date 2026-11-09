@@ -55,8 +55,8 @@ tags:
 
 先从最高层看，问数智能体的完整流程大致如下。
 
-<!-- ![基于 LangGraph 的问数智能体全流程：关键词抽取、多路召回、合并过滤、生成与校验 SQL 等节点](/assets/img/llm/ecommerce-data-qa/2/2-3-1-1.jpg) -->
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/ecommerce-data-qa/2/2-3-1-1.jpg" alt="基于 LangGraph 的问数智能体全流程：关键词抽取、多路召回、合并过滤、生成与校验 SQL 等节点"></div>
+<!-- <div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/llm/ecommerce-data-qa/2/2-3-1-1.jpg" alt="基于 LangGraph 的问数智能体全流程：关键词抽取、多路召回、合并过滤、生成与校验 SQL 等节点"></div> -->
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/llm/ecommerce-data-qa/2/2-3-1-1.jpg" alt="基于 LangGraph 的问数智能体全流程：关键词抽取、多路召回、合并过滤、生成与校验 SQL 等节点"></div>
 
 如果把每一步对应到代码里的节点名，可以先记成下面这条线：
 
@@ -155,8 +155,8 @@ shopkeeper-agent/
 
 下面这张图把本章最常见的几个 LangGraph 概念放在同一张图里。读代码时，不要把它们混成一团：`StateGraph` 管结构，`State` 管共享数据，`Node` 做局部处理，`Edge` 管下一步，`Runtime Context` 放运行时依赖。
 
-<!-- ![LangGraph 五件套在电商问数智能体中的位置：StateGraph、State、Node、Edge、Runtime Context 与 Streaming](/assets/img/llm/ecommerce-data-qa/10/10-3-0-1.svg) -->
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/ecommerce-data-qa/10/10-3-0-1.svg" alt="LangGraph 五件套在电商问数智能体中的位置：StateGraph、State、Node、Edge、Runtime Context 与 Streaming"></div>
+<!-- <div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/llm/ecommerce-data-qa/10/10-3-0-1.svg" alt="LangGraph 五件套在电商问数智能体中的位置：StateGraph、State、Node、Edge、Runtime Context 与 Streaming"></div> -->
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/llm/ecommerce-data-qa/10/10-3-0-1.svg" alt="LangGraph 五件套在电商问数智能体中的位置：StateGraph、State、Node、Edge、Runtime Context 与 Streaming"></div>
 
 如果想对照官方说明，可以参考 LangGraph 的 [Choosing APIs](https://docs.langchain.com/oss/python/langgraph/choosing-apis)、[Graph API](https://docs.langchain.com/oss/python/langgraph/graph-api) 和 [Use the Graph API](https://docs.langchain.com/oss/python/langgraph/use-graph-api)。
 

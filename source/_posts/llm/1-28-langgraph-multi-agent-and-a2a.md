@@ -138,8 +138,8 @@ sequenceDiagram
 
 ### 1.5 A2A 和 MCP 的区别
 
-<!-- ![MCP 与 A2A 的区别：MCP 负责 Agent 接入工具和资源，A2A 负责 Agent 与 Agent 之间的跨系统任务协作](/assets/img/llm/26/26-1-5-1.png) -->
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/26/26-1-5-1.png" alt="MCP 与 A2A 的区别：MCP 负责 Agent 接入工具和资源，A2A 负责 Agent 与 Agent 之间的跨系统任务协作"></div>
+<!-- <div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/llm/26/26-1-5-1.png" alt="MCP 与 A2A 的区别：MCP 负责 Agent 接入工具和资源，A2A 负责 Agent 与 Agent 之间的跨系统任务协作"></div> -->
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/llm/26/26-1-5-1.png" alt="MCP 与 A2A 的区别：MCP 负责 Agent 接入工具和资源，A2A 负责 Agent 与 Agent 之间的跨系统任务协作"></div>
 
 更工程化一点看：
 
@@ -292,8 +292,8 @@ Supervisor 模式可以理解成：**一个主管 Agent 负责判断当前该让
 
 这个模式特别适合：企业助手、旅行预订、客服分流、多部门协作场景。
 
-<!-- ![Supervisor 执行流程示意：主管 Agent 接收用户请求后，按任务类型调度航班、酒店等子 Agent，并汇总结果返回给用户](/assets/img/llm/26/26-2-2-1.svg) -->
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/26/26-2-2-1.svg" alt="Supervisor 执行流程示意：主管 Agent 接收用户请求后，按任务类型调度航班、酒店等子 Agent，并汇总结果返回给用户"></div>
+<!-- <div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/llm/26/26-2-2-1.svg" alt="Supervisor 执行流程示意：主管 Agent 接收用户请求后，按任务类型调度航班、酒店等子 Agent，并汇总结果返回给用户"></div> -->
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/llm/26/26-2-2-1.svg" alt="Supervisor 执行流程示意：主管 Agent 接收用户请求后，按任务类型调度航班、酒店等子 Agent，并汇总结果返回给用户"></div>
 
 放回 LangGraph 的 API 主线看，Supervisor 仍然属于第 26 章讲过的控制流问题，只是路由逻辑从普通条件函数升级成了一个主管 Agent：
 

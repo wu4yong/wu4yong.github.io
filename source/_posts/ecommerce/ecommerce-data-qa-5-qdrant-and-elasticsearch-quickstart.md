@@ -80,9 +80,9 @@ tags:
 
 ### 1.2 区分 OLTP、OLAP 和向量数据库
 
-<!-- ![OLTP、OLAP 与向量数据库的数据组织方式对比图](/assets/img/ecommerce/5/5-1-2-1.png) -->
+<!-- <div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/ecommerce/5/5-1-2-1.png" alt="OLTP、OLAP 与向量数据库的数据组织方式对比图"></div> -->
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/ecommerce/5/5-1-2-1.png" alt="OLTP、OLAP 与向量数据库的数据组织方式对比图"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/ecommerce/5/5-1-2-1.png" alt="OLTP、OLAP 与向量数据库的数据组织方式对比图"></div>
 理解 `Qdrant` 之前，一个常见误区是把它简单理解成“另一种 MySQL”。
 
 如果直接结合上面这张图来看，它本质上是在对比三类数据库的**数据组织方式**：
@@ -136,9 +136,9 @@ tags:
 
 ### 1.3 理解 Qdrant 核心概念
 
-<!-- ![指标元数据按名称、描述、别名分别向量化并写入向量库的映射示例](/assets/img/ecommerce/5/5-1-3-1.png) -->
+<!-- <div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/ecommerce/5/5-1-3-1.png" alt="指标元数据按名称、描述、别名分别向量化并写入向量库的映射示例"></div> -->
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/ecommerce/5/5-1-3-1.png" alt="指标元数据按名称、描述、别名分别向量化并写入向量库的映射示例"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/ecommerce/5/5-1-3-1.png" alt="指标元数据按名称、描述、别名分别向量化并写入向量库的映射示例"></div>
 Qdrant 官方对 `collection` 的描述很清楚：**同一个 collection 里的 points 使用相同维度，并按同一种距离度量进行比较。**
 
 如果是第一次接触向量数据库，先掌握下面几个概念：
@@ -308,9 +308,9 @@ Qdrant 官方 API 文档里，`query_points` 还支持 `score_threshold`、`limi
 
 `Qdrant` 自带可视化页面，通常可以通过 http://localhost:6333/dashboard 打开控制台页面，查看当前有哪些 `collection`、点数据是否写入成功。这对开发阶段排查问题会比较方便。
 
-<!-- ![Qdrant 控制台页面，用于查看集合与点数据是否写入成功](/assets/img/ecommerce/5/5-1-4-1.png) -->
+<!-- <div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/ecommerce/5/5-1-4-1.png" alt="Qdrant 控制台页面，用于查看集合与点数据是否写入成功"></div> -->
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/ecommerce/5/5-1-4-1.png" alt="Qdrant 控制台页面，用于查看集合与点数据是否写入成功"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/ecommerce/5/5-1-4-1.png" alt="Qdrant 控制台页面，用于查看集合与点数据是否写入成功"></div>
 ### 1.5 封装 Qdrant 客户端
 
 理解了 `Qdrant` 的基本概念之后，再来看项目代码里的封装就顺了。
@@ -714,9 +714,9 @@ GET /cooking_blog/_search
 
 如果这组代码能在 `Dev Tools` 中顺利执行，并且 `_search` 能查到结果，就说明你已经把 ES 的最小使用链路走通了。
 
-<!-- ![Kibana Dev Tools 中执行 cooking_blog 示例的响应结果](/assets/img/ecommerce/5/5-2-6-1.png) -->
+<!-- <div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/ecommerce/5/5-2-6-1.png" alt="Kibana Dev Tools 中执行 cooking_blog 示例的响应结果"></div> -->
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/ecommerce/5/5-2-6-1.png" alt="Kibana Dev Tools 中执行 cooking_blog 示例的响应结果"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/ecommerce/5/5-2-6-1.png" alt="Kibana Dev Tools 中执行 cooking_blog 示例的响应结果"></div>
 ### 2.7 理解 bulk 和 match
 
 快速入门里还有两个非常常用的 API，需要单独理解一下。
@@ -900,9 +900,9 @@ if __name__ == "__main__":
 {'took': 5, 'timed_out': False, '_shards': {'total': 1, 'successful': 1, 'skipped': 0, 'failed': 0}, 'hits': {'total': {'value': 1, 'relation': 'eq'}, 'max_score': 1.2067741, 'hits': [{'_index': 'my-books', '_id': 'SDB_np0BrzSqcXAMSMVk', '_score': 1.2067741, '_source': {'name': 'Brave New World', 'author': 'Aldous Huxley', 'release_date': '1932-06-01', 'page_count': 268}}]}}
 ```
 
-<!-- ![ESClientManager 测试代码运行成功后的返回结果示意](/assets/img/ecommerce/5/5-2-8-1.png) -->
+<!-- <div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/ecommerce/5/5-2-8-1.png" alt="ESClientManager 测试代码运行成功后的返回结果示意"></div> -->
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/ecommerce/5/5-2-8-1.png" alt="ESClientManager 测试代码运行成功后的返回结果示意"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/ecommerce/5/5-2-8-1.png" alt="ESClientManager 测试代码运行成功后的返回结果示意"></div>
 #### 2.8.1 这一层封装在做什么
 
 这个文件实际上也在完成两层工作：

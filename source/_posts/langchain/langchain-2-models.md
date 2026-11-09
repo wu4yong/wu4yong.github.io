@@ -16,7 +16,7 @@ tags:
 
 在LangChain v0.3版本中，提到了Model I/O，包括输入提示（Format）、调用模型（Predict）、输出解析（Parse）。分别对应着Prompt Template， Model 和Output Parser。
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/langchain/2/page-01-image-01.png" alt="page-01-image-01.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/langchain/2/page-01-image-01.png" alt="page-01-image-01.png"></div>
 
 关于模型调用模块，如今对话模型已经是主要形式。从历史上解读：
 
@@ -87,7 +87,7 @@ tags:
 pip install -r .\requirements.txt
 ```
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/langchain/2/page-03-image-01.png" alt="page-03-image-01.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/langchain/2/page-03-image-01.png" alt="page-03-image-01.png"></div>
 
 说明：课程中的部分章节会单独列出相关依赖，主要是为了帮助大家了解该章节涉及的核心库。无需重复安装，这些依赖已经统一包含在 requirements.txt 中。
 
@@ -99,7 +99,7 @@ pip install -r .\requirements.txt
 
 官网链接：<https://reference.langchain.com/python/langchain-community/chat-models>
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/langchain/2/page-03-image-02.png" alt="page-03-image-02.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/langchain/2/page-03-image-02.png" alt="page-03-image-02.png"></div>
 
 ### 2.1 通过专用API调用
 
@@ -457,7 +457,7 @@ print(model.invoke("一句话介绍下你自己"))
 
 **补充说明：账户充值**
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/langchain/2/page-10-image-01.png" alt="page-10-image-01.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/langchain/2/page-10-image-01.png" alt="page-10-image-01.png"></div>
 
 #### 2.3.2 CloseAI
 
@@ -517,7 +517,7 @@ model = init_chat_model(
 
 图示：
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/langchain/2/page-11-image-01.png" alt="page-11-image-01.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/langchain/2/page-11-image-01.png" alt="page-11-image-01.png"></div>
 
 ### 3.1 使用举例
 
@@ -636,7 +636,7 @@ init_chat_model()三种方式
 CloseAPI平台的DeepSeek模型：可以调用ChatOpenAI()、init_chat_model() 两种方式
 ```
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/langchain/2/page-14-image-01.png" alt="page-14-image-01.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/langchain/2/page-14-image-01.png" alt="page-14-image-01.png"></div>
 
 ### 3.3 模型初始化参数（常用版）
 
@@ -664,7 +664,7 @@ API文档：<https://docs.langchain.org.cn/oss/python/langchain/models#parameter
 - 0.8-1.5：创造性任务（写作、头脑风暴）
 - 1.5-2.0：高度创造性（诗歌、故事创作）
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/langchain/2/page-15-image-01.png" alt="page-15-image-01.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/langchain/2/page-15-image-01.png" alt="page-15-image-01.png"></div>
 
 举例：
 
@@ -904,7 +904,7 @@ Ollama官方地址：<https://ollama.com>
 
 产品定位：
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/langchain/2/page-20-image-01.png" alt="page-20-image-01.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/langchain/2/page-20-image-01.png" alt="page-20-image-01.png"></div>
 
 ### 4.2 Ollama的下载-安装
 
@@ -914,7 +914,7 @@ Ollama项目支持跨平台部署，目前已兼容Mac、Linux和Windows操作�
 
 访问 <https://ollama.com/download> 下载对应系统的安装文件。
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/langchain/2/page-20-image-02.png" alt="page-20-image-02.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/langchain/2/page-20-image-02.png" alt="page-20-image-02.png"></div>
 
 - Linux 系统执行以下命令安装：
 
@@ -938,11 +938,11 @@ curl -fsSL https://ollama.com/install.sh | sh
 
 手动创建ollama安装目录：首先在你想安装的路径下创建好一个新文件夹，并把ollama的安装包放在里面。比如我的是：F:\common_tools\Ollama
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/langchain/2/page-21-image-01.png" alt="page-21-image-01.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/langchain/2/page-21-image-01.png" alt="page-21-image-01.png"></div>
 
 在文件路径上输入cmd 回车后会自动打开命令行窗口：
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/langchain/2/page-21-image-02.png" alt="page-21-image-02.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/langchain/2/page-21-image-02.png" alt="page-21-image-02.png"></div>
 
 然后在cmd 窗口输入：
 
@@ -952,7 +952,7 @@ OllamaSetup.exe /DIR=F:\common_tools\Ollama
 
 语法：软件名称/DIR=这里放你上面创建好的Ollama指定目录
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/langchain/2/page-21-image-03.png" alt="page-21-image-03.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/langchain/2/page-21-image-03.png" alt="page-21-image-03.png"></div>
 
 然后Ollama就会进入安装，点击install后，可以看到Ollama的安装路径就变成了我们指定的目录了。
 
@@ -960,17 +960,17 @@ OllamaSetup.exe /DIR=F:\common_tools\Ollama
 
 **1、手动设置大模型存储目录：**
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/langchain/2/page-21-image-04.png" alt="page-21-image-04.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/langchain/2/page-21-image-04.png" alt="page-21-image-04.png"></div>
 
 指明大模型要下载到的本地目录位置
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/langchain/2/page-22-image-01.png" alt="page-22-image-01.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/langchain/2/page-22-image-01.png" alt="page-22-image-01.png"></div>
 
 **2、模型的下载**
 
 方式1：直接在图形化界面位置下载
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/langchain/2/page-22-image-02.png" alt="page-22-image-02.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/langchain/2/page-22-image-02.png" alt="page-22-image-02.png"></div>
 
 > 蓝色的使用在线模型，需要在Ollama平台付费使用。
 
@@ -980,15 +980,15 @@ OllamaSetup.exe /DIR=F:\common_tools\Ollama
 ollama run deepseek-r1:1.5b
 ```
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/langchain/2/page-23-image-01.png" alt="page-23-image-01.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/langchain/2/page-23-image-01.png" alt="page-23-image-01.png"></div>
 
 回到命令行，输入指令开始下载：
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/langchain/2/page-23-image-02.png" alt="page-23-image-02.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/langchain/2/page-23-image-02.png" alt="page-23-image-02.png"></div>
 
 下载完即可进行交互：
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/langchain/2/page-23-image-03.png" alt="page-23-image-03.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/langchain/2/page-23-image-03.png" alt="page-23-image-03.png"></div>
 
 Ollama常用命令：
 
@@ -2001,7 +2001,7 @@ If you want a more natural title-like phrase, **“Falling Autumn Leaves”
 
 举例：
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/langchain/2/page-43-image-01.png" alt="page-43-image-01.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/langchain/2/page-43-image-01.png" alt="page-43-image-01.png"></div>
 
 在LangChain框架中，异步方法（ainvoke、astream、abatch）与它们的同步版本（invoke、stream、batch）相比，具备如下特点：
 
@@ -2326,7 +2326,7 @@ response.pretty_print()
 
 控制字符无法被渲染，输出效果如下图所示。
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/langchain/2/page-49-image-01.png" alt="page-49-image-01.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/langchain/2/page-49-image-01.png" alt="page-49-image-01.png"></div>
 
 **方法2：使用 rich 库**
 
@@ -2759,7 +2759,7 @@ alias: None
 
 Deepseek 官方文档明确说明见下图：
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/langchain/2/page-57-image-01.png" alt="page-57-image-01.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/langchain/2/page-57-image-01.png" alt="page-57-image-01.png"></div>
 
 - 底层客户端访问： client、async_client、root_client （这些通常是内部生成的 SDK 实例，不建议在初始化时手动传参）。
 - 透传参数： model_kwargs、extra_body （如果你想传递 DeepSeek API 支持但 LangChain 还没定义的参数，可以写在这里）。
@@ -2774,7 +2774,7 @@ Deepseek 官方文档明确说明见下图：
 
 查阅OpenAI Chat Completions文档，可以看到官方支持的所有请求字段。
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/langchain/2/page-58-image-01.png" alt="page-58-image-01.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/langchain/2/page-58-image-01.png" alt="page-58-image-01.png"></div>
 
 上文输出的字段列表不包含tools字段，因此我们需要通过model_kwargs传递。
 
@@ -2879,7 +2879,7 @@ AIMessage(
 
 查阅OpenAI Chat Completions文档和DeepSeek对话补全API文档可知，thinking 是DeepSeek扩展的字段，用于控制是否启用思考模式。
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/langchain/2/page-60-image-01.png" alt="page-60-image-01.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/langchain/2/page-60-image-01.png" alt="page-60-image-01.png"></div>
 
 ```python
 from langchain.chat_models import init_chat_model

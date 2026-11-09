@@ -205,8 +205,8 @@ def read_file_content(
 
 脚本里的测试入口会把 `get_session_context()` 临时固定为项目根目录下的 `examples/test_docs`，然后读取测试文件。
 
-<!-- ![上传文件读取工具本地验证：读取测试目录中的 Markdown、Word 和 PDF 文件内容](/assets/img/deepSearch/13/13-3-1-1.png) -->
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/deepSearch/13/13-3-1-1.png" alt="上传文件读取工具本地验证：读取测试目录中的 Markdown、Word 和 PDF 文件内容"></div>
+<!-- <div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/deepSearch/13/13-3-1-1.png" alt="上传文件读取工具本地验证：读取测试目录中的 Markdown、Word 和 PDF 文件内容"></div> -->
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/deepSearch/13/13-3-1-1.png" alt="上传文件读取工具本地验证：读取测试目录中的 Markdown、Word 和 PDF 文件内容"></div>
 
 ---
 
@@ -1276,8 +1276,8 @@ if __name__ == "__main__":
 
 在项目根目录下执行：`uv run python -m app.agent.main_agent`
 
-<!-- ![主智能体脚本验证结果：生成 session_test_session_001 工作目录和机器人信息 Markdown 文件](/assets/img/deepSearch/13/13-11-1-1.png) -->
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/deepSearch/13/13-11-1-1.png" alt="主智能体脚本验证结果：生成 session_test_session_001 工作目录和机器人信息 Markdown 文件"></div>
+<!-- <div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/deepSearch/13/13-11-1-1.png" alt="主智能体脚本验证结果：生成 session_test_session_001 工作目录和机器人信息 Markdown 文件"></div> -->
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/deepSearch/13/13-11-1-1.png" alt="主智能体脚本验证结果：生成 session_test_session_001 工作目录和机器人信息 Markdown 文件"></div>
 
 ---
 

@@ -506,9 +506,9 @@ python -m app.scripts.build_meta_knowledge -c conf/meta_config.yaml
 其中最关键的是 `type` 和 `examples`。
 只要这两个字段已经有值，就说明本章最核心的“配置 + 动态补齐 + 落库”链路已经跑通了。
 
-<!-- ![验证本章效果](/assets/img/ecommerce/8/8-9-2-1.png) -->
+<!-- <div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/ecommerce/8/8-9-2-1.png" alt="验证本章效果"></div> -->
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/ecommerce/8/8-9-2-1.png" alt="验证本章效果"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/ecommerce/8/8-9-2-1.png" alt="验证本章效果"></div>
 ---
 
 **本章小结：**

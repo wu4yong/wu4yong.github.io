@@ -79,8 +79,8 @@ A：新请求进入队列排队，RT 逐步拉长；队列满触发拒绝策略�
 Q：长事务危害？ A：持有 MVCC 快照，undo 日志膨胀；行锁长时间不释放，阻塞其他写入，锁等待堆积。 
 Q：Arthas 一般用什么命令排查？ A：trace 看方法耗时，thread 找阻塞线程，gc 看 GC 情况，heapdump 排查内存泄漏。
 
-<!-- ![图 10-1　答题要点结构图](/assets/img/interview/10-1api-slow-degradation.png) -->
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/interview/10-1api-slow-degradation.png" alt="排查答题要点结构图"></div>
+<!-- <div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/interview/10-1api-slow-degradation.png" alt="图 10-1　答题要点结构图"></div> -->
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/interview/10-1api-slow-degradation.png" alt="排查答题要点结构图"></div>
 
 ## 第 2 题　压测 TPS 上不去、CPU/内存没跑满
 
@@ -169,8 +169,8 @@ A：IO 密集型核心数可以大于 CPU 核数；CPU 密集型贴近核数；�
 
 A：优先本地缓存 + 异步削峰，尽量减少热点争抢同一把分布式锁；拆分资源 key，打散锁粒度。 Q：JSON 序列化为什么会卡住 TPS，CPU 却不高？ A：很多老框架序列化是单线程串行、反射很重，热点路径串行，并发上不去，CPU 无法被打满。
 
-<!-- ![图 10-2　答题要点结构图](/assets/img/interview/10-2tps-bottleneck.png) -->
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/interview/10-2tps-bottleneck.png" alt="排查答题要点结构图"></div>
+<!-- <div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/interview/10-2tps-bottleneck.png" alt="图 10-2　答题要点结构图"></div> -->
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/interview/10-2tps-bottleneck.png" alt="排查答题要点结构图"></div>
 
 ## 第 3 题　高峰期服务 CPU 100%，接口全线超时，不能随意 jstack、不能重启，如何排查+快速止损
 
@@ -268,5 +268,5 @@ A：优先本地缓存 + 异步削峰，尽量减少热点争抢同一把分布�
 线上故障处理分为两个阶段：先快速降低负载止损，再低风险采集证据定位根因；稳定性架构要提前设计基于 CPU、
 延迟的自适应降级能力，而不是故障来了只能重启扩容。
 
-<!-- ![图 10-3　答题要点结构图](/assets/img/interview/10-3cpu-100-triage.png) -->
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/interview/10-3cpu-100-triage.png" alt="排查答题要点结构图"></div>
+<!-- <div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/interview/10-3cpu-100-triage.png" alt="图 10-3　答题要点结构图"></div> -->
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/interview/10-3cpu-100-triage.png" alt="排查答题要点结构图"></div>

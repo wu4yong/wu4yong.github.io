@@ -36,8 +36,8 @@ tags:
 
 这里的“图”不是只画给人看的流程图，而是**真的会被编译、运行、调度的程序结构**。当你把状态、节点和边定义好，再调用 `compile()`，LangGraph 会把这个图构建器编译成一个真正可运行的应用对象；之后就可以用 `invoke(...)`、`stream(...)` 等方式执行这张图。
 
-<!-- ![有向图在工作流中的含义示意](/assets/img/llm/23/23-1-1-1.jpeg) -->
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/23/23-1-1-1.jpeg" alt="有向图在工作流中的含义示意"></div>
+<!-- <div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/llm/23/23-1-1-1.jpeg" alt="有向图在工作流中的含义示意"></div> -->
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/llm/23/23-1-1-1.jpeg" alt="有向图在工作流中的含义示意"></div>
 
 这张图可以这样看：
 
@@ -168,8 +168,8 @@ State Schema 写法|入门理解|优点|更适合的场景
 **output_schema**|限制图执行结束后最终对外返回哪些字段|“最终只把哪些结果交给调用方，不把内部草稿全暴露出去”
 {% endautogrid %}
 
-<!-- ![StateGraph 输入输出隔离：外部调用先经过 input_schema 过滤，内部普通节点围绕 state_schema 运行，出图时再由 output_schema 过滤返回](/assets/img/llm/23/23-2-4-1.svg) -->
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/23/23-2-4-1.svg" alt="StateGraph 输入输出隔离：外部调用先经过 input_schema 过滤，内部普通节点围绕 state_schema 运行，出图时再由 output_schema 过滤返回"></div>
+<!-- <div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/llm/23/23-2-4-1.svg" alt="StateGraph 输入输出隔离：外部调用先经过 input_schema 过滤，内部普通节点围绕 state_schema 运行，出图时再由 output_schema 过滤返回"></div> -->
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/llm/23/23-2-4-1.svg" alt="StateGraph 输入输出隔离：外部调用先经过 input_schema 过滤，内部普通节点围绕 state_schema 运行，出图时再由 output_schema 过滤返回"></div>
 
 这三层可以按执行链路来理解：
 
@@ -366,8 +366,8 @@ def my_reducer(current_value, update_value):
 
 学完这些案例后，不要只背 Reducer 名字。真实项目里更重要的是：先看字段语义，再选合并方式。
 
-<!-- ![Reducer 选型示意：默认覆盖适合最新值，add_messages 适合消息历史，operator.add 适合列表或数值累加，自定义 Reducer 适合去重和按 ID 合并](/assets/img/llm/23/23-3-8-1.png) -->
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/23/23-3-8-1.png" alt="Reducer 选型示意：默认覆盖适合最新值，add_messages 适合消息历史，operator.add 适合列表或数值累加，自定义 Reducer 适合去重和按 ID 合并"></div>
+<!-- <div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/llm/23/23-3-8-1.png" alt="Reducer 选型示意：默认覆盖适合最新值，add_messages 适合消息历史，operator.add 适合列表或数值累加，自定义 Reducer 适合去重和按 ID 合并"></div> -->
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/llm/23/23-3-8-1.png" alt="Reducer 选型示意：默认覆盖适合最新值，add_messages 适合消息历史，operator.add 适合列表或数值累加，自定义 Reducer 适合去重和按 ID 合并"></div>
 
 {% autogrid data-grid-link-table nofix %}
 业务字段类型|更适合的 Reducer|典型例子
@@ -417,8 +417,8 @@ LangGraph 底层采用的是 Pregel 风格的图计算思路。这里只要建�
 
 你在代码里定义节点和边，调用 `builder.compile()` 后，运行时会把它转换成 Pregel 图。节点变成 Actors，状态字段、入口、分支触发关系等变成 Channels。
 
-<!-- ![逻辑图编译为 Pregel 图：节点和边转换成 Actors 与 Channels，状态字段 aggregate 也成为运行时通道之一](/assets/img/llm/23/23-4-2-1.png) -->
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/23/23-4-2-1.png" alt="逻辑图编译为 Pregel 图：节点和边转换成 Actors 与 Channels，状态字段 aggregate 也成为运行时通道之一"></div>
+<!-- <div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/llm/23/23-4-2-1.png" alt="逻辑图编译为 Pregel 图：节点和边转换成 Actors 与 Channels，状态字段 aggregate 也成为运行时通道之一"></div> -->
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/llm/23/23-4-2-1.png" alt="逻辑图编译为 Pregel 图：节点和边转换成 Actors 与 Channels，状态字段 aggregate 也成为运行时通道之一"></div>
 
 可以把它理解成：
 
@@ -431,8 +431,8 @@ LangGraph 底层采用的是 Pregel 风格的图计算思路。这里只要建�
 
 在 Pregel 视角下，一个节点不是孤立函数，而是一个订阅某些 Channel、执行后写入某些 Channel 的 Actor。
 
-<!-- ![Actor 内部订阅与写入示意：节点 a 订阅 branch:to:a，写入 branch:to:b 与 branch:to:c；节点 d 订阅 branch:to:d，执行后不再写入分支通道](/assets/img/llm/23/23-4-3-1.png) -->
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/23/23-4-3-1.png" alt="Actor 内部订阅与写入示意：节点 a 订阅 branch:to:a，写入 branch:to:b 与 branch:to:c；节点 d 订阅 branch:to:d，执行后不再写入分支通道"></div>
+<!-- <div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/llm/23/23-4-3-1.png" alt="Actor 内部订阅与写入示意：节点 a 订阅 branch:to:a，写入 branch:to:b 与 branch:to:c；节点 d 订阅 branch:to:d，执行后不再写入分支通道"></div> -->
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/llm/23/23-4-3-1.png" alt="Actor 内部订阅与写入示意：节点 a 订阅 branch:to:a，写入 branch:to:b 与 branch:to:c；节点 d 订阅 branch:to:d，执行后不再写入分支通道"></div>
 
 这张图可以这样读：
 
@@ -450,8 +450,8 @@ Pregel 模型里还有一个很关键的词：**Superstep**。你可以先把它
 2. **Execute**：并行执行这些 Actor。只要在同一轮被选中，它们就不是简单串行排队。
 3. **Update**：把这些 Actor 写出的更新统一合并回 Channels 和 State。
 
-<!-- ![Superstep 执行过程：Step0 执行 a，Step1 执行 b/c，Step2 执行 b_2/d，Step3 再执行 d 后结束](/assets/img/llm/23/23-4-4-1.png) -->
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/23/23-4-4-1.png" alt="Superstep 执行过程：Step0 执行 a，Step1 执行 b/c，Step2 执行 b_2/d，Step3 再执行 d 后结束"></div>
+<!-- <div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/llm/23/23-4-4-1.png" alt="Superstep 执行过程：Step0 执行 a，Step1 执行 b/c，Step2 执行 b_2/d，Step3 再执行 d 后结束"></div> -->
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/llm/23/23-4-4-1.png" alt="Superstep 执行过程：Step0 执行 a，Step1 执行 b/c，Step2 执行 b_2/d，Step3 再执行 d 后结束"></div>
 
 用上图里的结构来理解：
 

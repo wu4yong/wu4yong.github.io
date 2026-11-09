@@ -235,9 +235,9 @@ async def _save_column_info_to_qdrant(self, column_infos: list[ColumnInfo]):
 3. 调用 `Embedding` 服务批量生成向量
 4. 把 `id`、`embedding`、`payload` 一起写入 `Qdrant`
 
-<!-- ![一个字段会按字段名、描述和别名拆成多条向量记录](/assets/img/ecommerce/9/9-3-2-1.png) -->
+<!-- <div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/ecommerce/9/9-3-2-1.png" alt="一个字段会按字段名、描述和别名拆成多条向量记录"></div> -->
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/ecommerce/9/9-3-2-1.png" alt="一个字段会按字段名、描述和别名拆成多条向量记录"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/ecommerce/9/9-3-2-1.png" alt="一个字段会按字段名、描述和别名拆成多条向量记录"></div>
 ### 3.2 为什么一个字段不会只生成一个 point
 
 这是字段向量索引的核心设计：一个字段不会只建一个点，而是要围绕这个字段拆出多个语义入口。
@@ -502,9 +502,9 @@ uv run python -m app.scripts.build_meta_knowledge -c conf/meta_config.yaml
 
 最直观的做法，就是打开 `Qdrant Dashboard` 看看 `column_info_collection` 是否已经创建成功，并且 collection 里的 point 数量不是 `0`。
 
-<!-- ![在 Qdrant Dashboard 中查看字段向量 collection 和字段 payload](/assets/img/ecommerce/9/9-3-8-1.png) -->
+<!-- <div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/ecommerce/9/9-3-8-1.png" alt="在 Qdrant Dashboard 中查看字段向量 collection 和字段 payload"></div> -->
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/ecommerce/9/9-3-8-1.png" alt="在 Qdrant Dashboard 中查看字段向量 collection 和字段 payload"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/ecommerce/9/9-3-8-1.png" alt="在 Qdrant Dashboard 中查看字段向量 collection 和字段 payload"></div>
 5. 用一个字段相关短语做最小搜索验证，例如“销售额”是否能召回和 `order_amount` 相关的字段信息
 
 如果你想直接在终端里做一次最小召回验证，可以在后端项目根目录执行下面这段命令：
@@ -934,9 +934,9 @@ GET value_index/_search
 
 这一步验证的核心不是“写没写进去”，而是确认：**字段真实值匹配能力已经真正建立起来了。**
 
-<!-- ![在 Kibana Dev Tools 中搜索字段真实值并返回 column_id](/assets/img/ecommerce/9/9-4-8-1.png) -->
+<!-- <div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/ecommerce/9/9-4-8-1.png" alt="在 Kibana Dev Tools 中搜索字段真实值并返回 column_id"></div> -->
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/ecommerce/9/9-4-8-1.png" alt="在 Kibana Dev Tools 中搜索字段真实值并返回 column_id"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/ecommerce/9/9-4-8-1.png" alt="在 Kibana Dev Tools 中搜索字段真实值并返回 column_id"></div>
 ---
 
 ## 5、字段两条检索链路到底如何协同
@@ -1299,23 +1299,23 @@ uv run python -m app.scripts.build_meta_knowledge -c conf/meta_config.yaml
 
 至少要能看到 `table_info`、`column_info`、`metric_info`、`column_metric` 这些表里已经有内容。
 
-<!-- ![在 Meta MySQL 中查看 metric_info、column_metric 等元数据表](/assets/img/ecommerce/9/9-9-4-1.png) -->
+<!-- <div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/ecommerce/9/9-9-4-1.png" alt="在 Meta MySQL 中查看 metric_info、column_metric 等元数据表"></div> -->
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/ecommerce/9/9-9-4-1.png" alt="在 Meta MySQL 中查看 metric_info、column_metric 等元数据表"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/ecommerce/9/9-9-4-1.png" alt="在 Meta MySQL 中查看 metric_info、column_metric 等元数据表"></div>
 2. `Qdrant` 里已经有两个 collection
 
 当前项目里对应的是 `column_info_collection` 和 `metric_info_collection`。
 
-<!-- ![在 Qdrant Dashboard 中查看字段和指标两个向量 collection](/assets/img/ecommerce/9/9-9-4-2.png) -->
+<!-- <div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/ecommerce/9/9-9-4-2.png" alt="在 Qdrant Dashboard 中查看字段和指标两个向量 collection"></div> -->
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/ecommerce/9/9-9-4-2.png" alt="在 Qdrant Dashboard 中查看字段和指标两个向量 collection"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/ecommerce/9/9-9-4-2.png" alt="在 Qdrant Dashboard 中查看字段和指标两个向量 collection"></div>
 3. `Elasticsearch` 里的字段值索引已经建好
 
 当前项目里对应的是 `value_index`。
 
-<!-- ![在 Kibana Index Management 中查看 value_index 索引](/assets/img/ecommerce/9/9-9-4-3.png) -->
+<!-- <div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/ecommerce/9/9-9-4-3.png" alt="在 Kibana Index Management 中查看 value_index 索引"></div> -->
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/ecommerce/9/9-9-4-3.png" alt="在 Kibana Index Management 中查看 value_index 索引"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/ecommerce/9/9-9-4-3.png" alt="在 Kibana Index Management 中查看 value_index 索引"></div>
 做到这里，就可以给这一阶段下一个明确结论：**元数据知识库已经不只是“设计出来了”，而是真的构建并验证完成了。**
 
 ---

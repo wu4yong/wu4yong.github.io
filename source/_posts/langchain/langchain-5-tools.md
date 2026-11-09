@@ -20,11 +20,11 @@ tags:
 
 举例：
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/langchain/5/langchain-tools-application-scenarios.png" alt="langchain-tools-application-scenarios.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/langchain/5/langchain-tools-application-scenarios.png" alt="langchain-tools-application-scenarios.png"></div>
 
 工具是构建智能体的核心要素之一！
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/langchain/5/agent-core-elements.png" alt="agent-core-elements.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/langchain/5/agent-core-elements.png" alt="agent-core-elements.png"></div>
 
 ### 1.2 工具调用的方式
 
@@ -121,7 +121,7 @@ AI 想调用工具： [{'name': 'get_weather', 'args': {'city': '北京'}, 'id':
 
 经典流程如下：
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/langchain/5/tool-calling-overall-flow.png" alt="tool-calling-overall-flow.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/langchain/5/tool-calling-overall-flow.png" alt="tool-calling-overall-flow.png"></div>
 
 我们现在编写的LangChain应用对应上图中的AI助手或应用。
 
@@ -274,7 +274,7 @@ tool_calls=[] invalid_tool_calls=[] usage_metadata={'input_tokens':
 
 对应图示（以参考1为例）：
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/langchain/5/tool-calling-complete-flow.png" alt="tool-calling-complete-flow.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/langchain/5/tool-calling-complete-flow.png" alt="tool-calling-complete-flow.png"></div>
 
 **工具调用流程总结：**
 
@@ -1931,11 +1931,11 @@ bind_tools 可以传递参数 tool_choice，用于控制是否强制使用工具
 
 OpenAI官方文档
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/langchain/5/openai-tool-choice-doc.png" alt="openai-tool-choice-doc.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/langchain/5/openai-tool-choice-doc.png" alt="openai-tool-choice-doc.png"></div>
 
 Deepseek官方文档
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/langchain/5/deepseek-tool-choice-doc.png" alt="deepseek-tool-choice-doc.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/langchain/5/deepseek-tool-choice-doc.png" alt="deepseek-tool-choice-doc.png"></div>
 
 none：模型不会调用任何工具。
 

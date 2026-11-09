@@ -50,8 +50,8 @@ tags:
 - 从零开始构建一个网站
 - 分析你的企业数据
 
-<!-- ![提示词可用于问答、写作、代码生成、竞品分析和数据分析等多种任务场景](/assets/img/llm/1-2/1-2-1-1-1.jpg) -->
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/1-2/1-2-1-1-1.jpg" alt="提示词可用于问答、写作、代码生成、竞品分析和数据分析等多种任务场景"></div>
+<!-- <div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/llm/1-2/1-2-1-1-1.jpg" alt="提示词可用于问答、写作、代码生成、竞品分析和数据分析等多种任务场景"></div> -->
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/llm/1-2/1-2-1-1-1.jpg" alt="提示词可用于问答、写作、代码生成、竞品分析和数据分析等多种任务场景"></div>
 
 从入门角度，可以先把 Prompt 理解成“我给模型的一次任务说明”。但从工程角度，Prompt 不只是“一句话问问题”，而是**把角色、任务、上下文、输入和输出规则组织清楚**。
 
@@ -62,8 +62,8 @@ tags:
 
 提示词不是在“教模型重新学知识”，而是在**激活它当前最该用的那部分能力**。
 
-<!-- ![提示词帮助模型明确角色、任务、参考资料和输出要求的示意图](/assets/img/llm/1-2/1-2-1-2-1.png) -->
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/1-2/1-2-1-2-1.png" alt="提示词帮助模型明确角色、任务、参考资料和输出要求的示意图"></div>
+<!-- <div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/llm/1-2/1-2-1-2-1.png" alt="提示词帮助模型明确角色、任务、参考资料和输出要求的示意图"></div> -->
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/llm/1-2/1-2-1-2-1.png" alt="提示词帮助模型明确角色、任务、参考资料和输出要求的示意图"></div>
 
 ### 1.3 为什么需要优化提示词
 
@@ -77,8 +77,8 @@ tags:
 
 大模型也一样。输入越模糊，输出越容易漂。
 
-<!-- ![优化提示词可以减少歧义、减少跑偏并提升输出稳定性的示意图](/assets/img/llm/1-2/1-2-1-3-1.png) -->
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/1-2/1-2-1-3-1.png" alt="优化提示词可以减少歧义、减少跑偏并提升输出稳定性的示意图"></div>
+<!-- <div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/llm/1-2/1-2-1-3-1.png" alt="优化提示词可以减少歧义、减少跑偏并提升输出稳定性的示意图"></div> -->
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/llm/1-2/1-2-1-3-1.png" alt="优化提示词可以减少歧义、减少跑偏并提升输出稳定性的示意图"></div>
 
 ### 1.4 提示词工程
 
@@ -109,8 +109,8 @@ tags:
 - 检索结果
 - 工具返回
 
-<!-- ![上下文通常由系统提示、用户输入、历史对话、检索结果和工具返回共同构成](/assets/img/llm/1-2/1-2-1-5-1.png) -->
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/1-2/1-2-1-5-1.png" alt="上下文通常由系统提示、用户输入、历史对话、检索结果和工具返回共同构成"></div>
+<!-- <div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/llm/1-2/1-2-1-5-1.png" alt="上下文通常由系统提示、用户输入、历史对话、检索结果和工具返回共同构成"></div> -->
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/llm/1-2/1-2-1-5-1.png" alt="上下文通常由系统提示、用户输入、历史对话、检索结果和工具返回共同构成"></div>
 
 #### 1.5.2 上下文窗口
 
@@ -709,8 +709,8 @@ AI全向助力
 
 选择 DeepSeek 官方网站进行测试。
 
-<!-- ![在 DeepSeek 在线平台中测试商品视频脚本 Prompt 的示意图](/assets/img/llm/1-2/1-2-2-2-1.jpg) -->
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/1-2/1-2-2-2-1.jpg" alt="在 DeepSeek 在线平台中测试商品视频脚本 Prompt 的示意图"></div>
+<!-- <div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/llm/1-2/1-2-2-2-1.jpg" alt="在 DeepSeek 在线平台中测试商品视频脚本 Prompt 的示意图"></div> -->
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/llm/1-2/1-2-2-2-1.jpg" alt="在 DeepSeek 在线平台中测试商品视频脚本 Prompt 的示意图"></div>
 
 **输出如下**
 
@@ -967,8 +967,8 @@ A:
 
 > **六要素回答“写什么”，模板回答“怎么复用”，消息结构回答“运行时怎么装配”。**
 
-<!-- ![提示词要素与 System、User 等消息结构之间的对应关系示意图](/assets/img/llm/1-2/1-2-2-4-1.png) -->
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/1-2/1-2-2-4-1.png" alt="提示词要素与 System、User 等消息结构之间的对应关系示意图"></div>
+<!-- <div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/llm/1-2/1-2-2-4-1.png" alt="提示词要素与 System、User 等消息结构之间的对应关系示意图"></div> -->
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/llm/1-2/1-2-2-4-1.png" alt="提示词要素与 System、User 等消息结构之间的对应关系示意图"></div>
 
 放到工程里，通常会形成下面这种拆分。先看基础结构，后面讲 RAG 和 Agent 时，再把检索资料、工具结果继续接进来。
 
@@ -1150,15 +1150,15 @@ AI全向助力
 
 不变提示词作为系统提示词。
 
-<!-- ![Cherry Studio 中把不变提示词配置为 System Prompt 的界面示意图](/assets/img/llm/1-2/1-2-2-4-2.jpg) -->
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/1-2/1-2-2-4-2.jpg" alt="Cherry Studio 中把不变提示词配置为 System Prompt 的界面示意图"></div>
+<!-- <div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/llm/1-2/1-2-2-4-2.jpg" alt="Cherry Studio 中把不变提示词配置为 System Prompt 的界面示意图"></div> -->
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/llm/1-2/1-2-2-4-2.jpg" alt="Cherry Studio 中把不变提示词配置为 System Prompt 的界面示意图"></div>
 
 ② 用户提示词
 
 可变提示词作为用户提示词，直接输入对话框即可。
 
-<!-- ![Cherry Studio 中把可变提示词作为 User Prompt 输入的界面示意图](/assets/img/llm/1-2/1-2-2-4-3.jpg) -->
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/1-2/1-2-2-4-3.jpg" alt="Cherry Studio 中把可变提示词作为 User Prompt 输入的界面示意图"></div>
+<!-- <div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/llm/1-2/1-2-2-4-3.jpg" alt="Cherry Studio 中把可变提示词作为 User Prompt 输入的界面示意图"></div> -->
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/llm/1-2/1-2-2-4-3.jpg" alt="Cherry Studio 中把可变提示词作为 User Prompt 输入的界面示意图"></div>
 
 ③ 输出如下
 
@@ -1258,8 +1258,8 @@ AI全向助力
 
 一个很有启发的研究结论是：许多模型对提示开头和结尾位置的信息更敏感，而对中间部分更容易“丢失关注”。所以，关键约束要放在显眼位置。
 
-<!-- ![模型对提示开头和结尾位置更敏感、中间信息更容易被忽略的研究图示](/assets/img/llm/1-2/1-2-3-3-1.jpg) -->
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/1-2/1-2-3-3-1.jpg" alt="模型对提示开头和结尾位置更敏感、中间信息更容易被忽略的研究图示"></div>
+<!-- <div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/llm/1-2/1-2-3-3-1.jpg" alt="模型对提示开头和结尾位置更敏感、中间信息更容易被忽略的研究图示"></div> -->
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/llm/1-2/1-2-3-3-1.jpg" alt="模型对提示开头和结尾位置更敏感、中间信息更容易被忽略的研究图示"></div>
 
 > 大多数模型在任务描述位于开头时表现更好；也有部分模型对结尾处的关键指令更敏感。无论如何，这张图传达的核心结论都一样：**不要把最重要的要求埋在中间。**
 

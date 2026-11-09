@@ -55,19 +55,19 @@ tags:
 一般会将这种 线程轮流使用 CPU 的做法称为并发， concurrent
 
 <div class="img-wrap-left">
-  <img class="left-img" src="/assets/img/java/concurrent/concurrent1.png" alt="并发示意图">
+  <img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/java/concurrent/concurrent1.png" alt="并发示意图">
 </div>
 <div class="img-wrap-left">
-  <img class="left-img" src="/assets/img/java/concurrent/concurrent2.png" alt="并发示意图">
+  <img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/java/concurrent/concurrent2.png" alt="并发示意图">
 </div>
 **并发（concurrent）：指线程轮流抢占、使用CPU时间片的运行模式，同一时刻仅执行一个线程，通过快速切换实现多任务交替执行**。
 
 多核CPU环境下，每一个CPU核心都可以独立调度并运行线程，多个核心可同时执行多个线程，这种真正意义上的同时执行就是并行。
 <div class="img-wrap-left">
-  <img class="left-img" src="/assets/img/java/concurrent/concurrent3.png" alt="并发示意图">
+  <img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/java/concurrent/concurrent3.png" alt="并发示意图">
 </div>
 <div class="img-wrap-left">
-  <img class="left-img" src="/assets/img/java/concurrent/concurrent4.png" alt="并发示意图">
+  <img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/java/concurrent/concurrent4.png" alt="并发示意图">
 </div>
 ### 通俗案例区分
 

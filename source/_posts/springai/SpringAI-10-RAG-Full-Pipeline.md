@@ -26,7 +26,7 @@ tags:
 4. 将查询到的数据和对话信息再请求大模型
 5. 此时会响应退订需要多少费用
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/springai/ch10_1741158263487-85d26245-bcab-48ee-8d0c-45322c292687_65187bac56.png" alt="ch10_1741158263487-85d26245-bcab-48ee-8d0c-45322c292687_65187bac56.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/springai/ch10_1741158263487-85d26245-bcab-48ee-8d0c-45322c292687_65187bac56.png" alt="ch10_1741158263487-85d26245-bcab-48ee-8d0c-45322c292687_65187bac56.png"></div>
 
 ## 概念
 
@@ -34,15 +34,15 @@ tags:
 
 向量通常用来做相似性搜索，比如语义的一维向量，可以表示词语或短语的语义相似性。例如，“你好”、“hello”和“见到你很高兴”可以通过一维向量来表示它们的语义接近程度。
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/springai/ch10_1741703979687-3dfe46b9-8bbc-4c8a-8ff7-11a63cd32800_5c8f045b5e.png" alt="ch10_1741703979687-3dfe46b9-8bbc-4c8a-8ff7-11a63cd32800_5c8f045b5e.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/springai/ch10_1741703979687-3dfe46b9-8bbc-4c8a-8ff7-11a63cd32800_5c8f045b5e.png" alt="ch10_1741703979687-3dfe46b9-8bbc-4c8a-8ff7-11a63cd32800_5c8f045b5e.png"></div>
 
 然而，对于更复杂的对象，比如小狗，无法仅通过一个维度来进行相似性搜索。这时，我们需要提取多个特征，如颜色、大小、品种等，将每个特征表示为向量的一个维度，从而形成一个多维向量。例如，一只棕色的小型泰迪犬可以表示为一个多维向量 [棕色, 小型, 泰迪犬]。
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/springai/ch10_1741703733774-aafd18f8-6d1c-4f9c-ac0a-55eb5c2ef03e_558367f605.png" alt="ch10_1741703733774-aafd18f8-6d1c-4f9c-ac0a-55eb5c2ef03e_558367f605.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/springai/ch10_1741703733774-aafd18f8-6d1c-4f9c-ac0a-55eb5c2ef03e_558367f605.png" alt="ch10_1741703733774-aafd18f8-6d1c-4f9c-ac0a-55eb5c2ef03e_558367f605.png"></div>
 
 如果需要检索见过更加精准， 我们肯定还需要更多维度的向量， 组成更多维度的空间，在多维向量空间中，相似性检索变得更加复杂。我们需要使用一些算法，如余弦相似度或欧几里得距离，来计算向量之间的相似性。**向量数据库**会帮我实现。
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/springai/ch10_1752672648271-7cafe1a1-33e0-4c4d-8f70-d8c3fb819cd6_e1415275c9.png" alt="ch10_1752672648271-7cafe1a1-33e0-4c4d-8f70-d8c3fb819cd6_e1415275c9.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/springai/ch10_1752672648271-7cafe1a1-33e0-4c4d-8f70-d8c3fb819cd6_e1415275c9.png" alt="ch10_1752672648271-7cafe1a1-33e0-4c4d-8f70-d8c3fb819cd6_e1415275c9.png"></div>
 
 ### 文本向量化
 
@@ -52,7 +52,7 @@ tags:
 2. 阿里百炼有大量向量模型
     1. 默认模型`DashScopeEmbeddingProperties#DEFAULT_EMBEDDING_MODEL="text-embedding-v1"`
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/springai/ch10_1749557877276-e1c0b9b2-feed-410d-92e4-f6fb41b98775_804f9c772b.png" alt="ch10_1749557877276-e1c0b9b2-feed-410d-92e4-f6fb41b98775_804f9c772b.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/springai/ch10_1749557877276-e1c0b9b2-feed-410d-92e4-f6fb41b98775_804f9c772b.png" alt="ch10_1749557877276-e1c0b9b2-feed-410d-92e4-f6fb41b98775_804f9c772b.png"></div>
 
 ```properties
 spring.ai.dashscope.embedding.options.model= text-embedding-v4
@@ -60,7 +60,7 @@ spring.ai.dashscope.embedding.options.model= text-embedding-v4
 
 3. ollama有大量向量模型, 自己拉取
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/springai/ch10_1749557970769-1073e1ca-eee5-4275-ba03-6c46f03ba9f2_f6d3f2c6db.png" alt="ch10_1749557970769-1073e1ca-eee5-4275-ba03-6c46f03ba9f2_f6d3f2c6db.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/springai/ch10_1749557970769-1073e1ca-eee5-4275-ba03-6c46f03ba9f2_f6d3f2c6db.png" alt="ch10_1749557970769-1073e1ca-eee5-4275-ba03-6c46f03ba9f2_f6d3f2c6db.png"></div>
 
 以ollama为例：
 
@@ -84,13 +84,13 @@ public class EmbaddingTest {
 
 ```
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/springai/ch10_1749559505646-45b28c7e-2599-4f11-a628-d99b1c872573_f5cb43feae.png" alt="ch10_1749559505646-45b28c7e-2599-4f11-a628-d99b1c872573_f5cb43feae.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/springai/ch10_1749559505646-45b28c7e-2599-4f11-a628-d99b1c872573_f5cb43feae.png" alt="ch10_1749559505646-45b28c7e-2599-4f11-a628-d99b1c872573_f5cb43feae.png"></div>
 
 从结果可以知道"我叫SpringAI"这句话经过OllamaEmbeddingModel向量化之后得到的一个长度为768的float数组。注意，768是向量模型nomic-embed-text-v1.5固定的，不会随着句子长度而变化，不同的向量模型提供了不同的维度。
 那么，我们通过这种向量模型得到一句话对应的向量有什么作用呢？非常有用，因为我们可以基于向量来判断两句话之间的相似度，举个例子：
 查询跟秋田犬类似的狗，  在向量数据库中根据每个狗的特点进行多维向量， 你会发现秋田犬的向量数值和柴犬的向量数值最接近， 就可以查到类似的狗。    （当然我这里只是举例，让你对向量数据库有一个印象）
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/springai/ch10_1741159536310-23b0c084-513b-4801-9436-f63790fe47dc_72d4078c2d.png" alt="ch10_1741159536310-23b0c084-513b-4801-9436-f63790fe47dc_72d4078c2d.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/springai/ch10_1741159536310-23b0c084-513b-4801-9436-f63790fe47dc_72d4078c2d.png" alt="ch10_1741159536310-23b0c084-513b-4801-9436-f63790fe47dc_72d4078c2d.png"></div>
 
 + 向量模型的本质目标，就是把**语义相似**的内容用“相近”的向量表示，把“不相关”内容尽量拉远。  
 + 所以好的向量模型能够更好的识别语义， 进行向量化.
@@ -123,14 +123,14 @@ public class EmbaddingTest {
 1. [SimpleVectorStore](https://github.com/spring-projects/spring-ai/blob/main/spring-ai-vector-store/src/main/java/org/springframework/ai/vectorstore/SimpleVectorStore.java) 教学版向量数据库
 2. [Milvus Vector Store](https://docs.spring.io/spring-ai/reference/api/vectordbs/milvus.html)  Milvus（国产团队）、文档友好、社区国内活跃、性能最佳、市场占用率大。 实战中使用的向量数据库.
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/springai/ch10_1749561837608-0462ab68-315f-4da5-89e5-17ee84dd843b_8617bc5de9.png" alt="ch10_1749561837608-0462ab68-315f-4da5-89e5-17ee84dd843b_8617bc5de9.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/springai/ch10_1749561837608-0462ab68-315f-4da5-89e5-17ee84dd843b_8617bc5de9.png" alt="ch10_1749561837608-0462ab68-315f-4da5-89e5-17ee84dd843b_8617bc5de9.png"></div>
 
 ### 匹配检索
 
 在这个示例中， 我分别存储了`预订航班`和`取消预订`2段说明到向量数据库中
 然后通过"退票要多少钱" 进行查询
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/springai/ch10_1741702267256-ccae55e5-3820-4f1a-8f52-feffc37affe7_2ef724da97.png" alt="ch10_1741702267256-ccae55e5-3820-4f1a-8f52-feffc37affe7_2ef724da97.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/springai/ch10_1741702267256-ccae55e5-3820-4f1a-8f52-feffc37affe7_2ef724da97.png" alt="ch10_1741702267256-ccae55e5-3820-4f1a-8f52-feffc37affe7_2ef724da97.png"></div>
 
 代码执行结果为：
 OllamaEmbedding结果
@@ -301,7 +301,7 @@ public class SimpleVectorStoreTest {
 + 查询检索器
     - 检索提示词重写
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/springai/ch10_1766997521123-373d6486-ca66-4b34-a3da-91c69f3be502_25e4560fd4.png" alt="ch10_1766997521123-373d6486-ca66-4b34-a3da-91c69f3be502_25e4560fd4.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/springai/ch10_1766997521123-373d6486-ca66-4b34-a3da-91c69f3be502_25e4560fd4.png" alt="ch10_1766997521123-373d6486-ca66-4b34-a3da-91c69f3be502_25e4560fd4.png"></div>
 
 用户查询可能存在表述模糊、语义不完整、关键词缺失等问题，通过查询改写可优化查询的语义表征，让检索更精准：
 
@@ -383,11 +383,11 @@ public class SimpleVectorStoreTest {
 在之前，我们主要完成了数据检索阶段，  但是完整的RAG流程还需要有emedding阶段， 即：
 提取（读取）、转换（分隔）和加载（写入）
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/springai/ch10_1752825687770-5d5b57f7-8aa6-48f9-aa9d-bfc071a044bb_9e7ab4a115.jpeg" alt="ch10_1752825687770-5d5b57f7-8aa6-48f9-aa9d-bfc071a044bb_9e7ab4a115.jpeg"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/springai/ch10_1752825687770-5d5b57f7-8aa6-48f9-aa9d-bfc071a044bb_9e7ab4a115.jpeg" alt="ch10_1752825687770-5d5b57f7-8aa6-48f9-aa9d-bfc071a044bb_9e7ab4a115.jpeg"></div>
 
 ### [Document Loaders](https://docs.langchain4j.dev/category/document-loaders) 文档读取器
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/springai/ch10_1741186496899-c89b21c0-6e7b-4503-853f-9c0e109d3b1b_1e627e5a33.png" alt="ch10_1741186496899-c89b21c0-6e7b-4503-853f-9c0e109d3b1b_1e627e5a33.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/springai/ch10_1741186496899-c89b21c0-6e7b-4503-853f-9c0e109d3b1b_1e627e5a33.png" alt="ch10_1741186496899-c89b21c0-6e7b-4503-853f-9c0e109d3b1b_1e627e5a33.png"></div>
 
 **springai提供了以下文档阅读器**
 + [JSON](https://docs.spring.io/spring-ai/reference/api/etl-pipeline.html#_json)
@@ -409,7 +409,7 @@ public class SimpleVectorStoreTest {
 [https://github.com/alibaba/spring-ai-alibaba/tree/main/community/document-readers](https://github.com/alibaba/spring-ai-alibaba/tree/main/community/document-readers)
 ****
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/springai/ch10_1749974735407-b036f47f-1eb5-46fa-9a77-092eaa246fce_0c50681dfa.png" alt="ch10_1749974735407-b036f47f-1eb5-46fa-9a77-092eaa246fce_0c50681dfa.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/springai/ch10_1749974735407-b036f47f-1eb5-46fa-9a77-092eaa246fce_0c50681dfa.png" alt="ch10_1749974735407-b036f47f-1eb5-46fa-9a77-092eaa246fce_0c50681dfa.png"></div>
 
 ### 读取Text
 
@@ -529,7 +529,7 @@ public class SimpleVectorStoreTest {
 
 ### [DocumentSplitter‌](https://docs.langchain4j.dev/tutorials/rag#document-splitter) 文档拆分器（转换器）
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/springai/ch10_1741186628965-bab8cbb0-71d6-4cd5-bfab-0287b13a2540_fcbb88d487.png" alt="ch10_1741186628965-bab8cbb0-71d6-4cd5-bfab-0287b13a2540_fcbb88d487.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/springai/ch10_1741186628965-bab8cbb0-71d6-4cd5-bfab-0287b13a2540_fcbb88d487.png" alt="ch10_1741186628965-bab8cbb0-71d6-4cd5-bfab-0287b13a2540_fcbb88d487.png"></div>
 
 由于文本读取过来后， 还需要分成一段一段的片段(分块chunk)， 分块是为了更好地拆分语义单元，这样在后面可以更精确地进行语义相似性检索，也可以避免LLM的Token限制。
 SpringAi就提供了一个文档拆分器：
@@ -581,7 +581,7 @@ SpringAi就提供了一个文档拆分器：
 
 整个流程如下：
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/springai/ch10_1749993911885-95202323-3010-46cb-8bc7-e69fe606b220_142b375b85.png" alt="ch10_1749993911885-95202323-3010-46cb-8bc7-e69fe606b220_142b375b85.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/springai/ch10_1749993911885-95202323-3010-46cb-8bc7-e69fe606b220_142b375b85.png" alt="ch10_1749993911885-95202323-3010-46cb-8bc7-e69fe606b220_142b375b85.png"></div>
 
 ### 自定分割器：
 
@@ -799,7 +799,7 @@ public class ChineseTokenTextSplitter extends TextSplitter {
 
 以下是 RAG 的五种分块策略：
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/springai/ch10_1753853837683-32cb032f-28d9-406e-b3e5-cc7ec87038ed_298a8307bc.gif" alt="ch10_1753853837683-32cb032f-28d9-406e-b3e5-cc7ec87038ed_298a8307bc.gif"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/springai/ch10_1753853837683-32cb032f-28d9-406e-b3e5-cc7ec87038ed_298a8307bc.gif" alt="ch10_1753853837683-32cb032f-28d9-406e-b3e5-cc7ec87038ed_298a8307bc.gif"></div>
 
 ---
 
@@ -807,7 +807,7 @@ public class ChineseTokenTextSplitter extends TextSplitter {
 
 生成块的最直观和直接的方法是根据预定义的字符、单词或标记数量将文本分成统一的段。
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/springai/ch10_1753853836122-f0cc462f-5950-4cba-b11d-e1bce7eb52e6_053b489b7a.png" alt="ch10_1753853836122-f0cc462f-5950-4cba-b11d-e1bce7eb52e6_053b489b7a.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/springai/ch10_1753853836122-f0cc462f-5950-4cba-b11d-e1bce7eb52e6_053b489b7a.png" alt="ch10_1753853836122-f0cc462f-5950-4cba-b11d-e1bce7eb52e6_053b489b7a.png"></div>
 
 由于直接分割会破坏语义流，因此建议在两个连续的块之间保持一些重叠（上图蓝色部分）。
 这很容易实现。而且，由于所有块的大小相同，它简化了批处理。
@@ -819,7 +819,7 @@ public class ChineseTokenTextSplitter extends TextSplitter {
 
 这个想法很简单。
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/springai/ch10_1753853837572-b20e461c-2dac-44d1-8edb-d3e2ae6ced7b_692398d163.gif" alt="ch10_1753853837572-b20e461c-2dac-44d1-8edb-d3e2ae6ced7b_692398d163.gif"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/springai/ch10_1753853837572-b20e461c-2dac-44d1-8edb-d3e2ae6ced7b_692398d163.gif" alt="ch10_1753853837572-b20e461c-2dac-44d1-8edb-d3e2ae6ced7b_692398d163.gif"></div>
 
 + 根据句子、段落或主题部分等有意义的单位对文档进行细分。
 + 接下来，为每个片段创建嵌入。
@@ -829,7 +829,7 @@ public class ChineseTokenTextSplitter extends TextSplitter {
     - 一旦发生这种情况，我们就开始新的部分并重复。
 输出可能如下所示：
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/springai/ch10_1753853836031-5db335da-e799-4a83-bc13-8f90a05c7dcb_9b564c1e96.png" alt="ch10_1753853836031-5db335da-e799-4a83-bc13-8f90a05c7dcb_9b564c1e96.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/springai/ch10_1753853836031-5db335da-e799-4a83-bc13-8f90a05c7dcb_9b564c1e96.png" alt="ch10_1753853836031-5db335da-e799-4a83-bc13-8f90a05c7dcb_9b564c1e96.png"></div>
 
 与固定大小的块不同，这保持了语言的自然流畅并保留了完整的想法。
 由于每个块都更加丰富，它提高了检索准确性，进而使 LLM 产生更加连贯和相关的响应。
@@ -841,13 +841,13 @@ public class ChineseTokenTextSplitter extends TextSplitter {
 
 这也很简单。
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/springai/ch10_1753853836600-2acd37dd-3cb8-4714-8688-72fd216e58ee_a70a46af01.gif" alt="ch10_1753853836600-2acd37dd-3cb8-4714-8688-72fd216e58ee_a70a46af01.gif"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/springai/ch10_1753853836600-2acd37dd-3cb8-4714-8688-72fd216e58ee_a70a46af01.gif" alt="ch10_1753853836600-2acd37dd-3cb8-4714-8688-72fd216e58ee_a70a46af01.gif"></div>
 
 首先，根据固有分隔符（如段落或章节）进行分块。
 接下来，如果每个块的大小超出了预定义的块大小限制，则将其拆分成更小的块。但是，如果块符合块大小限制，则不再进行进一步拆分。
 输出可能如下所示：
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/springai/ch10_1753853837553-448a3d2b-1cf7-4036-955f-6efc28f602bf_1a6579a135.png" alt="ch10_1753853837553-448a3d2b-1cf7-4036-955f-6efc28f602bf_1a6579a135.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/springai/ch10_1753853837553-448a3d2b-1cf7-4036-955f-6efc28f602bf_1a6579a135.png" alt="ch10_1753853837553-448a3d2b-1cf7-4036-955f-6efc28f602bf_1a6579a135.png"></div>
 
 如上图：
 + 首先，我们定义两个块（紫色的两个段落）。
@@ -861,13 +861,13 @@ public class ChineseTokenTextSplitter extends TextSplitter {
 
 这是另一种直观的方法。
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/springai/ch10_1753853838253-c6ae6f8e-08eb-41a8-83c0-c39e4b6ce25d_14de1ef793.gif" alt="ch10_1753853838253-c6ae6f8e-08eb-41a8-83c0-c39e4b6ce25d_14de1ef793.gif"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/springai/ch10_1753853838253-c6ae6f8e-08eb-41a8-83c0-c39e4b6ce25d_14de1ef793.gif" alt="ch10_1753853838253-c6ae6f8e-08eb-41a8-83c0-c39e4b6ce25d_14de1ef793.gif"></div>
 
 它利用文档的固有结构（如标题、章节或段落）来定义块边界。
 这样，它就通过与文档的逻辑部分对齐来保持结构完整性。
 输出可能如下所示：
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/springai/ch10_1753853839556-9ea8dab6-5905-4fef-9469-7151da720546_857750566e.png" alt="ch10_1753853839556-9ea8dab6-5905-4fef-9469-7151da720546_857750566e.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/springai/ch10_1753853839556-9ea8dab6-5905-4fef-9469-7151da720546_857750566e.png" alt="ch10_1753853839556-9ea8dab6-5905-4fef-9469-7151da720546_857750566e.png"></div>
 
 也就是说，这种方法假设文档具有清晰的结构，但事实可能并非如此。
 此外，块的长度可能会有所不同，可能会超出模型令牌的限制。您可以尝试使用递归拆分进行合并。
@@ -876,7 +876,7 @@ public class ChineseTokenTextSplitter extends TextSplitter {
 
 #### 5）基于LLM的分块
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/springai/ch10_1753853841393-bfd2a2be-2db9-4b40-b723-4dfd1aaf3de6_aca087ba96.gif" alt="ch10_1753853841393-bfd2a2be-2db9-4b40-b723-4dfd1aaf3de6_aca087ba96.gif"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/springai/ch10_1753853841393-bfd2a2be-2db9-4b40-b723-4dfd1aaf3de6_aca087ba96.gif" alt="ch10_1753853841393-bfd2a2be-2db9-4b40-b723-4dfd1aaf3de6_aca087ba96.gif"></div>
 
 既然每种方法都有优点和缺点，为什么不使用 LLM 来创建块呢？
 可以提示 LLM 生成语义上孤立且有意义的块。
@@ -946,7 +946,7 @@ The World is Big and Salvation Lurks Around the Corner
 
 ```
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/springai/ch10_1749997147499-7bafe6d5-bcaa-47cb-ae35-8489d3102d7c_fbf0e2ff5c.png" alt="ch10_1749997147499-7bafe6d5-bcaa-47cb-ae35-8489d3102d7c_fbf0e2ff5c.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/springai/ch10_1749997147499-7bafe6d5-bcaa-47cb-ae35-8489d3102d7c_fbf0e2ff5c.png" alt="ch10_1749997147499-7bafe6d5-bcaa-47cb-ae35-8489d3102d7c_fbf0e2ff5c.png"></div>
 
 **作用**：  
 帮助做元数据过滤。    并不参数向量数据库的相似性检索
@@ -1021,7 +1021,7 @@ Summary: The section outlines the policies for modifying and canceling reservati
 
 ### 文本向量化
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/springai/ch10_1741188324988-536ef32b-5a6d-4999-9e08-df15d488a342_3f5d814df0.png" alt="ch10_1741188324988-536ef32b-5a6d-4999-9e08-df15d488a342_3f5d814df0.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/springai/ch10_1741188324988-536ef32b-5a6d-4999-9e08-df15d488a342_3f5d814df0.png" alt="ch10_1741188324988-536ef32b-5a6d-4999-9e08-df15d488a342_3f5d814df0.png"></div>
 
 向量化存储之前在“文本向量化”介绍了， 就是通过向量模型库进行向量化
 代码：
@@ -1062,7 +1062,7 @@ for (Document document : apply) {
 vectorStore.write(apply);
 ```
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/springai/ch10_1750055863649-e1a58a18-23f4-482d-9c0d-123ee5a893fc_5e965e66db.png" alt="ch10_1750055863649-e1a58a18-23f4-482d-9c0d-123ee5a893fc_5e965e66db.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/springai/ch10_1750055863649-e1a58a18-23f4-482d-9c0d-123ee5a893fc_5e965e66db.png" alt="ch10_1750055863649-e1a58a18-23f4-482d-9c0d-123ee5a893fc_5e965e66db.png"></div>
 
 ```java
 @Test
@@ -1135,7 +1135,7 @@ vectorStore.write(apply);
 
 如果结合ChatClient 可以直接将检索和Advisor整合在一起
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/springai/ch10_1741847699874-61b078b9-8d57-4f61-ac3d-5927d7bad5f6_ea91eaca47.png" alt="ch10_1741847699874-61b078b9-8d57-4f61-ac3d-5927d7bad5f6_ea91eaca47.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/springai/ch10_1741847699874-61b078b9-8d57-4f61-ac3d-5927d7bad5f6_ea91eaca47.png" alt="ch10_1741847699874-61b078b9-8d57-4f61-ac3d-5927d7bad5f6_ea91eaca47.png"></div>
 
 ```java
 @Test
@@ -1177,13 +1177,13 @@ vectorStore.write(apply);
 
 SpringAI整个过程原理：
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/springai/ch10_1750057895102-987392e8-f52a-417d-9df1-35764077748c_fbeee54166.png" alt="ch10_1750057895102-987392e8-f52a-417d-9df1-35764077748c_fbeee54166.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/springai/ch10_1750057895102-987392e8-f52a-417d-9df1-35764077748c_fbeee54166.png" alt="ch10_1750057895102-987392e8-f52a-417d-9df1-35764077748c_fbeee54166.png"></div>
 
 ## 提升检索精度—rerank(重排序）
 
 ### 为什么需要 rerank
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/springai/ch10_1753779425195-b3fcc518-dd15-40cb-ac6d-fb5e77285348_71e6d7dcc6.png" alt="ch10_1753779425195-b3fcc518-dd15-40cb-ac6d-fb5e77285348_71e6d7dcc6.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/springai/ch10_1753779425195-b3fcc518-dd15-40cb-ac6d-fb5e77285348_71e6d7dcc6.png" alt="ch10_1753779425195-b3fcc518-dd15-40cb-ac6d-fb5e77285348_71e6d7dcc6.png"></div>
 
 传统的向量检索存在几个关键问题：
 **语义相似度的局限性**：向量检索主要基于余弦相似度等数学计算，但相似的向量表示不一定意味着内容一定绝对相关。单纯的向量相似度无法充分理解查询的真实意图和上下文。
@@ -1194,7 +1194,7 @@ SpringAI整个过程原理：
 
 主要在检索阶段进行改进：
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/springai/ch10_1753779476732-44858afa-eacb-4758-8362-411138c71e97_c6a316794a.png" alt="ch10_1753779476732-44858afa-eacb-4758-8362-411138c71e97_c6a316794a.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/springai/ch10_1753779476732-44858afa-eacb-4758-8362-411138c71e97_c6a316794a.png" alt="ch10_1753779476732-44858afa-eacb-4758-8362-411138c71e97_c6a316794a.png"></div>
 
 **二阶段优化架构**：rerank 采用"粗排+精排"的两阶段架构。第一阶段快速检索大量候选文档，第二阶段使用专门的重排序模型进行精确评分。
 **专业化模型**：重排序模型（如 `**gte-rerank-hybrid**`）专门针对文档相关性评估进行训练，能够更准确地计算查询与文档的语义匹配度。
@@ -1271,9 +1271,9 @@ public class RerankTest {
 重排前：
 排第一的doucment跟退费并没有关系：
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/springai/ch10_1752846171180-c3491a36-4fe2-451a-b3df-d7354e7423c9_0fc3a1c986.png" alt="ch10_1752846171180-c3491a36-4fe2-451a-b3df-d7354e7423c9_0fc3a1c986.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/springai/ch10_1752846171180-c3491a36-4fe2-451a-b3df-d7354e7423c9_0fc3a1c986.png" alt="ch10_1752846171180-c3491a36-4fe2-451a-b3df-d7354e7423c9_0fc3a1c986.png"></div>
 
 重排后：
 排第一的document:
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/springai/ch10_1752846203397-eba6baeb-fe2b-4a00-8ad1-c1cc17ccc841_dc3e7673a3.png" alt="ch10_1752846203397-eba6baeb-fe2b-4a00-8ad1-c1cc17ccc841_dc3e7673a3.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/springai/ch10_1752846203397-eba6baeb-fe2b-4a00-8ad1-c1cc17ccc841_dc3e7673a3.png" alt="ch10_1752846203397-eba6baeb-fe2b-4a00-8ad1-c1cc17ccc841_dc3e7673a3.png"></div>

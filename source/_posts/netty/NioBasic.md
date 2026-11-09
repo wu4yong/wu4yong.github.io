@@ -22,7 +22,7 @@ channel 有一点类似于 stream，它就是读写数据的**双向通道**，
 可以从 channel 将数据读入 buffer，也可以将 buffer 的数据写入 channel，
 而之前的 stream 要么是输入，要么是输出，channel 比 stream 更为底层
 
-![](/assets/img/netty/channel-buffer.png)
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/netty/channel-buffer.png" alt=""></div>
 
 ### Channel 类型 
 常见的Channel有
@@ -49,7 +49,7 @@ channel 有一点类似于 stream，它就是读写数据的**双向通道**，
 selector 单从字面意思不好理解，需要结合服务器的设计演化来理解它的用途
 
 #### 多线程版设计
-![](/assets/img/netty/concurrency.png)
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/netty/concurrency.png" alt=""></div>
 #### ⚠️ 多线程版缺点
 
 * 内存占用高
@@ -58,7 +58,7 @@ selector 单从字面意思不好理解，需要结合服务器的设计演化�
 
 #### 线程池版设计
 
-![](/assets/img/netty/concurrency-pool.png)
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/netty/concurrency-pool.png" alt=""></div>
 #### ⚠️ 线程池版缺点
 
 * 阻塞模式下，线程仅能处理一个 socket 连接
@@ -70,7 +70,7 @@ selector 单从字面意思不好理解，需要结合服务器的设计演化�
 selector 的作用就是配合一个线程来管理多个 channel，获取这些 channel 上发生的事件，这些 channel 工作在非阻塞模式下，
 不会让线程吊死在一个 channel 上。适合连接数特别多，但流量低的场景（low traffic）
 
-![](/assets/img/netty/selector.png)
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/netty/selector.png" alt=""></div>
 
 
 调用 selector 的 select() 会阻塞直到 channel 发生了读写就绪事件，这些事件发生，select 方法就会返回这些事件交给 thread 来处理
@@ -158,27 +158,27 @@ ByteBuffer 有以下重要属性
 
 一开始
 
-![](/assets/img/netty/0021.png)
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/netty/0021.png" alt=""></div>
 
 写模式下，position 是写入位置，limit 等于容量，下图表示写入了 4 个字节后的状态
 
-![](/assets/img/netty/0018.png)
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/netty/0018.png" alt=""></div>
 
 flip 动作发生后，position 切换为读取位置，limit 切换为读取限制
 
-![](/assets/img/netty/0019.png)
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/netty/0019.png" alt=""></div>
 
 读取 4 个字节后，状态
 
-![](/assets/img/netty/0020.png)
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/netty/0020.png" alt=""></div>
 
 clear 动作发生后，状态
 
-![](/assets/img/netty/0021.png)
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/netty/0021.png" alt=""></div>
 
 compact 方法，是把未读完的部分向前压缩，然后切换至写模式
 
-![](/assets/img/netty/0022.png)
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/netty/0022.png" alt=""></div>
 
 
 
@@ -1117,7 +1117,7 @@ while (true) {
 
 ### 4.2 Selector
 
-![](/assets/img/netty/selector.png)
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/netty/selector.png" alt=""></div>
 
 
 
@@ -1427,7 +1427,7 @@ ld�
 
 #### 处理消息的边界
 
-![](/assets/img/netty/0023.png)
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/netty/0023.png" alt=""></div>
 
 * 一种思路是固定消息长度，数据包大小一样，服务器按预定长度读取，缺点是浪费带宽
 * 另一种思路是按分隔符拆分，缺点是效率低
@@ -1927,25 +1927,25 @@ public class UdpClient {
 * 等待数据阶段
 * 复制数据阶段
 
-![](/assets/img/netty/0033.png)
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/netty/0033.png" alt=""></div>
 
 * 阻塞 IO
 
-![](/assets/img/netty/0039.png)
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/netty/0039.png" alt=""></div>
 * 非阻塞  IO
 
-![](/assets/img/netty/0035.png)  
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/netty/0035.png" alt=""></div>  
 
 * 多路复用
 
-![](/assets/img/netty/0038.png)
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/netty/0038.png" alt=""></div>
 * 信号驱动
 
 * 异步 IO
-![](/assets/img/netty/0037.png)
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/netty/0037.png" alt=""></div>
 
 * 阻塞 IO vs 多路复用
-![](/assets/img/netty/0034.png)
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/netty/0034.png" alt=""></div>
 
 c
 
@@ -1974,7 +1974,7 @@ socket.getOutputStream().write(buf);
 
 内部工作流程是这样的：
 
-![](/assets/img/netty/0024.png)
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/netty/0024.png" alt=""></div>
 1. java 本身并不具备 IO 读写能力，因此 read 方法调用后，要从 java 程序的**用户态**切换至**内核态**，去调用操作系统（Kernel）的读能力，将数据读入**内核缓冲区**。这期间用户线程阻塞，操作系统使用 DMA（Direct Memory Access）来实现文件读，其间也不会使用 cpu
 
    > DMA 也可以理解为硬件单元，用来解放 cpu 完成文件 IO
@@ -2001,7 +2001,7 @@ socket.getOutputStream().write(buf);
 * ByteBuffer.allocate(10)  HeapByteBuffer 使用的还是 java 内存
 * ByteBuffer.allocateDirect(10)  DirectByteBuffer 使用的是操作系统内存
 
-![](/assets/img/netty/0025.png)
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/netty/0025.png" alt=""></div>
 大部分步骤与优化前相同，不再赘述。唯有一点：java 可以使用 DirectByteBuf 将堆外内存映射到 jvm 内存中来直接访问使用
 
 * 这块内存不受 jvm 垃圾回收的影响，因此内存地址固定，有助于 IO 读写
@@ -2014,7 +2014,7 @@ socket.getOutputStream().write(buf);
 
 进一步优化（底层采用了 linux 2.1 后提供的 sendFile 方法），java 中对应着两个 channel 调用 transferTo/transferFrom 方法拷贝数据
 
-![](/assets/img/netty/0026.png)
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/netty/0026.png" alt=""></div>
 1. java 调用 transferTo 方法后，要从 java 程序的**用户态**切换至**内核态**，使用 DMA将数据读入**内核缓冲区**，不会使用 cpu
 2. 数据从**内核缓冲区**传输到 **socket 缓冲区**，cpu 会参与拷贝
 3. 最后使用 DMA 将 **socket 缓冲区**的数据写入网卡，不会使用 cpu
@@ -2028,7 +2028,7 @@ socket.getOutputStream().write(buf);
 
 进一步优化（linux 2.4）
 
-![](/assets/img/netty/0027.png)
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/netty/0027.png" alt=""></div>
 
 1. java 调用 transferTo 方法后，要从 java 程序的**用户态**切换至**内核态**，使用 DMA将数据读入**内核缓冲区**，不会使用 cpu
 2. 只会将一些 offset 和 length 信息拷入 **socket 缓冲区**，几乎无消耗

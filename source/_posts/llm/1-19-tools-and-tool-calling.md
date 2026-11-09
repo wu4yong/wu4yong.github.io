@@ -67,8 +67,8 @@ tags:
 - 数据分析助手要跑 SQL、读报表、调统计接口
 - 生活类助手要查天气、查地图、查航班、查日程
 
-<!-- ![未开启联网或工具时，对话产品无法给出实时天气，只能提示用户开启能力（示意图）](/assets/img/llm/17/17-1-2-1.jpeg) -->
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/17/17-1-2-1.jpeg" alt="未开启联网或工具时，对话产品无法给出实时天气，只能提示用户开启能力（示意图）"></div>
+<!-- <div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/llm/17/17-1-2-1.jpeg" alt="未开启联网或工具时，对话产品无法给出实时天气，只能提示用户开启能力（示意图）"></div> -->
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/llm/17/17-1-2-1.jpeg" alt="未开启联网或工具时，对话产品无法给出实时天气，只能提示用户开启能力（示意图）"></div>
 
 > **图意说明：** 界面中用户询问「今天北京天气」，在未启用「联网搜索」等外部能力时，模型无法给出实时数据，只能建议去气象网站或**开启联网搜索**。该图用于说明：**没有接入工具/插件时，模型再强也拿不到实时世界状态**，与后文通过 Tool 调用天气 API 形成对照。
 
@@ -128,8 +128,8 @@ tags:
 
 这就是工具调用的完整闭环。
 
-<!-- ![工具调用泳道图：用户、程序、工具、大模型四栏协作（用户提问 → 程序带工具定义调模型 → 模型判断是否调用工具 → 程序执行工具 → 结果再交模型生成回复）](/assets/img/llm/17/17-2-1-1.jpeg) -->
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/17/17-2-1-1.jpeg" alt="工具调用泳道图：用户、程序、工具、大模型四栏协作（用户提问 → 程序带工具定义调模型 → 模型判断是否调用工具 → 程序执行工具 → 结果再交模型生成回复）"></div>
+<!-- <div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/llm/17/17-2-1-1.jpeg" alt="工具调用泳道图：用户、程序、工具、大模型四栏协作（用户提问 → 程序带工具定义调模型 → 模型判断是否调用工具 → 程序执行工具 → 结果再交模型生成回复）"></div> -->
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/llm/17/17-2-1-1.jpeg" alt="工具调用泳道图：用户、程序、工具、大模型四栏协作（用户提问 → 程序带工具定义调模型 → 模型判断是否调用工具 → 程序执行工具 → 结果再交模型生成回复）"></div>
 
 > **小知识：泳道图 vs 普通流程图（面试题）**
 >
@@ -147,8 +147,8 @@ tags:
 
 也就是说，**Tool Calling 不是脱离消息机制另起炉灶，它本质上仍然发生在消息流之中。**
 
-<!-- ![bind_tools 与 Agent 自动执行工具的边界：绑定工具只提供 schema，Agent 才负责循环执行工具并写回观察结果](/assets/img/llm/17/17-2-1-2.svg) -->
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/17/17-2-1-2.svg" alt="bind_tools 与 Agent 自动执行工具的边界：绑定工具只提供 schema，Agent 才负责循环执行工具并写回观察结果"></div>
+<!-- <div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/llm/17/17-2-1-2.svg" alt="bind_tools 与 Agent 自动执行工具的边界：绑定工具只提供 schema，Agent 才负责循环执行工具并写回观察结果"></div> -->
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/llm/17/17-2-1-2.svg" alt="bind_tools 与 Agent 自动执行工具的边界：绑定工具只提供 schema，Agent 才负责循环执行工具并写回观察结果"></div>
 
 ### 2.2 模型到底看到了什么
 
@@ -248,8 +248,8 @@ tags:
 
 LangChain 官方文档也明确强调：**最简单的创建工具方式，就是使用 `@tool` 装饰器；默认情况下，函数 docstring 会成为工具描述。**
 
-<!-- ![LangChain 文档摘录：使用 @tool 装饰器创建工具，默认以函数 docstring 作为工具描述（Basic tool definition）](/assets/img/llm/17/17-3-1-1.jpeg) -->
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/17/17-3-1-1.jpeg" alt="LangChain 文档摘录：使用 @tool 装饰器创建工具，默认以函数 docstring 作为工具描述（Basic tool definition）"></div>
+<!-- <div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/llm/17/17-3-1-1.jpeg" alt="LangChain 文档摘录：使用 @tool 装饰器创建工具，默认以函数 docstring 作为工具描述（Basic tool definition）"></div> -->
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/llm/17/17-3-1-1.jpeg" alt="LangChain 文档摘录：使用 @tool 装饰器创建工具，默认以函数 docstring 作为工具描述（Basic tool definition）"></div>
 
 所以先记住一句最重要的话：**`@tool` 的意义，不是把函数“变复杂”，而是把函数“变成模型看得懂的工具”。**
 
@@ -288,8 +288,8 @@ LangChain 官方文档也明确强调：**最简单的创建工具方式，就�
 
 所以从工程实践上说，定义 Tool 时最怕的不是“函数实现难”，而是：名字取得太随意，描述写得太模糊，参数定义不清楚。
 
-<!-- ![@tool 与函数名、类型注解、docstring 在工具定义中的角色示意（装饰器注册、函数名为工具 ID、类型帮助生成参数、文档字符串为「使用说明」）](/assets/img/llm/17/17-3-3-1.jpeg) -->
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/17/17-3-3-1.jpeg" alt="@tool 与函数名、类型注解、docstring 在工具定义中的角色示意（装饰器注册、函数名为工具 ID、类型帮助生成参数、文档字符串为「使用说明」）"></div>
+<!-- <div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/llm/17/17-3-3-1.jpeg" alt="@tool 与函数名、类型注解、docstring 在工具定义中的角色示意（装饰器注册、函数名为工具 ID、类型帮助生成参数、文档字符串为「使用说明」）"></div> -->
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/llm/17/17-3-3-1.jpeg" alt="@tool 与函数名、类型注解、docstring 在工具定义中的角色示意（装饰器注册、函数名为工具 ID、类型帮助生成参数、文档字符串为「使用说明」）"></div>
 
 ### 3.4 工具描述的作用
 
@@ -443,8 +443,8 @@ def add_number(a: int, b: int) -> int:
 
 > **版本说明：** OpenWeather 的免费额度、可用产品、订阅档位和调用限制会随官方策略调整；本章只说明 API Key 获取和本地配置流程，具体额度与计费以当前 [OpenWeather Pricing](https://openweathermap.org/price) 页面和账号订阅页为准。
 
-<!-- ![OpenWeather 用户后台「API keys」页：查看已有密钥状态，或通过 Create key 生成新密钥（教程中用于配置天气工具）](/assets/img/llm/17/17-5-1-1.png) -->
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/17/17-5-1-1.png" alt="OpenWeather 用户后台「API keys」页：查看已有密钥状态，或通过 Create key 生成新密钥（教程中用于配置天气工具）"></div>
+<!-- <div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/llm/17/17-5-1-1.png" alt="OpenWeather 用户后台「API keys」页：查看已有密钥状态，或通过 Create key 生成新密钥（教程中用于配置天气工具）"></div> -->
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/llm/17/17-5-1-1.png" alt="OpenWeather 用户后台「API keys」页：查看已有密钥状态，或通过 Create key 生成新密钥（教程中用于配置天气工具）"></div>
 
 ### 5.2 定义天气查询工具
 
@@ -475,8 +475,8 @@ LangChain 官方文档对这一点讲得很清楚：**只有先把工具绑定�
 
 **把 `get_weather` 这项能力声明给模型，告诉它：你之后如果判断有必要，可以调用这个工具。**
 
-<!-- ![Function calling 技术思路：普通对话（用户 ↔ 大模型）与「查询天气」场景下，大模型发出函数调用请求 → 外部函数 get_weather → 请求 OpenWeather API → 响应回到模型再生成用户可见回复](/assets/img/llm/17/17-5-3-1.jpeg) -->
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/17/17-5-3-1.jpeg" alt="Function calling 技术思路：普通对话（用户 ↔ 大模型）与「查询天气」场景下，大模型发出函数调用请求 → 外部函数 get_weather → 请求 OpenWeather API → 响应回到模型再生成用户可见回复"></div>
+<!-- <div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/llm/17/17-5-3-1.jpeg" alt="Function calling 技术思路：普通对话（用户 ↔ 大模型）与「查询天气」场景下，大模型发出函数调用请求 → 外部函数 get_weather → 请求 OpenWeather API → 响应回到模型再生成用户可见回复"></div> -->
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/llm/17/17-5-3-1.jpeg" alt="Function calling 技术思路：普通对话（用户 ↔ 大模型）与「查询天气」场景下，大模型发出函数调用请求 → 外部函数 get_weather → 请求 OpenWeather API → 响应回到模型再生成用户可见回复"></div>
 
 模型收到用户问题后，可能出现两种情况：**不需要工具**：直接返回自然语言答案；**需要工具**：返回 `tool_calls`。
 

@@ -86,8 +86,8 @@ tags:
 
 <strong>核心思想：</strong>并发稳定性，不是会写并发 API，而是控制资源边界、隔离故障域、拆分依赖、做好失败补偿，防止一个慢分支拖垮整个异步链路。
 
-<!-- ![图 8-1　答题要点结构图](/assets/img/interview/8-1threadpool-queue-full.png) -->
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/interview/8-1threadpool-queue-full.png" alt="高可用答题要点结构图"></div>
+<!-- <div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/interview/8-1threadpool-queue-full.png" alt="图 8-1　答题要点结构图"></div> -->
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/interview/8-1threadpool-queue-full.png" alt="高可用答题要点结构图"></div>
 
 ## 第 2 题　接口超时与重试（订单分配骑手案例）
 
@@ -129,8 +129,8 @@ tags:
 
 接口超时不能简单调大超时时间、加重试。超时代表结果未知，首先接口必须基于唯一请求 ID 实现幂等，避免重试造成重复分配骑手；其次重试要区分异常类型，只对网络类瞬时异常重试，采用带随机抖动的指数退避策略，配合熔断，下游压力高的时候停止重试，防止重试风暴；最后优先把这类非核心同步调用改成 MQ 异步解耦，配合状态机和定时对账兜底，从架构上消除同步调用带来的不确定性。
 
-<!-- ![图 8-2　答题要点结构图](/assets/img/interview/8-2api-timeout-retry.png) -->
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/interview/8-2api-timeout-retry.png" alt="高可用答题要点结构图"></div>
+<!-- <div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/interview/8-2api-timeout-retry.png" alt="图 8-2　答题要点结构图"></div> -->
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/interview/8-2api-timeout-retry.png" alt="高可用答题要点结构图"></div>
 
 ## 第 3 题　Tomcat 线程被慢第三方接口占满，调高 maxThreads 只能临时缓解，反复打满，根因和解决方案
 
@@ -210,8 +210,8 @@ Tomcat 的 NIO/BIO 的区别：同步 Servlet 哪怕 NIO，写同步http 调用�
 
 <strong>核心思想：</strong>线程池不是无限扩容就能解决慢 IO，故障隔离才是高并发高可用的核心。
 
-<!-- ![图 8-3　答题要点结构图](/assets/img/interview/8-3tomcat-thread-exhausted.png) -->
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/interview/8-3tomcat-thread-exhausted.png" alt="高可用答题要点结构图"></div>
+<!-- <div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/interview/8-3tomcat-thread-exhausted.png" alt="图 8-3　答题要点结构图"></div> -->
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/interview/8-3tomcat-thread-exhausted.png" alt="高可用答题要点结构图"></div>
 
 ## 第 4 题　第三方接口远程调用，外部服务卡顿拖垮自身服务，如何做服务保护、容错设计
 
@@ -317,8 +317,8 @@ Tomcat 的 NIO/BIO 的区别：同步 Servlet 哪怕 NIO，写同步http 调用�
 
 <strong>核心思想：</strong>外部第三方不可控，不能把外部服务的风险传导到自己核心服务，资源隔离是第一道防线。
 
-<!-- ![图 8-4　答题要点结构图](/assets/img/interview/8-4third-party-dependency-isolation.png) -->
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/interview/8-4third-party-dependency-isolation.png" alt="高可用答题要点结构图"></div>
+<!-- <div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/interview/8-4third-party-dependency-isolation.png" alt="图 8-4　答题要点结构图"></div> -->
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/interview/8-4third-party-dependency-isolation.png" alt="高可用答题要点结构图"></div>
 
 ## 第 5 题　数据库连接池盲目调大 maxSize 事故
 
@@ -376,8 +376,8 @@ MySQL 最优连接经验公式： 最优连接数 ≈ CPU 核数 * 2 + 磁盘IO 
 
 Q：HikariCP 为什么默认 max 不大？ A：Hikari 设计理念就是少而精，数据库能高效处理的并发连接本身有限，它鼓励排队快速失败，而不是大量连接打满 DB。 Q：多个微服务连同一个 MySQL，怎么管控总连接？ A：统一规划配额，每个实例连接池上限加起来远小于数据库 max_connections；接入数据库代理（ProxySQL）统一管控、限流、熔断。 Q：高峰期连接池排队超时，怎么快速区分是连接池小，还是 SQL 慢？ A：监控两个指标：连接等待耗时、活跃连接利用率。活跃连接打满、排队持续上涨，同时 SQL 本身很快，才适合小幅上调；活跃连接早就满了，并且大量 SQL 执行 RT 很高，就是 DB 侧瓶颈，不能加大连接。
 
-<!-- ![图 8-5　答题要点结构图](/assets/img/interview/8-5connection-pool-maxsize.png) -->
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/interview/8-5connection-pool-maxsize.png" alt="高可用答题要点结构图"></div>
+<!-- <div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/interview/8-5connection-pool-maxsize.png" alt="图 8-5　答题要点结构图"></div> -->
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/interview/8-5connection-pool-maxsize.png" alt="高可用答题要点结构图"></div>
 
 ## 第 6 题　数据库连接池耗尽、接口全超时卡住
 
@@ -457,8 +457,8 @@ Q2：连接数配置充足，但依然频繁打满，从哪几个方向定位根
 
 Q：HikariCP 为什么不建议设置很大 maxPoolSize？ A：Hikari 本身高性能，但底层数据库的承载有上限，maxPoolSize 本质是发给 DB 的并发会话上限，超过 DB 最优并发，性能会断崖下跌。 Q：怎么区分是锁等待导致的慢，还是单纯无索引慢 SQL？ A：看show engine innodb status 里的锁等待信息，以及 performance_schema 的等待事件。 Q：连接泄露和慢 SQL 在监控上怎么区分？ A：泄露表现：活跃连接稳步上涨，即使 QPS 很低，连接也只涨不降；慢 SQL 是连接持有时间长，伴随 RT 上涨，QPS 上来时打满。
 
-<!-- ![图 8-6　答题要点结构图](/assets/img/interview/8-6connection-pool-exhausted.png) -->
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/interview/8-6connection-pool-exhausted.png" alt="高可用答题要点结构图"></div>
+<!-- <div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/interview/8-6connection-pool-exhausted.png" alt="图 8-6　答题要点结构图"></div> -->
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/interview/8-6connection-pool-exhausted.png" alt="高可用答题要点结构图"></div>
 
 ## 第 7 题　大促订单系统连接池爆满、接口雪崩
 
@@ -537,8 +537,8 @@ HikariCP 可以通过几种方式观测内部指标：
 
 Q：Hikari 的 connectionTimeout 怎么配？ A：获取连接的最大等待时间，不能太长，建议 2~3s，排队太久直接快速失败，防止请求堆积。 Q：maxLifetime 为什么自带随机偏移？ A：防止大量连接同一时刻过期，瞬间集中新建连接造成尖刺抖动。 Q：读写分离场景，主库连接池和从库连接池参数一样吗？ A：不一样，主库写链路对锁更敏感，maxPoolSize 通常更小；从库查询链路可以适当放大，同时做好慢查询防护。
 
-<!-- ![图 8-7　答题要点结构图](/assets/img/interview/8-7connection-pool-avalanche.png) -->
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/interview/8-7connection-pool-avalanche.png" alt="高可用答题要点结构图"></div>
+<!-- <div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/interview/8-7connection-pool-avalanche.png" alt="图 8-7　答题要点结构图"></div> -->
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/interview/8-7connection-pool-avalanche.png" alt="高可用答题要点结构图"></div>
 
 ## 第 8 题　场景题：无慢 SQL、连接正常关闭，高峰期连接池反复打满，重启半小时又复现
 
@@ -616,8 +616,8 @@ Q：健康检查单独开连接池的意义是什么？ A：业务池耗尽时�
 
 A：事务内 sleep、大循环查询、等待锁、消费消息时事务迟迟不提交。 Q：如果已经出现大量锁等待阻塞链，是加大连接还是限流？ A：优先限流 + kill 阻塞会话，加大连接只会让更多事务进来抢锁，等待链更长。
 
-<!-- ![图 8-8　答题要点结构图](/assets/img/interview/8-8connection-pool-leak.png) -->
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/interview/8-8connection-pool-leak.png" alt="高可用答题要点结构图"></div>
+<!-- <div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/interview/8-8connection-pool-leak.png" alt="图 8-8　答题要点结构图"></div> -->
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/interview/8-8connection-pool-leak.png" alt="高可用答题要点结构图"></div>
 
 ## 第 9 题　数据库连接池打满，请求全部超时卡住，如何不停机止损、区分泄露/长事务慢 SQL、避免数据库连接雪崩、根治方案
 
@@ -717,8 +717,8 @@ A：事务内 sleep、大循环查询、等待锁、消费消息时事务迟迟�
 3. 故障优先限流降级、摘流，有不停机的应急手段，而不是只会重启；
 4. 整套闭环：应急止损 → 定位泄露 / 慢 SQL → 代码规范、参数兜底、读写分离架构改造，从源头降低风险。
 
-<!-- ![图 8-9　答题要点结构图](/assets/img/interview/8-9connection-pool-triage.png) -->
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/interview/8-9connection-pool-triage.png" alt="高可用答题要点结构图"></div>
+<!-- <div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/interview/8-9connection-pool-triage.png" alt="图 8-9　答题要点结构图"></div> -->
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/interview/8-9connection-pool-triage.png" alt="高可用答题要点结构图"></div>
 
 ## 第 10 题　数据库连接池核心连接数怎么计算
 
@@ -782,8 +782,8 @@ A：事务内 sleep、大循环查询、等待锁、消费消息时事务迟迟�
 
 Q：HikariCP 为什么不建议把 minimumIdle 设置很大？ A：Hikari 设计思想是尽量少空闲连接，minimumIdle 大了会维持一堆闲置连接占用数据库资源，推荐 minimumIdle = maximumPoolSize。 Q：Threads_connected 和 Threads_running 的区别？ A：Threads_connected 是所有已经建立的连接（大量 sleep 空闲）；Threads_running 是正在执行 SQL 的活跃连接，这个才是压力指标。 Q：如果看到连接池排队很久，加大 max 就一定解决吗？ A：不一定。排队根源如果是慢 SQL 锁等待、数据库 IO 瓶颈，加大连接只会雪上加霜
 
-<!-- ![图 8-10　答题要点结构图](/assets/img/interview/8-10connection-pool-sizing.png) -->
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/interview/8-10connection-pool-sizing.png" alt="高可用答题要点结构图"></div>
+<!-- <div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/interview/8-10connection-pool-sizing.png" alt="图 8-10　答题要点结构图"></div> -->
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/interview/8-10connection-pool-sizing.png" alt="高可用答题要点结构图"></div>
 
 ## 第 11 题　连接池进阶面试题
 
@@ -898,8 +898,8 @@ DB 侧主动断开产生死连接，Hikari 靠 maxLifetime，设置比 MySQLwait
 
 Q：Hikari 和 Druid 在僵死连接检测上有什么区别？ A：Hikari 是取出时校验，依靠 maxLifetime 轮换；Druid 支持空闲周期心跳检测，适合老版本 JDBC。 Q：信号量隔离和拆分连接池各自优缺点？ A：信号量不用消耗额外 DB 连接，但是同一个池内故障依然互相影响；拆分池隔离性更强，但是占用更多数据库连接配额，需要全局管控。 Q：maxLifetime 设置越小越好吗？ A：不是，太小会导致连接频繁销毁重建，产生大量建连开销和 RT 抖动，一般 30 分钟起步。
 
-<!-- ![图 8-11　答题要点结构图](/assets/img/interview/8-11connection-pool-advanced.png) -->
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/interview/8-11connection-pool-advanced.png" alt="高可用答题要点结构图"></div>
+<!-- <div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/interview/8-11connection-pool-advanced.png" alt="图 8-11　答题要点结构图"></div> -->
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/interview/8-11connection-pool-advanced.png" alt="高可用答题要点结构图"></div>
 
 ## 第 12 题　秒杀 Redis 固定计数器限流，限流生效但服务打垮、合法请求被拦截、出现超卖
 
@@ -976,8 +976,8 @@ Q：Hikari 和 Druid 在僵死连接检测上有什么区别？ A：Hikari 是�
 
 <strong>核心思想：</strong>限流不是一个 Redis 计数器就能搞定的功能，是流量识别、配额隔离、削峰缓冲、柔性返回、动态调控组成的流量治理体系。
 
-<!-- ![图 8-12　答题要点结构图](/assets/img/interview/8-12rate-limit-fixed-window.png) -->
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/interview/8-12rate-limit-fixed-window.png" alt="高可用答题要点结构图"></div>
+<!-- <div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/interview/8-12rate-limit-fixed-window.png" alt="图 8-12　答题要点结构图"></div> -->
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/interview/8-12rate-limit-fixed-window.png" alt="高可用答题要点结构图"></div>
 
 ## 第 13 题　集群限流不均衡问题
 
@@ -1027,8 +1027,8 @@ Q：Hikari 和 Druid 在僵死连接检测上有什么区别？ A：Hikari 是�
 
 问：为什么不全部都用分布式限流？ 答：分布式限流依赖Redis/TokenServer，有网络延迟和稳定性成本；流量均匀的普通接口，单机限流足够，性能更好。
 
-<!-- ![图 8-13　答题要点结构图](/assets/img/interview/8-13cluster-rate-limit.png) -->
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/interview/8-13cluster-rate-limit.png" alt="高可用答题要点结构图"></div>
+<!-- <div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/interview/8-13cluster-rate-limit.png" alt="图 8-13　答题要点结构图"></div> -->
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/interview/8-13cluster-rate-limit.png" alt="高可用答题要点结构图"></div>
 
 ## 第 14 题　大促分层限流体系设计，网关+多实例集群、流量尖峰、Redis 故障、差异化限流、漏桶/令牌桶对比、多层防护防雪崩
 
@@ -1131,8 +1131,8 @@ Redis 挂了，不能让限流直接消失：开关降级为本地限流
 
 不再只是写 Redis 令牌桶；考察多层防御思想、故障兜底、流量优先级设计、集群分摊的取舍，明白任何一层限流组件都可能出问题，每一个服务都要具备自我保护能力。
 
-<!-- ![图 8-14　答题要点结构图](/assets/img/interview/8-14rate-limit-architecture.png) -->
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/interview/8-14rate-limit-architecture.png" alt="高可用答题要点结构图"></div>
+<!-- <div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/interview/8-14rate-limit-architecture.png" alt="图 8-14　答题要点结构图"></div> -->
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/interview/8-14rate-limit-architecture.png" alt="高可用答题要点结构图"></div>
 
 ## 第 15 题　网关+熔断+降级组合，大促流量暴涨后核心业务被限流、熔断无法恢复，页面大面积报错
 
@@ -1212,8 +1212,8 @@ Redis 挂了，不能让限流直接消失：开关降级为本地限流
 
 <strong>核心思想：</strong>流量防护不是简单加注解配规则，是一套分级隔离、优先保障核心、故障可切断、恢复可渐进的全链路风控体系。
 
-<!-- ![图 8-15　答题要点结构图](/assets/img/interview/8-15gateway-circuit-breaker.png) -->
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/interview/8-15gateway-circuit-breaker.png" alt="高可用答题要点结构图"></div>
+<!-- <div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/interview/8-15gateway-circuit-breaker.png" alt="图 8-15　答题要点结构图"></div> -->
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/interview/8-15gateway-circuit-breaker.png" alt="高可用答题要点结构图"></div>
 
 ## 第 16 题　微服务并发暴涨，服务雪崩、分布式数据不一致如何解决
 
@@ -1296,8 +1296,8 @@ Redis 挂了，不能让限流直接消失：开关降级为本地限流
 
 <strong>核心思想：</strong>微服务高可用，不是注册中心 + 分布式事务框架 + 限流组件的简单堆砌，而是一套流量管控、故障隔离、柔性降级、幂等保障、事务补偿的风险闭环体系。
 
-<!-- ![图 8-16　答题要点结构图](/assets/img/interview/8-16microservice-avalanche.png) -->
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/interview/8-16microservice-avalanche.png" alt="高可用答题要点结构图"></div>
+<!-- <div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/interview/8-16microservice-avalanche.png" alt="图 8-16　答题要点结构图"></div> -->
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/interview/8-16microservice-avalanche.png" alt="高可用答题要点结构图"></div>
 
 ## 第 17 题　A→B→C→D 链式调用，D 变慢导致 A、B、C 全部阻塞、集群雪崩，如何防范
 
@@ -1367,5 +1367,5 @@ Redis 挂了，不能让限流直接消失：开关降级为本地限流
 
 <strong>核心思想：</strong>防止链式雪崩，顺序是：缩短同步链路 → 资源隔离阻断传染 →合理超时 + 精细化熔断降级 → 监控动态应急，不是上来就加熔断器。
 
-<!-- ![图 8-17　答题要点结构图](/assets/img/interview/8-17cascading-failure.png) -->
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/interview/8-17cascading-failure.png" alt="高可用答题要点结构图"></div>
+<!-- <div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/interview/8-17cascading-failure.png" alt="图 8-17　答题要点结构图"></div> -->
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/interview/8-17cascading-failure.png" alt="高可用答题要点结构图"></div>

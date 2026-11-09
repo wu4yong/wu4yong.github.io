@@ -15,11 +15,11 @@ tags:
 
 Spring AI 利用面向切面的思想提供 Advisors API ， 它提供了灵活而强大的方法来拦截、修改和增强 Spring 应用程序中的 AI 驱动交互。
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/springai/ch05_1748595841228-a2cc26e0-025d-4795-b9d5-acc8aa14ce12_39b304f7be.png" alt="ch05_1748595841228-a2cc26e0-025d-4795-b9d5-acc8aa14ce12_39b304f7be.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/springai/ch05_1748595841228-a2cc26e0-025d-4795-b9d5-acc8aa14ce12_39b304f7be.png" alt="ch05_1748595841228-a2cc26e0-025d-4795-b9d5-acc8aa14ce12_39b304f7be.png"></div>
 
 `Advisor `接口提供了`CallAdvisor`和组成`CallAdvisorChain`（适用于非流式场景），以及`StreamAdvisor`和 （`StreamAdvisorChain`适用于流式场景）。它还包括`ChatClientRequest`，用于表示未密封的 Prompt 请求，以及 ，`ChatClientResponse`用于表示聊天完成响应。
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/springai/ch05_1748596397995-c75e2484-0562-4e76-94e5-785c48fa3da9_d6a09da255.jpeg" alt="ch05_1748596397995-c75e2484-0562-4e76-94e5-785c48fa3da9_d6a09da255.jpeg"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/springai/ch05_1748596397995-c75e2484-0562-4e76-94e5-785c48fa3da9_d6a09da255.jpeg" alt="ch05_1748596397995-c75e2484-0562-4e76-94e5-785c48fa3da9_d6a09da255.jpeg"></div>
 
 ### 日志拦截：
 
@@ -154,10 +154,10 @@ public class AdvisorTest {
 
 ### 原理
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/springai/ch05_1751620554294-e45fc2f1-68ab-4551-ae10-bfdd21d3891a_5f7a4f9733.png" alt="ch05_1751620554294-e45fc2f1-68ab-4551-ae10-bfdd21d3891a_5f7a4f9733.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/springai/ch05_1751620554294-e45fc2f1-68ab-4551-ae10-bfdd21d3891a_5f7a4f9733.png" alt="ch05_1751620554294-e45fc2f1-68ab-4551-ae10-bfdd21d3891a_5f7a4f9733.png"></div>
 
 **记住！   **
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/springai/ch05_1748870548847-b2868cb2-027b-42f0-b0bf-42a21bf462d2_75e4348718.png" alt="ch05_1748870548847-b2868cb2-027b-42f0-b0bf-42a21bf462d2_75e4348718.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/springai/ch05_1748870548847-b2868cb2-027b-42f0-b0bf-42a21bf462d2_75e4348718.png" alt="ch05_1748870548847-b2868cb2-027b-42f0-b0bf-42a21bf462d2_75e4348718.png"></div>
 
 dvisor只有结合ChatClient才能用！   是SpringAi上层提供的。  模型底层并没有这个东西

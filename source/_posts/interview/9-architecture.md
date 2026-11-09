@@ -129,8 +129,8 @@ Redis 分布式锁可以做并发控制，但存在锁超时、主从切换丢�
 幂等不是一次请求拦截，而是保证同一个业务标识，多次调用只会产生一次数据变更，并且要能扛住服务宕机、
 网络超时重试这类异常时序。
 
-<!-- ![图 9-1　答题要点结构图](/assets/img/interview/9-1idempotency-payment.png) -->
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/interview/9-1idempotency-payment.png" alt="架构答题要点结构图"></div>
+<!-- <div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/interview/9-1idempotency-payment.png" alt="图 9-1　答题要点结构图"></div> -->
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/interview/9-1idempotency-payment.png" alt="架构答题要点结构图"></div>
 
 ## 第 2 题　接口幂等：前端置灰、唯一主键为什么挡不住 MQ 重复投递与回调重试？
 
@@ -203,8 +203,8 @@ Redis 分布式锁可以做并发控制，但存在锁超时、主从切换丢�
 
  答：Redis 数据丢失、过期、主从切换丢标记，所以 Redis 只能做前置拦截，不能单独作为唯一幂等保障，数据库必须兜底。
 
-<!-- ![图 9-2　答题要点结构图](/assets/img/interview/9-2idempotency-mq-callback.png) -->
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/interview/9-2idempotency-mq-callback.png" alt="架构答题要点结构图"></div>
+<!-- <div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/interview/9-2idempotency-mq-callback.png" alt="图 9-2　答题要点结构图"></div> -->
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/interview/9-2idempotency-mq-callback.png" alt="架构答题要点结构图"></div>
 
 ## 第 3 题　支付订单幂等性架构设计
 
@@ -285,8 +285,8 @@ A：订单、支付这种自带状态流转的优先状态机，少一张表，�
 
 A：捕获唯一索引异常，先查询这条 requestNo 对应的业务结果，查到已成功，直接返回上次成功结果，对外屏蔽报错。
 
-<!-- ![图 9-3　答题要点结构图](/assets/img/interview/9-3idempotency-architecture.png) -->
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/interview/9-3idempotency-architecture.png" alt="架构答题要点结构图"></div>
+<!-- <div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/interview/9-3idempotency-architecture.png" alt="图 9-3　答题要点结构图"></div> -->
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/interview/9-3idempotency-architecture.png" alt="架构答题要点结构图"></div>
 
 ## 第 4 题　Redis 查-执-写幂等击穿（并发重复支付事故）
 
@@ -350,8 +350,8 @@ A：压测很多是串行或者错开的请求；只有同一个流水号极短�
 
 A：可以，Lua 脚本保证查询 + 标记设置在 Redis侧原子执行，也是可选方案；SET NX 更简单通用。
 
-<!-- ![图 9-4　答题要点结构图](/assets/img/interview/9-4idempotency-race-condition.png) -->
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/interview/9-4idempotency-race-condition.png" alt="架构答题要点结构图"></div>
+<!-- <div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/interview/9-4idempotency-race-condition.png" alt="图 9-4　答题要点结构图"></div> -->
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/interview/9-4idempotency-race-condition.png" alt="架构答题要点结构图"></div>
 
 ## 第 5 题　Redis 和数据库双写怎么保证一致？
 
@@ -428,8 +428,8 @@ A 再写库。最终 DB 库存是 0，Redis 残留旧库存，引发超卖。
 **核心思想：**
 缓存更新策略不能只看正常流程，要思考并发时序异常；缓存只能加速查询，不能替代数据库作为数据真值。
 
-<!-- ![图 9-5　答题要点结构图](/assets/img/interview/9-5cache-db-consistency.png) -->
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/interview/9-5cache-db-consistency.png" alt="架构答题要点结构图"></div>
+<!-- <div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/interview/9-5cache-db-consistency.png" alt="图 9-5　答题要点结构图"></div> -->
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/interview/9-5cache-db-consistency.png" alt="架构答题要点结构图"></div>
 
 ## 第 6 题　Redis 缓存和数据库配合
 
@@ -505,8 +505,8 @@ A 再写库。最终 DB 库存是 0，Redis 残留旧库存，引发超卖。
 缓存更新不要去更新 value，优先失效 key；缓存是查询加速层，数据真值永远保存在数据库，
 同时要有多层兜底机制处理各种异常。
 
-<!-- ![图 9-6　答题要点结构图](/assets/img/interview/9-6cache-aside-update.png) -->
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/interview/9-6cache-aside-update.png" alt="架构答题要点结构图"></div>
+<!-- <div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/interview/9-6cache-aside-update.png" alt="图 9-6　答题要点结构图"></div> -->
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/interview/9-6cache-aside-update.png" alt="架构答题要点结构图"></div>
 
 ## 第 7 题　秒杀超卖问题完整解析
 
@@ -568,8 +568,8 @@ select 库存 > 0 → update 库存-1 select 和 update 是两条独立 SQL，�
 
 分布式锁也能解决，但是锁会串行，并发能力下降；秒杀追求吞吐，优先 Lua原子扣减，性能更好。
 
-<!-- ![图 9-7　答题要点结构图](/assets/img/interview/9-7seckill-oversell.png) -->
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/interview/9-7seckill-oversell.png" alt="架构答题要点结构图"></div>
+<!-- <div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/interview/9-7seckill-oversell.png" alt="图 9-7　答题要点结构图"></div> -->
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/interview/9-7seckill-oversell.png" alt="架构答题要点结构图"></div>
 
 ## 第 8 题　电商下单系统设计（订单创建、库存扣减、支付回调、超时取消全流程）
 
@@ -682,8 +682,8 @@ B；以 DB 库存为准，定时核对 Redis 和 DB 库存差异。
 
 A：库存扣减时 DB 层面加乐观锁 / 行锁，作为最后兜底防线。
 
-<!-- ![图 9-8　答题要点结构图](/assets/img/interview/9-8ecommerce-order-design.png) -->
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/interview/9-8ecommerce-order-design.png" alt="架构答题要点结构图"></div>
+<!-- <div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/interview/9-8ecommerce-order-design.png" alt="图 9-8　答题要点结构图"></div> -->
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/interview/9-8ecommerce-order-design.png" alt="架构答题要点结构图"></div>
 
 ## 第 9 题　第三方支付对接系统设计（P7 面试题）
 
@@ -779,5 +779,5 @@ A：防止攻击者篡改回调参数，把 100 元改成 0.01 元，必须比�
 
 A：两边配合，我方设置有效期，到期主动关单；同时轮询确认渠道真实状态，避免单方面关单和渠道不一致。
 
-<!-- ![图 9-9　答题要点结构图](/assets/img/interview/9-9payment-integration-design.png) -->
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/interview/9-9payment-integration-design.png" alt="架构答题要点结构图"></div>
+<!-- <div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/interview/9-9payment-integration-design.png" alt="图 9-9　答题要点结构图"></div> -->
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/interview/9-9payment-integration-design.png" alt="架构答题要点结构图"></div>

@@ -114,8 +114,8 @@ tags:
 
 <strong>核心思想：</strong>分布式 ID 的第一要务是唯一性，有序、高性能只是附加特性；核心资金业务，不要把唯一性寄托在服务器系统时钟上。
 
-<!-- ![图 7-1　答题要点结构图](/assets/img/interview/7-1snowflake-clock-backwards.png) -->
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/interview/7-1snowflake-clock-backwards.png" alt="分布式答题要点结构图"></div>
+<!-- <div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/interview/7-1snowflake-clock-backwards.png" alt="图 7-1　答题要点结构图"></div> -->
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/interview/7-1snowflake-clock-backwards.png" alt="分布式答题要点结构图"></div>
 
 ## 第 2 题　雪花算法时钟回拨，不同 workerId 节点也出现 ID 冲突，如何保证时钟异常、机器扩容场景下 ID 绝对唯一
 
@@ -209,8 +209,8 @@ tags:
 
 <strong>核心思想：</strong>雪花的有序高性能是红利，但代价是绑定系统时钟；核心资金业务，尽量不要把唯一性寄托在服务器系统时间上
 
-<!-- ![图 7-2　答题要点结构图](/assets/img/interview/7-2snowflake-id-uniqueness.png) -->
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/interview/7-2snowflake-id-uniqueness.png" alt="分布式答题要点结构图"></div>
+<!-- <div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/interview/7-2snowflake-id-uniqueness.png" alt="图 7-2　答题要点结构图"></div> -->
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/interview/7-2snowflake-id-uniqueness.png" alt="分布式答题要点结构图"></div>
 
 ## 第 3 题　Seata AT 模式下单场景，订单、库存成功，支付超时，回滚时网络异常引发数据不一致、超卖问题
 
@@ -330,8 +330,8 @@ AT 本身没有无限阻塞重试的强保障：TC 会重试分支回滚，但�
 
 <strong>核心思想：</strong>分布式事务框架只是一致性的工具，网络不可达是物理现实；架构设计优先通过业务隔离（冻结、状态流转）降低不一致带来的损失，再用补偿 + 对账兜底。
 
-<!-- ![图 7-3　答题要点结构图](/assets/img/interview/7-3seata-at-rollback.png) -->
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/interview/7-3seata-at-rollback.png" alt="分布式答题要点结构图"></div>
+<!-- <div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/interview/7-3seata-at-rollback.png" alt="图 7-3　答题要点结构图"></div> -->
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/interview/7-3seata-at-rollback.png" alt="分布式答题要点结构图"></div>
 
 ## 第 4 题　订单扣余额、扣库存、增加积分三服务操作，如何保证全部成功或全部回滚
 
@@ -444,8 +444,8 @@ AT 本质：一阶段执行业务 SQL，生成 undo_log，提交本地事务、�
 
 <strong>核心思想：</strong>分布式一致性，优先业务隔离，再匹配合适的事务模型；所有模型都要配套幂等、异常拦截、重试管控和对账兜底。
 
-<!-- ![图 7-4　答题要点结构图](/assets/img/interview/7-4distributed-transaction-atomic.png) -->
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/interview/7-4distributed-transaction-atomic.png" alt="分布式答题要点结构图"></div>
+<!-- <div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/interview/7-4distributed-transaction-atomic.png" alt="图 7-4　答题要点结构图"></div> -->
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/interview/7-4distributed-transaction-atomic.png" alt="分布式答题要点结构图"></div>
 
 ## 第 5 题　下单同时扣库存、扣余额、生成订单；跨服务场景，扣库存、扣余额成功，创建订单时宕机，怎么解决
 
@@ -538,8 +538,8 @@ TCC 三阶段适配这个场景：
 
 <strong>核心思想：</strong>分布式一致性，优先保证业务凭证（订单）先落地，资源扣减后置；资源不要裸扣，优先冻结。
 
-<!-- ![图 7-5　答题要点结构图](/assets/img/interview/7-5distributed-transaction-order.png) -->
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/interview/7-5distributed-transaction-order.png" alt="分布式答题要点结构图"></div>
+<!-- <div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/interview/7-5distributed-transaction-order.png" alt="图 7-5　答题要点结构图"></div> -->
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/interview/7-5distributed-transaction-order.png" alt="分布式答题要点结构图"></div>
 
 ## 第 6 题　跨库交易（下单扣库存+加积分）
 
@@ -588,8 +588,8 @@ Q2：为什么不用 Seata？ A：Seata AT 会持有全局行锁，大促并发�
 
 Q3：对账会不会延迟太久，用户投诉？ A：对账是兜底；主链路依靠消息重试优先实时完成；对账只捕获极低概率的极端故障，不是主流程。
 
-<!-- ![图 7-6　答题要点结构图](/assets/img/interview/7-6cross-database-transaction.png) -->
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/interview/7-6cross-database-transaction.png" alt="分布式答题要点结构图"></div>
+<!-- <div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/interview/7-6cross-database-transaction.png" alt="图 7-6　答题要点结构图"></div> -->
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/interview/7-6cross-database-transaction.png" alt="分布式答题要点结构图"></div>
 
 ## 第 7 题　跨服务下单、库存扣减、支付异常导致数据不一致
 
@@ -645,8 +645,8 @@ Q3：对账会不会延迟太久，用户投诉？ A：对账是兜底；主链�
 
 Q：SAGA 和 TCC 怎么选？ A：简单补偿场景、补偿逻辑轻用 SAGA；资金、库存这类资源需要预先锁定、补偿逻辑严谨的用 TCC。 Q：补偿接口调用也失败怎么办？ A：补偿要支持重试幂等，同时记录补偿日志，多次失败后告警人工介入。 Q：为什么不能直接用 XA 分布式事务？ A：XA 两阶段提交是同步阻塞，协调者故障会锁住资源，吞吐量低，不适合电商下单这种高并发链路。
 
-<!-- ![图 7-7　答题要点结构图](/assets/img/interview/7-7distributed-data-inconsistency.png) -->
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/interview/7-7distributed-data-inconsistency.png" alt="分布式答题要点结构图"></div>
+<!-- <div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/interview/7-7distributed-data-inconsistency.png" alt="图 7-7　答题要点结构图"></div> -->
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/interview/7-7distributed-data-inconsistency.png" alt="分布式答题要点结构图"></div>
 
 ## 第 8 题　支付成功库存未扣减、下单成功收不到物流通知；长链路、外部第三方、Seata 依赖故障、高并发锁瓶颈、脏数据排查修复整套方案
 
@@ -771,8 +771,8 @@ Q：SAGA 和 TCC 怎么选？ A：简单补偿场景、补偿逻辑轻用 SAGA�
 
 <strong>核心思想：</strong>分布式一致性的第一原则是能拆则拆、能异步不同步、能业务规避就不用强分布式事务。
 
-<!-- ![图 7-8　答题要点结构图](/assets/img/interview/7-8seata-failure-chain.png) -->
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/interview/7-8seata-failure-chain.png" alt="分布式答题要点结构图"></div>
+<!-- <div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/interview/7-8seata-failure-chain.png" alt="图 7-8　答题要点结构图"></div> -->
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/interview/7-8seata-failure-chain.png" alt="分布式答题要点结构图"></div>
 
 ## 第 9 题　Seata AT 下单链路，订单标记已支付成功，库存服务网络超时未扣减，引发超卖，问题根源与完整保障方案
 
@@ -891,8 +891,8 @@ Q：SAGA 和 TCC 怎么选？ A：简单补偿场景、补偿逻辑轻用 SAGA�
 
 <strong>核心思想：</strong>分布式里最可怕的不是明确的成功 / 失败，而是状态未知；框架只能处理明确上报的失败，超时悬停必须额外监控、人工判定、对账兜底。
 
-<!-- ![图 7-9　答题要点结构图](/assets/img/interview/7-9seata-at-oversell.png) -->
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/interview/7-9seata-at-oversell.png" alt="分布式答题要点结构图"></div>
+<!-- <div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/interview/7-9seata-at-oversell.png" alt="图 7-9　答题要点结构图"></div> -->
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/interview/7-9seata-at-oversell.png" alt="分布式答题要点结构图"></div>
 
 ## 第 10 题　分库分表方案设计，哈希取模 vs 按时间范围拆分、平滑扩容、跨库关联、衍生问题、“能不分就不分” 的理解
 
@@ -981,8 +981,8 @@ Q：SAGA 和 TCC 怎么选？ A：简单补偿场景、补偿逻辑轻用 SAGA�
 
 面试官想看你不是只会配置 Sharding-JDBC 写分片键，而是懂取舍、适用边界、扩容成本、整体演进路线；明白分库分表是最后的选择，不是上来就用的优化手段。
 
-<!-- ![图 7-10　答题要点结构图](/assets/img/interview/7-10sharding-strategy.png) -->
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/interview/7-10sharding-strategy.png" alt="分布式答题要点结构图"></div>
+<!-- <div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/interview/7-10sharding-strategy.png" alt="图 7-10　答题要点结构图"></div> -->
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/interview/7-10sharding-strategy.png" alt="分布式答题要点结构图"></div>
 
 ## 第 11 题　分库分表，单表 limit 分页正常，跨分片分页出现重复、缺失，越往后越严重
 
@@ -1054,8 +1054,8 @@ id < #{last_id} order by create_time desc, id desc limit
 
 区分「单分片本地分页」和「多分片结果合并分页」的底层差异；知道limitoffset 分页在分表场景的天生缺陷，而不是简单配置问题，并且能区分游标分页和框架补全分页各自的取舍。
 
-<!-- ![图 7-11　答题要点结构图](/assets/img/interview/7-11sharding-pagination.png) -->
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/interview/7-11sharding-pagination.png" alt="分布式答题要点结构图"></div>
+<!-- <div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/interview/7-11sharding-pagination.png" alt="图 7-11　答题要点结构图"></div> -->
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/interview/7-11sharding-pagination.png" alt="分布式答题要点结构图"></div>
 
 ## 第 12 题　分库分表下多表关联分页，海量数据漏查、重复分页、深度分页性能问题解决方案
 
@@ -1150,8 +1150,8 @@ id < #{last_id} order by create_time desc, id desc limit
 
 <strong>核心思想：</strong>分库分表不要在数据库层硬扛跨分片深度分页，优先游标分页；无法改造就异构到搜索引擎。
 
-<!-- ![图 7-12　答题要点结构图](/assets/img/interview/7-12sharding-join-pagination.png) -->
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/interview/7-12sharding-join-pagination.png" alt="分布式答题要点结构图"></div>
+<!-- <div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/interview/7-12sharding-join-pagination.png" alt="图 7-12　答题要点结构图"></div> -->
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/interview/7-12sharding-join-pagination.png" alt="分布式答题要点结构图"></div>
 
 ## 第 13 题　分片键是 user_id，按用户 ID 哈希分订单表；不带分片键、仅按时间范围导出订单，全分片扫描，连接池打满、线上业务卡顿，如何治理多维查询
 
@@ -1214,8 +1214,8 @@ id < #{last_id} order by create_time desc, id desc limit
 
 不再只懂分片路由；理解分片带来的查询模型约束、流量隔离、存储分层思想；知道在线库和分析库职责分离，而不是所有查询都往分片 MySQL 上压。
 
-<!-- ![图 7-13　答题要点结构图](/assets/img/interview/7-13sharding-multi-dimension-query.png) -->
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/interview/7-13sharding-multi-dimension-query.png" alt="分布式答题要点结构图"></div>
+<!-- <div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/interview/7-13sharding-multi-dimension-query.png" alt="图 7-13　答题要点结构图"></div> -->
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/interview/7-13sharding-multi-dimension-query.png" alt="分布式答题要点结构图"></div>
 
 ## 第 14 题　集群定时任务多实例同时触发，重复执行、重复生成账单推送消息，如何保证集群下任务同一时间只执行一次
 
@@ -1280,8 +1280,8 @@ id < #{last_id} order by create_time desc, id desc limit
 
 4. 除了防重复，还要考虑超时、阻塞、失败告警、高可用整套风险。
 
-<!-- ![图 7-14　答题要点结构图](/assets/img/interview/7-14scheduled-task-cluster.png) -->
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/interview/7-14scheduled-task-cluster.png" alt="分布式答题要点结构图"></div>
+<!-- <div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/interview/7-14scheduled-task-cluster.png" alt="图 7-14　答题要点结构图"></div> -->
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/interview/7-14scheduled-task-cluster.png" alt="分布式答题要点结构图"></div>
 
 ## 第 15 题　分布式定时任务（订单对账任务）如何做到不重、不漏、防重叠、防积压、防脑裂
 
@@ -1378,8 +1378,8 @@ id < #{last_id} order by create_time desc, id desc limit
 
 <strong>核心思想：</strong>分布式定时任务可靠的核心是【调度唯一性 + 任务原子认领 + 可观测的状态流转 + 故障自动转移】，幂等只是最后一道保险。
 
-<!-- ![图 7-15　答题要点结构图](/assets/img/interview/7-15scheduled-task-exactly-once.png) -->
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/interview/7-15scheduled-task-exactly-once.png" alt="分布式答题要点结构图"></div>
+<!-- <div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/interview/7-15scheduled-task-exactly-once.png" alt="图 7-15　答题要点结构图"></div> -->
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/interview/7-15scheduled-task-exactly-once.png" alt="分布式答题要点结构图"></div>
 
 ## 第 16 题　分布式定时任务（重复执行/丢失/堆积）
 
@@ -1423,5 +1423,5 @@ id < #{last_id} order by create_time desc, id desc limit
 
 分布式定时任务不能只依靠互斥锁。三层设计：第一层中心化调度，用 XXL-JOB 这类框架统一下发任务，避免多节点本地时钟不一致导致重复触发；第二层任务执行带状态流水，记录执行进度，失败自动重试，同时做业务幂等，服务宕机后支持断点续跑，防止数据丢失；第三层线程池隔离、堆积熔断，监控调度延迟，长任务分片处理，避免任务越积越多把服务线程耗尽。Quartz 原生集群锁竞争重、能力弱，一般不推荐在大集群使用。
 
-<!-- ![图 7-16　答题要点结构图](/assets/img/interview/7-16scheduled-task-pitfalls.png) -->
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/interview/7-16scheduled-task-pitfalls.png" alt="分布式答题要点结构图"></div>
+<!-- <div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/interview/7-16scheduled-task-pitfalls.png" alt="图 7-16　答题要点结构图"></div> -->
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/interview/7-16scheduled-task-pitfalls.png" alt="分布式答题要点结构图"></div>

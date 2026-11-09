@@ -14,7 +14,7 @@ tags:
 
 通用人工智能（AGI）将是AI的终极形态，几乎已成为业界共识。同样，构建智能体（Agent）则是AI工程应用当下的“终极形态”，即Agent是大模型应用开发的核心。
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/langchain/7/page-01-image-01.png" alt="page-01-image-01.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/langchain/7/page-01-image-01.png" alt="page-01-image-01.png"></div>
 
 ### 1.1 什么是Agent？
 
@@ -36,7 +36,7 @@ tags:
 
 前面讲过现在AI Agent的架构：
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/langchain/7/page-02-image-01.png" alt="page-02-image-01.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/langchain/7/page-02-image-01.png" alt="page-02-image-01.png"></div>
 
 实际开发中几个要素并不需要同时出现，一句话总结
 
@@ -191,7 +191,7 @@ display(Image(agent.get_graph().draw_mermaid_png()))
 <class 'langgraph.graph.state.CompiledStateGraph'>
 ```
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/langchain/7/page-05-image-01.png" alt="page-05-image-01.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/langchain/7/page-05-image-01.png" alt="page-05-image-01.png"></div>
 
 由上可知，agent本质上是LangGraph的CompiledStateGraph实例，底层实现是一个图结构。
 
@@ -233,7 +233,7 @@ display(Image(agent.get_graph().draw_mermaid_png()))
 <class 'langgraph.graph.state.CompiledStateGraph'>
 ```
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/langchain/7/page-06-image-01.png" alt="page-06-image-01.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/langchain/7/page-06-image-01.png" alt="page-06-image-01.png"></div>
 
 ## 3、Agent的基本用法2：如何调用Agent
 
@@ -453,7 +453,7 @@ rprint(resp)
 
 Agent支持静态和动态绑定工具，后者需要用到中间件，后面会讲。在执行时：
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/langchain/7/page-10-image-01.png" alt="page-10-image-01.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/langchain/7/page-10-image-01.png" alt="page-10-image-01.png"></div>
 
 这里的工具可以是LangChain内置的，也可以是自定义的。LangChain生态中已经内置集成了非常多的实用工具，开发者可以快速调用这些工具完成更加复杂工作流的开发。
 
@@ -461,7 +461,7 @@ LangChain内置工具列表：<https://docs.langchain.com/oss/python/integration
 
 其中典型的工具如下：
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/langchain/7/page-11-image-01.png" alt="page-11-image-01.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/langchain/7/page-11-image-01.png" alt="page-11-image-01.png"></div>
 
 ### 4.1 基本用法
 
@@ -642,7 +642,7 @@ from IPython.display import Image, display
 display(Image(agent.get_graph().draw_mermaid_png()))
 ```
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/langchain/7/page-15-image-01.png" alt="page-15-image-01.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/langchain/7/page-15-image-01.png" alt="page-15-image-01.png"></div>
 
 #### 举例2：接入内置工具
 
@@ -650,7 +650,7 @@ display(Image(agent.get_graph().draw_mermaid_png()))
 
 这里我们需要先在tavily官网注册并获得API-KEY（每月有免费额度）：<https://www.tavily.com/>。
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/langchain/7/page-15-image-02.png" alt="page-15-image-02.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/langchain/7/page-15-image-02.png" alt="page-15-image-02.png"></div>
 
 然后将API-KEY写到本地.env中的TAVILY_API_KEY 变量中，即可进行调用了。
 
@@ -739,7 +739,7 @@ print(result['messages'][-1].content)
 
 一次完整的Function calling 执行流程如下：
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/langchain/7/page-17-image-01.png" alt="page-17-image-01.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/langchain/7/page-17-image-01.png" alt="page-17-image-01.png"></div>
 
 #### 举例3：绑定多个工具
 
@@ -918,7 +918,7 @@ from IPython.display import Image, display
 display(Image(agent.get_graph().draw_mermaid_png()))
 ```
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/langchain/7/page-21-image-01.png" alt="page-21-image-01.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/langchain/7/page-21-image-01.png" alt="page-21-image-01.png"></div>
 
 注意：只给 Agent 需要的工具，工具太多会混淆。一般2-5 个工具最佳
 
@@ -926,7 +926,7 @@ display(Image(agent.get_graph().draw_mermaid_png()))
 
 LangChain 的 Agent 会将模型与工具结合起来，在实现上由一个基于 LangGraph 的图结构来编排执行流程，如下所示。
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/langchain/7/page-21-image-02.png" alt="page-21-image-02.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/langchain/7/page-21-image-02.png" alt="page-21-image-02.png"></div>
 
 这与前文得到的 Agent 图结构是一致的，本质上就是经典的 ReAct 结构：一个具备“ 思考-行动-观察”不断循环的自主工作者。
 
@@ -938,11 +938,11 @@ LangChain 的 Agent 会将模型与工具结合起来，在实现上由一个基
 
 完整流程：
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/langchain/7/page-22-image-01.png" alt="page-22-image-01.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/langchain/7/page-22-image-01.png" alt="page-22-image-01.png"></div>
 
 **举例：用户问题：“找出当前最流行的无线耳机并检查库存”的任务。**
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/langchain/7/page-22-image-02.png" alt="page-22-image-02.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/langchain/7/page-22-image-02.png" alt="page-22-image-02.png"></div>
 
 1、输入解析与初始推理
 
@@ -3081,7 +3081,7 @@ rprint(result)
 
 运行后结果如下：
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/langchain/7/page-59-image-01.png" alt="page-59-image-01.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/langchain/7/page-59-image-01.png" alt="page-59-image-01.png"></div>
 
 模型接收到错误反馈后，再次生成新的调用请求，直至成功或达到内部的最大重试次数。
 
@@ -3478,9 +3478,9 @@ rprint(result)
 
 输出如下：
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/langchain/7/page-66-image-01.png" alt="page-66-image-01.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/langchain/7/page-66-image-01.png" alt="page-66-image-01.png"></div>
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/langchain/7/page-66-image-02.png" alt="page-66-image-02.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/langchain/7/page-66-image-02.png" alt="page-66-image-02.png"></div>
 
 **情况3：设置为自定义错误处理函数**
 
@@ -3546,9 +3546,9 @@ rprint(result)
 
 handle_errors指定自定义错误处理，运行后结果如下：
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/langchain/7/page-67-image-01.png" alt="page-67-image-01.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/langchain/7/page-67-image-01.png" alt="page-67-image-01.png"></div>
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/langchain/7/page-68-image-01.png" alt="page-68-image-01.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/langchain/7/page-68-image-01.png" alt="page-68-image-01.png"></div>
 
 ## 8、Agent的高级用法4：流式输出及模式
 
@@ -3642,7 +3642,7 @@ for chunk in customer_service_agent.stream(
 
 代码运行后示意结果如下：
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/langchain/7/page-70-image-01.png" alt="page-70-image-01.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/langchain/7/page-70-image-01.png" alt="page-70-image-01.png"></div>
 
 #### 8.2.2 updates输出模式
 
@@ -3664,7 +3664,7 @@ for chunk in customer_service_agent.stream(
 
 运行结果如下：
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/langchain/7/page-70-image-02.png" alt="page-70-image-02.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/langchain/7/page-70-image-02.png" alt="page-70-image-02.png"></div>
 
 #### 8.2.3 messages输出模式
 
@@ -3688,7 +3688,7 @@ for chunk in customer_service_agent.stream(
 
 运行结果如下：
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/langchain/7/page-71-image-01.png" alt="page-71-image-01.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/langchain/7/page-71-image-01.png" alt="page-71-image-01.png"></div>
 
 #### 8.2.4 tasks输出模式
 
@@ -3710,7 +3710,7 @@ for chunk in customer_service_agent.stream(
 
 运行结果如下：
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/langchain/7/page-71-image-02.png" alt="page-71-image-02.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/langchain/7/page-71-image-02.png" alt="page-71-image-02.png"></div>
 
 #### 8.2.5 debug输出模式
 
@@ -3732,7 +3732,7 @@ for chunk in customer_service_agent.stream(
 
 运行结果如下：
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/langchain/7/page-72-image-01.png" alt="page-72-image-01.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/langchain/7/page-72-image-01.png" alt="page-72-image-01.png"></div>
 
 #### 8.2.6 checkpoints输出模式
 
@@ -3777,7 +3777,7 @@ for chunk in customer_service_agent.stream(
 
 运行结果如下，每次输出都会将相关MESSAGE追加到values.messages中。
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/langchain/7/page-73-image-01.png" alt="page-73-image-01.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/langchain/7/page-73-image-01.png" alt="page-73-image-01.png"></div>
 
 #### 8.2.7 custom输出模式
 
@@ -3954,7 +3954,7 @@ for stream_mode, chunk in customer_service_agent.stream(
 
 当指定多模式后，可以通过“ for stream_mode, chunk in customer_service_agent.stream... ”来遍历dict，dict的key(stream_mode)是执行模式，value(chunk)是该模式输出的结果。代码运行输出结果如下：
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/langchain/7/page-76-image-01.png" alt="page-76-image-01.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/langchain/7/page-76-image-01.png" alt="page-76-image-01.png"></div>
 
 ## 9、实战：多功能智能助手
 

@@ -11,5 +11,5 @@ order: 2
    <!-- HBase Mind map -->
 </div>
 <div align="center">
-  <img src="/assets/img/hbase/mindmap.png" style="width:100%; max-width:1000px; object-fit:contain;" alt="HBase完整知识思维导图">
+  <img src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/hbase/mindmap.png" style="width:100%; max-width:1000px; object-fit:contain;" alt="HBase完整知识思维导图">
 </div>

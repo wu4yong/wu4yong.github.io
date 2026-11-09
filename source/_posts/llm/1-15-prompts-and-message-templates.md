@@ -50,8 +50,8 @@ tags:
 
 这也是为什么随着项目复杂度提高，Prompt 会从“一个字符串”逐步演化成“多角色消息 + 模板 + 占位符 + 外部配置文件”。
 
-<!-- ![DeepSeek 官方提示词示例库入口](/assets/img/llm/13/13-1-1-1.jpeg) -->
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/13/13-1-1-1.jpeg" alt="DeepSeek 官方提示词示例库入口"></div>
+<!-- <div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/llm/13/13-1-1-1.jpeg" alt="DeepSeek 官方提示词示例库入口"></div> -->
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/llm/13/13-1-1-1.jpeg" alt="DeepSeek 官方提示词示例库入口"></div>
 
 ### 1.2 Prompt 的作用
 
@@ -91,8 +91,8 @@ tags:
 
 同一次 `invoke`，左侧可以是多种类型的输入，中间由聊天模型处理，右侧典型返回值是 `AIMessage`。这也是为什么你在 [第 13 章](/2026/10/13/llm/1-13-model-io-and-model-access/) 会经常看到“正文一般通过 `.content` 读取”。
 
-<!-- ![聊天模型 invoke：常见入参类型与 AIMessage 输出](/assets/img/llm/13/13-2-1-1.png) -->
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/13/13-2-1-1.png" alt="聊天模型 invoke：常见入参类型与 AIMessage 输出"></div>
+<!-- <div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/llm/13/13-2-1-1.png" alt="聊天模型 invoke：常见入参类型与 AIMessage 输出"></div> -->
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/llm/13/13-2-1-1.png" alt="聊天模型 invoke：常见入参类型与 AIMessage 输出"></div>
 
 常见对应关系如下：
 
@@ -850,8 +850,8 @@ MessagesPlaceholder（消息占位符）这是本章最重要的知识点之一�
 
 **先说结论：`MessagesPlaceholder` 的作用，就是在模板里先留出一段“消息列表的位置”，等真正调用时再把历史对话整块塞进去。**
 
-<!-- ![MessagesPlaceholder 将历史消息动态插入 ChatPromptTemplate：模板先留占位，运行时再填入多轮消息](/assets/img/llm/13/13-7-5-1.svg) -->
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/13/13-7-5-1.svg" alt="MessagesPlaceholder 将历史消息动态插入 ChatPromptTemplate：模板先留占位，运行时再填入多轮消息"></div>
+<!-- <div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/llm/13/13-7-5-1.svg" alt="MessagesPlaceholder 将历史消息动态插入 ChatPromptTemplate：模板先留占位，运行时再填入多轮消息"></div> -->
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/llm/13/13-7-5-1.svg" alt="MessagesPlaceholder 将历史消息动态插入 ChatPromptTemplate：模板先留占位，运行时再填入多轮消息"></div>
 
 为什么它重要？因为真实项目里的“历史对话”往往不是固定写死的：
 

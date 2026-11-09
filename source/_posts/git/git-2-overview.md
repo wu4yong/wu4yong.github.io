@@ -18,7 +18,7 @@ Git 是一个分布式版本控制工具，通常用来对软件开发过程中�
 
 远程仓库：远程服务器上的 Git 仓库
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/git/2/image4.png" alt="image4.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/git/2/image4.png" alt="image4.png"></div>
 
 解释说明：
 
@@ -34,24 +34,24 @@ Git 是一个分布式版本控制工具，通常用来对软件开发过程中�
 
 **\[该类型的内容暂不支持下载\]**
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/git/2/image5.png" alt="image5.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/git/2/image5.png" alt="image5.png"></div>
 
 下载完成后得到安装文件：
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/git/2/image6.png" alt="image6.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/git/2/image6.png" alt="image6.png"></div>
 
 直接双击完成安装即可，安装完成后可以在任意目录下点击鼠标右键，如果能够看到如下菜单则说明安装成功：
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/git/2/image7.png" alt="image7.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/git/2/image7.png" alt="image7.png"></div>
 
 Git GUI Here：打开Git 图形界面
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/git/2/image8.png" alt="image8.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/git/2/image8.png" alt="image8.png"></div>
 
 Git Bash Here：打开Git 命令行
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/git/2/image9.png" alt="image9.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/git/2/image9.png" alt="image9.png"></div>
 
 Git安装目录结构如下：
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/git/2/image10.png" alt="image10.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/git/2/image10.png" alt="image10.png"></div>

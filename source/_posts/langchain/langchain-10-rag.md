@@ -54,15 +54,15 @@ RAG（Retrieval-Augmented Generation，检索增强生成）是一种结合信�
 
 **典型的检索流程如下：（官方）**
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/langchain/10/page-02-image-01.png" alt="page-02-image-01.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/langchain/10/page-02-image-01.png" alt="page-02-image-01.png"></div>
 
 即：
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/langchain/10/page-02-image-02.png" alt="page-02-image-02.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/langchain/10/page-02-image-02.png" alt="page-02-image-02.png"></div>
 
 **简单举例：**
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/langchain/10/page-02-image-03.png" alt="page-02-image-03.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/langchain/10/page-02-image-03.png" alt="page-02-image-03.png"></div>
 
 > 如果说LangChain相当于给LLM这个“大脑”安装了“四肢和躯干”，RAG则是为LLM提供了接入“人类知识图书馆”的能力。
 
@@ -70,11 +70,11 @@ RAG（Retrieval-Augmented Generation，检索增强生成）是一种结合信�
 
 目前，已经出现了非常多的产品几乎完全建立在 RAG 之上，包括客服系统、基于大模型的数据分析，以及成千上万的数据驱动聊天应用，应用场景五花八门。
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/langchain/10/page-03-image-01.png" alt="page-03-image-01.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/langchain/10/page-03-image-01.png" alt="page-03-image-01.png"></div>
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/langchain/10/page-03-image-02.png" alt="page-03-image-02.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/langchain/10/page-03-image-02.png" alt="page-03-image-02.png"></div>
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/langchain/10/page-03-image-03.jpeg" alt="page-03-image-03.jpeg"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/langchain/10/page-03-image-03.jpeg" alt="page-03-image-03.jpeg"></div>
 
 ### 1.3 RAG优缺点
 
@@ -94,7 +94,7 @@ RAG（Retrieval-Augmented Generation，检索增强生成）是一种结合信�
 
 ### 1.4 RAG工作流程
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/langchain/10/page-04-image-01.jpeg" alt="page-04-image-01.jpeg"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/langchain/10/page-04-image-01.jpeg" alt="page-04-image-01.jpeg"></div>
 
 **环节1：Source（数据源）**
 
@@ -114,7 +114,7 @@ RAG（Retrieval-Augmented Generation，检索增强生成）是一种结合信�
 
 文档对象包含文档内容和相关元数据信息，例如TXT、CSV、HTML、JSON、Markdown、PDF，甚至 YouTube 视频转录等。
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/langchain/10/page-05-image-01.png" alt="page-05-image-01.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/langchain/10/page-05-image-01.png" alt="page-05-image-01.png"></div>
 
 文档加载器还支持“ 延迟加载”模式，以缓解处理大文件时的内存压力。
 
@@ -163,13 +163,13 @@ print(loader.load())
 
 文档嵌入模型（Text Embedding Models）负责将文本转换为向量表示，即模型赋予了文本计算机可理解的数值表示，使文本可用于向量空间中的各种运算，大大拓展了文本分析的可能性，是自然语言处理领域非常重要的技术。
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/langchain/10/page-06-image-01.png" alt="page-06-image-01.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/langchain/10/page-06-image-01.png" alt="page-06-image-01.png"></div>
 
 - 实现原理：通过特定算法（如Word2Vec）将语义信息编码为固定维度的向量，具体算法细节需后续深入。
 
 - 关键特性：相似的词在向量空间中距离相近，例如"猫"和"犬"的向量夹角小于"猫"和"汽车"。
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/langchain/10/page-06-image-02.jpeg" alt="page-06-image-02.jpeg"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/langchain/10/page-06-image-02.jpeg" alt="page-06-image-02.jpeg"></div>
 
 文本嵌入为 LangChain 中的问答、检索、推荐等功能提供了重要支持。具体为：
 
@@ -187,7 +187,7 @@ print(loader.load())
 
 LangChain 还支持把文本嵌入存储到向量存储或临时缓存，以避免需要重新计算它们。这里就出现了数据库，支持这些嵌入的高效存储和搜索的需求。
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/langchain/10/page-07-image-01.png" alt="page-07-image-01.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/langchain/10/page-07-image-01.png" alt="page-07-image-01.png"></div>
 
 **环节6：Retrieve（检索）**
 
@@ -1371,7 +1371,7 @@ LangChain提供了许多不同类型的文档切分器
 
 - length_function ：用于计算切块长度的方法。默认赋值为父类TextSplitter的len函数。
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/langchain/10/page-28-image-01.png" alt="page-28-image-01.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/langchain/10/page-28-image-01.png" alt="page-28-image-01.png"></div>
 
 举例1：字符串文本的分割
 
@@ -1900,7 +1900,7 @@ text_splitter = RecursiveCharacterTextSplitter(
 
 流程如下
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/langchain/10/page-37-image-01.png" alt="page-37-image-01.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/langchain/10/page-37-image-01.png" alt="page-37-image-01.png"></div>
 
 ##### ③ TokenTextSplitter/CharacterTextSplitter：Split by tokens
 
@@ -2308,7 +2308,7 @@ for i, doc in enumerate(docs):
 
 Text Embedding Models：文档嵌入模型，提供将文本编码为向量的能力，即文档向量化。文档写入和用户查询匹配前都会先执行文档嵌入编码，即向量化。
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/langchain/10/page-47-image-01.png" alt="page-47-image-01.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/langchain/10/page-47-image-01.png" alt="page-47-image-01.png"></div>
 
 常用嵌入模型：
 
@@ -2327,7 +2327,7 @@ LangChain中针对向量化模型的封装提供了两种接口，一种针对�
 
 **选型1：使用CloseAI平台提供的嵌入模型**
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/langchain/10/page-48-image-01.png" alt="page-48-image-01.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/langchain/10/page-48-image-01.png" alt="page-48-image-01.png"></div>
 
 初始化方式：
 
@@ -2358,7 +2358,7 @@ CLOSEAI_BASE_URL=https://api.openai-proxy.org/v1
 
 选择bge-m3 作为嵌入模型，可以通过硅基流动调用，该模型可以免费调用，如果追求更低的延迟、更稳定的服务，也可以充值后选择带有pro 前缀的模型，如下所示
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/langchain/10/page-49-image-01.png" alt="page-49-image-01.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/langchain/10/page-49-image-01.png" alt="page-49-image-01.png"></div>
 
 这两款产品的模型是一样的，区别只在于资费和服务保障。
 

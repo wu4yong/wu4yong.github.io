@@ -26,7 +26,7 @@ C语言的字符串存在如下问题：
 
 SDS是一个结构体，源码如下：
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/redis/6/image142.png" alt="image142.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/redis/6/image142.png" alt="image142.png"></div>
 
 初始时alloc和len相同，但随着动态扩容，两者会有差异
 
@@ -34,11 +34,11 @@ SDS是一个结构体，源码如下：
 
 为了适应不同长度的字符串，Redis设计了五种SDS头部结构，这些结构的主要区别在于它们能够表示的字符串长度的范围不同：
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/redis/6/image143.png" alt="image143.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/redis/6/image143.png" alt="image143.png"></div>
 
 例如保存一个"hi"字符串的SDS结构为：
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/redis/6/image144.png" alt="image144.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/redis/6/image144.png" alt="image144.png"></div>
 
 SDS还具备动态扩容能力，比如在"hi"字符串后追加 “,Amy” ，首先申请内存空间：
 
@@ -46,7 +46,7 @@ SDS还具备动态扩容能力，比如在"hi"字符串后追加 “,Amy” ，�
 
 如果新字符串大于1M，则新空间为 扩展后字符串长度+1M+1 ，称为内存预分配
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/redis/6/image145.png" alt="image145.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/redis/6/image145.png" alt="image145.png"></div>
 
 SDS的优点：
 
@@ -72,15 +72,15 @@ SDS的优点：
 
 IntSet是Redis中set集合的一种实现方式，基于整数数组来实现，并且具备长度可变、有序等特征。 结构如下：
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/redis/6/image146.png" alt="image146.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/redis/6/image146.png" alt="image146.png"></div>
 
 其中的encoding包含三种模式，表示存储的整数大小不同：
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/redis/6/image147.png" alt="image147.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/redis/6/image147.png" alt="image147.png"></div>
 
 为了方便查找，Redis会将intset中所有的整数按照**升序**依次保存在contents数组中。例如存放数据[5，10，20]，采用INTSET_ENC_INT16编码，插入后的intset结构：
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/redis/6/image148.png" alt="image148.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/redis/6/image148.png" alt="image148.png"></div>
 
 现在，数组中每个数字都在int16_t的范围内，因此采用的编码方式是INTSET_ENC_INT16，每部分占用的字节大小：
 
@@ -92,7 +92,7 @@ contents：2字节 * 3 = 6字节
 
 数组中每个数字采用相同的编码方式，即占用空间大小相同，结合数组起始地址和数组下标可以快速定位到每个元素的物理地址：startPtr + (sizeof(int16) * index)，所以数组下标也表示当前元素到数组起始地址间隔了多少个元素。
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/redis/6/image149.png" alt="image149.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/redis/6/image149.png" alt="image149.png"></div>
 
 现在向数组[5，10，20]中添加元素50000，这个数字已经超出INTSET_ENC_INT16的范围，intset将自动升级编码方式到合适的大小：
 
@@ -104,11 +104,11 @@ contents：2字节 * 3 = 6字节
 
 最后，将inset的encoding属性改为INTSET_ENC_INT32，将length属性改为4
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/redis/6/image150.png" alt="image150.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/redis/6/image150.png" alt="image150.png"></div>
 
 添加元素的源码如下：
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/redis/6/image151.png" alt="image151.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/redis/6/image151.png" alt="image151.png"></div>
 
 总结下来，Intset可以看做是特殊的整数数组，具备如下特点：
 
@@ -126,7 +126,7 @@ Redis是一个键值型数据库，可以根据键实现快速的增删改查。
 
 Dict由三部分组成，分别是：哈希表（DictHashTable）、哈希节点（DictEntry）、字典（Dict）
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/redis/6/image152.png" alt="image152.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/redis/6/image152.png" alt="image152.png"></div>
 
 哈希表实际上是一个数组，其中：
 
@@ -142,17 +142,17 @@ used：哈希表数组中已存在的entry的个数
 
 *h & sizemask相当于 h % size，由于size总是2的幂次方，对应二进制总是一位为1，其余位为0，所以size - 1即siezmask的二进制就是1后面所有位是1（不包含原来的1），其余位是0，而h % size就是得到size中1后面所有低位对应h二进制中的数据，恰好是h & sizemask：*
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/redis/6/image153.png" alt="image153.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/redis/6/image153.png" alt="image153.png"></div>
 
 若此时要插入两个键值对k1-v1、k2-v2，加入k1计算出的hash值h = 1，1 & 3 = 1，所以存储在数组索引为1的位置，假如k2计算出也要存放在数组索引为1的位置，就会发生Hash冲突，Redis会将两个哈希结点形成链表，把k2-v2采用头插法插入链表头部（table指向链表第一个哈希节点，采用尾插法需要遍历找到最后一个节点再插入，效率低）：
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/redis/6/image154.png" alt="image154.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/redis/6/image154.png" alt="image154.png"></div>
 
 接下来看看字典的结构：
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/redis/6/image155.png" alt="image155.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/redis/6/image155.png" alt="image155.png"></div>
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/redis/6/image156.png" alt="image156.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/redis/6/image156.png" alt="image156.png"></div>
 
 ### 3.2 Dict的扩容
 
@@ -166,17 +166,17 @@ Dict在每次新增键值对时都会检查负载因子（LoadFactor = used/size
 
 扩容的源码如下：
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/redis/6/image157.png" alt="image157.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/redis/6/image157.png" alt="image157.png"></div>
 
 ### 3.3 Dict的收缩
 
 Dict除了扩容以外，每次删除元素时，也会对负载因子做检查，当LoadFactor < 0.1时，会做哈希表收缩：
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/redis/6/image158.png" alt="image158.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/redis/6/image158.png" alt="image158.png"></div>
 
 扩容和收缩都会调用dictExpand方法，其源码如下：
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/redis/6/image159.png" alt="image159.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/redis/6/image159.png" alt="image159.png"></div>
 
 ### 3.4 Dict的rehash
 
@@ -200,7 +200,7 @@ Dict除了扩容以外，每次删除元素时，也会对负载因子做检查�
 
 执行过程截图：
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/redis/6/image160.png" alt="image160.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/redis/6/image160.png" alt="image160.png"></div>
 
 但是rehash是在执行增删操作时判断是否要执行rehash，而这些操作是在Redis的主进程中进行的，若一次迁移太多的entry会导致主进程阻塞，直至完成rehash后才能处理新命令。
 
@@ -236,7 +236,7 @@ ziplist是一种压缩存储结构，用于存储字符串或整数，它使用�
 
 ziplist结构如下：
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/redis/6/image161.png" alt="image161.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/redis/6/image161.png" alt="image161.png"></div>
 
 zlbytes：类型uint32_t，长度4 字节，记录整个压缩列表占用的内存字节数
 
@@ -252,7 +252,7 @@ zlend：类型uint8_t，长度1 字节，特殊值0xFF（十进制255），用�
 
 ZipList 中的Entry并不像普通链表那样记录前后节点的指针，因为记录两个指针要占用16个字节，浪费内存。而是采用了下面的结构：
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/redis/6/image162.png" alt="image162.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/redis/6/image162.png" alt="image162.png"></div>
 
 previous_entry_length：前一个节点的长度，占1个或5个字节
 
@@ -278,19 +278,19 @@ ZipListEntry中的encoding编码分为字符串和整数两种：
 
 **字符串**：如果encoding是以“00”、“01”或者“10”开头，则证明content是字符串
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/redis/6/image163.png" alt="image163.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/redis/6/image163.png" alt="image163.png"></div>
 
 例如依次存储“ab”和“bc”，previous_entry_length = 0，对应二进制00000000，“a”和“b”的UTF-8编码分别是97、98，即01100001、01100010，“ab”长度为2bytes，所以采用00xxxxxx，对应encoding是00000010，所以ab的entry为：
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/redis/6/image164.png" alt="image164.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/redis/6/image164.png" alt="image164.png"></div>
 
 "bc"类似，所以插入“ab”和“bc”后最终ziplist结构为：
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/redis/6/image165.png" alt="image165.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/redis/6/image165.png" alt="image165.png"></div>
 
 **整数**：如果encoding是以“11”开始，则证明content是整数，且encoding固定只占用1个字节
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/redis/6/image166.png" alt="image166.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/redis/6/image166.png" alt="image166.png"></div>
 
 整数的数据类型只有byte、short、int、long，对应的数据分别为1、2、4、8个字节，所以整数只要确定了类型，其content的长度就确定了，所以整数编码无需保存content的长度。
 
@@ -298,7 +298,7 @@ ZipListEntry中的encoding编码分为字符串和整数两种：
 
 例如，一个ZipList中包含两个整数值："2"和"5"，其Entry结构和整个ZipList结构如下：
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/redis/6/image167.png" alt="image167.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/redis/6/image167.png" alt="image167.png"></div>
 
 ### 4.4 连锁更新问题
 
@@ -310,11 +310,11 @@ ZipList的每个Entry都包含previous_entry_length字段来记录上一个节�
 
 假设有N个连续的、长度为250~253字节之间的entry，因此entry的previous_entry_length属性用1个字节即可表示，如图所示：
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/redis/6/image168.png" alt="image168.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/redis/6/image168.png" alt="image168.png"></div>
 
 若此时在表头插入一个长度为254字节的entry，原来表头entry的previous_entry_length就要从1个字节变为5个字节，那么这个entry的长度就变成254字节。原来第二个entry为了记录前面entry的长度，它的previous_entry_length也要从1个字节变为5个字节，它的长度也变成254字节，又会引起后面一个entry的previous_entry_length变大...：
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/redis/6/image169.png" alt="image169.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/redis/6/image169.png" alt="image169.png"></div>
 
 ZipList这种特殊情况下产生的连续多次空间扩展操作称之为连锁更新。新增、删除都可能导致连锁更新，但是连锁更新发生概率很低，所以不用在意。
 
@@ -336,7 +336,7 @@ ZipList这种特殊情况下产生的连续多次空间扩展操作称之为连�
 
 QuickList是Redis3.2引入的数据结构，它是一个双端链表，只不过链表中的每个节点都是一个ZipList。QuickList结合了ZipList和双向链表的优点，旨在提供高效的内存利用率和快速的插入、删除操作，其结构如下：
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/redis/6/image170.png" alt="image170.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/redis/6/image170.png" alt="image170.png"></div>
 
 为了避免QuickList中的每个ZipList的entry过多，Redis提供了配置项list-max-ziplist-size来限制：
 
@@ -370,11 +370,11 @@ QuickList是Redis3.2引入的数据结构，它是一个双端链表，只不过
 
 QuickList和QuickListNode的结构源码：
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/redis/6/image171.png" alt="image171.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/redis/6/image171.png" alt="image171.png"></div>
 
 QuickList和QuickListNode的结构内存图：
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/redis/6/image172.png" alt="image172.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/redis/6/image172.png" alt="image172.png"></div>
 
 *当向QuickList中插入1个元素时，Redis会根据一定的策略选择一个合适的quicklistNode，并将元素插入到该节点中。如果插入操作导致quicklistNode中的元素数量超过了一定的阈值（由list-max-ziplist-size参数决定），Redis会将该节点拆分成两个节点。同样，如果删除操作导致quicklistNode中的元素数量过少，Redis会将相邻的两个节点合并成一个节点。*
 
@@ -398,11 +398,11 @@ SkipList首先是链表，但与传统链表相比有几点差异：
 
 节点可能包含多个指针，指针跨度不同（多级指针）
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/redis/6/image173.png" alt="image173.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/redis/6/image173.png" alt="image173.png"></div>
 
 SkipList结构定义如下：
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/redis/6/image174.png" alt="image174.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/redis/6/image174.png" alt="image174.png"></div>
 
 ele：结点的值，类型是动态字符串
 
@@ -414,7 +414,7 @@ level[]：多级索引数组，每个结点包含的指针数量不确定，首�
 
 SkipList内存结构：
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/redis/6/image175.png" alt="image175.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/redis/6/image175.png" alt="image175.png"></div>
 
 **查找操作**：
 
@@ -534,23 +534,23 @@ String是Redis中最常见的数据存储类型：
 
 基本编码方式是**RAW**，基于简单动态字符串（SDS）实现，存储上限为512mb
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/redis/6/image176.png" alt="image176.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/redis/6/image176.png" alt="image176.png"></div>
 
 如果存储的SDS长度小于44字节，则会采用**EMBSTR**编码，此时RedisObject对象头和SDS是一段连续空间，申请内存时只需要调用一次内存分配函数，效率更高
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/redis/6/image177.png" alt="image177.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/redis/6/image177.png" alt="image177.png"></div>
 
 为什么是44字节？SDS头信息中len、alloc、flags各占一字节，字符结束符0占一字节，字符串内容44字节，整个SDS共占48字节，RedisObject头信息共占16字节，加起来是64字节，Redis中jemalloc是默认的内存分配器，Jemalloc会为不同大小的内存请求分配固定大小的块（这些块的大小通常是2的幂次），在分配内存时会尽量满足内存对齐的要求，以减少由于频繁的内存分配和释放操作导致的内存碎片。64字节刚好是Jemalloc的一个内存分配单位，能把这些数据存储在一个连续的内存块中而不产生内存碎片。
 
 当存储的字符串是整数值，并且大小在LONG_MAX范围内，则会采用**INT**编码，直接将数据保存在RedisObject的ptr指针位置，不再需要SDS：
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/redis/6/image178.png" alt="image178.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/redis/6/image178.png" alt="image178.png"></div>
 
 如果整数值超过了LONG_MAX的范围，就会使用**ROW**编码方式，把整数当成字符串存储
 
 最后看一下RAW、EMBSTR、INT三种编码对比加深印象：
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/redis/6/image179.png" alt="image179.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/redis/6/image179.png" alt="image179.png"></div>
 
 ### 8.2 List类型
 
@@ -566,7 +566,7 @@ QuickList：LinkedList + ZipList，可以从双端访问，内存占用较低，
 
 在3.2版本之后：Redis统一采用**QuickList**来实现List：
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/redis/6/image180.png" alt="image180.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/redis/6/image180.png" alt="image180.png"></div>
 
 ### 8.3 Set类型
 
@@ -592,7 +592,7 @@ set-max-intset-entries可以在配置文件中设置，默认为512
 
 如果该字符不是数值类型，则会采用HT编码，创建Dict存储元素
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/redis/6/image181.png" alt="image181.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/redis/6/image181.png" alt="image181.png"></div>
 
 在向set插入元素过程中（非第一次插入）：
 
@@ -600,11 +600,11 @@ set-max-intset-entries可以在配置文件中设置，默认为512
 
 若当前的编码是IntSet，需要进行判断。当目前插入的元素不是数值类型或者该元素是数值类型，但成功插入后Set中的元素个数超过了设定值时，该Set的编码会从IntSet切换为HT，并使用Dict存储当前IntSet中的值。若这两个条件都不满足，则继续在原来的IntSet中存储新元素。
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/redis/6/image182.png" alt="image182.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/redis/6/image182.png" alt="image182.png"></div>
 
 通过内存图来理解IntSet编码切换为HT编码：
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/redis/6/image183.png" alt="image183.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/redis/6/image183.png" alt="image183.png"></div>
 
 ### 8.4 ZSet类型
 
@@ -624,9 +624,9 @@ HT（Dict）：可以键值存储，并且可以根据key找value，但无法排
 
 Zset底层同时使用了这两种编码结构，结合它们的功能满足Zset的需要，ZSet的结构定义如下，在创建ZsetObject对象时，先创建了Zset对象，再为Zset对象创建了Dict和SkipList，并将编码方式设置为**OBJ_ENCODING_SKIPLIST**：
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/redis/6/image184.png" alt="image184.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/redis/6/image184.png" alt="image184.png"></div>
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/redis/6/image185.png" alt="image185.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/redis/6/image185.png" alt="image185.png"></div>
 
 当元素数量不多时，HT和SkipList的优势不明显，而且更耗内存，同一份数据存储了两份。因此zset还会采用**ZipList**结构来节省内存，不过需要同时满足两个条件：
 
@@ -640,17 +640,17 @@ ZipList是连续内存，因此score和element是紧挨在一起的两个entry�
 
 score越小越接近队首，score越大越接近队尾，按照score值升序排列
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/redis/6/image186.png" alt="image186.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/redis/6/image186.png" alt="image186.png"></div>
 
 **ZipList实现ZSet源码分析**：
 
 创建Zset：在zadd添加元素时，先根据key找到zset，不存在则创建新的zset。创建时判断配置文件中zset_max_ziplist_entries值是否为0，设置为0就是禁用了zipList，或者value大小超过了zset_max_ziplist_value，此时采用HT和SKipList结合方案，否则采用ZipList：
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/redis/6/image187.png" alt="image187.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/redis/6/image187.png" alt="image187.png"></div>
 
 向Zset中添加元素时，首先判断编码方式，若本身是SKIPLIST编码，无序转换。否则，可能存在编码转换的可能：
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/redis/6/image188.png" alt="image188.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/redis/6/image188.png" alt="image188.png"></div>
 
 ### 8.5 Hash类型
 
@@ -664,7 +664,7 @@ zset要根据score排序；hash则无需排序
 
 Hash结构默认采用**ZipList**编码，用以节省内存，ZipList中相邻的两个entry分别保存field和value：
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/redis/6/image189.png" alt="image189.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/redis/6/image189.png" alt="image189.png"></div>
 
 当数据量较大时，Hash结构会转为**HT编码**，也就是Dict，触发条件有两种：
 
@@ -672,10 +672,10 @@ ZipList中的元素数量超过了hash-max-ziplist-entries（默认512）
 
 ZipList中的任意entry大小超过了hash-max-ziplist-value（默认64字节）
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/redis/6/image190.png" alt="image190.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/redis/6/image190.png" alt="image190.png"></div>
 
 **源码分析**：
 
 创建Hash结构时默认采用ZipList编码，由于存在两种编码格式，在添加元素时可能会发生格式转换：
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/redis/6/image191.png" alt="image191.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/redis/6/image191.png" alt="image191.png"></div>

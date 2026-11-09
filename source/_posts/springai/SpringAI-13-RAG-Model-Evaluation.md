@@ -154,8 +154,8 @@ public class RagEvalTest {
 
 ```
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/springai/ch13_1750393171415-ab39fd5d-e127-4c49-94eb-0af9f51be3c3_e269d1aa8f.png" alt="ch13_1750393171415-ab39fd5d-e127-4c49-94eb-0af9f51be3c3_e269d1aa8f.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/springai/ch13_1750393171415-ab39fd5d-e127-4c49-94eb-0af9f51be3c3_e269d1aa8f.png" alt="ch13_1750393171415-ab39fd5d-e127-4c49-94eb-0af9f51be3c3_e269d1aa8f.png"></div>
 
 `query = "我叫什么名字";`
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/springai/ch13_1750393227492-de8a71f7-a330-4466-8e2e-6578cea525f7_f0ab495ee1.png" alt="ch13_1750393227492-de8a71f7-a330-4466-8e2e-6578cea525f7_f0ab495ee1.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/springai/ch13_1750393227492-de8a71f7-a330-4466-8e2e-6578cea525f7_f0ab495ee1.png" alt="ch13_1750393227492-de8a71f7-a330-4466-8e2e-6578cea525f7_f0ab495ee1.png"></div>

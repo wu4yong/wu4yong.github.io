@@ -346,8 +346,8 @@ SSE 全称是 `Server-Sent Events`，可以理解成“服务端向客户端持�
 
 先看结论：当前项目的问题提交是一次性的，后续主要是后端持续返回进度和结果，所以 SSE 更贴合需求；WebSocket 更适合前后端都要持续主动发送消息的场景。
 
-<!-- ![SSE 和 WebSocket 在问数接口中的选择：SSE 更适合任务进度和结果持续返回，WebSocket 更适合复杂双向实时交互](/assets/img/llm/ecommerce-data-qa/15/15-5-1-1.svg) -->
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/ecommerce-data-qa/15/15-5-1-1.svg" alt="SSE 和 WebSocket 在问数接口中的选择：SSE 更适合任务进度和结果持续返回，WebSocket 更适合复杂双向实时交互"></div>
+<!-- <div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/llm/ecommerce-data-qa/15/15-5-1-1.svg" alt="SSE 和 WebSocket 在问数接口中的选择：SSE 更适合任务进度和结果持续返回，WebSocket 更适合复杂双向实时交互"></div> -->
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/llm/ecommerce-data-qa/15/15-5-1-1.svg" alt="SSE 和 WebSocket 在问数接口中的选择：SSE 更适合任务进度和结果持续返回，WebSocket 更适合复杂双向实时交互"></div>
 
 {% autogrid data-grid-link-table nofix %}
 方案|特点|适合场景
@@ -445,8 +445,8 @@ uv run fastapi dev main.py
 }
 ```
 
-<!-- ![Swagger UI](/assets/img/llm/ecommerce-data-qa/15/15-6-1-1.png) -->
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/ecommerce-data-qa/15/15-6-1-1.png" alt="Swagger UI"></div>
+<!-- <div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/llm/ecommerce-data-qa/15/15-6-1-1.png" alt="Swagger UI"></div> -->
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/llm/ecommerce-data-qa/15/15-6-1-1.png" alt="Swagger UI"></div>
 
 Swagger 中可能会发现页面一直 loading，等全部结束后才一次性展示完整结果。这不代表后端没有流式输出，只是 Swagger UI 通常不会逐条渲染 SSE。
 
@@ -458,8 +458,8 @@ Swagger 中可能会发现页面一直 loading，等全部结束后才一次性�
 Apifox / Postman|选择 POST `/api/query`，观察 SSE 是否一条条出现
 {% endautogrid %}
 
-<!-- ![Apifox](/assets/img/llm/ecommerce-data-qa/15/15-6-1-2.png) -->
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/ecommerce-data-qa/15/15-6-1-2.png" alt="Apifox"></div>
+<!-- <div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/llm/ecommerce-data-qa/15/15-6-1-2.png" alt="Apifox"></div> -->
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/llm/ecommerce-data-qa/15/15-6-1-2.png" alt="Apifox"></div>
 
 如果看到 `step:0` 到 `step:9` 大约每秒出现一条，就说明本章的最小流式接口已经跑通。
 

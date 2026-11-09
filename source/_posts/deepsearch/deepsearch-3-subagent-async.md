@@ -39,8 +39,8 @@ DeepAgents 子智能体：https://docs.langchain.com/oss/python/deepagents/subag
 
 所以本章会把一些能力拆成几个简单助手：主智能体负责判断和分派，子智能体负责各自的小任务。
 
-<!-- ![层级式多智能体协作：Orchestrator 负责拆解任务，多个 LLM Call 分别处理子任务，最后由 Synthesizer 汇总输出](/assets/img/deepSearch/3/3-1-2-1.png) -->
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/deepSearch/3/3-1-2-1.png" alt="层级式多智能体协作：Orchestrator 负责拆解任务，多个 LLM Call 分别处理子任务，最后由 Synthesizer 汇总输出"></div>
+<!-- <div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/deepSearch/3/3-1-2-1.png" alt="层级式多智能体协作：Orchestrator 负责拆解任务，多个 LLM Call 分别处理子任务，最后由 Synthesizer 汇总输出"></div> -->
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/deepSearch/3/3-1-2-1.png" alt="层级式多智能体协作：Orchestrator 负责拆解任务，多个 LLM Call 分别处理子任务，最后由 Synthesizer 汇总输出"></div>
 
 本章主要对应项目中的三个示例文件：
 
@@ -59,8 +59,8 @@ DeepAgents 子智能体：https://docs.langchain.com/oss/python/deepagents/subag
 
 第 1 章已经讲过：子智能体主要解决上下文隔离、专业分工和可控并行的问题。本章不再重复展开概念，而是把这个判断落到代码设计上。
 
-<!-- ![DeepAgents 子智能体机制：Main Agent 通过 task 工具委派 Subagent，子智能体在隔离上下文中完成工作，再返回最终结果](/assets/img/deepSearch/3/3-2-1-1.png) -->
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/deepSearch/3/3-2-1-1.png" alt="DeepAgents 子智能体机制：Main Agent 通过 task 工具委派 Subagent，子智能体在隔离上下文中完成工作，再返回最终结果"></div>
+<!-- <div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/deepSearch/3/3-2-1-1.png" alt="DeepAgents 子智能体机制：Main Agent 通过 task 工具委派 Subagent，子智能体在隔离上下文中完成工作，再返回最终结果"></div> -->
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/deepSearch/3/3-2-1-1.png" alt="DeepAgents 子智能体机制：Main Agent 通过 task 工具委派 Subagent，子智能体在隔离上下文中完成工作，再返回最终结果"></div>
 
 主智能体先通过 `task` 派活，子智能体拿到独立任务后自己完成推理和工具调用，最后只把结果交回主智能体。这样主智能体不用背着所有细节继续往下推理。
 

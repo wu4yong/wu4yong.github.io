@@ -14,13 +14,13 @@ tags:
 
 多级缓存就是充分利用请求处理的每个环节，分别添加缓存，减轻Tomcat压力，提升服务性能：
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/redis/4/image116.png" alt="image116.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/redis/4/image116.png" alt="image116.png"></div>
 
 浏览器访问静态资源时，优先读取浏览器本地缓存，访问非静态资源（Ajax查数据）时，访问服务器，当请求到达Nginx后，优先读取**Nginx本地缓存**，如果Nginx本地缓存未命中，则去查Redis缓存（不经过Tomcat），若Redis也没命中，则查Tomcat内的**JVM进程缓存**，如果JVM进程缓存也没命中，最后才查数据库。
 
 在多级缓存架构中，Nginx内部需要编写本地缓存查询、Redis查询、Tomcat查询的业务逻辑，因此这样的nginx不再是一个反向代理服务器，而是一个编写**业务的Web服务器**，所以需要搭建Nginx集群，再由专门的Nginx反向代理。同理，Tomcat也需要搭建集群。最终的多级缓存架构如下：
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/redis/4/image117.png" alt="image117.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/redis/4/image117.png" alt="image117.png"></div>
 
 ## 1.JVM进程缓存
 
@@ -93,7 +93,7 @@ tb_item_stock：商品库存表，包含商品的库存信息
 
 导入上面的item-service项目到IDEA，最终项目结构如下：
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/redis/4/image118.png" alt="image118.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/redis/4/image118.png" alt="image118.png"></div>
 
 修改配置文件的MySQL信息为自己的数据库信息：
 
@@ -280,7 +280,7 @@ print("Hello World!")
 
 ### 2.2.1 Lua的数据类型
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/redis/4/image119.png" alt="image119.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/redis/4/image119.png" alt="image119.png"></div>
 
 可以通过type()函数判断数据类型，如print(type('Hello World'))输出结果为string
 
@@ -386,7 +386,7 @@ end
 
 与JAVA不同的是，布尔表达式中的逻辑运算是基于英文单词：
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/redis/4/image120.png" alt="image120.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/redis/4/image120.png" alt="image120.png"></div>
 
 例如，自定义printArr函数打印table，当参数为nil时打印错误信息：
 
@@ -449,7 +449,7 @@ yum install -y openresty-opm
 
 默认情况下，OpenResty安装的目录是/usr/local/openresty，目录结构如下：
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/redis/4/image121.png" alt="image121.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/redis/4/image121.png" alt="image121.png"></div>
 
 通过nginx目录可以看到，OpenResty就是在Nginx基础上集成了一些Lua模块。
 
@@ -472,7 +472,7 @@ source /etc/profile
 
 OpenResty底层是基于Nginx的，查看OpenResty目录的nginx目录，结构与windows中安装的nginx基本一致：
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/redis/4/image122.png" alt="image122.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/redis/4/image122.png" alt="image122.png"></div>
 
 所以运行方式与nginx基本一致：
 
@@ -535,7 +535,7 @@ nginx
 
 访问商品查询页http://localhost/item.html?id=10001时，会发送一个GET请求http://localhost/api/item/10001，请求被Windows上的Nginx捕获，并反向代理给OpenResty集群，也就是缓存Nginx集群。
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/redis/4/image123.png" alt="image123.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/redis/4/image123.png" alt="image123.png"></div>
 
 我们需要在OpenResty中编写业务，查询商品数据（假数据）并返回到浏览器。
 
@@ -596,7 +596,7 @@ nginx -s reload
 
 OpenResty中提供了一些API用来获取不同类型的前端请求参数：
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/redis/4/image124.png" alt="image124.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/redis/4/image124.png" alt="image124.png"></div>
 
 ### 3.3.2 获取参数并返回
 
@@ -635,7 +635,7 @@ nginx -s reload
 
 此时lua脚本中的数据还是静态的，我们需要实现商品数据从Tomcat获取，再响应给前端：
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/redis/4/image125.png" alt="image125.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/redis/4/image125.png" alt="image125.png"></div>
 
 需要注意的是，Tomcat在Windows，而OpenResty在Linux，只需要将Linux上的IP最后一位变成1，前三位不变，就能得到Windows的IP，例如192.168.150.**101**对应到本地Windows就是192.168.150.**1**
 
@@ -668,7 +668,7 @@ proxy_pass http://192.168.150.1:8081;
 }
 ```
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/redis/4/image126.png" alt="image126.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/redis/4/image126.png" alt="image126.png"></div>
 
 ### 3.4.2 封装http工具
 
@@ -836,7 +836,7 @@ nginx -s reload
 
 复制Tomcat服务，并指定端口号为8082（参考实战篇一人一单）：
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/redis/4/image127.png" alt="image127.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/redis/4/image127.png" alt="image127.png"></div>
 
 同时启动两个tomcat并多次访问http://localhost/api/item/10001，可以看到只有8082第一次访问有查询数据库的SQL，后几次没有日志记录，说明请求到达8082并且缓存生效。
 
@@ -1160,11 +1160,11 @@ nginx -s reload
 
 **基于MQ的异步通知**：业务完成对数据的修改后，发送一条消息到MQ中，缓存服务监听MQ消息，然后更新缓存，但是这种方式仍然有少量代码入侵
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/redis/4/image128.png" alt="image128.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/redis/4/image128.png" alt="image128.png"></div>
 
 **基于Canal的通知**：业务完成对数据的修改后直接结束，Canal监听MySQL变化，当发现MySQL变化后，立即通知缓存服务，缓存服务进行缓存更新，这种方式实现了代码零入侵
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/redis/4/image129.png" alt="image129.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/redis/4/image129.png" alt="image129.png"></div>
 
 ### 3.8.2 Canal工作原理
 
@@ -1176,7 +1176,7 @@ Canal的Github网址：
 
 Canal是基于MySQL的主从同步来实现的，MySQL主从同步的原理如下：
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/redis/4/image130.png" alt="image130.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/redis/4/image130.png" alt="image130.png"></div>
 
 MySQL master 将数据变更写入二进制日志（binary log），其中记录的数据叫做binary log events，MySQL slave 将 master 的 binary log events拷贝到它的中继日志（relay log），然后重放 relay log 中事件，将数据变更反映它自己的数据。
 
@@ -1292,7 +1292,7 @@ mysql 数据解析关注的表，Perl正则表达式.
 
 Canal提供了各种语言的客户端，当Canal监听到binlog变化时，会通知Canal的客户端，这里使用Java客户端：
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/redis/4/image131.png" alt="image131.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/redis/4/image131.png" alt="image131.png"></div>
 
 我们使用Github上的第三方客户端canal-starter，它与SpringBoot完美整合，自动装配，比官方客户端简单好用。
 

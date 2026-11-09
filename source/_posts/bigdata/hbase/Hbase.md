@@ -35,7 +35,7 @@ HBase 是基于Hadoop的KV格式、面向列存储的分布式数据库，**非�
 ---
 ## 二、HBase 集群架构
 <div align="center">
-  <img src="/assets/img/hbase/hbase_arch.png" style="width:90%; max-width:1000px; object-fit:contain;" alt="HBase集群架构图">
+  <img src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/hbase/hbase_arch.png" style="width:90%; max-width:1000px; object-fit:contain;" alt="HBase集群架构图">
 </div>
 
 ### 1. 集群角色分工
@@ -72,12 +72,12 @@ HBase 是基于Hadoop的KV格式、面向列存储的分布式数据库，**非�
 ### 2. HBase 数据模型示意
 #### HBase表数据逻辑模型示意图
 <div align="center">
-  <img src="/assets/img/hbase/Logicalmodel.png" style="width:90%; max-width:1000px; object-fit:contain;" alt="HBase表数据逻辑模型示意图">
+  <img src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/hbase/Logicalmodel.png" style="width:90%; max-width:1000px; object-fit:contain;" alt="HBase表数据逻辑模型示意图">
 </div>
 
 #### HBase表数据存储模型示意图
 <div align="center">
-  <img src="/assets/img/hbase/Storagemodel.png" style="width:90%; max-width:1000px; object-fit:contain;" alt="HBase表数据存储模型示意图">
+  <img src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/hbase/Storagemodel.png" style="width:90%; max-width:1000px; object-fit:contain;" alt="HBase表数据存储模型示意图">
 </div>
 
 ### 核心字段概念
@@ -101,7 +101,7 @@ HBase 是基于Hadoop的KV格式、面向列存储的分布式数据库，**非�
 ## 三、HBase 读写流程
 ### 1. 读流程（Get/Scan）
 <div align="center">
-  <img src="/assets/img/hbase/hbase_read.png" style="width:90%; max-width:1000px; object-fit:contain;" alt="HBase读流程">
+  <img src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/hbase/hbase_read.png" style="width:90%; max-width:1000px; object-fit:contain;" alt="HBase读流程">
 </div>
 
 1. Client 请求ZooKeeper，查询`hbase:meta`，定位RowKey所属`RegionServer`
@@ -113,10 +113,10 @@ HBase 是基于Hadoop的KV格式、面向列存储的分布式数据库，**非�
 
 ### 2. 写流程（Put）
 <div align="center">
-  <img src="/assets/img/hbase/hbase_write1.png" style="width:90%; max-width:1000px; object-fit:contain;" alt="HBase写流程">
+  <img src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/hbase/hbase_write1.png" style="width:90%; max-width:1000px; object-fit:contain;" alt="HBase写流程">
 </div>
 <div align="center">
-  <img src="/assets/img/hbase/hbase_write2.png" style="width:90%; max-width:1000px; object-fit:contain;" alt="HBase写流程时序图">
+  <img src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/hbase/hbase_write2.png" style="width:90%; max-width:1000px; object-fit:contain;" alt="HBase写流程时序图">
 </div>
 
 1. Client请求ZK获取元数据，定位目标`RegionServer`

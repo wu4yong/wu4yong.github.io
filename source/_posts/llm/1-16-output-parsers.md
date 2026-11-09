@@ -44,8 +44,8 @@ tags:
 - Output Parser 负责把结果转成字符串、JSON 或对象，把这份回答“**整理成程序好用的样子**”。
 - 第 [17 章 LCEL 与链式调用](/2026/10/17/llm/1-17-lcel-and-chaining/) 会把这条链真正串起来。
 
-<!-- ![输出解析器在 Model I/O 中的位置：承接模型文本输出，解析为程序可用的结构化数据](/assets/img/llm/14/14-1-1-1.jpeg) -->
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/14/14-1-1-1.jpeg" alt="输出解析器在 Model I/O 中的位置：承接模型文本输出，解析为程序可用的结构化数据"></div>
+<!-- <div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/llm/14/14-1-1-1.jpeg" alt="输出解析器在 Model I/O 中的位置：承接模型文本输出，解析为程序可用的结构化数据"></div> -->
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/llm/14/14-1-1-1.jpeg" alt="输出解析器在 Model I/O 中的位置：承接模型文本输出，解析为程序可用的结构化数据"></div>
 
 放到实际使用中，根据解析器类型不同，输出解析器通常会承担下面几类工作：
 
@@ -363,8 +363,8 @@ parser.get_format_instructions()
 
 > “你必须按这个 schema 交付结果。”
 
-<!-- ![从普通文本、Parser、JSON 到结构化输出和 Pydantic 校验的逐步增强路线](/assets/img/llm/14/14-4-1-1.svg) -->
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/14/14-4-1-1.svg" alt="从普通文本、Parser、JSON 到结构化输出和 Pydantic 校验的逐步增强路线"></div>
+<!-- <div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/llm/14/14-4-1-1.svg" alt="从普通文本、Parser、JSON 到结构化输出和 Pydantic 校验的逐步增强路线"></div> -->
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/llm/14/14-4-1-1.svg" alt="从普通文本、Parser、JSON 到结构化输出和 Pydantic 校验的逐步增强路线"></div>
 
 LangChain 官方现在特别强调：**很多现代模型已经支持原生结构化输出**。这意味着，在支持的模型上，优先使用：
 

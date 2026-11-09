@@ -88,9 +88,9 @@ Embedding 服务|`TEI` + `BAAI/bge-large-zh-v1.5`|负责把字段名、字段描
 
 ### 1.3 对照架构图理解整条链路
 
-<!-- ![电商问数系统整体架构：数据仓库、配置与同步脚本、元数据知识库与问数智能体](/assets/img/ecommerce/2/2-1-2-1.png) -->
+<!-- <div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/ecommerce/2/2-1-2-1.png" alt="电商问数系统整体架构：数据仓库、配置与同步脚本、元数据知识库与问数智能体"></div> -->
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/ecommerce/2/2-1-2-1.png" alt="电商问数系统整体架构：数据仓库、配置与同步脚本、元数据知识库与问数智能体"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/ecommerce/2/2-1-2-1.png" alt="电商问数系统整体架构：数据仓库、配置与同步脚本、元数据知识库与问数智能体"></div>
 这张图如果第一次看，最容易晕的地方就是箭头很多、模块很多。更简单的看法是：**整套系统其实只有两条主线。**
 
 1. **构建期：先把知识准备好**
@@ -182,9 +182,9 @@ Embedding 服务|`TEI` + `BAAI/bge-large-zh-v1.5`|负责把字段名、字段描
 
 元数据库负责存放完整、权威的结构化元数据。它不是业务数据本身，而是“关于数据的数据”。在当前项目中，这部分主要放在 `MySQL` 里，并包含四张核心表，用于保存数据仓库中的表信息、字段信息、指标信息以及字段与指标之间的关联关系。
 
-<!-- ![元数据库四张核心表 metric_info、column_metric、column_info、table_info 及其关联关系](/assets/img/ecommerce/2/2-2-2-1.png) -->
+<!-- <div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/ecommerce/2/2-2-2-1.png" alt="元数据库四张核心表 metric_info、column_metric、column_info、table_info 及其关联关系"></div> -->
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/ecommerce/2/2-2-2-1.png" alt="元数据库四张核心表 metric_info、column_metric、column_info、table_info 及其关联关系"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/ecommerce/2/2-2-2-1.png" alt="元数据库四张核心表 metric_info、column_metric、column_info、table_info 及其关联关系"></div>
 各表具体内容示例如下。为了便于快速建立直觉，先把这几张表的中文含义记住：
 
 - `metric_info`：指标信息表
@@ -326,14 +326,14 @@ fact_order|fact_order|fact|订单事实表，记录订单数量和金额等核�
 
 `column_info` 中需要建立向量索引的字段如下图所示：
 
-<!-- ![column_info 表中用于构建向量索引的字段示意（name、description、alias 等）](/assets/img/ecommerce/2/2-2-3-1.png) -->
+<!-- <div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/ecommerce/2/2-2-3-1.png" alt="column_info 表中用于构建向量索引的字段示意（name、description、alias 等）"></div> -->
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/ecommerce/2/2-2-3-1.png" alt="column_info 表中用于构建向量索引的字段示意（name、description、alias 等）"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/ecommerce/2/2-2-3-1.png" alt="column_info 表中用于构建向量索引的字段示意（name、description、alias 等）"></div>
 具体示例如下图所示：
 
-<!-- ![column_info 一行元数据按名称、描述、别名拆分为多条向量写入向量库的映射示例](/assets/img/ecommerce/2/2-2-3-2.png) -->
+<!-- <div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/ecommerce/2/2-2-3-2.png" alt="column_info 一行元数据按名称、描述、别名拆分为多条向量写入向量库的映射示例"></div> -->
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/ecommerce/2/2-2-3-2.png" alt="column_info 一行元数据按名称、描述、别名拆分为多条向量写入向量库的映射示例"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/ecommerce/2/2-2-3-2.png" alt="column_info 一行元数据按名称、描述、别名拆分为多条向量写入向量库的映射示例"></div>
 这里的核心思想不是“给一整行字段信息只建一个向量”，而是对同一行中的多个关键文本分别建向量。以 `column_info` 为例，一条字段记录通常会对应多个向量点：
 
 - 字段名 `name` 会生成一个向量
@@ -352,14 +352,14 @@ fact_order|fact_order|fact|订单事实表，记录订单数量和金额等核�
 
 `metric_info` 中需要建立向量索引的字段如下图所示：
 
-<!-- ![metric_info 表中用于构建向量索引的字段示意（name、description、alias 等）](/assets/img/ecommerce/2/2-2-3-3.png) -->
+<!-- <div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/ecommerce/2/2-2-3-3.png" alt="metric_info 表中用于构建向量索引的字段示意（name、description、alias 等）"></div> -->
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/ecommerce/2/2-2-3-3.png" alt="metric_info 表中用于构建向量索引的字段示意（name、description、alias 等）"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/ecommerce/2/2-2-3-3.png" alt="metric_info 表中用于构建向量索引的字段示意（name、description、alias 等）"></div>
 具体示例如下图所示：
 
-<!-- ![metric_info 指标元数据按名称、描述、别名分别向量化并写入向量库的映射示例](/assets/img/ecommerce/2/2-2-3-4.png) -->
+<!-- <div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/ecommerce/2/2-2-3-4.png" alt="metric_info 指标元数据按名称、描述、别名分别向量化并写入向量库的映射示例"></div> -->
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/ecommerce/2/2-2-3-4.png" alt="metric_info 指标元数据按名称、描述、别名分别向量化并写入向量库的映射示例"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/ecommerce/2/2-2-3-4.png" alt="metric_info 指标元数据按名称、描述、别名分别向量化并写入向量库的映射示例"></div>
 `metric_info` 的思路和 `column_info` 完全类似。对于一条指标记录，我们同样会对 `name`、`description` 和 `alias` 分别建立向量索引。这样当用户提问中出现某个业务指标的简称、别称，或者一种更口语化的表达时，系统也更容易把正确指标召回出来。
 
 在实际实现中，我们会把字段名、字段描述、字段别名，以及指标名、指标描述、指标别名等文本分别送入 Embedding 模型，得到向量后存入 `Qdrant`，用于后续的语义召回。
@@ -384,9 +384,9 @@ fact_order|fact_order|fact|订单事实表，记录订单数量和金额等核�
 
 具体示例如下图所示：
 
-<!-- ![维度表字段取值写入全文索引表 value_info（id、value、column_id）的映射示例](/assets/img/ecommerce/2/2-2-4-2.png) -->
+<!-- <div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/ecommerce/2/2-2-4-2.png" alt="维度表字段取值写入全文索引表 value_info（id、value、column_id）的映射示例"></div> -->
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/ecommerce/2/2-2-4-2.png" alt="维度表字段取值写入全文索引表 value_info（id、value、column_id）的映射示例"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/ecommerce/2/2-2-4-2.png" alt="维度表字段取值写入全文索引表 value_info（id、value、column_id）的映射示例"></div>
 在项目实现中，这部分能力由 `Elasticsearch` 提供。每一个字段取值都会作为一条独立索引记录写入 `ES`，其中至少包括三个核心信息：
 
 - `id`：该取值的唯一标识
@@ -443,9 +443,9 @@ fact_order|fact_order|fact|订单事实表，记录订单数量和金额等核�
 
 这个智能体基于 `LangGraph` 实现，不是单轮“Prompt + LLM”的简单模式，而是一个可分步骤执行、可观测、可纠错的图结构流程。
 
-<!-- ![基于 LangGraph 的问数智能体全流程：关键词抽取、多路召回、合并过滤、生成与校验 SQL 等节点](/assets/img/ecommerce/2/2-3-1-1.jpg) -->
+<!-- <div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/ecommerce/2/2-3-1-1.jpg" alt="基于 LangGraph 的问数智能体全流程：关键词抽取、多路召回、合并过滤、生成与校验 SQL 等节点"></div> -->
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/ecommerce/2/2-3-1-1.jpg" alt="基于 LangGraph 的问数智能体全流程：关键词抽取、多路召回、合并过滤、生成与校验 SQL 等节点"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/ecommerce/2/2-3-1-1.jpg" alt="基于 LangGraph 的问数智能体全流程：关键词抽取、多路召回、合并过滤、生成与校验 SQL 等节点"></div>
 如果顺着这张流程图往下看，整个问数智能体本质是一条“先理解问题、再召回信息、最后生成并执行 SQL”的工作流。
 
 为了先抓住主线，也可以把这一整段流程先压缩成 3 个阶段：
@@ -461,9 +461,9 @@ fact_order|fact_order|fact|订单事实表，记录订单数量和金额等核�
 
 ### 3.1 第一步：抽取关键词
 
-<!-- ![问数智能体「抽取关键词」步骤：使用 jieba 与 TF-IDF 从用户问题中提炼用于检索的核心词](/assets/img/ecommerce/2/2-3-1-2.png) -->
+<!-- <div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/ecommerce/2/2-3-1-2.png" alt="问数智能体「抽取关键词」步骤：使用 jieba 与 TF-IDF 从用户问题中提炼用于检索的核心词"></div> -->
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/ecommerce/2/2-3-1-2.png" alt="问数智能体「抽取关键词」步骤：使用 jieba 与 TF-IDF 从用户问题中提炼用于检索的核心词"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/ecommerce/2/2-3-1-2.png" alt="问数智能体「抽取关键词」步骤：使用 jieba 与 TF-IDF 从用户问题中提炼用于检索的核心词"></div>
 流程图最上方的第一个节点是“抽取关键词”。
 
 这一步的作用，是先把用户问题中真正对查询有帮助的核心词抽出来，尽量去掉一些无关紧要的表达。比如用户说：
@@ -496,27 +496,27 @@ fact_order|fact_order|fact|订单事实表，记录订单数量和金额等核�
 
 - **召回字段信息**
 
-<!-- ![问数智能体「召回字段信息」：基于向量索引检索与用户问题相关的 column_info 字段](/assets/img/ecommerce/2/2-3-2-1.png) -->
+<!-- <div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/ecommerce/2/2-3-2-1.png" alt="问数智能体「召回字段信息」：基于向量索引检索与用户问题相关的 column_info 字段"></div> -->
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/ecommerce/2/2-3-2-1.png" alt="问数智能体「召回字段信息」：基于向量索引检索与用户问题相关的 column_info 字段"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/ecommerce/2/2-3-2-1.png" alt="问数智能体「召回字段信息」：基于向量索引检索与用户问题相关的 column_info 字段"></div>
 这一步主要去向量索引中检索与问题最相关的字段。比如问题里有“地区”“销售总额”这类表达，系统就要尽量把 `region_name`、`order_amount` 等可能相关的字段找出来。
 
 为了提高召回效果，系统并不只依赖最初抽出来的关键词，还会借助大模型进一步做“关键词扩展”。也就是说，系统会让模型从“我要查字段信息”这个目标出发，补充一些更适合用于字段检索的词，例如把“销售总额”扩展成“销售金额”之类的表达。这样做的本质，是为了提高字段召回率。
 
 - **召回指标信息**
 
-<!-- ![问数智能体「召回指标信息」：基于向量索引检索与用户问题相关的 metric_info 指标定义](/assets/img/ecommerce/2/2-3-2-2.png) -->
+<!-- <div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/ecommerce/2/2-3-2-2.png" alt="问数智能体「召回指标信息」：基于向量索引检索与用户问题相关的 metric_info 指标定义"></div> -->
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/ecommerce/2/2-3-2-2.png" alt="问数智能体「召回指标信息」：基于向量索引检索与用户问题相关的 metric_info 指标定义"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/ecommerce/2/2-3-2-2.png" alt="问数智能体「召回指标信息」：基于向量索引检索与用户问题相关的 metric_info 指标定义"></div>
 这一步和字段召回类似，也是走向量检索，只不过目标换成了 `metric_info` 中的业务指标。比如用户问“销售总额”，系统不仅要想到具体字段 `order_amount`，也要有机会召回 `GMV` 这样的指标定义。
 
 这里同样会做关键词扩展。因为用户问题里的说法，未必和指标名一模一样。通过扩展关键词，系统能更容易把“问题的说法”和“元数据里的指标定义”对上。
 
 - **召回字段取值**
 
-<!-- ![问数智能体「召回字段取值」：通过全文索引将问题中的自然语言映射到库内真实字段取值](/assets/img/ecommerce/2/2-3-2-3.png) -->
+<!-- <div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/ecommerce/2/2-3-2-3.png" alt="问数智能体「召回字段取值」：通过全文索引将问题中的自然语言映射到库内真实字段取值"></div> -->
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/ecommerce/2/2-3-2-3.png" alt="问数智能体「召回字段取值」：通过全文索引将问题中的自然语言映射到库内真实字段取值"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/ecommerce/2/2-3-2-3.png" alt="问数智能体「召回字段取值」：通过全文索引将问题中的自然语言映射到库内真实字段取值"></div>
 这一步主要走全文检索，目标是找到问题中提到的那些真实字段取值。比如：华北地区；黄金会员；手机数码。
 
 这些信息不是字段名，而是字段里存的值，所以要去全文索引里查。
@@ -525,9 +525,9 @@ fact_order|fact_order|fact|订单事实表，记录订单数量和金额等核�
 
 ### 3.3 第三步：合并召回信息
 
-<!-- ![问数智能体「合并召回信息」：将字段、指标与字段取值整理为按表分组的层次化上下文](/assets/img/ecommerce/2/2-3-3-1.png) -->
+<!-- <div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/ecommerce/2/2-3-3-1.png" alt="问数智能体「合并召回信息」：将字段、指标与字段取值整理为按表分组的层次化上下文"></div> -->
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/ecommerce/2/2-3-3-1.png" alt="问数智能体「合并召回信息」：将字段、指标与字段取值整理为按表分组的层次化上下文"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/ecommerce/2/2-3-3-1.png" alt="问数智能体「合并召回信息」：将字段、指标与字段取值整理为按表分组的层次化上下文"></div>
 三路粗召回完成后，系统拿到的是三份相对分散的结果：
 
 - 一批字段信息
@@ -594,9 +594,9 @@ fact_order|fact_order|fact|订单事实表，记录订单数量和金额等核�
 - 过滤指标信息
 - 过滤表格信息
 
-<!-- ![问数智能体「过滤指标信息」：结合用户问题对召回的指标元数据做语义精筛](/assets/img/ecommerce/2/2-3-4-1.png) -->
+<!-- <div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/ecommerce/2/2-3-4-1.png" alt="问数智能体「过滤指标信息」：结合用户问题对召回的指标元数据做语义精筛"></div> -->
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/ecommerce/2/2-3-4-1.png" alt="问数智能体「过滤指标信息」：结合用户问题对召回的指标元数据做语义精筛"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/ecommerce/2/2-3-4-1.png" alt="问数智能体「过滤指标信息」：结合用户问题对召回的指标元数据做语义精筛"></div>
 这两步本质上都是一次**精筛**。系统会借助大模型，结合用户原始问题，对召回结果再做一次语义判断，把无关项、冗余项剔除掉，只保留和当前查询意图最相关的表、字段和指标。
 
 这一步非常重要，因为前面的召回更像是“宁可多召回一些，也不要漏太多”，而这里则是把“多出来的部分”再清洗一遍。你可以把这一段连起来记成：**先粗召回，再结构化整理，最后精筛保留。**
@@ -615,9 +615,9 @@ fact_order|fact_order|fact|订单事实表，记录订单数量和金额等核�
 
 另外还有一个工程细节值得注意：有些主键、外键字段在向量召回时并不容易自然被召回出来，但在真正写 SQL 时，多表关联又经常离不开它们。所以在实现里，系统还会通过元数据库把必要的主外键补回来，再在过滤阶段统一处理。也就是说，过滤阶段不是单纯做“删减”，它还会顺手保证真正生成 SQL 所需的关键结构没有丢。
 
-<!-- ![问数智能体「过滤表格信息」：保留与当前问题相关的表与字段，形成精简表结构上下文](/assets/img/ecommerce/2/2-3-4-2.png) -->
+<!-- <div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/ecommerce/2/2-3-4-2.png" alt="问数智能体「过滤表格信息」：保留与当前问题相关的表与字段，形成精简表结构上下文"></div> -->
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/ecommerce/2/2-3-4-2.png" alt="问数智能体「过滤表格信息」：保留与当前问题相关的表与字段，形成精简表结构上下文"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/ecommerce/2/2-3-4-2.png" alt="问数智能体「过滤表格信息」：保留与当前问题相关的表与字段，形成精简表结构上下文"></div>
 过滤完成之后，表格信息通常会被整理成一个更精简的结果文件。例如，当前项目中的 `yaml/filtered_table_infos.yaml`，就是“过滤表格信息”这一步的示例结果。
 
 [filtered_table_infos.yaml](yaml/filtered_table_infos.yaml ":include :type=code")
@@ -633,9 +633,9 @@ fact_order|fact_order|fact|订单事实表，记录订单数量和金额等核�
 
 ### 3.5 第五步：增加额外上下文
 
-<!-- ![问数智能体「增加额外上下文」：补充当前时间、数据库类型与版本等影响 SQL 正确性的环境信息](/assets/img/ecommerce/2/2-3-5-1.png) -->
+<!-- <div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/ecommerce/2/2-3-5-1.png" alt="问数智能体「增加额外上下文」：补充当前时间、数据库类型与版本等影响 SQL 正确性的环境信息"></div> -->
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/ecommerce/2/2-3-5-1.png" alt="问数智能体「增加额外上下文」：补充当前时间、数据库类型与版本等影响 SQL 正确性的环境信息"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/ecommerce/2/2-3-5-1.png" alt="问数智能体「增加额外上下文」：补充当前时间、数据库类型与版本等影响 SQL 正确性的环境信息"></div>
 过滤之后，系统已经拿到了比较干净的表信息、字段信息和指标信息，但在真正生成 SQL 之前，流程图里还有一步“增加额外上下文”。这一步做的事情是：在“业务上下文”已经齐备之后，再把“环境上下文”补齐。
 
 这一步补充的，主要是一些不直接属于表结构，但会影响 SQL 正确性的环境信息，例如：
@@ -650,9 +650,9 @@ fact_order|fact_order|fact|订单事实表，记录订单数量和金额等核�
 
 ### 3.6 第六步：生成 SQL
 
-<!-- ![问数智能体「生成 SQL」：在表、字段、指标与取值等上下文齐备后由大模型生成查询语句](/assets/img/ecommerce/2/2-3-6-1.png) -->
+<!-- <div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/ecommerce/2/2-3-6-1.png" alt="问数智能体「生成 SQL」：在表、字段、指标与取值等上下文齐备后由大模型生成查询语句"></div> -->
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/ecommerce/2/2-3-6-1.png" alt="问数智能体「生成 SQL」：在表、字段、指标与取值等上下文齐备后由大模型生成查询语句"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/ecommerce/2/2-3-6-1.png" alt="问数智能体「生成 SQL」：在表、字段、指标与取值等上下文齐备后由大模型生成查询语句"></div>
 到这一步，系统终于具备了生成 SQL 所需的主要上下文：
 
 - 用户原始问题

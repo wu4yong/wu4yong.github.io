@@ -60,8 +60,8 @@ add_extra_context  # 添加日期、数据库等额外上下文
   -> generate_sql
 ```
 
-<!-- ![基于 LangGraph 的问数智能体全流程：本章处理的是合并召回之后、生成 SQL 之前的上下文精筛和补全](/assets/img/llm/ecommerce-data-qa/2/2-3-1-1.jpg) -->
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/ecommerce-data-qa/2/2-3-1-1.jpg" alt="基于 LangGraph 的问数智能体全流程：本章处理的是合并召回之后、生成 SQL 之前的上下文精筛和补全"></div>
+<!-- <div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/llm/ecommerce-data-qa/2/2-3-1-1.jpg" alt="基于 LangGraph 的问数智能体全流程：本章处理的是合并召回之后、生成 SQL 之前的上下文精筛和补全"></div> -->
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/llm/ecommerce-data-qa/2/2-3-1-1.jpg" alt="基于 LangGraph 的问数智能体全流程：本章处理的是合并召回之后、生成 SQL 之前的上下文精筛和补全"></div>
 
 简单来说：
 
@@ -208,8 +208,8 @@ yaml.dump(table_infos, allow_unicode=True, sort_keys=False)
 
 ## 5、表过滤节点：filter_table
 
-<!-- ![问数智能体「过滤表信息」：保留与当前问题相关的表与字段，形成精简表结构上下文](/assets/img/llm/ecommerce-data-qa/2/2-3-4-2.png) -->
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/ecommerce-data-qa/2/2-3-4-2.png" alt="问数智能体「过滤表信息」：保留与当前问题相关的表与字段，形成精简表结构上下文"></div>
+<!-- <div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/llm/ecommerce-data-qa/2/2-3-4-2.png" alt="问数智能体「过滤表信息」：保留与当前问题相关的表与字段，形成精简表结构上下文"></div> -->
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/llm/ecommerce-data-qa/2/2-3-4-2.png" alt="问数智能体「过滤表信息」：保留与当前问题相关的表与字段，形成精简表结构上下文"></div>
 
 `filter_table` 读取的是上一章生成的：`state["table_infos"]`
 
@@ -381,8 +381,8 @@ return {"table_infos": filtered_table_infos}
 
 ## 6、指标过滤节点：filter_metric
 
-<!-- ![问数智能体「过滤指标信息」：结合用户问题对召回的指标元数据做语义精筛](/assets/img/llm/ecommerce-data-qa/2/2-3-4-1.png) -->
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/ecommerce-data-qa/2/2-3-4-1.png" alt="问数智能体「过滤指标信息」：结合用户问题对召回的指标元数据做语义精筛"></div>
+<!-- <div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/llm/ecommerce-data-qa/2/2-3-4-1.png" alt="问数智能体「过滤指标信息」：结合用户问题对召回的指标元数据做语义精筛"></div> -->
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/llm/ecommerce-data-qa/2/2-3-4-1.png" alt="问数智能体「过滤指标信息」：结合用户问题对召回的指标元数据做语义精筛"></div>
 
 `filter_metric` 的目标和 `filter_table` 类似，只是它处理的是指标。
 
@@ -555,8 +555,8 @@ merge_retrieved_info 完成
 
 ## 8、额外上下文节点：add_extra_context
 
-<!-- ![问数智能体「添加额外上下文」：补充当前时间、数据库类型与版本等影响 SQL 正确性的环境信息](/assets/img/llm/ecommerce-data-qa/2/2-3-5-1.png) -->
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/ecommerce-data-qa/2/2-3-5-1.png" alt="问数智能体「添加额外上下文」：补充当前时间、数据库类型与版本等影响 SQL 正确性的环境信息"></div>
+<!-- <div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/llm/ecommerce-data-qa/2/2-3-5-1.png" alt="问数智能体「添加额外上下文」：补充当前时间、数据库类型与版本等影响 SQL 正确性的环境信息"></div> -->
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/llm/ecommerce-data-qa/2/2-3-5-1.png" alt="问数智能体「添加额外上下文」：补充当前时间、数据库类型与版本等影响 SQL 正确性的环境信息"></div>
 
 表和指标过滤完成后，业务上下文已经比较干净了。但 SQL 生成还需要一些不属于表结构的外部信息。
 
@@ -844,8 +844,8 @@ state = DataAgentState(query="统计华北地区的销售总额")
 
 流式输出里应该能看到类似下面这些节点进度。由于三路召回、表过滤和指标过滤是并行分支，实际打印顺序可能会略有不同。
 
-<!-- ![流式输出里应该能看到类似下面这些节点进度](/assets/img/llm/ecommerce-data-qa/13/13-11-1-1.png) -->
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/ecommerce-data-qa/13/13-11-1-1.png" alt="流式输出里应该能看到类似下面这些节点进度"></div>
+<!-- <div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/llm/ecommerce-data-qa/13/13-11-1-1.png" alt="流式输出里应该能看到类似下面这些节点进度"></div> -->
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/llm/ecommerce-data-qa/13/13-11-1-1.png" alt="流式输出里应该能看到类似下面这些节点进度"></div>
 
 日志里可以重点观察三类结果。
 

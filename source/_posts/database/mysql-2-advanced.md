@@ -14,9 +14,9 @@ tags:
 
 MySQL体系结构：
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/mysql/MySQL体系结构.png" alt="MySQL体系结构.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/mysql/MySQL体系结构.png" alt="MySQL体系结构.png"></div>
   
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/mysql/MySQL体系结构层级含义.png" alt="MySQL体系结构层级含义.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/mysql/MySQL体系结构层级含义.png" alt="MySQL体系结构层级含义.png"></div>
 
 存储引擎就是存储数据、建立索引、更新/查询数据等技术的实现方式。存储引擎是基于表而不是基于库的，所以存储引擎也可以被称为表引擎。  
 默认存储引擎是InnoDB。
@@ -61,7 +61,7 @@ InnoDB 是一种兼顾高可靠性和高性能的通用存储引擎，在 MySQL 
 `ibd2sdi xxx.ibd`
 
 InnoDB 逻辑存储结构：  
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/mysql/逻辑存储结构.png" alt="逻辑存储结构.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/mysql/逻辑存储结构.png" alt="逻辑存储结构.png"></div>
 
 ### MyISAM
 
@@ -206,17 +206,17 @@ Full-text|5.6版本后支持|支持|不支持
 
 #### B-Tree
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/mysql/二叉树.png" alt="二叉树.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/mysql/二叉树.png" alt="二叉树.png"></div>
 
 二叉树的缺点可以用红黑树来解决：  
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/mysql/红黑树.png" alt="红黑树.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/mysql/红黑树.png" alt="红黑树.png"></div>
   
 红黑树也存在大数据量情况下，层级较深，检索速度慢的问题。
 
 为了解决上述问题，可以使用 B-Tree 结构。  
 B-Tree (多路平衡查找树) 以一棵最大度数（max-degree，指一个节点的子节点个数）为5（5阶）的 b-tree 为例（每个节点最多存储4个key，5个指针）
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/mysql/B-Tree结构.png" alt="B-Tree结构.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/mysql/B-Tree结构.png" alt="B-Tree结构.png"></div>
 
 > B-Tree 的数据插入过程动画参照：<https://www.bilibili.com/video/BV1Kr4y1i7ru?p=68>  
 > 演示地址：<https://www.cs.usfca.edu/~galles/visualization/BTree.html>
@@ -225,7 +225,7 @@ B-Tree (多路平衡查找树) 以一棵最大度数（max-degree，指一个节
 
 结构图：
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/mysql/B+Tree结构图.png" alt="B+Tree结构图.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/mysql/B+Tree结构图.png" alt="B+Tree结构图.png"></div>
 
 > 演示地址：<https://www.cs.usfca.edu/~galles/visualization/BPlusTree.html>
 
@@ -236,14 +236,14 @@ B-Tree (多路平衡查找树) 以一棵最大度数（max-degree，指一个节
 
 MySQL 索引数据结构对经典的 B+Tree 进行了优化。在原 B+Tree 的基础上，增加一个指向相邻叶子节点的链表指针，就形成了带有顺序指针的 B+Tree，提高区间访问的性能。
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/mysql/结构图.png" alt="结构图.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/mysql/结构图.png" alt="结构图.png"></div>
 
 #### Hash
 
 哈希索引就是采用一定的hash算法，将键值换算成新的hash值，映射到对应的槽位上，然后存储在hash表中。  
 如果两个（或多个）键值，映射到一个相同的槽位上，他们就产生了hash冲突（也称为hash碰撞），可以通过链表来解决。
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/mysql/Hash索引原理图.png" alt="Hash索引原理图.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/mysql/Hash索引原理图.png" alt="Hash索引原理图.png"></div>
 
 特点：
 
@@ -284,9 +284,9 @@ MySQL 索引数据结构对经典的 B+Tree 进行了优化。在原 B+Tree 的�
 
 演示图：
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/mysql/原理图.png" alt="原理图.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/mysql/原理图.png" alt="原理图.png"></div>
   
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/mysql/演示图.png" alt="演示图.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/mysql/演示图.png" alt="演示图.png"></div>
 
 聚集索引选取规则：
 
@@ -546,7 +546,7 @@ InnoDB 的行锁是针对索引加的锁，不是针对记录加的锁，并且�
 
 ## 视图/存储过程/触发器
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/mysql/视图等内容的总结.png" alt="视图等内容的总结.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/mysql/视图等内容的总结.png" alt="视图等内容的总结.png"></div>
 
 ### 视图
 
@@ -1308,9 +1308,9 @@ MySQL中的锁，按照锁的粒度分，分为一下三类：
 
 演示图：
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/mysql/51083972978.png" alt="51083972978.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/mysql/51083972978.png" alt="51083972978.png"></div>
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/mysql/fqweqwegqg.png" alt="fqweqwegqg.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/mysql/fqweqwegqg.png" alt="fqweqwegqg.png"></div>
 
 特点：
 
@@ -1405,9 +1405,9 @@ alter table …|EXCLYSIVE|与其他的MDL都互斥
 
 #### AUTO-INC锁（补充）
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/mysql/qrer231r123r.png" alt="qrer231r123r.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/mysql/qrer231r123r.png" alt="qrer231r123r.png"></div>
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/mysql/qewf23f.png" alt="qewf23f.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/mysql/qewf23f.png" alt="qewf23f.png"></div>
 
 ### 行级锁
 
@@ -1453,11 +1453,11 @@ select … for update|排他锁|需要手动在select之后for update
 
 #### Gap Lock（间隙锁）
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/mysql/qweg2431123qw.png" alt="qweg2431123qw.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/mysql/qweg2431123qw.png" alt="qweg2431123qw.png"></div>
 
 #### Next-Key Lock（临键锁）
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/mysql/qwegfqew24.png" alt="qwegfqew24.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/mysql/qwegfqew24.png" alt="qwegfqew24.png"></div>
 
 默认情况下，InnODB在 REPEATABLE READ事务隔离级别运行，InnoDB使用 next-key 锁进行搜索和索引扫描，以防止幻读。
 
@@ -1469,33 +1469,33 @@ select … for update|排他锁|需要手动在select之后for update
 
 ### 逻辑存储结构
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/mysql/ewqqeg423.png" alt="ewqqeg423.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/mysql/ewqqeg423.png" alt="ewqqeg423.png"></div>
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/mysql/ewqg1341.png" alt="ewqg1341.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/mysql/ewqg1341.png" alt="ewqg1341.png"></div>
 
 ### 架构
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/mysql/qewg13g423f.png" alt="qewg13g423f.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/mysql/qewg13g423f.png" alt="qewg13g423f.png"></div>
 
 #### 内存架构
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/mysql/qwef12t132r.png" alt="qwef12t132r.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/mysql/qwef12t132r.png" alt="qwef12t132r.png"></div>
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/mysql/910310644164.png" alt="910310644164.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/mysql/910310644164.png" alt="910310644164.png"></div>
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/mysql/2633356152.png" alt="2633356152.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/mysql/2633356152.png" alt="2633356152.png"></div>
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/mysql/21810694716.png" alt="21810694716.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/mysql/21810694716.png" alt="21810694716.png"></div>
 
 #### 磁盘结构
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/mysql/71896219103.png" alt="71896219103.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/mysql/71896219103.png" alt="71896219103.png"></div>
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/mysql/6345845897.png" alt="6345845897.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/mysql/6345845897.png" alt="6345845897.png"></div>
 
 #### 后台线程
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/mysql/1192969375.png" alt="1192969375.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/mysql/1192969375.png" alt="1192969375.png"></div>
 
 ### 事务原理
 
@@ -1512,7 +1512,7 @@ select … for update|排他锁|需要手动在select之后for update
 
 特性原理分类图：
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/mysql/10723932987.png" alt="10723932987.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/mysql/10723932987.png" alt="10723932987.png"></div>
 
 #### redo log
 
@@ -1522,7 +1522,7 @@ select … for update|排他锁|需要手动在select之后for update
 
 Buffer Pool在产生脏页数据的时候，会先将数据存储到 redo log buffer 再存储到 redo log 中进行磁盘持久化存储，在内存出现异常（比如突然断电）时，通过redo log中持久化的数据进行回滚。过程如下图：
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/mysql/7521579557.png" alt="7521579557.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/mysql/7521579557.png" alt="7521579557.png"></div>
 
 redo log 要写到磁盘，数据也要写磁盘，为什么要多此一举?
 
@@ -1558,7 +1558,7 @@ Undo log 存储：undo log 采用段的方式进行管理和记录，存放在�
 
 #### 三个隐藏字段
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/mysql/9225237599.png" alt="9225237599.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/mysql/9225237599.png" alt="9225237599.png"></div>
 
 #### undo log
 
@@ -1576,7 +1576,7 @@ Undo log 存储：undo log 采用段的方式进行管理和记录，存放在�
 - **快照读取结束**：
   - 当所有依赖于该undo log的快照读取操作结束后，undo log才会被删除。这意味着如果有一个事务正在进行快照读取，并且依赖于某个undo log，那么这个undo log会一直保留直到该事务结束。
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/mysql/921810810932.png" alt="921810810932.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/mysql/921810810932.png" alt="921810810932.png"></div>
 
 #### readview
 
@@ -1592,9 +1592,9 @@ max\_trx\_id|预分配事务ID，当前最大事务ID+1（因为事务ID是自�
 creator\_trx\_id|ReadView创建者的事务ID
 {% endautogrid %}
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/mysql/84711022753.png" alt="84711022753.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/mysql/84711022753.png" alt="84711022753.png"></div>
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/mysql/6934998817.png" alt="6934998817.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/mysql/6934998817.png" alt="6934998817.png"></div>
 
 依次比较 undo log 日志中版本数据链，找到可以进行访问的版本数据。
 
@@ -1616,24 +1616,24 @@ sys|包含了一系列方便 DBA和开发人员利用 performance\_schema性能�
 
 #### mysql
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/mysql/3233394951.png" alt="3233394951.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/mysql/3233394951.png" alt="3233394951.png"></div>
 
 #### mysqladmin
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/mysql/10103131010198.png" alt="10103131010198.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/mysql/10103131010198.png" alt="10103131010198.png"></div>
 
 #### mysqlbinlog
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/mysql/1285451886.png" alt="1285451886.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/mysql/1285451886.png" alt="1285451886.png"></div>
 
 #### mysqlshow
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/mysql/8210310352105.png" alt="8210310352105.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/mysql/8210310352105.png" alt="8210310352105.png"></div>
 
 #### mysqldump
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/mysql/479211610103.png" alt="479211610103.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/mysql/479211610103.png" alt="479211610103.png"></div>
 
 #### mysqlimport/source
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/mysql/34108898837.png" alt="34108898837.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/mysql/34108898837.png" alt="34108898837.png"></div>

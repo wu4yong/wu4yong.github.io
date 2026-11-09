@@ -932,7 +932,7 @@ name='华为mate 80 promax' price=1.0 stock=0
 
 #### 2.1.3 工作流程图解
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/langchain/6/langchain-pydantic-structured-output-workflow.png" alt="langchain-pydantic-structured-output-workflow.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/langchain/6/langchain-pydantic-structured-output-workflow.png" alt="langchain-pydantic-structured-output-workflow.png"></div>
 
 **第1步：定义结构**
 
@@ -1019,7 +1019,7 @@ print(movie)
 
 实例化字典时给出的字段名称和TypedDict不完全一致，此时IDE的静态类型检查会标记。
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/langchain/6/typeddict-ide-static-check-example.png" alt="typeddict-ide-static-check-example.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/langchain/6/typeddict-ide-static-check-example.png" alt="typeddict-ide-static-check-example.png"></div>
 
 但不会导致运行时异常，输出如下所示
 

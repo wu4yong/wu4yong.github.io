@@ -57,9 +57,9 @@ tags:
 
 把这三类能力放在一起看，它们不是三条孤立支线，而是共同支撑后续的建库、检索、生成和排障。
 
-<!-- ![Embedding、MySQL 和日志三类基础能力如何支撑元数据知识库与问数链路](/assets/img/ecommerce/6/6-0-0-1.svg) -->
+<!-- <div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/ecommerce/6/6-0-0-1.svg" alt="Embedding、MySQL 和日志三类基础能力如何支撑元数据知识库与问数链路"></div> -->
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/ecommerce/6/6-0-0-1.svg" alt="Embedding、MySQL 和日志三类基础能力如何支撑元数据知识库与问数链路"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/ecommerce/6/6-0-0-1.svg" alt="Embedding、MySQL 和日志三类基础能力如何支撑元数据知识库与问数链路"></div>
 只有这三部分都接起来，后面的元知识构建、混合召回、SQL 生成与执行，才会真正形成闭环。
 
 ---

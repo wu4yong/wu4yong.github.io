@@ -56,8 +56,8 @@ DeepAgents 后端存储：https://docs.langchain.com/oss/python/deepagents/backe
 
 ### 1.3 Backend 在 DeepAgents 中的定位
 
-<!-- ![DeepAgents Backend 体系：文件系统工具通过 Backend 路由到 State、Filesystem、Store 或 Composite 等不同存储后端](/assets/img/deepSearch/6/6-1-2-1.png) -->
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/deepSearch/6/6-1-2-1.png" alt="DeepAgents Backend 体系：文件系统工具通过 Backend 路由到 State、Filesystem、Store 或 Composite 等不同存储后端"></div>
+<!-- <div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/deepSearch/6/6-1-2-1.png" alt="DeepAgents Backend 体系：文件系统工具通过 Backend 路由到 State、Filesystem、Store 或 Composite 等不同存储后端"></div> -->
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/deepSearch/6/6-1-2-1.png" alt="DeepAgents Backend 体系：文件系统工具通过 Backend 路由到 State、Filesystem、Store 或 Composite 等不同存储后端"></div>
 
 gent 仍然通过文件系统工具读写文件，但文件不一定真的落在同一个地方。Backend 位于“文件工具”和“真实存储介质”之间，负责把虚拟文件路径映射到 State、本地磁盘、Store 或组合后端。
 

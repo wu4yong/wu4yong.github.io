@@ -47,7 +47,7 @@ tags:
 
 写入向量数据库
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/springai/ch11_1730894384826-1fc20e94-3ba1-4514-b20f-bb04a24dc3e1_8d06c771f0.webp" alt="ch11_1730894384826-1fc20e94-3ba1-4514-b20f-bb04a24dc3e1_8d06c771f0.webp"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/springai/ch11_1730894384826-1fc20e94-3ba1-4514-b20f-bb04a24dc3e1_8d06c771f0.webp" alt="ch11_1730894384826-1fc20e94-3ba1-4514-b20f-bb04a24dc3e1_8d06c771f0.webp"></div>
 
 ```java
 @Bean

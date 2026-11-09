@@ -30,11 +30,11 @@ tags:
     }
 ```
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/springai/ch06_1748870080223-31727dfd-e598-4a56-8d4a-de362b0d82e8_dd9b3235ce.png" alt="ch06_1748870080223-31727dfd-e598-4a56-8d4a-de362b0d82e8_dd9b3235ce.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/springai/ch06_1748870080223-31727dfd-e598-4a56-8d4a-de362b0d82e8_dd9b3235ce.png" alt="ch06_1748870080223-31727dfd-e598-4a56-8d4a-de362b0d82e8_dd9b3235ce.png"></div>
 
 那我们平常跟一些大模型聊天是怎么记住我们对话的呢？实际上，每次对话都需要将之前的对话消息内置发送给大模型，这种方式称为多轮对话。
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/springai/ch06_1748870240621-6c24ff74-035a-426e-bd0f-a5e60e5c15f4_2bd890a5af.png" alt="ch06_1748870240621-6c24ff74-035a-426e-bd0f-a5e60e5c15f4_2bd890a5af.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/springai/ch06_1748870240621-6c24ff74-035a-426e-bd0f-a5e60e5c15f4_2bd890a5af.png" alt="ch06_1748870240621-6c24ff74-035a-426e-bd0f-a5e60e5c15f4_2bd890a5af.png"></div>
 
 SpringAi提供了一个`ChatMemory`的组件用于存储聊天记录，允许您使用 LLM 跨多个交互存储和检索信息。并且可以为不同用户的多个交互之间维护上下文或状态。
 可以在每次对话的时候把当前聊天信息和模型的响应存储到ChatMemory， 然后下一次对话把聊天记录取出来再发给大模型。  
@@ -127,7 +127,7 @@ public class ChatMemoryTest {
 你要知道， 我们把聊天记录发给大模型， 都是算token计数的。
 大模型的token是有上限了，  如果你发送过多聊天记录，可能就会导致token过长。
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/springai/ch06_1748871034319-bcb8f5e9-b1bb-431e-8776-f54d93d6ff85_45c2fb393a.png" alt="ch06_1748871034319-bcb8f5e9-b1bb-431e-8776-f54d93d6ff85_45c2fb393a.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/springai/ch06_1748871034319-bcb8f5e9-b1bb-431e-8776-f54d93d6ff85_45c2fb393a.png" alt="ch06_1748871034319-bcb8f5e9-b1bb-431e-8776-f54d93d6ff85_45c2fb393a.png"></div>
 
 并且更多的token也意味更多的费用， 更久的解析时间.  所以不建议太长
 （DEFAULT_MAX_MESSAGES默认20即10次对话）
@@ -179,7 +179,7 @@ public class ChatMemoryTest {
 
 会发现， 不同的CONVERSATION_ID，会有不同的记忆
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/springai/ch06_1748871907406-385208ea-02bf-40d8-ab33-48ee834f59a4_d603e8c94e.png" alt="ch06_1748871907406-385208ea-02bf-40d8-ab33-48ee834f59a4_d603e8c94e.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/springai/ch06_1748871907406-385208ea-02bf-40d8-ab33-48ee834f59a4_d603e8c94e.png" alt="ch06_1748871907406-385208ea-02bf-40d8-ab33-48ee834f59a4_d603e8c94e.png"></div>
 
 ### 原理源码$
 
@@ -188,7 +188,7 @@ public class ChatMemoryTest {
 具体存储实现
 `ChatMemoryRepository`
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/springai/ch06_1748936717843-1c2d02a4-1b8a-4e14-89c8-e6809b240893_d17c1e4d47.png" alt="ch06_1748936717843-1c2d02a4-1b8a-4e14-89c8-e6809b240893_d17c1e4d47.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/springai/ch06_1748936717843-1c2d02a4-1b8a-4e14-89c8-e6809b240893_d17c1e4d47.png" alt="ch06_1748936717843-1c2d02a4-1b8a-4e14-89c8-e6809b240893_d17c1e4d47.png"></div>
 
 ### 数据库存储对话记忆
 
@@ -314,7 +314,7 @@ public class ChatMemoryTest {
 
 可以看到由于我设置`.maxMessages(1)`数据库只存一条
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/springai/ch06_1748937116139-c2400662-b5af-4f98-8c37-cce47407912a_8c5b279922.png" alt="ch06_1748937116139-c2400662-b5af-4f98-8c37-cce47407912a_8c5b279922.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/springai/ch06_1748937116139-c2400662-b5af-4f98-8c37-cce47407912a_8c5b279922.png" alt="ch06_1748937116139-c2400662-b5af-4f98-8c37-cce47407912a_8c5b279922.png"></div>
 
 ### Redis存储
 

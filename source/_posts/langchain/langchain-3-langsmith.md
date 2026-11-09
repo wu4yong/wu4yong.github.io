@@ -23,7 +23,7 @@ LangSmith 是 LangChain 生态系统中专门用于 LLM（大语言模型）应�
 
 主界面：
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/langchain/3/01-langsmith-main.png" alt="01-langsmith-main.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/langchain/3/01-langsmith-main.png" alt="01-langsmith-main.png"></div>
 
 ### 1.2 具体功能
 
@@ -98,41 +98,41 @@ LangSmith 是 LangChain 生态系统中专门用于 LLM（大语言模型）应�
 
 访问 LangSmith 官网：<https://smith.langchain.com/>
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/langchain/3/02-langsmith-signup.png" alt="02-langsmith-signup.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/langchain/3/02-langsmith-signup.png" alt="02-langsmith-signup.png"></div>
 
 **步骤2：自由选择注册或登录方式**
 
 **步骤3：登录成功**
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/langchain/3/03-langsmith-login-success.png" alt="03-langsmith-login-success.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/langchain/3/03-langsmith-login-success.png" alt="03-langsmith-login-success.png"></div>
 
 ### 2.2 获取API_KEY
 
 **步骤1：打开设置**
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/langchain/3/04-open-settings.png" alt="04-open-settings.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/langchain/3/04-open-settings.png" alt="04-open-settings.png"></div>
 
 **步骤2：创建API_KEY**
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/langchain/3/05-api-keys-page.png" alt="05-api-keys-page.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/langchain/3/05-api-keys-page.png" alt="05-api-keys-page.png"></div>
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/langchain/3/06-create-api-key.png" alt="06-create-api-key.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/langchain/3/06-create-api-key.png" alt="06-create-api-key.png"></div>
 
 **步骤3：保存KEY**
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/langchain/3/07-copy-api-key.png" alt="07-copy-api-key.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/langchain/3/07-copy-api-key.png" alt="07-copy-api-key.png"></div>
 
 > **注意：**点击 `copy` 将 API_KEY 保存到剪贴板并关闭弹窗，API_KEY 只在上述窗口出现一次，关闭弹窗后回到设置页面，此后就无法在官网查看 API_KEY 的内容了，请妥善保存。
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/langchain/3/08-api-key-saved.png" alt="08-api-key-saved.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/langchain/3/08-api-key-saved.png" alt="08-api-key-saved.png"></div>
 
 **步骤4（可选）：按需删除**
 
 如果需要删除 KEY，点击右侧图标即可。
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/langchain/3/09-delete-api-key.png" alt="09-delete-api-key.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/langchain/3/09-delete-api-key.png" alt="09-delete-api-key.png"></div>
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/langchain/3/10-confirm-delete-api-key.png" alt="10-confirm-delete-api-key.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/langchain/3/10-confirm-delete-api-key.png" alt="10-confirm-delete-api-key.png"></div>
 
 ### 2.3 新增环境变量
 
@@ -256,7 +256,7 @@ rprint(response)
 
 **步骤2：打开监控界面**
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/langchain/3/11-tracing-project.png" alt="11-tracing-project.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/langchain/3/11-tracing-project.png" alt="11-tracing-project.png"></div>
 
 此时在 LangSmith 官方 WebUI 的 Tracing 界面下，可以看到按照 `LANGSMITH_PROJECT` 命名的项目。
 
@@ -264,20 +264,20 @@ rprint(response)
 
 点击条目任意位置可以进入详情页面。
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/langchain/3/12-run-details.png" alt="12-run-details.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/langchain/3/12-run-details.png" alt="12-run-details.png"></div>
 
 此处列出了详细的运行指标，点击某次运行记录，可以查看更详细的信息，自行探索。
 
 **步骤4：查看运行报表**
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/langchain/3/13-monitoring-project.png" alt="13-monitoring-project.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/langchain/3/13-monitoring-project.png" alt="13-monitoring-project.png"></div>
 
 此处提供了大量指标的报表。
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/langchain/3/14-monitoring-traces.png" alt="14-monitoring-traces.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/langchain/3/14-monitoring-traces.png" alt="14-monitoring-traces.png"></div>
 
 点击上述标签或下滑页面可以切换指标。
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/langchain/3/15-monitoring-llm-calls.png" alt="15-monitoring-llm-calls.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/langchain/3/15-monitoring-llm-calls.png" alt="15-monitoring-llm-calls.png"></div>
 
 自行探索。

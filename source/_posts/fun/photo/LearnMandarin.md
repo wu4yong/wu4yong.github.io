@@ -11,23 +11,23 @@ tags:
 </div>
 
 <div align="center">
-  <img src="/assets/img/nuli/1.png" style="width:90%;max-width:1000px;object-fit:contain;" alt="努力的理由">
+  <img src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/nuli/1.png" style="width:90%;max-width:1000px;object-fit:contain;" alt="努力的理由">
 </div>
 <div align="center">
-  <img src="/assets/img/nuli/2.png" style="width:90%;max-width:1000px;object-fit:contain;" alt="努力的理由">
+  <img src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/nuli/2.png" style="width:90%;max-width:1000px;object-fit:contain;" alt="努力的理由">
 </div>
 <div align="center">
-  <img src="/assets/img/nuli/3.png" style="width:90%;max-width:1000px;object-fit:contain;" alt="努力的理由">
+  <img src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/nuli/3.png" style="width:90%;max-width:1000px;object-fit:contain;" alt="努力的理由">
 </div>
 <div align="center">
-  <img src="/assets/img/nuli/4.png" style="width:90%;max-width:1000px;object-fit:contain;" alt="努力的理由">
+  <img src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/nuli/4.png" style="width:90%;max-width:1000px;object-fit:contain;" alt="努力的理由">
 </div>
 <div align="center">
-  <img src="/assets/img/nuli/5.png" style="width:90%;max-width:1000px;object-fit:contain;" alt="努力的理由">
+  <img src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/nuli/5.png" style="width:90%;max-width:1000px;object-fit:contain;" alt="努力的理由">
 </div>
 <div align="center">
-  <img src="/assets/img/nuli/6.png" style="width:90%;max-width:1000px;object-fit:contain;" alt="努力的理由">
+  <img src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/nuli/6.png" style="width:90%;max-width:1000px;object-fit:contain;" alt="努力的理由">
 </div>
 <div align="center">
-  <img src="/assets/img/nuli/7.png" style="width:90%;max-width:1000px;object-fit:contain;" alt="努力的理由">
+  <img src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/nuli/7.png" style="width:90%;max-width:1000px;object-fit:contain;" alt="努力的理由">
 </div>

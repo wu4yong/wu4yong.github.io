@@ -18,13 +18,13 @@ Redis、MySQL等用户应用无法直接执行访问系统硬件，需要通过�
 
 计算机硬件包括CPU、内存、网卡等，内核通过寻址空间可以操作硬件，但是内核需要不同设备的**驱动**，有了这些驱动后就可以对计算机硬件进行内存管理，文件系统管理，进程管理等等。
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/redis/7/image192.png" alt="image192.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/redis/7/image192.png" alt="image192.png"></div>
 
 用户应用想要访问计算机硬件，计算机就必须对外暴露的一些**接口**才能访问到，从而间接实现对内核的操控，但是内核本身也是一个应用，也需要一些内存、CPU等设备资源，用户应用也在消耗这些资源。为了避免了用户程序随意操作系统资源，错误或恶意执行危险指令（如清空内存、修改时钟），就需要把用户和内核隔离开。所以进程的寻址空间被划分成**内核空间**和**用户空间**，也就是内核态和用户态。
 
 用户空间和内核空间都无法直接访问物理内存，而是通过分配**虚拟内存**映射到物理内存，通过虚拟内存可以将内核空间与用户空间隔离开来，避免用户程序错误地或恶意地访问内核空间。在32位Linux操作系统中，虚拟内存空间大小为 4GB，高位的1G空间作为内核空间，低位的3G空间作为用户空间。
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/redis/7/image193.png" alt="image193.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/redis/7/image193.png" alt="image193.png"></div>
 
 在linux中权限分成两个等级，0和3，用户空间只能执行受限的命令（Ring3），不能直接调用系统资源，必须通过内核提供的接口来访问。内核空间可以执行特权命令（Ring0），调用一切系统资源。一般情况下，用户操作运行在用户空间，内核运行的数据在内核空间，而有些情况下，应用程序需要调用一些特权资源，去调用一些内核空间的操作，此时需要在用户态和内核态之间进行切换。
 
@@ -38,11 +38,11 @@ Linux系统为了提高IO效率，会在用户空间和内核空间都加入缓�
 
 用户读数据时，向内核态申请读取内核的数据，而内核数据要等待驱动程序从硬件上读取数据，当从磁盘上加载到数据之后，内核会将数据写入到内核的缓冲区中，然后再将数据拷贝到用户态的缓冲区中，返回给应用程序：
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/redis/7/image194.png" alt="image194.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/redis/7/image194.png" alt="image194.png"></div>
 
 该过程主要的时间花费在用户等待数据就绪以及用户态和内核态数据缓冲区之间的数据拷贝。为了提高IO效率，Linux的五种不同的IO模型就是在等待数据就绪和读取数据这两个阶段做了不同的处理：
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/redis/7/image195.png" alt="image195.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/redis/7/image195.png" alt="image195.png"></div>
 
 五种IO模型：
 
@@ -60,7 +60,7 @@ IO多路复用（IO Multiplexing）
 
 阻塞IO分为两个阶段，数据从硬件读取到内核缓冲区 和 内核拷贝缓冲区数据到用户缓冲区，阻塞IO的这两个阶段都是阻塞的：
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/redis/7/image196.png" alt="image196.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/redis/7/image196.png" alt="image196.png"></div>
 
 当应用程序调用IO函数（如read或write）时，如果数据没有准备好，用户进程会被阻塞，直到数据准备好并被复制到应用程序的缓冲区中。在阻塞期间，进程无法执行其他任务，阻塞 IO 的阻塞期间不会占用 CPU 资源。
 
@@ -68,7 +68,7 @@ IO多路复用（IO Multiplexing）
 
 非阻塞IO的recvfrom操作会立即返回结果而不是阻塞用户进程，如果数据没有准备好，函数会立即返回一个错误码（如EWOULDBLOCK），表示当前没有数据可读或可写。用户程序需要不断轮询内核，检查数据是否准备好，这会导致CPU资源的浪费：
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/redis/7/image197.png" alt="image197.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/redis/7/image197.png" alt="image197.png"></div>
 
 非阻塞IO模型中，用户进程第一个阶段是非阻塞，第二个阶段是阻塞状态。虽然是非阻塞，但性能并没有得到提高。而且忙等机制会导致CPU空转，CPU使用率暴增。
 
@@ -86,7 +86,7 @@ IO多路复用（IO Multiplexing）
 
 **IO多路复用**是利用单个线程同时监听多个FD，并在某个FD可读、可写时得到通知，从而避免无效的等待，充分利用CPU资源
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/redis/7/image198.png" alt="image198.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/redis/7/image198.png" alt="image198.png"></div>
 
 Linux系统监听FD的方式、通知的方式有多种实现，常见的有**select**、**poll**和**epoll**，它们是Linux提供的用于监听多个文件描述符状态的系统调用，这些系统调用允许程序将一组文件描述符注册到监听队列中，当其中任何一个文件描述符的状态发生变化时（如可读、可写或发生错误），系统调用会返回并通知应用程序。
 
@@ -94,7 +94,7 @@ Linux系统监听FD的方式、通知的方式有多种实现，常见的有**se
 
 select是Linux中最早的I/O多路复用实现方案，源码如下：
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/redis/7/image199.png" alt="image199.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/redis/7/image199.png" alt="image199.png"></div>
 
 数组fds_bits每个元素占用4 * 8 = 32个bit，数组长度为32，所以数组可以表示32 * 32 = 1024bit，其中每个比特位监听一个FD文件，将来要监听哪个FD，就把对应位置（自低位从1开始）比特为置为1，如1,2,5要监听对应的就是...00010011。
 
@@ -110,11 +110,11 @@ select方式进行IO多路复用的流程如下：
 
 若当前没有就绪的fd，休眠等待数据就绪被唤醒或超时
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/redis/7/image200.png" alt="image200.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/redis/7/image200.png" alt="image200.png"></div>
 
 当有fd就绪时，内核遍历rfds找到被监听的fd，将其与已就绪的fd比较，相同则保留，其余的fd置为0，之后内核将自己的rfds拷贝回用户空间的rfds，此时rfds中保存的是已就绪的fd，并且select函数返回已就绪fd的数量
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/redis/7/image201.png" alt="image201.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/redis/7/image201.png" alt="image201.png"></div>
 
 最后用户进程遍历fd_set，找到就绪的fd，读取其中的数据
 
@@ -132,7 +132,7 @@ select无法得知具体是哪个fd就绪，需要遍历整个fd_set fd_set
 
 poll模式对select模式做了简单改进，但性能提升不明显，源码如下：
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/redis/7/image202.png" alt="image202.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/redis/7/image202.png" alt="image202.png"></div>
 
 poll方式实现IO多路复用的流程如下：
 
@@ -180,15 +180,15 @@ epoll方式实现IO多路复用的流程如下：
 
 epoll_create：在内核创建eventpoll结构体，返回对应的句柄epfd，即该eventpoll的唯一标识。每一个句柄epfd对应一个eventpoll
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/redis/7/image203.png" alt="image203.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/redis/7/image203.png" alt="image203.png"></div>
 
 epoll_ctl：将一个FD添加到eventpoll的红黑树中并对其进行监听，但不会等待FD就绪，而是对该FD设置事件发生时的回调函数ep_poll_callback，当要监听的事件发生时，自动调用该回调函数，把对应的FD加入到就绪链表list_head中
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/redis/7/image204.png" alt="image204.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/redis/7/image204.png" alt="image204.png"></div>
 
 epoll_wait：将FD添加到红黑树中后，调用epoll_wait 检查就绪链表是否为空，不为空则返回就绪的FD的数量，同时将就绪链表中的FD拷贝到用户空间的events数组中（只拷贝就绪的FD），如果epoll_wait为空就等待FD就绪
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/redis/7/image205.png" alt="image205.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/redis/7/image205.png" alt="image205.png"></div>
 
 小总结：
 
@@ -230,7 +230,7 @@ epoll模式中如何解决这些问题的？
 
 在epoll模式中，将就绪链表list_head中的FD拷贝到用户空间events数组之前，会先将就绪的FD从list_head移除，假设第一次没有拷贝完FD的数据，若采用LT模式拷贝完会将这些FD重新添加回list_head，若采用ET模式则不会添加回list_head。
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/redis/7/image206.png" alt="image206.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/redis/7/image206.png" alt="image206.png"></div>
 
 例如：
 
@@ -256,7 +256,7 @@ ET模式适用于需要高效处理大量并发事件，对延迟敏感的应用
 
 ### 基于epoll的服务器端流程
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/redis/7/image207.png" alt="image207.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/redis/7/image207.png" alt="image207.png"></div>
 
 服务器启动时，在服务端调用epoll_create创建epoll实例，即在内核中创建红黑树（管理监听FD）和就绪链表（存储就绪FD）
 
@@ -286,7 +286,7 @@ ssfd专门用于监听客户端的连接请求，有客户端连接服务器时�
 
 信号驱动IO允许用户进程通过注册一个 信号处理函数 来异步接收数据可用的通知。当设备数据可用时，内核会向用户进程发送一个SIGIO信号，触发用户进程预先注册的信号处理函数，进而执行相应的IO操作，期间用户应用可以执行其它业务，无需阻塞等待：
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/redis/7/image208.png" alt="image208.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/redis/7/image208.png" alt="image208.png"></div>
 
 与其他IO模型的比较：
 
@@ -304,7 +304,7 @@ ssfd专门用于监听客户端的连接请求，有客户端连接服务器时�
 
 异步IO的整个过程都是非阻塞的，用户进程调用完异步API后就可以去做其它事情，内核等待数据就绪并拷贝到用户空间后才会递交信号，通知用户进程：
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/redis/7/image209.png" alt="image209.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/redis/7/image209.png" alt="image209.png"></div>
 
 ### 优点
 
@@ -328,7 +328,7 @@ ssfd专门用于监听客户端的连接请求，有客户端连接服务器时�
 
 在IO操作中，同步和异步 与 阻塞和非阻塞没有直接关系。IO操作是同步还是异步，关键看数据在内核空间与用户空间的拷贝过程（数据读写的IO操作），也就是阶段二是同步还是异步：
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/redis/7/image210.png" alt="image210.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/redis/7/image210.png" alt="image210.png"></div>
 
 ## 3.Redis网络模型
 
@@ -356,15 +356,15 @@ Redis v6.0：在核心网络模型中引入多线程，进一步提高对于多�
 
 Redis通过IO多路复用来提高网络性能，支持各种不同的多路复用实现，Redis将这些实现进行封装，提供了统一的高性能事件库API库 AE：
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/redis/7/image211.png" alt="image211.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/redis/7/image211.png" alt="image211.png"></div>
 
 在ae.c中根据当前系统支持的多路复用方式，引入对应响应的API库，之后调用API时就会调用对应文件中的函数：
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/redis/7/image212.png" alt="image212.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/redis/7/image212.png" alt="image212.png"></div>
 
 在Linux系统下，Redis底层使用epoll实现多路复用，分析Redis单线程网络模型的源码：
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/redis/7/image213.png" alt="image213.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/redis/7/image213.png" alt="image213.png"></div>
 
 Redis单线程网络模型的代码执行流程如下：
 
@@ -392,7 +392,7 @@ redis将各种命令都封装成xxxCommand函数，并建立了命令和对应�
 
 最后开始监听FD，执行aeApiPoll（类似以epoll_wait），当有FD就绪时，返回就绪FD的数量，调用对应的处理器处理就绪的FD
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/redis/7/image214.png" alt="image214.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/redis/7/image214.png" alt="image214.png"></div>
 
 整体来讲，Redis使用了IO多路复用技术，允许单个线程同时监听多个文件描述符（包括服务端的ServerSocket和客户端的socket），并在有数据可读或可写时将任务派发给不同的处理器进行处理。具体来说：
 
@@ -410,7 +410,7 @@ redis将各种命令都封装成xxxCommand函数，并建立了命令和对应�
 
 所以Redis 6.0引入了多线程以提高IO读写效率，因此在解析客户端命令、写响应结果时采用了多线程。核心的命令执行、IO多路复用模块依然是由主线程执行：
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/redis/7/image215.png" alt="image215.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/redis/7/image215.png" alt="image215.png"></div>
 
 ## 4.Redis通信协议
 
@@ -446,7 +446,7 @@ Redis 6.0版本中，从RESP2升级到了RESP3协议，增加了更多数据类�
 
 多行字符串：首字节是$，表示二进制安全的字符串，记录时保存**字符串长度**和**字符串本身**，最大支持512MB：
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/redis/7/image216.png" alt="image216.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/redis/7/image216.png" alt="image216.png"></div>
 
 如果大小为0，则代表空字符串："$0rnrn"
 
@@ -454,7 +454,7 @@ Redis 6.0版本中，从RESP2升级到了RESP3协议，增加了更多数据类�
 
 数组：首字节是*，后面跟上数组元素个数，再跟上元素，元素数据类型不限：
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/redis/7/image217.png" alt="image217.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/redis/7/image217.png" alt="image217.png"></div>
 
 ### 4.2 自定义Redis客户端
 
@@ -580,17 +580,17 @@ Redis通过expire命令可以为key设置一个有效期TTL，当key过期后，
 
 在Redis中最多可以有16个数据库，每个数据库都被保存为一个redisDb实例。Redis所有数据都是以key-value的形式存在，在redisDb实例中，dict用于存放所有的key和value，expires用于存放所有key的有效期TTL（不包含value）：
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/redis/7/image218.png" alt="image218.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/redis/7/image218.png" alt="image218.png"></div>
 
 redisDb实例的结构示意图：
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/redis/7/image219.png" alt="image219.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/redis/7/image219.png" alt="image219.png"></div>
 
 当key的TTL到期后，key不是会被立即删除，删除情况有惰性删除和周期删除两种：
 
 **惰性删除**：在访问一个key的时候，检查该key的存活时间，如果已经过期才执行删除
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/redis/7/image220.png" alt="image220.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/redis/7/image220.png" alt="image220.png"></div>
 
 但是如果很多key过期后很长时间没有被访问，只采用惰性删除时，这些key就无法被释放，这就需要周期删除。
 
@@ -614,7 +614,7 @@ databasesCron使用SLOW模式循环不断地尝试清理过期的key
 
 有FD就绪处理完IO事件后，判断是否到可以调用serverCron使用SLOW模式清理（就是判断距离上次执行serverCron是否过去了100ms），如果可以清理就调用serverCron清理，否则下一次循环
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/redis/7/image221.png" alt="image221.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/redis/7/image221.png" alt="image221.png"></div>
 
 SLOW模式规则：
 
@@ -646,7 +646,7 @@ FAST模式规则（过期key比例小于10%不执行）：
 
 Redis会在处理客户端命令的方法 processCommand() 中尝试做内存淘汰：
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/redis/7/image222.png" alt="image222.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/redis/7/image222.png" alt="image222.png"></div>
 
 Redis支持8种不同策略来选择要删除的key：
 
@@ -676,7 +676,7 @@ Redis的数据都会被封装为一个redisObject，其中的unsigned lru:LRU_BI
 
 若采用LFU淘汰策略，该字段会用高16位 以分钟为单位记录最近一次访问时间，低8位记录逻辑访问次数
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/redis/7/image223.png" alt="image223.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/redis/7/image223.png" alt="image223.png"></div>
 
 Redis会通过unsigned lru:LRU_BITS统计一个key最近一次的访问时间或最近一次访问的频率，其中LFU策略的逻辑访问次数并不是key的真实访问次数，而是通过计算得到：
 
@@ -692,6 +692,6 @@ Redis会通过unsigned lru:LRU_BITS统计一个key最近一次的访问时间或
 
 Redis在执行每一条客户端命令前执行 processCommand() 进行内存淘汰，该函数根据设置的淘汰策略淘汰一部分key，执行流程如下：
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/redis/7/image224.png" alt="image224.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/redis/7/image224.png" alt="image224.png"></div>
 
 执行 LRU|LFU|TTL 淘汰策略本质是比较key的过期时间进行淘汰，但数据库通常有成千上万的key，不可能遍历所有key进行比较，所以就创建一个淘汰池 evication_pool 从数据库（遍历所有DB）中随机找一部分key进行比较，池子的规则是按照某一种规则进行升序排列，排列后值越大的的越先淘汰，具体的算法根据淘汰策略不同进行调整使之可以适用越大越先淘汰的逻辑，池子中的数据删除时倒序值越大越应该删除。

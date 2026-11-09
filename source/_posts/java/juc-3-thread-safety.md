@@ -22,12 +22,12 @@ tags:
 
 ● 老王（操作系统）有一个功能强大的算盘（CPU），现在想把它租出去，赚一点外快
 <div class="img-wrap-left">
-  <img class="left-img" src="/assets/img/java/concurrent/concurrent31.png" alt="示意图">
+  <img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/java/concurrent/concurrent31.png" alt="示意图">
 </div>
 ● 小南、小女（线程）来使用这个算盘来进行一些计算，并按照时间给老王支付费用 
 ● 但小南不能一天24小时使用算盘，他经常要小憩一会（sleep），又或是去吃饭上厕所（阻塞 io 操作），有时还需要一根烟，没烟时思路全无（wait）这些情况统称为（阻塞）
 <div class="img-wrap-left">
-  <img class="left-img" src="/assets/img/java/concurrent/concurrent32.png" alt="示意图">
+  <img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/java/concurrent/concurrent32.png" alt="示意图">
 </div>
 ● 在这些时候，算盘没利用起来（不能收钱了），老王觉得有点不划算 
 ● 另外，小女也想用用算盘，如果总是小南占着算盘，让小女觉得不公平 
@@ -36,7 +36,7 @@ tags:
 ● 最近执行的计算比较复杂，需要存储一些中间结果，而学生们的脑容量（工作内存）不够，所以老王申请了一个笔记本（主存），把一些中间结果先记在本上 
 ● 计算流程是这样的
 <div class="img-wrap-left">
-  <img class="left-img" src="/assets/img/java/concurrent/concurrent33.png" alt="示意图">
+  <img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/java/concurrent/concurrent33.png" alt="示意图">
 </div>
 ● 但是由于分时系统，有一天还是发生了事故 
 ● 小南刚读取了初始值 0 做了个 +1 运算，还没来得及写回结果 
@@ -44,7 +44,7 @@ tags:
 ● 老王说 [ 小女，该你了 ]，小女看到了笔记本上还写着 0 做了一个 -1 运算，将结果 -1 写入笔记本 
 ● 这时小女的时间也用完了，老王又叫醒了小南：[小南，把你上次的题目算完吧]，小南将他脑海中的结果 1 写入了笔记本 
 <div class="img-wrap-left">
-  <img class="left-img" src="/assets/img/java/concurrent/concurrent34.png" alt="示意图">
+  <img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/java/concurrent/concurrent34.png" alt="示意图">
 </div>
 ● 小南和小女都觉得自己没做错，但笔记本里的结果是 1 而不是 0
 
@@ -108,23 +108,23 @@ putstatic i    // 写回主存
 
 而 Java 的内存模型如下，完成静态变量的自增，自减需要在主存和工作内存中进行数据交换：
 <div class="img-wrap-left">
-  <img class="left-img" src="/assets/img/java/concurrent/concurrent35.png" alt="并发示意图">
+  <img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/java/concurrent/concurrent35.png" alt="并发示意图">
 </div>
 
 如果是单线程以上 8 行代码是顺序执行（不会交错）没有问题：
 <div class="img-wrap-left">
-  <img class="left-img" src="/assets/img/java/concurrent/concurrent36.png" alt="并发示意图">
+  <img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/java/concurrent/concurrent36.png" alt="并发示意图">
 </div>
 
 但多线程下这 8 行代码可能交错运行： 
 出现负数的情况：
 <div class="img-wrap-left">
-  <img class="left-img" src="/assets/img/java/concurrent/concurrent37.png" alt="并发示意图">
+  <img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/java/concurrent/concurrent37.png" alt="并发示意图">
 </div>
 
 出现正数的情况：
 <div class="img-wrap-left">
-  <img class="left-img" src="/assets/img/java/concurrent/concurrent38.png" alt="并发示意图">
+  <img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/java/concurrent/concurrent38.png" alt="并发示意图">
 </div>
 
 ## 3.1.4 核心概念定义
@@ -210,7 +210,7 @@ public static void main(String[] args) throws InterruptedException {
 </pre>
 </div>
 <div class="img-wrap-left">
-  <img class="left-img" src="/assets/img/java/concurrent/concurrent39.png" alt="示意图">
+  <img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/java/concurrent/concurrent39.png" alt="示意图">
 </div>
 你可以做这样的类比： 
 ● synchronized(对象) 中的对象，可以想象为一个房间（room），有唯一入口（门）房间只能一次进入一人进行计算，线程 t1，t2 想象成两个人 
@@ -220,7 +220,7 @@ public static void main(String[] args) throws InterruptedException {
 ● 当 t1 执行完 synchronized{} 块内的代码，这时候才会从 obj 房间出来并解开门上的锁，唤醒 t2 线程把钥匙给他。t2 线程这时才可以进入 obj 房间，锁住了门拿上钥匙，执行它的 count-- 代码.
 用图表示
 <div class="img-wrap-left">
-  <img class="left-img" src="/assets/img/java/concurrent/concurrent40.png" alt="示意图">
+  <img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/java/concurrent/concurrent40.png" alt="示意图">
 </div>
 
 思考 
@@ -600,7 +600,7 @@ public static void test1();
 </div>
 如图
 <div class="img-wrap-left">
-  <img class="left-img" src="/assets/img/java/concurrent/concurrent41.png" alt="并发示意图">
+  <img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/java/concurrent/concurrent41.png" alt="并发示意图">
 </div>
 
 局部变量的引用稍有不同 
@@ -649,7 +649,7 @@ public static void main(String[] args) {
 ● 无论哪个线程中的 method2 引用的都是同一个对象中的 list 成员变量 
 ● method3 与 method2 分析相同
 <div class="img-wrap-left">
-  <img class="left-img" src="/assets/img/java/concurrent/concurrent42.png" alt="并发示意图">
+  <img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/java/concurrent/concurrent42.png" alt="并发示意图">
 </div>
 
 将 list 修改为局部变量
@@ -681,7 +681,7 @@ class ThreadSafe {
 ● method3 的参数分析与 method2 相同
 
 <div class="img-wrap-left">
-  <img class="left-img" src="/assets/img/java/concurrent/concurrent43.png" alt="并发示意图">
+  <img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/java/concurrent/concurrent43.png" alt="并发示意图">
 </div>
 
 方法访问修饰符带来的思考，如果把 method2 和 method3 的方法修改为 public 会不会出现线程安全问题？ 
@@ -772,7 +772,7 @@ if( table.get("key") == null) {
 </div>
 
 <div class="img-wrap-left">
-  <img class="left-img" src="/assets/img/java/concurrent/concurrent44.png" alt="并发示意图">
+  <img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/java/concurrent/concurrent44.png" alt="并发示意图">
 </div>
 
 

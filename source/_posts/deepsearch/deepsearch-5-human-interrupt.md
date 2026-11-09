@@ -40,8 +40,8 @@ DeepAgents 人机协作：https://docs.langchain.com/oss/python/deepagents/human
 
 所以 DeepAgents 提供了人机协作能力，也就是常说的 `HITL`：Human In The Loop。
 
-<!-- ![DeepAgents 人机协作流程：Agent 遇到需要中断的动作时暂停，人工可以 approve、edit 或 reject，再决定是否继续执行](/assets/img/deepSearch/5/5-1-2-1.png) -->
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/deepSearch/5/5-1-2-1.png" alt="DeepAgents 人机协作流程：Agent 遇到需要中断的动作时暂停，人工可以 approve、edit 或 reject，再决定是否继续执行"></div>
+<!-- <div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/deepSearch/5/5-1-2-1.png" alt="DeepAgents 人机协作流程：Agent 遇到需要中断的动作时暂停，人工可以 approve、edit 或 reject，再决定是否继续执行"></div> -->
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/deepSearch/5/5-1-2-1.png" alt="DeepAgents 人机协作流程：Agent 遇到需要中断的动作时暂停，人工可以 approve、edit 或 reject，再决定是否继续执行"></div>
 
 Agent 先正常规划任务；一旦遇到被 `interrupt_on` 标记的高风险工具，就暂停在执行前；人工审核后，可以选择放行、修改参数后放行，或者拒绝执行；最后再从暂停的位置继续往下跑。
 

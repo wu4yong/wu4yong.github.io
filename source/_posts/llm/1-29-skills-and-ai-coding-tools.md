@@ -56,8 +56,8 @@ Skills 的价值，就是把这些反复使用的经验整理成可复用、可�
 
 ### 1.2 一张图理解 Skill 化
 
-<!-- ![从长 Prompt 到 Skill 化：把反复出现的规则、流程、模板和脚本从主提示词中拆出来，整理成可复用的技能包](/assets/img/llm/27/27-1-2-1.svg) -->
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/27/27-1-2-1.svg" alt="从长 Prompt 到 Skill 化：把反复出现的规则、流程、模板和脚本从主提示词中拆出来，整理成可复用的技能包"></div>
+<!-- <div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/llm/27/27-1-2-1.svg" alt="从长 Prompt 到 Skill 化：把反复出现的规则、流程、模板和脚本从主提示词中拆出来，整理成可复用的技能包"></div> -->
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/llm/27/27-1-2-1.svg" alt="从长 Prompt 到 Skill 化：把反复出现的规则、流程、模板和脚本从主提示词中拆出来，整理成可复用的技能包"></div>
 
 先记住一个简化公式：`Skill = 可复用提示词 + 专业流程 + 可选脚本 + 可选资源`
 
@@ -259,8 +259,8 @@ code-reviewer/
     review-template.md
 ```
 
-<!-- ![Skill 扩展目录结构：code-reviewer 技能包由 SKILL.md、requirements.txt、references、scripts 与 assets 组成，并由 Agent 按需加载](/assets/img/llm/27/27-3-4-1.png) -->
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/27/27-3-4-1.png" alt="Skill 扩展目录结构：code-reviewer 技能包由 SKILL.md、requirements.txt、references、scripts 与 assets 组成，并由 Agent 按需加载"></div>
+<!-- <div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/llm/27/27-3-4-1.png" alt="Skill 扩展目录结构：code-reviewer 技能包由 SKILL.md、requirements.txt、references、scripts 与 assets 组成，并由 Agent 按需加载"></div> -->
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/llm/27/27-3-4-1.png" alt="Skill 扩展目录结构：code-reviewer 技能包由 SKILL.md、requirements.txt、references、scripts 与 assets 组成，并由 Agent 按需加载"></div>
 
 各目录职责如下：
 
@@ -338,8 +338,8 @@ code-reviewer/
 
 ### 4.2 三层加载图解
 
-<!-- ![Skill 渐进式加载三层：先加载 name 和 description，任务匹配后读取 SKILL.md，真正需要时再读取 references、scripts 和 assets](/assets/img/llm/27/27-4-2-1.svg) -->
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/27/27-4-2-1.svg" alt="Skill 渐进式加载三层：先加载 name 和 description，任务匹配后读取 SKILL.md，真正需要时再读取 references、scripts 和 assets"></div>
+<!-- <div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/llm/27/27-4-2-1.svg" alt="Skill 渐进式加载三层：先加载 name 和 description，任务匹配后读取 SKILL.md，真正需要时再读取 references、scripts 和 assets"></div> -->
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/llm/27/27-4-2-1.svg" alt="Skill 渐进式加载三层：先加载 name 和 description，任务匹配后读取 SKILL.md，真正需要时再读取 references、scripts 和 assets"></div>
 
 可以把加载过程理解为三层：
 
@@ -400,8 +400,8 @@ description: 当用户要求审查 Markdown 技术教程的结构、标题层级
 
 ### 5.1 边界总览
 
-<!-- ![Skill 与 Prompt、Rules、Memory、Tool、MCP、Agent 的边界：Prompt 是一次性指令，Rules 是常驻规则，Memory 是历史状态，Tool 执行动作，MCP 统一接入外部能力，Agent 负责决策，Skill 沉淀可复用任务方法](/assets/img/llm/27/27-5-1-1.svg) -->
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/27/27-5-1-1.svg" alt="Skill 与 Prompt、Rules、Memory、Tool、MCP、Agent 的边界：Prompt 是一次性指令，Rules 是常驻规则，Memory 是历史状态，Tool 执行动作，MCP 统一接入外部能力，Agent 负责决策，Skill 沉淀可复用任务方法"></div>
+<!-- <div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/llm/27/27-5-1-1.svg" alt="Skill 与 Prompt、Rules、Memory、Tool、MCP、Agent 的边界：Prompt 是一次性指令，Rules 是常驻规则，Memory 是历史状态，Tool 执行动作，MCP 统一接入外部能力，Agent 负责决策，Skill 沉淀可复用任务方法"></div> -->
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/llm/27/27-5-1-1.svg" alt="Skill 与 Prompt、Rules、Memory、Tool、MCP、Agent 的边界：Prompt 是一次性指令，Rules 是常驻规则，Memory 是历史状态，Tool 执行动作，MCP 统一接入外部能力，Agent 负责决策，Skill 沉淀可复用任务方法"></div>
 
 > **图注：** Skill 位于“提示词工程”和“Agent 工程”之间。它不直接替代 Tool、MCP 或 Agent，而是把任务方法和上下文资源整理成可复用单元。
 

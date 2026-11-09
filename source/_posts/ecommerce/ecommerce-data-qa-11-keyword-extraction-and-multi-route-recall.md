@@ -316,8 +316,8 @@ graph_builder.add_edge("recall_metric", "merge_retrieved_info")
 
 ## 4、实现关键词抽取节点
 
-<!-- ![问数智能体「抽取关键词」步骤：使用 jieba 与 TF-IDF 从用户问题中提炼用于检索的核心词](/assets/img/llm/ecommerce-data-qa/2/2-3-1-2.png) -->
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/ecommerce-data-qa/2/2-3-1-2.png" alt="问数智能体「抽取关键词」步骤：使用 jieba 与 TF-IDF 从用户问题中提炼用于检索的核心词"></div>
+<!-- <div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/llm/ecommerce-data-qa/2/2-3-1-2.png" alt="问数智能体「抽取关键词」步骤：使用 jieba 与 TF-IDF 从用户问题中提炼用于检索的核心词"></div> -->
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/llm/ecommerce-data-qa/2/2-3-1-2.png" alt="问数智能体「抽取关键词」步骤：使用 jieba 与 TF-IDF 从用户问题中提炼用于检索的核心词"></div>
 
 `extract_keywords` 是本章第一个节点。它要做的事情很直接：
 
@@ -607,8 +607,8 @@ result = await chain.ainvoke({"query": query})
 
 ## 6、字段信息召回：recall_column
 
-<!-- ![问数智能体「召回字段信息」：基于向量索引检索与用户问题相关的 column_info 字段](/assets/img/llm/ecommerce-data-qa/2/2-3-2-1.png) -->
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/ecommerce-data-qa/2/2-3-2-1.png" alt="问数智能体「召回字段信息」：基于向量索引检索与用户问题相关的 column_info 字段"></div>
+<!-- <div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/llm/ecommerce-data-qa/2/2-3-2-1.png" alt="问数智能体「召回字段信息」：基于向量索引检索与用户问题相关的 column_info 字段"></div> -->
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/llm/ecommerce-data-qa/2/2-3-2-1.png" alt="问数智能体「召回字段信息」：基于向量索引检索与用户问题相关的 column_info 字段"></div>
 
 字段召回的目标是找到一批可能相关的 `ColumnInfo`。它的完整流程如下：
 
@@ -845,8 +845,8 @@ async def search(
 
 ## 7、指标信息召回：recall_metric
 
-<!-- ![问数智能体「召回指标信息」：先用 LLM 扩展指标关键词，再到指标向量库中召回 GMV、AOV 等候选指标](/assets/img/llm/ecommerce-data-qa/2/2-3-2-2.png) -->
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/ecommerce-data-qa/2/2-3-2-2.png" alt="问数智能体「召回指标信息」：先用 LLM 扩展指标关键词，再到指标向量库中召回 GMV、AOV 等候选指标"></div>
+<!-- <div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/llm/ecommerce-data-qa/2/2-3-2-2.png" alt="问数智能体「召回指标信息」：先用 LLM 扩展指标关键词，再到指标向量库中召回 GMV、AOV 等候选指标"></div> -->
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/llm/ecommerce-data-qa/2/2-3-2-2.png" alt="问数智能体「召回指标信息」：先用 LLM 扩展指标关键词，再到指标向量库中召回 GMV、AOV 等候选指标"></div>
 
 指标召回的逻辑和字段召回非常像，只是检索目标从字段 collection 换成了指标 collection。
 
@@ -1014,8 +1014,8 @@ class MetricInfo:
 
 ## 8、字段取值召回：recall_value
 
-<!-- ![问数智能体「召回字段取值」：从用户问题中扩展出字段值关键词，再通过 Elasticsearch 找到真实存在的字段值](/assets/img/llm/ecommerce-data-qa/2/2-3-2-3.png) -->
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/ecommerce-data-qa/2/2-3-2-3.png" alt="问数智能体「召回字段取值」：从用户问题中扩展出字段值关键词，再通过 Elasticsearch 找到真实存在的字段值"></div>
+<!-- <div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/llm/ecommerce-data-qa/2/2-3-2-3.png" alt="问数智能体「召回字段取值」：从用户问题中扩展出字段值关键词，再通过 Elasticsearch 找到真实存在的字段值"></div> -->
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/llm/ecommerce-data-qa/2/2-3-2-3.png" alt="问数智能体「召回字段取值」：从用户问题中扩展出字段值关键词，再通过 Elasticsearch 找到真实存在的字段值"></div>
 
 字段取值召回和指标召回的目标不同。
 

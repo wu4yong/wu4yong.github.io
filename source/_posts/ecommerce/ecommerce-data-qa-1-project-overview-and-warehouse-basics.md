@@ -43,9 +43,9 @@ tags:
 
 **一句话记忆：** 「电商问数」要做的事，就是把“人能看懂的问题”翻译成“数据库能执行的 SQL”。
 
-<!-- ![电商问数查询结果页：展示 LangGraph 执行流程、SQL 闭环进度和最终 GMV 查询结果](/assets/img/ecommerce/0/0-3.png) -->
+<!-- <div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/ecommerce/0/0-3.png" alt="电商问数查询结果页：展示 LangGraph 执行流程、SQL 闭环进度和最终 GMV 查询结果"></div> -->
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/ecommerce/0/0-3.png" alt="电商问数查询结果页：展示 LangGraph 执行流程、SQL 闭环进度和最终 GMV 查询结果"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/ecommerce/0/0-3.png" alt="电商问数查询结果页：展示 LangGraph 执行流程、SQL 闭环进度和最终 GMV 查询结果"></div>
 ---
 
 ## 2、问数项目背景
@@ -80,9 +80,9 @@ tags:
 
 正式看事实表和维度表之前，先把几层数据关系放到一张图里。业务数据库负责支撑交易系统运行，教学数据仓库负责承接分析查询，元数据知识库则把“有哪些表、字段、指标和值”整理给问数智能体使用。
 
-<!-- ![业务数据库、教学数据仓库、元数据知识库和问数智能体之间的关系](/assets/img/ecommerce/1/1-3-0-1.svg) -->
+<!-- <div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/ecommerce/1/1-3-0-1.svg" alt="业务数据库、教学数据仓库、元数据知识库和问数智能体之间的关系"></div> -->
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/ecommerce/1/1-3-0-1.svg" alt="业务数据库、教学数据仓库、元数据知识库和问数智能体之间的关系"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/ecommerce/1/1-3-0-1.svg" alt="业务数据库、教学数据仓库、元数据知识库和问数智能体之间的关系"></div>
 ### 3.1 为什么不直接查业务数据库
 
 你可能会问：既然业务数据本来就保存在数据库里，为什么不直接查业务库，而要单独搞一个“数据仓库”？原因很简单，因为业务数据库和分析型查询的目标并不一样。
@@ -192,9 +192,9 @@ tags:
 
 下面这张图展示的是当前项目中，数据仓库采用维度建模后的事实表与维度表示例。可以结合这张简化示意图理解它们之间的关系：
 
-<!-- ![电商问数教学数仓星型模型：事实表 fact_order 与 dim_customer、dim_product、dim_region、dim_date 等维度表关系](/assets/img/ecommerce/1/1-4-2-1.png) -->
+<!-- <div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/ecommerce/1/1-4-2-1.png" alt="电商问数教学数仓星型模型：事实表 fact_order 与 dim_customer、dim_product、dim_region、dim_date 等维度表关系"></div> -->
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/ecommerce/1/1-4-2-1.png" alt="电商问数教学数仓星型模型：事实表 fact_order 与 dim_customer、dim_product、dim_region、dim_date 等维度表关系"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/ecommerce/1/1-4-2-1.png" alt="电商问数教学数仓星型模型：事实表 fact_order 与 dim_customer、dim_product、dim_region、dim_date 等维度表关系"></div>
 在本项目的教学环境中，我们用一张事实表 `fact_order` 和四张维度表 `dim_product`、`dim_customer`、`dim_region`、`dim_date` 来模拟一个简化后的电商数仓。
 
 为了方便看懂这张图，这里先补充两个图例说明：

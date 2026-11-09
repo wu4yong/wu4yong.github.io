@@ -30,7 +30,7 @@ BitBucket    | https://bitbucket.org/    | 一家源代码托管网站，采用M
 
 **\[该类型的内容暂不支持下载\]**
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/git/3/image11.png" alt="image11.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/git/3/image11.png" alt="image11.png"></div>
 
 使用码云的操作流程如下：
 
@@ -48,7 +48,7 @@ BitBucket    | https://bitbucket.org/    | 一家源代码托管网站，采用M
 
 **\[该类型的内容暂不支持下载\]**
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/git/3/image12.png" alt="image12.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/git/3/image12.png" alt="image12.png"></div>
 
 ### 3.2.2 登录码云
 
@@ -56,17 +56,17 @@ BitBucket    | https://bitbucket.org/    | 一家源代码托管网站，采用M
 
 **\[该类型的内容暂不支持下载\]**
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/git/3/image13.png" alt="image13.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/git/3/image13.png" alt="image13.png"></div>
 
 ### 3.2.3 创建远程仓库
 
 登录成功后可以创建远程仓库，操作方式如下：
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/git/3/image14.png" alt="image14.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/git/3/image14.png" alt="image14.png"></div>
 
 页面跳转到新建仓库页面：
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/git/3/image15.png" alt="image15.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/git/3/image15.png" alt="image15.png"></div>
 
 解释说明：
 
@@ -80,7 +80,7 @@ BitBucket    | https://bitbucket.org/    | 一家源代码托管网站，采用M
 
 创建完成后可以查看仓库信息：
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/git/3/image16.png" alt="image16.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/git/3/image16.png" alt="image16.png"></div>
 
 **注意**：每个Git远程仓库都会对应一个网络地址，点击【克隆/下载】按钮，在弹出窗口点击【复制】按钮即可复制网络地址，地址如下：
 
@@ -92,15 +92,15 @@ BitBucket    | https://bitbucket.org/    | 一家源代码托管网站，采用M
 
 点击管理按钮进入仓库管理页面，左侧菜单中可以看到【仓库成员管理】：
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/git/3/image17.png" alt="image17.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/git/3/image17.png" alt="image17.png"></div>
 
 点击【开发者】菜单，跳转到如下页面：
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/git/3/image18.png" alt="image18.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/git/3/image18.png" alt="image18.png"></div>
 
 点击【添加仓库成员】菜单下的【邀请用户】菜单，跳转到如下页面：
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/git/3/image19.png" alt="image19.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/git/3/image19.png" alt="image19.png"></div>
 
 可以看到邀请用户有多种方式：链接邀请、直接添加、通过仓库邀请成员
 

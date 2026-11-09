@@ -13,7 +13,7 @@ tags:
 
 1. 创建项目
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/springai/ch02_1747831963607-5dfd6f93-1d11-4408-acee-a8116d0cf0e7_81e9fffa00.png" alt="ch02_1747831963607-5dfd6f93-1d11-4408-acee-a8116d0cf0e7_81e9fffa00.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/springai/ch02_1747831963607-5dfd6f93-1d11-4408-acee-a8116d0cf0e7_81e9fffa00.png" alt="ch02_1747831963607-5dfd6f93-1d11-4408-acee-a8116d0cf0e7_81e9fffa00.png"></div>
 
 ```xml
 <?xml version="1.0" encoding="UTF-8"?>
@@ -87,9 +87,9 @@ tags:
 2. 获取deepseek api-key
 + **API Key**：需从 DeepSeek 创建并获取 API 密钥：[https://platform.deepseek.com/api_keys](https://platform.deepseek.com/api_keys)
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/springai/ch02_1747832077989-a12b8be5-a8d2-4d2a-8ae5-7d4913b50acb_d6b9b3f530.png" alt="ch02_1747832077989-a12b8be5-a8d2-4d2a-8ae5-7d4913b50acb_d6b9b3f530.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/springai/ch02_1747832077989-a12b8be5-a8d2-4d2a-8ae5-7d4913b50acb_d6b9b3f530.png" alt="ch02_1747832077989-a12b8be5-a8d2-4d2a-8ae5-7d4913b50acb_d6b9b3f530.png"></div>
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/springai/ch02_1747832096179-5c93c5b2-e568-4915-8463-ceeaac75f62b_b9282b8654.png" alt="ch02_1747832096179-5c93c5b2-e568-4915-8463-ceeaac75f62b_b9282b8654.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/springai/ch02_1747832096179-5c93c5b2-e568-4915-8463-ceeaac75f62b_b9282b8654.png" alt="ch02_1747832096179-5c93c5b2-e568-4915-8463-ceeaac75f62b_b9282b8654.png"></div>
 
 3. 配置
 
@@ -128,7 +128,7 @@ public class DeepseelTest {
 
 ```
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/springai/ch02_1747832330018-cbc151a4-6de9-4949-9d84-4ad7d5fdb559_c135fd70ed.png" alt="ch02_1747832330018-cbc151a4-6de9-4949-9d84-4ad7d5fdb559_c135fd70ed.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/springai/ch02_1747832330018-cbc151a4-6de9-4949-9d84-4ad7d5fdb559_c135fd70ed.png" alt="ch02_1747832330018-cbc151a4-6de9-4949-9d84-4ad7d5fdb559_c135fd70ed.png"></div>
 
 ### 流式对话
 
@@ -169,11 +169,11 @@ spring.ai.deepseek.chat.options.temperature=0.8
 
 temperature:0.2   规规矩矩，像是被应试教育出来的老实学生没有创造力
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/springai/ch02_1747890503560-3f26de5a-a3f3-48a6-86f8-c7bf6dc6923a_737cfe3e1f.png" alt="ch02_1747890503560-3f26de5a-a3f3-48a6-86f8-c7bf6dc6923a_737cfe3e1f.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/springai/ch02_1747890503560-3f26de5a-a3f3-48a6-86f8-c7bf6dc6923a_737cfe3e1f.png" alt="ch02_1747890503560-3f26de5a-a3f3-48a6-86f8-c7bf6dc6923a_737cfe3e1f.png"></div>
 
 temperature:1.9   可以看出来表现欲更强， 像是一个在领导面前想要表现的你.
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/springai/ch02_1747890748919-bf48b998-7b65-455d-a304-5d6c01677e5f_591ac48de4.png" alt="ch02_1747890748919-bf48b998-7b65-455d-a304-5d6c01677e5f_591ac48de4.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/springai/ch02_1747890748919-bf48b998-7b65-455d-a304-5d6c01677e5f_591ac48de4.png" alt="ch02_1747890748919-bf48b998-7b65-455d-a304-5d6c01677e5f_591ac48de4.png"></div>
 
 也可以通过提示词降低他的主观臆想：
 + 只引用可靠来源中的信息，不做任何假设或扩展描述。
@@ -229,11 +229,11 @@ spring:
 
 设置深度思考，  思考的内容有个专业名词叫：Chain of Thought (CoT)
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/springai/ch02_1747914817445-76e8a32a-ddea-4ed0-bb6d-d498f14ad682_ff743b6da5.png" alt="ch02_1747914817445-76e8a32a-ddea-4ed0-bb6d-d498f14ad682_ff743b6da5.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/springai/ch02_1747914817445-76e8a32a-ddea-4ed0-bb6d-d498f14ad682_ff743b6da5.png" alt="ch02_1747914817445-76e8a32a-ddea-4ed0-bb6d-d498f14ad682_ff743b6da5.png"></div>
 
 在deepseek中，  deepseek-reasoner模型是深度思考模型：
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/springai/ch02_1747914659592-870470ec-2b9e-4fd8-963e-446808af56f6_54e67c80fe.png" alt="ch02_1747914659592-870470ec-2b9e-4fd8-963e-446808af56f6_54e67c80fe.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/springai/ch02_1747914659592-870470ec-2b9e-4fd8-963e-446808af56f6_54e67c80fe.png" alt="ch02_1747914659592-870470ec-2b9e-4fd8-963e-446808af56f6_54e67c80fe.png"></div>
 
 ```java
 @Test
@@ -290,7 +290,7 @@ spring.ai.deepseek.chat.options.model= deepseek-reasoner
 
 ### 原理：
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/springai/ch02_1750928853497-d5ef1895-6b22-480e-8f80-721797eada97_5d7df51ef0.png" alt="ch02_1750928853497-d5ef1895-6b22-480e-8f80-721797eada97_5d7df51ef0.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/springai/ch02_1750928853497-d5ef1895-6b22-480e-8f80-721797eada97_5d7df51ef0.png" alt="ch02_1750928853497-d5ef1895-6b22-480e-8f80-721797eada97_5d7df51ef0.png"></div>
 
 1. 当调用chatModel.call
 
@@ -304,7 +304,7 @@ default String call(String message) {
 
     1. 首先会将提示词解析到Prompt对象中 （用于远程请求的messages）
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/springai/ch02_1748356262503-f20736ce-10bd-426d-9e99-73ddcdd06bc7_09ffa1e583.png" alt="ch02_1748356262503-f20736ce-10bd-426d-9e99-73ddcdd06bc7_09ffa1e583.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/springai/ch02_1748356262503-f20736ce-10bd-426d-9e99-73ddcdd06bc7_09ffa1e583.png" alt="ch02_1748356262503-f20736ce-10bd-426d-9e99-73ddcdd06bc7_09ffa1e583.png"></div>
 
 2. 调用deepseekModel#call---> internalCall方法
 
@@ -352,7 +352,7 @@ public ResponseEntity<ChatCompletion> chatCompletionEntity(ChatCompletionRequest
 
 ## 接入阿里百炼
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/springai/ch02_1750994049968-43797508-45f3-426a-adfa-3f5dcd73ef13_b860edf0db.png" alt="ch02_1750994049968-43797508-45f3-426a-adfa-3f5dcd73ef13_b860edf0db.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/springai/ch02_1750994049968-43797508-45f3-426a-adfa-3f5dcd73ef13_b860edf0db.png" alt="ch02_1750994049968-43797508-45f3-426a-adfa-3f5dcd73ef13_b860edf0db.png"></div>
 
 阿里自己的团队维护spring-ai-alibaba.   但是也必须依赖spring-ai 。   好处是扩展度更高，坏处是必须是springai先出来， spring-ai-alibaba.延迟几天出来。
 如果需要接入阿里的百炼平台， 就必须用该组件
@@ -551,14 +551,14 @@ ollama是大语言模型的运行环境  ，  支持将开源的大语言模型�
   1. [https://ollama.com/download](https://ollama.com/download)
   2. 点击下载， 一直下一步即可非常简单
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/springai/ch02_1747915924346-0df0e1a5-be5d-4fab-8805-970f30d60a5e_554abf5aa0.png" alt="ch02_1747915924346-0df0e1a5-be5d-4fab-8805-970f30d60a5e_554abf5aa0.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/springai/ch02_1747915924346-0df0e1a5-be5d-4fab-8805-970f30d60a5e_554abf5aa0.png" alt="ch02_1747915924346-0df0e1a5-be5d-4fab-8805-970f30d60a5e_554abf5aa0.png"></div>
 
 3. 安装完后运行cmd --> ollama list  查看已安装的大模型（开始肯定什么都没有）
 4. 拉取模型 `ollama run qwen3:4b`
     1. 这里的4b=40亿参数   对应gpu显存差不多是4G ，当然8B也可以只是比较卡
 5. 测试
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/springai/ch02_1747917729824-c0ee37c7-2768-46a7-ae1e-7df3554f8383_5d10b09b06.png" alt="ch02_1747917729824-c0ee37c7-2768-46a7-ae1e-7df3554f8383_5d10b09b06.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/springai/ch02_1747917729824-c0ee37c7-2768-46a7-ae1e-7df3554f8383_5d10b09b06.png" alt="ch02_1747917729824-c0ee37c7-2768-46a7-ae1e-7df3554f8383_5d10b09b06.png"></div>
 
 ### 基于spring-ai使用
 
@@ -598,11 +598,11 @@ public class OllamaTest {
 
 ```
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/springai/ch02_1747918232750-104c6590-3bf0-40aa-8019-af8a43befa0b_648f4757c4.png" alt="ch02_1747918232750-104c6590-3bf0-40aa-8019-af8a43befa0b_648f4757c4.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/springai/ch02_1747918232750-104c6590-3bf0-40aa-8019-af8a43befa0b_648f4757c4.png" alt="ch02_1747918232750-104c6590-3bf0-40aa-8019-af8a43befa0b_648f4757c4.png"></div>
 
 ### 关闭thingking
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/springai/ch02_1751199163428-8570576c-1cf9-4b4e-ba78-4991cdcd13d1_8931381bf6.png" alt="ch02_1751199163428-8570576c-1cf9-4b4e-ba78-4991cdcd13d1_8931381bf6.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/springai/ch02_1751199163428-8570576c-1cf9-4b4e-ba78-4991cdcd13d1_8931381bf6.png" alt="ch02_1751199163428-8570576c-1cf9-4b4e-ba78-4991cdcd13d1_8931381bf6.png"></div>
 
   可以通过 在提示词结尾加入“/no_think” 指令
 
@@ -613,14 +613,14 @@ String text = ollamaChatModel.call("你是谁/no_think");
 
 但是依然有`<think>`标签， 暂时可以前端单独处理下
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/springai/ch02_1747921581411-27f379ce-ebb8-45d1-ba78-898f80b3ee50_e63cf7af6a.png" alt="ch02_1747921581411-27f379ce-ebb8-45d1-ba78-898f80b3ee50_e63cf7af6a.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/springai/ch02_1747921581411-27f379ce-ebb8-45d1-ba78-898f80b3ee50_e63cf7af6a.png" alt="ch02_1747921581411-27f379ce-ebb8-45d1-ba78-898f80b3ee50_e63cf7af6a.png"></div>
 
 ollama  0.9.0  支持了关闭think。但是在spring1.0版本还不兼容
 [https://ollama.com/blog/thinking](https://ollama.com/blog/thinking)
 
 ### 流式输出
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/springai/ch02_1751199935702-f444a59a-b3b5-46b3-aafe-71669d3460fb_f8ce167f5e.png" alt="ch02_1751199935702-f444a59a-b3b5-46b3-aafe-71669d3460fb_f8ce167f5e.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/springai/ch02_1751199935702-f444a59a-b3b5-46b3-aafe-71669d3460fb_f8ce167f5e.png" alt="ch02_1751199935702-f444a59a-b3b5-46b3-aafe-71669d3460fb_f8ce167f5e.png"></div>
 
 ```java
  @Test
@@ -639,7 +639,7 @@ ollama  0.8.0之前的版本不支持  stream+tools
 
 ### 多模态
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/springai/ch02_1751201032657-afcb978c-9da7-41cf-ae95-d3eaf9732a2f_5d0dcf2220.png" alt="ch02_1751201032657-afcb978c-9da7-41cf-ae95-d3eaf9732a2f_5d0dcf2220.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/springai/ch02_1751201032657-afcb978c-9da7-41cf-ae95-d3eaf9732a2f_5d0dcf2220.png" alt="ch02_1751201032657-afcb978c-9da7-41cf-ae95-d3eaf9732a2f_5d0dcf2220.png"></div>
 
 目前ollama支持的多模态模型：  
 + [Meta Llama 4](https://ollama.com/library/llama4)
@@ -676,4 +676,4 @@ ollama  0.8.0之前的版本不支持  stream+tools
     }
 ```
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/springai/ch02_1749038999303-f187d9b1-dfb1-44ae-8f47-3aef01134ca3_310e08f8bf.png" alt="ch02_1749038999303-f187d9b1-dfb1-44ae-8f47-3aef01134ca3_310e08f8bf.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/springai/ch02_1749038999303-f187d9b1-dfb1-44ae-8f47-3aef01134ca3_310e08f8bf.png" alt="ch02_1749038999303-f187d9b1-dfb1-44ae-8f47-3aef01134ca3_310e08f8bf.png"></div>

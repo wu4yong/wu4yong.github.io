@@ -21,8 +21,8 @@ tags:
 
 「深度研搜」就是围绕这个问题设计的。它不是再写一个聊天框，也不是只接一个搜索 `API`，而是用 `DeepAgents` 搭一个对话式多智能体研究台：用户输入研究任务或上传附件，主智能体判断任务需要哪些信息，再调度网络搜索、数据库查询、`RAGFlow` 知识库等能力，最后整理回答，或生成 `Markdown` / `PDF` 文件。
 
-<!-- ![深度研搜前端首页：左侧展示 WebSocket 连接、助手调度和工具调用统计，中间提供网络搜索、数据库查询、RAGFlow、上传文件分析和报告生成等任务示例](/assets/img/deepSearch/0/0-0-0-1.png) -->
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/deepSearch/0/0-0-0-1.png" alt="深度研搜前端首页：左侧展示 WebSocket 连接、助手调度和工具调用统计，中间提供网络搜索、数据库查询、RAGFlow、上传文件分析和报告生成等任务示例"></div>
+<!-- <div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/deepSearch/0/0-0-0-1.png" alt="深度研搜前端首页：左侧展示 WebSocket 连接、助手调度和工具调用统计，中间提供网络搜索、数据库查询、RAGFlow、上传文件分析和报告生成等任务示例"></div> -->
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/deepSearch/0/0-0-0-1.png" alt="深度研搜前端首页：左侧展示 WebSocket 连接、助手调度和工具调用统计，中间提供网络搜索、数据库查询、RAGFlow、上传文件分析和报告生成等任务示例"></div>
 
 **「深度研搜」不是一个只让大模型回答问题的 `Demo`，而是一套围绕“主智能体规划调度、子智能体分工执行、多来源资料检索、文件生成交付、前后端实时联动”展开的 `DeepAgents` 多智能体实战项目。**
 
@@ -76,18 +76,18 @@ tags:
 7. 生成 `Markdown`，必要时再转换成 `PDF`；
 8. 把执行过程、最终结果和输出文件展示给前端。
 
-<!-- ![深度研搜系统架构图：前端通过 FastAPI 和 WebSocket 连接后端，DeepAgents 主智能体调度网络搜索、数据库查询、RAGFlow 知识库和文件交付工具](/assets/img/deepSearch/0/0-2-0-1.svg) -->
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/deepSearch/0/0-2-0-1.svg" alt="深度研搜系统架构图：前端通过 FastAPI 和 WebSocket 连接后端，DeepAgents 主智能体调度网络搜索、数据库查询、RAGFlow 知识库和文件交付工具"></div>
+<!-- <div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/deepSearch/0/0-2-0-1.svg" alt="深度研搜系统架构图：前端通过 FastAPI 和 WebSocket 连接后端，DeepAgents 主智能体调度网络搜索、数据库查询、RAGFlow 知识库和文件交付工具"></div> -->
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/deepSearch/0/0-2-0-1.svg" alt="深度研搜系统架构图：前端通过 FastAPI 和 WebSocket 连接后端，DeepAgents 主智能体调度网络搜索、数据库查询、RAGFlow 知识库和文件交付工具"></div>
 
 执行过程中，前端不会只显示“等待中”。它会展示 `WebSocket` 状态、助手调度次数、工具调用次数，以及每一次 `tool_start`、`assistant_call`、`task_result` 等事件。
 
-<!-- ![深度研搜执行过程页面：前端实时展示网络搜索工具调用、tool_start 事件、task_result 事件和主智能体整理后的回答](/assets/img/deepSearch/0/0-2-0-2.png) -->
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/deepSearch/0/0-2-0-2.png" alt="深度研搜执行过程页面：前端实时展示网络搜索工具调用、tool_start 事件、task_result 事件和主智能体整理后的回答"></div>
+<!-- <div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/deepSearch/0/0-2-0-2.png" alt="深度研搜执行过程页面：前端实时展示网络搜索工具调用、tool_start 事件、task_result 事件和主智能体整理后的回答"></div> -->
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/deepSearch/0/0-2-0-2.png" alt="深度研搜执行过程页面：前端实时展示网络搜索工具调用、tool_start 事件、task_result 事件和主智能体整理后的回答"></div>
 
 如果任务生成了文件，页面还会展示输出文件列表。下面这个例子里，数据库查询助手执行 `SQL` 后，主智能体继续调用 `Markdown` 文档生成工具，最后把 `.md` 文件放到当前会话的输出区域，用户可以直接下载。
 
-<!-- ![深度研搜文件交付页面：数据库查询任务执行后生成 Markdown 文件，前端展示输出文件和下载入口](/assets/img/deepSearch/0/0-2-0-3.png) -->
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/deepSearch/0/0-2-0-3.png" alt="深度研搜文件交付页面：数据库查询任务执行后生成 Markdown 文件，前端展示输出文件和下载入口"></div>
+<!-- <div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/deepSearch/0/0-2-0-3.png" alt="深度研搜文件交付页面：数据库查询任务执行后生成 Markdown 文件，前端展示输出文件和下载入口"></div> -->
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/deepSearch/0/0-2-0-3.png" alt="深度研搜文件交付页面：数据库查询任务执行后生成 Markdown 文件，前端展示输出文件和下载入口"></div>
 
 ---
 

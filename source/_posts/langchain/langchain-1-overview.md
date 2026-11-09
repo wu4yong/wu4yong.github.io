@@ -14,11 +14,11 @@ tags:
 
 ### 1.1 从传统应用到智能体时代
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/langchain/1/page001_img001.png" alt="page001_img001.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/langchain/1/page001_img001.png" alt="page001_img001.png"></div>
 
 ### 1.2 单一的大语言模型的局限性
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/langchain/1/page001_img002.png" alt="page001_img002.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/langchain/1/page001_img002.png" alt="page001_img002.png"></div>
 
 所以要构建真正实用的 AI 应用，必须将大语言模型与外部工具、数据源和记忆机制有机结合，从而催生了 LangChain 框架的设计理念。
 
@@ -26,7 +26,7 @@ LangChain，是当前构建生产级 AI 智能体系统的首选。
 
 ### 1.3 LangChain 框架的定位
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/langchain/1/page002_img001.png" alt="page002_img001.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/langchain/1/page002_img001.png" alt="page002_img001.png"></div>
 
 LangChain 作为大模型与应用间的中间层，可统一调用各类大模型、管理提示词与上下文，还能集成外部工具和数据源，快速搭建具备推理、行动能力的智能体。
 
@@ -38,7 +38,7 @@ LangChain 作为大模型与应用间的中间层，可统一调用各类大模�
 
 ### 1.4 LangChain 的应用场景
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/langchain/1/page002_img002.png" alt="page002_img002.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/langchain/1/page002_img002.png" alt="page002_img002.png"></div>
 
 #### 1、检索增强生成（RAG）
 
@@ -72,11 +72,11 @@ LangChain 作为大模型与应用间的中间层，可统一调用各类大模�
 
 ### 1.5 大模型相关岗位介绍
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/langchain/1/page003_img001.png" alt="page003_img001.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/langchain/1/page003_img001.png" alt="page003_img001.png"></div>
 
 应用开发是大模型最值得关注的方向：**应用为王！**
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/langchain/1/page003_img002.png" alt="page003_img002.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/langchain/1/page003_img002.png" alt="page003_img002.png"></div>
 
 学习 LangChain 框架，高效开发大模型应用。
 
@@ -84,7 +84,7 @@ LangChain 作为大模型与应用间的中间层，可统一调用各类大模�
 
 ### 2.1 LangChain 的发展时间线
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/langchain/1/page004_img001.png" alt="page004_img001.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/langchain/1/page004_img001.png" alt="page004_img001.png"></div>
 
 #### 第1阶段：诞生（2022年10月）
 
@@ -120,7 +120,7 @@ LangGraph 与 LangServe 的发布是这一阶段的标志。LangGraph 为工作�
 
 此时，很多开发者的整体使用感受：
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/langchain/1/page005_img001.png" alt="page005_img001.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/langchain/1/page005_img001.png" alt="page005_img001.png"></div>
 
 这个阶段，LangChain 的开发者大规模流失。
 
@@ -152,14 +152,14 @@ LangGraph 与 LangServe 的发布是这一阶段的标志。LangGraph 为工作�
 
 ### 2.3 LangChain v1.2 的主要模块
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/langchain/1/page007_img001.png" alt="page007_img001.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/langchain/1/page007_img001.png" alt="page007_img001.png"></div>
 
 - **langchain-core**：官方推荐的核心 API。比如 Runnable、BaseMessage 等。
 - **langchain-classic**：冗余代码移或不推荐使用的经典 API 移到此。比如 0.x 中常用而 1.x 移除的 API 都在这里。
 - **langchain-community**：第三方集成，比如合作伙伴包 langchain-openai、langchain-anthropic 等，按需安装、避免臃肿。
 - **langgraph**：深度整合 LangGraph 1.0，协调多个 Chain、Agent、Tools 完成更复杂的任务，并且还支持循环调用，是 LangChain 图形化的增强版。
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/langchain/1/page008_img001.png" alt="page008_img001.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/langchain/1/page008_img001.png" alt="page008_img001.png"></div>
 
 来自：<https://reference.langchain.com/python/langchain/overview>
 
@@ -185,7 +185,7 @@ API 文档查询地址：<https://reference.langchain.com/python/langchain/>
 
 它们分别对应基础能力层、运行时编排层、智能体抽象层、监控与评估层，共同构建了一个从技术验证到生产部署、从单体智能到复杂协作的项目闭环。
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/langchain/1/page009_img001.png" alt="page009_img001.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/langchain/1/page009_img001.png" alt="page009_img001.png"></div>
 
 官方文档的解释：
 
@@ -224,7 +224,7 @@ LangChain 是整个生态的核心与起点，为开发者提供了模型调用�
 - LangChain＝能力抽象层（LLM／Tool／Message 标准化），负责“有什么能力”；
 - LangGraph＝执行与编排层（状态机／工作流／多 Agent 系统），负责“怎么跑”。
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/langchain/1/page010_img001.png" alt="page010_img001.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/langchain/1/page010_img001.png" alt="page010_img001.png"></div>
 
 ### 3.3 Deep Agent：智能体的执行框架
 
@@ -242,13 +242,13 @@ Deep Agent 的核心能力如下：
 
 官方文档（三者对比）：<https://docs.langchain.com/oss/python/langchain/overview>
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/langchain/1/page011_img001.png" alt="page011_img001.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/langchain/1/page011_img001.png" alt="page011_img001.png"></div>
 
 三个框架不是竞争关系，并非互斥，复杂项目完全可以同时用到这三层。
 
 **基于 LLM 的应用开发体系图：**
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/langchain/1/page011_img002.png" alt="page011_img002.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/langchain/1/page011_img002.png" alt="page011_img002.png"></div>
 
 从 LangChain 快速搭建，用 LangGraph 打磨生产稳定性，再用 Deep Agents 赋予 Agent 更强的自主能力——这才是完整的 LangChain 生态玩法。
 
@@ -258,7 +258,7 @@ Deep Agent 的核心能力如下：
 
 LangSmith 是 LangChain 官方推出的可视化监控与测试平台，用于跟踪、记录和分析智能体在运行过程中的完整调用链路，让智能体的内部运行过程变得透明和可评估。
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/langchain/1/page012_img001.png" alt="page012_img001.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/langchain/1/page012_img001.png" alt="page012_img001.png"></div>
 
 LangSmith 的核心目标如下：
 
@@ -295,7 +295,7 @@ LangSmith 的引入使得智能体的开发、调试与运维形成了完整的�
 
 相较于全局环境（系统环境），各个虚拟环境都有自己独立的一套：Python 解释器、pip 命令、第三方依赖包，不和其他项目产生干扰。
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/langchain/1/page013_img001.png" alt="page013_img001.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/langchain/1/page013_img001.png" alt="page013_img001.png"></div>
 
 虚拟环境的设置方案：
 
@@ -451,21 +451,21 @@ pip list
 conda list  # Conda 安装的包显示频道，pip 安装的显示 `pypi`
 ```
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/langchain/1/page016_img001.png" alt="page016_img001.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/langchain/1/page016_img001.png" alt="page016_img001.png"></div>
 
 #### 4.2.4 PyCharm 开发环境
 
 PyCharm 作为专业的 Python IDE，具有强大的代码编辑、调试和版本控制功能。
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/langchain/1/page016_img002.png" alt="page016_img002.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/langchain/1/page016_img002.png" alt="page016_img002.png"></div>
 
 <https://www.jetbrains.com/pycharm/download/other/#releases-2025>
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/langchain/1/page017_img001.png" alt="page017_img001.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/langchain/1/page017_img001.png" alt="page017_img001.png"></div>
 
 创建新的工程，并设置 Python 解释器（选择 Anaconda 环境）。
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/langchain/1/page017_img002.png" alt="page017_img002.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/langchain/1/page017_img002.png" alt="page017_img002.png"></div>
 
 ```python
 import langchain
@@ -489,7 +489,7 @@ print(langchain.__version__)
 
 LLM 在考试的时候面对陌生的领域，答复能力有限，然后就准备放飞自我了，而此时 RAG 给了一些提示和思路，让 LLM 懂了开始往这个提示的方向做，最终考试的正确率从 60% 到了 90%！
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/langchain/1/page018_img001.png" alt="page018_img001.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/langchain/1/page018_img001.png" alt="page018_img001.png"></div>
 
 #### 3）何为 RAG？
 
@@ -497,15 +497,15 @@ Retrieval-Augmented Generation（检索增强生成）
 
 图1：
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/langchain/1/page018_img002.png" alt="page018_img002.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/langchain/1/page018_img002.png" alt="page018_img002.png"></div>
 
 图2：
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/langchain/1/page019_rag_workflow.png" alt="page019_rag_workflow.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/langchain/1/page019_rag_workflow.png" alt="page019_rag_workflow.png"></div>
 
 检索-增强-生成过程：检索可以理解为第10步，增强理解为第13步（这里的提示词包含检索到的数据），生成理解为第15步。
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/langchain/1/page019_img003.png" alt="page019_img003.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/langchain/1/page019_img003.png" alt="page019_img003.png"></div>
 
 这些过程中的难点：1、文件解析；2、文件切割；3、知识检索；4、知识重排序。
 
@@ -526,11 +526,11 @@ Retrieval-Augmented Generation（检索增强生成）
 
 类比举例：
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/langchain/1/page020_img001.png" alt="page020_img001.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/langchain/1/page020_img001.png" alt="page020_img001.png"></div>
 
 OpenAI 的元老翁丽莲（Lilian Weng）于2023年6月在个人博客（<https://lilianweng.github.io/posts/2023-06-23-agent/>）首次提出了现代 AI Agent 架构。
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/langchain/1/page020_img002.png" alt="page020_img002.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/langchain/1/page020_img002.png" alt="page020_img002.png"></div>
 
 一个数学公式来表示：
 
@@ -556,15 +556,15 @@ OpenAI 的元老翁丽莲（Lilian Weng）于2023年6月在个人博客（<https
 
 通过任务分解、反思与自省框架实现复杂任务处理。例如，利用思维链（Chain of Thought）将目标拆解为子任务，并通过反馈优化策略。
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/langchain/1/page021_img001.png" alt="page021_img001.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/langchain/1/page021_img001.png" alt="page021_img001.png"></div>
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/langchain/1/page021_img002.png" alt="page021_img002.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/langchain/1/page021_img002.png" alt="page021_img002.png"></div>
 
 #### 3、工具使用（Tool Use）
 
 调用外部工具（如 API、数据库）扩展能力边界。
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/langchain/1/page021_img003.png" alt="page021_img003.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/langchain/1/page021_img003.png" alt="page021_img003.png"></div>
 
 #### 4、记忆（Memory）
 
@@ -572,7 +572,7 @@ OpenAI 的元老翁丽莲（Lilian Weng）于2023年6月在个人博客（<https
 
 - **短期记忆**：存储单次对话周期的上下文信息，属于临时信息存储机制。受限于模型的上下文窗口长度。
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/langchain/1/page022_img001.png" alt="page022_img001.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/langchain/1/page022_img001.png" alt="page022_img001.png"></div>
 
 > ChatGPT：支持约 8k token 的上下文；
 >
@@ -597,7 +597,7 @@ OpenAI 的元老翁丽莲（Lilian Weng）于2023年6月在个人博客（<https
 - Prompt 是操作大模型的唯一接口；
 - 当人看：你说一句，ta 回一句，你再说一句，ta 再回一句……
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/langchain/1/page023_img001.png" alt="page023_img001.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/langchain/1/page023_img001.png" alt="page023_img001.png"></div>
 
 #### 场景2：Agent＋Function Calling
 
@@ -605,7 +605,7 @@ OpenAI 的元老翁丽莲（Lilian Weng）于2023年6月在个人博客（<https
 - Function Calling：需要对接外部系统时，AI 要求执行某个函数；
 - 当人看：你问 ta“我明天去杭州出差，要带伞吗？”，ta 让你先看天气预报，你看了告诉 ta，ta 再告诉你要不要带伞。
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/langchain/1/page024_img001.png" alt="page024_img001.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/langchain/1/page024_img001.png" alt="page024_img001.png"></div>
 
 #### 场景3：RAG（Retrieval-Augmented Generation）
 
@@ -617,7 +617,7 @@ RAG：需要补充领域知识时使用。
 
 举例：考试答题时，到书上找相关内容，再结合题目组成答案。
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/langchain/1/page024_img002.png" alt="page024_img002.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/langchain/1/page024_img002.png" alt="page024_img002.png"></div>
 
 这个在智能客服上用的最广泛。s
 
@@ -625,7 +625,7 @@ RAG：需要补充领域知识时使用。
 
 举例：努力学习考试内容，长期记住，活学活用。
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/langchain/1/page025_img001.png" alt="page025_img001.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/langchain/1/page025_img001.png" alt="page025_img001.png"></div>
 
 特点：成本最高；在前面的方式解决不了问题的情况下，再使用。
 
@@ -633,4 +633,4 @@ RAG：需要补充领域知识时使用。
 
 面对一个需求，如何开始，如何选择技术方案？下面是个常用思路：
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/langchain/1/page025_img002.png" alt="page025_img002.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/langchain/1/page025_img002.png" alt="page025_img002.png"></div>

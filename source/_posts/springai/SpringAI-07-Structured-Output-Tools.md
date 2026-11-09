@@ -50,7 +50,7 @@ public void testBoolOut() {
 
 用购物APP应该见过复制一个地址， 自动为你填入每个输入框。  用大模型轻松完成！
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/springai/ch07_1749126843402-3cca89cf-d3a8-40c6-aa95-3664d526feb9_9f65c71b46.png" alt="ch07_1749126843402-3cca89cf-d3a8-40c6-aa95-3664d526feb9_9f65c71b46.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/springai/ch07_1749126843402-3cca89cf-d3a8-40c6-aa95-3664d526feb9_9f65c71b46.png" alt="ch07_1749126843402-3cca89cf-d3a8-40c6-aa95-3664d526feb9_9f65c71b46.png"></div>
 
 ```java
 
@@ -80,7 +80,7 @@ public record Address(
 
 ### 原理
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/springai/ch07_1749126360371-0165c51c-79c1-4058-9b1e-32c75182f51d_6662f99fc1.jpeg" alt="ch07_1749126360371-0165c51c-79c1-4058-9b1e-32c75182f51d_6662f99fc1.jpeg"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/springai/ch07_1749126360371-0165c51c-79c1-4058-9b1e-32c75182f51d_6662f99fc1.jpeg" alt="ch07_1749126360371-0165c51c-79c1-4058-9b1e-32c75182f51d_6662f99fc1.jpeg"></div>
 
 `ChatModel`或者直接使用低级API：
 
@@ -118,23 +118,23 @@ public record Address(
 
 ### 票务助手
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/springai/ch07_1749133561508-8d90a71e-e734-471e-a36e-5605fabc6b8c_cedfc4a752.png" alt="ch07_1749133561508-8d90a71e-e734-471e-a36e-5605fabc6b8c_cedfc4a752.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/springai/ch07_1749133561508-8d90a71e-e734-471e-a36e-5605fabc6b8c_cedfc4a752.png" alt="ch07_1749133561508-8d90a71e-e734-471e-a36e-5605fabc6b8c_cedfc4a752.png"></div>
 
 ### 效果
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/springai/ch07_1749133770407-472b9b4b-f1a8-43f2-b3d2-86d40abb3491_d4f72b04df.png" alt="ch07_1749133770407-472b9b4b-f1a8-43f2-b3d2-86d40abb3491_d4f72b04df.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/springai/ch07_1749133770407-472b9b4b-f1a8-43f2-b3d2-86d40abb3491_d4f72b04df.png" alt="ch07_1749133770407-472b9b4b-f1a8-43f2-b3d2-86d40abb3491_d4f72b04df.png"></div>
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/springai/ch07_1749133811144-c451d972-8ffc-4760-8b47-dfd14d4db5df_1f12e00328.png" alt="ch07_1749133811144-c451d972-8ffc-4760-8b47-dfd14d4db5df_1f12e00328.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/springai/ch07_1749133811144-c451d972-8ffc-4760-8b47-dfd14d4db5df_1f12e00328.png" alt="ch07_1749133811144-c451d972-8ffc-4760-8b47-dfd14d4db5df_1f12e00328.png"></div>
 
 输入姓名和预定号：
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/springai/ch07_1749133789344-aab6fec6-8dd9-415f-98cc-1f77c7c45f60_9850f51f40.png" alt="ch07_1749133789344-aab6fec6-8dd9-415f-98cc-1f77c7c45f60_9850f51f40.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/springai/ch07_1749133789344-aab6fec6-8dd9-415f-98cc-1f77c7c45f60_9850f51f40.png" alt="ch07_1749133789344-aab6fec6-8dd9-415f-98cc-1f77c7c45f60_9850f51f40.png"></div>
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/springai/ch07_1749133804610-66c41dfc-a556-49be-9353-e90eee657c20_245c5419ab.png" alt="ch07_1749133804610-66c41dfc-a556-49be-9353-e90eee657c20_245c5419ab.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/springai/ch07_1749133804610-66c41dfc-a556-49be-9353-e90eee657c20_245c5419ab.png" alt="ch07_1749133804610-66c41dfc-a556-49be-9353-e90eee657c20_245c5419ab.png"></div>
 
 普通对话：
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/springai/ch07_1749133832665-d12ca731-fae6-4991-8f17-cb0039a9a1ac_39e77779b1.png" alt="ch07_1749133832665-d12ca731-fae6-4991-8f17-cb0039a9a1ac_39e77779b1.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/springai/ch07_1749133832665-d12ca731-fae6-4991-8f17-cb0039a9a1ac_39e77779b1.png" alt="ch07_1749133832665-d12ca731-fae6-4991-8f17-cb0039a9a1ac_39e77779b1.png"></div>
 
 ### 代码：
 

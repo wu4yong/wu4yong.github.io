@@ -18,7 +18,7 @@ tags:
 
 大多数的大模型应用程序都会有一个会话接口，允许我们进行多轮的对话，并有一定的上下文记忆能力。比如：
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/langchain/9/page-01-chat-memory-example.png" alt="page-01-chat-memory-example.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/langchain/9/page-01-chat-memory-example.png" alt="page-01-chat-memory-example.png"></div>
 
 但实际上，大模型本身是“无状态”的，不会记忆任何上下文的。即每次调用 agent.invoke() 都是全新的开始，不记得之前的对话。
 
@@ -137,7 +137,7 @@ for msg in response3["messages"]:
 
 **我们希望的智能体应该是右图的情况：**
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/langchain/9/page-04-memory-comparison.png" alt="page-04-memory-comparison.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/langchain/9/page-04-memory-comparison.png" alt="page-04-memory-comparison.png"></div>
 
 ### 1.2 如何解决记忆问题
 
@@ -151,11 +151,11 @@ for msg in response3["messages"]:
 
 类比：
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/langchain/9/page-04-context-engineering-notebook.png" alt="page-04-context-engineering-notebook.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/langchain/9/page-04-context-engineering-notebook.png" alt="page-04-context-engineering-notebook.png"></div>
 
 举例：
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/langchain/9/page-05-context-filtering.png" alt="page-05-context-filtering.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/langchain/9/page-05-context-filtering.png" alt="page-05-context-filtering.png"></div>
 
 #### 1.2.2 上下文类型及相关的API
 
@@ -180,7 +180,7 @@ LangGraph 提供了三种管理上下文的方法，这些方法结合了可变�
 - **短期记忆（Short-term memory、会话级记忆、thread-scoped memory）**：作用范围是单个对话线程（Thread）内，一旦开启新对话（更换 thread_id），记忆即消失。
 - **长期记忆（Long-term memory，跨会话级记忆）**：在会话间存储用户特定或应用级数据， 并在会话线程间共享。它可以随时在任何线程中被调用。记忆的范围是任意自定义命名空间，而不仅仅是单一线程 ID。
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/langchain/9/page-06-short-term-long-term-memory.png" alt="page-06-short-term-long-term-memory.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/langchain/9/page-06-short-term-long-term-memory.png" alt="page-06-short-term-long-term-memory.png"></div>
 
 #### 1.3.2 记忆的管理
 
@@ -1473,7 +1473,7 @@ for msg in final_response["messages"]:
 
 **把早期历史压缩成摘要，再替换原始消息**。
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/langchain/9/page-30-summary-workflow.png" alt="page-30-summary-workflow.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/langchain/9/page-30-summary-workflow.png" alt="page-30-summary-workflow.png"></div>
 
 消息裁剪和删除都会导致上下文缺失，影响回答质量和用户体验。和它们相比，摘要是更适合长会话的折中方案：保语义，不保原文。官方推荐内置SummarizationMiddleware。上一章已有讲解。
 
@@ -1885,7 +1885,7 @@ state.get("structured_response", None) = WeatherInfo(city='北京',temperature='
 
 而长期记忆记录的是用户特定或应用级别的数据，任何会话都可以随时访问。
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/langchain/9/page-38-memory-architecture.png" alt="page-38-memory-architecture.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/langchain/9/page-38-memory-architecture.png" alt="page-38-memory-architecture.png"></div>
 
 比如：
 

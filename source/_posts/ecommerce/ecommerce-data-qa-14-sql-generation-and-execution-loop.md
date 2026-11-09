@@ -51,8 +51,8 @@ correct_sql   # 校正 SQL
 run_sql       # 执行 SQL
 ```
 
-<!-- ![基于 LangGraph 的问数智能体全流程：从自然语言问题进入召回、过滤、SQL 生成、校验、校正和执行](/assets/img/llm/ecommerce-data-qa/2/2-3-1-1.jpg) -->
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/ecommerce-data-qa/2/2-3-1-1.jpg" alt="基于 LangGraph 的问数智能体全流程：从自然语言问题进入召回、过滤、SQL 生成、校验、校正和执行"></div>
+<!-- <div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/llm/ecommerce-data-qa/2/2-3-1-1.jpg" alt="基于 LangGraph 的问数智能体全流程：从自然语言问题进入召回、过滤、SQL 生成、校验、校正和执行"></div> -->
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/llm/ecommerce-data-qa/2/2-3-1-1.jpg" alt="基于 LangGraph 的问数智能体全流程：从自然语言问题进入召回、过滤、SQL 生成、校验、校正和执行"></div>
 
 ---
 
@@ -131,8 +131,8 @@ db_info:
 
 ## 3、生成 SQL：generate_sql
 
-<!-- ![问数智能体「生成 SQL」：基于表结构、指标、日期和数据库环境，将自然语言问题转成 SQL](/assets/img/llm/ecommerce-data-qa/2/2-3-6-1.png) -->
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/ecommerce-data-qa/2/2-3-6-1.png" alt="问数智能体「生成 SQL」：基于表结构、指标、日期和数据库环境，将自然语言问题转成 SQL"></div>
+<!-- <div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/llm/ecommerce-data-qa/2/2-3-6-1.png" alt="问数智能体「生成 SQL」：基于表结构、指标、日期和数据库环境，将自然语言问题转成 SQL"></div> -->
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/llm/ecommerce-data-qa/2/2-3-6-1.png" alt="问数智能体「生成 SQL」：基于表结构、指标、日期和数据库环境，将自然语言问题转成 SQL"></div>
 
 `generate_sql` 的职责很单纯：**生成一条候选 SQL，并写入 `state["sql"]`。**
 

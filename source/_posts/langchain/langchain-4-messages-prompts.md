@@ -14,7 +14,7 @@ tags:
 
 大模型没有记忆，它的输出只和输入模型的内容有关（上下文）。很多大模型API服务也没有在服务端维护会话历史，是“`无状态`”的。因此，**如果应用需要“记住”对话历史，需要在程序中维护消息列表。**
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/langchain/4/page-01-image-01.png" alt="page-01-image-01.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/langchain/4/page-01-image-01.png" alt="page-01-image-01.png"></div>
 
 **在 LangChain 中，Message（消息）是模型交互的最基本单元。**它既代表模型接收到的`输入（Input）`，也代表模型生成的`输出（Output）`。
 
@@ -383,7 +383,7 @@ HumanMessage(
 
 - [OpenAI 的 API 手册](https://developers.openai.com/api/reference/resources/chat/subresources/completions/methods/create)告诉我们，HumanMessage支持`name` 作为元数据字段，如下图所示。而DeepSeek的API官方文档明确支持`name` 作为元数据，但实测发现模型无法识别。
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/langchain/4/page-08-image-01.png" alt="page-08-image-01.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/langchain/4/page-08-image-01.png" alt="page-08-image-01.png"></div>
 
 **举例：**
 
@@ -637,7 +637,7 @@ rprint(response.usage_metadata)
 
 返回的内容分析：
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/langchain/4/page-12-image-01.png" alt="page-12-image-01.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/langchain/4/page-12-image-01.png" alt="page-12-image-01.png"></div>
 
 #### 1.5.4 ToolMessage参数列表（拓展）
 
@@ -1041,11 +1041,11 @@ print(msg2)
 
 参考官方文档：<https://developers.openai.com/api/reference/python/resources/chat/subresources/completions/methods/create>
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/langchain/4/page-20-image-01.png" alt="page-20-image-01.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/langchain/4/page-20-image-01.png" alt="page-20-image-01.png"></div>
 
 将下图置于代码所在的目录下（比如chapter04_message_prompt），命名为`image_test.png`
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/langchain/4/page-20-image-02.png" alt="page-20-image-02.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/langchain/4/page-20-image-02.png" alt="page-20-image-02.png"></div>
 
 测试代码如下
 
@@ -1245,7 +1245,7 @@ print(response.content)
 
 `content_blocks` 还可用于输出格式化，以deepseek官网的`deepseek-v4-flash` 为例，其输出包含思考内容，后者位于`additional_kwargs` 的`reasoning_content` 字段下。比如：
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/langchain/4/page-24-image-01.png" alt="page-24-image-01.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/langchain/4/page-24-image-01.png" alt="page-24-image-01.png"></div>
 
 不同的模型其输出格式可能不同，仅为提取思考内容，切换模型都可能需要更改代码，非常不方便。
 

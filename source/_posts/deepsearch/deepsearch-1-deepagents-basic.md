@@ -77,8 +77,8 @@ DeepAgents 要解决的，正是这类更复杂、更长链路、更需要自主
 
 可以先用一张图建立整体印象。
 
-<!-- ![从 LLM 到 AI Agent 再到 Agentic AI 的能力演进示意图](/assets/img/deepSearch/1/1-2-1-1.png) -->
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/deepSearch/1/1-2-1-1.png" alt="从 LLM 到 AI Agent 再到 Agentic AI 的能力演进示意图"></div>
+<!-- <div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/deepSearch/1/1-2-1-1.png" alt="从 LLM 到 AI Agent 再到 Agentic AI 的能力演进示意图"></div> -->
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/deepSearch/1/1-2-1-1.png" alt="从 LLM 到 AI Agent 再到 Agentic AI 的能力演进示意图"></div>
 
 这张图表达的是大模型应用能力的递进关系：最早的大模型主要负责语言生成；进入 Agent 阶段后，模型开始能调用工具、执行动作；再往后发展到 Agentic AI，系统开始具备更强的规划、协作和长期任务推进能力。
 
@@ -208,8 +208,8 @@ DeepAgents 是 LangChain 生态中的一个独立库，建立在 LangChain 和 L
 - 支持长期记忆；
 - 支持复杂任务的持续执行和流式观测。
 
-<!-- ![DeepAgents、LangGraph、LangChain 的能力栈关系示意图](/assets/img/deepSearch/1/1-3-1-1.png) -->
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/deepSearch/1/1-3-1-1.png" alt="DeepAgents、LangGraph、LangChain 的能力栈关系示意图"></div>
+<!-- <div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/deepSearch/1/1-3-1-1.png" alt="DeepAgents、LangGraph、LangChain 的能力栈关系示意图"></div> -->
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/deepSearch/1/1-3-1-1.png" alt="DeepAgents、LangGraph、LangChain 的能力栈关系示意图"></div>
 
 这张图可以从内到外看：
 
@@ -238,8 +238,8 @@ DeepAgents 是 LangChain 生态中的一个独立库，建立在 LangChain 和 L
 
 本项目最终要做的是一个“深度搜索”类应用：用户给出一个开放问题，系统需要搜索资料、阅读信息、反思缺口、继续补充、最终生成报告。这类任务很难提前把每一步完全写死，因此非常适合作为 DeepAgents 的实战项目。
 
-<!-- ![LangChain、LangGraph、Deep Agents 在 Framework、Runtime、Harness 三层中的能力对比](/assets/img/deepSearch/1/1-3-2-1.jpg) -->
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/deepSearch/1/1-3-2-1.jpg" alt="LangChain、LangGraph、Deep Agents 在 Framework、Runtime、Harness 三层中的能力对比"></div>
+<!-- <div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/deepSearch/1/1-3-2-1.jpg" alt="LangChain、LangGraph、Deep Agents 在 Framework、Runtime、Harness 三层中的能力对比"></div> -->
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/deepSearch/1/1-3-2-1.jpg" alt="LangChain、LangGraph、Deep Agents 在 Framework、Runtime、Harness 三层中的能力对比"></div>
 
 可以从左到右理解这三层：
 
@@ -305,8 +305,8 @@ DeepAgents 内置了文件系统相关能力，例如：
 - 子智能体负责某一类专业任务，例如搜索、数据库查询、代码审查、报告撰写；
 - 每个子智能体有自己的系统提示词、工具集合和执行上下文。
 
-<!-- ![DeepAgents 子智能体通过 task 工具实现上下文隔离的示意图](/assets/img/deepSearch/1/1-4-3-1.png) -->
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/deepSearch/1/1-4-3-1.png" alt="DeepAgents 子智能体通过 task 工具实现上下文隔离的示意图"></div>
+<!-- <div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/deepSearch/1/1-4-3-1.png" alt="DeepAgents 子智能体通过 task 工具实现上下文隔离的示意图"></div> -->
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/deepSearch/1/1-4-3-1.png" alt="DeepAgents 子智能体通过 task 工具实现上下文隔离的示意图"></div>
 
 这张图里最关键的点是：主智能体并不直接吞下所有上下文，而是通过 `task` 工具把工作委派出去。子智能体在独立上下文中完成搜索、代码、通用任务等细节工作，最后只把可汇总结果交回主智能体。
 
@@ -550,8 +550,8 @@ DeepAgents 更适合用“主从关系”来理解：
 
 可以把它理解成一个项目负责人带着多个专业助手工作。主智能体先理解用户目标，再拆解任务、选择合适的子智能体、收集子智能体结果，最后统一整理成最终输出。子智能体不需要关心全局目标，只需要把自己负责的局部任务做好。
 
-<!-- ![层级工作流 Orchestrator-Workers 中主调度器拆分任务并汇总输出的示意图](/assets/img/deepSearch/1/1-5-7-1.png) -->
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/deepSearch/1/1-5-7-1.png" alt="层级工作流 Orchestrator-Workers 中主调度器拆分任务并汇总输出的示意图"></div>
+<!-- <div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/deepSearch/1/1-5-7-1.png" alt="层级工作流 Orchestrator-Workers 中主调度器拆分任务并汇总输出的示意图"></div> -->
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/deepSearch/1/1-5-7-1.png" alt="层级工作流 Orchestrator-Workers 中主调度器拆分任务并汇总输出的示意图"></div>
 
 它的流程通常是：
 
@@ -574,8 +574,8 @@ DeepAgents 更偏向这种模式。它强调的是：**主智能体负责规划�
 
 它更像多位专家开会。每个 Agent 都可以根据自己的角色和上下文发表意见，也可以根据其他 Agent 的输出继续补充、质疑或修正。这里不一定有一个绝对的“领导”，系统更依赖 Agent 之间的互动来让结果逐步收敛。
 
-<!-- ![协作工作流 Collaborative Network 中生成者与评估者循环反馈的示意图](/assets/img/deepSearch/1/1-5-7-2.png) -->
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/deepSearch/1/1-5-7-2.png" alt="协作工作流 Collaborative Network 中生成者与评估者循环反馈的示意图"></div>
+<!-- <div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/deepSearch/1/1-5-7-2.png" alt="协作工作流 Collaborative Network 中生成者与评估者循环反馈的示意图"></div> -->
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/deepSearch/1/1-5-7-2.png" alt="协作工作流 Collaborative Network 中生成者与评估者循环反馈的示意图"></div>
 
 这种方式的优点是灵活，适合开放式探索、方案讨论、观点碰撞。比如多个专家一起评估一个商业方案、讨论一个技术路线，协作模式可能产生更多角度。
 

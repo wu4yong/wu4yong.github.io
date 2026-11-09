@@ -178,20 +178,20 @@ CPU|至少 4 核，8 核更稳
 
 进入腾讯云 CVM 购买页后，可以选择竞价实例或按量计费实例。竞价实例价格低，但有被释放的风险，适合短期课堂练习；如果你要持续使用，建议选择更稳定的计费方式。
 
-<!-- ![腾讯云 CVM 购买页面：选择竞价实例、地域、可用区和基础规格](/assets/img/deepSearch/12/12-3-2-1.png) -->
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/deepSearch/12/12-3-2-1.png" alt="腾讯云 CVM 购买页面：选择竞价实例、地域、可用区和基础规格"></div>
+<!-- <div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/deepSearch/12/12-3-2-1.png" alt="腾讯云 CVM 购买页面：选择竞价实例、地域、可用区和基础规格"></div> -->
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/deepSearch/12/12-3-2-1.png" alt="腾讯云 CVM 购买页面：选择竞价实例、地域、可用区和基础规格"></div>
 
 这里先确认计费方式、服务器规格和系统镜像。课程练习可以优先选便宜的短期实例；如果要长期保存知识库，建议使用更稳定的计费方式。
 
 在测试环境，可以放开所有的安全组规则。但是真实项目不要这样做，公网只开放必要端口，管理后台尽量走内网、VPN 或反向代理。
 
-<!-- ![腾讯云安全组配置页面：课堂测试可临时放开入站规则，真实项目只开放必要端口](/assets/img/deepSearch/12/12-3-2-2.png) -->
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/deepSearch/12/12-3-2-2.png" alt="腾讯云安全组配置页面：课堂测试可临时放开入站规则，真实项目只开放必要端口"></div>
+<!-- <div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/deepSearch/12/12-3-2-2.png" alt="腾讯云安全组配置页面：课堂测试可临时放开入站规则，真实项目只开放必要端口"></div> -->
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/deepSearch/12/12-3-2-2.png" alt="腾讯云安全组配置页面：课堂测试可临时放开入站规则，真实项目只开放必要端口"></div>
 
 截图里的安全组配置只适合课堂临时测试。真实项目里，RAGFlow 页面、数据库、对象存储和向量检索服务都不要直接暴露给公网。
 
-<!-- ![腾讯云实例创建结果页面：记录公网 IP、登录密码和安全组信息](/assets/img/deepSearch/12/12-3-2-3.png) -->
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/deepSearch/12/12-3-2-3.png" alt="腾讯云实例创建结果页面：记录公网 IP、登录密码和安全组信息"></div>
+<!-- <div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/deepSearch/12/12-3-2-3.png" alt="腾讯云实例创建结果页面：记录公网 IP、登录密码和安全组信息"></div> -->
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/deepSearch/12/12-3-2-3.png" alt="腾讯云实例创建结果页面：记录公网 IP、登录密码和安全组信息"></div>
 
 实例创建完成后，先记录公网 IP、登录方式和安全组信息。后面浏览器访问、SSH 登录和 API 地址都会用到这里的公网 IP。
 
@@ -416,8 +416,8 @@ sudo systemctl status docker
 sudo docker info
 ```
 
-<!-- ![Docker 镜像加速配置验证与 RAGFlow 镜像拉取过程：确认 Registry Mirrors 生效并开始拉取依赖镜像](/assets/img/deepSearch/12/12-3-7-1.png) -->
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/deepSearch/12/12-3-7-1.png" alt="Docker 镜像加速配置验证与 RAGFlow 镜像拉取过程：确认 Registry Mirrors 生效并开始拉取依赖镜像"></div>
+<!-- <div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/deepSearch/12/12-3-7-1.png" alt="Docker 镜像加速配置验证与 RAGFlow 镜像拉取过程：确认 Registry Mirrors 生效并开始拉取依赖镜像"></div> -->
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/deepSearch/12/12-3-7-1.png" alt="Docker 镜像加速配置验证与 RAGFlow 镜像拉取过程：确认 Registry Mirrors 生效并开始拉取依赖镜像"></div>
 
 如果输出里能看到 `Registry Mirrors`，并且后续 `docker compose pull` 开始拉取 Elasticsearch、MySQL、Valkey、RAGFlow 等镜像，说明镜像加速配置已经生效。第一次拉镜像体积比较大，耐心等它完成即可。
 
@@ -428,8 +428,8 @@ sudo docker info
 sudo docker compose -f docker-compose.yml logs -f ragflow-cpu
 ```
 
-<!-- ![RAGFlow 服务日志：看到服务监听地址后再进入浏览器访问](/assets/img/deepSearch/12/12-3-7-2.png) -->
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/deepSearch/12/12-3-7-2.png" alt="RAGFlow 服务日志：看到服务监听地址后再进入浏览器访问"></div>
+<!-- <div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/deepSearch/12/12-3-7-2.png" alt="RAGFlow 服务日志：看到服务监听地址后再进入浏览器访问"></div> -->
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/deepSearch/12/12-3-7-2.png" alt="RAGFlow 服务日志：看到服务监听地址后再进入浏览器访问"></div>
 
 日志里看到服务已经监听地址，再去浏览器访问会更稳。第一次启动时依赖服务较多，页面没立刻打开不一定是失败，先看日志更准确。
 
@@ -453,8 +453,8 @@ Ctrl + C
 http://你的服务器公网IP
 ```
 
-<!-- ![RAGFlow 登录或注册页面：确认公网访问、端口映射和主服务启动正常](/assets/img/deepSearch/12/12-3-8-1.png) -->
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/deepSearch/12/12-3-8-1.png" alt="RAGFlow 登录或注册页面：确认公网访问、端口映射和主服务启动正常"></div>
+<!-- <div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/deepSearch/12/12-3-8-1.png" alt="RAGFlow 登录或注册页面：确认公网访问、端口映射和主服务启动正常"></div> -->
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/deepSearch/12/12-3-8-1.png" alt="RAGFlow 登录或注册页面：确认公网访问、端口映射和主服务启动正常"></div>
 
 能打开登录或注册页面，说明公网访问、端口映射和主服务启动基本正常。首次创建账号后，记得回到 `.env` 关闭公开注册。
 
@@ -517,8 +517,8 @@ RAGFlow 服务启动之后，此刻还没有开始写代码。页面里的模型
 
 课程里选择通义千问系列，是因为它覆盖模型比较完整。进入 RAGFlow 后，可以在模型供应商里添加 `Tongyi-Qianwen`，填入自己的百炼 API Key。
 
-<!-- ![RAGFlow 模型供应商配置页面：选择 Tongyi-Qianwen 并填写百炼 API Key](/assets/img/deepSearch/12/12-4-1-1.png) -->
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/deepSearch/12/12-4-1-1.png" alt="RAGFlow 模型供应商配置页面：选择 Tongyi-Qianwen 并填写百炼 API Key"></div>
+<!-- <div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/deepSearch/12/12-4-1-1.png" alt="RAGFlow 模型供应商配置页面：选择 Tongyi-Qianwen 并填写百炼 API Key"></div> -->
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/deepSearch/12/12-4-1-1.png" alt="RAGFlow 模型供应商配置页面：选择 Tongyi-Qianwen 并填写百炼 API Key"></div>
 
 这一步是在 RAGFlow 里配置模型供应商，不是在项目 `.env` 里配置。RAGFlow 需要自己知道用哪个 LLM、Embedding 或 Rerank 模型。
 
@@ -567,8 +567,8 @@ Embedding: text-embedding-v3
 
 不要写成“测试库”“知识库 1”这种没信息量的名字，否则后续模型很难判断应该使用哪个助手。
 
-<!-- ![RAGFlow 知识库列表页面：确认电商行业和金融行业两个知识库已经创建](/assets/img/deepSearch/12/12-4-3-1.png) -->
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/deepSearch/12/12-4-3-1.png" alt="RAGFlow 知识库列表页面：确认电商行业和金融行业两个知识库已经创建"></div>
+<!-- <div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/deepSearch/12/12-4-3-1.png" alt="RAGFlow 知识库列表页面：确认电商行业和金融行业两个知识库已经创建"></div> -->
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/deepSearch/12/12-4-3-1.png" alt="RAGFlow 知识库列表页面：确认电商行业和金融行业两个知识库已经创建"></div>
 
 ### 4.4 上传文件并解析
 
@@ -576,8 +576,8 @@ Embedding: text-embedding-v3
 
 可以将项目提供的 PDF 文件上传到对应知识库中，文件路径是 `deepsearch-agents/docs/knowledge_base/`。电商相关 PDF 上传到 `电商行业` 知识库，金融相关 PDF 上传到 `金融行业` 知识库，不要混在同一个库里。
 
-<!-- ![RAGFlow 文件上传页面：上传资料后需要等待解析状态完成](/assets/img/deepSearch/12/12-4-4-1.png) -->
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/deepSearch/12/12-4-4-1.png" alt="RAGFlow 文件上传页面：上传资料后需要等待解析状态完成"></div>
+<!-- <div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/deepSearch/12/12-4-4-1.png" alt="RAGFlow 文件上传页面：上传资料后需要等待解析状态完成"></div> -->
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/deepSearch/12/12-4-4-1.png" alt="RAGFlow 文件上传页面：上传资料后需要等待解析状态完成"></div>
 
 上传文件不等于知识库可用了。只有解析完成后，文档才会经过切片、向量化并写入检索引擎，后续聊天助手才能查到内容。
 
@@ -607,8 +607,8 @@ Embedding: text-embedding-v3
 
 也可以创建一个综合行业研究助手，同时绑定 `电商行业` 和 `金融行业`。但在课程演示阶段，先拆成两个助手更清楚，后续 Agent 也更容易根据问题选择正确助手。
 
-<!-- ![RAGFlow 聊天助手列表页面：确认不同业务方向的助手已经创建并准备绑定知识库](/assets/img/deepSearch/12/12-4-5-1.png) -->
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/deepSearch/12/12-4-5-1.png" alt="RAGFlow 聊天助手列表页面：确认不同业务方向的助手已经创建并准备绑定知识库"></div>
+<!-- <div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/deepSearch/12/12-4-5-1.png" alt="RAGFlow 聊天助手列表页面：确认不同业务方向的助手已经创建并准备绑定知识库"></div> -->
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/deepSearch/12/12-4-5-1.png" alt="RAGFlow 聊天助手列表页面：确认不同业务方向的助手已经创建并准备绑定知识库"></div>
 
 聊天助手才是 API 问答入口。知识库存资料，聊天助手负责绑定知识库并对外回答问题。
 
@@ -660,8 +660,8 @@ Embedding: text-embedding-v3
 
 这一步很重要。因为如果页面里都问不出来，后面代码调用 API 也很难成功。
 
-<!-- ![RAGFlow 页面测试结果：确认助手能基于知识库返回答案和引用来源](/assets/img/deepSearch/12/12-4-7-1.png) -->
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/deepSearch/12/12-4-7-1.png" alt="RAGFlow 页面测试结果：确认助手能基于知识库返回答案和引用来源"></div>
+<!-- <div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/deepSearch/12/12-4-7-1.png" alt="RAGFlow 页面测试结果：确认助手能基于知识库返回答案和引用来源"></div> -->
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/deepSearch/12/12-4-7-1.png" alt="RAGFlow 页面测试结果：确认助手能基于知识库返回答案和引用来源"></div>
 
 页面测试是代码接入前的第一道验收。如果页面里已经能返回答案和引用来源，后面排查代码问题时就能把重点放到 API Key、地址和助手名称上。
 
@@ -669,8 +669,8 @@ Embedding: text-embedding-v3
 
 在右上角点击头像，进入个人中心，点击 `API`，生成 API Key，随后填入项目环境变量中。
 
-<!-- ![RAGFlow 个人中心 API Key 页面：生成后端代码调用服务所需的访问密钥](/assets/img/deepSearch/12/12-4-8-1.png) -->
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/deepSearch/12/12-4-8-1.png" alt="RAGFlow 个人中心 API Key 页面：生成后端代码调用服务所需的访问密钥"></div>
+<!-- <div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/deepSearch/12/12-4-8-1.png" alt="RAGFlow 个人中心 API Key 页面：生成后端代码调用服务所需的访问密钥"></div> -->
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/deepSearch/12/12-4-8-1.png" alt="RAGFlow 个人中心 API Key 页面：生成后端代码调用服务所需的访问密钥"></div>
 
 这里生成的是后端调用 RAGFlow API 的访问密钥。不要把真实 API Key 写进公开文档或提交到仓库里。
 

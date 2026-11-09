@@ -77,8 +77,8 @@ tags:
 
 这就已经不是一条简单的 `prompt | model | parser` 线性链能很自然表达的流程了。
 
-<!-- ![基于 LLM 的智能体工作流示意：开始 → 大模型节点 → 边节点判断下一步 → 结束或执行 Action 并回到大模型](/assets/img/llm/22/22-1-2-1.jpeg) -->
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/22/22-1-2-1.jpeg" alt="基于 LLM 的智能体工作流示意：开始 → 大模型节点 → 边节点判断下一步 → 结束或执行 Action 并回到大模型"></div>
+<!-- <div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/llm/22/22-1-2-1.jpeg" alt="基于 LLM 的智能体工作流示意：开始 → 大模型节点 → 边节点判断下一步 → 结束或执行 Action 并回到大模型"></div> -->
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/llm/22/22-1-2-1.jpeg" alt="基于 LLM 的智能体工作流示意：开始 → 大模型节点 → 边节点判断下一步 → 结束或执行 Action 并回到大模型"></div>
 
 如果只用 **Chain / LCEL**，它很适合固定顺序的线性流水线，例如“先总结 → 再翻译 → 再解析输出”。但一旦流程里经常出现“根据当前状态跳到不同分支”“失败后回到前面重试”“中途暂停等待人工确认”，你就很容易写出大量 `if / while` 胶水代码，业务逻辑散在各个函数里，最后变得不好维护。
 
@@ -88,11 +88,11 @@ tags:
 
 下面这两张图分别从 **人机协作（Human-in-the-loop）** 和 **多智能体协作** 的角度，补充说明真实 AI 系统为什么经常需要 LangGraph 这种“可控流程编排”能力。
 
-<!-- ![人机协作（HITL）：课程内容经 AI 分析师建议 → AI 改写器执行修改，不确定时交由人类专家审核决策再回到改写器，最终输出](/assets/img/llm/22/22-1-2-2.svg) -->
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/22/22-1-2-2.svg" alt="人机协作（HITL）：课程内容经 AI 分析师建议 → AI 改写器执行修改，不确定时交由人类专家审核决策再回到改写器，最终输出"></div>
+<!-- <div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/llm/22/22-1-2-2.svg" alt="人机协作（HITL）：课程内容经 AI 分析师建议 → AI 改写器执行修改，不确定时交由人类专家审核决策再回到改写器，最终输出"></div> -->
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/llm/22/22-1-2-2.svg" alt="人机协作（HITL）：课程内容经 AI 分析师建议 → AI 改写器执行修改，不确定时交由人类专家审核决策再回到改写器，最终输出"></div>
 
-<!-- ![多智能体协作：分层规划与共创协作两种模式，模拟现实团队工作方式](/assets/img/llm/22/22-1-2-3.svg) -->
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/22/22-1-2-3.svg" alt="多智能体协作：分层规划与共创协作两种模式，模拟现实团队工作方式"></div>
+<!-- <div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/llm/22/22-1-2-3.svg" alt="多智能体协作：分层规划与共创协作两种模式，模拟现实团队工作方式"></div> -->
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/llm/22/22-1-2-3.svg" alt="多智能体协作：分层规划与共创协作两种模式，模拟现实团队工作方式"></div>
 
 ### 1.3 相关概念
 
@@ -125,8 +125,8 @@ LangGraph 入门最重要的不是先背很多 API，而是先把这四个词的
 **Graph**|图|由状态、节点、边组成的完整工作流|`StateGraph(...)` 构建器，`compile()` 后得到可执行 app
 {% endautogrid %}
 
-<!-- ![构建基石：State 为中心，Nodes 执行逻辑，Edges 定义流转顺序](/assets/img/llm/22/22-1-4-1.png) -->
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/22/22-1-4-1.png" alt="构建基石：State 为中心，Nodes 执行逻辑，Edges 定义流转顺序"></div>
+<!-- <div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/llm/22/22-1-4-1.png" alt="构建基石：State 为中心，Nodes 执行逻辑，Edges 定义流转顺序"></div> -->
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/llm/22/22-1-4-1.png" alt="构建基石：State 为中心，Nodes 执行逻辑，Edges 定义流转顺序"></div>
 
 这四个概念里，下面几处最容易误解：
 
@@ -150,8 +150,8 @@ LangGraph 很强，但不是所有任务都应该一上来就用它。对真实�
 
 可以把下面这张图当作本章的整体印象：**Chain 更像一条直线，LangGraph 更像一张带状态流转规则的网。**
 
-<!-- ![LangGraph 把复杂 AI 应用从“一条直线”变成“一张网”](/assets/img/llm/22/22-1-5-1.png) -->
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/22/22-1-5-1.png" alt="LangGraph 把复杂 AI 应用从“一条直线”变成“一张网”"></div>
+<!-- <div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/llm/22/22-1-5-1.png" alt="LangGraph 把复杂 AI 应用从“一条直线”变成“一张网”"></div> -->
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/llm/22/22-1-5-1.png" alt="LangGraph 把复杂 AI 应用从“一条直线”变成“一张网”"></div>
 
 ---
 
@@ -166,8 +166,8 @@ LangGraph 官方现在主要有两套写法：**Graph API** 和 **Functional API
 
 **本教程第 24～28 章主线先采用 Graph API。** 先把“状态、节点、边、图”这套显式结构建立起来，后面学习条件边、子图、持久化、多智能体协作会更顺。Functional API 不是不重要，只是更适合在你已经理解 LangGraph 核心思想后，再作为另一种写法补充学习。
 
-<!-- ![Quickstart 关键步骤示意：官方提供 Graph API 与 Functional API 两种方式，图中红框突出 Graph API（本教程采用）](/assets/img/llm/22/22-2-1-1.jpeg) -->
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/22/22-2-1-1.jpeg" alt="Quickstart 关键步骤示意：官方提供 Graph API 与 Functional API 两种方式，图中红框突出 Graph API（本教程采用）"></div>
+<!-- <div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/llm/22/22-2-1-1.jpeg" alt="Quickstart 关键步骤示意：官方提供 Graph API 与 Functional API 两种方式，图中红框突出 Graph API（本教程采用）"></div> -->
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/llm/22/22-2-1-1.jpeg" alt="Quickstart 关键步骤示意：官方提供 Graph API 与 Functional API 两种方式，图中红框突出 Graph API（本教程采用）"></div>
 
 ### 2.2 技术架构
 
@@ -177,8 +177,8 @@ LangGraph 官方现在主要有两套写法：**Graph API** 和 **Functional API
 - **Agent Node API**：更偏“围绕 Agent 节点做一些中间层封装”。
 - **构建图语法与 API**：更底层，也更适合我们系统学习 State、Node、Edge、Graph 这些核心机制。
 
-<!-- ![LangGraph 核心功能划分：预构建 Agent API、Agent Node API、构建图语法与 API](/assets/img/llm/22/22-2-2-1.jpeg) -->
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/22/22-2-2-1.jpeg" alt="LangGraph 核心功能划分：预构建 Agent API、Agent Node API、构建图语法与 API"></div>
+<!-- <div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/llm/22/22-2-2-1.jpeg" alt="LangGraph 核心功能划分：预构建 Agent API、Agent Node API、构建图语法与 API"></div> -->
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/llm/22/22-2-2-1.jpeg" alt="LangGraph 核心功能划分：预构建 Agent API、Agent Node API、构建图语法与 API"></div>
 
 **本章和后续第 25～27 章，主线优先学的是最底下这一层“构建图语法与 API”。** 因为只有先理解这层，后面你才知道 LangGraph 为什么能做条件跳转、状态持久化、多分支并行和人机中断。
 
@@ -269,8 +269,8 @@ print(f"图片已生成：{output_path}")
 
 **下图说明**：这是把 `draw_mermaid()` 输出粘贴到 Mermaid 在线编辑器后的效果。左侧是 Mermaid 源码，右侧是渲染出来的流程图。你不需要一开始把 Mermaid 语法全背下来，只要能看懂 `__start__ → greeting → add_emoji → __end__` 这条执行路径即可。
 
-<!-- ![Mermaid 在线编辑器：左侧为 draw_mermaid() 生成的代码，右侧为渲染的流程图（__start__ → greeting → add_emoji → __end__）](/assets/img/llm/22/22-2-5-1.png) -->
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/22/22-2-5-1.png" alt="Mermaid 在线编辑器：左侧为 draw_mermaid() 生成的代码，右侧为渲染的流程图（__start__ → greeting → add_emoji → __end__）"></div>
+<!-- <div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/llm/22/22-2-5-1.png" alt="Mermaid 在线编辑器：左侧为 draw_mermaid() 生成的代码，右侧为渲染的流程图（__start__ → greeting → add_emoji → __end__）"></div> -->
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/llm/22/22-2-5-1.png" alt="Mermaid 在线编辑器：左侧为 draw_mermaid() 生成的代码，右侧为渲染的流程图（__start__ → greeting → add_emoji → __end__）"></div>
 
 ### 2.6 案例二：加一点业务逻辑，但先不接大模型
 
@@ -323,8 +323,8 @@ messages: Annotated[List, add_messages]
 
 这种结构写成图会更直观：
 
-<!-- ![企业问答助手并行检索与融合生成流程：用户问题同时进入知识库检索和联网搜索，两路结果写入 State 后交给融合生成节点输出最终回答](/assets/img/llm/22/22-2-8-1.png) -->
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/22/22-2-8-1.png" alt="企业问答助手并行检索与融合生成流程：用户问题同时进入知识库检索和联网搜索，两路结果写入 State 后交给融合生成节点输出最终回答"></div>
+<!-- <div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/llm/22/22-2-8-1.png" alt="企业问答助手并行检索与融合生成流程：用户问题同时进入知识库检索和联网搜索，两路结果写入 State 后交给融合生成节点输出最终回答"></div> -->
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/llm/22/22-2-8-1.png" alt="企业问答助手并行检索与融合生成流程：用户问题同时进入知识库检索和联网搜索，两路结果写入 State 后交给融合生成节点输出最终回答"></div>
 
 ```python
 from typing import TypedDict

@@ -17,7 +17,7 @@ tags:
 
 ## 1. 评估优化器模式(evaluator-optimizer)
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/springai/ch15_evaluator_optimizer.png" alt="ch15_evaluator_optimizer.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/springai/ch15_evaluator_optimizer.png" alt="ch15_evaluator_optimizer.png"></div>
 
 根据任务 --> 生成信息 --> 通过评估器不断完善 --> 最终输出结果。
 
@@ -158,7 +158,7 @@ public class SimpleEvaluatorOptimizer {
 
 ## 2. 路由模式(routing-workflow)
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/springai/ch15_routing_workflow.png" alt="ch15_routing_workflow.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/springai/ch15_routing_workflow.png" alt="ch15_routing_workflow.png"></div>
 
 路由模式能够根据用户请求和上下文的分类，将输入智能路由到专门的处理程序。这个工作流特别适用于复杂任务，其中：
 
@@ -168,7 +168,7 @@ public class SimpleEvaluatorOptimizer {
 
 ## 3. 编排工作者(orchestrator-workers)
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/springai/ch15_orchestrator_workers.png" alt="ch15_orchestrator_workers.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/springai/ch15_orchestrator_workers.png" alt="ch15_orchestrator_workers.png"></div>
 
 这种模式是一种灵活的方法，用于处理需要动态任务分解和专门处理的复杂任务，manus 就是这个模式。
 
@@ -302,7 +302,7 @@ public class Application {
 
 ## 4. 链接（chain-workflow）
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/springai/ch15_chain_workflow.png" alt="ch15_chain_workflow.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/springai/ch15_chain_workflow.png" alt="ch15_chain_workflow.png"></div>
 
 该模式将复杂的任务分解为一系列步骤，其中每个 LLM 调用都会处理前一个调用的输出。
 
@@ -493,13 +493,13 @@ deepseek   MoE 多专家  多路并行
 
 话不多说，先看运行效果，以下是我们通过几个实际问答记录展示的 Spring AI Alibaba OpenManus 实际使用效果。
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/springai/ch15_manus_demo.png" alt="ch15_manus_demo.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/springai/ch15_manus_demo.png" alt="ch15_manus_demo.png"></div>
 
 ### 总体架构与原理
 
 Spring AI Alibaba Openmanus 与 Python 版本 OpenManus 设计理念相似，其总体架构如下图所示。
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/springai/ch15_manus_architecture.png" alt="ch15_manus_architecture.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/springai/ch15_manus_architecture.png" alt="ch15_manus_architecture.png"></div>
 
 分析上图架构，我们可以把它看作是一款多 Agent 智能自动协作实现，其中：
 

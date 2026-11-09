@@ -65,7 +65,7 @@ fork采用的是copy-on-write技术：
 
 当主进程执行写操作时，则会拷贝一份数据，执行写操作
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/redis/3/image82.png" alt="image82.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/redis/3/image82.png" alt="image82.png"></div>
 
 Redis并不会直接操作内存，而是为进程设置一个虚拟内存，并通过页表保存虚拟内存和物理内存的映射关系，bgsave开始fork主进程得到一个子进程，同时将物理内存中的数据标记为read-only，仅仅复制页表，子进程根据页表读取内存中的数据写一个新的rdb文件替换旧的rdb文件，如果复制页表或写rdb文件时主进程执行写操作，会将内存中的原数据拷贝一个副本，修改并读取副本的数据。
 
@@ -77,7 +77,7 @@ RDB的缺点：执行间隔时间长，两次RDB之间写入数据有丢失的�
 
 AOF即追加文件。Redis处理的每一个写命令都会记录在AOF文件，可以看做是命令日志文件：
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/redis/3/image83.png" alt="image83.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/redis/3/image83.png" alt="image83.png"></div>
 
 ### 1.2.2 AOF配置
 
@@ -112,7 +112,7 @@ appendfsync no
 
 因为AOF文件记录命令，往往比RDB文件大得多。对同一条数据的两次修改只有最后一条命令有效，但是会记录两次命令，通过bgrewriteaof命令可以对AOF文件进行重写，节省空间：
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/redis/3/image84.png" alt="image84.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/redis/3/image84.png" alt="image84.png"></div>
 
 Redis也会在触发阈值时自动去重写AOF文件，阈值可以在redis.conf中配置：
 
@@ -142,7 +142,7 @@ RDB和AOF各有自己的优缺点，如果对数据安全性要求较高，在�
 
 单节点Redis的并发能力是有上限的，要进一步提高Redis的并发能力，就需要搭建主从集群，实现读写分离。
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/redis/3/image85.png" alt="image85.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/redis/3/image85.png" alt="image85.png"></div>
 
 ### 2.1 Redis主从环境搭建
 
@@ -278,7 +278,7 @@ redis-cli -p 7001
 info replication
 ```
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/redis/3/image86.png" alt="image86.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/redis/3/image86.png" alt="image86.png"></div>
 
 > **注意**：
 > 如果主节点设置了密码，执行slaveof命令后还需要执行命令config set masterauth password指定password密码
@@ -294,7 +294,7 @@ info replication
 
 主从第一次建立连接时，会执行**全量同步**，将master节点的所有数据都拷贝给slave节点：
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/redis/3/image87.png" alt="image87.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/redis/3/image87.png" alt="image87.png"></div>
 
 第一次建立连接时，slave执行replicaof命令并建立连接，请求master进行数据同步，master判断是否是第一次同步，是第一次同步，返回master的数据版本信息，slave收到并保存版本信息，然后master执行bgsave命令生成RDB文件并发送RDB文件到slave，slave清空本地数据并加载收到的RDB文件，但是RDB期间可能有新的命令执行，master会记录这些命令缓存到repl_baklog中，RDB结束后master再发送repl_baklog中的命令给slave，slave在执行收到的命令，如果期间再有命令，还是缓存到repl_baklog，然后不断地发送执行，从而保证主从数据同步。
 
@@ -304,13 +304,13 @@ info replication
 
 slave做数据同步必须向master声明自己的replid和offset，master才可以判断是否是第一次同步、同步哪些数据：初始时slave有自己的replid和offset，建立连接时，master发现slave发送来的replid与自己的不一致，需要做全量同步，并将自己的replid和offset都发送给这个slave，slave保存这些信息，以后slave的replid就与master一致了。
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/redis/3/image88.png" alt="image88.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/redis/3/image88.png" alt="image88.png"></div>
 
 ### 2.2.2 增量同步
 
 全量同步是在master与slave第一次建立连接时执行的，其他情况、slave重启时都是进行的**增量同步**，所谓增量同步，即只更新slave与master存在差异的部分数据：
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/redis/3/image89.png" alt="image89.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/redis/3/image89.png" alt="image89.png"></div>
 
 当slave重启后，携带replid和offset向master请求数据同步，master判断请求的replid与自己的一致，则不是第一次，回复continue给slave，然后获取repl_baklog中offset偏移量之后的数据（命令）并发送给slave，slave执行收到的命令保证主从数据一致。
 
@@ -318,13 +318,13 @@ slave做数据同步必须向master声明自己的replid和offset，master才可
 
 repl_backlog是一个固定大小的环形数组，即角标到达数组末尾后，会再次从0开始读写。repl_baklog中会记录Redis处理过的命令日志及offset，包括master当前的offset，和slave已经拷贝到的offset：
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/redis/3/image90.png" alt="image90.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/redis/3/image90.png" alt="image90.png"></div>
 
 进行增量同步时，仅仅是拷贝slave偏移量和master偏移量有差别的部分（即红色区域），随着不断地拷贝，slave也在不断追赶master，即使数组已经满了进行覆盖旧数据，由于这部分旧数据已经被slave同步，所以并不会有影响。
 
 但是，如果slave宕机时间太长，以至于master偏移量超过了slave偏移量（如下图），此时slave重启发现自己的slave偏移量已经没有了，无法进行增量同步，就只能进行**全量同步**。
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/redis/3/image91.png" alt="image91.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/redis/3/image91.png" alt="image91.png"></div>
 
 ### 总结
 
@@ -352,7 +352,7 @@ Redis单节点上的内存占用不要太大，减少RDB导致的过多磁盘IO
 
 限制一个master上的slave节点数量，如果实在是太多slave，则可以采用主-从-从链式结构，减少master压力
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/redis/3/image92.png" alt="image92.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/redis/3/image92.png" alt="image92.png"></div>
 
 ## 3.Redis哨兵
 
@@ -364,7 +364,7 @@ Redis的哨兵机制用来实现主从集群的自动故障恢复：
 
 **通知**：Sentinel充当Redis客户端的服务发现来源，当集群发生故障转移时，会将最新信息推送给Redis的客户端
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/redis/3/image93.png" alt="image93.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/redis/3/image93.png" alt="image93.png"></div>
 
 ### 3.1 集群监控原理
 
@@ -374,7 +374,7 @@ Sentinel是怎么判断Redis服务器是否发生故障？答案是基于**心�
 
 客观下线：若超过指定数量（quorum）的sentinel都认为该实例主观下线，则该实例**客观下线**。quorum值最好超过Sentinel实例数量的一半
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/redis/3/image94.png" alt="image94.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/redis/3/image94.png" alt="image94.png"></div>
 
 ### 3.2 集群故障恢复原理
 
@@ -398,7 +398,7 @@ sentinel给所有其它slave发送slaveof 192.168.150.101 7002（新master的IP�
 
 最后，sentinel将故障节点标记为slave（修改配置文件添加slaveof），当故障节点恢复后会自动成为新的master的slave节点
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/redis/3/image95.png" alt="image95.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/redis/3/image95.png" alt="image95.png"></div>
 
 ### 3.3 哨兵集群环境搭建
 
@@ -422,7 +422,7 @@ cd /tmp
 mkdir s1 s2 s3
 ```
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/redis/3/image96.png" alt="image96.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/redis/3/image96.png" alt="image96.png"></div>
 
 在s1目录创建一个sentinel.conf文件，添加如下内容：
 
@@ -478,15 +478,15 @@ redis-sentinel s3/sentinel.conf
 
 尝试让master节点7001宕机，查看sentinel日志：
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/redis/3/image97.png" alt="image97.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/redis/3/image97.png" alt="image97.png"></div>
 
 查看7003的日志：
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/redis/3/image98.png" alt="image98.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/redis/3/image98.png" alt="image98.png"></div>
 
 查看7002的日志：
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/redis/3/image99.png" alt="image99.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/redis/3/image99.png" alt="image99.png"></div>
 
 ### 3.4 RedisTemplate
 
@@ -551,7 +551,7 @@ master之间通过ping监测彼此健康状态
 
 客户端请求可以访问集群任意节点，最终都会被转发到正确节点
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/redis/3/image100.png" alt="image100.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/redis/3/image100.png" alt="image100.png"></div>
 
 ### 4.1 分片集群环境搭建
 
@@ -643,7 +643,7 @@ ps -ef | grep redis
 
 发现服务都已经正常启动：
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/redis/3/image101.png" alt="image101.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/redis/3/image101.png" alt="image101.png"></div>
 
 如果要关闭所有进程，可以执行命令：
 
@@ -698,11 +698,11 @@ create：代表是创建集群
 
 运行后的样子：
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/redis/3/image102.png" alt="image102.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/redis/3/image102.png" alt="image102.png"></div>
 
 这里输入yes，则集群开始创建：
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/redis/3/image103.png" alt="image103.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/redis/3/image103.png" alt="image103.png"></div>
 
 通过以下命令可以查看集群状态：
 
@@ -729,7 +729,7 @@ set a 1
 
 Redis会把每一个master节点映射到0~16383共16384个插槽（hash slot）上，查看集群信息时就能看到：
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/redis/3/image104.png" alt="image104.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/redis/3/image104.png" alt="image104.png"></div>
 
 数据key不是与节点绑定，而是与插槽绑定。redis会根据key的**有效部分**计算插槽值：
 
@@ -739,7 +739,7 @@ key中不包含“{}”，整个key都是有效部分
 
 例如key是num，那么就根据num计算，如果是{itcast}num，则根据itcast计算。计算方式是利用CRC16算法得到一个hash值，然后对16384取余，得到的结果就是slot值。
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/redis/3/image105.png" alt="image105.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/redis/3/image105.png" alt="image105.png"></div>
 
 *要想将一类数据固定的保存在同一个Redis实例，可以使它们的key都以{typeId}为前缀，从而保证key有效部分相同。*
 
@@ -785,7 +785,7 @@ redis-cli -p 7001 cluster nodes
 
 如图，7004加入了集群，并且默认是一个master节点：
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/redis/3/image106.png" alt="image106.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/redis/3/image106.png" alt="image106.png"></div>
 
 但是，7004节点的插槽数量为0，因此没有任何数据可以存储到7004上
 
@@ -793,7 +793,7 @@ redis-cli -p 7001 cluster nodes
 
 通过get num命令可以看到num对应的插槽位置是2765：
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/redis/3/image107.png" alt="image107.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/redis/3/image107.png" alt="image107.png"></div>
 
 要想使num这个key存储到7004实例，可以将前3000个插槽从7001转移到7004，转移插槽的命令：
 
@@ -803,11 +803,11 @@ redis-cli --cluster reshard 192.168.150.101:7001
 
 执行命令后，首先会询问要移动多少个插槽，输入3000即可：
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/redis/3/image108.png" alt="image108.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/redis/3/image108.png" alt="image108.png"></div>
 
 然后，会询问哪个节点接收这些插槽，需要输入节点ID，7004节点的ID在4.3.3中的日志就可以看到，拷贝到控制台即可：
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/redis/3/image109.png" alt="image109.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/redis/3/image109.png" alt="image109.png"></div>
 
 之后会询问插槽是从哪里移动过来的，这里要从7001获取，因此填写7001的ID：
 
@@ -817,7 +817,7 @@ all：代表全部，也就是三个节点各转移一部分
 
 done：没有了
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/redis/3/image110.png" alt="image110.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/redis/3/image110.png" alt="image110.png"></div>
 
 最后会询问是否确认转移，输入yes就可以了。
 
@@ -827,7 +827,7 @@ done：没有了
 redis-cli -p 7001 cluster node
 ```
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/redis/3/image111.png" alt="image111.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/redis/3/image111.png" alt="image111.png"></div>
 
 ### 4.4 故障转移
 
@@ -845,15 +845,15 @@ redis-cli -p 7002 shutdown
 
 然后是疑似宕机：
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/redis/3/image112.png" alt="image112.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/redis/3/image112.png" alt="image112.png"></div>
 
 最后是确定下线，自动提升一个slave为新的master：
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/redis/3/image113.png" alt="image113.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/redis/3/image113.png" alt="image113.png"></div>
 
 当7002再次启动，就会变为一个slave节点：
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/redis/3/image114.png" alt="image114.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/redis/3/image114.png" alt="image114.png"></div>
 
 ### 4.4.2 手动故障转移
 
@@ -861,7 +861,7 @@ redis-cli -p 7002 shutdown
 
 利用cluster failover命令可以手动让集群中的某个master宕机，切换到执行cluster failover命令的这个slave节点，实现无感知的数据迁移，具体流程如下：
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/redis/3/image115.png" alt="image115.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/redis/3/image115.png" alt="image115.png"></div>
 
 failover命令可以指定三种模式：
 

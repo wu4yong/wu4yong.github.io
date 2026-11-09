@@ -88,7 +88,7 @@ CPU压力：对BigKey的数据序列化和反序列化会导致CPU的使用率�
 
 命令：redis-cli -a 密码 --bigkeys
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/redis/5/image132.png" alt="image132.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/redis/5/image132.png" alt="image132.png"></div>
 
 **说明**：这种方式仅仅能统计每个类型数据占用内存最大的key，但这个key不一定是BigKey
 
@@ -251,7 +251,7 @@ Redis-Rdb-Tools的Github网址：
 
 自定义工具，监控进出Redis的网络数据，超出预警值时主动告警。一般阿里云搭建的云服务器就有相关监控页面：
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/redis/5/image133.png" alt="image133.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/redis/5/image133.png" alt="image133.png"></div>
 
 ### 1.2.5 删除BigKey
 
@@ -259,7 +259,7 @@ BigKey内存占用较多，即便是删除这样的key也需要耗费很长时�
 
 Redis 3.0 之前：如果是集合类型，则遍历BigKey的元素，先逐个删除子元素，最后删除BigKey
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/redis/5/image134.png" alt="image134.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/redis/5/image134.png" alt="image134.png"></div>
 
 Redis 4.0 以后：Redis在4.0后提供了异步删除的命令UNLINK key [key ...]，它会开启新线程进行删除
 
@@ -416,15 +416,15 @@ Hash结构的entry数量不要超过1000
 
 单个命令的执行流程：一次命令的响应时间 = 1次往返的网络传输耗时 + 1次Redis执行命令耗时
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/redis/5/image135.png" alt="image135.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/redis/5/image135.png" alt="image135.png"></div>
 
 N条命令的执行流程：N次命令的响应时间 = N次往返的网络传输耗时 + N次Redis执行命令耗时
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/redis/5/image136.png" alt="image136.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/redis/5/image136.png" alt="image136.png"></div>
 
 由于Redis执行命令很快，所以命令响应时间往往只取决于网络传输耗时，所以可以一次发送N条命令，这时N条命令的执行流程就变化成：N次命令的响应时间 = 1次往返的网络传输耗时 + N次Redis执行命令耗时
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/redis/5/image137.png" alt="image137.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/redis/5/image137.png" alt="image137.png"></div>
 
 ### 2.1.1 MSET
 
@@ -487,7 +487,7 @@ System.out.println("time: " + (e - b));
 
 目前有4种解决方案（slot表示插槽）：
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/redis/5/image138.png" alt="image138.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/redis/5/image138.png" alt="image138.png"></div>
 
 ### 2.2.1 串行化执行代码实践
 
@@ -1099,7 +1099,7 @@ Redis的持久化虽然可以保证数据安全，但也会带来很多额外的
 
 主线程接收到写操作后，不仅将数据写到内存，还要将命令写到AOF缓冲区，根据刷盘策略（如每1秒刷盘）开启新线程同步进行刷盘，同时监听本次刷盘时间，如果刷盘超过2秒，主线程阻塞等待刷盘完成为止，否则通过正常执行指令：
 
-> <div class="img-wrap-left"><img class="left-img" src="/assets/img/redis/5/image139.png" alt="image139.png"></div>
+> <div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/redis/5/image139.png" alt="image139.png"></div>
 
 部署有关建议：
 
@@ -1117,7 +1117,7 @@ Redis实例的物理机要预留足够内存，应对fork和rewrite
 
 Redis是单线程的，客户端发出的指令都会进入到Redis底层的queue（队列）来执行，如果此时有一些慢查询的数据，就会导致大量请求阻塞，从而引起报错：
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/redis/5/image140.png" alt="image140.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/redis/5/image140.png" alt="image140.png"></div>
 
 慢查询的阈值对应配置项slowlog-log-slower-than，单位微妙，默认是10000，建议1000，可以通过命令临时修改：
 
@@ -1139,7 +1139,7 @@ slowlog get [n]：读取n条慢查询日志
 
 slowlog reset：清空慢查询列表
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/redis/5/image141.png" alt="image141.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/redis/5/image141.png" alt="image141.png"></div>
 
 ### 3.3 命令及安全配置
 

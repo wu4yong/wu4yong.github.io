@@ -75,8 +75,8 @@ token 可以理解为模型处理文本时使用的最小片段。它可能是�
 
 下面这张图先帮你建立直觉：模型是在已有上下文后面一步步接出答案。
 
-<!-- ![大语言模型通过不断预测下一个 token 逐步生成完整回答](/assets/img/llm/28/28-2-1-1.png) -->
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/28/28-2-1-1.png" alt="大语言模型通过不断预测下一个 token 逐步生成完整回答"></div>
+<!-- <div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/llm/28/28-2-1-1.png" alt="大语言模型通过不断预测下一个 token 逐步生成完整回答"></div> -->
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/llm/28/28-2-1-1.png" alt="大语言模型通过不断预测下一个 token 逐步生成完整回答"></div>
 
 这件事和微调有什么关系？
 
@@ -94,8 +94,8 @@ token 可以理解为模型处理文本时使用的最小片段。它可能是�
 
 下图会出现一些具体结构名，比如 RMSNorm、RoPE、注意力层等。这里不用逐个记住，先抓住主线就行：文本先变成 token 和向量，经过多层模型计算，最后再变成下一个 token 的概率分布。
 
-<!-- ![大模型从文本输入到概率输出的基本结构](/assets/img/llm/28/28-2-2-1.png) -->
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/28/28-2-2-1.png" alt="大模型从文本输入到概率输出的基本结构"></div>
+<!-- <div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/llm/28/28-2-2-1.png" alt="大模型从文本输入到概率输出的基本结构"></div> -->
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/llm/28/28-2-2-1.png" alt="大模型从文本输入到概率输出的基本结构"></div>
 
 模型里的大量矩阵数值，就是参数。我们说一个模型是 0.6B、7B、14B、32B，指的就是参数规模大约有多少。
 
@@ -131,8 +131,8 @@ adapter 可以理解为挂在基座模型旁边的一小组可训练参数。它
 
 **训练**时，模型会先根据当前参数做预测，再把预测结果和目标答案比较，得到 loss（损失值），然后根据这个差距更新参数或 adapter 参数。
 
-<!-- ![训练和推理的核心区别：推理只读取参数，训练会根据 loss 更新参数](/assets/img/llm/28/28-2-4-1.png) -->
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/28/28-2-4-1.png" alt="训练和推理的核心区别：推理只读取参数，训练会根据 loss 更新参数"></div>
+<!-- <div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/llm/28/28-2-4-1.png" alt="训练和推理的核心区别：推理只读取参数，训练会根据 loss 更新参数"></div> -->
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/llm/28/28-2-4-1.png" alt="训练和推理的核心区别：推理只读取参数，训练会根据 loss 更新参数"></div>
 
 这也是为什么“把几段对话发给模型看一看”不等于微调。只有把样本整理成训练数据，并进入训练流程，模型版本才可能发生变化。
 
@@ -198,8 +198,8 @@ SFT 适合作为入门主线，原因很简单：
 任务是不是需要执行动作？|查库存、调接口、写订单、审批、重试|Workflow / Agent
 {% endautogrid %}
 
-<!-- ![Prompt、RAG、微调与 Agent 的边界判断图](/assets/img/llm/28/28-4-1-1.png) -->
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/28/28-4-1-1.png" alt="Prompt、RAG、微调与 Agent 的边界判断图"></div>
+<!-- <div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/llm/28/28-4-1-1.png" alt="Prompt、RAG、微调与 Agent 的边界判断图"></div> -->
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/llm/28/28-4-1-1.png" alt="Prompt、RAG、微调与 Agent 的边界判断图"></div>
 
 这张图是为了提醒你：训练模型是成本更高的一步。能用 Prompt 解决的，先别急着微调；缺资料的问题，先把 RAG 做好；需要调用工具的问题，不要指望微调替代业务流程。
 
@@ -246,8 +246,8 @@ SFT 适合作为入门主线，原因很简单：
 
 下图强调的是“闭环”。微调不是点一次训练按钮就结束，而是通过验证结果不断回到前面调整。
 
-<!-- ![完整的微调训练闭环：目标定义、基线评估、模型选择、数据准备、训练配置、微调训练、模型验证与迭代调整](/assets/img/llm/28/28-5-1-1.png) -->
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/28/28-5-1-1.png" alt="完整的微调训练闭环：目标定义、基线评估、模型选择、数据准备、训练配置、微调训练、模型验证与迭代调整"></div>
+<!-- <div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/llm/28/28-5-1-1.png" alt="完整的微调训练闭环：目标定义、基线评估、模型选择、数据准备、训练配置、微调训练、模型验证与迭代调整"></div> -->
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/llm/28/28-5-1-1.png" alt="完整的微调训练闭环：目标定义、基线评估、模型选择、数据准备、训练配置、微调训练、模型验证与迭代调整"></div>
 
 真实项目里，经常会出现这些情况：
 
@@ -320,8 +320,8 @@ AI / 微调 / 数据集
 
 下面这张图只看训练内部：一批样本先经过对话模板和 tokenizer 变成模型输入，模型根据当前参数做前向预测，再用 labels（标准答案）计算 loss，最后通过反向传播更新参数或 LoRA / Adapter。这个过程会一批接一批重复，直到完成本轮训练。
 
-<!-- ![监督微调内部训练流程：从样本批次、对话模板、前向预测、labels、loss 到参数更新](/assets/img/llm/28/28-5-4-1.png) -->
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/28/28-5-4-1.png" alt="监督微调内部训练流程：从样本批次、对话模板、前向预测、labels、loss 到参数更新"></div>
+<!-- <div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/llm/28/28-5-4-1.png" alt="监督微调内部训练流程：从样本批次、对话模板、前向预测、labels、loss 到参数更新"></div> -->
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/llm/28/28-5-4-1.png" alt="监督微调内部训练流程：从样本批次、对话模板、前向预测、labels、loss 到参数更新"></div>
 
 图里出现的训练细节，第 33 章会结合 LLaMA-Factory 的训练日志、loss 曲线和保存产物继续展开。
 

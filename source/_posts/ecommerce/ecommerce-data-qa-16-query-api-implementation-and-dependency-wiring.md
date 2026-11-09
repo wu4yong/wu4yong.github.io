@@ -624,8 +624,8 @@ Content-Type: application/json
 
 如果一切正常，接口不会一次性返回完整结果，而是持续返回多段 SSE 消息。前端或 Apifox 能看到问数智能体执行过程中的进度输出。
 
-<!-- ![API 代码目录结构](/assets/img/llm/ecommerce-data-qa/16/16-6-1-1.png) -->
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/ecommerce-data-qa/16/16-6-1-1.png" alt="API 代码目录结构"></div>
+<!-- <div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/llm/ecommerce-data-qa/16/16-6-1-1.png" alt="API 代码目录结构"></div> -->
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/llm/ecommerce-data-qa/16/16-6-1-1.png" alt="API 代码目录结构"></div>
 
 ---
 

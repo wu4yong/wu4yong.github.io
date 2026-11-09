@@ -64,8 +64,8 @@ Redis6 多线程，只是多线程处理网络 IO；命令执行仍然是单线�
 
 <strong>核心思想：</strong>单线程是为了简化并发控制，规避锁；Redis6 多线程只是把网络收发卸载到多核，核心数据操作依然串行。
 
-<!-- ![图 4-1　答题要点结构图](/assets/img/interview/4-1redis-single-thread-fast.png) -->
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/interview/4-1redis-single-thread-fast.png" alt="Redis答题要点结构图"></div>
+<!-- <div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/interview/4-1redis-single-thread-fast.png" alt="图 4-1　答题要点结构图"></div> -->
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/interview/4-1redis-single-thread-fast.png" alt="Redis答题要点结构图"></div>
 
 ## 第 2 题　Redis 过期的数据是立刻被删除的吗？
 
@@ -122,8 +122,8 @@ Redis 实际是：惰性删除 + 定期抽样删除，两者配合。所以过�
 
 <strong>核心思想：</strong>过期时间只是逻辑失效标记；物理删除是延迟、按需进行的，有性能取舍，不能做到实时全部清理。
 
-<!-- ![图 4-2　答题要点结构图](/assets/img/interview/4-2redis-key-expiration.png) -->
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/interview/4-2redis-key-expiration.png" alt="Redis答题要点结构图"></div>
+<!-- <div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/interview/4-2redis-key-expiration.png" alt="图 4-2　答题要点结构图"></div> -->
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/interview/4-2redis-key-expiration.png" alt="Redis答题要点结构图"></div>
 
 ## 第 3 题　Redis 持久化怎么选才稳妥？
 
@@ -187,8 +187,8 @@ Redis 是单线程模型，fork 操作是在主线程中执行，fork 期间主�
 
 <strong>核心思想：</strong>持久化操作是带代价的，不是开启配置就万事大吉；高并发系统要将备份任务和线上读写流量隔离。
 
-<!-- ![图 4-3　答题要点结构图](/assets/img/interview/4-3redis-persistence.png) -->
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/interview/4-3redis-persistence.png" alt="Redis答题要点结构图"></div>
+<!-- <div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/interview/4-3redis-persistence.png" alt="图 4-3　答题要点结构图"></div> -->
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/interview/4-3redis-persistence.png" alt="Redis答题要点结构图"></div>
 
 ## 第 4 题　Redis 缓存穿透
 
@@ -248,8 +248,8 @@ Q：计数布隆有什么代价？ A：每个位置多一个计数器，内存�
 
 A：布隆有维护成本，数据频繁增删要同步；小流量、低攻击风险场景，短TTL 空缓存实现简单够用。 Q：布隆说不存在，就一定不存在吗？ A：是的；布隆的特性：说不存在，一定不存在；说存在，有可能误判。
 
-<!-- ![图 4-4　答题要点结构图](/assets/img/interview/4-4redis-cache-penetration.png) -->
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/interview/4-4redis-cache-penetration.png" alt="Redis答题要点结构图"></div>
+<!-- <div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/interview/4-4redis-cache-penetration.png" alt="图 4-4　答题要点结构图"></div> -->
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/interview/4-4redis-cache-penetration.png" alt="Redis答题要点结构图"></div>
 
 ## 第 5 题　布隆过滤器防缓存穿透，新品被误拦截、误判率持续上涨
 
@@ -320,8 +320,8 @@ A：布隆有维护成本，数据频繁增删要同步；小流量、低攻击�
 3. 不会单一依赖布隆，组合空缓存形成多层防护；
 4. 懂得权衡：容量、内存、误判率之间取舍，知道靠重建、灰度切换来控制误判率，而不是幻想无限扩容。
 
-<!-- ![图 4-5　答题要点结构图](/assets/img/interview/4-5bloom-filter-penetration.png) -->
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/interview/4-5bloom-filter-penetration.png" alt="Redis答题要点结构图"></div>
+<!-- <div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/interview/4-5bloom-filter-penetration.png" alt="图 4-5　答题要点结构图"></div> -->
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/interview/4-5bloom-filter-penetration.png" alt="Redis答题要点结构图"></div>
 
 ## 第 6 题　缓存穿透专项（应急+定位+根治）
 
@@ -382,8 +382,8 @@ Q：空缓存设置多久合适？ A：尽量短，一般 30s~2min；目的只�
 
 Q：布隆过滤器误判怎么办？ A：误判就是不存在的数据被当成存在，请求放行到 DB；这时候靠空缓存兜底，查到为空写入短 TTL 标记，避免持续穿透。
 
-<!-- ![图 4-6　答题要点结构图](/assets/img/interview/4-6cache-penetration-triage.png) -->
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/interview/4-6cache-penetration-triage.png" alt="Redis答题要点结构图"></div>
+<!-- <div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/interview/4-6cache-penetration-triage.png" alt="图 4-6　答题要点结构图"></div> -->
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/interview/4-6cache-penetration-triage.png" alt="Redis答题要点结构图"></div>
 
 ## 第 7 题　项目加 Redis 缓存减轻 DB 压力，Redis 高可用正常、缓存命中率95% 以上、热点数据预热完成，为什么数据库还是被大量请求打垮？
 
@@ -451,8 +451,8 @@ Redis 集群稳定、没宕机，过期时间设置很长，热点数据提前�
 
 <strong>核心思想：</strong>缓存架构防护，不能只盯着正常命中场景，重点防御高并发下少数异常 miss 请求，这才是压垮数据库的元凶。
 
-<!-- ![图 4-7　答题要点结构图](/assets/img/interview/4-7cache-hit-rate-myth.png) -->
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/interview/4-7cache-hit-rate-myth.png" alt="Redis答题要点结构图"></div>
+<!-- <div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/interview/4-7cache-hit-rate-myth.png" alt="图 4-7　答题要点结构图"></div> -->
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/interview/4-7cache-hit-rate-myth.png" alt="Redis答题要点结构图"></div>
 
 ## 第 8 题　秒杀爆款商品，单 Key 每秒十几万请求集中打在同一个 Redis 分片，节点 CPU 打满，缓存超时，流量击穿数据库
 
@@ -536,8 +536,8 @@ Redis 集群稳定、没宕机，过期时间设置很长，热点数据提前�
 
 <strong>核心思想：</strong>热点 key 的本质是流量全部落在单一分片 / 单一锁资源上，治理的核心目标就是打散流量、拆分竞争资源；而不是单纯扩容 Redis 节点。
 
-<!-- ![图 4-8　答题要点结构图](/assets/img/interview/4-8redis-hot-key-seckill.png) -->
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/interview/4-8redis-hot-key-seckill.png" alt="Redis答题要点结构图"></div>
+<!-- <div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/interview/4-8redis-hot-key-seckill.png" alt="图 4-8　答题要点结构图"></div> -->
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/interview/4-8redis-hot-key-seckill.png" alt="Redis答题要点结构图"></div>
 
 ## 第 9 题　缓存雪崩，需要考虑三类场景：大量 key 同时过期、Redis 集群整体宕机、热点 key 集中失效。从长期预防到线上应急
 
@@ -612,8 +612,8 @@ Redis 集群稳定、没宕机，过期时间设置很长，热点数据提前�
 
 <strong>核心思想：</strong>雪崩防护不能只在 Redis 层面做，要从流量入口、应用本地缓存、中间件、数据库多层建立防护；任何单一策略都无法覆盖全部故障场景。
 
-<!-- ![图 4-9　答题要点结构图](/assets/img/interview/4-9cache-avalanche-scenarios.png) -->
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/interview/4-9cache-avalanche-scenarios.png" alt="Redis答题要点结构图"></div>
+<!-- <div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/interview/4-9cache-avalanche-scenarios.png" alt="图 4-9　答题要点结构图"></div> -->
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/interview/4-9cache-avalanche-scenarios.png" alt="Redis答题要点结构图"></div>
 
 ## 第 10 题　缓存雪崩专项（应急+定位+根治）
 
@@ -664,8 +664,8 @@ Q：为什么不能只靠随机 TTL？ A：随机 TTL 只能解决过期雪崩�
 
 Q：缓存批量删除怎么避免雪崩？ A：不要 del 批量删；用异步分批删除；或者标记失效，后台慢慢清理，不要一次性清空。
 
-<!-- ![图 4-10　答题要点结构图](/assets/img/interview/4-10cache-avalanche-triage.png) -->
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/interview/4-10cache-avalanche-triage.png" alt="Redis答题要点结构图"></div>
+<!-- <div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/interview/4-10cache-avalanche-triage.png" alt="图 4-10　答题要点结构图"></div> -->
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/interview/4-10cache-avalanche-triage.png" alt="Redis答题要点结构图"></div>
 
 ## 第 11 题　电商首页商品缓存，大批量 key 同时过期+Redis 宕机双重风险
 
@@ -717,8 +717,8 @@ Q：缓存批量删除怎么避免雪崩？ A：不要 del 批量删；用异步
 
 Q：逻辑过期和互斥锁怎么选？ A：追求低延迟、允许短暂旧数据（首页商品）选逻辑过期；对一致性要求高、不能返回脏数据，才用互斥锁，代价是请求排队等待。 Q：本地 Caffeine 有什么缺点？ A：多节点之间数据不同步，更新商品后各个实例本地缓存失效时间不一致；适合非强一致场景；强一致场景不适合。 Q：如果商品修改了，怎么主动失效缓存？ A：商品更新后，删除 Redis 缓存；如果是逻辑过期方案，直接更新缓存里的数据和逻辑过期时间即可。
 
-<!-- ![图 4-11　答题要点结构图](/assets/img/interview/4-11cache-avalanche-homepage.png) -->
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/interview/4-11cache-avalanche-homepage.png" alt="Redis答题要点结构图"></div>
+<!-- <div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/interview/4-11cache-avalanche-homepage.png" alt="图 4-11　答题要点结构图"></div> -->
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/interview/4-11cache-avalanche-homepage.png" alt="Redis答题要点结构图"></div>
 
 ## 第 12 题　Redis 缓存穿透、击穿、雪崩
 
@@ -774,8 +774,8 @@ Q：互斥锁会不会拖慢并发？ A：会降低一点吞吐，适合热点�
 
 Q：本地缓存 Caffeine 有什么优缺点？ A：速度极快，不依赖 Redis；缺点是多实例本地缓存不一致，更新比较麻烦，适合允许短暂不一致的读场景。
 
-<!-- ![图 4-12　答题要点结构图](/assets/img/interview/4-12redis-cache-three-problems.png) -->
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/interview/4-12redis-cache-three-problems.png" alt="Redis答题要点结构图"></div>
+<!-- <div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/interview/4-12redis-cache-three-problems.png" alt="图 4-12　答题要点结构图"></div> -->
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/interview/4-12redis-cache-three-problems.png" alt="Redis答题要点结构图"></div>
 
 ## 第 13 题　实现分布式锁能不能直接用 Redis setnx+过期时间，靠自动过期兜底？
 
@@ -834,8 +834,8 @@ Q：本地缓存 Caffeine 有什么优缺点？ A：速度极快，不依赖 Red
 
 <strong>核心思想：</strong>分布式锁的安全由三部分组成：原子加锁、持有者校验 + 原子释放、锁自动续期；过期时间只是宕机故障兜底，不是业务正常流程的方案。
 
-<!-- ![图 4-13　答题要点结构图](/assets/img/interview/4-13redis-lock-setnx.png) -->
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/interview/4-13redis-lock-setnx.png" alt="Redis答题要点结构图"></div>
+<!-- <div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/interview/4-13redis-lock-setnx.png" alt="图 4-13　答题要点结构图"></div> -->
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/interview/4-13redis-lock-setnx.png" alt="Redis答题要点结构图"></div>
 
 ## 第 14 题　Redis 能实现绝对可靠的分布式锁吗？单机 Redis 锁随时存在失效风险，那为什么大厂核心业务还在用 Redis 做分布式锁？
 
@@ -900,8 +900,8 @@ Redlock：向多个独立 Redis 主节点申请锁，超过半数节点获取成
 
 <strong>核心思想：</strong>Redis 分布式锁是高性能的乐观并发防护手段，不是绝对安全的强互斥锁；高并发场景配合业务兜底校验才可以落地；零容忍并发错误场景，不能使用。
 
-<!-- ![图 4-14　答题要点结构图](/assets/img/interview/4-14redis-lock-reliability.png) -->
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/interview/4-14redis-lock-reliability.png" alt="Redis答题要点结构图"></div>
+<!-- <div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/interview/4-14redis-lock-reliability.png" alt="图 4-14　答题要点结构图"></div> -->
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/interview/4-14redis-lock-reliability.png" alt="Redis答题要点结构图"></div>
 
 ## 第 15 题　分布式锁怎么实现？幂等、防超卖、定时任务防重复；Redis 锁超时、误删、死锁、锁失效；Redis 锁 vs ZK 锁
 
@@ -1020,8 +1020,8 @@ Zookeeper 锁是 CP 模型，依靠临时有序节点，会话断开节点自动
 
 <strong>核心思想：</strong>没有万能分布式锁，锁是取舍；AP 的 Redis 性能好但一致性弱；CP 的 ZK 一致性强但吞吐低；高并发防超卖永远需要数据库兜底。
 
-<!-- ![图 4-15　答题要点结构图](/assets/img/interview/4-15redis-lock-patterns.png) -->
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/interview/4-15redis-lock-patterns.png" alt="Redis答题要点结构图"></div>
+<!-- <div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/interview/4-15redis-lock-patterns.png" alt="图 4-15　答题要点结构图"></div> -->
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/interview/4-15redis-lock-patterns.png" alt="Redis答题要点结构图"></div>
 
 ## 第 16 题　Redis 分布式锁控库存，双十一超卖，日志显示两个线程同时拿到锁，排查、根因、四层可靠锁方案
 
@@ -1113,8 +1113,8 @@ num >= 1;
 
 <strong>核心思想：</strong>Redis 异步主从架构天生不适合做强一致分布式锁；高并发库存防超卖，锁是锦上添花，数据库条件更新才是底线。
 
-<!-- ![图 4-16　答题要点结构图](/assets/img/interview/4-16redis-lock-oversell.png) -->
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/interview/4-16redis-lock-oversell.png" alt="Redis答题要点结构图"></div>
+<!-- <div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/interview/4-16redis-lock-oversell.png" alt="图 4-16　答题要点结构图"></div> -->
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/interview/4-16redis-lock-oversell.png" alt="Redis答题要点结构图"></div>
 
 ## 第 17 题　电商秒杀，Redis 分布式锁防超卖，压测偶发超卖+高并发偶发死锁，如何定位、排查、根治
 
@@ -1222,8 +1222,8 @@ Redlock 可以缓解，但性能和运维成本高，一般不用；我们主流
 
 区分【概率性主从丢锁导致的偶发超卖】和普通锁超时；同时能识别分布式锁场景下的死锁成因（不只是单锁不释放，还有多锁循环等待）；最重要的认知：秒杀里 Redis 锁是流量闸门，数据库才是正确性闸门。
 
-<!-- ![图 4-17　答题要点结构图](/assets/img/interview/4-17redis-lock-deadlock.png) -->
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/interview/4-17redis-lock-deadlock.png" alt="Redis答题要点结构图"></div>
+<!-- <div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/interview/4-17redis-lock-deadlock.png" alt="图 4-17　答题要点结构图"></div> -->
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/interview/4-17redis-lock-deadlock.png" alt="Redis答题要点结构图"></div>
 
 ## 第 18 题　定时任务（订单对账）Redis 锁，配置了 setnx、过期时间、释放校验，负载高任务超时、锁过期，任务重复执行导致对账错乱
 
@@ -1286,8 +1286,8 @@ ZK 临时会话节点，会话存活锁就存在，会话消失自动释放，�
 
 区分【锁的互斥】和【业务正确性】。初级工程师以为锁负责保证不重复；高级工程师清楚：锁只是优化手段，锁永远有失效边界，资金类任务必须用数据库幂等约束兜底。定时任务和库存秒杀场景的侧重点不一样：秒杀重点防超卖，对账重点防重复计算。
 
-<!-- ![图 4-18　答题要点结构图](/assets/img/interview/4-18redis-lock-scheduled-task.png) -->
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/interview/4-18redis-lock-scheduled-task.png" alt="Redis答题要点结构图"></div>
+<!-- <div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/interview/4-18redis-lock-scheduled-task.png" alt="图 4-18　答题要点结构图"></div> -->
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/interview/4-18redis-lock-scheduled-task.png" alt="Redis答题要点结构图"></div>
 
 ## 第 19 题　库存扣减场景，Redis 分布式锁全链路风险点+生产级完整方案
 
@@ -1396,6 +1396,6 @@ ZK 临时会话节点，会话存活锁就存在，会话消失自动释放，�
 
 <strong>核心思想：</strong>分布式锁没有绝对完美，所有锁都有失效场景；高级工程师不是写出一把不会坏的锁，而是识别所有失效路径，叠加兜底机制，控制故障影响。
 
-<!-- ![图 4-19　答题要点结构图](/assets/img/interview/4-19redis-lock-inventory.png) -->
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/interview/4-19redis-lock-inventory.png" alt="Redis答题要点结构图"></div>
+<!-- <div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/interview/4-19redis-lock-inventory.png" alt="图 4-19　答题要点结构图"></div> -->
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/interview/4-19redis-lock-inventory.png" alt="Redis答题要点结构图"></div>
 

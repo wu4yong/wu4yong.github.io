@@ -16,15 +16,15 @@ Git是一个分布式版本控制工具，主要用于管理开发过程中的�
 
 在IDEA开发工具中可以集成Git（后面会讲解Git安装和集成过程）：
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/git/1/image1.png" alt="image1.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/git/1/image1.png" alt="image1.png"></div>
 
 集成后在IDEA中可以看到Git相关图标：
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/git/1/image2.png" alt="image2.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/git/1/image2.png" alt="image2.png"></div>
 
 可以通过启动两个IDEA窗口模拟两个开发人员来展示Git的使用：
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/git/1/image3.png" alt="image3.png"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/git/1/image3.png" alt="image3.png"></div>
 
 其他的版本控制工具：
 

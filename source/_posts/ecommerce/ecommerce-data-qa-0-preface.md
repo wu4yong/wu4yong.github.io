@@ -27,9 +27,9 @@ tags:
 - 用 `LangGraph` 编排多阶段问数智能体工作流
 - 用 `FastAPI + SSE` 把后端能力交付给前端页面
 
-<!-- ![电商问数前端首页：支持样例问题、自然语言输入和智能数据分析 Agent 交互](/assets/img/ecommerce/0/0-1.png) -->
+<!-- <div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/ecommerce/0/0-1.png" alt="电商问数前端首页：支持样例问题、自然语言输入和智能数据分析 Agent 交互"></div> -->
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/ecommerce/0/0-1.png" alt="电商问数前端首页：支持样例问题、自然语言输入和智能数据分析 Agent 交互"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/ecommerce/0/0-1.png" alt="电商问数前端首页：支持样例问题、自然语言输入和智能数据分析 Agent 交互"></div>
 
 一句话概括：**「电商问数」不是一个只会让大模型裸写 SQL 的 Demo，而是一套围绕“先构建元数据知识库，再检索、推理、生成、校验和执行 SQL”展开的智能问数实战项目。**
 
@@ -98,9 +98,9 @@ tags:
 
 下面这张图可以先帮助你建立整体印象：用户提出自然语言问题后，系统会经过后端调度、字段和表结构召回、自然语言转 SQL、数据库查询、SSE 流式推送，最后把结果展示给用户。
 
-<!-- ![电商问数 NL2SQL 系统架构：用户提问、后端调度、字段表召回、SQL 生成、数据库查询与前端展示](/assets/img/ecommerce/0/0-2.jpg) -->
+<!-- <div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/ecommerce/0/0-2.jpg" alt="电商问数 NL2SQL 系统架构：用户提问、后端调度、字段表召回、SQL 生成、数据库查询与前端展示"></div> -->
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/ecommerce/0/0-2.jpg" alt="电商问数 NL2SQL 系统架构：用户提问、后端调度、字段表召回、SQL 生成、数据库查询与前端展示"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/ecommerce/0/0-2.jpg" alt="电商问数 NL2SQL 系统架构：用户提问、后端调度、字段表召回、SQL 生成、数据库查询与前端展示"></div>
 
 从使用者视角看，它就是一个“会查数的智能数据分析助手”：
 
@@ -113,9 +113,9 @@ tags:
 
 当一次查询真正跑起来时，前端不只是等待最后结果，而是可以看到 LangGraph 工作流的执行过程：抽取关键词、召回字段信息、召回指标信息、召回字段取值、合并召回信息、过滤上下文、生成 SQL、校验 SQL、执行 SQL，最后展示查询结果。
 
-<!-- ![电商问数查询结果页：展示 LangGraph 执行流程、SQL 闭环进度和最终 GMV 查询结果](/assets/img/ecommerce/0/0-3.png) -->
+<!-- <div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/ecommerce/0/0-3.png" alt="电商问数查询结果页：展示 LangGraph 执行流程、SQL 闭环进度和最终 GMV 查询结果"></div> -->
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/ecommerce/0/0-3.png" alt="电商问数查询结果页：展示 LangGraph 执行流程、SQL 闭环进度和最终 GMV 查询结果"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/ecommerce/0/0-3.png" alt="电商问数查询结果页：展示 LangGraph 执行流程、SQL 闭环进度和最终 GMV 查询结果"></div>
 
 所以，这个项目的重点从来不只是“大模型”，而是下面这整条链路：
 
@@ -231,6 +231,6 @@ shopkeeper-agent/
 
 学完之后，你收获的不只是“我跑通了一个 AI Demo”，而是能真正讲清楚：一个智能问数系统为什么要这样设计，代码为什么要这样拆，`MySQL`、`Qdrant`、`Elasticsearch`、`LangGraph` 和 `FastAPI` 在一条完整业务链路里分别解决什么问题。
 
-<!-- ![电商问数智能数据分析助手概念图：自然语言问题经过智能体理解后连接商品、数据表和分析图表](/assets/img/ecommerce/0/0-4.png) -->
+<!-- <div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/ecommerce/0/0-4.png" alt="电商问数智能数据分析助手概念图：自然语言问题经过智能体理解后连接商品、数据表和分析图表"></div> -->
 
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/ecommerce/0/0-4.png" alt="电商问数智能数据分析助手概念图：自然语言问题经过智能体理解后连接商品、数据表和分析图表"></div>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/ecommerce/0/0-4.png" alt="电商问数智能数据分析助手概念图：自然语言问题经过智能体理解后连接商品、数据表和分析图表"></div>

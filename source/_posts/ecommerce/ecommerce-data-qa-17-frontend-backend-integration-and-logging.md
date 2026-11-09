@@ -372,8 +372,8 @@ Content-Type: application/json
 }
 ```
 
-<!-- ![Apifox 正常流式返回 progress/result](/assets/img/llm/ecommerce-data-qa/17/17-4-1-1.png) -->
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/ecommerce-data-qa/17/17-4-1-1.png" alt="Apifox 正常流式返回 progress/result"></div>
+<!-- <div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/llm/ecommerce-data-qa/17/17-4-1-1.png" alt="Apifox 正常流式返回 progress/result"></div> -->
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/llm/ecommerce-data-qa/17/17-4-1-1.png" alt="Apifox 正常流式返回 progress/result"></div>
 
 ### 4.2 启动前端项目
 
@@ -405,8 +405,8 @@ POST http://127.0.0.1:8000/api/query
 
 大功告成~~~~~~
 
-<!-- ![](/assets/img/llm/ecommerce-data-qa/17/17-4-2-1.png) -->
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/ecommerce-data-qa/17/17-4-2-1.png" alt=""></div>
+<!-- <div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/llm/ecommerce-data-qa/17/17-4-2-1.png" alt=""></div> -->
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/llm/ecommerce-data-qa/17/17-4-2-1.png" alt=""></div>
 
 ---
 
@@ -633,8 +633,8 @@ request_id - 550e8400-e29b-41d4-a716-446655440000
 
 这说明并发请求虽然日志交错输出，但我们已经能够按请求维度把链路重新串起来。
 
-<!-- ![](/assets/img/llm/ecommerce-data-qa/17/17-5-4-1.png) -->
-<div class="img-wrap-left"><img class="left-img" src="/assets/img/llm/ecommerce-data-qa/17/17-5-4-1.png" alt=""></div>
+<!-- <div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/llm/ecommerce-data-qa/17/17-5-4-1.png" alt=""></div> -->
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/llm/ecommerce-data-qa/17/17-5-4-1.png" alt=""></div>
 
 ---
 

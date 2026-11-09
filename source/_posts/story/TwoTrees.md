@@ -38,8 +38,8 @@ tags:
 如果想要取柴，你就砍杨树；想做工艺品，就砍红松。你们当然不会无缘无故提着斧头上山砍树了！”
 
 <div style="display:flex; justify-content:center; gap:0;">
-    <img src="/assets/img/essay/tree1.png" style="width:50%; object-fit:contain; display:block;" alt="杨树">
-    <img src="/assets/img/essay/tree2.png" style="width:50%; object-fit:contain; display:block;" alt="胡杨">
+    <img src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/essay/tree1.png" style="width:50%; object-fit:contain; display:block;" alt="杨树">
+    <img src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/essay/tree2.png" style="width:50%; object-fit:contain; display:block;" alt="胡杨">
 </div>
 
 ## <span style="color:#c0392b; font-weight:bold;">这个故事告诉我们：</span>

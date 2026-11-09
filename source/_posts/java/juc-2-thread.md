@@ -428,7 +428,7 @@ private static void test1() throws InterruptedException {
 
 **异步**：调用方无需等待，启动线程后直接继续运行
 <div class="img-wrap-left">
-  <img class="left-img" src="/assets/img/java/concurrent/concurrent5.png" alt="示意图">
+  <img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/java/concurrent/concurrent5.png" alt="示意图">
 </div>
 
 ## 等待多个线程结果
@@ -474,7 +474,7 @@ private static void test2() throws InterruptedException {
 </div>
 
 <div class="img-wrap-left">
-  <img class="left-img" src="/assets/img/java/concurrent/concurrent6.png" alt="示意图">
+  <img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/java/concurrent/concurrent6.png" alt="示意图">
 </div>
 
 ## 有时效的join
@@ -605,7 +605,7 @@ private static void test2() throws InterruptedException {
 
 
 <div class="img-wrap-left">
-  <img class="left-img" src="/assets/img/java/concurrent/concurrent7.png" alt="示意图">
+  <img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/java/concurrent/concurrent7.png" alt="示意图">
 </div>
 
 ### 方案一：基于 isInterrupted 实现
@@ -786,7 +786,7 @@ log.debug("运行结束...");
 
 **终止状态**：线程代码执行完毕，生命周期结束
 <div class="img-wrap-left">
-  <img class="left-img" src="/assets/img/java/concurrent/concurrent8.png" alt="线程状态示意图">
+  <img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/java/concurrent/concurrent8.png" alt="线程状态示意图">
 </div>
 
 ## 二、Java API层面：六种线程状态（Thread\.State枚举）
@@ -803,7 +803,7 @@ log.debug("运行结束...");
 
 **TERMINATED**：线程代码执行完毕，终止运行
 <div class="img-wrap-left">
-  <img class="left-img" src="/assets/img/java/concurrent/concurrent9.png" alt="线程状态示意图">
+  <img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/java/concurrent/concurrent9.png" alt="线程状态示意图">
 </div>
 
 # 2.12 习题：烧水泡茶多线程统筹案例
@@ -826,7 +826,7 @@ log.debug("运行结束...");
 水壶不洗，不能烧开水，因而洗水壶是烧开水的前提。没开水、没茶叶、不洗茶壶茶杯，就不能泡茶，因而这些又是泡茶的前提。它们的相互关系，可以用下边的箭头图来表示：
 
 <div class="img-wrap-left">
-  <img class="left-img" src="/assets/img/java/concurrent/concurrent10.png" alt="烧水泡茶多线程统筹案例">
+  <img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/java/concurrent/concurrent10.png" alt="烧水泡茶多线程统筹案例">
 </div>
 
 从这个图上可以一眼看出，办法甲总共要16分钟（而办法乙、丙需要20分钟）。如果要缩短工时、提高工作效率，应当主要抓烧开水这个环节，而不是抓拿茶叶等环节。同时，洗茶壶茶杯、拿茶叶总共不过4分钟，大可利用“等水开”的时间来做。 
@@ -836,7 +836,7 @@ log.debug("运行结束...");
 洗茶壶，洗茶杯，拿茶叶，或先或后，关系不大，而且同是一个人的活儿，因而可以合并成为：
 
 <div class="img-wrap-left">
-  <img class="left-img" src="/assets/img/java/concurrent/concurrent11.png" alt="烧水泡茶多线程统筹案例">
+  <img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/java/concurrent/concurrent11.png" alt="烧水泡茶多线程统筹案例">
 </div>
 
 看来这是“小题大做”，但在工作环节太多的时候，这样做就非常必要了。 
