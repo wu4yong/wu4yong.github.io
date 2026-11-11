@@ -1,0 +1,707 @@
+<!--
+  ============================================
+  手机端 · 文章原文页
+  文件：phone/post.njk
+  适用终端：手机端（路由 /phone/p/<slug>/，由 scripts/phone-routes.js 生成）
+  作用：手机阅读单篇文章；单列布局、无侧栏无雷达，替代电脑端 post.njk
+        数据由生成期算好：page.item = { title, dateStr, content, cats, tags }
+  样式依赖：phone/_css/common.css、phone/_css/list.css
+  组件依赖：phone/_components/Particles.njk
+  最后修改：2026-11-11
+  ============================================
+-->
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>七、结构化输出和初代Tools实现 - 时空秘境</title>
+  <style>
+    /*
+  ============================================
+  手机端全局样式
+  文件：common.css
+  适用终端：手机端
+  作用：手机端星空底色与通用容器，common.css 的手机端副本
+  最后修改：2026-11-11
+  ============================================
+*//* ----- 重置所有元素边距和盒模型 ----- */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+/* ----- 页面主体 ----- */
+body {
+  background: #020817;        /* 深空蓝背景色 */
+  color: #fff;
+  font-family: "Microsoft Yahei", -apple-system, BlinkMacSystemFont, sans-serif;
+}
+/* ----- 星空粒子容器（固定定位，全屏覆盖）----- */
+#particles {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 0;                 /* 置于最底层，内容在上面 */
+}
+/* ----- 通用内容容器（归档页、标签页等使用）----- */
+.container {
+  position: relative;
+  z-index: 10;                /* 在粒子层之上 */
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 80px 20px;
+}
+/* ----- 页面头部 ----- */
+.header {
+  text-align: center;
+  margin-bottom: 40px;
+}
+.header h1 {
+  color: #00eeff;
+  font-size: 42px;
+  text-shadow: 0 0 20px #00eeff;    /* 青色发光效果 */
+}
+/* ----- 通用返回首页按钮 ----- */
+.back-home {
+  display: inline-block;
+  margin-top: 20px;
+  padding: 10px 25px;
+  background: rgba(0, 32, 65, 0.8);
+  border: 1px solid #00eeff;
+  border-radius: 30px;
+  color: #00eeff;
+  text-decoration: none;
+  transition: all 0.3s ease;
+}
+.back-home:hover {
+  background: #00eeff;
+  color: #020817;
+}
+/* ----- 文章/页面列表容器（归档页使用）----- */
+.post-list {
+  background: rgba(0, 22, 45, 0.85);
+  border-radius: 18px;
+  padding: 30px;
+  border: 1px solid #00eeff;
+}
+/* ----- 列表项 ----- */
+.post-item {
+  margin: 20px 0;
+  padding: 15px;
+  border-bottom: 1px solid #00eeff33;
+}
+.post-item a {
+  color: #00eeff;
+  text-decoration: none;
+  font-size: 20px;
+  transition: all 0.3s ease;
+}
+.post-item a:hover {
+  text-shadow: 0 0 8px #00eeff;
+}
+/* ============================================
+   移动端图片和视频自适应
+   ============================================ */
+/* 所有图片自适应 */
+.article-content img {
+  max-width: 100%;
+  height: auto;
+  display: block;
+  margin: 10px auto;
+  border-radius: 8px;
+}
+/* 所有视频和 iframe 自适应 */
+.article-content video,
+.article-content iframe {
+  max-width: 100%;
+  height: auto;
+  display: block;
+  margin: 10px auto;
+  border-radius: 8px;
+}
+/* 视频容器 - 保持 16:9 比例 */
+.video-container {
+  position: relative;
+  width: 100%;
+  padding-bottom: 56.25%;  /* 16:9 */
+  height: 0;
+  overflow: hidden;
+  border-radius: 8px;
+  margin: 10px 0;
+}
+.video-container video,
+.video-container iframe {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  border: none;
+}
+/* B站 iframe 自适应 */
+.article-content iframe[src*="bilibili"] {
+  width: 100%;
+  height: 400px;
+  max-height: 50vh;
+  border-radius: 8px;
+}
+/* ============================================
+   移动端统一适配
+   ============================================ */
+@media (max-width: 768px) {
+  .article-content iframe[src*="bilibili"] {
+    height: 250px;
+  }
+  .article-content video,
+  .article-content iframe {
+    border-radius: 6px;
+  }
+  /* 代码块水平滚动 */
+  .article-content pre,
+  .article-content .highlight {
+    overflow-x: auto !important;
+    white-space: pre !important;
+    word-break: normal !important;
+    padding: 12px !important;
+    font-size: 13px !important;
+    -webkit-overflow-scrolling: touch;
+  }
+  .article-content code {
+    font-size: 13px !important;
+    word-break: normal !important;
+  }
+  /* 表格水平滚动 */
+  .article-content table {
+    display: block !important;
+    overflow-x: auto !important;
+    white-space: nowrap !important;
+    -webkit-overflow-scrolling: touch;
+  }
+  .article-content table th,
+  .article-content table td {
+    padding: 6px 10px;
+    font-size: 12px;
+  }
+  .essay-image {
+    height: 160px;
+    font-size: 18px;
+    letter-spacing: 2px;
+  }
+}
+
+    /*
+  ============================================
+  手机端通用列表样式
+  文件：phone/_css/list.css
+  适用终端：手机端（/phone/c/、/phone/tags/、/phone/about/、/phone/p/ 共用）
+  作用：手机端极简竖排列表、标签胶囊、正文卡片、返回条
+  依赖：phone/_css/common.css（星空底色）
+  最后修改：2026-11-11
+  ============================================
+*/
+.mb-shell {
+  position: relative;
+  z-index: 1;
+  min-height: 100vh;
+  padding: 14px 16px 40px;
+  box-sizing: border-box;
+}
+
+.mb-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 8px 0 14px;
+  border-bottom: 1px solid rgba(0, 238, 255, 0.18);
+}
+
+.mb-top a.mb-back {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  letter-spacing: 0.04em;
+  color: #7fe8ff;
+  text-decoration: none;
+  padding: 6px 10px;
+  border: 1px solid rgba(0, 238, 255, 0.35);
+  border-radius: 4px;
+}
+
+.mb-title {
+  margin: 20px 0 6px;
+  font-size: 22px;
+  line-height: 1.3;
+  color: #eaf7ff;
+  text-shadow: 0 0 18px rgba(0, 238, 255, 0.35);
+}
+
+.mb-sub {
+  margin-bottom: 18px;
+  font-size: 12px;
+  letter-spacing: 0.08em;
+  color: rgba(140, 200, 220, 0.75);
+}
+
+.mb-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.mb-item {
+  display: block;
+  padding: 12px 14px;
+  border: 1px solid rgba(0, 238, 255, 0.16);
+  border-left: 3px solid rgba(0, 238, 255, 0.5);
+  border-radius: 6px;
+  background: rgba(8, 22, 38, 0.72);
+  color: #d8ecf7;
+  text-decoration: none;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.mb-item-title {
+  display: block;
+  margin-bottom: 4px;
+}
+
+.mb-item-meta {
+  display: block;
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  color: rgba(140, 200, 220, 0.68);
+}
+
+.mb-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.mb-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 12px;
+  border: 1px solid rgba(0, 238, 255, 0.28);
+  border-radius: 999px;
+  background: rgba(8, 22, 38, 0.7);
+  color: #cfe9f6;
+  text-decoration: none;
+  font-size: 13px;
+}
+
+.mb-chip b {
+  color: #00eeff;
+  font-weight: 600;
+}
+
+/* 正文：手机端只保留单列，字号与行距按屏幕可读性调 */
+.mb-article {
+  color: #cfe3ef;
+  font-size: 15px;
+  line-height: 1.85;
+  word-break: break-word;
+}
+
+.mb-article h2,
+.mb-article h3 {
+  margin: 26px 0 10px;
+  color: #eaf7ff;
+  font-size: 17px;
+  border-left: 3px solid #00eeff;
+  padding-left: 10px;
+}
+
+.mb-article img {
+  max-width: 100%;
+  height: auto;
+  border-radius: 6px;
+}
+
+.mb-article pre {
+  overflow-x: auto;
+  padding: 12px;
+  border-radius: 6px;
+  background: rgba(4, 14, 26, 0.9);
+  border: 1px solid rgba(0, 238, 255, 0.16);
+  font-size: 12px;
+}
+
+.mb-article table {
+  display: block;
+  width: 100%;
+  overflow-x: auto;
+}
+
+/* 底部返回条：手机端没有悬浮按钮，用一条固定的返回首页 */
+.mb-foot {
+  margin-top: 32px;
+  padding-top: 16px;
+  border-top: 1px solid rgba(0, 238, 255, 0.16);
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.mb-foot a {
+  flex: 1 1 auto;
+  text-align: center;
+  padding: 11px 14px;
+  border: 1px solid rgba(0, 238, 255, 0.34);
+  border-radius: 6px;
+  color: #8fe9ff;
+  text-decoration: none;
+  font-size: 13px;
+  letter-spacing: 0.06em;
+}
+
+  </style>
+<meta name="generator" content="Hexo 8.1.2"></head>
+<body>
+<div class="mb-shell">
+  <!--
+  ============================================
+  手机端星空粒子组件
+  文件：Particles.njk
+  适用终端：手机端
+  作用：Particles.njk 的手机端副本（nunjucks 子目录 include 取不到上级）
+  最后修改：2026-11-11
+  ============================================
+--><div id="particles" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: -1; pointer-events: none;"></div>
+<script src="https://cdn.jsdelivr.net/particles.js/2.0.0/particles.min.js"></script>
+<script>
+particlesJS("particles", {
+  particles: {
+    number: {
+      value: 120,
+      density: {
+        enable: true,
+        value_area: 800
+      }
+    },
+    color: {
+      value: "#00eeff"
+    },
+    shape: {
+      type: "circle",
+      stroke: {
+        width: 0,
+        color: "#000000"
+      }
+    },
+    opacity: {
+      value: 0.6,
+      random: true,
+      anim: {
+        enable: true,
+        speed: 0.5,
+        opacity_min: 0.1,
+        sync: false
+      }
+    },
+    size: {
+      value: 3,
+      random: true,
+      anim: {
+        enable: true,
+        speed: 2,
+        size_min: 0.1,
+        sync: false
+      }
+    },
+    line_linked: {
+      enable: true,
+      distance: 150,
+      color: "#00eeff",
+      opacity: 0.4,
+      width: 1
+    },
+    move: {
+      enable: true,
+      speed: 0.8,
+      direction: "none",
+      random: true,
+      straight: false,
+      out_mode: "out",
+      bounce: false,
+      attract: {
+        enable: true,
+        rotateX: 600,
+        rotateY: 1200
+      }
+    }
+  },
+  interactivity: {
+    detect_on: "canvas",
+    events: {
+      onhover: {
+        enable: true,
+        mode: "grab"       // 鼠标悬停时粒子聚集
+      },
+      onclick: {
+        enable: true,
+        mode: "push"       // 点击时产生新粒子
+      },
+      resize: true
+    },
+    modes: {
+      grab: {
+        distance: 200,
+        line_linked: {
+          opacity: 1
+        }
+      },
+      push: {
+        particles_nb: 6
+      }
+    }
+  },
+  retina_detect: true
+});
+</script>
+
+  <div class="mb-top">
+    <a class="mb-back" href="/phone/">← 返回手机首页</a>
+    <span class="mb-sub" style="margin:0">2026-09-06</span>
+  </div>
+
+  <h1 class="mb-title">七、结构化输出和初代Tools实现</h1>
+  <div class="mb-sub">
+    分类：springai
+     ｜ 标签：SpringAi
+  </div>
+
+  <div class="mb-article"><div class="essay-banner essay-image11">
+   <!-- Structured Output & Tools -->
+</div>
+
+<h2 id="结构化输出"><a href="#结构化输出" class="headerlink" title="结构化输出"></a>结构化输出</h2><h3 id="基础类型："><a href="#基础类型：" class="headerlink" title="基础类型："></a>基础类型：</h3><p>以Boolean为例 ， 在agent中可以用于判定用于的内容2个分支，  不同的分支走不同的逻辑</p>
+<pre class="line-numbers language-java" data-language="java"><code class="language-java"><span class="token class-name">ChatClient</span> chatClient<span class="token punctuation">;</span>
+<span class="token annotation punctuation">@BeforeEach</span>
+<span class="token keyword">public</span>  <span class="token keyword">void</span> <span class="token function">init</span><span class="token punctuation">(</span><span class="token annotation punctuation">@Autowired</span>
+                  <span class="token class-name">DashScopeChatModel</span> chatModel<span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+    chatClient <span class="token operator">=</span> <span class="token class-name">ChatClient</span><span class="token punctuation">.</span><span class="token function">builder</span><span class="token punctuation">(</span>chatModel<span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token function">build</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">&#125;</span>
+<span class="token annotation punctuation">@Test</span>
+<span class="token keyword">public</span> <span class="token keyword">void</span> <span class="token function">testBoolOut</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+    <span class="token class-name">Boolean</span> isComplain <span class="token operator">=</span> chatClient
+    <span class="token punctuation">.</span><span class="token function">prompt</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+    <span class="token punctuation">.</span><span class="token function">system</span><span class="token punctuation">(</span><span class="token triple-quoted-string string">"""
+            请判断用户信息是否表达了投诉意图?
+            只能用 true 或 false 回答，不要输出多余内容
+            """</span><span class="token punctuation">)</span>
+    <span class="token punctuation">.</span><span class="token function">user</span><span class="token punctuation">(</span><span class="token string">"你们家的快递迟迟不到,我要退货！"</span><span class="token punctuation">)</span>
+    <span class="token punctuation">.</span><span class="token function">call</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+    <span class="token punctuation">.</span><span class="token function">entity</span><span class="token punctuation">(</span><span class="token class-name">Boolean</span><span class="token punctuation">.</span><span class="token keyword">class</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+    <span class="token comment">// 分支逻辑</span>
+    <span class="token keyword">if</span> <span class="token punctuation">(</span><span class="token class-name">Boolean</span><span class="token punctuation">.</span><span class="token constant">TRUE</span><span class="token punctuation">.</span><span class="token function">equals</span><span class="token punctuation">(</span>isComplain<span class="token punctuation">)</span><span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+        <span class="token class-name">System</span><span class="token punctuation">.</span>out<span class="token punctuation">.</span><span class="token function">println</span><span class="token punctuation">(</span><span class="token string">"用户是投诉，转接人工客服！"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token punctuation">&#125;</span> <span class="token keyword">else</span> <span class="token punctuation">&#123;</span>
+        <span class="token class-name">System</span><span class="token punctuation">.</span>out<span class="token punctuation">.</span><span class="token function">println</span><span class="token punctuation">(</span><span class="token string">"用户不是投诉，自动流转客服机器人。"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+        <span class="token comment">// todo 继续调用 客服ChatClient进行对话</span>
+    <span class="token punctuation">&#125;</span>
+<span class="token punctuation">&#125;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<h3 id="Pojo类型："><a href="#Pojo类型：" class="headerlink" title="Pojo类型："></a>Pojo类型：</h3><p>用购物APP应该见过复制一个地址， 自动为你填入每个输入框。  用大模型轻松完成！</p>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/springai/ch07_1749126843402-3cca89cf-d3a8-40c6-aa95-3664d526feb9_9f65c71b46.webp" alt="ch07_1749126843402-3cca89cf-d3a8-40c6-aa95-3664d526feb9_9f65c71b46.png"></div>
+
+<pre class="line-numbers language-java" data-language="java"><code class="language-java">
+<span class="token annotation punctuation">@Test</span>
+<span class="token keyword">public</span> <span class="token keyword">void</span> <span class="token function">testEntityOut</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+    <span class="token class-name">Address</span> address <span class="token operator">=</span> chatClient<span class="token punctuation">.</span><span class="token function">prompt</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+            <span class="token punctuation">.</span><span class="token function">system</span><span class="token punctuation">(</span><span class="token triple-quoted-string string">"""
+                    请从下面这条文本中提取收货信息
+                    """</span><span class="token punctuation">)</span>
+            <span class="token punctuation">.</span><span class="token function">user</span><span class="token punctuation">(</span><span class="token string">"收货人：张三，电话13588888888，地址：浙江省杭州市西湖区文一西路100号8幢202室"</span><span class="token punctuation">)</span>
+            <span class="token punctuation">.</span><span class="token function">call</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+            <span class="token punctuation">.</span><span class="token function">entity</span><span class="token punctuation">(</span><span class="token class-name">Address</span><span class="token punctuation">.</span><span class="token keyword">class</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token class-name">System</span><span class="token punctuation">.</span>out<span class="token punctuation">.</span><span class="token function">println</span><span class="token punctuation">(</span>address<span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">&#125;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<pre class="line-numbers language-java" data-language="java"><code class="language-java"><span class="token keyword">public</span> <span class="token keyword">record</span> <span class="token class-name">Address</span><span class="token punctuation">(</span>
+    <span class="token class-name">String</span> name<span class="token punctuation">,</span>        <span class="token comment">// 收件人姓名</span>
+    <span class="token class-name">String</span> phone<span class="token punctuation">,</span>       <span class="token comment">// 联系电话</span>
+    <span class="token class-name">String</span> province<span class="token punctuation">,</span>    <span class="token comment">// 省</span>
+    <span class="token class-name">String</span> city<span class="token punctuation">,</span>        <span class="token comment">// 市</span>
+    <span class="token class-name">String</span> district<span class="token punctuation">,</span>    <span class="token comment">// 区/县</span>
+    <span class="token class-name">String</span> detail       <span class="token comment">// 详细地址</span>
+<span class="token punctuation">)</span> <span class="token punctuation">&#123;</span><span class="token punctuation">&#125;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<h3 id="原理"><a href="#原理" class="headerlink" title="原理"></a>原理</h3><div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/springai/ch07_1749126360371-0165c51c-79c1-4058-9b1e-32c75182f51d_6662f99fc1.webp" alt="ch07_1749126360371-0165c51c-79c1-4058-9b1e-32c75182f51d_6662f99fc1.jpeg"></div>
+
+<p><code>ChatModel</code>或者直接使用低级API：</p>
+<pre class="line-numbers language-java" data-language="java"><code class="language-java"><span class="token annotation punctuation">@Test</span>
+    <span class="token keyword">public</span> <span class="token keyword">void</span> <span class="token function">testLowEntityOut</span><span class="token punctuation">(</span>
+           <span class="token annotation punctuation">@Autowired</span> <span class="token class-name">DashScopeChatModel</span> chatModel<span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+        <span class="token class-name">BeanOutputConverter</span><span class="token generics"><span class="token punctuation">&lt;</span><span class="token class-name">ActorsFilms</span><span class="token punctuation">></span></span> beanOutputConverter <span class="token operator">=</span>
+                <span class="token keyword">new</span> <span class="token class-name">BeanOutputConverter</span><span class="token generics"><span class="token punctuation">&lt;</span><span class="token punctuation">></span></span><span class="token punctuation">(</span><span class="token class-name">ActorsFilms</span><span class="token punctuation">.</span><span class="token keyword">class</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+        <span class="token class-name">String</span> format <span class="token operator">=</span> beanOutputConverter<span class="token punctuation">.</span><span class="token function">getFormat</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+        <span class="token class-name">String</span> actor <span class="token operator">=</span> <span class="token string">"周星驰"</span><span class="token punctuation">;</span>
+
+        <span class="token class-name">String</span> template <span class="token operator">=</span> <span class="token triple-quoted-string string">"""
+        提供5部&#123;actor&#125;导演的电影.
+        &#123;format&#125;
+        """</span><span class="token punctuation">;</span>
+
+        <span class="token class-name">PromptTemplate</span> promptTemplate <span class="token operator">=</span> <span class="token class-name">PromptTemplate</span><span class="token punctuation">.</span><span class="token function">builder</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token function">template</span><span class="token punctuation">(</span>template<span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token function">variables</span><span class="token punctuation">(</span><span class="token class-name">Map</span><span class="token punctuation">.</span><span class="token function">of</span><span class="token punctuation">(</span><span class="token string">"actor"</span><span class="token punctuation">,</span> actor<span class="token punctuation">,</span> <span class="token string">"format"</span><span class="token punctuation">,</span> format<span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token function">build</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+        <span class="token class-name">ChatResponse</span> response <span class="token operator">=</span> chatModel<span class="token punctuation">.</span><span class="token function">call</span><span class="token punctuation">(</span>
+                promptTemplate<span class="token punctuation">.</span><span class="token function">create</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+        <span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+        <span class="token class-name">ActorsFilms</span> actorsFilms <span class="token operator">=</span> beanOutputConverter<span class="token punctuation">.</span><span class="token function">convert</span><span class="token punctuation">(</span>response<span class="token punctuation">.</span><span class="token function">getResult</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token function">getOutput</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token function">getText</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+        <span class="token class-name">System</span><span class="token punctuation">.</span>out<span class="token punctuation">.</span><span class="token function">println</span><span class="token punctuation">(</span>actorsFilms<span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token punctuation">&#125;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<h2 id="链接多个模型协调工作实战-初代tools："><a href="#链接多个模型协调工作实战-初代tools：" class="headerlink" title="链接多个模型协调工作实战 - 初代tools： $"></a>链接多个模型协调工作实战 - 初代tools： $</h2><h3 id="背景："><a href="#背景：" class="headerlink" title="背景："></a>背景：</h3><p>大模型如果它无法和企业API互联那将毫无意义！  比如我们开发一个智能票务助手，  当用户需要退票， 基础大模型它肯定做不到， 因为票务信息都存在了我们系统中， 必须通过我们系统的业务方法才能进行退票。  那怎么能让大模型“调用”我们自己系统的业务方法呢？ 今天叫大家通过结构化输入连接多个模型一起协同完成这个任务：</p>
+<h3 id="票务助手"><a href="#票务助手" class="headerlink" title="票务助手"></a>票务助手</h3><div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/springai/ch07_1749133561508-8d90a71e-e734-471e-a36e-5605fabc6b8c_cedfc4a752.webp" alt="ch07_1749133561508-8d90a71e-e734-471e-a36e-5605fabc6b8c_cedfc4a752.png"></div>
+
+<h3 id="效果"><a href="#效果" class="headerlink" title="效果"></a>效果</h3><div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/springai/ch07_1749133770407-472b9b4b-f1a8-43f2-b3d2-86d40abb3491_d4f72b04df.webp" alt="ch07_1749133770407-472b9b4b-f1a8-43f2-b3d2-86d40abb3491_d4f72b04df.png"></div>
+
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/springai/ch07_1749133811144-c451d972-8ffc-4760-8b47-dfd14d4db5df_1f12e00328.webp" alt="ch07_1749133811144-c451d972-8ffc-4760-8b47-dfd14d4db5df_1f12e00328.png"></div>
+
+<p>输入姓名和预定号：</p>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/springai/ch07_1749133789344-aab6fec6-8dd9-415f-98cc-1f77c7c45f60_9850f51f40.webp" alt="ch07_1749133789344-aab6fec6-8dd9-415f-98cc-1f77c7c45f60_9850f51f40.png"></div>
+
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/springai/ch07_1749133804610-66c41dfc-a556-49be-9353-e90eee657c20_245c5419ab.webp" alt="ch07_1749133804610-66c41dfc-a556-49be-9353-e90eee657c20_245c5419ab.png"></div>
+
+<p>普通对话：</p>
+<div class="img-wrap-left"><img class="left-img" src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/springai/ch07_1749133832665-d12ca731-fae6-4991-8f17-cb0039a9a1ac_39e77779b1.webp" alt="ch07_1749133832665-d12ca731-fae6-4991-8f17-cb0039a9a1ac_39e77779b1.png"></div>
+
+<h3 id="代码："><a href="#代码：" class="headerlink" title="代码："></a>代码：</h3><pre class="line-numbers language-java" data-language="java"><code class="language-java"><span class="token keyword">public</span> <span class="token keyword">class</span> <span class="token class-name">AiJob</span> <span class="token punctuation">&#123;</span>
+     <span class="token keyword">record</span> <span class="token class-name">Job</span><span class="token punctuation">(</span><span class="token class-name">JobType</span> jobType<span class="token punctuation">,</span> <span class="token class-name">Map</span><span class="token generics"><span class="token punctuation">&lt;</span><span class="token class-name">String</span><span class="token punctuation">,</span><span class="token class-name">String</span><span class="token punctuation">></span></span> keyInfos<span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+    <span class="token punctuation">&#125;</span>
+
+    <span class="token keyword">public</span> <span class="token keyword">enum</span> <span class="token class-name">JobType</span><span class="token punctuation">&#123;</span>
+        <span class="token constant">CANCEL</span><span class="token punctuation">,</span>
+        <span class="token constant">QUERY</span><span class="token punctuation">,</span>
+        <span class="token constant">OTHER</span><span class="token punctuation">,</span>
+    <span class="token punctuation">&#125;</span>
+<span class="token punctuation">&#125;</span>
+<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<pre class="line-numbers language-java" data-language="java"><code class="language-java">
+<span class="token comment">/**
+ * 公众号：程序员SpringAI
+ */</span>
+<span class="token annotation punctuation">@Configuration</span>
+<span class="token keyword">public</span> <span class="token keyword">class</span> <span class="token class-name">AiConfig</span> <span class="token punctuation">&#123;</span>
+
+    <span class="token annotation punctuation">@Bean</span>
+    <span class="token keyword">public</span> <span class="token class-name">ChatClient</span> <span class="token function">planningChatClient</span><span class="token punctuation">(</span><span class="token class-name">DashScopeChatModel</span> chatModel<span class="token punctuation">,</span>
+                                         <span class="token class-name">DashScopeChatProperties</span> options<span class="token punctuation">,</span>
+                                         <span class="token class-name">ChatMemory</span> chatMemory<span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+        <span class="token class-name">DashScopeChatOptions</span> dashScopeChatOptions <span class="token operator">=</span> <span class="token class-name">DashScopeChatOptions</span><span class="token punctuation">.</span><span class="token function">fromOptions</span><span class="token punctuation">(</span>options<span class="token punctuation">.</span><span class="token function">getOptions</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+        dashScopeChatOptions<span class="token punctuation">.</span><span class="token function">setTemperature</span><span class="token punctuation">(</span><span class="token number">0.7</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+            <span class="token keyword">return</span>  <span class="token class-name">ChatClient</span><span class="token punctuation">.</span><span class="token function">builder</span><span class="token punctuation">(</span>chatModel<span class="token punctuation">)</span>
+                    <span class="token punctuation">.</span><span class="token function">defaultSystem</span><span class="token punctuation">(</span><span class="token triple-quoted-string string">"""
+                            # 票务助手任务拆分规则
+                            ## 1.要求
+                            ### 1.1 根据用户内容识别任务
+                            
+                            ## 2. 任务
+                            ### 2.1 JobType:退票(CANCEL) 要求用户提供姓名和预定号， 或者从对话中提取；
+                            ### 2.2 JobType:查票(QUERY) 要求用户提供预定号， 或者从对话中提取；
+                            ### 2.3 JobType:其他(OTHER)
+                            """</span><span class="token punctuation">)</span>
+                    <span class="token punctuation">.</span><span class="token function">defaultAdvisors</span><span class="token punctuation">(</span>
+                            <span class="token class-name">MessageChatMemoryAdvisor</span><span class="token punctuation">.</span><span class="token function">builder</span><span class="token punctuation">(</span>chatMemory<span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token function">build</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+                    <span class="token punctuation">)</span>
+                    <span class="token punctuation">.</span><span class="token function">defaultOptions</span><span class="token punctuation">(</span>dashScopeChatOptions<span class="token punctuation">)</span>
+                    <span class="token punctuation">.</span><span class="token function">build</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token punctuation">&#125;</span>
+
+    <span class="token annotation punctuation">@Bean</span>
+    <span class="token keyword">public</span> <span class="token class-name">ChatClient</span> <span class="token function">botChatClient</span><span class="token punctuation">(</span><span class="token class-name">DashScopeChatModel</span> chatModel<span class="token punctuation">,</span>
+                                    <span class="token class-name">DashScopeChatProperties</span> options<span class="token punctuation">,</span>
+                                         <span class="token class-name">ChatMemory</span> chatMemory<span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+
+        <span class="token class-name">DashScopeChatOptions</span> dashScopeChatOptions <span class="token operator">=</span> <span class="token class-name">DashScopeChatOptions</span><span class="token punctuation">.</span><span class="token function">fromOptions</span><span class="token punctuation">(</span>options<span class="token punctuation">.</span><span class="token function">getOptions</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+        dashScopeChatOptions<span class="token punctuation">.</span><span class="token function">setTemperature</span><span class="token punctuation">(</span><span class="token number">1.2</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+        <span class="token keyword">return</span>  <span class="token class-name">ChatClient</span><span class="token punctuation">.</span><span class="token function">builder</span><span class="token punctuation">(</span>chatModel<span class="token punctuation">)</span>
+                <span class="token punctuation">.</span><span class="token function">defaultSystem</span><span class="token punctuation">(</span><span class="token triple-quoted-string string">"""
+                           你是XS航空智能客服代理， 请以友好的语气服务用户。
+                            """</span><span class="token punctuation">)</span>
+                <span class="token punctuation">.</span><span class="token function">defaultAdvisors</span><span class="token punctuation">(</span>
+                        <span class="token class-name">MessageChatMemoryAdvisor</span><span class="token punctuation">.</span><span class="token function">builder</span><span class="token punctuation">(</span>chatMemory<span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token function">build</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+                <span class="token punctuation">)</span>
+                <span class="token punctuation">.</span><span class="token function">defaultOptions</span><span class="token punctuation">(</span>dashScopeChatOptions<span class="token punctuation">)</span>
+                <span class="token punctuation">.</span><span class="token function">build</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token punctuation">&#125;</span>
+
+<span class="token punctuation">&#125;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<pre class="line-numbers language-java" data-language="java"><code class="language-java">
+<span class="token annotation punctuation">@RestController</span>
+<span class="token keyword">public</span> <span class="token keyword">class</span> <span class="token class-name">MultiModelsController</span> <span class="token punctuation">&#123;</span>
+
+    <span class="token annotation punctuation">@Autowired</span>
+    <span class="token class-name">ChatClient</span> planningChatClient<span class="token punctuation">;</span>
+
+    <span class="token annotation punctuation">@Autowired</span>
+    <span class="token class-name">ChatClient</span> botChatClient<span class="token punctuation">;</span>
+
+
+    <span class="token annotation punctuation">@GetMapping</span><span class="token punctuation">(</span>value <span class="token operator">=</span> <span class="token string">"/stream"</span><span class="token punctuation">,</span> produces <span class="token operator">=</span> <span class="token string">"text/stream;charset=UTF8"</span><span class="token punctuation">)</span>
+    <span class="token class-name">Flux</span><span class="token generics"><span class="token punctuation">&lt;</span><span class="token class-name">String</span><span class="token punctuation">></span></span> <span class="token function">stream</span><span class="token punctuation">(</span><span class="token annotation punctuation">@RequestParam</span> <span class="token class-name">String</span> message<span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+        <span class="token comment">// 创建一个用于接收多条消息的 Sink</span>
+        <span class="token class-name">Sinks<span class="token punctuation">.</span>Many</span><span class="token generics"><span class="token punctuation">&lt;</span><span class="token class-name">String</span><span class="token punctuation">></span></span> sink <span class="token operator">=</span> <span class="token class-name">Sinks</span><span class="token punctuation">.</span><span class="token function">many</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token function">unicast</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token function">onBackpressureBuffer</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+        <span class="token comment">// 推送消息</span>
+        sink<span class="token punctuation">.</span><span class="token function">tryEmitNext</span><span class="token punctuation">(</span><span class="token string">"正在计划任务...&lt;br/>"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+
+        <span class="token keyword">new</span> <span class="token class-name">Thread</span><span class="token punctuation">(</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token operator">-></span> <span class="token punctuation">&#123;</span>
+        <span class="token class-name">AiJob<span class="token punctuation">.</span>Job</span> job <span class="token operator">=</span> planningChatClient<span class="token punctuation">.</span><span class="token function">prompt</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token function">user</span><span class="token punctuation">(</span>message<span class="token punctuation">)</span>
+                <span class="token punctuation">.</span><span class="token function">call</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token function">entity</span><span class="token punctuation">(</span><span class="token class-name">AiJob<span class="token punctuation">.</span>Job</span><span class="token punctuation">.</span><span class="token keyword">class</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+        <span class="token keyword">switch</span> <span class="token punctuation">(</span>job<span class="token punctuation">.</span><span class="token function">jobType</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">&#123;</span>
+            <span class="token keyword">case</span> <span class="token constant">CANCEL</span> <span class="token operator">-></span><span class="token punctuation">&#123;</span>
+                <span class="token class-name">System</span><span class="token punctuation">.</span>out<span class="token punctuation">.</span><span class="token function">println</span><span class="token punctuation">(</span>job<span class="token punctuation">)</span><span class="token punctuation">;</span>
+                <span class="token comment">// todo.. 执行业务</span>
+                <span class="token keyword">if</span><span class="token punctuation">(</span>job<span class="token punctuation">.</span><span class="token function">keyInfos</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token function">size</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token operator">==</span><span class="token number">0</span><span class="token punctuation">)</span><span class="token punctuation">&#123;</span>
+                    sink<span class="token punctuation">.</span><span class="token function">tryEmitNext</span><span class="token punctuation">(</span><span class="token string">"请输入姓名和订单号."</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+                <span class="token punctuation">&#125;</span>
+                <span class="token keyword">else</span> <span class="token punctuation">&#123;</span>
+                    sink<span class="token punctuation">.</span><span class="token function">tryEmitNext</span><span class="token punctuation">(</span><span class="token string">"退票成功!"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+                <span class="token punctuation">&#125;</span>
+            <span class="token punctuation">&#125;</span>
+            <span class="token keyword">case</span> <span class="token constant">QUERY</span> <span class="token operator">-></span> <span class="token punctuation">&#123;</span>
+                <span class="token class-name">System</span><span class="token punctuation">.</span>out<span class="token punctuation">.</span><span class="token function">println</span><span class="token punctuation">(</span>job<span class="token punctuation">)</span><span class="token punctuation">;</span>
+                <span class="token comment">// todo.. 执行业务</span>
+                sink<span class="token punctuation">.</span><span class="token function">tryEmitNext</span><span class="token punctuation">(</span><span class="token string">"查询预定信息：xxxx"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+            <span class="token punctuation">&#125;</span>
+            <span class="token keyword">case</span> <span class="token constant">OTHER</span> <span class="token operator">-></span> <span class="token punctuation">&#123;</span>
+                <span class="token class-name">Flux</span><span class="token generics"><span class="token punctuation">&lt;</span><span class="token class-name">String</span><span class="token punctuation">></span></span> content <span class="token operator">=</span> botChatClient<span class="token punctuation">.</span><span class="token function">prompt</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token function">user</span><span class="token punctuation">(</span>message<span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token function">stream</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token function">content</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+                content<span class="token punctuation">.</span><span class="token function">doOnNext</span><span class="token punctuation">(</span>sink<span class="token operator">::</span><span class="token function">tryEmitNext</span><span class="token punctuation">)</span> <span class="token comment">// 推送每条AI流内容</span>
+                        <span class="token punctuation">.</span><span class="token function">doOnComplete</span><span class="token punctuation">(</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token operator">-></span> sink<span class="token punctuation">.</span><span class="token function">tryEmitComplete</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span>
+                        <span class="token punctuation">.</span><span class="token function">subscribe</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+            <span class="token punctuation">&#125;</span>
+            <span class="token keyword">default</span> <span class="token operator">-></span> <span class="token punctuation">&#123;</span>
+                <span class="token class-name">System</span><span class="token punctuation">.</span>out<span class="token punctuation">.</span><span class="token function">println</span><span class="token punctuation">(</span>job<span class="token punctuation">)</span><span class="token punctuation">;</span>
+                sink<span class="token punctuation">.</span><span class="token function">tryEmitNext</span><span class="token punctuation">(</span><span class="token string">"解析失败"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+            <span class="token punctuation">&#125;</span>
+        <span class="token punctuation">&#125;</span>
+        <span class="token punctuation">&#125;</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token function">start</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+        <span class="token keyword">return</span> sink<span class="token punctuation">.</span><span class="token function">asFlux</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token punctuation">&#125;</span>
+<span class="token punctuation">&#125;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+</div>
+
+  <div class="mb-foot">
+    <a href="/phone/">返回手机首页</a>
+    <a href="/phone/tags/">星迹索引</a>
+  </div>
+</div>
+</body>
+</html>
