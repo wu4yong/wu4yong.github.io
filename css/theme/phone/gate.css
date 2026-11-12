@@ -1,0 +1,345 @@
+/*
+ * ============================================================
+ * gate.css｜手机端雷达待机页（首页专用）
+ * 适用终端：手机 / 小平板（布局宽度 <= 900px，或 UA 为手机）
+ * 作用：手机打开首页时，用一个全屏待机层盖住电脑版布局 ——
+ *      上方固定「WELCOME TO / 时空秘境！」，中间雷达扫描动画，
+ *      底部提示「轻触屏幕进入」；触碰或点击任意位置进入 /phone/ 移动菜单
+ * 依赖：common.css（重置与星空底色）、_components/Particles.njk（粒子底）
+ * 挂载：layout/index.njk 的 #mGate 节点；显示与跳转逻辑在 source/js/theme/phone/gate.js
+ * 最后修改：2026-11-12
+ * ============================================================
+ */
+
+/* ---------- 变量：与电脑端首页同一套冰蓝配色 ---------- */
+#mGate {
+  --mg-ice: #00eeff;
+  --mg-ice-soft: rgba(0, 238, 255, 0.55);
+  --mg-line: rgba(0, 238, 255, 0.16);
+  --mg-line-strong: rgba(0, 238, 255, 0.34);
+  --mg-text: #e8f7ff;
+  --mg-text-dim: rgba(190, 220, 238, 0.72);
+  --mg-mono: "JetBrains Mono", "Cascadia Mono", Consolas, monospace;
+  --mg-bg: #020817;
+}
+
+/* ---------- 待机层容器：默认不显示，只在手机端被启用 ---------- */
+#mGate {
+  position: fixed;
+  inset: 0;
+  z-index: 9990;
+  display: none;
+  flex-direction: column;
+  align-items: center;
+  justify-content: space-between;
+  /* dvh：iOS Safari 地址栏收起/展开时不用 100vh，避免底部被顶出屏幕 */
+  height: 100dvh;
+  padding: max(5vh, 28px) 6vw max(4.4vh, 24px);
+  box-sizing: border-box;
+  overflow: hidden;
+  background:
+    radial-gradient(120% 70% at 50% 8%, #06182c 0%, #020817 58%, #01040c 100%);
+  color: var(--mg-text);
+  font-family: var(--mg-mono);
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+  cursor: pointer;
+  text-decoration: none;
+  opacity: 0;
+  transition: opacity 0.32s ease;
+}
+
+/* 首帧兜底：手机端在 JS 执行前也不要看到电脑版布局 */
+@media (max-width: 900px) {
+  #mGate { display: flex; opacity: 1; }
+  .pc-shell { display: none; }
+}
+
+/* JS 判定为手机（如 iPad 横屏宽度 >900）时，同样收起电脑版布局 */
+body.is-mg-gate .pc-shell,
+body.is-mg-gate .pc-scanlines,
+body.is-mg-gate .pc-vignette {
+  display: none;
+}
+
+/* ---------- 顶部：品牌文字，固定在上方不随雷达移动 ---------- */
+.mg-head {
+  flex: 0 0 auto;
+  width: 100%;
+  text-align: center;
+  position: relative;
+  z-index: 2;
+}
+
+.mg-head::after {                    /* 文字下方的细分隔线，两端渐隐 */
+  content: "";
+  display: block;
+  margin: 1.8vh auto 0;
+  width: min(72vw, 340px);
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--mg-line-strong), transparent);
+}
+
+.mg-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: clamp(9px, 2.6vw, 11px);
+  letter-spacing: 0.22em;
+  color: var(--mg-ice-soft);
+  margin-bottom: 1.4vh;
+}
+
+.mg-tag-tick {                       /* 标签前的小方块 */
+  width: 5px;
+  height: 5px;
+  background: var(--mg-ice);
+  box-shadow: 0 0 8px var(--mg-ice);
+}
+
+.mg-welcome {
+  display: block;
+  font-size: clamp(11px, 3.4vw, 14px);
+  letter-spacing: 0.42em;
+  color: var(--mg-text-dim);
+  text-indent: 0.42em;               /* 抵消末位字距，视觉居中 */
+  margin-bottom: 1vh;
+}
+
+.mg-title {
+  display: block;
+  font-size: clamp(30px, 10.4vw, 52px);
+  font-weight: 700;
+  line-height: 1.14;
+  letter-spacing: 0.04em;
+  color: var(--mg-ice);
+  text-shadow:
+    0 0 12px rgba(0, 238, 255, 0.42),
+    0 0 34px rgba(0, 238, 255, 0.18);
+}
+
+.mg-sub {
+  display: block;
+  margin-top: 1.6vh;
+  font-size: clamp(10px, 3vw, 12px);
+  letter-spacing: 0.08em;
+  color: rgba(190, 220, 238, 0.5);
+}
+
+/* ---------- 中部：雷达扫描 ---------- */
+.mg-radar {
+  position: relative;
+  flex: 0 0 auto;
+  width: min(86vmin, 356px);
+  height: min(86vmin, 356px);
+  margin: 1.6vh 0;
+  border-radius: 50%;
+  background: radial-gradient(circle at 50% 50%,
+    rgba(0, 238, 255, 0.10) 0%,
+    rgba(0, 238, 255, 0.045) 46%,
+    rgba(0, 60, 90, 0.10) 78%,
+    transparent 100%);
+  box-shadow: inset 0 0 40px rgba(0, 238, 255, 0.08);
+}
+
+/* 同心环：三层，逐层外扩脉冲 */
+.mg-ring {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  border: 1px solid var(--mg-line);
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+  box-sizing: border-box;
+}
+
+.mg-ring-1 { width: 30%; height: 30%; border-color: var(--mg-line-strong); }
+.mg-ring-2 { width: 60%; height: 60%; }
+.mg-ring-3 { width: 92%; height: 92%; border-color: rgba(0, 238, 255, 0.22); }
+
+/* 外圈刻度：60 条放射短线，缓慢反向旋转 */
+.mg-ticks {
+  position: absolute;
+  inset: 2%;
+  border-radius: 50%;
+  background: repeating-conic-gradient(
+    from 0deg,
+    rgba(0, 238, 255, 0.26) 0deg 0.6deg,
+    transparent 0.6deg 6deg);
+  -webkit-mask: radial-gradient(circle, transparent 0 45%, #000 46% 49%, transparent 50%);
+          mask: radial-gradient(circle, transparent 0 45%, #000 46% 49%, transparent 50%);
+  animation: mg-spin-rev 26s linear infinite;
+}
+
+/* 扫描扇形：锥形渐变，前缘一条亮线，整体匀速旋转 */
+.mg-sweep {
+  position: absolute;
+  inset: 4%;
+  border-radius: 50%;
+  background: conic-gradient(from 0deg,
+    rgba(0, 238, 255, 0.00) 0deg,
+    rgba(0, 238, 255, 0.02) 26deg,
+    rgba(0, 238, 255, 0.20) 76deg,
+    rgba(0, 238, 255, 0.40) 89deg,
+    rgba(120, 240, 255, 0.55) 90deg,
+    rgba(0, 238, 255, 0.10) 91deg,
+    rgba(0, 238, 255, 0.00) 96deg,
+    rgba(0, 238, 255, 0.00) 360deg);
+  animation: mg-spin 3.4s linear infinite;
+}
+
+/* 十字准线 */
+.mg-cross {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  background: linear-gradient(90deg, transparent, var(--mg-line-strong), transparent);
+}
+
+.mg-cross-h {
+  width: 92%;
+  height: 1px;
+  transform: translate(-50%, -50%);
+}
+
+.mg-cross-v {
+  width: 1px;
+  height: 92%;
+  background: linear-gradient(180deg, transparent, var(--mg-line-strong), transparent);
+  transform: translate(-50%, -50%);
+}
+
+/* 中心核：小圆点 + 呼吸光晕 */
+.mg-core {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 7%;
+  height: 7%;
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+  background: radial-gradient(circle, #ffffff 0%, var(--mg-ice) 46%, rgba(0, 238, 255, 0.1) 100%);
+  box-shadow: 0 0 14px rgba(0, 238, 255, 0.8);
+  animation: mg-breathe 2.4s ease-in-out infinite;
+}
+
+/* 目标点：8 个，位置错开，逐个闪烁（扫到谁谁亮） */
+.mg-node {
+  position: absolute;
+  width: 1.5%;
+  min-width: 4px;
+  aspect-ratio: 1 / 1;
+  border-radius: 50%;
+  background: var(--mg-ice);
+  box-shadow: 0 0 8px rgba(0, 238, 255, 0.9);
+  animation: mg-node 3.4s linear infinite;
+}
+
+.mg-node-1 { left: 30%; top: 26%; animation-delay: 0.20s; }
+.mg-node-2 { left: 62%; top: 20%; animation-delay: 0.62s; }
+.mg-node-3 { left: 74%; top: 46%; animation-delay: 1.36s; }
+.mg-node-4 { left: 66%; top: 74%; animation-delay: 1.92s; }
+.mg-node-5 { left: 38%; top: 82%; animation-delay: 2.44s; }
+.mg-node-6 { left: 22%; top: 58%; animation-delay: 2.86s; }
+.mg-node-7 { left: 46%; top: 40%; animation-delay: 1.04s; }
+.mg-node-8 { left: 54%; top: 62%; animation-delay: 1.68s; }
+
+/* 雷达中心文字：待机标识 */
+.mg-radar-label {
+  position: absolute;
+  left: 50%;
+  bottom: 12%;
+  transform: translateX(-50%);
+  font-size: clamp(8px, 2.2vw, 10px);
+  letter-spacing: 0.22em;
+  color: rgba(0, 238, 255, 0.52);
+  white-space: nowrap;
+}
+
+/* ---------- 底部：进入提示 ---------- */
+.mg-foot {
+  flex: 0 0 auto;
+  width: 100%;
+  text-align: center;
+  position: relative;
+  z-index: 2;
+}
+
+.mg-enter {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: clamp(10px, 3vw, 12px);
+  letter-spacing: 0.18em;
+  color: var(--mg-text-dim);
+  animation: mg-fade 2.6s ease-in-out infinite;
+}
+
+.mg-enter-arrow {
+  display: inline-block;
+  width: 0;
+  height: 0;
+  border-left: 4px solid transparent;
+  border-right: 4px solid transparent;
+  border-top: 6px solid var(--mg-ice);
+  animation: mg-nudge 1.6s ease-in-out infinite;
+}
+
+.mg-foot-meta {
+  display: block;
+  margin-top: 1.6vh;
+  font-size: clamp(8px, 2.2vw, 10px);
+  letter-spacing: 0.16em;
+  color: rgba(190, 220, 238, 0.34);
+}
+
+/* ---------- 四角 HUD 装饰 ---------- */
+.mg-corner {
+  position: absolute;
+  width: 18px;
+  height: 18px;
+  border: 1px solid var(--mg-line-strong);
+  opacity: 0.7;
+}
+
+.mg-corner-tl { left: 14px; top: 14px; border-right: 0; border-bottom: 0; }
+.mg-corner-tr { right: 14px; top: 14px; border-left: 0; border-bottom: 0; }
+.mg-corner-bl { left: 14px; bottom: 14px; border-right: 0; border-top: 0; }
+.mg-corner-br { right: 14px; bottom: 14px; border-left: 0; border-top: 0; }
+
+/* ---------- 动画关键帧 ---------- */
+@keyframes mg-spin {
+  to { transform: rotate(360deg); }
+}
+
+@keyframes mg-spin-rev {
+  to { transform: rotate(-360deg); }
+}
+
+@keyframes mg-breathe {
+  0%, 100% { transform: translate(-50%, -50%) scale(1); opacity: 0.92; }
+  50% { transform: translate(-50%, -50%) scale(1.32); opacity: 0.55; }
+}
+
+@keyframes mg-node {
+  0%, 74% { opacity: 0.18; transform: scale(0.8); }
+  78%, 90% { opacity: 1; transform: scale(1.28); }
+  96%, 100% { opacity: 0.18; transform: scale(0.8); }
+}
+
+@keyframes mg-fade {
+  0%, 100% { opacity: 0.55; }
+  50% { opacity: 1; }
+}
+
+@keyframes mg-nudge {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(4px); }
+}
+
+/* 触屏设备上避免长按选中文字 */
+#mGate,
+#mGate * {
+  -webkit-user-select: none;
+  user-select: none;
+}
