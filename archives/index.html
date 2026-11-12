@@ -26,6 +26,10 @@
 --><head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="color-scheme" content="dark">
+  <meta name="theme-color" content="#020817">
+  <!-- 首帧兜底：浏览器默认画布是白的，样式表还没解析完就画会闪一下白。这条 8 字节规则先锁死深空底色 -->
+  <style>html{background-color:#020817}</style>
   <title>星图手记 - 时空秘境</title>
   <style>
     
@@ -204,6 +208,67 @@ body {
   }
 }
 
+/* ========== 跨页切换：新页淡入盖住旧页 ==========
+   静态站每点一次菜单都是重新打开一个页面，加淡入是为了「看起来像切页而不是刷新」。
+   上一版重影的根因不在淡入本身，而在新页首帧还没排好标签（模板 20 个 → 脚本收成 5 个），
+   两套标签在 0.2s 里叠在一起。现在排序已经下沉到 .tag-cloud 紧跟的内联脚本
+   （_js/hot-tags.js），首帧就是最终 5 个，所以淡入可以安全保留。
+   仍然只做「旧页留底 + 新页淡入」，不做两层同时半透明（那样中间会偏暗像闪黑）。 */
+@view-transition {
+  navigation: auto;
+}
+::view-transition-old(root) {
+  animation: none;
+  opacity: 1;
+}
+::view-transition-new(root) {
+  animation: vtFadeIn 0.26s ease-out both;
+}
+@keyframes vtFadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+/* ========== 全站滚动条：星图风细窄滑块（信息日志同款） ==========
+   Windows 默认滚动条是浅灰宽条，压在深色玻璃面板上非常突兀。
+   这里统一成：轨道透明（不切面板的底色）、滑块 4px 视觉宽度的青色圆头像悬浮着，
+   悬停变亮并带一点光晕。所有可滚动区域（侧栏、正文、雷达日志、标签页、弹窗列表）
+   都吃这一条规则，不再各写各的。
+   注意：只写 ::-webkit-*，不要混用 scrollbar-width / scrollbar-color——
+   Chrome 一旦看到那两个属性就会放弃 ::-webkit 伪元素的定制，退回系统样式。 */
+::-webkit-scrollbar {
+  width: 12px;
+  height: 12px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+  border: 0;
+}
+::-webkit-scrollbar-thumb {
+  background-color: rgba(0, 238, 255, 0.42);
+  /* 两侧透明边 + background-clip：12px 的轨道里只露出中间 4px，
+     看起来是一条悬空的细光条，而不是贴着面板边缘的实心块 */
+  border: 4px solid transparent;
+  border-radius: 12px;
+  background-clip: content-box;
+  min-height: 36px;
+  transition: background-color 0.2s ease, box-shadow 0.2s ease;
+}
+::-webkit-scrollbar-thumb:hover {
+  background-color: rgba(0, 238, 255, 0.82);
+  box-shadow: 0 0 8px rgba(0, 238, 255, 0.45);
+}
+::-webkit-scrollbar-thumb:active {
+  background-color: rgba(0, 238, 255, 0.9);
+}
+::-webkit-scrollbar-corner {
+  background: transparent;
+}
+/* 老版本 Chromium（<121）没有 background-clip 的滑块内边距，回退成 6px 实心条 */
+@supports not (background-clip: content-box) {
+  ::-webkit-scrollbar { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-thumb { border: 0; border-radius: 3px; }
+}
     
       /*
   ============================================
@@ -463,7 +528,11 @@ html.post-page * {
   backdrop-filter: blur(10px);      /* 毛玻璃效果 */
   border-right: 1px solid #00eeff33;
   overflow-y: auto;                 /* 内容过多时滚动 */
-  padding: 20px;
+  /* 右侧内边距从 20px 收到 8px：滚动条换成 12px 细滑块以后，
+     原来那圈留白让滑块像浮在空白里，现在贴着卡片边缘走 */
+  padding: 20px 8px 20px 20px;
+  /* 滚动条出现/消失时不挤压内容宽度，避免侧栏里 1~2px 的横跳 */
+  scrollbar-gutter: stable;
   flex-shrink: 0;                   /* 防止被压缩 */
 }
 
@@ -602,12 +671,14 @@ html.post-page * {
   color: #ccddff;
   text-decoration: none;
   font-size: 13px;
-  transition: all 0.3s ease;
+  /* 只过渡颜色/发光：hover 时元素自身绝不位移，否则鼠标会被“推离”元素，触发 hover 反复进出 */
+  display: inline-block;
+  transition: color 0.25s ease, text-shadow 0.25s ease;
 }
 .links-card a:hover,
 .archive-list a:hover {
   color: #00eeff;
-  padding-left: 4px;
+  text-shadow: 0 0 8px rgba(0, 238, 255, 0.55);
 }
 
 /* ========== 标签云 ========== */
@@ -617,17 +688,20 @@ html.post-page * {
   gap: 8px;
 }
 .tag-link {
-  color: #ccddff;
+  color: #00eeff;
   text-decoration: none;
   font-size: 12px;
   padding: 4px 8px;
-  background: rgba(0, 0, 0, 0.3);
+  /* 与「+ 关注」按钮同款：半透明青色底 + 青色描边胶囊 */
+  background: rgba(0, 238, 255, 0.2);
+  border: 1px solid #00eeff;
   border-radius: 15px;
-  transition: all 0.3s ease;
+  transition: background 0.25s ease, color 0.25s ease, box-shadow 0.25s ease;
 }
 .tag-link:hover {
-  color: #00eeff;
-  background: rgba(0, 238, 255, 0.2);
+  color: #020817;
+  background: #00eeff;
+  box-shadow: 0 0 14px rgba(0, 238, 255, 0.35);
 }
 
 /* ========== 移动端适配：小屏幕隐藏侧边栏 ========== */
@@ -754,7 +828,6 @@ body.sidebar-collapsed .main-content {
     display:none !important;
   }
 }
-
 
 /* ========== 搜索弹窗模态框 霓虹深色风格 + 淡入动画 ========== */
 .modal-mask {
@@ -934,16 +1007,6 @@ body.sidebar-collapsed .main-content {
   overflow-y: auto;
   overflow-x: hidden;
   padding: 6px 8px 14px;
-  scrollbar-width: thin;
-  scrollbar-color: rgba(0,238,255,.4) transparent;
-}
-.sp-body::-webkit-scrollbar {
-  width: 6px;
-  height: 0;
-}
-.sp-body::-webkit-scrollbar-thumb {
-  background: rgba(0,238,255,.35);
-  border-radius: 3px;
 }
 .sp-loading {
   padding: 26px 12px;
@@ -2376,11 +2439,6 @@ body {
   border-color:rgba(255,216,102,0.4);
   background:rgba(255,216,102,0.1);
 }
-.log-list::-webkit-scrollbar { width:4px; }
-.log-list::-webkit-scrollbar-thumb {
-  background:rgba(0,238,255,0.35);
-  border-radius:2px;
-}
 
 /* ========== 底部轨道数据带 ========== */
 .bottom-panel {
@@ -2773,6 +2831,37 @@ body {
 .article-content ul li ul li::before {
   left: -1.4em;
 }
+/* 列表背景块：正文有序/无序列表统一套一层与代码容器同色的面板，避免「裸排版」 */
+.article-content ol,
+.article-content ul {
+  background: #0a2035;
+  border: 1px solid rgba(0, 238, 255, 0.14);
+  border-radius: 8px;
+  box-sizing: border-box;
+  width: 100%;
+  padding: 14px 18px 14px 2.9em !important;
+  margin: 12px 0 16px;
+}
+/* 嵌套子列表不叠加背景，只保留缩进，避免盒子套盒子 */
+.article-content ol li ol,
+.article-content ol li ul,
+.article-content ul li ol,
+.article-content ul li ul {
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  padding: 0 0 0 1.4em !important;
+  margin: 0.2rem 0 !important;
+}
+/* 引用块（提示框）内部的列表也不加面板，保持引用块本身的原样 */
+.article-content blockquote ol,
+.article-content blockquote ul {
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  padding: 0 0 0 1.6em !important;
+  margin: 0.4em 0 !important;
+}
 /* Mermaid 流程图 / 时序图 整体适配：auto 超长出滚动条，不会溢出页面 */
 .mermaid {
   margin: 24px 0;
@@ -3092,15 +3181,6 @@ article .mermaid,
   overflow-y: auto;
   padding: 26px 34px 70px;
   scroll-behavior: smooth;
-}
-.reader-body::-webkit-scrollbar,
-.tag-post-list::-webkit-scrollbar {
-  width: 6px;
-}
-.reader-body::-webkit-scrollbar-thumb,
-.tag-post-list::-webkit-scrollbar-thumb {
-  background: rgba(0, 238, 255, 0.45);
-  border-radius: 3px;
 }
 .reader-body .article-content {
   max-width: 860px;
@@ -3702,13 +3782,6 @@ html.post-page body {
   max-height: 124px;
   overflow-y: auto;
 }
-.year-bars::-webkit-scrollbar {
-  width: 4px;
-}
-.year-bars::-webkit-scrollbar-thumb {
-  background: rgba(0, 238, 255, 0.35);
-  border-radius: 2px;
-}
 .year-bar-row {
   display: grid;
   grid-template-columns: 64px 1fr 56px;
@@ -3772,7 +3845,6 @@ html.post-page body {
   font-size: 15px;
   text-shadow: 0 0 8px rgba(0, 238, 255, 0.6);
 }
-
 
 
     
@@ -5337,6 +5409,60 @@ html.post-page body {
     
   
 
+  
+  
+  
+    
+  
+
+  
+  
+  
+    
+  
+
+  
+  
+  
+    
+  
+
+  
+  
+  
+    
+  
+
+  
+  
+  
+    
+  
+
+  
+  
+  
+    
+  
+
+  
+  
+  
+    
+  
+
+  
+  
+  
+    
+  
+
+  
+  
+  
+    
+  
+
 
 
 
@@ -5485,6 +5611,42 @@ html.post-page body {
   
   
     
+  
+  
+
+  
+  
+  
+
+  
+  
+  
+
+  
+  
+  
+
+  
+  
+  
+
+  
+  
+  
+
+  
+  
+  
+
+  
+  
+  
+
+  
+  
+  
+
+  
   
   
 
@@ -6146,7 +6308,7 @@ particlesJS("particles", {
     <p class="bio">星辰大海，代码为舟</p>
     <div class="stats">
       <div class="stat-item">
-        <span class="stat-num">165</span>
+        <span class="stat-num">174</span>
         <span class="stat-label">文章</span>
       </div>
       <div class="stat-item">
@@ -6180,6 +6342,9 @@ particlesJS("particles", {
     
     <div class="tag-cloud">
       
+      <a href="/tags/电商问数/" class="tag-link" data-tag="电商问数"
+        data-count="18">电商问数</a>
+      
       <a href="/tags/MySQL数据库/" class="tag-link" data-tag="MySQL数据库"
         data-count="7">MySQL数据库</a>
       
@@ -6189,29 +6354,26 @@ particlesJS("particles", {
       <a href="/tags/深度研搜/" class="tag-link" data-tag="深度研搜"
         data-count="15">深度研搜</a>
       
-      <a href="/tags/电商问数/" class="tag-link" data-tag="电商问数"
-        data-count="18">电商问数</a>
-      
       <a href="/tags/git/" class="tag-link" data-tag="git"
         data-count="5">git</a>
-      
-      <a href="/tags/langchain/" class="tag-link" data-tag="langchain"
-        data-count="10">langchain</a>
       
       <a href="/tags/面试/" class="tag-link" data-tag="面试"
         data-count="11">面试</a>
       
-      <a href="/tags/Netty/" class="tag-link" data-tag="Netty"
-        data-count="4">Netty</a>
+      <a href="/tags/langchain/" class="tag-link" data-tag="langchain"
+        data-count="10">langchain</a>
       
       <a href="/tags/Java/" class="tag-link" data-tag="Java"
         data-count="10">Java</a>
       
-      <a href="/tags/vue/" class="tag-link" data-tag="vue"
-        data-count="9">vue</a>
-      
       <a href="/tags/大模型/" class="tag-link" data-tag="大模型"
         data-count="35">大模型</a>
+      
+      <a href="/tags/AICoding/" class="tag-link" data-tag="AICoding"
+        data-count="9">AICoding</a>
+      
+      <a href="/tags/Netty/" class="tag-link" data-tag="Netty"
+        data-count="4">Netty</a>
       
       <a href="/tags/SpringAi/" class="tag-link" data-tag="SpringAi"
         data-count="15">SpringAi</a>
@@ -6222,22 +6384,96 @@ particlesJS("particles", {
       <a href="/tags/视频剪辑/" class="tag-link" data-tag="视频剪辑"
         data-count="1">视频剪辑</a>
       
+      <a href="/tags/vue/" class="tag-link" data-tag="vue"
+        data-count="9">vue</a>
+      
       <a href="/tags/大数据/" class="tag-link" data-tag="大数据"
         data-count="3">大数据</a>
       
-      <a href="/tags/游戏/" class="tag-link" data-tag="游戏"
-        data-count="1">游戏</a>
+      <a href="/tags/电影/" class="tag-link" data-tag="电影"
+        data-count="2">电影</a>
       
       <a href="/tags/音乐/" class="tag-link" data-tag="音乐"
         data-count="8">音乐</a>
       
-      <a href="/tags/电影/" class="tag-link" data-tag="电影"
-        data-count="2">电影</a>
+      <a href="/tags/游戏/" class="tag-link" data-tag="游戏"
+        data-count="1">游戏</a>
       
       <a href="/tags/图片/" class="tag-link" data-tag="图片"
         data-count="2">图片</a>
       
     </div>
+    <script>
+      /*
+  ============================================
+  侧栏热门标签排序（首帧前执行）
+  文件：_js/hot-tags.js
+  引入位置：_components/Sidebar.njk 里 .tag-cloud 闭合标签之后（紧跟着写死）
+  作用：按点击次数排序、只露前 5 个、点一下立刻重排
+  为什么单独拆出来：以前放在 sidebar.js 的 DOMContentLoaded 里，首帧渲染的还是
+  模板顺序的 20 个标签，等脚本跑完才收成 5 个；配合跨页淡入（View Transition）
+  会出现「新旧两套标签叠在一起、影子跳一下」。紧跟标签节点内联执行就没有中间态。
+  最后修改：2026-11-12
+  ============================================
+*/
+(function () {
+  var cloud = document.querySelector('.tag-cloud');
+  if (!cloud) return;
+  var links = Array.prototype.slice.call(cloud.querySelectorAll('.tag-link'));
+  if (!links.length) return;
+
+  var KEY = 'starry_tag_visits'; // 标签名 -> 点击次数
+  var TOP = 5;
+  var visits = {};
+
+  try {
+    var raw = JSON.parse(localStorage.getItem(KEY) || '{}');
+    visits = (raw && typeof raw === 'object') ? raw : {};
+  } catch (e) {
+    visits = {};
+  }
+
+  links.forEach(function (link) {
+    var name = link.dataset.tag || (link.textContent || '').trim();
+    link.dataset.tag = name;
+    if (!link.dataset.count) link.dataset.count = '0';
+  });
+
+  // 排序：点击次数降序 → 文章数降序 → 名字，保证同分时顺序稳定不来回跳
+  function order() {
+    return links.slice().sort(function (a, b) {
+      var va = visits[a.dataset.tag] || 0;
+      var vb = visits[b.dataset.tag] || 0;
+      if (vb !== va) return vb - va;
+      var ca = Number(a.dataset.count) || 0;
+      var cb = Number(b.dataset.count) || 0;
+      if (cb !== ca) return cb - ca;
+      return String(a.dataset.tag).localeCompare(String(b.dataset.tag), 'zh');
+    });
+  }
+
+  // 重排 DOM：按名次 append，超出 5 个的 hidden（仍留在 DOM，等名次升上来再显示）
+  function render() {
+    order().forEach(function (link, i) {
+      link.dataset.visits = visits[link.dataset.tag] || 0;
+      cloud.appendChild(link);
+      link.hidden = i >= TOP;
+    });
+  }
+
+  links.forEach(function (link) {
+    link.addEventListener('click', function () {
+      var name = link.dataset.tag;
+      visits[name] = (visits[name] || 0) + 1;
+      try { localStorage.setItem(KEY, JSON.stringify(visits)); } catch (e) { /* 忽略配额错误 */ }
+      render(); // 当前页立刻看到「谁被点多了谁上前」
+    });
+  });
+
+  render();
+})();
+
+    </script>
   </div>
   <div class="archive-card">
     <h4>按月归档</h4>
@@ -6253,6 +6489,33 @@ particlesJS("particles", {
           2026年11月
         </a>
       </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
       
       
       
@@ -7335,6 +7598,65 @@ particlesJS("particles", {
     });
   }
 
+
+  // ===== 连点保护：切换途中再点侧栏菜单只认第一次 =====
+  // 猛点同一条菜单会连续发起多次导航，每次导航都会重新抓一次首帧画面，
+  // 叠在一起看起来就是「跳一下」。这里 400ms 内只放行第一次点击；
+  // 时间戳存 sessionStorage，所以跳到新页之后紧接着的连点同样会被挡掉。
+  (function guardRapidNav() {
+    var KEY = 'sb_nav_ts';
+    function isLocked() {
+      try { return Date.now() - (parseInt(sessionStorage.getItem(KEY) || '0', 10) || 0) < 400; } catch (e) { return false; }
+    }
+    function lock() { try { sessionStorage.setItem(KEY, String(Date.now())); } catch (e) { /* 忽略 */ } }
+    document.addEventListener('click', function (e) {
+      var a = e.target && e.target.closest ? e.target.closest('#sidebar a[href]') : null;
+      if (!a) return;
+      var href = a.getAttribute('href') || '';
+      if (href.indexOf('javascript:') === 0 || href.charAt(0) === '#') return; // 弹窗类跳过
+      if (isLocked()) { e.preventDefault(); return; }
+      lock();
+    }, true);
+  })();
+
+  // ===== 侧栏自己的滚动位置：换页后恢复，避免每次点菜单侧栏都跳回顶部 =====
+  (function rememberSidebarScroll() {
+    var sb = document.getElementById('sidebar');
+    if (!sb) return;
+    try {
+      var saved = sessionStorage.getItem('sidebarScrollTop');
+      if (saved) sb.scrollTop = parseInt(saved, 10) || 0;
+    } catch (e) { /* 忽略隐私模式报错 */ }
+    sb.addEventListener('scroll', function () {
+      try { sessionStorage.setItem('sidebarScrollTop', String(sb.scrollTop)); } catch (e) { /* 忽略 */ }
+    }, { passive: true });
+  })();
+
+  // ===== 站内链接预取：鼠标悬停时就把目标页拉进缓存，点下去是秒开，不再有“刷新”的等待感 =====
+  (function prefetchLinks() {
+    var seen = {};
+    function prefetch(raw) {
+      if (!raw || raw.indexOf('javascript:') === 0 || raw.charAt(0) === '#') return;
+      var abs;
+      try { abs = new URL(raw, location.href); } catch (e) { return; }
+      if (abs.origin !== location.origin) return;         // 只预取本站
+      if (abs.pathname === location.pathname) return;     // 当前页不用预取
+      var key = abs.pathname;
+      if (seen[key]) return;
+      seen[key] = 1;
+      var l = document.createElement('link');
+      l.rel = 'prefetch';
+      l.as = 'document';
+      l.href = abs.href;
+      document.head.appendChild(l);
+    }
+    // mouseover 会冒泡，pointerenter 不会，所以用 mouseover 统一兜住
+    document.addEventListener('mouseover', function (e) {
+      var a = e.target && e.target.closest ? e.target.closest('a[href]') : null;
+      if (a) prefetch(a.getAttribute('href'));
+    }, { passive: true });
+  })();
+
   // =========侧边栏折叠展开逻辑=========
   const toggleBtn = document.getElementById('sidebarToggle');
   const sidebar = document.getElementById('sidebar');
@@ -7380,7 +7702,7 @@ particlesJS("particles", {
             </div>
             <div class="status-item">
               <span class="status-dot dot-node"></span>
-              <span class="status-text">RECORDS: 165</span>
+              <span class="status-text">RECORDS: 174</span>
             </div>
             <div class="status-item">
               <span class="status-dot dot-link"></span>
@@ -7801,14 +8123,14 @@ particlesJS("particles", {
                   <div class="year-label" id="year-2026">
                     <span class="year-dot"></span>
                     <span>2026</span>
-                    <span class="year-count">130 篇</span>
+                    <span class="year-count">139 篇</span>
                   </div>
                   
                     
                     
                       
                     
-                    <div class="coord-item coord-level-high" data-year="2026" data-count="130"
+                    <div class="coord-item coord-level-high" data-year="2026" data-count="139"
                          data-url="/2026/01/01/fun/music/WingsofAngels/" data-title="自学吉他:天使的翅膀"
                          data-date="2026.01.01">
                       <span class="coord-date">01.01</span>
@@ -7819,7 +8141,7 @@ particlesJS("particles", {
                     
                       
                     
-                    <div class="coord-item coord-level-high" data-year="2026" data-count="130"
+                    <div class="coord-item coord-level-high" data-year="2026" data-count="139"
                          data-url="/2026/01/02/fun/music/TrulyLoveYou/" data-title="自学吉他:真的爱你"
                          data-date="2026.01.02">
                       <span class="coord-date">01.02</span>
@@ -7830,7 +8152,7 @@ particlesJS("particles", {
                     
                       
                     
-                    <div class="coord-item coord-level-high" data-year="2026" data-count="130"
+                    <div class="coord-item coord-level-high" data-year="2026" data-count="139"
                          data-url="/2026/01/03/fun/music/GloriousYears/" data-title="光辉岁月"
                          data-date="2026.01.03">
                       <span class="coord-date">01.03</span>
@@ -7841,7 +8163,7 @@ particlesJS("particles", {
                     
                       
                     
-                    <div class="coord-item coord-level-high" data-year="2026" data-count="130"
+                    <div class="coord-item coord-level-high" data-year="2026" data-count="139"
                          data-url="/2026/01/04/fun/music/BeWithYou/" data-title="与你同在"
                          data-date="2026.01.04">
                       <span class="coord-date">01.04</span>
@@ -7852,7 +8174,7 @@ particlesJS("particles", {
                     
                       
                     
-                    <div class="coord-item coord-level-high" data-year="2026" data-count="130"
+                    <div class="coord-item coord-level-high" data-year="2026" data-count="139"
                          data-url="/2026/01/05/fun/music/TravelingLight/" data-title="Traveling Light"
                          data-date="2026.01.05">
                       <span class="coord-date">01.05</span>
@@ -7863,7 +8185,7 @@ particlesJS("particles", {
                     
                       
                     
-                    <div class="coord-item coord-level-high" data-year="2026" data-count="130"
+                    <div class="coord-item coord-level-high" data-year="2026" data-count="139"
                          data-url="/2026/01/06/fun/music/StayAlive/" data-title="Stay Alive"
                          data-date="2026.01.06">
                       <span class="coord-date">01.06</span>
@@ -7874,7 +8196,7 @@ particlesJS("particles", {
                     
                       
                     
-                    <div class="coord-item coord-level-high" data-year="2026" data-count="130"
+                    <div class="coord-item coord-level-high" data-year="2026" data-count="139"
                          data-url="/2026/01/07/fun/music/JustHoldOn/" data-title="Just Hold On"
                          data-date="2026.01.07">
                       <span class="coord-date">01.07</span>
@@ -7885,7 +8207,7 @@ particlesJS("particles", {
                     
                       
                     
-                    <div class="coord-item coord-level-high" data-year="2026" data-count="130"
+                    <div class="coord-item coord-level-high" data-year="2026" data-count="139"
                          data-url="/2026/01/08/fun/music/HallOfFame/" data-title="Hall Of Fame"
                          data-date="2026.01.08">
                       <span class="coord-date">01.08</span>
@@ -7896,7 +8218,7 @@ particlesJS("particles", {
                     
                       
                     
-                    <div class="coord-item coord-level-high" data-year="2026" data-count="130"
+                    <div class="coord-item coord-level-high" data-year="2026" data-count="139"
                          data-url="/2026/02/01/fun/movie/NeverTrulyLived/" data-title="人可怕的不是死亡,而是从未真正活过"
                          data-date="2026.02.01">
                       <span class="coord-date">02.01</span>
@@ -7907,7 +8229,7 @@ particlesJS("particles", {
                     
                       
                     
-                    <div class="coord-item coord-level-high" data-year="2026" data-count="130"
+                    <div class="coord-item coord-level-high" data-year="2026" data-count="139"
                          data-url="/2026/02/02/fun/movie/SummerOfPig/" data-title="小猪妖的夏天"
                          data-date="2026.02.02">
                       <span class="coord-date">02.02</span>
@@ -7918,7 +8240,7 @@ particlesJS("particles", {
                     
                       
                     
-                    <div class="coord-item coord-level-high" data-year="2026" data-count="130"
+                    <div class="coord-item coord-level-high" data-year="2026" data-count="139"
                          data-url="/2026/02/03/fun/game/index/" data-title="传奇世界回忆录"
                          data-date="2026.02.03">
                       <span class="coord-date">02.03</span>
@@ -7929,7 +8251,7 @@ particlesJS("particles", {
                     
                       
                     
-                    <div class="coord-item coord-level-high" data-year="2026" data-count="130"
+                    <div class="coord-item coord-level-high" data-year="2026" data-count="139"
                          data-url="/2026/02/04/fun/photo/LearnMandarin/" data-title="努力的理由"
                          data-date="2026.02.04">
                       <span class="coord-date">02.04</span>
@@ -7940,7 +8262,7 @@ particlesJS("particles", {
                     
                       
                     
-                    <div class="coord-item coord-level-high" data-year="2026" data-count="130"
+                    <div class="coord-item coord-level-high" data-year="2026" data-count="139"
                          data-url="/2026/02/05/fun/photo/ReasonsForWorkingHard/" data-title="学普通话"
                          data-date="2026.02.05">
                       <span class="coord-date">02.05</span>
@@ -7951,7 +8273,7 @@ particlesJS("particles", {
                     
                       
                     
-                    <div class="coord-item coord-level-high" data-year="2026" data-count="130"
+                    <div class="coord-item coord-level-high" data-year="2026" data-count="139"
                          data-url="/2026/02/06/story/TwoTrees/" data-title="两颗树"
                          data-date="2026.02.06">
                       <span class="coord-date">02.06</span>
@@ -7962,7 +8284,7 @@ particlesJS("particles", {
                     
                       
                     
-                    <div class="coord-item coord-level-high" data-year="2026" data-count="130"
+                    <div class="coord-item coord-level-high" data-year="2026" data-count="139"
                          data-url="/2026/02/07/story/Window/" data-title="窗口"
                          data-date="2026.02.07">
                       <span class="coord-date">02.07</span>
@@ -7973,7 +8295,7 @@ particlesJS("particles", {
                     
                       
                     
-                    <div class="coord-item coord-level-high" data-year="2026" data-count="130"
+                    <div class="coord-item coord-level-high" data-year="2026" data-count="139"
                          data-url="/2026/02/08/story/ZeroToFinalCut/" data-title="视频剪辑"
                          data-date="2026.02.08">
                       <span class="coord-date">02.08</span>
@@ -7984,7 +8306,7 @@ particlesJS("particles", {
                     
                       
                     
-                    <div class="coord-item coord-level-high" data-year="2026" data-count="130"
+                    <div class="coord-item coord-level-high" data-year="2026" data-count="139"
                          data-url="/2026/03/01/java/hello-programming/" data-title="Hello编程"
                          data-date="2026.03.01">
                       <span class="coord-date">03.01</span>
@@ -7995,7 +8317,7 @@ particlesJS("particles", {
                     
                       
                     
-                    <div class="coord-item coord-level-high" data-year="2026" data-count="130"
+                    <div class="coord-item coord-level-high" data-year="2026" data-count="139"
                          data-url="/2026/03/02/java/java-basics/" data-title="Java基础篇"
                          data-date="2026.03.02">
                       <span class="coord-date">03.02</span>
@@ -8006,7 +8328,7 @@ particlesJS("particles", {
                     
                       
                     
-                    <div class="coord-item coord-level-high" data-year="2026" data-count="130"
+                    <div class="coord-item coord-level-high" data-year="2026" data-count="139"
                          data-url="/2026/03/03/java/JVM/" data-title="虚拟机篇"
                          data-date="2026.03.03">
                       <span class="coord-date">03.03</span>
@@ -8017,7 +8339,7 @@ particlesJS("particles", {
                     
                       
                     
-                    <div class="coord-item coord-level-high" data-year="2026" data-count="130"
+                    <div class="coord-item coord-level-high" data-year="2026" data-count="139"
                          data-url="/2026/03/04/java/spring-source/" data-title="Spring源码篇"
                          data-date="2026.03.04">
                       <span class="coord-date">03.04</span>
@@ -8028,7 +8350,7 @@ particlesJS("particles", {
                     
                       
                     
-                    <div class="coord-item coord-level-high" data-year="2026" data-count="130"
+                    <div class="coord-item coord-level-high" data-year="2026" data-count="139"
                          data-url="/2026/04/01/netty/NioBasic/" data-title="NIO基础篇"
                          data-date="2026.04.01">
                       <span class="coord-date">04.01</span>
@@ -8039,7 +8361,7 @@ particlesJS("particles", {
                     
                       
                     
-                    <div class="coord-item coord-level-high" data-year="2026" data-count="130"
+                    <div class="coord-item coord-level-high" data-year="2026" data-count="139"
                          data-url="/2026/04/02/netty/NettyIntroduction/" data-title="Netty入门篇"
                          data-date="2026.04.02">
                       <span class="coord-date">04.02</span>
@@ -8050,7 +8372,7 @@ particlesJS("particles", {
                     
                       
                     
-                    <div class="coord-item coord-level-high" data-year="2026" data-count="130"
+                    <div class="coord-item coord-level-high" data-year="2026" data-count="139"
                          data-url="/2026/04/03/netty/NettyAdvanced/" data-title="Netty进阶篇"
                          data-date="2026.04.03">
                       <span class="coord-date">04.03</span>
@@ -8061,7 +8383,7 @@ particlesJS("particles", {
                     
                       
                     
-                    <div class="coord-item coord-level-high" data-year="2026" data-count="130"
+                    <div class="coord-item coord-level-high" data-year="2026" data-count="139"
                          data-url="/2026/04/04/netty/NettySource/" data-title="Netty优化与源码篇"
                          data-date="2026.04.04">
                       <span class="coord-date">04.04</span>
@@ -8072,7 +8394,7 @@ particlesJS("particles", {
                     
                       
                     
-                    <div class="coord-item coord-level-high" data-year="2026" data-count="130"
+                    <div class="coord-item coord-level-high" data-year="2026" data-count="139"
                          data-url="/2026/05/01/java/juc-1-process/" data-title="JUC多线程篇(一) 进程"
                          data-date="2026.05.01">
                       <span class="coord-date">05.01</span>
@@ -8083,7 +8405,7 @@ particlesJS("particles", {
                     
                       
                     
-                    <div class="coord-item coord-level-high" data-year="2026" data-count="130"
+                    <div class="coord-item coord-level-high" data-year="2026" data-count="139"
                          data-url="/2026/05/02/java/juc-2-thread/" data-title="JUC多线程篇(二) Thread"
                          data-date="2026.05.02">
                       <span class="coord-date">05.02</span>
@@ -8094,7 +8416,7 @@ particlesJS("particles", {
                     
                       
                     
-                    <div class="coord-item coord-level-high" data-year="2026" data-count="130"
+                    <div class="coord-item coord-level-high" data-year="2026" data-count="139"
                          data-url="/2026/05/03/java/juc-3-thread-safety/" data-title="JUC多线程篇(三) 线程安全"
                          data-date="2026.05.03">
                       <span class="coord-date">05.03</span>
@@ -8105,7 +8427,7 @@ particlesJS("particles", {
                     
                       
                     
-                    <div class="coord-item coord-level-high" data-year="2026" data-count="130"
+                    <div class="coord-item coord-level-high" data-year="2026" data-count="139"
                          data-url="/2026/05/04/java/juc-4-monitor/" data-title="JUC多线程篇(四) Monitor"
                          data-date="2026.05.04">
                       <span class="coord-date">05.04</span>
@@ -8116,7 +8438,7 @@ particlesJS("particles", {
                     
                       
                     
-                    <div class="coord-item coord-level-high" data-year="2026" data-count="130"
+                    <div class="coord-item coord-level-high" data-year="2026" data-count="139"
                          data-url="/2026/05/05/java/juc-5-wait-notify/" data-title="JUC多线程篇(五) Wait/Notif"
                          data-date="2026.05.05">
                       <span class="coord-date">05.05</span>
@@ -8127,7 +8449,7 @@ particlesJS("particles", {
                     
                       
                     
-                    <div class="coord-item coord-level-high" data-year="2026" data-count="130"
+                    <div class="coord-item coord-level-high" data-year="2026" data-count="139"
                          data-url="/2026/05/06/java/juc-6-park-unpark/" data-title="JUC多线程篇(六)  Park/Unpark"
                          data-date="2026.05.06">
                       <span class="coord-date">05.06</span>
@@ -8138,7 +8460,7 @@ particlesJS("particles", {
                     
                       
                     
-                    <div class="coord-item coord-level-high" data-year="2026" data-count="130"
+                    <div class="coord-item coord-level-high" data-year="2026" data-count="139"
                          data-url="/2026/06/01/database/mysql-1-basic/" data-title="Mysql基础篇"
                          data-date="2026.06.01">
                       <span class="coord-date">06.01</span>
@@ -8149,7 +8471,7 @@ particlesJS("particles", {
                     
                       
                     
-                    <div class="coord-item coord-level-high" data-year="2026" data-count="130"
+                    <div class="coord-item coord-level-high" data-year="2026" data-count="139"
                          data-url="/2026/06/02/database/mysql-2-advanced/" data-title="Mysql进阶篇"
                          data-date="2026.06.02">
                       <span class="coord-date">06.02</span>
@@ -8160,7 +8482,7 @@ particlesJS("particles", {
                     
                       
                     
-                    <div class="coord-item coord-level-high" data-year="2026" data-count="130"
+                    <div class="coord-item coord-level-high" data-year="2026" data-count="139"
                          data-url="/2026/06/03/database/mysql-3-operations-and-maintenance/" data-title="Mysql运维篇"
                          data-date="2026.06.03">
                       <span class="coord-date">06.03</span>
@@ -8171,7 +8493,7 @@ particlesJS("particles", {
                     
                       
                     
-                    <div class="coord-item coord-level-high" data-year="2026" data-count="130"
+                    <div class="coord-item coord-level-high" data-year="2026" data-count="139"
                          data-url="/2026/06/04/database/mysql-4-data-types/" data-title="Mysql数据类型"
                          data-date="2026.06.04">
                       <span class="coord-date">06.04</span>
@@ -8182,7 +8504,7 @@ particlesJS("particles", {
                     
                       
                     
-                    <div class="coord-item coord-level-high" data-year="2026" data-count="130"
+                    <div class="coord-item coord-level-high" data-year="2026" data-count="139"
                          data-url="/2026/06/05/database/mysql-5-privileges/" data-title="Mysql权限一览表"
                          data-date="2026.06.05">
                       <span class="coord-date">06.05</span>
@@ -8193,7 +8515,7 @@ particlesJS("particles", {
                     
                       
                     
-                    <div class="coord-item coord-level-high" data-year="2026" data-count="130"
+                    <div class="coord-item coord-level-high" data-year="2026" data-count="139"
                          data-url="/2026/06/06/database/mysql-6-gui-tools-and-installation/" data-title="图形化界面工具"
                          data-date="2026.06.06">
                       <span class="coord-date">06.06</span>
@@ -8204,7 +8526,7 @@ particlesJS("particles", {
                     
                       
                     
-                    <div class="coord-item coord-level-high" data-year="2026" data-count="130"
+                    <div class="coord-item coord-level-high" data-year="2026" data-count="139"
                          data-url="/2026/06/07/database/mysql-7-interview/" data-title="Mysql面试篇"
                          data-date="2026.06.07">
                       <span class="coord-date">06.07</span>
@@ -8215,7 +8537,7 @@ particlesJS("particles", {
                     
                       
                     
-                    <div class="coord-item coord-level-high" data-year="2026" data-count="130"
+                    <div class="coord-item coord-level-high" data-year="2026" data-count="139"
                          data-url="/2026/07/01/deepsearch/deepsearch-0-preface/" data-title="深度研搜：前言"
                          data-date="2026.07.01">
                       <span class="coord-date">07.01</span>
@@ -8226,7 +8548,7 @@ particlesJS("particles", {
                     
                       
                     
-                    <div class="coord-item coord-level-high" data-year="2026" data-count="130"
+                    <div class="coord-item coord-level-high" data-year="2026" data-count="139"
                          data-url="/2026/07/02/deepsearch/deepsearch-1-deepagents-basic/" data-title="一、深度研搜：DeepAgents 基础与核心概念"
                          data-date="2026.07.02">
                       <span class="coord-date">07.02</span>
@@ -8237,7 +8559,7 @@ particlesJS("particles", {
                     
                       
                     
-                    <div class="coord-item coord-level-high" data-year="2026" data-count="130"
+                    <div class="coord-item coord-level-high" data-year="2026" data-count="139"
                          data-url="/2026/07/03/deepsearch/deepsearch-2-quickstart-stream/" data-title="二、深度研搜：DeepAgents 快速入门与流式解析"
                          data-date="2026.07.03">
                       <span class="coord-date">07.03</span>
@@ -8248,7 +8570,7 @@ particlesJS("particles", {
                     
                       
                     
-                    <div class="coord-item coord-level-high" data-year="2026" data-count="130"
+                    <div class="coord-item coord-level-high" data-year="2026" data-count="139"
                          data-url="/2026/07/04/deepsearch/deepsearch-3-subagent-async/" data-title="三、深度研搜：子智能体进阶与异步执行"
                          data-date="2026.07.04">
                       <span class="coord-date">07.04</span>
@@ -8259,7 +8581,7 @@ particlesJS("particles", {
                     
                       
                     
-                    <div class="coord-item coord-level-high" data-year="2026" data-count="130"
+                    <div class="coord-item coord-level-high" data-year="2026" data-count="139"
                          data-url="/2026/07/05/deepsearch/deepsearch-4-langgraph-langchain/" data-title="四、深度研搜：接入 LangGraph 与 LangChain"
                          data-date="2026.07.05">
                       <span class="coord-date">07.05</span>
@@ -8270,7 +8592,7 @@ particlesJS("particles", {
                     
                       
                     
-                    <div class="coord-item coord-level-high" data-year="2026" data-count="130"
+                    <div class="coord-item coord-level-high" data-year="2026" data-count="139"
                          data-url="/2026/07/06/deepsearch/deepsearch-5-human-interrupt/" data-title="五、深度研搜：人机协作与中断恢复"
                          data-date="2026.07.06">
                       <span class="coord-date">07.06</span>
@@ -8281,7 +8603,7 @@ particlesJS("particles", {
                     
                       
                     
-                    <div class="coord-item coord-level-high" data-year="2026" data-count="130"
+                    <div class="coord-item coord-level-high" data-year="2026" data-count="139"
                          data-url="/2026/07/07/deepsearch/deepsearch-6-longterm-memory/" data-title="六、深度研搜：长期记忆与 Backend 存储"
                          data-date="2026.07.07">
                       <span class="coord-date">07.07</span>
@@ -8292,7 +8614,7 @@ particlesJS("particles", {
                     
                       
                     
-                    <div class="coord-item coord-level-high" data-year="2026" data-count="130"
+                    <div class="coord-item coord-level-high" data-year="2026" data-count="139"
                          data-url="/2026/07/08/deepsearch/deepsearch-7-skill-config/" data-title="七、深度研搜：中间件机制与 Skills 配置"
                          data-date="2026.07.08">
                       <span class="coord-date">07.08</span>
@@ -8303,7 +8625,7 @@ particlesJS("particles", {
                     
                       
                     
-                    <div class="coord-item coord-level-high" data-year="2026" data-count="130"
+                    <div class="coord-item coord-level-high" data-year="2026" data-count="139"
                          data-url="/2026/07/09/deepsearch/deepsearch-8-project-init/" data-title="八、深度研搜：项目总览与工程初始化"
                          data-date="2026.07.09">
                       <span class="coord-date">07.09</span>
@@ -8314,7 +8636,7 @@ particlesJS("particles", {
                     
                       
                     
-                    <div class="coord-item coord-level-high" data-year="2026" data-count="130"
+                    <div class="coord-item coord-level-high" data-year="2026" data-count="139"
                          data-url="/2026/07/10/deepsearch/deepsearch-9-model-config/" data-title="九、深度研搜：基础模块与模型配置"
                          data-date="2026.07.10">
                       <span class="coord-date">07.10</span>
@@ -8325,7 +8647,7 @@ particlesJS("particles", {
                     
                       
                     
-                    <div class="coord-item coord-level-high" data-year="2026" data-count="130"
+                    <div class="coord-item coord-level-high" data-year="2026" data-count="139"
                          data-url="/2026/07/11/deepsearch/deepsearch-10-tavily-search/" data-title="十、深度研搜：网络搜索子智能体与 Tavily 工具"
                          data-date="2026.07.11">
                       <span class="coord-date">07.11</span>
@@ -8336,7 +8658,7 @@ particlesJS("particles", {
                     
                       
                     
-                    <div class="coord-item coord-level-high" data-year="2026" data-count="130"
+                    <div class="coord-item coord-level-high" data-year="2026" data-count="139"
                          data-url="/2026/07/12/deepsearch/deepsearch-11-mysql-sql-agent/" data-title="十一、深度研搜：数据库查询子智能体与 MySQL 工具"
                          data-date="2026.07.12">
                       <span class="coord-date">07.12</span>
@@ -8347,7 +8669,7 @@ particlesJS("particles", {
                     
                       
                     
-                    <div class="coord-item coord-level-high" data-year="2026" data-count="130"
+                    <div class="coord-item coord-level-high" data-year="2026" data-count="139"
                          data-url="/2026/07/13/deepsearch/deepsearch-12-ragflow-knowledge/" data-title="十二、深度研搜：RAGFlow 子智能体与知识库准备"
                          data-date="2026.07.13">
                       <span class="coord-date">07.13</span>
@@ -8358,7 +8680,7 @@ particlesJS("particles", {
                     
                       
                     
-                    <div class="coord-item coord-level-high" data-year="2026" data-count="130"
+                    <div class="coord-item coord-level-high" data-year="2026" data-count="139"
                          data-url="/2026/07/14/deepsearch/deepsearch-13-main-agent/" data-title="十三、深度研搜：主智能体搭建与异步执行"
                          data-date="2026.07.14">
                       <span class="coord-date">07.14</span>
@@ -8369,7 +8691,7 @@ particlesJS("particles", {
                     
                       
                     
-                    <div class="coord-item coord-level-high" data-year="2026" data-count="130"
+                    <div class="coord-item coord-level-high" data-year="2026" data-count="139"
                          data-url="/2026/07/15/deepsearch/deepsearch-14-fastapi-close/" data-title="十四、深度研搜：FastAPI 接口与项目闭环"
                          data-date="2026.07.15">
                       <span class="coord-date">07.15</span>
@@ -8380,7 +8702,7 @@ particlesJS("particles", {
                     
                       
                     
-                    <div class="coord-item coord-level-high" data-year="2026" data-count="130"
+                    <div class="coord-item coord-level-high" data-year="2026" data-count="139"
                          data-url="/2026/08/01/ecommerce/ecommerce-data-qa-0-preface/" data-title="电商问数：前言"
                          data-date="2026.08.01">
                       <span class="coord-date">08.01</span>
@@ -8391,7 +8713,7 @@ particlesJS("particles", {
                     
                       
                     
-                    <div class="coord-item coord-level-high" data-year="2026" data-count="130"
+                    <div class="coord-item coord-level-high" data-year="2026" data-count="139"
                          data-url="/2026/08/02/ecommerce/ecommerce-data-qa-1-project-overview-and-warehouse-basics/" data-title="一、电商问数：项目概述与数仓基础"
                          data-date="2026.08.02">
                       <span class="coord-date">08.02</span>
@@ -8402,7 +8724,7 @@ particlesJS("particles", {
                     
                       
                     
-                    <div class="coord-item coord-level-high" data-year="2026" data-count="130"
+                    <div class="coord-item coord-level-high" data-year="2026" data-count="139"
                          data-url="/2026/08/03/ecommerce/ecommerce-data-qa-2-architecture-and-agent-workflow/" data-title="二、电商问数：项目整体架构与智能体流程"
                          data-date="2026.08.03">
                       <span class="coord-date">08.03</span>
@@ -8413,7 +8735,7 @@ particlesJS("particles", {
                     
                       
                     
-                    <div class="coord-item coord-level-high" data-year="2026" data-count="130"
+                    <div class="coord-item coord-level-high" data-year="2026" data-count="139"
                          data-url="/2026/08/04/ecommerce/ecommerce-data-qa-3-dev-environment-and-services-preparation/" data-title="三、电商问数：开发环境与基础服务准备"
                          data-date="2026.08.04">
                       <span class="coord-date">08.04</span>
@@ -8424,7 +8746,7 @@ particlesJS("particles", {
                     
                       
                     
-                    <div class="coord-item coord-level-high" data-year="2026" data-count="130"
+                    <div class="coord-item coord-level-high" data-year="2026" data-count="139"
                          data-url="/2026/08/05/ecommerce/ecommerce-data-qa-4-project-structure-and-config-management/" data-title="四、电商问数：项目结构与基础服务配置管理"
                          data-date="2026.08.05">
                       <span class="coord-date">08.05</span>
@@ -8435,7 +8757,7 @@ particlesJS("particles", {
                     
                       
                     
-                    <div class="coord-item coord-level-high" data-year="2026" data-count="130"
+                    <div class="coord-item coord-level-high" data-year="2026" data-count="139"
                          data-url="/2026/08/06/ecommerce/ecommerce-data-qa-5-qdrant-and-elasticsearch-quickstart/" data-title="五、电商问数：Qdrant 与 ES 快速入门与接入"
                          data-date="2026.08.06">
                       <span class="coord-date">08.06</span>
@@ -8446,7 +8768,7 @@ particlesJS("particles", {
                     
                       
                     
-                    <div class="coord-item coord-level-high" data-year="2026" data-count="130"
+                    <div class="coord-item coord-level-high" data-year="2026" data-count="139"
                          data-url="/2026/08/07/ecommerce/ecommerce-data-qa-6-mysql-embedding-and-logging/" data-title="六、电商问数：MySQL、Embedding 接入与日志管理"
                          data-date="2026.08.07">
                       <span class="coord-date">08.07</span>
@@ -8457,7 +8779,7 @@ particlesJS("particles", {
                     
                       
                     
-                    <div class="coord-item coord-level-high" data-year="2026" data-count="130"
+                    <div class="coord-item coord-level-high" data-year="2026" data-count="139"
                          data-url="/2026/08/08/ecommerce/ecommerce-data-qa-7-metadata-knowledge-base-overview/" data-title="七、电商问数：元数据知识库总览与构建入口"
                          data-date="2026.08.08">
                       <span class="coord-date">08.08</span>
@@ -8468,7 +8790,7 @@ particlesJS("particles", {
                     
                       
                     
-                    <div class="coord-item coord-level-high" data-year="2026" data-count="130"
+                    <div class="coord-item coord-level-high" data-year="2026" data-count="139"
                          data-url="/2026/08/09/ecommerce/ecommerce-data-qa-8-table-and-column-sync-to-metadata-db/" data-title="八、电商问数：表与字段信息同步到元数据库"
                          data-date="2026.08.09">
                       <span class="coord-date">08.09</span>
@@ -8479,7 +8801,7 @@ particlesJS("particles", {
                     
                       
                     
-                    <div class="coord-item coord-level-high" data-year="2026" data-count="130"
+                    <div class="coord-item coord-level-high" data-year="2026" data-count="139"
                          data-url="/2026/08/10/ecommerce/ecommerce-data-qa-9-field-and-metric-retrieval/" data-title="九、电商问数：字段与指标检索能力构建"
                          data-date="2026.08.10">
                       <span class="coord-date">08.10</span>
@@ -8490,7 +8812,7 @@ particlesJS("particles", {
                     
                       
                     
-                    <div class="coord-item coord-level-high" data-year="2026" data-count="130"
+                    <div class="coord-item coord-level-high" data-year="2026" data-count="139"
                          data-url="/2026/08/11/ecommerce/ecommerce-data-qa-10-agent-overview-and-workflow-skeleton/" data-title="十、电商问数：问数智能体总览与工作流骨架"
                          data-date="2026.08.11">
                       <span class="coord-date">08.11</span>
@@ -8501,7 +8823,7 @@ particlesJS("particles", {
                     
                       
                     
-                    <div class="coord-item coord-level-high" data-year="2026" data-count="130"
+                    <div class="coord-item coord-level-high" data-year="2026" data-count="139"
                          data-url="/2026/08/12/ecommerce/ecommerce-data-qa-11-keyword-extraction-and-multi-route-recall/" data-title="十一、电商问数：关键词抽取与多路召回"
                          data-date="2026.08.12">
                       <span class="coord-date">08.12</span>
@@ -8512,7 +8834,7 @@ particlesJS("particles", {
                     
                       
                     
-                    <div class="coord-item coord-level-high" data-year="2026" data-count="130"
+                    <div class="coord-item coord-level-high" data-year="2026" data-count="139"
                          data-url="/2026/08/13/ecommerce/ecommerce-data-qa-12-merging-retrieved-info-and-context-building/" data-title="十二、电商问数：召回信息合并与上下文构建"
                          data-date="2026.08.13">
                       <span class="coord-date">08.13</span>
@@ -8523,7 +8845,7 @@ particlesJS("particles", {
                     
                       
                     
-                    <div class="coord-item coord-level-high" data-year="2026" data-count="130"
+                    <div class="coord-item coord-level-high" data-year="2026" data-count="139"
                          data-url="/2026/08/14/ecommerce/ecommerce-data-qa-13-information-filtering-and-completion-before-sql/" data-title="十三、电商问数：SQL 生成前的信息过滤与补全"
                          data-date="2026.08.14">
                       <span class="coord-date">08.14</span>
@@ -8534,7 +8856,7 @@ particlesJS("particles", {
                     
                       
                     
-                    <div class="coord-item coord-level-high" data-year="2026" data-count="130"
+                    <div class="coord-item coord-level-high" data-year="2026" data-count="139"
                          data-url="/2026/08/15/ecommerce/ecommerce-data-qa-14-sql-generation-and-execution-loop/" data-title="十四、电商问数：SQL 生成与执行闭环"
                          data-date="2026.08.15">
                       <span class="coord-date">08.15</span>
@@ -8545,7 +8867,7 @@ particlesJS("particles", {
                     
                       
                     
-                    <div class="coord-item coord-level-high" data-year="2026" data-count="130"
+                    <div class="coord-item coord-level-high" data-year="2026" data-count="139"
                          data-url="/2026/08/16/ecommerce/ecommerce-data-qa-15-api-basics-and-fastapi-introduction/" data-title="十五、电商问数：API 接口基础与 FastAPI 入门"
                          data-date="2026.08.16">
                       <span class="coord-date">08.16</span>
@@ -8556,7 +8878,7 @@ particlesJS("particles", {
                     
                       
                     
-                    <div class="coord-item coord-level-high" data-year="2026" data-count="130"
+                    <div class="coord-item coord-level-high" data-year="2026" data-count="139"
                          data-url="/2026/08/17/ecommerce/ecommerce-data-qa-16-query-api-implementation-and-dependency-wiring/" data-title="十六、电商问数：查询接口实现与依赖组装"
                          data-date="2026.08.17">
                       <span class="coord-date">08.17</span>
@@ -8567,7 +8889,7 @@ particlesJS("particles", {
                     
                       
                     
-                    <div class="coord-item coord-level-high" data-year="2026" data-count="130"
+                    <div class="coord-item coord-level-high" data-year="2026" data-count="139"
                          data-url="/2026/08/18/ecommerce/ecommerce-data-qa-17-frontend-backend-integration-and-logging/" data-title="十七、电商问数：前后端联调与日志追踪"
                          data-date="2026.08.18">
                       <span class="coord-date">08.18</span>
@@ -8578,7 +8900,7 @@ particlesJS("particles", {
                     
                       
                     
-                    <div class="coord-item coord-level-high" data-year="2026" data-count="130"
+                    <div class="coord-item coord-level-high" data-year="2026" data-count="139"
                          data-url="/2026/09/01/springai/SpringAI-01-SpringAI-Features/" data-title="一、SpringAi特性介绍"
                          data-date="2026.09.01">
                       <span class="coord-date">09.01</span>
@@ -8589,7 +8911,7 @@ particlesJS("particles", {
                     
                       
                     
-                    <div class="coord-item coord-level-high" data-year="2026" data-count="130"
+                    <div class="coord-item coord-level-high" data-year="2026" data-count="139"
                          data-url="/2026/09/02/springai/SpringAI-02-SpringAI-Quick-Start/" data-title="二、SpringAi快速使用"
                          data-date="2026.09.02">
                       <span class="coord-date">09.02</span>
@@ -8600,7 +8922,7 @@ particlesJS("particles", {
                     
                       
                     
-                    <div class="coord-item coord-level-high" data-year="2026" data-count="130"
+                    <div class="coord-item coord-level-high" data-year="2026" data-count="139"
                          data-url="/2026/09/03/springai/SpringAI-03-ChatClient-Basics/" data-title="三、ChatClient的基本使用及实战"
                          data-date="2026.09.03">
                       <span class="coord-date">09.03</span>
@@ -8611,7 +8933,7 @@ particlesJS("particles", {
                     
                       
                     
-                    <div class="coord-item coord-level-high" data-year="2026" data-count="130"
+                    <div class="coord-item coord-level-high" data-year="2026" data-count="139"
                          data-url="/2026/09/04/springai/SpringAI-04-Prompt-Engineering/" data-title="四、提示词使用和设置技巧"
                          data-date="2026.09.04">
                       <span class="coord-date">09.04</span>
@@ -8622,7 +8944,7 @@ particlesJS("particles", {
                     
                       
                     
-                    <div class="coord-item coord-level-high" data-year="2026" data-count="130"
+                    <div class="coord-item coord-level-high" data-year="2026" data-count="139"
                          data-url="/2026/09/05/springai/SpringAI-05-Advisor-Interceptor/" data-title="五、Advisor对话拦截的使用和自定义"
                          data-date="2026.09.05">
                       <span class="coord-date">09.05</span>
@@ -8633,7 +8955,7 @@ particlesJS("particles", {
                     
                       
                     
-                    <div class="coord-item coord-level-high" data-year="2026" data-count="130"
+                    <div class="coord-item coord-level-high" data-year="2026" data-count="139"
                          data-url="/2026/09/06/springai/SpringAI-06-Chat-Memory-DB-Redis/" data-title="六、对话记忆—数据库和Redis不同的实现"
                          data-date="2026.09.06">
                       <span class="coord-date">09.06</span>
@@ -8644,7 +8966,7 @@ particlesJS("particles", {
                     
                       
                     
-                    <div class="coord-item coord-level-high" data-year="2026" data-count="130"
+                    <div class="coord-item coord-level-high" data-year="2026" data-count="139"
                          data-url="/2026/09/07/springai/SpringAI-07-Structured-Output-Tools/" data-title="七、结构化输出和初代Tools实现"
                          data-date="2026.09.07">
                       <span class="coord-date">09.07</span>
@@ -8655,7 +8977,7 @@ particlesJS("particles", {
                     
                       
                     
-                    <div class="coord-item coord-level-high" data-year="2026" data-count="130"
+                    <div class="coord-item coord-level-high" data-year="2026" data-count="139"
                          data-url="/2026/09/08/springai/SpringAI-08-Tools-Function-Call/" data-title="八、Tools/function-call使用+原理+7大痛点"
                          data-date="2026.09.08">
                       <span class="coord-date">09.08</span>
@@ -8666,7 +8988,7 @@ particlesJS("particles", {
                     
                       
                     
-                    <div class="coord-item coord-level-high" data-year="2026" data-count="130"
+                    <div class="coord-item coord-level-high" data-year="2026" data-count="139"
                          data-url="/2026/09/09/springai/SpringAI-09-MCP-Implementation/" data-title="九、MCP实现+原理+源码+鉴权"
                          data-date="2026.09.09">
                       <span class="coord-date">09.09</span>
@@ -8677,7 +8999,7 @@ particlesJS("particles", {
                     
                       
                     
-                    <div class="coord-item coord-level-high" data-year="2026" data-count="130"
+                    <div class="coord-item coord-level-high" data-year="2026" data-count="139"
                          data-url="/2026/09/10/springai/SpringAI-10-RAG-Full-Pipeline/" data-title="十、RAG全链路讲解"
                          data-date="2026.09.10">
                       <span class="coord-date">09.10</span>
@@ -8688,7 +9010,7 @@ particlesJS("particles", {
                     
                       
                     
-                    <div class="coord-item coord-level-high" data-year="2026" data-count="130"
+                    <div class="coord-item coord-level-high" data-year="2026" data-count="139"
                          data-url="/2026/09/11/springai/SpringAI-11-Airline-RAG-Project/" data-title="十一、《基于航空智能客服+RAG》实战"
                          data-date="2026.09.11">
                       <span class="coord-date">09.11</span>
@@ -8699,7 +9021,7 @@ particlesJS("particles", {
                     
                       
                     
-                    <div class="coord-item coord-level-high" data-year="2026" data-count="130"
+                    <div class="coord-item coord-level-high" data-year="2026" data-count="139"
                          data-url="/2026/09/12/springai/SpringAI-12-Knowledge-Base-QA-RAG/" data-title="十二、《基于RAG技术的个人知识库AI问答系统》实战"
                          data-date="2026.09.12">
                       <span class="coord-date">09.12</span>
@@ -8710,7 +9032,7 @@ particlesJS("particles", {
                     
                       
                     
-                    <div class="coord-item coord-level-high" data-year="2026" data-count="130"
+                    <div class="coord-item coord-level-high" data-year="2026" data-count="139"
                          data-url="/2026/09/13/springai/SpringAI-13-RAG-Model-Evaluation/" data-title="十三、模型RAG评测"
                          data-date="2026.09.13">
                       <span class="coord-date">09.13</span>
@@ -8721,7 +9043,7 @@ particlesJS("particles", {
                     
                       
                     
-                    <div class="coord-item coord-level-high" data-year="2026" data-count="130"
+                    <div class="coord-item coord-level-high" data-year="2026" data-count="139"
                          data-url="/2026/09/14/springai/SpringAI-14-SpringAI-Observability/" data-title="十四、SpringAI实时监控+观测性"
                          data-date="2026.09.14">
                       <span class="coord-date">09.14</span>
@@ -8732,7 +9054,7 @@ particlesJS("particles", {
                     
                       
                     
-                    <div class="coord-item coord-level-high" data-year="2026" data-count="130"
+                    <div class="coord-item coord-level-high" data-year="2026" data-count="139"
                          data-url="/2026/09/15/springai/SpringAI-15-Agent-Five-Patterns/" data-title="十五、Agent5种模式详细应用"
                          data-date="2026.09.15">
                       <span class="coord-date">09.15</span>
@@ -8743,7 +9065,7 @@ particlesJS("particles", {
                     
                       
                     
-                    <div class="coord-item coord-level-high" data-year="2026" data-count="130"
+                    <div class="coord-item coord-level-high" data-year="2026" data-count="139"
                          data-url="/2026/10/01/llm/getting-started-and-faq/" data-title="新手入门与常见问题"
                          data-date="2026.10.01">
                       <span class="coord-date">10.01</span>
@@ -8754,7 +9076,7 @@ particlesJS("particles", {
                     
                       
                     
-                    <div class="coord-item coord-level-high" data-year="2026" data-count="130"
+                    <div class="coord-item coord-level-high" data-year="2026" data-count="139"
                          data-url="/2026/10/01/llm/tutorial-outline/" data-title="教程目录大纲"
                          data-date="2026.10.01">
                       <span class="coord-date">10.01</span>
@@ -8765,7 +9087,7 @@ particlesJS("particles", {
                     
                       
                     
-                    <div class="coord-item coord-level-high" data-year="2026" data-count="130"
+                    <div class="coord-item coord-level-high" data-year="2026" data-count="139"
                          data-url="/2026/10/01/llm/case-links-and-demos/" data-title="教程案例链接汇总"
                          data-date="2026.10.01">
                       <span class="coord-date">10.01</span>
@@ -8776,7 +9098,7 @@ particlesJS("particles", {
                     
                       
                     
-                    <div class="coord-item coord-level-high" data-year="2026" data-count="130"
+                    <div class="coord-item coord-level-high" data-year="2026" data-count="139"
                          data-url="/2026/10/01/llm/tools-and-references-index/" data-title="工具导航与参考资料索引"
                          data-date="2026.10.01">
                       <span class="coord-date">10.01</span>
@@ -8787,7 +9109,7 @@ particlesJS("particles", {
                     
                       
                     
-                    <div class="coord-item coord-level-high" data-year="2026" data-count="130"
+                    <div class="coord-item coord-level-high" data-year="2026" data-count="139"
                          data-url="/2026/10/01/llm/1-1-llm-basics-engineering-overview/" data-title="一、大模型认知与工程概览"
                          data-date="2026.10.01">
                       <span class="coord-date">10.01</span>
@@ -8798,7 +9120,7 @@ particlesJS("particles", {
                     
                       
                     
-                    <div class="coord-item coord-level-high" data-year="2026" data-count="130"
+                    <div class="coord-item coord-level-high" data-year="2026" data-count="139"
                          data-url="/2026/10/02/llm/1-2-prompt-engineering-basics/" data-title="二、提示词工程基础"
                          data-date="2026.10.02">
                       <span class="coord-date">10.02</span>
@@ -8809,7 +9131,7 @@ particlesJS("particles", {
                     
                       
                     
-                    <div class="coord-item coord-level-high" data-year="2026" data-count="130"
+                    <div class="coord-item coord-level-high" data-year="2026" data-count="139"
                          data-url="/2026/10/03/llm/1-3-rag-finetuning-continued-training-and-agent-selection/" data-title="三、RAG、微调、续训与智能体选型"
                          data-date="2026.10.03">
                       <span class="coord-date">10.03</span>
@@ -8820,7 +9142,7 @@ particlesJS("particles", {
                     
                       
                     
-                    <div class="coord-item coord-level-high" data-year="2026" data-count="130"
+                    <div class="coord-item coord-level-high" data-year="2026" data-count="139"
                          data-url="/2026/10/04/llm/1-4-rag-private-and-personal-knowledge-base/" data-title="四、RAG 搭建企业私有&个人知识库"
                          data-date="2026.10.04">
                       <span class="coord-date">10.04</span>
@@ -8831,7 +9153,7 @@ particlesJS("particles", {
                     
                       
                     
-                    <div class="coord-item coord-level-high" data-year="2026" data-count="130"
+                    <div class="coord-item coord-level-high" data-year="2026" data-count="139"
                          data-url="/2026/10/05/llm/1-5-agent-development-on-coze-and-dify/" data-title="五、基于 Coze&Dify 平台的智能体开发"
                          data-date="2026.10.05">
                       <span class="coord-date">10.05</span>
@@ -8842,7 +9164,7 @@ particlesJS("particles", {
                     
                       
                     
-                    <div class="coord-item coord-level-high" data-year="2026" data-count="130"
+                    <div class="coord-item coord-level-high" data-year="2026" data-count="139"
                          data-url="/2026/10/06/llm/1-6-calling-dify-workflows-with-python/" data-title="六、Python 调用 Dify 平台工作流"
                          data-date="2026.10.06">
                       <span class="coord-date">10.06</span>
@@ -8853,7 +9175,7 @@ particlesJS("particles", {
                     
                       
                     
-                    <div class="coord-item coord-level-high" data-year="2026" data-count="130"
+                    <div class="coord-item coord-level-high" data-year="2026" data-count="139"
                          data-url="/2026/10/07/llm/1-7-calling-coze-workflows-with-python/" data-title="七、Python 调用 Coze 平台工作流"
                          data-date="2026.10.07">
                       <span class="coord-date">10.07</span>
@@ -8864,7 +9186,7 @@ particlesJS("particles", {
                     
                       
                     
-                    <div class="coord-item coord-level-high" data-year="2026" data-count="130"
+                    <div class="coord-item coord-level-high" data-year="2026" data-count="139"
                          data-url="/2026/10/08/llm/1-8-windows-deployment-of-coze-and-dify/" data-title="八、Coze 与 Dify 的 Windows 平台部署"
                          data-date="2026.10.08">
                       <span class="coord-date">10.08</span>
@@ -8875,7 +9197,7 @@ particlesJS("particles", {
                     
                       
                     
-                    <div class="coord-item coord-level-high" data-year="2026" data-count="130"
+                    <div class="coord-item coord-level-high" data-year="2026" data-count="139"
                          data-url="/2026/10/09/llm/1-9-enterprise-llm-deployment/" data-title="九、企业级大模型部署"
                          data-date="2026.10.09">
                       <span class="coord-date">10.09</span>
@@ -8886,7 +9208,7 @@ particlesJS("particles", {
                     
                       
                     
-                    <div class="coord-item coord-level-high" data-year="2026" data-count="130"
+                    <div class="coord-item coord-level-high" data-year="2026" data-count="139"
                          data-url="/2026/10/10/llm/1-10-docker-quickstart-and-dify-deployment-troubleshooting/" data-title="十、Docker 快速入门与 Dify 部署排障"
                          data-date="2026.10.10">
                       <span class="coord-date">10.10</span>
@@ -8897,7 +9219,7 @@ particlesJS("particles", {
                     
                       
                     
-                    <div class="coord-item coord-level-high" data-year="2026" data-count="130"
+                    <div class="coord-item coord-level-high" data-year="2026" data-count="139"
                          data-url="/2026/10/11/llm/1-11-langchain-overview-and-architecture/" data-title="十一、LangChain 概述与架构"
                          data-date="2026.10.11">
                       <span class="coord-date">10.11</span>
@@ -8908,7 +9230,7 @@ particlesJS("particles", {
                     
                       
                     
-                    <div class="coord-item coord-level-high" data-year="2026" data-count="130"
+                    <div class="coord-item coord-level-high" data-year="2026" data-count="139"
                          data-url="/2026/10/12/llm/1-12-langchain-quickstart-and-helloworld/" data-title="十二、LangChain 快速上手与 HelloWorld"
                          data-date="2026.10.12">
                       <span class="coord-date">10.12</span>
@@ -8919,7 +9241,7 @@ particlesJS("particles", {
                     
                       
                     
-                    <div class="coord-item coord-level-high" data-year="2026" data-count="130"
+                    <div class="coord-item coord-level-high" data-year="2026" data-count="139"
                          data-url="/2026/10/13/llm/1-13-model-io-and-model-access/" data-title="十三、Model I/O 与模型接入"
                          data-date="2026.10.13">
                       <span class="coord-date">10.13</span>
@@ -8930,7 +9252,7 @@ particlesJS("particles", {
                     
                       
                     
-                    <div class="coord-item coord-level-high" data-year="2026" data-count="130"
+                    <div class="coord-item coord-level-high" data-year="2026" data-count="139"
                          data-url="/2026/10/14/llm/1-14-ollama-local-deployment-and-usage/" data-title="十四、Ollama 本地部署与调用"
                          data-date="2026.10.14">
                       <span class="coord-date">10.14</span>
@@ -8941,7 +9263,7 @@ particlesJS("particles", {
                     
                       
                     
-                    <div class="coord-item coord-level-high" data-year="2026" data-count="130"
+                    <div class="coord-item coord-level-high" data-year="2026" data-count="139"
                          data-url="/2026/10/15/llm/1-15-prompts-and-message-templates/" data-title="十五、提示词与消息模板"
                          data-date="2026.10.15">
                       <span class="coord-date">10.15</span>
@@ -8952,7 +9274,7 @@ particlesJS("particles", {
                     
                       
                     
-                    <div class="coord-item coord-level-high" data-year="2026" data-count="130"
+                    <div class="coord-item coord-level-high" data-year="2026" data-count="139"
                          data-url="/2026/10/16/llm/1-16-output-parsers/" data-title="十六、输出解析器"
                          data-date="2026.10.16">
                       <span class="coord-date">10.16</span>
@@ -8963,7 +9285,7 @@ particlesJS("particles", {
                     
                       
                     
-                    <div class="coord-item coord-level-high" data-year="2026" data-count="130"
+                    <div class="coord-item coord-level-high" data-year="2026" data-count="139"
                          data-url="/2026/10/17/llm/1-17-lcel-and-chaining/" data-title="十七、LCEL 与链式调用"
                          data-date="2026.10.17">
                       <span class="coord-date">10.17</span>
@@ -8974,7 +9296,7 @@ particlesJS("particles", {
                     
                       
                     
-                    <div class="coord-item coord-level-high" data-year="2026" data-count="130"
+                    <div class="coord-item coord-level-high" data-year="2026" data-count="139"
                          data-url="/2026/10/18/llm/1-18-memory-and-chat-history-with-redis/" data-title="十八、记忆与对话历史（含 Redis 基础）"
                          data-date="2026.10.18">
                       <span class="coord-date">10.18</span>
@@ -8985,7 +9307,7 @@ particlesJS("particles", {
                     
                       
                     
-                    <div class="coord-item coord-level-high" data-year="2026" data-count="130"
+                    <div class="coord-item coord-level-high" data-year="2026" data-count="139"
                          data-url="/2026/10/19/llm/1-19-tools-and-tool-calling/" data-title="十九、Tools 工具调用"
                          data-date="2026.10.19">
                       <span class="coord-date">10.19</span>
@@ -8996,7 +9318,7 @@ particlesJS("particles", {
                     
                       
                     
-                    <div class="coord-item coord-level-high" data-year="2026" data-count="130"
+                    <div class="coord-item coord-level-high" data-year="2026" data-count="139"
                          data-url="/2026/10/20/llm/1-20-vector-database-and-embedding-in-practice/" data-title="二十、向量数据库与 Embedding 实战"
                          data-date="2026.10.20">
                       <span class="coord-date">10.20</span>
@@ -9007,7 +9329,7 @@ particlesJS("particles", {
                     
                       
                     
-                    <div class="coord-item coord-level-high" data-year="2026" data-count="130"
+                    <div class="coord-item coord-level-high" data-year="2026" data-count="139"
                          data-url="/2026/10/21/llm/1-21-rag-retrieval-augmented-generation/" data-title="二十一、RAG 检索增强生成"
                          data-date="2026.10.21">
                       <span class="coord-date">10.21</span>
@@ -9018,7 +9340,7 @@ particlesJS("particles", {
                     
                       
                     
-                    <div class="coord-item coord-level-high" data-year="2026" data-count="130"
+                    <div class="coord-item coord-level-high" data-year="2026" data-count="139"
                          data-url="/2026/10/22/llm/1-22-mcp-model-context-protocol/" data-title="二十二、MCP 模型上下文协议"
                          data-date="2026.10.22">
                       <span class="coord-date">10.22</span>
@@ -9029,7 +9351,7 @@ particlesJS("particles", {
                     
                       
                     
-                    <div class="coord-item coord-level-high" data-year="2026" data-count="130"
+                    <div class="coord-item coord-level-high" data-year="2026" data-count="139"
                          data-url="/2026/10/23/llm/1-23-agent/" data-title="二十三、Agent 智能体"
                          data-date="2026.10.23">
                       <span class="coord-date">10.23</span>
@@ -9040,7 +9362,7 @@ particlesJS("particles", {
                     
                       
                     
-                    <div class="coord-item coord-level-high" data-year="2026" data-count="130"
+                    <div class="coord-item coord-level-high" data-year="2026" data-count="139"
                          data-url="/2026/10/24/llm/1-24-langgraph-overview-and-quickstart/" data-title="二十四、LangGraph 概述与快速入门"
                          data-date="2026.10.24">
                       <span class="coord-date">10.24</span>
@@ -9051,7 +9373,7 @@ particlesJS("particles", {
                     
                       
                     
-                    <div class="coord-item coord-level-high" data-year="2026" data-count="130"
+                    <div class="coord-item coord-level-high" data-year="2026" data-count="139"
                          data-url="/2026/10/25/llm/1-25-langgraph-api-graph-and-state/" data-title="二十五、LangGraph API：图与状态"
                          data-date="2026.10.25">
                       <span class="coord-date">10.25</span>
@@ -9062,7 +9384,7 @@ particlesJS("particles", {
                     
                       
                     
-                    <div class="coord-item coord-level-high" data-year="2026" data-count="130"
+                    <div class="coord-item coord-level-high" data-year="2026" data-count="139"
                          data-url="/2026/10/26/llm/1-26-langgraph-api-nodes-edges-and-advanced/" data-title="二十六、LangGraph API：节点、边与进阶"
                          data-date="2026.10.26">
                       <span class="coord-date">10.26</span>
@@ -9073,7 +9395,7 @@ particlesJS("particles", {
                     
                       
                     
-                    <div class="coord-item coord-level-high" data-year="2026" data-count="130"
+                    <div class="coord-item coord-level-high" data-year="2026" data-count="139"
                          data-url="/2026/10/27/llm/1-27-langgraph-advanced-features/" data-title="二十七、LangGraph 高级特性"
                          data-date="2026.10.27">
                       <span class="coord-date">10.27</span>
@@ -9084,7 +9406,7 @@ particlesJS("particles", {
                     
                       
                     
-                    <div class="coord-item coord-level-high" data-year="2026" data-count="130"
+                    <div class="coord-item coord-level-high" data-year="2026" data-count="139"
                          data-url="/2026/10/28/llm/1-28-langgraph-multi-agent-and-a2a/" data-title="二十八、LangGraph 多智能体与 A2A"
                          data-date="2026.10.28">
                       <span class="coord-date">10.28</span>
@@ -9095,7 +9417,7 @@ particlesJS("particles", {
                     
                       
                     
-                    <div class="coord-item coord-level-high" data-year="2026" data-count="130"
+                    <div class="coord-item coord-level-high" data-year="2026" data-count="139"
                          data-url="/2026/10/29/llm/1-29-skills-and-ai-coding-tools/" data-title="二十九、Skills 技能与 AI 编程工具实践"
                          data-date="2026.10.29">
                       <span class="coord-date">10.29</span>
@@ -9106,7 +9428,7 @@ particlesJS("particles", {
                     
                       
                     
-                    <div class="coord-item coord-level-high" data-year="2026" data-count="130"
+                    <div class="coord-item coord-level-high" data-year="2026" data-count="139"
                          data-url="/2026/10/30/llm/1-30-llm-finetuning-overview-and-training-loop/" data-title="三十、大模型微调概述与训练闭环"
                          data-date="2026.10.30">
                       <span class="coord-date">10.30</span>
@@ -9117,7 +9439,7 @@ particlesJS("particles", {
                     
                       
                     
-                    <div class="coord-item coord-level-high" data-year="2026" data-count="130"
+                    <div class="coord-item coord-level-high" data-year="2026" data-count="139"
                          data-url="/2026/10/30/llm/ai-agent-interview-questions/" data-title="AI 智能体与大模型应用开发面试题库"
                          data-date="2026.10.30">
                       <span class="coord-date">10.30</span>
@@ -9128,7 +9450,7 @@ particlesJS("particles", {
                     
                       
                     
-                    <div class="coord-item coord-level-high" data-year="2026" data-count="130"
+                    <div class="coord-item coord-level-high" data-year="2026" data-count="139"
                          data-url="/2026/11/01/langchain/langchain-1-overview/" data-title="LangChain-概述"
                          data-date="2026.11.01">
                       <span class="coord-date">11.01</span>
@@ -9139,7 +9461,7 @@ particlesJS("particles", {
                     
                       
                     
-                    <div class="coord-item coord-level-high" data-year="2026" data-count="130"
+                    <div class="coord-item coord-level-high" data-year="2026" data-count="139"
                          data-url="/2026/11/02/langchain/langchain-2-models/" data-title="LangChain-模型的创建与调用"
                          data-date="2026.11.02">
                       <span class="coord-date">11.02</span>
@@ -9150,7 +9472,7 @@ particlesJS("particles", {
                     
                       
                     
-                    <div class="coord-item coord-level-high" data-year="2026" data-count="130"
+                    <div class="coord-item coord-level-high" data-year="2026" data-count="139"
                          data-url="/2026/11/03/langchain/langchain-3-langsmith/" data-title="LangChain-LangSmith基本使用"
                          data-date="2026.11.03">
                       <span class="coord-date">11.03</span>
@@ -9161,7 +9483,7 @@ particlesJS("particles", {
                     
                       
                     
-                    <div class="coord-item coord-level-high" data-year="2026" data-count="130"
+                    <div class="coord-item coord-level-high" data-year="2026" data-count="139"
                          data-url="/2026/11/04/langchain/langchain-4-messages-prompts/" data-title="LangChain-消息与提示词模板"
                          data-date="2026.11.04">
                       <span class="coord-date">11.04</span>
@@ -9172,7 +9494,7 @@ particlesJS("particles", {
                     
                       
                     
-                    <div class="coord-item coord-level-high" data-year="2026" data-count="130"
+                    <div class="coord-item coord-level-high" data-year="2026" data-count="139"
                          data-url="/2026/11/05/langchain/langchain-5-tools/" data-title="LangChain-Tools"
                          data-date="2026.11.05">
                       <span class="coord-date">11.05</span>
@@ -9183,7 +9505,7 @@ particlesJS("particles", {
                     
                       
                     
-                    <div class="coord-item coord-level-high" data-year="2026" data-count="130"
+                    <div class="coord-item coord-level-high" data-year="2026" data-count="139"
                          data-url="/2026/11/06/langchain/langchain-6-structured-output/" data-title="LangChain-结构化输出"
                          data-date="2026.11.06">
                       <span class="coord-date">11.06</span>
@@ -9194,7 +9516,7 @@ particlesJS("particles", {
                     
                       
                     
-                    <div class="coord-item coord-level-high" data-year="2026" data-count="130"
+                    <div class="coord-item coord-level-high" data-year="2026" data-count="139"
                          data-url="/2026/11/07/langchain/langchain-7-agents/" data-title="LangChain-智能体"
                          data-date="2026.11.07">
                       <span class="coord-date">11.07</span>
@@ -9205,7 +9527,7 @@ particlesJS("particles", {
                     
                       
                     
-                    <div class="coord-item coord-level-high" data-year="2026" data-count="130"
+                    <div class="coord-item coord-level-high" data-year="2026" data-count="139"
                          data-url="/2026/11/08/langchain/langchain-8-middleware/" data-title="LangChain-中间件"
                          data-date="2026.11.08">
                       <span class="coord-date">11.08</span>
@@ -9216,7 +9538,7 @@ particlesJS("particles", {
                     
                       
                     
-                    <div class="coord-item coord-level-high" data-year="2026" data-count="130"
+                    <div class="coord-item coord-level-high" data-year="2026" data-count="139"
                          data-url="/2026/11/09/langchain/langchain-9-context-memory/" data-title="LangChain-上下文与记忆"
                          data-date="2026.11.09">
                       <span class="coord-date">11.09</span>
@@ -9227,11 +9549,110 @@ particlesJS("particles", {
                     
                       
                     
-                    <div class="coord-item coord-level-high" data-year="2026" data-count="130"
+                    <div class="coord-item coord-level-high" data-year="2026" data-count="139"
                          data-url="/2026/11/10/langchain/langchain-10-rag/" data-title="LangChain-RAG"
                          data-date="2026.11.10">
                       <span class="coord-date">11.10</span>
                       <a href="/2026/11/10/langchain/langchain-10-rag/">LangChain-RAG</a>
+                    </div>
+                  
+                    
+                    
+                      
+                    
+                    <div class="coord-item coord-level-high" data-year="2026" data-count="139"
+                         data-url="/2026/11/11/llm/ai-coding-0-environment-setup/" data-title="零、环境准备与工具安装"
+                         data-date="2026.11.11">
+                      <span class="coord-date">11.11</span>
+                      <a href="/2026/11/11/llm/ai-coding-0-environment-setup/">零、环境准备与工具安装</a>
+                    </div>
+                  
+                    
+                    
+                      
+                    
+                    <div class="coord-item coord-level-high" data-year="2026" data-count="139"
+                         data-url="/2026/11/12/llm/ai-coding-1-ai-coding-basics/" data-title="一、AI编程基础理论"
+                         data-date="2026.11.12">
+                      <span class="coord-date">11.12</span>
+                      <a href="/2026/11/12/llm/ai-coding-1-ai-coding-basics/">一、AI编程基础理论</a>
+                    </div>
+                  
+                    
+                    
+                      
+                    
+                    <div class="coord-item coord-level-high" data-year="2026" data-count="139"
+                         data-url="/2026/11/13/llm/ai-coding-2-ai-tool-ecosystem/" data-title="二、AI编程工具生态"
+                         data-date="2026.11.13">
+                      <span class="coord-date">11.13</span>
+                      <a href="/2026/11/13/llm/ai-coding-2-ai-tool-ecosystem/">二、AI编程工具生态</a>
+                    </div>
+                  
+                    
+                    
+                      
+                    
+                    <div class="coord-item coord-level-high" data-year="2026" data-count="139"
+                         data-url="/2026/11/14/llm/ai-coding-3-claude-code-deep-dive/" data-title="三、Claude Code 深度使用与进阶技巧"
+                         data-date="2026.11.14">
+                      <span class="coord-date">11.14</span>
+                      <a href="/2026/11/14/llm/ai-coding-3-claude-code-deep-dive/">三、Claude Code 深度使用与进阶技巧</a>
+                    </div>
+                  
+                    
+                    
+                      
+                    
+                    <div class="coord-item coord-level-high" data-year="2026" data-count="139"
+                         data-url="/2026/11/15/llm/ai-coding-4-skills-in-depth/" data-title="四、AI技能系统（Skills）深度实践"
+                         data-date="2026.11.15">
+                      <span class="coord-date">11.15</span>
+                      <a href="/2026/11/15/llm/ai-coding-4-skills-in-depth/">四、AI技能系统（Skills）深度实践</a>
+                    </div>
+                  
+                    
+                    
+                      
+                    
+                    <div class="coord-item coord-level-high" data-year="2026" data-count="139"
+                         data-url="/2026/11/16/llm/ai-coding-5-projects-walkthrough/" data-title="五、完整项目案例实操"
+                         data-date="2026.11.16">
+                      <span class="coord-date">11.16</span>
+                      <a href="/2026/11/16/llm/ai-coding-5-projects-walkthrough/">五、完整项目案例实操</a>
+                    </div>
+                  
+                    
+                    
+                      
+                    
+                    <div class="coord-item coord-level-high" data-year="2026" data-count="139"
+                         data-url="/2026/11/17/llm/ai-coding-6-practice-projects/" data-title="六、项目实战（独立完成）"
+                         data-date="2026.11.17">
+                      <span class="coord-date">11.17</span>
+                      <a href="/2026/11/17/llm/ai-coding-6-practice-projects/">六、项目实战（独立完成）</a>
+                    </div>
+                  
+                    
+                    
+                      
+                    
+                    <div class="coord-item coord-level-high" data-year="2026" data-count="139"
+                         data-url="/2026/11/18/llm/ai-coding-7-codex-desktop/" data-title="七、Codex Desktop 安装和使用教程"
+                         data-date="2026.11.18">
+                      <span class="coord-date">11.18</span>
+                      <a href="/2026/11/18/llm/ai-coding-7-codex-desktop/">七、Codex Desktop 安装和使用教程</a>
+                    </div>
+                  
+                    
+                    
+                      
+                    
+                    <div class="coord-item coord-level-high" data-year="2026" data-count="139"
+                         data-url="/2026/11/19/llm/ai-coding-8-commands/" data-title="八、附录：常用命令速查表"
+                         data-date="2026.11.19">
+                      <span class="coord-date">11.19</span>
+                      <a href="/2026/11/19/llm/ai-coding-8-commands/">八、附录：常用命令速查表</a>
                     </div>
                   
                 </div>
@@ -9250,7 +9671,7 @@ particlesJS("particles", {
             <div class="starmag-center-node">
               <span class="core-pulse"></span>
               <span class="core-text">ARCHIVE</span>
-              <span class="core-count">165 RECORDS</span>
+              <span class="core-count">174 RECORDS</span>
             </div>
             
               
@@ -9516,7 +9937,7 @@ window.StarmapReader = (function () {
               <div class="archive-stats">
                 <div class="archive-stat-row">
                   <span>归档记录</span>
-                  <span class="archive-stat-value">165</span>
+                  <span class="archive-stat-value">174</span>
                 </div>
                 <div class="archive-stat-row">
                   <span>覆盖年份</span>
@@ -9524,7 +9945,7 @@ window.StarmapReader = (function () {
                 </div>
                 <div class="archive-stat-row">
                   <span>标签节点</span>
-                  <span class="archive-stat-value">19</span>
+                  <span class="archive-stat-value">20</span>
                 </div>
                 <div class="archive-stat-row">
                   <span>分类星区</span>
@@ -9606,7 +10027,7 @@ window.StarmapReader = (function () {
                   <div class="log-item log-item-node">
                     <span class="log-time"></span>
                     <span class="log-tag">节点</span>
-                    <span class="log-text">共 165 条记录入档</span>
+                    <span class="log-text">共 174 条记录入档</span>
                   </div>
                   <div class="log-item log-item-link">
                     <span class="log-time"></span>
@@ -9655,7 +10076,7 @@ window.StarmapReader = (function () {
                 <div class="year-bar-row">
                   <span class="year-bar-year">2025</span>
                   <div class="year-bar-track">
-                    <span class="year-bar-fill" style="width: 26.9%"></span>
+                    <span class="year-bar-fill" style="width: 25.2%"></span>
                   </div>
                   <span class="year-bar-count">35 篇</span>
                 </div>
@@ -9666,7 +10087,7 @@ window.StarmapReader = (function () {
                   <div class="year-bar-track">
                     <span class="year-bar-fill" style="width: 100%"></span>
                   </div>
-                  <span class="year-bar-count">130 篇</span>
+                  <span class="year-bar-count">139 篇</span>
                 </div>
               
             </div>
@@ -10077,46 +10498,9 @@ document.addEventListener('DOMContentLoaded', function () {
     }
   }
 
-  /* ---------- 5. 侧栏热门标签：按访问次数取前 5 ---------- */
-  function buildHotTags() {
-    var cloud = document.querySelector('.tag-cloud');
-    if (!cloud) return;
-
-    var links = Array.prototype.slice.call(cloud.querySelectorAll('.tag-link'));
-    if (!links.length) return;
-
-    var visits = {};
-    try {
-      visits = JSON.parse(window.localStorage.getItem('starry_tag_visits') || '{}');
-    } catch (err) {
-      visits = {};
-    }
-
-    function bump(name) {
-      visits[name] = (visits[name] || 0) + 1;
-      try { window.localStorage.setItem('starry_tag_visits', JSON.stringify(visits)); } catch (err) { /* 忽略配额错误 */ }
-    }
-
-    links.forEach(function (link) {
-      var name = link.dataset.tag || link.textContent.trim();
-      link.dataset.tag = name;
-      link.dataset.visits = visits[name] || 0;
-      link.dataset.count = link.dataset.count || '0';
-      link.addEventListener('click', function () { bump(name); });
-    });
-
-    links.sort(function (a, b) {
-      var va = Number(a.dataset.visits);
-      var vb = Number(b.dataset.visits);
-      if (va !== vb) return vb - va;
-      return Number(b.dataset.count) - Number(a.dataset.count);
-    });
-
-    links.forEach(function (link, i) {
-      cloud.appendChild(link);
-      link.hidden = i >= 5;
-    });
-  }
+  /* ---------- 5. 侧栏热门标签 ----------
+     排序与点击计数已统一挪到 _js/sidebar.js（Sidebar.njk 全站引入），
+     这里不再重复绑定，避免同一页面点击被计两次。 */
 
   document.addEventListener('DOMContentLoaded', function () {
     var posts = collectPosts();
@@ -10124,7 +10508,6 @@ document.addEventListener('DOMContentLoaded', function () {
     buildKline(posts);
     buildLog(posts);
     buildOrbital(posts);
-    buildHotTags();
   });
 })();
 

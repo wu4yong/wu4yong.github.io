@@ -21,6 +21,10 @@
 --><head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="color-scheme" content="dark">
+  <meta name="theme-color" content="#020817">
+  <!-- 首帧兜底：浏览器默认画布是白的，样式表还没解析完就画会闪一下白。这条 8 字节规则先锁死深空底色 -->
+  <style>html{background-color:#020817}</style>
   <title>时空秘境 - 三、ChatClient的基本使用及实战</title>
   <style>
     
@@ -199,6 +203,67 @@ body {
   }
 }
 
+/* ========== 跨页切换：新页淡入盖住旧页 ==========
+   静态站每点一次菜单都是重新打开一个页面，加淡入是为了「看起来像切页而不是刷新」。
+   上一版重影的根因不在淡入本身，而在新页首帧还没排好标签（模板 20 个 → 脚本收成 5 个），
+   两套标签在 0.2s 里叠在一起。现在排序已经下沉到 .tag-cloud 紧跟的内联脚本
+   （_js/hot-tags.js），首帧就是最终 5 个，所以淡入可以安全保留。
+   仍然只做「旧页留底 + 新页淡入」，不做两层同时半透明（那样中间会偏暗像闪黑）。 */
+@view-transition {
+  navigation: auto;
+}
+::view-transition-old(root) {
+  animation: none;
+  opacity: 1;
+}
+::view-transition-new(root) {
+  animation: vtFadeIn 0.26s ease-out both;
+}
+@keyframes vtFadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+/* ========== 全站滚动条：星图风细窄滑块（信息日志同款） ==========
+   Windows 默认滚动条是浅灰宽条，压在深色玻璃面板上非常突兀。
+   这里统一成：轨道透明（不切面板的底色）、滑块 4px 视觉宽度的青色圆头像悬浮着，
+   悬停变亮并带一点光晕。所有可滚动区域（侧栏、正文、雷达日志、标签页、弹窗列表）
+   都吃这一条规则，不再各写各的。
+   注意：只写 ::-webkit-*，不要混用 scrollbar-width / scrollbar-color——
+   Chrome 一旦看到那两个属性就会放弃 ::-webkit 伪元素的定制，退回系统样式。 */
+::-webkit-scrollbar {
+  width: 12px;
+  height: 12px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+  border: 0;
+}
+::-webkit-scrollbar-thumb {
+  background-color: rgba(0, 238, 255, 0.42);
+  /* 两侧透明边 + background-clip：12px 的轨道里只露出中间 4px，
+     看起来是一条悬空的细光条，而不是贴着面板边缘的实心块 */
+  border: 4px solid transparent;
+  border-radius: 12px;
+  background-clip: content-box;
+  min-height: 36px;
+  transition: background-color 0.2s ease, box-shadow 0.2s ease;
+}
+::-webkit-scrollbar-thumb:hover {
+  background-color: rgba(0, 238, 255, 0.82);
+  box-shadow: 0 0 8px rgba(0, 238, 255, 0.45);
+}
+::-webkit-scrollbar-thumb:active {
+  background-color: rgba(0, 238, 255, 0.9);
+}
+::-webkit-scrollbar-corner {
+  background: transparent;
+}
+/* 老版本 Chromium（<121）没有 background-clip 的滑块内边距，回退成 6px 实心条 */
+@supports not (background-clip: content-box) {
+  ::-webkit-scrollbar { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-thumb { border: 0; border-radius: 3px; }
+}
     
       /*
   ============================================
@@ -458,7 +523,11 @@ html.post-page * {
   backdrop-filter: blur(10px);      /* 毛玻璃效果 */
   border-right: 1px solid #00eeff33;
   overflow-y: auto;                 /* 内容过多时滚动 */
-  padding: 20px;
+  /* 右侧内边距从 20px 收到 8px：滚动条换成 12px 细滑块以后，
+     原来那圈留白让滑块像浮在空白里，现在贴着卡片边缘走 */
+  padding: 20px 8px 20px 20px;
+  /* 滚动条出现/消失时不挤压内容宽度，避免侧栏里 1~2px 的横跳 */
+  scrollbar-gutter: stable;
   flex-shrink: 0;                   /* 防止被压缩 */
 }
 
@@ -597,12 +666,14 @@ html.post-page * {
   color: #ccddff;
   text-decoration: none;
   font-size: 13px;
-  transition: all 0.3s ease;
+  /* 只过渡颜色/发光：hover 时元素自身绝不位移，否则鼠标会被“推离”元素，触发 hover 反复进出 */
+  display: inline-block;
+  transition: color 0.25s ease, text-shadow 0.25s ease;
 }
 .links-card a:hover,
 .archive-list a:hover {
   color: #00eeff;
-  padding-left: 4px;
+  text-shadow: 0 0 8px rgba(0, 238, 255, 0.55);
 }
 
 /* ========== 标签云 ========== */
@@ -612,17 +683,20 @@ html.post-page * {
   gap: 8px;
 }
 .tag-link {
-  color: #ccddff;
+  color: #00eeff;
   text-decoration: none;
   font-size: 12px;
   padding: 4px 8px;
-  background: rgba(0, 0, 0, 0.3);
+  /* 与「+ 关注」按钮同款：半透明青色底 + 青色描边胶囊 */
+  background: rgba(0, 238, 255, 0.2);
+  border: 1px solid #00eeff;
   border-radius: 15px;
-  transition: all 0.3s ease;
+  transition: background 0.25s ease, color 0.25s ease, box-shadow 0.25s ease;
 }
 .tag-link:hover {
-  color: #00eeff;
-  background: rgba(0, 238, 255, 0.2);
+  color: #020817;
+  background: #00eeff;
+  box-shadow: 0 0 14px rgba(0, 238, 255, 0.35);
 }
 
 /* ========== 移动端适配：小屏幕隐藏侧边栏 ========== */
@@ -749,7 +823,6 @@ body.sidebar-collapsed .main-content {
     display:none !important;
   }
 }
-
 
 /* ========== 搜索弹窗模态框 霓虹深色风格 + 淡入动画 ========== */
 .modal-mask {
@@ -929,16 +1002,6 @@ body.sidebar-collapsed .main-content {
   overflow-y: auto;
   overflow-x: hidden;
   padding: 6px 8px 14px;
-  scrollbar-width: thin;
-  scrollbar-color: rgba(0,238,255,.4) transparent;
-}
-.sp-body::-webkit-scrollbar {
-  width: 6px;
-  height: 0;
-}
-.sp-body::-webkit-scrollbar-thumb {
-  background: rgba(0,238,255,.35);
-  border-radius: 3px;
 }
 .sp-loading {
   padding: 26px 12px;
@@ -1833,6 +1896,37 @@ body.sidebar-collapsed .main-content {
 .article-content ul li ul li::before {
   left: -1.4em;
 }
+/* 列表背景块：正文有序/无序列表统一套一层与代码容器同色的面板，避免「裸排版」 */
+.article-content ol,
+.article-content ul {
+  background: #0a2035;
+  border: 1px solid rgba(0, 238, 255, 0.14);
+  border-radius: 8px;
+  box-sizing: border-box;
+  width: 100%;
+  padding: 14px 18px 14px 2.9em !important;
+  margin: 12px 0 16px;
+}
+/* 嵌套子列表不叠加背景，只保留缩进，避免盒子套盒子 */
+.article-content ol li ol,
+.article-content ol li ul,
+.article-content ul li ol,
+.article-content ul li ul {
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  padding: 0 0 0 1.4em !important;
+  margin: 0.2rem 0 !important;
+}
+/* 引用块（提示框）内部的列表也不加面板，保持引用块本身的原样 */
+.article-content blockquote ol,
+.article-content blockquote ul {
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  padding: 0 0 0 1.6em !important;
+  margin: 0.4em 0 !important;
+}
 /* Mermaid 流程图 / 时序图 整体适配：auto 超长出滚动条，不会溢出页面 */
 .mermaid {
   margin: 24px 0;
@@ -2200,7 +2294,7 @@ particlesJS("particles", {
     <p class="bio">星辰大海，代码为舟</p>
     <div class="stats">
       <div class="stat-item">
-        <span class="stat-num">165</span>
+        <span class="stat-num">174</span>
         <span class="stat-label">文章</span>
       </div>
       <div class="stat-item">
@@ -2234,6 +2328,9 @@ particlesJS("particles", {
     
     <div class="tag-cloud">
       
+      <a href="/tags/电商问数/" class="tag-link" data-tag="电商问数"
+        data-count="18">电商问数</a>
+      
       <a href="/tags/MySQL数据库/" class="tag-link" data-tag="MySQL数据库"
         data-count="7">MySQL数据库</a>
       
@@ -2243,29 +2340,26 @@ particlesJS("particles", {
       <a href="/tags/深度研搜/" class="tag-link" data-tag="深度研搜"
         data-count="15">深度研搜</a>
       
-      <a href="/tags/电商问数/" class="tag-link" data-tag="电商问数"
-        data-count="18">电商问数</a>
-      
       <a href="/tags/git/" class="tag-link" data-tag="git"
         data-count="5">git</a>
-      
-      <a href="/tags/langchain/" class="tag-link" data-tag="langchain"
-        data-count="10">langchain</a>
       
       <a href="/tags/面试/" class="tag-link" data-tag="面试"
         data-count="11">面试</a>
       
-      <a href="/tags/Netty/" class="tag-link" data-tag="Netty"
-        data-count="4">Netty</a>
+      <a href="/tags/langchain/" class="tag-link" data-tag="langchain"
+        data-count="10">langchain</a>
       
       <a href="/tags/Java/" class="tag-link" data-tag="Java"
         data-count="10">Java</a>
       
-      <a href="/tags/vue/" class="tag-link" data-tag="vue"
-        data-count="9">vue</a>
-      
       <a href="/tags/大模型/" class="tag-link" data-tag="大模型"
         data-count="35">大模型</a>
+      
+      <a href="/tags/AICoding/" class="tag-link" data-tag="AICoding"
+        data-count="9">AICoding</a>
+      
+      <a href="/tags/Netty/" class="tag-link" data-tag="Netty"
+        data-count="4">Netty</a>
       
       <a href="/tags/SpringAi/" class="tag-link" data-tag="SpringAi"
         data-count="15">SpringAi</a>
@@ -2276,22 +2370,96 @@ particlesJS("particles", {
       <a href="/tags/视频剪辑/" class="tag-link" data-tag="视频剪辑"
         data-count="1">视频剪辑</a>
       
+      <a href="/tags/vue/" class="tag-link" data-tag="vue"
+        data-count="9">vue</a>
+      
       <a href="/tags/大数据/" class="tag-link" data-tag="大数据"
         data-count="3">大数据</a>
       
-      <a href="/tags/游戏/" class="tag-link" data-tag="游戏"
-        data-count="1">游戏</a>
+      <a href="/tags/电影/" class="tag-link" data-tag="电影"
+        data-count="2">电影</a>
       
       <a href="/tags/音乐/" class="tag-link" data-tag="音乐"
         data-count="8">音乐</a>
       
-      <a href="/tags/电影/" class="tag-link" data-tag="电影"
-        data-count="2">电影</a>
+      <a href="/tags/游戏/" class="tag-link" data-tag="游戏"
+        data-count="1">游戏</a>
       
       <a href="/tags/图片/" class="tag-link" data-tag="图片"
         data-count="2">图片</a>
       
     </div>
+    <script>
+      /*
+  ============================================
+  侧栏热门标签排序（首帧前执行）
+  文件：_js/hot-tags.js
+  引入位置：_components/Sidebar.njk 里 .tag-cloud 闭合标签之后（紧跟着写死）
+  作用：按点击次数排序、只露前 5 个、点一下立刻重排
+  为什么单独拆出来：以前放在 sidebar.js 的 DOMContentLoaded 里，首帧渲染的还是
+  模板顺序的 20 个标签，等脚本跑完才收成 5 个；配合跨页淡入（View Transition）
+  会出现「新旧两套标签叠在一起、影子跳一下」。紧跟标签节点内联执行就没有中间态。
+  最后修改：2026-11-12
+  ============================================
+*/
+(function () {
+  var cloud = document.querySelector('.tag-cloud');
+  if (!cloud) return;
+  var links = Array.prototype.slice.call(cloud.querySelectorAll('.tag-link'));
+  if (!links.length) return;
+
+  var KEY = 'starry_tag_visits'; // 标签名 -> 点击次数
+  var TOP = 5;
+  var visits = {};
+
+  try {
+    var raw = JSON.parse(localStorage.getItem(KEY) || '{}');
+    visits = (raw && typeof raw === 'object') ? raw : {};
+  } catch (e) {
+    visits = {};
+  }
+
+  links.forEach(function (link) {
+    var name = link.dataset.tag || (link.textContent || '').trim();
+    link.dataset.tag = name;
+    if (!link.dataset.count) link.dataset.count = '0';
+  });
+
+  // 排序：点击次数降序 → 文章数降序 → 名字，保证同分时顺序稳定不来回跳
+  function order() {
+    return links.slice().sort(function (a, b) {
+      var va = visits[a.dataset.tag] || 0;
+      var vb = visits[b.dataset.tag] || 0;
+      if (vb !== va) return vb - va;
+      var ca = Number(a.dataset.count) || 0;
+      var cb = Number(b.dataset.count) || 0;
+      if (cb !== ca) return cb - ca;
+      return String(a.dataset.tag).localeCompare(String(b.dataset.tag), 'zh');
+    });
+  }
+
+  // 重排 DOM：按名次 append，超出 5 个的 hidden（仍留在 DOM，等名次升上来再显示）
+  function render() {
+    order().forEach(function (link, i) {
+      link.dataset.visits = visits[link.dataset.tag] || 0;
+      cloud.appendChild(link);
+      link.hidden = i >= TOP;
+    });
+  }
+
+  links.forEach(function (link) {
+    link.addEventListener('click', function () {
+      var name = link.dataset.tag;
+      visits[name] = (visits[name] || 0) + 1;
+      try { localStorage.setItem(KEY, JSON.stringify(visits)); } catch (e) { /* 忽略配额错误 */ }
+      render(); // 当前页立刻看到「谁被点多了谁上前」
+    });
+  });
+
+  render();
+})();
+
+    </script>
   </div>
   <div class="archive-card">
     <h4>按月归档</h4>
@@ -2307,6 +2475,33 @@ particlesJS("particles", {
           2026年11月
         </a>
       </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
       
       
       
@@ -3388,6 +3583,65 @@ particlesJS("particles", {
       }, 300);
     });
   }
+
+
+  // ===== 连点保护：切换途中再点侧栏菜单只认第一次 =====
+  // 猛点同一条菜单会连续发起多次导航，每次导航都会重新抓一次首帧画面，
+  // 叠在一起看起来就是「跳一下」。这里 400ms 内只放行第一次点击；
+  // 时间戳存 sessionStorage，所以跳到新页之后紧接着的连点同样会被挡掉。
+  (function guardRapidNav() {
+    var KEY = 'sb_nav_ts';
+    function isLocked() {
+      try { return Date.now() - (parseInt(sessionStorage.getItem(KEY) || '0', 10) || 0) < 400; } catch (e) { return false; }
+    }
+    function lock() { try { sessionStorage.setItem(KEY, String(Date.now())); } catch (e) { /* 忽略 */ } }
+    document.addEventListener('click', function (e) {
+      var a = e.target && e.target.closest ? e.target.closest('#sidebar a[href]') : null;
+      if (!a) return;
+      var href = a.getAttribute('href') || '';
+      if (href.indexOf('javascript:') === 0 || href.charAt(0) === '#') return; // 弹窗类跳过
+      if (isLocked()) { e.preventDefault(); return; }
+      lock();
+    }, true);
+  })();
+
+  // ===== 侧栏自己的滚动位置：换页后恢复，避免每次点菜单侧栏都跳回顶部 =====
+  (function rememberSidebarScroll() {
+    var sb = document.getElementById('sidebar');
+    if (!sb) return;
+    try {
+      var saved = sessionStorage.getItem('sidebarScrollTop');
+      if (saved) sb.scrollTop = parseInt(saved, 10) || 0;
+    } catch (e) { /* 忽略隐私模式报错 */ }
+    sb.addEventListener('scroll', function () {
+      try { sessionStorage.setItem('sidebarScrollTop', String(sb.scrollTop)); } catch (e) { /* 忽略 */ }
+    }, { passive: true });
+  })();
+
+  // ===== 站内链接预取：鼠标悬停时就把目标页拉进缓存，点下去是秒开，不再有“刷新”的等待感 =====
+  (function prefetchLinks() {
+    var seen = {};
+    function prefetch(raw) {
+      if (!raw || raw.indexOf('javascript:') === 0 || raw.charAt(0) === '#') return;
+      var abs;
+      try { abs = new URL(raw, location.href); } catch (e) { return; }
+      if (abs.origin !== location.origin) return;         // 只预取本站
+      if (abs.pathname === location.pathname) return;     // 当前页不用预取
+      var key = abs.pathname;
+      if (seen[key]) return;
+      seen[key] = 1;
+      var l = document.createElement('link');
+      l.rel = 'prefetch';
+      l.as = 'document';
+      l.href = abs.href;
+      document.head.appendChild(l);
+    }
+    // mouseover 会冒泡，pointerenter 不会，所以用 mouseover 统一兜住
+    document.addEventListener('mouseover', function (e) {
+      var a = e.target && e.target.closest ? e.target.closest('a[href]') : null;
+      if (a) prefetch(a.getAttribute('href'));
+    }, { passive: true });
+  })();
 
   // =========侧边栏折叠展开逻辑=========
   const toggleBtn = document.getElementById('sidebarToggle');
