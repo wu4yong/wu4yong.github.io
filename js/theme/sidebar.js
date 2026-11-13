@@ -291,18 +291,24 @@
     }
   });
 
-  // ===== 粉丝数点击 +1（起始 1088） =====
+  // ===== 粉丝数：只由「关注」按钮驱动，起点 1088，不落任何存储（刷新即还原） =====
   var fansEl = document.getElementById('fans-count');
-  if (fansEl) {
-    fansEl.addEventListener('click', function () {
-      var current = parseInt(this.textContent);
-      this.textContent = current + 1;
-      this.style.transform = 'scale(1.3)';
-      this.style.color = '#ff6b6b';
-      setTimeout(function () {
-        fansEl.style.transform = 'scale(1)';
-        fansEl.style.color = '#00eeff';
-      }, 300);
+  var followBtn = document.getElementById('followBtn');
+  if (fansEl && followBtn) {
+    var baseFans = parseInt(fansEl.getAttribute('data-base'), 10) || 1088;
+    var isFollowing = false;
+    fansEl.textContent = baseFans;
+    followBtn.addEventListener('click', function () {
+      isFollowing = !isFollowing;
+      fansEl.textContent = baseFans + (isFollowing ? 1 : 0);
+      /* 数字只闪一下，不把颜色留住 */
+      fansEl.classList.remove('is-bump');
+      void fansEl.offsetWidth;
+      fansEl.classList.add('is-bump');
+      setTimeout(function () { fansEl.classList.remove('is-bump'); }, 420);
+      followBtn.classList.toggle('is-following', isFollowing);
+      followBtn.textContent = isFollowing ? '已关注' : '+ 关注';
+      followBtn.setAttribute('aria-pressed', isFollowing ? 'true' : 'false');
     });
   }
 
