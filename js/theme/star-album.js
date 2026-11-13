@@ -256,7 +256,8 @@ window.StarAlbum = (function () {
 
   function paint(ui, i) {
     var n = ui.items.length;
-    current = Math.max(0, Math.min(n - 1, i));
+    /* 首尾循环：点左箭头从第 1 张退到末张，点右箭头从末张回到第 1 张 */
+    current = ((i % n) + n) % n;
     if (ui.el.classList.contains('album-scroll')) {
       var slide = ui.track.children[current];
       if (slide) {
@@ -268,8 +269,6 @@ window.StarAlbum = (function () {
     ui.idx.textContent = (current + 1) + ' / ' + n;
     ui.bar.style.width = ((current + 1) / n * 100) + '%';
     if (ui.count) ui.count.textContent = pad2(current + 1) + ' / ' + (n < 10 ? '0' : '') + n;
-    ui.prev.classList.toggle('is-off', current === 0);
-    ui.next.classList.toggle('is-off', current === n - 1);
     playSub(ui);
     /* scroll 用原生滚动，字幕的 playSub 由滚动同步处调用 */
   }
@@ -348,8 +347,6 @@ window.StarAlbum = (function () {
           ui.idx.textContent = (current + 1) + ' / ' + n;
           ui.bar.style.width = ((current + 1) / n * 100) + '%';
           if (ui.count) ui.count.textContent = pad2(current + 1) + ' / ' + (n < 10 ? '0' : '') + n;
-          ui.prev.classList.toggle('is-off', current === 0);
-          ui.next.classList.toggle('is-off', current === n - 1);
           playSub(ui);
         }
       });
