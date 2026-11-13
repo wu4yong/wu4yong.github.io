@@ -572,8 +572,6 @@
     void node.el.offsetWidth;
     node.el.classList.add('rv-hit');
     setTimeout(function () { node.el.classList.remove('rv-hit'); }, 1500);
-
-    kickIdle();
   }
 
   function focusById(id) {
@@ -646,22 +644,11 @@
     }
   }
 
-  /* ============ 7.5 静置 10s 随机换位（仅 graph 视图） ============
-     规则：质量最大的节点（如「大模型」）缓慢飘向随机挑中的另一颗（如「vue」），
-     抵达瞬间那颗消失、质量节点占住它的位置，随后它淡入到质量节点原来的位置上。
-     任何指针动作都会重置 10s 计时。 */
-  var IDLE_MS = 5000;
-  var idleTimer = 0;
+  /* ============ 7.5 随机换位（仅 graph 视图，固定 5 秒一次，不看有没有点击） ============
+     规则：随机挑两颗可见节点，A 缓慢飘向 B 的位置，抵达瞬间 B 消失、
+     A 占住 B 的位置，随后 B 淡入到 A 原来的位置上。
+     节奏由 7.6 节的定时器统一驱动（旋转 → 换位），指针动作不再重置。 */
   var swapping = false;
-
-  function kickIdle() {
-    if (idleTimer) { clearTimeout(idleTimer); idleTimer = 0; }
-    if (VIEW !== 'graph') return;
-    idleTimer = setTimeout(function () {
-      idleTimer = 0;
-      swapParticles();
-    }, IDLE_MS);
-  }
 
   function swapParticles() {
     if (VIEW !== 'graph' || swapping) return;
@@ -708,13 +695,13 @@
           a.el.style.transition = '';
           b.el.style.transition = '';
           swapping = false;
-          kickIdle();
+          snapStarNodes();   /* 依附在标签周围的小行星跟着换到新位置 */
         }, 420);
       }, 32);
     }, 1150);
   }
 
-  /* ============ 7.6 星图手记：行星每 5 秒沿轨道顺时针推进 ============ */
+  /* ============ 7.6 行星每 5 秒顺时针推进（timeline 沿轨道 / graph 绕核心自转） ============ */
   var ROT_MS = 5000;
   var ROT_DEG = 9;
   var rotTimer = 0;
@@ -734,10 +721,31 @@
     snapStarNodes();  /* 吸附的小星点跟着节点走 */
   }
 
+  /* graph 没有轨道圈，用「绕核心自转」：半径（按质量定的远近）不变，只推角度 */
+  function rotateGraph() {
+    if (VIEW !== 'graph' || document.hidden) return;
+    nodes.forEach(function (n) {
+      n.deg += ROT_DEG;
+      var rad = n.deg * Math.PI / 180;
+      n.x = geometry.cx + n.r * Math.cos(rad);
+      n.y = geometry.cy + n.r * Math.sin(rad);
+      n.el.style.left = n.x + 'px';
+      n.el.style.top = n.y + 'px';
+    });
+    snapStarNodes();  /* 依附在标签周围的小行星跟着走 */
+  }
+
   function startRotation() {
     if (rotTimer) { clearInterval(rotTimer); rotTimer = 0; }
-    if (VIEW !== 'timeline') return;
-    rotTimer = setInterval(rotateTimeline, ROT_MS);
+    if (VIEW === 'timeline') {
+      rotTimer = setInterval(rotateTimeline, ROT_MS);
+    } else if (VIEW === 'graph') {
+      /* 同一拍：先整体转 9°，等转到位（1.2s 缓动）再随机换位两颗 */
+      rotTimer = setInterval(function () {
+        rotateGraph();
+        setTimeout(swapParticles, 1250);
+      }, ROT_MS);
+    }
   }
 
   /* ============ 7.7 信息日志：用户真实点击 ============
@@ -829,16 +837,7 @@
       }
     }, true);
 
-    /* 指针一动就重置静置计时（高频的 move 做 700ms 节流，点击必重置） */
-    var lastKick = 0;
-    ['pointerdown', 'pointermove', 'wheel', 'keydown'].forEach(function (ev) {
-      window.addEventListener(ev, function () {
-        var now = Date.now();
-        if (now - lastKick < 700 && ev !== 'pointerdown') return;
-        lastKick = now;
-        kickIdle();
-      }, { passive: true });
-    });
+    /* 5 秒节奏由 7.6 的定时器统一驱动，指针动作不再打断旋转 / 换位 */
 
     document.addEventListener('visibilitychange', function () {
       if (document.hidden) {
@@ -860,7 +859,7 @@
     startParticles();
 
     /* 等字体与布局稳定后再排一次，避免 clientWidth 读到的还是 0 */
-    setTimeout(function () { layout(); restoreContext(); kickIdle(); startRotation(); }, 260);
+    setTimeout(function () { layout(); restoreContext(); startRotation(); }, 260);
   }
 
   if (document.readyState === 'loading') {
