@@ -4,45 +4,70 @@
  * 文件：star-album.js
  * 适用终端：电脑端（星迹索引 / 星图手记）
  * 作用：
- *   1) 图片类文章（front-matter 里写了 album: book / album: scroll）
+ *   1) 图片类文章（front-matter 里写了 album: fill / book / scroll）
  *      在阅读器里改成画册：
- *        book   = 一次一页、左右翻页（努力的理由）
+ *        fill   = 一页铺满雷达区、左右翻页（没有捷径）
+ *        book   = 一次一页、居中留边（努力的理由）
  *        scroll = 横向一张挨一张，可拖动/滑动（学普通话）
- *      打开即循环播放轻音乐，关闭即停。
+ *      除 scroll 外，无人操作时每 5 秒自动翻一页；一碰画册就停表，松手重新计时。
+ *      打开即循环播放《与你同在》的背景音乐，关闭即停。
  *   2) 电影 / 音乐类文章正文里有 iframe / video 时，
  *      由 InplaceReader 自动铺满雷达区播放（本文件只管画册与音乐）。
  * 依赖：window.StarmapReader 的 open / close 事件（starmap:reader-*）
  * ============================================================
  */
 window.StarAlbum = (function () {
-  var BGM_SRC = '/assets/audio/light-piano.mp3';
+  var BGM_SRC = '/assets/audio/be-with-you.mp3';  /* 全局兜底背景音：文章没写 album_bgm 时用它 */
+  var bgmSrc = BGM_SRC;      /* 当前这一篇实际用的背景音，由 begin() 按 md 的 album_bgm 覆盖 */
   var VOLUME = 0.3;        /* 背景音乐音量 30，与视频播放器同一档 */
+  var AUTO_MS = 5000;      /* 无人操作时的自动翻页间隔（与雷达换位同一节奏） */
   var audio = null;
   var muted = false;
   var mode = '';
   var albumEl = null;
   var current = 0;
   var total = 0;
+  var autoTimer = 0;
 
   function ensureAudio() {
-    if (audio) return audio;
-    audio = new Audio(BGM_SRC);
-    audio.loop = true;
-    audio.preload = 'auto';
+    if (!audio) {
+      audio = new Audio();
+      audio.loop = true;
+      audio.preload = 'auto';
+      /* 挂到 body（不设 controls，界面上看不到任何控件），便于调试与统一回收 */
+      document.body.appendChild(audio);
+    }
+    /* 换篇就换曲：src 与当前 bgmSrc 不一致时重新挂载，不重新建 audio 元素 */
+    if (audio.__src !== bgmSrc) {
+      try { audio.pause(); } catch (e) {}
+      audio.src = bgmSrc;
+      audio.__src = bgmSrc;
+      try { audio.load(); } catch (e) {}
+    }
     audio.volume = muted ? 0 : VOLUME;
-    /* 挂到 body（不设 controls，界面上看不到任何控件），便于调试与统一回收 */
-    document.body.appendChild(audio);
     return audio;
   }
 
+  /* md front-matter 里的 album_bgm（例如 /assets/audio/ni-zhan.mp3）落到这里 */
+  function setBgm(src) {
+    if (!src || src === bgmSrc) return;
+    bgmSrc = src;
+  }
+
   /* 必须在用户点击的那一次手势任务里同步调用，否则自动播放会被浏览器拦 */
-  function begin(m) {
+  function begin(m, src) {
     mode = m || '';
+    if (src) setBgm(src);     /* 每篇 md 可以指定自己的背景音，没给就沿用上一篇/默认 */
     if (!mode) return;
     try {
       var a = ensureAudio();
       var p = a.play();
-      if (p && p.catch) p.catch(function () { /* 被拦就静音等用户点 ♪ */ });
+      if (p && p.catch) p.catch(function () {
+        /* 上一首还在播时换 src，play() 会被 load() 打断（AbortError），补一次重试 */
+        setTimeout(function () {
+          try { var q2 = a.play(); if (q2 && q2.catch) q2.catch(function () {}); } catch (e) {}
+        }, 150);
+      });
     } catch (e) { /* 静默降级 */ }
   }
 
@@ -58,6 +83,7 @@ window.StarAlbum = (function () {
     if (audio) {
       try { audio.pause(); audio.currentTime = 0; } catch (e) {}
     }
+    clearAuto();
     detach();
     document.removeEventListener('keydown', keyHandler);
     mode = '';
@@ -99,7 +125,7 @@ window.StarAlbum = (function () {
 
   function build(kind, items, title) {
     var box = document.createElement('div');
-    box.className = 'album album-' + (kind === 'scroll' ? 'scroll' : 'book');
+    box.className = 'album album-' + (kind === 'scroll' ? 'scroll' : (kind === 'fill' ? 'fill' : 'book'));
     box.setAttribute('data-total', items.length);
 
     var viewport = document.createElement('div');
@@ -146,7 +172,7 @@ window.StarAlbum = (function () {
     info.className = 'album-info';
     var kicker = document.createElement('span');
     kicker.className = 'album-kicker';
-    kicker.textContent = (kind === 'scroll' ? 'PHOTO SCROLL' : 'PHOTO BOOK') + ' · ' + items.length + ' 页';
+    kicker.textContent = (kind === 'scroll' ? 'PHOTO SCROLL' : (kind === 'fill' ? 'PHOTO STORY' : 'PHOTO BOOK')) + ' · ' + items.length + ' 页';
     var count = document.createElement('span');
     count.className = 'album-count';
     count.textContent = '01 / ' + (items.length < 10 ? '0' : '') + items.length;
@@ -194,7 +220,18 @@ window.StarAlbum = (function () {
     bar.className = 'album-bar';
     bar.style.width = (100 / items.length) + '%';
     hud.appendChild(idx);
-    hud.appendChild(bar);
+    /* 进度条套一层定宽盒子：条形宽度按百分比算，需要一个明确的参照宽度 */
+    var prog = document.createElement('span');
+    prog.className = 'album-progress';
+    prog.appendChild(bar);
+    hud.appendChild(prog);
+    /* 自动翻页指示灯：只在会自己动的版式上出现（scroll 是手动横拖） */
+    if (kind !== 'scroll') {
+      var autoDot = document.createElement('i');
+      autoDot.className = 'album-auto';
+      autoDot.title = '无操作时每 5 秒自动翻页';
+      hud.appendChild(autoDot);
+    }
     box.appendChild(hud);
 
     var mute = document.createElement('button');
@@ -214,9 +251,29 @@ window.StarAlbum = (function () {
 
   function pad2(n) { return (n < 10 ? '0' : '') + n; }
 
+  /* 自动翻页：paint 之后重排一次计时，于是「手动点一下」天然就是重置，
+     不会出现「刚翻完又被自动翻走」。放大层打开、页面切到后台时停表。 */
+  function clearAuto() {
+    if (autoTimer) { window.clearTimeout(autoTimer); autoTimer = 0; }
+  }
+
+  function resetAuto(ui) {
+    clearAuto();
+    if (!ui || !ui.el) return;
+    if (ui.el.classList.contains('album-scroll')) return;
+    if (ui.zoom && !ui.zoom.hidden) return;
+    if (document.hidden) return;
+    autoTimer = window.setTimeout(function () {
+      autoTimer = 0;
+      if (!albumEl || albumEl !== ui.el) return;
+      paint(ui, current + 1);
+    }, AUTO_MS);
+  }
+
   function openZoom(ui, i) {
     var it = ui.items[i];
     if (!it) return;
+    clearAuto();
     ui.zoomImg.src = it.src;
     ui.zoomImg.alt = it.note || it.alt || '';
     ui.zoom.hidden = false;
@@ -226,6 +283,7 @@ window.StarAlbum = (function () {
   function closeZoom(ui) {
     ui.zoom.hidden = true;
     ui.zoomImg.src = '';
+    resetAuto(ui);
   }
 
   /* 字幕：一行一句画面解说，逐字打出来（换页会先清掉上一页没打完的计时器） */
@@ -269,7 +327,14 @@ window.StarAlbum = (function () {
     ui.idx.textContent = (current + 1) + ' / ' + n;
     ui.bar.style.width = ((current + 1) / n * 100) + '%';
     if (ui.count) ui.count.textContent = pad2(current + 1) + ' / ' + (n < 10 ? '0' : '') + n;
+    /* fill 版式：给当前页重播一次缓慢推近（换页回到起点，不会一直放大到底） */
+    var cur = ui.track.children[current];
+    if (cur && ui.el.classList.contains('album-fill')) {
+      var curImg = cur.querySelector('img');
+      if (curImg) { curImg.style.animation = 'none'; void curImg.offsetWidth; curImg.style.animation = ''; }
+    }
     playSub(ui);
+    resetAuto(ui);
     /* scroll 用原生滚动，字幕的 playSub 由滚动同步处调用 */
   }
 
@@ -287,6 +352,9 @@ window.StarAlbum = (function () {
     }
     ui.el.addEventListener('pointerdown', resumeOnce);
     ui.el.addEventListener('click', resumeOnce);
+    /* 用户一碰画册（哪怕只是按住看图）就先停表，松手后再从头计 5 秒 */
+    ui.el.addEventListener('pointerdown', function () { clearAuto(); }, true);
+    ui.el.addEventListener('pointerup', function () { resetAuto(ui); }, true);
 
     ui.prev.addEventListener('click', function (e) { e.stopPropagation(); paint(ui, current - 1); });
     ui.next.addEventListener('click', function (e) { e.stopPropagation(); paint(ui, current + 1); });
@@ -394,5 +462,12 @@ window.StarAlbum = (function () {
     stop();
   });
 
-  return { begin: begin, render: render, stop: stop };
+  /* 切到后台不空转，回到前台接着从当前页计时 */
+  document.addEventListener('visibilitychange', function () {
+    if (!albumEl) return;
+    if (document.hidden) clearAuto();
+    else resetAuto(albumEl.__ui);
+  });
+
+  return { begin: begin, render: render, stop: stop, setBgm: setBgm };
 })();
