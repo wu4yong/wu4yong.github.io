@@ -1,0 +1,2105 @@
+<!--
+  ============================================
+  文章原文页模板
+  文件：post.njk
+  适用终端：电脑端
+  作用：文章正文 + 侧栏；手机 UA 跳 /phone/p/<slug>/
+  最后修改：2026-11-11
+  ============================================
+-->
+
+
+<!DOCTYPE html>
+<html class="post-page">
+<!--
+  ============================================
+  公共 head 组件
+  文件：Head.njk
+  适用终端：电脑端
+  作用：输出 charset/viewport/title，并按 pageCss 输出外链样式表
+  样式资源：themes/butterfly/source/css/theme/*.css（Hexo 复制到 /css/theme/）
+  引入层级顺序（= CSS 层叠顺序，调整只允许追加，不要打乱前后）：
+    1 基础  common.css
+    2 布局  post-layout.css
+    3 组件  sidebar.css
+    4 正文  post.css
+    5 页面  tags.css / chronicle.css / about.css / tag.css / category-shared.css / pc-home.css
+    6 浮层  star-reader.css
+    7 特效  starmap-live.css
+  最后修改：2026-11-12
+  ============================================
+--><head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="color-scheme" content="dark">
+  <meta name="theme-color" content="#020817">
+  <!-- 首帧兜底：浏览器默认画布是白的，样式表还没解析完就画会闪一下白。这条 8 字节规则先锁死深空底色 -->
+  <style>html{background-color:#020817}</style>
+  <title>时空秘境 - 十八、记忆与对话历史（含 Redis 基础）</title>
+  
+  <link rel="stylesheet" href="/css/theme/common.css">
+  
+  <link rel="stylesheet" href="/css/theme/post-layout.css">
+  
+  <link rel="stylesheet" href="/css/theme/sidebar.css">
+  
+  <link rel="stylesheet" href="/css/theme/post.css">
+  
+<meta name="generator" content="Hexo 8.1.2"></head>
+
+<script>
+  /* 手机 UA 分流：电脑端这套控制台不再给手机用，直接换成手机版页面 */
+  (function () {
+    var ua = navigator.userAgent || '';
+    if (/Android|iPhone|iPod|HarmonyOS|Windows Phone|MicroMessenger|Mobile Safari/i.test(ua)) {
+      location.replace('/phone/p/llm/1-18-memory-and-chat-history-with-redis/');
+    }
+  })();
+</script>
+<link rel="stylesheet" href="/css/code-table.css">
+
+<body>
+  <!--
+  ============================================
+  星空粒子背景组件
+  文件：Particles.njk
+  适用终端：电脑端
+  作用：particles.js 全站星空动画，鼠标悬停互动
+  最后修改：2026-11-11
+  ============================================
+--><!-- z-index 必须是 0 而不是 -1：body 带着不透明的 radial-gradient 底色，
+     负层级的子元素会被父元素背景整个盖住，粒子在跑但一个点都看不见 -->
+<div id="particles" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 0; pointer-events: none;"></div>
+<!-- 星座层：随机零星散布星座图形，叠在粒子之上、页面内容之下 -->
+<div id="constellations" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 1; pointer-events: none;" aria-hidden="true"></div>
+<script src="/js/particles.min.js"></script>
+<script>/* 本地库失效时回退 CDN，保证星空背景不丢 */
+if (typeof particlesJS === "undefined") {
+  document.write('<script src="https://cdn.jsdelivr.net/particles.js/2.0.0/particles.min.js"><\/script>');
+}
+</script>
+<script>
+particlesJS("particles", {
+  particles: {
+    number: {
+      value: 95,
+      density: {
+        enable: true,
+        value_area: 800
+      }
+    },
+    color: {
+      value: "#00eeff"
+    },
+    shape: {
+      type: "circle",
+      stroke: {
+        width: 0,
+        color: "#000000"
+      }
+    },
+    opacity: {
+      value: 0.6,
+      random: true,
+      anim: {
+        enable: true,
+        speed: 0.5,
+        opacity_min: 0.1,
+        sync: false
+      }
+    },
+    size: {
+      value: 3,
+      random: true,
+      anim: {
+        enable: true,
+        speed: 2,
+        size_min: 0.1,
+        sync: false
+      }
+    },
+    line_linked: {
+      enable: true,
+      distance: 118,          /* 比原来 150 收紧，让粒子网络稀疏些，给星座留出视觉空间 */
+      color: "#00eeff",
+      opacity: 0.32,
+      width: 1
+    },
+    move: {
+      enable: true,
+      speed: 0.8,
+      direction: "none",
+      random: true,
+      straight: false,
+      out_mode: "out",
+      bounce: false,
+      attract: {
+        enable: true,
+        rotateX: 600,
+        rotateY: 1200
+      }
+    }
+  },
+  interactivity: {
+    detect_on: "canvas",
+    events: {
+      onhover: {
+        enable: true,
+        mode: "grab"       // 鼠标悬停时粒子聚集
+      },
+      onclick: {
+        enable: true,
+        mode: "push"       // 点击时产生新粒子
+      },
+      resize: true
+    },
+    modes: {
+      grab: {
+        distance: 200,
+        line_linked: {
+          opacity: 1
+        }
+      },
+      push: {
+        particles_nb: 6
+      }
+    }
+  },
+  retina_detect: true
+});
+</script>
+<!-- 星座层：独立 canvas，随机散布真实星座图形（依赖上面的 #constellations 容器） -->
+<script src="/js/theme/starfield.js"></script>
+
+  <!-- 返回按钮：按来源回到星图手记 / 星迹索引，默认回星图手记。
+       放在 body 顶层（不进 main-content），避免被其溢出裁剪切掉右半边 -->
+  <a class="article-back" id="articleBack" href="/archives/">← 返回星图手记</a>
+
+  <div class="app-layout">
+    <!--
+  ============================================
+  左侧栏个人卡组件
+  文件：_components/Sidebar.njk
+  适用终端：电脑端（星图手记 / 星迹索引 / 秘境主人 页面通栏侧栏）
+  作用：头像、昵称、站点统计、导航菜单、底部信息与全局搜索面板（结果落在雷达区，无结果播「内容走丢 → 404」动画）
+  样式依赖：source/css/theme/sidebar.css
+  脚本依赖：source/js/theme/sidebar.js
+  最后修改：2026-11-11
+  ============================================
+-->
+<aside class="sidebar" id="sidebar">
+  <div class="profile-card">
+    <div class="avatar">
+      <div
+        style="width:80px;height:80px;border-radius:50%;background:linear-gradient(135deg,#0a0e27,#1a1a4e);display:flex;align-items:center;justify-content:center;margin:0 auto;font-size:40px;border:2px solid #00eeff;box-shadow:0 0 30px rgba(0,238,255,0.3);">
+        ✨</div>
+    </div>
+    <h3 class="nickname">时空行者</h3>
+    <p class="bio">星辰大海，代码为舟</p>
+    <div class="stats">
+      <div class="stat-item">
+        <span class="stat-num">174</span>
+        <span class="stat-label">文章</span>
+      </div>
+      <div class="stat-item">
+        <span class="stat-num" id="fans-count" style="cursor:pointer;">1088</span>
+        <span class="stat-label">粉丝</span>
+      </div>
+      <div class="stat-item">
+        <span class="stat-num" id="follow-count" style="cursor:pointer;">66</span>
+        <span class="stat-label">关注</span>
+      </div>
+    </div>
+    <button class="follow-btn">+ 关注</button>
+  </div>
+  <div class="search-box">
+    <input type="text" placeholder="找找看..." id="search-input">
+    <button class="search-btn" id="searchModalOpen">🔍</button>
+  </div>
+  <div class="links-card">
+    <h4>常用链接</h4>
+    <ul>
+      <li><a href="/about/">秘境主人</a></li>
+      <li><a href="/archives/">星图手记</a></li>
+      <li><a href="/tags/">星迹索引</a></li>
+      <!-- ✅ 新增联系我 -->
+      <li><a class="contact-trigger" href="javascript:void(0)">星语传书</a></li>
+      <li><a class="donate-trigger" href="javascript:void(0)">星芒赠礼</a></li>
+    </ul>
+  </div>
+  <div class="tags-card">
+    <h4>热门标签</h4>
+    
+    <div class="tag-cloud">
+      
+      <a href="/tags/MySQL数据库/" class="tag-link" data-tag="MySQL数据库"
+        data-count="7">MySQL数据库</a>
+      
+      <a href="/tags/redis/" class="tag-link" data-tag="redis"
+        data-count="7">redis</a>
+      
+      <a href="/tags/深度研搜/" class="tag-link" data-tag="深度研搜"
+        data-count="15">深度研搜</a>
+      
+      <a href="/tags/电商问数/" class="tag-link" data-tag="电商问数"
+        data-count="18">电商问数</a>
+      
+      <a href="/tags/git/" class="tag-link" data-tag="git"
+        data-count="5">git</a>
+      
+      <a href="/tags/面试/" class="tag-link" data-tag="面试"
+        data-count="11">面试</a>
+      
+      <a href="/tags/Java/" class="tag-link" data-tag="Java"
+        data-count="10">Java</a>
+      
+      <a href="/tags/langchain/" class="tag-link" data-tag="langchain"
+        data-count="10">langchain</a>
+      
+      <a href="/tags/Netty/" class="tag-link" data-tag="Netty"
+        data-count="4">Netty</a>
+      
+      <a href="/tags/大模型/" class="tag-link" data-tag="大模型"
+        data-count="35">大模型</a>
+      
+      <a href="/tags/AICoding/" class="tag-link" data-tag="AICoding"
+        data-count="9">AICoding</a>
+      
+      <a href="/tags/SpringAi/" class="tag-link" data-tag="SpringAi"
+        data-count="15">SpringAi</a>
+      
+      <a href="/tags/随笔杂谈/" class="tag-link" data-tag="随笔杂谈"
+        data-count="2">随笔杂谈</a>
+      
+      <a href="/tags/vue/" class="tag-link" data-tag="vue"
+        data-count="9">vue</a>
+      
+      <a href="/tags/视频剪辑/" class="tag-link" data-tag="视频剪辑"
+        data-count="1">视频剪辑</a>
+      
+      <a href="/tags/大数据/" class="tag-link" data-tag="大数据"
+        data-count="3">大数据</a>
+      
+      <a href="/tags/电影/" class="tag-link" data-tag="电影"
+        data-count="2">电影</a>
+      
+      <a href="/tags/游戏/" class="tag-link" data-tag="游戏"
+        data-count="1">游戏</a>
+      
+      <a href="/tags/音乐/" class="tag-link" data-tag="音乐"
+        data-count="8">音乐</a>
+      
+      <a href="/tags/图片/" class="tag-link" data-tag="图片"
+        data-count="2">图片</a>
+      
+    </div>
+    <script>
+      /*
+  ============================================
+  侧栏热门标签排序（首帧前执行）
+  文件：_js/hot-tags.js
+  引入位置：_components/Sidebar.njk 里 .tag-cloud 闭合标签之后（紧跟着写死）
+  作用：按点击次数排序、只露前 5 个、点一下立刻重排
+  为什么单独拆出来：以前放在 sidebar.js 的 DOMContentLoaded 里，首帧渲染的还是
+  模板顺序的 20 个标签，等脚本跑完才收成 5 个；配合跨页淡入（View Transition）
+  会出现「新旧两套标签叠在一起、影子跳一下」。紧跟标签节点内联执行就没有中间态。
+  最后修改：2026-11-12
+  ============================================
+*/
+(function () {
+  var cloud = document.querySelector('.tag-cloud');
+  if (!cloud) return;
+  var links = Array.prototype.slice.call(cloud.querySelectorAll('.tag-link'));
+  if (!links.length) return;
+
+  var KEY = 'starry_tag_visits'; // 标签名 -> 点击次数
+  var TOP = 5;
+  var visits = {};
+
+  try {
+    var raw = JSON.parse(localStorage.getItem(KEY) || '{}');
+    visits = (raw && typeof raw === 'object') ? raw : {};
+  } catch (e) {
+    visits = {};
+  }
+
+  links.forEach(function (link) {
+    var name = link.dataset.tag || (link.textContent || '').trim();
+    link.dataset.tag = name;
+    if (!link.dataset.count) link.dataset.count = '0';
+  });
+
+  // 排序：点击次数降序 → 文章数降序 → 名字，保证同分时顺序稳定不来回跳
+  function order() {
+    return links.slice().sort(function (a, b) {
+      var va = visits[a.dataset.tag] || 0;
+      var vb = visits[b.dataset.tag] || 0;
+      if (vb !== va) return vb - va;
+      var ca = Number(a.dataset.count) || 0;
+      var cb = Number(b.dataset.count) || 0;
+      if (cb !== ca) return cb - ca;
+      return String(a.dataset.tag).localeCompare(String(b.dataset.tag), 'zh');
+    });
+  }
+
+  // 重排 DOM：按名次 append，超出 5 个的 hidden（仍留在 DOM，等名次升上来再显示）
+  function render() {
+    order().forEach(function (link, i) {
+      link.dataset.visits = visits[link.dataset.tag] || 0;
+      cloud.appendChild(link);
+      link.hidden = i >= TOP;
+    });
+  }
+
+  links.forEach(function (link) {
+    link.addEventListener('click', function () {
+      var name = link.dataset.tag;
+      visits[name] = (visits[name] || 0) + 1;
+      try { localStorage.setItem(KEY, JSON.stringify(visits)); } catch (e) { /* 忽略配额错误 */ }
+      render(); // 当前页立刻看到「谁被点多了谁上前」
+    });
+  });
+
+  render();
+})();
+
+    </script>
+  </div>
+  <div class="archive-card">
+    <h4>按月归档</h4>
+    <ul class="archive-list">
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2026/12/">
+          2026年12月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2026/11/">
+          2026年11月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2026/10/">
+          2026年10月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2026/09/">
+          2026年09月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2026/08/">
+          2026年08月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2026/07/">
+          2026年07月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2026/06/">
+          2026年06月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2026/05/">
+          2026年05月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2026/04/">
+          2026年04月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2026/03/">
+          2026年03月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2026/02/">
+          2026年02月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2026/01/">
+          2026年01月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2025/12/">
+          2025年12月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2025/11/">
+          2025年11月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2025/10/">
+          2025年10月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2025/09/">
+          2025年09月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2025/08/">
+          2025年08月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2025/07/">
+          2025年07月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2025/06/">
+          2025年06月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2025/05/">
+          2025年05月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2025/04/">
+          2025年04月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2025/03/">
+          2025年03月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2025/02/">
+          2025年02月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2025/01/">
+          2025年01月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2024/11/">
+          2024年11月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2024/10/">
+          2024年10月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2024/09/">
+          2024年09月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2024/08/">
+          2024年08月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2024/07/">
+          2024年07月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2024/05/">
+          2024年05月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2024/04/">
+          2024年04月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2024/03/">
+          2024年03月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2024/02/">
+          2024年02月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2024/01/">
+          2024年01月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2023/12/">
+          2023年12月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2023/11/">
+          2023年11月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2023/10/">
+          2023年10月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2023/09/">
+          2023年09月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2023/08/">
+          2023年08月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2023/07/">
+          2023年07月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2023/06/">
+          2023年06月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2023/05/">
+          2023年05月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2023/04/">
+          2023年04月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2023/03/">
+          2023年03月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2023/02/">
+          2023年02月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2023/01/">
+          2023年01月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2022/09/">
+          2022年09月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2022/05/">
+          2022年05月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2022/01/">
+          2022年01月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2021/12/">
+          2021年12月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2021/11/">
+          2021年11月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2021/10/">
+          2021年10月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2021/09/">
+          2021年09月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2021/08/">
+          2021年08月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2021/07/">
+          2021年07月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2021/06/">
+          2021年06月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2021/05/">
+          2021年05月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2021/04/">
+          2021年04月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2021/03/">
+          2021年03月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2021/02/">
+          2021年02月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2021/01/">
+          2021年01月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2020/10/">
+          2020年10月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2020/07/">
+          2020年07月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2020/04/">
+          2020年04月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2020/01/">
+          2020年01月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2019/12/">
+          2019年12月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2019/11/">
+          2019年11月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2019/10/">
+          2019年10月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2019/09/">
+          2019年09月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2019/08/">
+          2019年08月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2019/07/">
+          2019年07月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2019/06/">
+          2019年06月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2019/05/">
+          2019年05月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2019/04/">
+          2019年04月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2019/03/">
+          2019年03月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2019/02/">
+          2019年02月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2019/01/">
+          2019年01月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2018/12/">
+          2018年12月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2018/11/">
+          2018年11月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2018/10/">
+          2018年10月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2018/09/">
+          2018年09月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2018/08/">
+          2018年08月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2018/07/">
+          2018年07月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2018/06/">
+          2018年06月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2018/05/">
+          2018年05月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2018/04/">
+          2018年04月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2018/03/">
+          2018年03月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2018/02/">
+          2018年02月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2018/01/">
+          2018年01月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+    </ul>
+  </div>
+
+  <!-- ========== 星语传书（雷达区弹窗，与搜索面板同一套面板样式） ========== -->
+  <div class="search-panel dock-panel" id="contactModal" hidden>
+    <div class="sp-mask" data-dock-close></div>
+    <div class="sp-box" role="dialog" aria-modal="true" aria-label="星语传书">
+      <div class="sp-head">
+        <span class="sp-dot"></span>
+        <span class="sp-title">星语传书</span>
+        <span class="sp-title-sub">/ SIGNAL CHANNEL</span>
+        <span class="sp-meta">SYS.REPLY ≤ 48H</span>
+        <button class="sp-close" type="button" data-dock-close title="关闭">×</button>
+      </div>
+      <div class="sp-body dock-body">
+        <p class="dock-lead">写信给时空行者：文章里的错字、跑不通的 demo、想聊的一句技术，都可以从这里进来。信号收到，我会尽量回。</p>
+        <div class="dock-grid">
+          <div class="dock-list">
+            <a class="dock-row" href="https://wpa.qq.com/msgrd?v=3&amp;uin=372109355&amp;site=qq&amp;menu=yes"
+              target="_blank" rel="noopener">
+              <span class="dock-ico">企</span>
+              <span class="dock-k"><b>QQ</b><span>372109355</span></span>
+            </a>
+            <a class="dock-row" href="https://wu4yong.github.io" target="_blank" rel="noopener">
+              <span class="dock-ico">⌂</span>
+              <span class="dock-k"><b>站点主站</b><span>wu4yong.github.io</span></span>
+            </a>
+            <div class="dock-row dock-row-static">
+              <span class="dock-ico">✉</span>
+              <span class="dock-k"><b>电子邮箱</b><span>暂未公开 · 任何问题QQ留言</span></span>
+            </div>
+            <a class="dock-row" href="#" target="_blank" rel="noopener">
+              <span class="dock-ico">◈</span>
+              <span class="dock-k"><b>GitHub</b><span>暂未公开 · 任何问题QQ留言</span></span>
+            </a>
+            <a class="dock-row" href="#" target="_blank" rel="noopener">
+              <span class="dock-ico">◇</span>
+              <span class="dock-k"><b>Gitee</b><span>暂未公开 · 任何问题QQ留言</span></span>
+            </a>
+          </div>
+          <div class="dock-side">
+            <div class="dock-qr">
+              <em>WECHAT · 微信</em>
+              <img src="/assets/images/wechat-qr.png" alt="微信二维码">
+              <span class="dock-qr-tip">扫码添加，备注「来自时空秘境」</span>
+            </div>
+          </div>
+        </div>
+        <div class="dock-chips">
+          <span class="dock-chip">文章纠错</span>
+          <span class="dock-chip">Demo 答疑</span>
+          <span class="dock-chip">转载授权</span>
+          <span class="dock-chip">技术交流</span>
+          <span class="dock-chip">内推 / 合作</span>
+        </div>
+        <p class="dock-note">无正文的「在吗」容易被当作信号干扰滤掉，直接把问题写清楚，回信会快很多。</p>
+      </div>
+      <!-- 开合转场层：百叶窗 / 电影幕布 / 淡入，由 source/js/theme/sidebar.js 轮换播放 -->
+      <div class="dock-fx" aria-hidden="true">
+        <div class="dock-fx-slats"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+        <div class="dock-fx-curtain"><span class="top"></span><span class="bottom"></span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========== 全局搜索面板 ==========
+       索引来自构建期生成的 /search.json（hexo-generator-searchdb），随文章新增自动更新；
+       打开时由 source/js/theme/sidebar.js 把整块挪进 Radar 中间区（无雷达的页面退化为居中浮层） -->
+  <div class="search-panel" id="searchPanel" hidden>
+    <div class="sp-mask" id="searchMask"></div>
+    <div class="sp-box" role="dialog" aria-modal="true" aria-label="全文搜索">
+      <div class="sp-head">
+        <span class="sp-dot"></span>
+        <span class="sp-title">全文搜索</span>
+        <span class="sp-title-sub">/ GLOBAL SEARCH</span>
+        <span class="sp-meta" id="spMeta"></span>
+        <button class="sp-close" id="searchPanelClose" type="button" title="关闭搜索">×</button>
+      </div>
+      <div class="sp-body" id="spBody">
+        <div class="sp-loading" id="spLoading">正在扫描星图索引…</div>
+        <ul class="sp-list" id="spList"></ul>
+        <!-- 无结果：内容走丢 → 慢速落 404 -->
+        <div class="sp-empty" id="spEmpty" hidden>
+          <div class="sp-drift-wrap">
+            <span class="sp-trail"></span>
+            <span class="sp-drift"></span>
+            <span class="sp-lost">SIGNAL LOST · 信号已丢失</span>
+          </div>
+          <div class="sp-404"><span>4</span><span>0</span><span>4</span></div>
+          <p class="sp-empty-main">内容走丢在星海里了</p>
+          <p class="sp-empty-tip">换个关键词，或去〈星迹索引 / 星图手记〉里慢慢逛</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========== 星芒赠礼（雷达区弹窗，收款码图片沿用原图不改） ========== -->
+  <div class="search-panel dock-panel" id="donateModal" hidden>
+    <div class="sp-mask" data-dock-close></div>
+    <div class="sp-box" role="dialog" aria-modal="true" aria-label="星芒赠礼">
+      <div class="sp-head">
+        <span class="sp-dot"></span>
+        <span class="sp-title">星芒赠礼</span>
+        <span class="sp-title-sub">/ STAR OFFERING</span>
+        <span class="sp-meta">THANKS FOR THE LIGHT</span>
+        <button class="sp-close" type="button" data-dock-close title="关闭">×</button>
+      </div>
+      <div class="sp-body dock-body">
+        <div class="dock-thanks">
+          <p>这片星空是工作闲暇时光一个个凌晨攒出来的：一篇文章、一次复盘、一个修不完的 bug。</p>
+          <p>如果你在这里找到了能用的东西，愿意赏一杯凌晨三点的咖啡 —— 这份心意我会记很久。</p>
+          <p>不打赏也完全没关系：所有文章永久免费，愿你我在各自的轨道上都跑得稳一点。</p>
+        </div>
+        <div class="dock-donate">
+          <div class="dock-hero">
+            <div class="dock-hero-pic">
+              <span class="dock-hero-halo" aria-hidden="true"></span>
+              <span class="dock-hero-ring dock-hero-ring-a" aria-hidden="true"></span>
+              <span class="dock-hero-ring dock-hero-ring-b" aria-hidden="true"></span>
+              <img src="/assets/images/donate-boy.png" alt="感谢支持">
+            </div>
+            <em>THANKS FOR THE LIGHT</em>
+            <span class="dock-hero-tip">愿每一次凌晨，都有人替你留一盏灯</span>
+          </div>
+          <div class="dock-pay">
+            <div class="dock-qr dock-qr-row">
+              <img src="/assets/images/alipay-qr.jpg" alt="支付宝收款码">
+              <div class="dock-qr-txt">
+                <b>支付宝 · 星途赞赏</b>
+                <span>请我喝一杯凌晨三点的咖啡</span>
+              </div>
+            </div>
+            <div class="dock-qr dock-qr-row">
+              <img src="/assets/images/wechat-pay-qr.jpg" alt="微信收款码">
+              <div class="dock-qr-txt">
+                <b>微信 · 星河致谢</b>
+                <span>金额随意，心意已经收到</span>
+              </div>
+            </div>
+          </div>
+        </div>        <div class="dock-chips">
+          <span class="dock-chip">域名与服务器</span>
+          <span class="dock-chip">图床与备份</span>
+          <span class="dock-chip">一本技术书</span>
+          <span class="dock-chip">深夜的一杯咖啡</span>
+        </div>
+        <p class="dock-note">赠礼纯属心意，不产生任何付费内容或额外承诺；扫码前请确认收款人，小心仿冒。</p>
+      </div>
+      <!-- 开合转场层：百叶窗 / 电影幕布 / 淡入，由 source/js/theme/sidebar.js 轮换播放 -->
+      <div class="dock-fx" aria-hidden="true">
+        <div class="dock-fx-slats"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+        <div class="dock-fx-curtain"><span class="top"></span><span class="bottom"></span></div>
+      </div>
+    </div>
+  </div>
+
+
+</aside>
+<!-- 引入侧边栏交互脚本：外链（源文件 themes/butterfly/source/js/theme/sidebar.js） -->
+<script src="/js/theme/sidebar.js"></script>
+
+    
+    <button id="sidebarToggle" class="sidebar-toggle" title="隐藏侧栏"></button>
+
+    <main class="main-content">
+      <div class="article-card">
+        <h1 class="article-title">十八、记忆与对话历史（含 Redis 基础）</h1>
+        <div class="article-meta">📅 2023-06-28</div>
+        <div class="article-content"><div class="essay-banner essay-image11">
+    <!-- memory-and-chat-history-with-redis -->
+</div>
+
+<h1 id="1-18-记忆与对话历史（含-Redis-基础）"><a href="#1-18-记忆与对话历史（含-Redis-基础）" class="headerlink" title="1-18 记忆与对话历史（含 Redis 基础）"></a>1-18 记忆与对话历史（含 Redis 基础）</h1><hr>
+<p><strong>本章课程目标：</strong></p>
+<ul>
+<li>理解本章所说的**记忆（Memory）**到底是什么，知道它为什么在多轮对话中不可缺少。</li>
+<li>掌握“<strong>读历史 → 拼入提示 → 调模型 → 写回历史</strong>”这条最核心的实现主线，理解 <code>RunnableWithMessageHistory</code> 与 <code>BaseChatMessageHistory</code> 的职责分工。</li>
+<li>对 Redis 在本章中的定位建立清晰认识：它不是让模型“变聪明”，而是让<strong>会话历史可持久化、可跨进程、可跨实例共享</strong>。</li>
+</ul>
+<p><strong>学习建议：</strong> 这章最好用两轮对话来学：先看没有记忆时模型为什么“忘事”，再看同一个 <code>session_id</code> 下历史消息如何被读出、拼进提示词、调用模型、写回存储。Redis 先别当重点，它只是把内存版的历史保存得更持久。只要能讲清“读历史 -&gt; 拼提示 -&gt; 调模型 -&gt; 写历史”，后面的实现类就不散。</p>
+<p><strong>官方文档与资源</strong>：详见 <a href="/2023/01/28/llm/tools-and-references-index/#LangGraph">工具导航与参考资料索引 - LangGraph</a>。</p>
+<hr>
+<h2 id="1、记忆简介"><a href="#1、记忆简介" class="headerlink" title="1、记忆简介"></a>1、记忆简介</h2><h3 id="1-1-为什么需要记忆"><a href="#1-1-为什么需要记忆" class="headerlink" title="1.1 为什么需要记忆"></a>1.1 为什么需要记忆</h3><p>如果你只做单轮问答，那么每次请求都是一次独立调用，模型只看当前输入，答完就结束。<br>但只要你开始做聊天机器人、客服助手、学习助手、企业知识问答，多轮上下文就会立刻成为刚需。</p>
+<p>最典型的现象就是：</p>
+<ol>
+<li>第一轮你说：“我叫张三。”</li>
+<li>第二轮你再问：“我叫什么？”</li>
+</ol>
+<p>如果系统没有保存并重新注入上一轮内容，模型就只能把第二轮当作一条全新的请求，于是很自然地回答：“我不知道。”这不是模型“太笨”，而是程序根本没有把上一轮信息带给它。</p>
+<p><img src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/llm/16/16-1-1-1.webp" alt="无记忆时两轮对话相互独立，模型无法利用上一轮信息"></p>
+<p>所以从工程角度看，记忆并不是一个“可有可无的高级特性”，而是多轮对话系统最基础的能力之一。它至少解决三类问题：</p>
+<ul>
+<li><strong>上下文连续性</strong>：让模型知道上一轮说过什么。</li>
+<li><strong>会话个性化</strong>：让模型记住用户在当前会话里提供的信息，如名字、偏好、任务背景。</li>
+<li><strong>多步任务承接</strong>：让模型把前一步结果作为后一步输入，而不是每轮都重新从零开始。</li>
+</ul>
+<p>用一句最直白的话说：<strong>没有记忆，聊天系统就只是“连续发了很多次单轮请求”；有了记忆，它才真正开始像“对话”。</strong></p>
+<p><img src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/llm/16/16-1-1-2.webp" alt="LangChain 官方文档「Core components → Short-term memory」概述：记忆用于保存先前交互信息，支撑智能体在多轮交互中保持效率与体验"></p>
+<h3 id="1-2-定义"><a href="#1-2-定义" class="headerlink" title="1.2 定义"></a>1.2 定义</h3><p>本章里的<strong>记忆（Memory）</strong>，指的主要是<strong>短期记忆（Short-Term Memory）<strong>或</strong>对话历史（Chat History）</strong>。</p>
+<p>它的本质不是“模型真的记住了”，而是：<strong>程序把之前的消息保存下来，并在下一轮调用前，再把这些历史消息一并传给模型。</strong></p>
+<p>所以它更像一种“外部会话状态管理机制”，而不是模型参数层面的学习。</p>
+<h3 id="1-3-这不是训练模型"><a href="#1-3-这不是训练模型" class="headerlink" title="1.3 这不是训练模型"></a>1.3 这不是训练模型</h3><p>这里容易混淆，所以单独强调。</p>
+<p>本章所说的记忆：</p>
+<ul>
+<li><strong>不是</strong>重新训练模型</li>
+<li><strong>不是</strong>把信息写进模型参数</li>
+<li><strong>不是</strong>让模型永久学会某些知识</li>
+</ul>
+<p>它做的事情只是：</p>
+<ol>
+<li>把历史消息保存在外部</li>
+<li>下次调用前重新读出来</li>
+<li>和当前问题一起发给模型</li>
+</ol>
+<p>也就是说，模型“记住你是谁”，不是因为它内部学会了你，而是因为程序每次都把“你叫张三”这条历史重新带给它。</p>
+<p>这也是为什么：</p>
+<ul>
+<li><strong>内存版</strong>：程序一关，历史就丢了</li>
+<li><strong>Redis 版</strong>：程序重启后，历史还能读回来</li>
+</ul>
+<h3 id="1-4-本章的“记忆”能做什么"><a href="#1-4-本章的“记忆”能做什么" class="headerlink" title="1.4 本章的“记忆”能做什么"></a>1.4 本章的“记忆”能做什么</h3><p>从项目角度看，本章的记忆主要能做这些事：</p>
+<ul>
+<li><p><strong>让多轮问答连续起来</strong>：例如先自我介绍，再追问名字、偏好、之前说过的内容。</p>
+</li>
+<li><p><strong>保存当前会话上下文</strong>：例如用户正在做一份简历、正在学习 Python、正在整理某份报告，后续问题不必每轮都重述背景。</p>
+</li>
+<li><p><strong>为链式流程提供上下文</strong>：历史消息最终通常通过 <a href="/2023/06/05/llm/1-15-prompts-and-message-templates/">第 15 章</a> 的 <code>MessagesPlaceholder</code> 注入模板，与 <a href="/2023/06/20/llm/1-17-lcel-and-chaining/">第 17 章</a> 中的链组合在一起使用。</p>
+</li>
+<li><p><strong>为后续 Agent &#x2F; Tool &#x2F; LangGraph 打基础</strong>：你后面会发现，工具调用、Agent、多步决策几乎都离不开“当前线程 &#x2F; 当前会话”的状态保存。</p>
+</li>
+</ul>
+<h3 id="1-5-本章不重点讨论什么"><a href="#1-5-本章不重点讨论什么" class="headerlink" title="1.5 本章不重点讨论什么"></a>1.5 本章不重点讨论什么</h3><p>为了避免和后面章节混在一起，这里也要明确本章边界：</p>
+<ul>
+<li><p><strong>不是长期知识记忆</strong>：比如用户永久画像、跨很多天的长期偏好管理，这不属于本章核心。</p>
+</li>
+<li><p><strong>不是 RAG 检索记忆</strong>：把外部文档查出来再回答，属于 <a href="/2023/07/20/llm/1-21-rag-retrieval-augmented-generation/">第 21 章 RAG</a> 的主线。</p>
+</li>
+<li><p><strong>不是 Agent 决策状态机</strong>：更复杂的循环式状态与持久化，会在 <a href="/2023/08/05/llm/1-23-agent/">Agent</a> 与 LangGraph 相关章节里更自然地出现。</p>
+</li>
+</ul>
+<p>所以你可以先把本章聚焦成一句话：<strong>本章主要讲“当前会话里，怎么把历史消息保存起来并重新喂给模型”。</strong></p>
+<hr>
+<h2 id="2、「我不知道」演示：无记忆时的行为"><a href="#2、「我不知道」演示：无记忆时的行为" class="headerlink" title="2、「我不知道」演示：无记忆时的行为"></a>2、「我不知道」演示：无记忆时的行为</h2><p>在真正上记忆之前，最好的学习方式不是先背概念，而是先亲眼看到“没有记忆时会发生什么”。下面这个案例故意只保留最简单的链：Prompt、Model、Parser。</p>
+<p>然后连续做两次调用：</p>
+<ol>
+<li>第一次告诉模型：“我叫张三，你叫什么？”</li>
+<li>第二次再问：“你知道我是谁吗？”</li>
+</ol>
+<p>因为程序没有保存第一轮内容，也没有在第二轮重新注入历史，所以模型只能把第二个问题当作一条全新的请求处理，于是给出“我不知道”之类的回答。</p>
+<p>【案例源码】<code>案例与源码-2-LangChain框架/07-memory/Memory_IDontKnow.py</code></p>
+<p><a href="%E6%A1%88%E4%BE%8B%E4%B8%8E%E6%BA%90%E7%A0%81-2-LangChain%E6%A1%86%E6%9E%B6/07-memory/Memory_IDontKnow.py" title=":include :type&#x3D;code">Memory_IDontKnow.py</a></p>
+<p>这个案例用来建立一个基础直觉：<strong>模型不是天然会记住多轮对话，是程序决定它能不能看见历史。</strong></p>
+<hr>
+<h2 id="3、实现原理"><a href="#3、实现原理" class="headerlink" title="3、实现原理"></a>3、实现原理</h2><h3 id="3-1-核心主线"><a href="#3-1-核心主线" class="headerlink" title="3.1 核心主线"></a>3.1 核心主线</h3><p>先不急着看类名，记忆的实现过程可以拆成四步：</p>
+<ol>
+<li><strong>读历史</strong></li>
+<li><strong>把历史拼进当前提示</strong></li>
+<li><strong>调用模型</strong></li>
+<li><strong>把本轮输入和输出写回历史</strong></li>
+</ol>
+<p>这就是本章最核心的链路。</p>
+<p><img src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/llm/16/16-3-1-1.webp" alt="记忆在链中的位置：读历史 → 拼入 Prompt → 调模型 → 写回历史"></p>
+<h3 id="3-2-工程化表达"><a href="#3-2-工程化表达" class="headerlink" title="3.2 工程化表达"></a>3.2 工程化表达</h3><p>如果用更接近程序的方式来描述，一次带记忆的调用通常是这样发生的：</p>
+<p><strong>第一步：根据会话标识找到对应历史。</strong><br>比如通过 <code>session_id=&quot;user-001&quot;</code> 找到这位用户当前会话的消息列表。</p>
+<p><strong>第二步：把历史消息插入 Prompt。</strong><br>这一步通常会和 <a href="/2023/06/05/llm/1-15-prompts-and-message-templates/">第 15 章</a> 里的 <code>MessagesPlaceholder(&quot;history&quot;)</code> 配合使用。</p>
+<p><strong>第三步：把“历史 + 当前问题”一起交给模型。</strong><br>这样模型看到的就不再只是当前一句话，而是完整上下文。</p>
+<p><strong>第四步：把本轮消息写回历史存储。</strong><br>也就是把：用户这一轮输入、模型这一轮回复，都追加进去，供下一轮再读取。</p>
+<h3 id="3-3-MessagesPlaceholder-与模板的关系"><a href="#3-3-MessagesPlaceholder-与模板的关系" class="headerlink" title="3.3 MessagesPlaceholder 与模板的关系"></a>3.3 MessagesPlaceholder 与模板的关系</h3><p>在对话历史场景里，你通常不会把历史消息一条条手写死在模板中，因为历史轮数与内容每轮都在变。更合理的做法是在模板里留一个“历史消息插槽”，运行时再把当前会话历史整块塞进去——这正是 <a href="/2023/06/05/llm/1-15-prompts-and-message-templates/">第 15 章</a> 中 <code>MessagesPlaceholder</code> 的典型用法，与本章的“读写历史”前后衔接。</p>
+<h3 id="3-4-session-id-的意义"><a href="#3-4-session-id-的意义" class="headerlink" title="3.4 session_id 的意义"></a>3.4 session_id 的意义</h3><p>只要涉及记忆，就会涉及一个关键问题：<strong>你怎么知道哪份历史属于哪位用户、哪次会话？</strong></p>
+<p>最常见的做法就是使用 <code>session_id</code>，它就是“当前会话的编号”。</p>
+<p>例如：</p>
+<ul>
+<li><code>user-001</code></li>
+<li><code>user-002</code></li>
+<li><code>chat-room-a</code></li>
+</ul>
+<p>不同的 <code>session_id</code>，通常对应不同的历史记录。</p>
+<p>在 <code>RunnableWithMessageHistory</code> 里，<code>session_id</code> 通常通过运行配置传入，例如 <code>config=&#123;&quot;configurable&quot;: &#123;&quot;session_id&quot;: &quot;user-001&quot;&#125;&#125;</code>。不同的 <code>session_id</code> 会对应不同的历史对象。</p>
+<p>这也是为什么本章 Redis 版和多 session 版案例里，<code>session_id</code> 都很重要。如果没有这层区分，系统就可能把 A 用户的历史错拿给 B 用户。</p>
+<h3 id="3-5-本章和-LangGraph-官方主线的关系"><a href="#3-5-本章和-LangGraph-官方主线的关系" class="headerlink" title="3.5 本章和 LangGraph 官方主线的关系"></a>3.5 本章和 LangGraph 官方主线的关系</h3><p>这里需要补一个版本背景。</p>
+<p>在 LangChain &#x2F; LangGraph 当前官方主线里，<strong>短期记忆</strong>越来越倾向于放在 <strong>LangGraph persistence &#x2F; checkpointer &#x2F; thread</strong> 这条体系里来讲。<br>也就是说，官方现在更强调：</p>
+<ul>
+<li>线程（thread）</li>
+<li>持久化（persistence）</li>
+<li>检查点（checkpointer）</li>
+<li>图执行状态</li>
+</ul>
+<p>但这并不意味着 <code>RunnableWithMessageHistory</code> 没价值了。对 LCEL 链来说，它更直观，也更容易看清“历史消息如何注入到当前调用里”。</p>
+<p>所以本章采用这条学习顺序：</p>
+<ul>
+<li>先用 <code>RunnableWithMessageHistory + BaseChatMessageHistory</code> 看清链级对话历史</li>
+<li>再知道复杂 Agent 的状态持久化会继续走向 LangGraph persistence</li>
+</ul>
+<blockquote>
+<p><strong>版本说明：</strong> 本章继续使用 <code>RunnableWithMessageHistory</code>，是为了把 LCEL 链里的“历史消息如何读写和注入”讲清楚。生产级 Agent 或复杂多轮状态管理，建议再对照 LangGraph 的 checkpointer、thread 和 persistence 机制来设计。</p>
+</blockquote>
+<p>这样后面你切到更复杂的 Agent &#x2F; LangGraph，就不会断层。</p>
+<p><strong>补充：</strong> 历史消息会占用模型上下文窗口；轮数过多时需要做截断、摘要或只保留最近 (k) 轮，否则可能触达 token 上限或带来额外成本。本章先把“注入历史”这件事讲清楚，具体压缩策略后面按产品需求再选。</p>
+<hr>
+<h2 id="4、记忆相关实现类"><a href="#4、记忆相关实现类" class="headerlink" title="4、记忆相关实现类"></a>4、记忆相关实现类</h2><h3 id="4-1-本章使用哪套写法"><a href="#4-1-本章使用哪套写法" class="headerlink" title="4.1 本章使用哪套写法"></a>4.1 本章使用哪套写法</h3><p>前面已经明确：本章先用 <code>RunnableWithMessageHistory + BaseChatMessageHistory</code> 讲清链级对话历史；复杂 Agent 的状态持久化，后续再放到 LangGraph 的 <code>thread / checkpointer / persistence</code> 里理解。</p>
+<p>接下来先看几个相关类：哪些是早期写法，哪些适合作为本章重点。</p>
+<h3 id="4-2-ConversationChain（早期写法）"><a href="#4-2-ConversationChain（早期写法）" class="headerlink" title="4.2 ConversationChain（早期写法）"></a>4.2 ConversationChain（早期写法）</h3><p>LangChain 早期有一个比较有代表性的类，叫 <code>ConversationChain</code>。</p>
+<p>它内置了对话模板和记忆机制，所以很适合快速做简单演示；但它的灵活性有限，也不太贴合 LCEL &#x2F; Runnable 体系，面对复杂对话流程时扩展性会比较差。</p>
+<p>所以在今天的学习路径里，它不再适合作为本章的主线写法。</p>
+<h3 id="4-3-RunnableWithMessageHistory（更合适的写法）"><a href="#4-3-RunnableWithMessageHistory（更合适的写法）" class="headerlink" title="4.3 RunnableWithMessageHistory（更合适的写法）"></a>4.3 RunnableWithMessageHistory（更合适的写法）</h3><p><code>RunnableWithMessageHistory</code> 的作用很直接：<strong>给一条已有的 Runnable &#x2F; Chain 包上一层历史管理能力。</strong></p>
+<p>它并不替代你的 Prompt、Model、Parser，而是站在它们外面，统一负责历史的读取、注入和写回。</p>
+<p>这和第 17 章讲的 LCEL 很契合，因为它不是另起一套风格，而是在 Runnable 体系之上继续工作。所以从教学角度说，它特别适合这一章，因为它能把“记忆是在链外单独管理的一层会话能力”讲清楚。</p>
+<h3 id="4-4-BaseChatMessageHistory（历史存储接口）"><a href="#4-4-BaseChatMessageHistory（历史存储接口）" class="headerlink" title="4.4 BaseChatMessageHistory（历史存储接口）"></a>4.4 BaseChatMessageHistory（历史存储接口）</h3><p>如果 <code>RunnableWithMessageHistory</code> 解决的是“历史读写时机”，那么 <code>BaseChatMessageHistory</code> 解决的就是：</p>
+<p>**历史到底存在哪里、怎么存。**它可以看作“聊天消息历史的统一抽象接口”。</p>
+<p>不必先纠结源码细节，只要抓住这层分工：</p>
+<ul>
+<li><strong>RunnableWithMessageHistory</strong>：控制历史何时读、何时写</li>
+<li><strong>BaseChatMessageHistory 及其实现类</strong>：控制历史存到哪里</li>
+</ul>
+<p>这就是为什么本章会同时讲它们两个，而不是只讲其中一个。</p>
+<h3 id="4-5-常见实现类"><a href="#4-5-常见实现类" class="headerlink" title="4.5 常见实现类"></a>4.5 常见实现类</h3><p>LangChain 提供了多种聊天历史实现（如内存、文件、Redis、Elasticsearch、DynamoDB 等），核心差别主要在于<strong>是否持久化、是否适合多实例共享</strong>。</p>
+<p>常见实现的区别主要看存储位置：</p>
+<div class="data-grid data-grid-link-table"><div class="grid-header"><div class="grid-cell">组件名称</div><div class="grid-cell">存储方式</div><div class="grid-cell">适合什么场景</div></div><div class="grid-row"><div class="grid-cell">`InMemoryChatMessageHistory`</div><div class="grid-cell">进程内内存</div><div class="grid-cell">本地学习、单进程演示、临时会话</div></div><div class="grid-row"><div class="grid-cell">`FileChatMessageHistory`</div><div class="grid-cell">本地文件</div><div class="grid-cell">轻量持久化、小型脚本</div></div><div class="grid-row"><div class="grid-cell">`RedisChatMessageHistory`</div><div class="grid-cell">Redis</div><div class="grid-cell">持久化、跨进程、多实例共享</div></div><div class="grid-row"><div class="grid-cell">其他后端实现</div><div class="grid-cell">ES、数据库等</div><div class="grid-cell">和现有技术栈集成</div></div></div>
+
+<p>对这一章来说，最重要的是前两个核心结论：</p>
+<ul>
+<li><strong>先学 InMemory</strong>，因为它最直观</li>
+<li><strong>再学 Redis</strong>，因为它最贴近真实项目</li>
+</ul>
+<h3 id="4-6-本章案例结构对应关系"><a href="#4-6-本章案例结构对应关系" class="headerlink" title="4.6 本章案例结构对应关系"></a>4.6 本章案例结构对应关系</h3><p>下面按学习顺序列出本章案例文件：</p>
+<div class="data-grid data-grid-link-table"><div class="grid-header"><div class="grid-cell">文件</div><div class="grid-cell">作用</div></div><div class="grid-row"><div class="grid-cell">`Memory_IDontKnow.py`</div><div class="grid-cell">先看无记忆时的问题</div></div><div class="grid-row"><div class="grid-cell">`Memory_RunnableWithMessageHistory.py`</div><div class="grid-cell">最基础的内存版带历史对话</div></div><div class="grid-row"><div class="grid-cell">`Memory_RunnableWithMessageHistoryV2.py`</div><div class="grid-cell">多 session 版，对应真实多用户场景</div></div><div class="grid-row"><div class="grid-cell">`Memory_InMemoryChatMessageHistory.py`</div><div class="grid-cell">不走包装器，直接手动操作 history</div></div><div class="grid-row"><div class="grid-cell">`RedisEnvCheck.py`</div><div class="grid-cell">跑 Redis 版前先做环境校验</div></div><div class="grid-row"><div class="grid-cell">`Memory_RedisChatMessageHistory.py`</div><div class="grid-cell">Redis 持久化主案例</div></div><div class="grid-row"><div class="grid-cell">`Memory_RedisStackChatMessageHistory.py`</div><div class="grid-cell">Redis Stack 可选案例</div></div></div>
+
+<p>这样安排其实很合理：</p>
+<ul>
+<li>先让你看到问题</li>
+<li>再给出最简单解决方案</li>
+<li>再扩展到多 session</li>
+<li>最后再讲持久化</li>
+</ul>
+<hr>
+<h2 id="5、案例代码"><a href="#5、案例代码" class="headerlink" title="5、案例代码"></a>5、案例代码</h2><h3 id="5-1-内存版（进程内，重启即丢失）"><a href="#5-1-内存版（进程内，重启即丢失）" class="headerlink" title="5.1 内存版（进程内，重启即丢失）"></a>5.1 内存版（进程内，重启即丢失）</h3><p>内存版最适合入门，因为它把“记忆的本质”暴露得最清楚：</p>
+<ul>
+<li>历史就是一个消息列表</li>
+<li>每轮都从这份列表里读取</li>
+<li>每轮结束再把新消息写回去</li>
+</ul>
+<p>缺点也很明显：</p>
+<ul>
+<li>只在当前 Python 进程有效</li>
+<li>程序一停，历史就没了</li>
+<li>不适合多实例共享</li>
+</ul>
+<p>但正因为足够简单，它适合用来建立第一层理解。</p>
+<h3 id="5-1-1-最基础写法：RunnableWithMessageHistory"><a href="#5-1-1-最基础写法：RunnableWithMessageHistory" class="headerlink" title="5.1.1 最基础写法：RunnableWithMessageHistory"></a>5.1.1 最基础写法：RunnableWithMessageHistory</h3><p>【案例源码】<code>案例与源码-2-LangChain框架/07-memory/Memory_RunnableWithMessageHistory.py</code></p>
+<p><a href="%E6%A1%88%E4%BE%8B%E4%B8%8E%E6%BA%90%E7%A0%81-2-LangChain%E6%A1%86%E6%9E%B6/07-memory/Memory_RunnableWithMessageHistory.py" title=":include :type&#x3D;code">Memory_RunnableWithMessageHistory.py</a></p>
+<p>这个案例最值得看懂的点有三个：</p>
+<ul>
+<li><code>MessagesPlaceholder(&quot;history&quot;)</code> 负责接收历史</li>
+<li><code>RunnableWithMessageHistory</code> 负责包住整条链</li>
+<li><code>session_id</code> 负责告诉系统“当前该读哪份历史”</li>
+</ul>
+<h3 id="5-1-2-多-session-写法：按-session-id-维护多份历史"><a href="#5-1-2-多-session-写法：按-session-id-维护多份历史" class="headerlink" title="5.1.2 多 session 写法：按 session_id 维护多份历史"></a>5.1.2 多 session 写法：按 session_id 维护多份历史</h3><p>【案例源码】<code>案例与源码-2-LangChain框架/07-memory/Memory_RunnableWithMessageHistoryV2.py</code></p>
+<p><a href="%E6%A1%88%E4%BE%8B%E4%B8%8E%E6%BA%90%E7%A0%81-2-LangChain%E6%A1%86%E6%9E%B6/07-memory/Memory_RunnableWithMessageHistoryV2.py" title=":include :type&#x3D;code">Memory_RunnableWithMessageHistoryV2.py</a></p>
+<p>这个案例比上一个更贴近真实项目，因为真实系统里不会只有一个用户，也不会只有一份历史。</p>
+<p>它用一个 <code>store</code> 字典按 <code>session_id</code> 存放不同的 <code>InMemoryChatMessageHistory</code>，本质上是在演示：</p>
+<p>**同一套链逻辑，如何根据不同会话编号切换到不同历史。**如果你后面要做 Web 聊天、客服系统、多人会话，这个思路会反复用到。</p>
+<h3 id="5-1-3-直接操作-InMemoryChatMessageHistory"><a href="#5-1-3-直接操作-InMemoryChatMessageHistory" class="headerlink" title="5.1.3 直接操作 InMemoryChatMessageHistory"></a>5.1.3 直接操作 InMemoryChatMessageHistory</h3><p>【案例源码】<code>案例与源码-2-LangChain框架/07-memory/Memory_InMemoryChatMessageHistory.py</code></p>
+<p><a href="%E6%A1%88%E4%BE%8B%E4%B8%8E%E6%BA%90%E7%A0%81-2-LangChain%E6%A1%86%E6%9E%B6/07-memory/Memory_InMemoryChatMessageHistory.py" title=":include :type&#x3D;code">Memory_InMemoryChatMessageHistory.py</a></p>
+<p>这个案例不再通过 <code>RunnableWithMessageHistory</code> 自动管理，而是手动：</p>
+<ul>
+<li><code>add_user_message(...)</code></li>
+<li><code>add_message(...)</code></li>
+<li><code>history.messages</code></li>
+</ul>
+<p>它的价值在于让你更“看见底层”：<strong>所谓记忆，说到底就是在维护一份消息历史列表。</strong></p>
+<p>从工程角度说：</p>
+<ul>
+<li><strong>想快速搭多轮链</strong>：优先用 <code>RunnableWithMessageHistory</code></li>
+<li><strong>想完全掌控读写时机</strong>：可以直接操作 <code>InMemoryChatMessageHistory</code></li>
+</ul>
+<h3 id="5-2-持久化：Redis-存储"><a href="#5-2-持久化：Redis-存储" class="headerlink" title="5.2 持久化：Redis 存储"></a>5.2 持久化：Redis 存储</h3><p>当你已经理解内存版后，就会自然遇到一个问题：<strong>程序一重启，历史全没了，怎么办？</strong></p>
+<p>这就是 Redis 出场的原因。Redis 在本章里的角色非常明确：</p>
+<ul>
+<li>它不是模型</li>
+<li>它不是 Prompt</li>
+<li>它不是“更高级的记忆算法”</li>
+<li>它只是一个更适合持久化保存会话历史的存储后端</li>
+</ul>
+<p>也就是说，本章从内存版切到 Redis 版，变化的不是“记忆原理”，而是“历史保存的位置”。</p>
+<h3 id="5-2-1-设计要求与参考文档"><a href="#5-2-1-设计要求与参考文档" class="headerlink" title="5.2.1 设计要求与参考文档"></a>5.2.1 设计要求与参考文档</h3><p>这一节的目标非常朴素：**把对话历史从进程内存，换成 Redis 持久化存储。**这样做之后：程序重启后还能恢复历史，多个实例可以共享同一份历史，更贴近真实线上系统。</p>
+<p>同时结合本项目当前依赖，你也要知道：</p>
+<ul>
+<li>本仓库 <code>requirements.txt</code> 中已经包含 <code>redis&gt;=5.3,&lt;6</code></li>
+<li>也包含 <code>langchain-redis&gt;=0.2</code></li>
+</ul>
+<p>所以如果你已经执行过 <code>pip install -r requirements.txt</code>，通常不需要再单独补装基础依赖。</p>
+<h3 id="5-2-2-Redis-与-Redis-Stack-简介"><a href="#5-2-2-Redis-与-Redis-Stack-简介" class="headerlink" title="5.2.2 Redis 与 Redis Stack 简介"></a>5.2.2 Redis 与 Redis Stack 简介</h3><p>先说最重要的结论：<strong>本章对话历史案例，原生 Redis 就够用了。</strong></p>
+<p>原因是 <code>RedisChatMessageHistory</code> 存储对话历史时，使用的只是 Redis 的基础数据结构能力，不依赖 Redis Stack 才有的高级模块。</p>
+<p>所以：</p>
+<ul>
+<li><strong>原生 Redis</strong>：完全能跑本章主案例</li>
+<li><strong>Redis Stack</strong>：可以跑，而且更方便用 RedisInsight 可视化查看数据</li>
+</ul>
+<p><img src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/llm/16/16-5-2-1.webp" alt="Redis Stack 与原生 Redis 的关系"></p>
+<p>如果你是第一次学，可以直接把它们区分成这样：<code>Redis</code> 是高性能键值存储本体，<code>Redis Stack</code> 则是在 Redis 基础上补上更多增强能力，并带来更友好的工具链。</p>
+<p>本章之所以还保留 Redis Stack 小节，一方面是为了让你能用 RedisInsight 更直观地观察数据，另一方面也顺手为后面向量存储、搜索等更复杂的 Redis 用法做一点环境铺垫。</p>
+<div class="data-grid data-grid-link-table"><div class="grid-header"><div class="grid-cell">功能维度</div><div class="grid-cell">原生 Redis</div><div class="grid-cell">Redis Stack 增强功能</div></div><div class="grid-row"><div class="grid-cell">数据结构</div><div class="grid-cell">字符串、列表、集合、哈希等</div><div class="grid-cell">增加 JSON、图、时间序列、概率结构等高级类型</div></div><div class="grid-row"><div class="grid-cell">查询能力</div><div class="grid-cell">仅限键值查询</div><div class="grid-cell">支持全文搜索、向量搜索、图查询、JSON 查询</div></div><div class="grid-row"><div class="grid-cell">使用场景</div><div class="grid-cell">缓存、消息队列、计数器等</div><div class="grid-cell">实时推荐、时序分析、知识图谱、文档数据库、AI 向量检索</div></div><div class="grid-row"><div class="grid-cell">开发体验</div><div class="grid-cell">命令行操作，需手动拼装逻辑</div><div class="grid-cell">提供 RedisInsight 和对象映射库，开发效率更高</div></div></div>
+
+<h3 id="5-2-3-Docker-启动与宿主机连接"><a href="#5-2-3-Docker-启动与宿主机连接" class="headerlink" title="5.2.3 Docker 启动与宿主机连接"></a>5.2.3 Docker 启动与宿主机连接</h3><p>如果你本机没单独装 Redis，用 Docker 是最省事的办法。</p>
+<p><strong>原生 Redis：</strong></p>
+<pre class="line-numbers language-bash" data-language="bash"><code class="language-bash"><span class="token function">docker</span> run <span class="token parameter variable">-d</span> <span class="token parameter variable">--name</span> docker-redis-1 <span class="token parameter variable">-p</span> <span class="token number">6379</span>:6379 redis<span aria-hidden="true" class="line-numbers-rows"><span></span></span></code></pre>
+
+<p>这样本机就可以通过：</p>
+<pre class="line-numbers language-bash" data-language="bash"><code class="language-bash">redis://localhost:6379<span aria-hidden="true" class="line-numbers-rows"><span></span></span></code></pre>
+
+<p>来连接 Redis。</p>
+<p><strong>Redis Stack：</strong></p>
+<pre class="line-numbers language-bash" data-language="bash"><code class="language-bash"><span class="token function">docker</span> run <span class="token parameter variable">-d</span> <span class="token parameter variable">--name</span> redis-stack <span class="token parameter variable">-p</span> <span class="token number">26379</span>:6379 <span class="token parameter variable">-p</span> <span class="token number">8001</span>:8001 redis/redis-stack<span aria-hidden="true" class="line-numbers-rows"><span></span></span></code></pre>
+
+<p>这里要区分两个端口：</p>
+<ul>
+<li><code>26379</code>：本机访问 Redis 服务用（映射到容器内 <code>6379</code>）</li>
+<li><code>8001</code>：浏览器访问 RedisInsight 的常用映射端口</li>
+</ul>
+<p>也就是说，Redis Stack 版案例里如果默认连接 <code>redis://localhost:26379</code>，是完全正常的，因为它连的是<strong>宿主机映射端口</strong>，不是容器内的原始 <code>6379</code>。若你本地镜像或 compose 将 Insight 映到 <strong>8002</strong> 等其他端口，以实际 <code>docker ps</code> 或文档为准即可。</p>
+<h3 id="5-2-4-Redis-基本命令与查看对话历史"><a href="#5-2-4-Redis-基本命令与查看对话历史" class="headerlink" title="5.2.4 Redis 基本命令与查看对话历史"></a>5.2.4 Redis 基本命令与查看对话历史</h3><p>这一节不用学成 Redis 专家，只要会看本章案例写进去的数据就够了。</p>
+<p>最常用的命令有这些：</p>
+<div class="data-grid data-grid-link-table"><div class="grid-header"><div class="grid-cell">命令</div><div class="grid-cell">说明</div><div class="grid-cell">示例</div></div><div class="grid-row"><div class="grid-cell">`PING`</div><div class="grid-cell">检测服务是否存活</div><div class="grid-cell">`PING` → 返回 `PONG`</div></div><div class="grid-row"><div class="grid-cell">`SET key value`</div><div class="grid-cell">设置字符串键值</div><div class="grid-cell">`SET mykey "hello"`</div></div><div class="grid-row"><div class="grid-cell">`GET key`</div><div class="grid-cell">获取字符串值</div><div class="grid-cell">`GET mykey`</div></div><div class="grid-row"><div class="grid-cell">`DEL key [key ...]`</div><div class="grid-cell">删除一个或多个键</div><div class="grid-cell">`DEL mykey`</div></div><div class="grid-row"><div class="grid-cell">`KEYS pattern`</div><div class="grid-cell">按模式查找键（慎用于生产）</div><div class="grid-cell">`KEYS *`、`KEYS message_store:*`</div></div><div class="grid-row"><div class="grid-cell">`EXISTS key`</div><div class="grid-cell">判断键是否存在</div><div class="grid-cell">`EXISTS mykey` → 1 或 0</div></div><div class="grid-row"><div class="grid-cell">`TTL key`</div><div class="grid-cell">查看键的剩余过期时间（秒）</div><div class="grid-cell">`TTL mykey`，-1 表示永不过期</div></div><div class="grid-row"><div class="grid-cell">`EXPIRE key seconds`</div><div class="grid-cell">设置键的过期时间</div><div class="grid-cell">`EXPIRE mykey 3600`</div></div><div class="grid-row"><div class="grid-cell">`DBSIZE`</div><div class="grid-cell">当前数据库的键数量</div><div class="grid-cell">`DBSIZE`</div></div><div class="grid-row"><div class="grid-cell">`FLUSHDB`</div><div class="grid-cell">清空当前数据库（慎用）</div><div class="grid-cell">`FLUSHDB`</div></div></div>
+
+<p>本章 Redis 对话历史案例里，最值得你关注的是这一点：<strong>LangChain 会按 <code>session_id</code> 写入不同的键。</strong></p>
+<p>例如你运行过某个 <code>session_id=user-001</code> 的会话后，可能会看到类似：</p>
+<pre class="line-numbers language-redis" data-language="redis"><code class="language-redis">KEYS *
+TYPE message_store:user-001
+LRANGE message_store:user-001 0 -1<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span></span></code></pre>
+
+<p>你看到的每个元素，本质上就是一条序列化后的消息记录。这里可以建立一个基础直觉：</p>
+<p><strong>对话历史并不神秘，落到 Redis 里，本质上就是按 session 管理的一组消息数据。</strong></p>
+<h3 id="5-2-5-环境验证"><a href="#5-2-5-环境验证" class="headerlink" title="5.2.5 环境验证"></a>5.2.5 环境验证</h3><p>在真正运行 Redis 对话历史前，建议先检查两个问题：</p>
+<ol>
+<li>Python 里的 <code>redis</code> 包是否安装正常</li>
+<li>Redis 服务是否真的能连上</li>
+</ol>
+<p>【案例源码】<code>案例与源码-2-LangChain框架/07-memory/RedisEnvCheck.py</code></p>
+<p><a href="%E6%A1%88%E4%BE%8B%E4%B8%8E%E6%BA%90%E7%A0%81-2-LangChain%E6%A1%86%E6%9E%B6/07-memory/RedisEnvCheck.py" title=":include :type&#x3D;code">RedisEnvCheck.py</a></p>
+<p>这个脚本建议作为“跑 Redis 案例前的第一步”，因为很多问题其实不是 LangChain 的问题，而是 Redis 环境本身没就绪。</p>
+<h3 id="5-2-6-案例：Redis-对话历史"><a href="#5-2-6-案例：Redis-对话历史" class="headerlink" title="5.2.6 案例：Redis 对话历史"></a>5.2.6 案例：Redis 对话历史</h3><p>【案例源码】<code>案例与源码-2-LangChain框架/07-memory/Memory_RedisChatMessageHistory.py</code></p>
+<p><a href="%E6%A1%88%E4%BE%8B%E4%B8%8E%E6%BA%90%E7%A0%81-2-LangChain%E6%A1%86%E6%9E%B6/07-memory/Memory_RedisChatMessageHistory.py" title=":include :type&#x3D;code">Memory_RedisChatMessageHistory.py</a></p>
+<p>这是本章最重要的持久化案例。它和内存版相比，真正变化的核心只有一处：</p>
+<ul>
+<li><code>get_session_history(...)</code> 不再返回 <code>InMemoryChatMessageHistory</code></li>
+<li>而是返回 <code>RedisChatMessageHistory</code></li>
+</ul>
+<p>也就是说：<strong>链的读写逻辑没变，只是历史的存储后端换了。</strong></p>
+<p>这个认识特别重要，因为它让你真正理解：</p>
+<ul>
+<li><code>RunnableWithMessageHistory</code> 负责“什么时候读写”</li>
+<li><code>RedisChatMessageHistory</code> 负责“历史存到哪里”</li>
+</ul>
+<p>两者是配合关系，不是替代关系。</p>
+<h3 id="5-2-7-案例：使用-Redis-Stack（可选）"><a href="#5-2-7-案例：使用-Redis-Stack（可选）" class="headerlink" title="5.2.7 案例：使用 Redis Stack（可选）"></a>5.2.7 案例：使用 Redis Stack（可选）</h3><p>【案例源码】<code>案例与源码-2-LangChain框架/07-memory/Memory_RedisStackChatMessageHistory.py</code></p>
+<p><a href="%E6%A1%88%E4%BE%8B%E4%B8%8E%E6%BA%90%E7%A0%81-2-LangChain%E6%A1%86%E6%9E%B6/07-memory/Memory_RedisStackChatMessageHistory.py" title=":include :type&#x3D;code">Memory_RedisStackChatMessageHistory.py</a></p>
+<p>这个案例和上一节主案例的逻辑基本一致，只是默认连接到了 Redis Stack 常见端口。</p>
+<p>它最大的教学价值不是“换了一个全新方案”，而是：让你确认 Redis Stack 也能兼容跑本章历史存储；让你能用 RedisInsight 直观看到会话数据。</p>
+<p><img src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/llm/16/16-5-2-2.webp" alt="RedisInsight 中查看 LangChain 写入的会话：键 message_store:user-001 类型为 LIST，元素为序列化后的 human&#x2F;ai 消息（JSON），便于对照代码理解持久化结构"></p>
+<p>所以这节更适合看作：<strong>主案例的一个更方便观察数据的变体。</strong></p>
+<hr>
+<p><strong>章节思考题：</strong></p>
+<ol>
+<li><p>如果用户说“模型记住了我”，你会怎样解释本章里的“记忆”到底是什么？</p>
+<p><strong>参考思路：</strong> 这里的记忆不是模型参数更新，而是系统把历史消息重新取出来，作为上下文交给模型。模型看起来记得，是因为应用帮它带上了历史。</p>
+</li>
+<li><p><code>RunnableWithMessageHistory</code> 和具体存储类的边界为什么要分清？</p>
+<p><strong>参考思路：</strong> 前者负责把历史接入调用链，决定何时读写；后者负责消息真正存在哪里。边界分清后，内存、Redis、数据库等存储可以替换，而调用链逻辑不用大改。</p>
+</li>
+<li><p>多用户场景里，<code>session_id</code> 设计不好会出现什么问题？</p>
+<p><strong>参考思路：</strong> 可能串会话、串用户、误用历史，甚至泄露隐私。<code>session_id</code> 应该和用户、会话、业务租户等隔离策略一起设计，而不是随便写一个字符串。</p>
+</li>
+<li><p>为什么完整历史不能无限塞回模型？</p>
+<p><strong>参考思路：</strong> 上下文窗口、成本、延迟和噪声都会增加。历史越多不一定越好，真实系统要做窗口截断、摘要、重要信息提取和过期清理。</p>
+</li>
+</ol>
+<p><strong>本章小结：</strong></p>
+<ul>
+<li><strong>记忆是什么</strong>：这里讲的是短期记忆 &#x2F; 对话历史，不是训练模型，也不是更新模型参数，而是把历史消息保存下来，并在下一轮调用前重新交给模型。</li>
+<li><strong>基本流程</strong>：读历史 → 拼入提示 → 调模型 → 写回历史。<code>MessagesPlaceholder</code> 负责给历史消息留位置，<code>RunnableWithMessageHistory</code> 负责管理读写时机，<code>BaseChatMessageHistory</code> 及其实现类负责具体存储。</li>
+<li><strong>存储怎么选</strong>：<code>InMemoryChatMessageHistory</code> 适合单进程学习和演示，进程一停就丢；<code>RedisChatMessageHistory</code> 适合持久化、多实例共享和跨进程会话恢复。</li>
+<li><strong>版本关系</strong>：本章用 <code>RunnableWithMessageHistory + BaseChatMessageHistory</code> 讲清链级记忆；复杂 Agent 的长期运行状态，后面再看 LangGraph 的 thread、persistence 和 checkpointer。</li>
+</ul>
+<p><strong>建议下一步：</strong> 先把无记忆、内存版、多 session 版、Redis 版案例都跑一遍，重点观察“同一个 <code>session_id</code> 下历史是怎么被延续的”；然后继续学习 <a href="/2023/07/05/llm/1-19-tools-and-tool-calling/">第 19 章 Tools 工具调用</a>，你会更容易理解为什么 Agent 场景不仅需要工具，还需要会话状态与历史管理。</p>
+</div>
+      </div>
+    </main>
+  </div>
+
+  <div class="float-buttons">
+    <button id="back-to-top" class="float-btn" title="返回顶部">↑</button>
+    <a href="/" class="float-btn" title="返回首页">🏠</a>
+  </div>
+
+  
+  <!-- 浮动按钮脚本：外链（源文件 themes/butterfly/source/js/theme/post-float-btn.js） -->
+  <script src="/js/theme/post-float-btn.js"></script>
+
+  
+  <!--
+  ============================================
+  音频播放器组件
+  文件：APlayer.njk
+  适用终端：电脑端
+  作用：APlayer + Meting 外链播放，按需渲染到页面底部
+  最后修改：2026-11-11
+  ============================================
+-->
+<link rel="stylesheet" href="https://cdn.bootcdn.net/ajax/libs/aplayer/1.10.1/APlayer.min.css">
+<script src="https://cdn.bootcdn.net/ajax/libs/aplayer/1.10.1/APlayer.min.js"></script>
+<script src="https://cdn.bootcdn.net/ajax/libs/meting/2.0.1/Meting.min.js"></script>
+<div class="aplayer no-destroy"
+     data-id="2182931917"
+     data-server="netease"
+     data-type="playlist"
+     data-fixed="true"
+     data-mini="true">
+</div>
+
+
+
+<script>
+  async function renderMermaidDiagram(){
+    const blocks = document.querySelectorAll('pre[class*="language-mermaid"]');
+    if(!blocks.length) return;
+
+    const mermaidBlocks = [];
+    blocks.forEach(el=>{
+      const codeEl = el.querySelector('code');
+      if(codeEl){
+        const codeText = codeEl.innerText;
+        mermaidBlocks.push({fig: el, codeText});
+      }
+    })
+    if(!mermaidBlocks.length) return;
+
+    // ESM 按需引入 mermaid
+    const { default: mermaid } = await import('https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs');
+    
+    mermaid.initialize({
+      startOnLoad: false,
+      theme: 'base'
+    });
+
+    for(const {fig,codeText} of mermaidBlocks){
+      const div = document.createElement('div');
+      div.className = 'mermaid';
+      div.innerText = codeText;
+      fig.parentNode.replaceChild(div, fig);
+    }
+    await mermaid.run();
+  }
+  document.addEventListener('DOMContentLoaded', renderMermaidDiagram);
+  document.addEventListener('pjax:complete', renderMermaidDiagram);
+</script>
+
+
+  <script>
+    /* 返回按钮来源判定：从星迹索引进来回 /tags/，从星图手记进来回 /archives/；
+       直接从地址栏/站外进入时默认回星图手记，保证按钮始终可用 */
+    (function () {
+      var back = document.getElementById('articleBack');
+      if (!back) return;
+      var from = '';
+      try {
+        var q = new URLSearchParams(location.search);
+        from = q.get('from') || '';
+      } catch (e) {}
+      if (!from) {
+        var ref = document.referrer || '';
+        if (ref.indexOf('/tags') > -1) from = 'tags';
+        else if (ref.indexOf('/archives') > -1) from = 'archive';
+      }
+      if (from === 'tags') {
+        back.href = '/tags/';
+        back.textContent = '← 返回星迹索引';
+      } else if (from === 'search') {
+        back.href = '/';
+        back.textContent = '← 返回首页';
+      } else {
+        back.href = '/archives/';
+        back.textContent = '← 返回星图手记';
+      }
+    })();
+  </script>
+</body>
+</html>

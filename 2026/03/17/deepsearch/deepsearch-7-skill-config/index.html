@@ -1,0 +1,2440 @@
+<!--
+  ============================================
+  文章原文页模板
+  文件：post.njk
+  适用终端：电脑端
+  作用：文章正文 + 侧栏；手机 UA 跳 /phone/p/<slug>/
+  最后修改：2026-11-11
+  ============================================
+-->
+
+
+<!DOCTYPE html>
+<html class="post-page">
+<!--
+  ============================================
+  公共 head 组件
+  文件：Head.njk
+  适用终端：电脑端
+  作用：输出 charset/viewport/title，并按 pageCss 输出外链样式表
+  样式资源：themes/butterfly/source/css/theme/*.css（Hexo 复制到 /css/theme/）
+  引入层级顺序（= CSS 层叠顺序，调整只允许追加，不要打乱前后）：
+    1 基础  common.css
+    2 布局  post-layout.css
+    3 组件  sidebar.css
+    4 正文  post.css
+    5 页面  tags.css / chronicle.css / about.css / tag.css / category-shared.css / pc-home.css
+    6 浮层  star-reader.css
+    7 特效  starmap-live.css
+  最后修改：2026-11-12
+  ============================================
+--><head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="color-scheme" content="dark">
+  <meta name="theme-color" content="#020817">
+  <!-- 首帧兜底：浏览器默认画布是白的，样式表还没解析完就画会闪一下白。这条 8 字节规则先锁死深空底色 -->
+  <style>html{background-color:#020817}</style>
+  <title>时空秘境 - 七、深度研搜：中间件机制与 Skills 配置</title>
+  
+  <link rel="stylesheet" href="/css/theme/common.css">
+  
+  <link rel="stylesheet" href="/css/theme/post-layout.css">
+  
+  <link rel="stylesheet" href="/css/theme/sidebar.css">
+  
+  <link rel="stylesheet" href="/css/theme/post.css">
+  
+<meta name="generator" content="Hexo 8.1.2"></head>
+
+<script>
+  /* 手机 UA 分流：电脑端这套控制台不再给手机用，直接换成手机版页面 */
+  (function () {
+    var ua = navigator.userAgent || '';
+    if (/Android|iPhone|iPod|HarmonyOS|Windows Phone|MicroMessenger|Mobile Safari/i.test(ua)) {
+      location.replace('/phone/p/deepsearch/deepsearch-7-skill-config/');
+    }
+  })();
+</script>
+<link rel="stylesheet" href="/css/code-table.css">
+
+<body>
+  <!--
+  ============================================
+  星空粒子背景组件
+  文件：Particles.njk
+  适用终端：电脑端
+  作用：particles.js 全站星空动画，鼠标悬停互动
+  最后修改：2026-11-11
+  ============================================
+--><!-- z-index 必须是 0 而不是 -1：body 带着不透明的 radial-gradient 底色，
+     负层级的子元素会被父元素背景整个盖住，粒子在跑但一个点都看不见 -->
+<div id="particles" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 0; pointer-events: none;"></div>
+<!-- 星座层：随机零星散布星座图形，叠在粒子之上、页面内容之下 -->
+<div id="constellations" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 1; pointer-events: none;" aria-hidden="true"></div>
+<script src="/js/particles.min.js"></script>
+<script>/* 本地库失效时回退 CDN，保证星空背景不丢 */
+if (typeof particlesJS === "undefined") {
+  document.write('<script src="https://cdn.jsdelivr.net/particles.js/2.0.0/particles.min.js"><\/script>');
+}
+</script>
+<script>
+particlesJS("particles", {
+  particles: {
+    number: {
+      value: 95,
+      density: {
+        enable: true,
+        value_area: 800
+      }
+    },
+    color: {
+      value: "#00eeff"
+    },
+    shape: {
+      type: "circle",
+      stroke: {
+        width: 0,
+        color: "#000000"
+      }
+    },
+    opacity: {
+      value: 0.6,
+      random: true,
+      anim: {
+        enable: true,
+        speed: 0.5,
+        opacity_min: 0.1,
+        sync: false
+      }
+    },
+    size: {
+      value: 3,
+      random: true,
+      anim: {
+        enable: true,
+        speed: 2,
+        size_min: 0.1,
+        sync: false
+      }
+    },
+    line_linked: {
+      enable: true,
+      distance: 118,          /* 比原来 150 收紧，让粒子网络稀疏些，给星座留出视觉空间 */
+      color: "#00eeff",
+      opacity: 0.32,
+      width: 1
+    },
+    move: {
+      enable: true,
+      speed: 0.8,
+      direction: "none",
+      random: true,
+      straight: false,
+      out_mode: "out",
+      bounce: false,
+      attract: {
+        enable: true,
+        rotateX: 600,
+        rotateY: 1200
+      }
+    }
+  },
+  interactivity: {
+    detect_on: "canvas",
+    events: {
+      onhover: {
+        enable: true,
+        mode: "grab"       // 鼠标悬停时粒子聚集
+      },
+      onclick: {
+        enable: true,
+        mode: "push"       // 点击时产生新粒子
+      },
+      resize: true
+    },
+    modes: {
+      grab: {
+        distance: 200,
+        line_linked: {
+          opacity: 1
+        }
+      },
+      push: {
+        particles_nb: 6
+      }
+    }
+  },
+  retina_detect: true
+});
+</script>
+<!-- 星座层：独立 canvas，随机散布真实星座图形（依赖上面的 #constellations 容器） -->
+<script src="/js/theme/starfield.js"></script>
+
+  <!-- 返回按钮：按来源回到星图手记 / 星迹索引，默认回星图手记。
+       放在 body 顶层（不进 main-content），避免被其溢出裁剪切掉右半边 -->
+  <a class="article-back" id="articleBack" href="/archives/">← 返回星图手记</a>
+
+  <div class="app-layout">
+    <!--
+  ============================================
+  左侧栏个人卡组件
+  文件：_components/Sidebar.njk
+  适用终端：电脑端（星图手记 / 星迹索引 / 秘境主人 页面通栏侧栏）
+  作用：头像、昵称、站点统计、导航菜单、底部信息与全局搜索面板（结果落在雷达区，无结果播「内容走丢 → 404」动画）
+  样式依赖：source/css/theme/sidebar.css
+  脚本依赖：source/js/theme/sidebar.js
+  最后修改：2026-11-11
+  ============================================
+-->
+<aside class="sidebar" id="sidebar">
+  <div class="profile-card">
+    <div class="avatar">
+      <div
+        style="width:80px;height:80px;border-radius:50%;background:linear-gradient(135deg,#0a0e27,#1a1a4e);display:flex;align-items:center;justify-content:center;margin:0 auto;font-size:40px;border:2px solid #00eeff;box-shadow:0 0 30px rgba(0,238,255,0.3);">
+        ✨</div>
+    </div>
+    <h3 class="nickname">时空行者</h3>
+    <p class="bio">星辰大海，代码为舟</p>
+    <div class="stats">
+      <div class="stat-item">
+        <span class="stat-num">174</span>
+        <span class="stat-label">文章</span>
+      </div>
+      <div class="stat-item">
+        <span class="stat-num" id="fans-count" style="cursor:pointer;">1088</span>
+        <span class="stat-label">粉丝</span>
+      </div>
+      <div class="stat-item">
+        <span class="stat-num" id="follow-count" style="cursor:pointer;">66</span>
+        <span class="stat-label">关注</span>
+      </div>
+    </div>
+    <button class="follow-btn">+ 关注</button>
+  </div>
+  <div class="search-box">
+    <input type="text" placeholder="找找看..." id="search-input">
+    <button class="search-btn" id="searchModalOpen">🔍</button>
+  </div>
+  <div class="links-card">
+    <h4>常用链接</h4>
+    <ul>
+      <li><a href="/about/">秘境主人</a></li>
+      <li><a href="/archives/">星图手记</a></li>
+      <li><a href="/tags/">星迹索引</a></li>
+      <!-- ✅ 新增联系我 -->
+      <li><a class="contact-trigger" href="javascript:void(0)">星语传书</a></li>
+      <li><a class="donate-trigger" href="javascript:void(0)">星芒赠礼</a></li>
+    </ul>
+  </div>
+  <div class="tags-card">
+    <h4>热门标签</h4>
+    
+    <div class="tag-cloud">
+      
+      <a href="/tags/MySQL数据库/" class="tag-link" data-tag="MySQL数据库"
+        data-count="7">MySQL数据库</a>
+      
+      <a href="/tags/redis/" class="tag-link" data-tag="redis"
+        data-count="7">redis</a>
+      
+      <a href="/tags/深度研搜/" class="tag-link" data-tag="深度研搜"
+        data-count="15">深度研搜</a>
+      
+      <a href="/tags/电商问数/" class="tag-link" data-tag="电商问数"
+        data-count="18">电商问数</a>
+      
+      <a href="/tags/git/" class="tag-link" data-tag="git"
+        data-count="5">git</a>
+      
+      <a href="/tags/面试/" class="tag-link" data-tag="面试"
+        data-count="11">面试</a>
+      
+      <a href="/tags/Java/" class="tag-link" data-tag="Java"
+        data-count="10">Java</a>
+      
+      <a href="/tags/langchain/" class="tag-link" data-tag="langchain"
+        data-count="10">langchain</a>
+      
+      <a href="/tags/Netty/" class="tag-link" data-tag="Netty"
+        data-count="4">Netty</a>
+      
+      <a href="/tags/大模型/" class="tag-link" data-tag="大模型"
+        data-count="35">大模型</a>
+      
+      <a href="/tags/AICoding/" class="tag-link" data-tag="AICoding"
+        data-count="9">AICoding</a>
+      
+      <a href="/tags/SpringAi/" class="tag-link" data-tag="SpringAi"
+        data-count="15">SpringAi</a>
+      
+      <a href="/tags/随笔杂谈/" class="tag-link" data-tag="随笔杂谈"
+        data-count="2">随笔杂谈</a>
+      
+      <a href="/tags/vue/" class="tag-link" data-tag="vue"
+        data-count="9">vue</a>
+      
+      <a href="/tags/视频剪辑/" class="tag-link" data-tag="视频剪辑"
+        data-count="1">视频剪辑</a>
+      
+      <a href="/tags/大数据/" class="tag-link" data-tag="大数据"
+        data-count="3">大数据</a>
+      
+      <a href="/tags/电影/" class="tag-link" data-tag="电影"
+        data-count="2">电影</a>
+      
+      <a href="/tags/游戏/" class="tag-link" data-tag="游戏"
+        data-count="1">游戏</a>
+      
+      <a href="/tags/音乐/" class="tag-link" data-tag="音乐"
+        data-count="8">音乐</a>
+      
+      <a href="/tags/图片/" class="tag-link" data-tag="图片"
+        data-count="2">图片</a>
+      
+    </div>
+    <script>
+      /*
+  ============================================
+  侧栏热门标签排序（首帧前执行）
+  文件：_js/hot-tags.js
+  引入位置：_components/Sidebar.njk 里 .tag-cloud 闭合标签之后（紧跟着写死）
+  作用：按点击次数排序、只露前 5 个、点一下立刻重排
+  为什么单独拆出来：以前放在 sidebar.js 的 DOMContentLoaded 里，首帧渲染的还是
+  模板顺序的 20 个标签，等脚本跑完才收成 5 个；配合跨页淡入（View Transition）
+  会出现「新旧两套标签叠在一起、影子跳一下」。紧跟标签节点内联执行就没有中间态。
+  最后修改：2026-11-12
+  ============================================
+*/
+(function () {
+  var cloud = document.querySelector('.tag-cloud');
+  if (!cloud) return;
+  var links = Array.prototype.slice.call(cloud.querySelectorAll('.tag-link'));
+  if (!links.length) return;
+
+  var KEY = 'starry_tag_visits'; // 标签名 -> 点击次数
+  var TOP = 5;
+  var visits = {};
+
+  try {
+    var raw = JSON.parse(localStorage.getItem(KEY) || '{}');
+    visits = (raw && typeof raw === 'object') ? raw : {};
+  } catch (e) {
+    visits = {};
+  }
+
+  links.forEach(function (link) {
+    var name = link.dataset.tag || (link.textContent || '').trim();
+    link.dataset.tag = name;
+    if (!link.dataset.count) link.dataset.count = '0';
+  });
+
+  // 排序：点击次数降序 → 文章数降序 → 名字，保证同分时顺序稳定不来回跳
+  function order() {
+    return links.slice().sort(function (a, b) {
+      var va = visits[a.dataset.tag] || 0;
+      var vb = visits[b.dataset.tag] || 0;
+      if (vb !== va) return vb - va;
+      var ca = Number(a.dataset.count) || 0;
+      var cb = Number(b.dataset.count) || 0;
+      if (cb !== ca) return cb - ca;
+      return String(a.dataset.tag).localeCompare(String(b.dataset.tag), 'zh');
+    });
+  }
+
+  // 重排 DOM：按名次 append，超出 5 个的 hidden（仍留在 DOM，等名次升上来再显示）
+  function render() {
+    order().forEach(function (link, i) {
+      link.dataset.visits = visits[link.dataset.tag] || 0;
+      cloud.appendChild(link);
+      link.hidden = i >= TOP;
+    });
+  }
+
+  links.forEach(function (link) {
+    link.addEventListener('click', function () {
+      var name = link.dataset.tag;
+      visits[name] = (visits[name] || 0) + 1;
+      try { localStorage.setItem(KEY, JSON.stringify(visits)); } catch (e) { /* 忽略配额错误 */ }
+      render(); // 当前页立刻看到「谁被点多了谁上前」
+    });
+  });
+
+  render();
+})();
+
+    </script>
+  </div>
+  <div class="archive-card">
+    <h4>按月归档</h4>
+    <ul class="archive-list">
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2026/12/">
+          2026年12月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2026/11/">
+          2026年11月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2026/10/">
+          2026年10月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2026/09/">
+          2026年09月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2026/08/">
+          2026年08月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2026/07/">
+          2026年07月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2026/06/">
+          2026年06月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2026/05/">
+          2026年05月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2026/04/">
+          2026年04月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2026/03/">
+          2026年03月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2026/02/">
+          2026年02月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2026/01/">
+          2026年01月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2025/12/">
+          2025年12月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2025/11/">
+          2025年11月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2025/10/">
+          2025年10月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2025/09/">
+          2025年09月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2025/08/">
+          2025年08月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2025/07/">
+          2025年07月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2025/06/">
+          2025年06月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2025/05/">
+          2025年05月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2025/04/">
+          2025年04月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2025/03/">
+          2025年03月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2025/02/">
+          2025年02月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2025/01/">
+          2025年01月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2024/11/">
+          2024年11月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2024/10/">
+          2024年10月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2024/09/">
+          2024年09月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2024/08/">
+          2024年08月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2024/07/">
+          2024年07月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2024/05/">
+          2024年05月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2024/04/">
+          2024年04月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2024/03/">
+          2024年03月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2024/02/">
+          2024年02月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2024/01/">
+          2024年01月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2023/12/">
+          2023年12月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2023/11/">
+          2023年11月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2023/10/">
+          2023年10月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2023/09/">
+          2023年09月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2023/08/">
+          2023年08月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2023/07/">
+          2023年07月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2023/06/">
+          2023年06月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2023/05/">
+          2023年05月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2023/04/">
+          2023年04月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2023/03/">
+          2023年03月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2023/02/">
+          2023年02月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2023/01/">
+          2023年01月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2022/09/">
+          2022年09月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2022/05/">
+          2022年05月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2022/01/">
+          2022年01月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2021/12/">
+          2021年12月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2021/11/">
+          2021年11月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2021/10/">
+          2021年10月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2021/09/">
+          2021年09月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2021/08/">
+          2021年08月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2021/07/">
+          2021年07月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2021/06/">
+          2021年06月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2021/05/">
+          2021年05月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2021/04/">
+          2021年04月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2021/03/">
+          2021年03月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2021/02/">
+          2021年02月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2021/01/">
+          2021年01月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2020/10/">
+          2020年10月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2020/07/">
+          2020年07月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2020/04/">
+          2020年04月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2020/01/">
+          2020年01月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2019/12/">
+          2019年12月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2019/11/">
+          2019年11月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2019/10/">
+          2019年10月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2019/09/">
+          2019年09月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2019/08/">
+          2019年08月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2019/07/">
+          2019年07月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2019/06/">
+          2019年06月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2019/05/">
+          2019年05月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2019/04/">
+          2019年04月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2019/03/">
+          2019年03月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2019/02/">
+          2019年02月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2019/01/">
+          2019年01月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2018/12/">
+          2018年12月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2018/11/">
+          2018年11月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2018/10/">
+          2018年10月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2018/09/">
+          2018年09月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2018/08/">
+          2018年08月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2018/07/">
+          2018年07月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2018/06/">
+          2018年06月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2018/05/">
+          2018年05月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2018/04/">
+          2018年04月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2018/03/">
+          2018年03月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2018/02/">
+          2018年02月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2018/01/">
+          2018年01月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+    </ul>
+  </div>
+
+  <!-- ========== 星语传书（雷达区弹窗，与搜索面板同一套面板样式） ========== -->
+  <div class="search-panel dock-panel" id="contactModal" hidden>
+    <div class="sp-mask" data-dock-close></div>
+    <div class="sp-box" role="dialog" aria-modal="true" aria-label="星语传书">
+      <div class="sp-head">
+        <span class="sp-dot"></span>
+        <span class="sp-title">星语传书</span>
+        <span class="sp-title-sub">/ SIGNAL CHANNEL</span>
+        <span class="sp-meta">SYS.REPLY ≤ 48H</span>
+        <button class="sp-close" type="button" data-dock-close title="关闭">×</button>
+      </div>
+      <div class="sp-body dock-body">
+        <p class="dock-lead">写信给时空行者：文章里的错字、跑不通的 demo、想聊的一句技术，都可以从这里进来。信号收到，我会尽量回。</p>
+        <div class="dock-grid">
+          <div class="dock-list">
+            <a class="dock-row" href="https://wpa.qq.com/msgrd?v=3&amp;uin=372109355&amp;site=qq&amp;menu=yes"
+              target="_blank" rel="noopener">
+              <span class="dock-ico">企</span>
+              <span class="dock-k"><b>QQ</b><span>372109355</span></span>
+            </a>
+            <a class="dock-row" href="https://wu4yong.github.io" target="_blank" rel="noopener">
+              <span class="dock-ico">⌂</span>
+              <span class="dock-k"><b>站点主站</b><span>wu4yong.github.io</span></span>
+            </a>
+            <div class="dock-row dock-row-static">
+              <span class="dock-ico">✉</span>
+              <span class="dock-k"><b>电子邮箱</b><span>暂未公开 · 任何问题QQ留言</span></span>
+            </div>
+            <a class="dock-row" href="#" target="_blank" rel="noopener">
+              <span class="dock-ico">◈</span>
+              <span class="dock-k"><b>GitHub</b><span>暂未公开 · 任何问题QQ留言</span></span>
+            </a>
+            <a class="dock-row" href="#" target="_blank" rel="noopener">
+              <span class="dock-ico">◇</span>
+              <span class="dock-k"><b>Gitee</b><span>暂未公开 · 任何问题QQ留言</span></span>
+            </a>
+          </div>
+          <div class="dock-side">
+            <div class="dock-qr">
+              <em>WECHAT · 微信</em>
+              <img src="/assets/images/wechat-qr.png" alt="微信二维码">
+              <span class="dock-qr-tip">扫码添加，备注「来自时空秘境」</span>
+            </div>
+          </div>
+        </div>
+        <div class="dock-chips">
+          <span class="dock-chip">文章纠错</span>
+          <span class="dock-chip">Demo 答疑</span>
+          <span class="dock-chip">转载授权</span>
+          <span class="dock-chip">技术交流</span>
+          <span class="dock-chip">内推 / 合作</span>
+        </div>
+        <p class="dock-note">无正文的「在吗」容易被当作信号干扰滤掉，直接把问题写清楚，回信会快很多。</p>
+      </div>
+      <!-- 开合转场层：百叶窗 / 电影幕布 / 淡入，由 source/js/theme/sidebar.js 轮换播放 -->
+      <div class="dock-fx" aria-hidden="true">
+        <div class="dock-fx-slats"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+        <div class="dock-fx-curtain"><span class="top"></span><span class="bottom"></span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========== 全局搜索面板 ==========
+       索引来自构建期生成的 /search.json（hexo-generator-searchdb），随文章新增自动更新；
+       打开时由 source/js/theme/sidebar.js 把整块挪进 Radar 中间区（无雷达的页面退化为居中浮层） -->
+  <div class="search-panel" id="searchPanel" hidden>
+    <div class="sp-mask" id="searchMask"></div>
+    <div class="sp-box" role="dialog" aria-modal="true" aria-label="全文搜索">
+      <div class="sp-head">
+        <span class="sp-dot"></span>
+        <span class="sp-title">全文搜索</span>
+        <span class="sp-title-sub">/ GLOBAL SEARCH</span>
+        <span class="sp-meta" id="spMeta"></span>
+        <button class="sp-close" id="searchPanelClose" type="button" title="关闭搜索">×</button>
+      </div>
+      <div class="sp-body" id="spBody">
+        <div class="sp-loading" id="spLoading">正在扫描星图索引…</div>
+        <ul class="sp-list" id="spList"></ul>
+        <!-- 无结果：内容走丢 → 慢速落 404 -->
+        <div class="sp-empty" id="spEmpty" hidden>
+          <div class="sp-drift-wrap">
+            <span class="sp-trail"></span>
+            <span class="sp-drift"></span>
+            <span class="sp-lost">SIGNAL LOST · 信号已丢失</span>
+          </div>
+          <div class="sp-404"><span>4</span><span>0</span><span>4</span></div>
+          <p class="sp-empty-main">内容走丢在星海里了</p>
+          <p class="sp-empty-tip">换个关键词，或去〈星迹索引 / 星图手记〉里慢慢逛</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========== 星芒赠礼（雷达区弹窗，收款码图片沿用原图不改） ========== -->
+  <div class="search-panel dock-panel" id="donateModal" hidden>
+    <div class="sp-mask" data-dock-close></div>
+    <div class="sp-box" role="dialog" aria-modal="true" aria-label="星芒赠礼">
+      <div class="sp-head">
+        <span class="sp-dot"></span>
+        <span class="sp-title">星芒赠礼</span>
+        <span class="sp-title-sub">/ STAR OFFERING</span>
+        <span class="sp-meta">THANKS FOR THE LIGHT</span>
+        <button class="sp-close" type="button" data-dock-close title="关闭">×</button>
+      </div>
+      <div class="sp-body dock-body">
+        <div class="dock-thanks">
+          <p>这片星空是工作闲暇时光一个个凌晨攒出来的：一篇文章、一次复盘、一个修不完的 bug。</p>
+          <p>如果你在这里找到了能用的东西，愿意赏一杯凌晨三点的咖啡 —— 这份心意我会记很久。</p>
+          <p>不打赏也完全没关系：所有文章永久免费，愿你我在各自的轨道上都跑得稳一点。</p>
+        </div>
+        <div class="dock-donate">
+          <div class="dock-hero">
+            <div class="dock-hero-pic">
+              <span class="dock-hero-halo" aria-hidden="true"></span>
+              <span class="dock-hero-ring dock-hero-ring-a" aria-hidden="true"></span>
+              <span class="dock-hero-ring dock-hero-ring-b" aria-hidden="true"></span>
+              <img src="/assets/images/donate-boy.png" alt="感谢支持">
+            </div>
+            <em>THANKS FOR THE LIGHT</em>
+            <span class="dock-hero-tip">愿每一次凌晨，都有人替你留一盏灯</span>
+          </div>
+          <div class="dock-pay">
+            <div class="dock-qr dock-qr-row">
+              <img src="/assets/images/alipay-qr.jpg" alt="支付宝收款码">
+              <div class="dock-qr-txt">
+                <b>支付宝 · 星途赞赏</b>
+                <span>请我喝一杯凌晨三点的咖啡</span>
+              </div>
+            </div>
+            <div class="dock-qr dock-qr-row">
+              <img src="/assets/images/wechat-pay-qr.jpg" alt="微信收款码">
+              <div class="dock-qr-txt">
+                <b>微信 · 星河致谢</b>
+                <span>金额随意，心意已经收到</span>
+              </div>
+            </div>
+          </div>
+        </div>        <div class="dock-chips">
+          <span class="dock-chip">域名与服务器</span>
+          <span class="dock-chip">图床与备份</span>
+          <span class="dock-chip">一本技术书</span>
+          <span class="dock-chip">深夜的一杯咖啡</span>
+        </div>
+        <p class="dock-note">赠礼纯属心意，不产生任何付费内容或额外承诺；扫码前请确认收款人，小心仿冒。</p>
+      </div>
+      <!-- 开合转场层：百叶窗 / 电影幕布 / 淡入，由 source/js/theme/sidebar.js 轮换播放 -->
+      <div class="dock-fx" aria-hidden="true">
+        <div class="dock-fx-slats"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+        <div class="dock-fx-curtain"><span class="top"></span><span class="bottom"></span></div>
+      </div>
+    </div>
+  </div>
+
+
+</aside>
+<!-- 引入侧边栏交互脚本：外链（源文件 themes/butterfly/source/js/theme/sidebar.js） -->
+<script src="/js/theme/sidebar.js"></script>
+
+    
+    <button id="sidebarToggle" class="sidebar-toggle" title="隐藏侧栏"></button>
+
+    <main class="main-content">
+      <div class="article-card">
+        <h1 class="article-title">七、深度研搜：中间件机制与 Skills 配置</h1>
+        <div class="article-meta">📅 2026-03-17</div>
+        <div class="article-content"><div class="essay-banner essay-image11">
+    <!-- skill-config -->
+</div>
+
+<h1 id="7-深度研搜：中间件机制与-Skills-配置"><a href="#7-深度研搜：中间件机制与-Skills-配置" class="headerlink" title="7 深度研搜：中间件机制与 Skills 配置"></a>7 深度研搜：中间件机制与 Skills 配置</h1><hr>
+<p><strong>本章课程目标：</strong></p>
+<ul>
+<li>理解中间件在 Agent 执行链路中的位置：它不负责具体业务，而是负责链路治理。</li>
+<li>掌握上下文摘要、模型调用限制、工具调用限制三类常用中间件。</li>
+<li>区分 <code>thread_limit</code>、<code>run_limit</code>、<code>exit_behavior</code> 的作用。</li>
+<li>知道中间件如何与 <code>interrupt_on</code>、子智能体、WebSocket 进度推送配合。</li>
+</ul>
+<p><strong>学习建议：</strong> 先把中间件理解成 Agent 执行链路上的检查口：模型调用前、工具调用前、上下文送入前，都可以在这里观察或改写。读代码时重点看它怎样做日志、参数调整、次数限制和风险拦截。Skills 部分先看它如何作为可复用说明被加载，不必和工具、子智能体混在一起。</p>
+<p><strong>对应代码分支：</strong> <code>07-deepagents-middleware-governance</code></p>
+<p><strong>参考资料：</strong><br>LangChain 内置中间件：<a target="_blank" rel="noopener" href="https://docs.langchain.com/oss/python/langchain/middleware/built-in">https://docs.langchain.com/oss/python/langchain/middleware/built-in</a></p>
+<hr>
+<h2 id="1、中间件先解决什么问题"><a href="#1、中间件先解决什么问题" class="headerlink" title="1、中间件先解决什么问题"></a>1、中间件先解决什么问题</h2><h3 id="1-1-用一句话理解中间件"><a href="#1-1-用一句话理解中间件" class="headerlink" title="1.1 用一句话理解中间件"></a>1.1 用一句话理解中间件</h3><p>中间件的英文是 <code>Middleware</code>。它不是最终执行业务的对象，而是站在“调用方”和“被调用方”之间的一层处理逻辑。</p>
+<p>在普通 Web 项目里，中间件可能站在：<code>客户端请求 -&gt; 中间件 -&gt; 接口函数</code></p>
+<p>在 Agent 项目里，它可能站在：</p>
+<pre class="line-numbers language-text" data-language="text"><code class="language-text">Agent -> 中间件 -> 模型
+Agent -> 中间件 -> 工具
+Agent -> 中间件 -> 子智能体<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span></span></code></pre>
+
+<p>所以，中间件不是 DeepAgents 独有的概念。DeepAgents 建立在 LangChain &#x2F; LangGraph 之上，本章用到的很多能力也来自 LangChain 的 Agent Middleware 体系。一句话总结：<strong>工具负责做事，中间件负责管事。</strong></p>
+<h3 id="1-2-它能拦在哪些位置"><a href="#1-2-它能拦在哪些位置" class="headerlink" title="1.2 它能拦在哪些位置"></a>1.2 它能拦在哪些位置</h3><p>中间件不只是在“工具调用”这一处生效。LangChain 的 Agent Middleware 可以插入 Agent 执行的不同阶段。</p>
+<div class="data-grid data-grid-link-table"><div class="grid-header"><div class="grid-cell">阶段</div><div class="grid-cell">能做什么</div><div class="grid-cell">本章怎么处理</div></div><div class="grid-row"><div class="grid-cell">模型调用前后</div><div class="grid-cell">限制调用次数、切换模型、重试、记录成本</div><div class="grid-cell">重点讲</div></div><div class="grid-row"><div class="grid-cell">工具调用前后</div><div class="grid-cell">记录日志、权限校验、改写参数、包装结果</div><div class="grid-cell">重点讲</div></div><div class="grid-row"><div class="grid-cell">上下文送入模型之前</div><div class="grid-cell">摘要压缩、敏感信息处理</div><div class="grid-cell">讲核心思路</div></div><div class="grid-row"><div class="grid-cell">最终回复生成前后</div><div class="grid-cell">统一格式、收尾处理</div><div class="grid-cell">只做提示</div></div><div class="grid-row"><div class="grid-cell">子智能体自己的链路中</div><div class="grid-cell">单独设置限制、日志或权限规则</div><div class="grid-cell">讲配置方式</div></div></div>
+
+<p><img src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/deepSearch/7/7-1-2-1.svg" alt="Agent 中间件可以在上下文、模型、工具和子智能体链路中充当检查口，负责摘要、限流、日志、权限和异常治理"></p>
+<p>本章重点放在模型调用限制和工具调用中间件上，因为它们最容易观察，也最常用于控制成本、记录日志和治理工具执行链路。</p>
+<h3 id="1-3-常见能力"><a href="#1-3-常见能力" class="headerlink" title="1.3 常见能力"></a>1.3 常见能力</h3><div class="data-grid data-grid-link-table"><div class="grid-header"><div class="grid-cell">能力</div><div class="grid-cell">说明</div><div class="grid-cell">典型场景</div></div><div class="grid-row"><div class="grid-cell">日志追踪</div><div class="grid-cell">记录模型、工具、子智能体什么时候被调用</div><div class="grid-cell">排查 Agent 执行过程</div></div><div class="grid-row"><div class="grid-cell">参数改写</div><div class="grid-cell">在真正调用工具前修改参数</div><div class="grid-cell">统一补默认值、参数脱敏</div></div><div class="grid-row"><div class="grid-cell">结果改写</div><div class="grid-cell">在工具返回后统一包装结果</div><div class="grid-cell">统一输出格式、敏感内容过滤</div></div><div class="grid-row"><div class="grid-cell">调用限制</div><div class="grid-cell">限制模型或工具调用次数</div><div class="grid-cell">防止死循环、节省 Token</div></div><div class="grid-row"><div class="grid-cell">上下文压缩</div><div class="grid-cell">对过长的对话历史或中间过程进行摘要</div><div class="grid-cell">防止撑爆上下文窗口</div></div><div class="grid-row"><div class="grid-cell">权限认证</div><div class="grid-cell">在调用高风险工具前判断当前用户是否有权限</div><div class="grid-cell">企业系统里的付费功能、敏感操作</div></div><div class="grid-row"><div class="grid-cell">提前终止或抛异常</div><div class="grid-cell">达到阈值后主动停止执行，或交给上层统一异常处理</div><div class="grid-cell">调用次数超限、流程异常</div></div></div>
+
+<p>对企业级智能体来说，最常用的是三件事：</p>
+<ul>
+<li><strong>压缩上下文</strong>：避免多轮对话和长链路任务把上下文窗口撑爆。</li>
+<li><strong>限制模型调用次数</strong>：避免 Agent 不断思考、不断重试。</li>
+<li><strong>限制工具调用次数</strong>：避免某个工具被反复调用，造成循环或成本失控。</li>
+</ul>
+<h3 id="1-4-为什么多智能体更需要中间件"><a href="#1-4-为什么多智能体更需要中间件" class="headerlink" title="1.4 为什么多智能体更需要中间件"></a>1.4 为什么多智能体更需要中间件</h3><p>前面几章讲过，多智能体系统能“分而治之”，但也会放大两个问题：</p>
+<ul>
+<li>多个 Agent 互相调用，Token 成本更高；</li>
+<li>Agent 的决策有不确定性，容易陷入重复规划或循环调用。</li>
+</ul>
+<p>比如主智能体发现信息不足，就调用网络助手；网络助手搜索后返回不完整；主智能体继续调用；如果提示词或工具设计不好，这条链路就可能一直绕圈。</p>
+<p>中间件的价值，是给这类系统加上工程边界：</p>
+<pre class="line-numbers language-text" data-language="text"><code class="language-text">可以调用模型，但要有次数上限；
+可以调用工具，但某个工具不能无限调用；
+上下文可以增长，但到阈值前要先摘要压缩；
+达到限制后，要么正常结束，要么抛出异常交给业务层处理。<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span></span></code></pre>
+
+<h3 id="1-5-LangChain-内置中间件概览"><a href="#1-5-LangChain-内置中间件概览" class="headerlink" title="1.5 LangChain 内置中间件概览"></a>1.5 LangChain 内置中间件概览</h3><div class="data-grid data-grid-link-table"><div class="grid-header"><div class="grid-cell">工程问题</div><div class="grid-cell">代表中间件</div><div class="grid-cell">解决什么</div></div><div class="grid-row"><div class="grid-cell">上下文太长</div><div class="grid-cell">`SummarizationMiddleware`</div><div class="grid-cell">自动摘要旧消息，保留关键上下文</div></div><div class="grid-row"><div class="grid-cell">调用次数失控</div><div class="grid-cell">`ModelCallLimitMiddleware`、`ToolCallLimitMiddleware`</div><div class="grid-cell">限制模型或工具调用次数，防止循环和成本失控</div></div><div class="grid-row"><div class="grid-cell">高风险动作审批</div><div class="grid-cell">`HumanInTheLoopMiddleware`</div><div class="grid-cell">在发邮件、删库、写文件等动作前暂停，等待人工确认</div></div><div class="grid-row"><div class="grid-cell">隐私与敏感信息</div><div class="grid-cell">`PIIMiddleware`</div><div class="grid-cell">对邮箱、手机号、信用卡等信息做脱敏、遮蔽或阻断</div></div><div class="grid-row"><div class="grid-cell">失败恢复</div><div class="grid-cell">`ModelRetryMiddleware`、`ModelFallbackMiddleware`、`ToolRetryMiddleware`</div><div class="grid-cell">模型或外部工具失败时重试，必要时切换备用模型</div></div><div class="grid-row"><div class="grid-cell">工具太多难选择</div><div class="grid-cell">`LLMToolSelectorMiddleware`</div><div class="grid-cell">工具列表很长时，先筛出当前任务相关工具</div></div><div class="grid-row"><div class="grid-cell">任务规划辅助</div><div class="grid-cell">`TodoListMiddleware`</div><div class="grid-cell">给 Agent 增加待办清单能力，帮助处理多步骤任务</div></div></div>
+
+<p>这里先知道名字和用途即可。本章会展开上下文摘要、模型调用限制、工具调用限制，以及如何用 <code>@wrap_tool_call</code> 自己包住一次工具调用。</p>
+<hr>
+<h2 id="2、DeepAgents-中的-middleware-配置"><a href="#2、DeepAgents-中的-middleware-配置" class="headerlink" title="2、DeepAgents 中的 middleware 配置"></a>2、DeepAgents 中的 middleware 配置</h2><h3 id="2-1-主智能体配置"><a href="#2-1-主智能体配置" class="headerlink" title="2.1 主智能体配置"></a>2.1 主智能体配置</h3><p>创建 DeepAgent 时，可以通过 <code>middleware</code> 参数传入一个列表。</p>
+<pre class="line-numbers language-python" data-language="python"><code class="language-python"><span class="token keyword">from</span> deepagents <span class="token keyword">import</span> create_deep_agent
+<span class="token keyword">from</span> langchain<span class="token punctuation">.</span>agents<span class="token punctuation">.</span>middleware <span class="token keyword">import</span> ModelCallLimitMiddleware
+<span class="token keyword">from</span> langgraph<span class="token punctuation">.</span>checkpoint<span class="token punctuation">.</span>memory <span class="token keyword">import</span> InMemorySaver
+
+<span class="token comment"># checkpointer 用来记录同一条线程的执行状态</span>
+<span class="token comment"># thread_id 也是 thread_limit 判断“同一个会话线程”的依据</span>
+checkpointer <span class="token operator">=</span> InMemorySaver<span class="token punctuation">(</span><span class="token punctuation">)</span>
+thread_config <span class="token operator">=</span> <span class="token punctuation">&#123;</span><span class="token string">"configurable"</span><span class="token punctuation">:</span> <span class="token punctuation">&#123;</span><span class="token string">"thread_id"</span><span class="token punctuation">:</span> <span class="token string">"erdaye"</span><span class="token punctuation">&#125;</span><span class="token punctuation">&#125;</span>
+
+main_agent <span class="token operator">=</span> create_deep_agent<span class="token punctuation">(</span>
+    model<span class="token operator">=</span>llm<span class="token punctuation">,</span>
+    tools<span class="token operator">=</span><span class="token punctuation">[</span>delete_database<span class="token punctuation">,</span> delete_file<span class="token punctuation">,</span> select_database<span class="token punctuation">]</span><span class="token punctuation">,</span>
+    checkpointer<span class="token operator">=</span>checkpointer<span class="token punctuation">,</span>
+    system_prompt<span class="token operator">=</span><span class="token string">"回答使用中文，调用对应的工具实现对应的功能！"</span><span class="token punctuation">,</span>
+    middleware<span class="token operator">=</span><span class="token punctuation">[</span>
+        ModelCallLimitMiddleware<span class="token punctuation">(</span>
+            thread_limit<span class="token operator">=</span><span class="token number">1</span><span class="token punctuation">,</span>  <span class="token comment"># 同一个 thread_id 下累计最多调用 1 次模型</span>
+            run_limit<span class="token operator">=</span><span class="token number">1</span><span class="token punctuation">,</span>  <span class="token comment"># 当前这次 invoke 内最多调用 1 次模型</span>
+            exit_behavior<span class="token operator">=</span><span class="token string">"error"</span><span class="token punctuation">,</span>  <span class="token comment"># 超限后抛出异常，便于后端统一捕获处理</span>
+        <span class="token punctuation">)</span>
+    <span class="token punctuation">]</span><span class="token punctuation">,</span>
+    <span class="token comment"># 本章重点是 middleware 调用限制，因此这里关闭人工审批拦截</span>
+    interrupt_on<span class="token operator">=</span><span class="token punctuation">&#123;</span>
+        <span class="token string">"delete_database"</span><span class="token punctuation">:</span> <span class="token boolean">False</span><span class="token punctuation">,</span>
+        <span class="token string">"delete_file"</span><span class="token punctuation">:</span> <span class="token boolean">False</span><span class="token punctuation">,</span>
+        <span class="token string">"select_database"</span><span class="token punctuation">:</span> <span class="token boolean">False</span><span class="token punctuation">,</span>
+    <span class="token punctuation">&#125;</span><span class="token punctuation">,</span>
+<span class="token punctuation">)</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<p>这段代码的意思是：给主智能体加一个模型调用限制中间件。只要主智能体需要调用模型，就会先经过这个中间件。</p>
+<p><code>middleware</code> 是列表，因此可以同时配置多个中间件：</p>
+<pre class="line-numbers language-python" data-language="python"><code class="language-python">main_agent <span class="token operator">=</span> create_deep_agent<span class="token punctuation">(</span>
+    model<span class="token operator">=</span>llm<span class="token punctuation">,</span>
+    tools<span class="token operator">=</span><span class="token punctuation">[</span><span class="token punctuation">.</span><span class="token punctuation">.</span><span class="token punctuation">.</span><span class="token punctuation">]</span><span class="token punctuation">,</span>
+    middleware<span class="token operator">=</span><span class="token punctuation">[</span>
+        middleware_a<span class="token punctuation">,</span>
+        middleware_b<span class="token punctuation">,</span>
+        middleware_c<span class="token punctuation">,</span>
+    <span class="token punctuation">]</span><span class="token punctuation">,</span>
+<span class="token punctuation">)</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<p>不建议给同一种限制重复配置多个实例。比如同时放两个 <code>ModelCallLimitMiddleware</code>，后续排查时很难判断到底是哪条规则触发了限制。更清楚的做法是：一个类型只配一个实例，把阈值和超限行为写明白。</p>
+<h3 id="2-2-子智能体配置"><a href="#2-2-子智能体配置" class="headerlink" title="2.2 子智能体配置"></a>2.2 子智能体配置</h3><p>子智能体本质上也是一个独立的 Agent 配置，因此也可以配置 <code>middleware</code>。</p>
+<p>字典式子智能体常见字段如下：</p>
+<pre class="line-numbers language-python" data-language="python"><code class="language-python">db_agent <span class="token operator">=</span> <span class="token punctuation">&#123;</span>
+    <span class="token string">"name"</span><span class="token punctuation">:</span> <span class="token string">"db_helper"</span><span class="token punctuation">,</span>
+    <span class="token string">"description"</span><span class="token punctuation">:</span> <span class="token string">"负责数据库查询任务。"</span><span class="token punctuation">,</span>
+    <span class="token string">"system_prompt"</span><span class="token punctuation">:</span> <span class="token string">"你是一个专业的数据库查询助手。"</span><span class="token punctuation">,</span>
+    <span class="token string">"tools"</span><span class="token punctuation">:</span> <span class="token punctuation">[</span>query_table<span class="token punctuation">,</span> query_schema<span class="token punctuation">]</span><span class="token punctuation">,</span>
+    <span class="token string">"middleware"</span><span class="token punctuation">:</span> <span class="token punctuation">[</span>
+        <span class="token comment"># 子智能体自己的中间件</span>
+    <span class="token punctuation">]</span><span class="token punctuation">,</span>
+<span class="token punctuation">&#125;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<p>这里要分清两层：</p>
+<div class="data-grid data-grid-link-table"><div class="grid-header"><div class="grid-cell">配置位置</div><div class="grid-cell">影响范围</div></div><div class="grid-row"><div class="grid-cell">`create_deep_agent(... middleware=...)`</div><div class="grid-cell">影响主智能体自己的执行链路</div></div><div class="grid-row"><div class="grid-cell">子智能体字典里的 `middleware`</div><div class="grid-cell">影响该子智能体自己的链路</div></div></div>
+
+<p>在「深度研搜」项目里，如果某个子智能体特别容易循环，例如数据库助手反复生成 SQL、反复查询，就可以只给数据库助手单独加工具或模型调用限制。</p>
+<hr>
+<h2 id="3、上下文摘要：SummarizationMiddleware"><a href="#3、上下文摘要：SummarizationMiddleware" class="headerlink" title="3、上下文摘要：SummarizationMiddleware"></a>3、上下文摘要：SummarizationMiddleware</h2><h3 id="3-1-适用问题"><a href="#3-1-适用问题" class="headerlink" title="3.1 适用问题"></a>3.1 适用问题</h3><p>模型的上下文窗口不是无限的。对话轮次很多，或者 Agent 执行过程很长时，<code>messages</code> 里会积累大量历史消息、工具结果和中间过程。最粗暴的处理方式是把旧消息丢掉，但这样容易丢失关键背景。</p>
+<p>更合理的做法是：在上下文快要过长之前，把一部分历史消息交给模型总结成短摘要，再把摘要放回上下文。这就是摘要中间件的作用。</p>
+<h3 id="3-2-核心参数"><a href="#3-2-核心参数" class="headerlink" title="3.2 核心参数"></a>3.2 核心参数</h3><p>摘要中间件通常要关心三个参数。</p>
+<div class="data-grid data-grid-link-table"><div class="grid-header"><div class="grid-cell">参数</div><div class="grid-cell">说明</div></div><div class="grid-row"><div class="grid-cell">`model`</div><div class="grid-cell">使用哪个模型做摘要压缩</div></div><div class="grid-row"><div class="grid-cell">`trigger`</div><div class="grid-cell">什么时候触发摘要，例如 Token 数、消息数、上下文比例</div></div><div class="grid-row"><div class="grid-cell">`keep`</div><div class="grid-cell">摘要后保留多少最近上下文，避免最新消息丢失</div></div></div>
+
+<p>示意代码：</p>
+<pre class="line-numbers language-python" data-language="python"><code class="language-python"><span class="token keyword">from</span> langchain<span class="token punctuation">.</span>agents<span class="token punctuation">.</span>middleware <span class="token keyword">import</span> SummarizationMiddleware
+
+summary_middleware <span class="token operator">=</span> SummarizationMiddleware<span class="token punctuation">(</span>
+    model<span class="token operator">=</span>llm<span class="token punctuation">,</span>
+    trigger<span class="token operator">=</span><span class="token punctuation">(</span><span class="token string">"tokens"</span><span class="token punctuation">,</span> <span class="token number">4000</span><span class="token punctuation">)</span><span class="token punctuation">,</span>  <span class="token comment"># 消息累计到约 4000 token 时触发摘要</span>
+    keep<span class="token operator">=</span><span class="token punctuation">(</span><span class="token string">"messages"</span><span class="token punctuation">,</span> <span class="token number">20</span><span class="token punctuation">)</span><span class="token punctuation">,</span>  <span class="token comment"># 摘要后保留最近 20 条原始消息</span>
+<span class="token punctuation">)</span>
+
+main_agent <span class="token operator">=</span> create_deep_agent<span class="token punctuation">(</span>
+    model<span class="token operator">=</span>llm<span class="token punctuation">,</span>
+    tools<span class="token operator">=</span><span class="token punctuation">[</span><span class="token punctuation">.</span><span class="token punctuation">.</span><span class="token punctuation">.</span><span class="token punctuation">]</span><span class="token punctuation">,</span>
+    middleware<span class="token operator">=</span><span class="token punctuation">[</span>summary_middleware<span class="token punctuation">]</span><span class="token punctuation">,</span>
+<span class="token punctuation">)</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<p><code>trigger=(&quot;tokens&quot;, 4000)</code> 不应该等于模型最大上下文长度。比如模型最大支持 8000 Token，就不要设置成 8000 才压缩，因为真到极限时，可能已经来不及把内容发给摘要模型了。</p>
+<p>更稳妥的做法是设置为最大上下文的三分之二或四分之三。</p>
+<p>旧资料里可能会看到 <code>max_tokens_before_summary</code>、<code>messages_to_keep</code> 这类参数名。在 LangChain 1.x 中，更推荐使用 <code>trigger</code> 和 <code>keep</code>，表达会更统一。</p>
+<h3 id="3-3-放在哪些任务里"><a href="#3-3-放在哪些任务里" class="headerlink" title="3.3 放在哪些任务里"></a>3.3 放在哪些任务里</h3><p>摘要中间件适合放在长任务里，例如：</p>
+<ul>
+<li>多轮深度搜索；</li>
+<li>多次网络检索；</li>
+<li>多次数据库查询；</li>
+<li>需要不断修订报告的任务；</li>
+<li>子智能体返回内容比较长的任务。</li>
+</ul>
+<p>它不是为了“让回答更好看”，而是为了让 Agent 在长链路中仍然保留关键上下文。短任务先不急着加摘要，长任务要提前考虑摘要。</p>
+<hr>
+<h2 id="4、模型调用限制：ModelCallLimitMiddleware"><a href="#4、模型调用限制：ModelCallLimitMiddleware" class="headerlink" title="4、模型调用限制：ModelCallLimitMiddleware"></a>4、模型调用限制：ModelCallLimitMiddleware</h2><h3 id="4-1-它限制的是什么"><a href="#4-1-它限制的是什么" class="headerlink" title="4.1 它限制的是什么"></a>4.1 它限制的是什么</h3><p>Agent 每次“思考下一步”都可能调用模型。一次正常任务里，模型调用几次是合理的：先理解任务，决定调用工具，看工具结果，再整理最终答案。</p>
+<p>但如果提示词不清晰、工具结果不稳定，Agent 可能不断重复：</p>
+<pre class="line-numbers language-text" data-language="text"><code class="language-text">调用模型 -> 决定调用工具 -> 工具结果不满意 -> 再调用模型 -> 再调用工具<span aria-hidden="true" class="line-numbers-rows"><span></span></span></code></pre>
+
+<p>模型调用限制就是给这条链路设置上限。</p>
+<h3 id="4-2-thread-limit-与-run-limit"><a href="#4-2-thread-limit-与-run-limit" class="headerlink" title="4.2 thread_limit 与 run_limit"></a>4.2 thread_limit 与 run_limit</h3><p>示例代码里用了两个限制：</p>
+<pre class="line-numbers language-python" data-language="python"><code class="language-python">ModelCallLimitMiddleware<span class="token punctuation">(</span>
+    thread_limit<span class="token operator">=</span><span class="token number">1</span><span class="token punctuation">,</span>  <span class="token comment"># 同一个 thread_id 下累计最多调用 1 次模型</span>
+    run_limit<span class="token operator">=</span><span class="token number">1</span><span class="token punctuation">,</span>  <span class="token comment"># 当前这次 invoke 内最多调用 1 次模型</span>
+    exit_behavior<span class="token operator">=</span><span class="token string">"error"</span><span class="token punctuation">,</span>  <span class="token comment"># 超限后抛出异常</span>
+<span class="token punctuation">)</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<p>它们的区别如下：</p>
+<div class="data-grid data-grid-link-table"><div class="grid-header"><div class="grid-cell">参数</div><div class="grid-cell">含义</div><div class="grid-cell">可以怎么理解</div></div><div class="grid-row"><div class="grid-cell">`thread_limit`</div><div class="grid-cell">同一个 `thread_id` 下的累计模型调用次数限制</div><div class="grid-cell">一个客户端或一条会话线程的总额度</div></div><div class="grid-row"><div class="grid-cell">`run_limit`</div><div class="grid-cell">单次执行里的模型调用次数限制</div><div class="grid-cell">当前这次请求最多调用多少次模型</div></div></div>
+
+<p>如果要使用 <code>thread_limit</code>，需要有稳定的 <code>thread_id</code>，通常还要配置 <code>checkpointer</code>。否则框架没有可靠位置记录“这条线程已经调用过几次模型”。</p>
+<p>在 Web 项目里，一个浏览器会话通常会对应一个稳定的 <code>thread_id</code>。服务端既能把多轮任务归到同一条会话链路上，也能知道当前执行结果应该推送给哪个前端连接。</p>
+<p>可以这样理解：</p>
+<pre class="line-numbers language-text" data-language="text"><code class="language-text">thread_limit 管一整条会话线程；
+run_limit 管这一次 invoke / stream。<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span></span></code></pre>
+
+<p>教学示例里把两个值都设置为 <code>1</code>，是为了快速触发限制。真实项目不能机械照搬，要根据一次正常任务大概需要几次模型调用来设置。</p>
+<p>比如深度搜索类任务通常要经历“理解问题 -&gt; 搜索 -&gt; 阅读结果 -&gt; 再搜索 -&gt; 汇总回答”。如果 <code>run_limit</code> 只给 1 或 2，很容易把正常任务误判成异常。</p>
+<h3 id="4-3-exit-behavior：end-还是-error"><a href="#4-3-exit-behavior：end-还是-error" class="headerlink" title="4.3 exit_behavior：end 还是 error"></a>4.3 exit_behavior：end 还是 error</h3><p>达到限制后，中间件需要决定怎么处理。常见取值有两个：</p>
+<div class="data-grid data-grid-link-table"><div class="grid-header"><div class="grid-cell">取值</div><div class="grid-cell">行为</div><div class="grid-cell">适合场景</div></div><div class="grid-row"><div class="grid-cell">`"end"`</div><div class="grid-cell">正常结束，返回一段限制提示</div><div class="grid-cell">提示内容可以直接给用户看</div></div><div class="grid-row"><div class="grid-cell">`"error"`</div><div class="grid-cell">抛出异常</div><div class="grid-cell">后端需要统一捕获异常，返回标准错误格式</div></div></div>
+
+<p>在企业级后端里，更推荐使用 <code>&quot;error&quot;</code>。</p>
+<p>原因是 <code>&quot;end&quot;</code> 属于“正常业务返回”，前端可能把它当成普通回答展示；而 <code>&quot;error&quot;</code> 可以交给接口层统一处理，返回固定格式：</p>
+<pre class="line-numbers language-json" data-language="json"><code class="language-json"><span class="token punctuation">&#123;</span>
+  <span class="token property">"code"</span><span class="token operator">:</span> <span class="token string">"MODEL_CALL_LIMIT"</span><span class="token punctuation">,</span>
+  <span class="token property">"message"</span><span class="token operator">:</span> <span class="token string">"本次任务模型调用次数过多，请缩小问题范围后重试"</span>
+<span class="token punctuation">&#125;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span></span></code></pre>
+
+<p>这样前后端协作会更清楚。</p>
+<h3 id="4-4-代码示例"><a href="#4-4-代码示例" class="headerlink" title="4.4 代码示例"></a>4.4 代码示例</h3><p>下面是教学代码中模型调用限制的核心部分：</p>
+<pre class="line-numbers language-python" data-language="python"><code class="language-python"><span class="token keyword">import</span> os
+
+<span class="token keyword">from</span> deepagents <span class="token keyword">import</span> create_deep_agent
+<span class="token keyword">from</span> dotenv <span class="token keyword">import</span> find_dotenv<span class="token punctuation">,</span> load_dotenv
+<span class="token keyword">from</span> langchain<span class="token punctuation">.</span>agents<span class="token punctuation">.</span>middleware <span class="token keyword">import</span> ModelCallLimitMiddleware
+<span class="token keyword">from</span> langchain<span class="token punctuation">.</span>chat_models <span class="token keyword">import</span> init_chat_model
+<span class="token keyword">from</span> langgraph<span class="token punctuation">.</span>checkpoint<span class="token punctuation">.</span>memory <span class="token keyword">import</span> InMemorySaver
+
+load_dotenv<span class="token punctuation">(</span>find_dotenv<span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span>
+
+llm <span class="token operator">=</span> init_chat_model<span class="token punctuation">(</span>
+    model<span class="token operator">=</span>os<span class="token punctuation">.</span>getenv<span class="token punctuation">(</span><span class="token string">"LLM_QWEN_MAX"</span><span class="token punctuation">)</span><span class="token punctuation">,</span>
+    model_provider<span class="token operator">=</span><span class="token string">"openai"</span><span class="token punctuation">,</span>
+<span class="token punctuation">)</span>
+
+<span class="token comment"># checkpointer 用来记录同一条线程的执行状态</span>
+<span class="token comment"># thread_id 也是 thread_limit 判断“同一个会话线程”的依据</span>
+checkpointer <span class="token operator">=</span> InMemorySaver<span class="token punctuation">(</span><span class="token punctuation">)</span>
+thread_config <span class="token operator">=</span> <span class="token punctuation">&#123;</span><span class="token string">"configurable"</span><span class="token punctuation">:</span> <span class="token punctuation">&#123;</span><span class="token string">"thread_id"</span><span class="token punctuation">:</span> <span class="token string">"erdaye"</span><span class="token punctuation">&#125;</span><span class="token punctuation">&#125;</span>
+
+main_agent <span class="token operator">=</span> create_deep_agent<span class="token punctuation">(</span>
+    model<span class="token operator">=</span>llm<span class="token punctuation">,</span>
+    tools<span class="token operator">=</span><span class="token punctuation">[</span>delete_database<span class="token punctuation">,</span> delete_file<span class="token punctuation">,</span> select_database<span class="token punctuation">]</span><span class="token punctuation">,</span>
+    checkpointer<span class="token operator">=</span>checkpointer<span class="token punctuation">,</span>
+    system_prompt<span class="token operator">=</span><span class="token string">"回答使用中文，调用对应的工具实现对应的功能！"</span><span class="token punctuation">,</span>
+    middleware<span class="token operator">=</span><span class="token punctuation">[</span>
+        ModelCallLimitMiddleware<span class="token punctuation">(</span>
+            thread_limit<span class="token operator">=</span><span class="token number">1</span><span class="token punctuation">,</span>  <span class="token comment"># 同一个 thread_id 下累计最多调用 1 次模型</span>
+            run_limit<span class="token operator">=</span><span class="token number">1</span><span class="token punctuation">,</span>  <span class="token comment"># 当前这次 invoke 内最多调用 1 次模型</span>
+            exit_behavior<span class="token operator">=</span><span class="token string">"error"</span><span class="token punctuation">,</span>  <span class="token comment"># 超限后抛出异常，便于后端统一捕获处理</span>
+        <span class="token punctuation">)</span>
+    <span class="token punctuation">]</span><span class="token punctuation">,</span>
+    <span class="token comment"># 本章重点是 middleware 调用限制，因此这里关闭人工审批拦截</span>
+    <span class="token comment"># 如果要演示危险动作审批，可以把高风险工具配置为 True 或 allowed_decisions</span>
+    interrupt_on<span class="token operator">=</span><span class="token punctuation">&#123;</span>
+        <span class="token string">"delete_database"</span><span class="token punctuation">:</span> <span class="token boolean">False</span><span class="token punctuation">,</span>
+        <span class="token string">"delete_file"</span><span class="token punctuation">:</span> <span class="token boolean">False</span><span class="token punctuation">,</span>
+        <span class="token string">"select_database"</span><span class="token punctuation">:</span> <span class="token boolean">False</span><span class="token punctuation">,</span>
+    <span class="token punctuation">&#125;</span><span class="token punctuation">,</span>
+<span class="token punctuation">)</span>
+
+<span class="token comment"># 这个请求通常需要多次“模型规划 -> 工具调用 -> 模型整理结果”</span>
+<span class="token comment"># run_limit=1 会让示例更容易触发模型调用上限</span>
+result <span class="token operator">=</span> main_agent<span class="token punctuation">.</span>invoke<span class="token punctuation">(</span>
+    <span class="token punctuation">&#123;</span>
+        <span class="token string">"messages"</span><span class="token punctuation">:</span> <span class="token punctuation">[</span>
+            <span class="token punctuation">&#123;</span>
+                <span class="token string">"role"</span><span class="token punctuation">:</span> <span class="token string">"user"</span><span class="token punctuation">,</span>
+                <span class="token string">"content"</span><span class="token punctuation">:</span> <span class="token string">"先查询product表的数据！再删除user表，最后，删除zhaoweifeng.txt文件"</span><span class="token punctuation">,</span>
+            <span class="token punctuation">&#125;</span>
+        <span class="token punctuation">]</span>
+    <span class="token punctuation">&#125;</span><span class="token punctuation">,</span>
+    config<span class="token operator">=</span>thread_config<span class="token punctuation">,</span>
+<span class="token punctuation">)</span>
+
+<span class="token keyword">print</span><span class="token punctuation">(</span><span class="token string-interpolation"><span class="token string">f"最终结果</span><span class="token interpolation"><span class="token punctuation">&#123;</span>result<span class="token punctuation">[</span><span class="token string">'messages'</span><span class="token punctuation">]</span><span class="token punctuation">[</span><span class="token operator">-</span><span class="token number">1</span><span class="token punctuation">]</span><span class="token punctuation">.</span>content<span class="token punctuation">&#125;</span></span><span class="token string">"</span></span><span class="token punctuation">)</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<p><code>thread_config</code> 里的 <code>thread_id</code> 很关键。它让中间件知道当前调用属于哪条线程，也让检查点、人机协作、WebSocket 推送都能围绕同一条会话展开。</p>
+<h3 id="4-5-运行结果解析"><a href="#4-5-运行结果解析" class="headerlink" title="4.5 运行结果解析"></a>4.5 运行结果解析</h3><p>运行 <code>13-model-call-limit-middleware.py</code> 时，可以重点观察两件事。</p>
+<p>第一，工具确实被调用了：</p>
+<pre class="line-numbers language-text" data-language="text"><code class="language-text">调用了select_database工具。查询了product表数据
+调用了删除了delete_database工具。删除了user表
+调用了删除了delete_file工具。删除了zhaoweifeng.txt文件<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span></span></code></pre>
+
+<p>第二，工具调用结束后，Agent 还需要再次调用模型来整理下一步或生成最终回答。因为示例里把 <code>thread_limit</code> 和 <code>run_limit</code> 都设置成了 <code>1</code>，这次新的模型调用会在 <code>before_model</code> 阶段被中间件拦住：</p>
+<pre class="line-numbers language-text" data-language="text"><code class="language-text">ModelCallLimitExceededError:
+Model call limits exceeded: thread limit (1/1), run limit (1/1)
+During task with name 'ModelCallLimitMiddleware.before_model'<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span></span></code></pre>
+
+<p>这说明 <code>ModelCallLimitMiddleware</code> 管的是“模型调用次数”，不是“工具调用次数”。所以你会看到工具已经执行，但后续模型调用超限后仍然抛异常。</p>
+<hr>
+<h2 id="5、工具调用限制：ToolCallLimitMiddleware"><a href="#5、工具调用限制：ToolCallLimitMiddleware" class="headerlink" title="5、工具调用限制：ToolCallLimitMiddleware"></a>5、工具调用限制：ToolCallLimitMiddleware</h2><h3 id="5-1-和模型调用限制的区别"><a href="#5-1-和模型调用限制的区别" class="headerlink" title="5.1 和模型调用限制的区别"></a>5.1 和模型调用限制的区别</h3><p>模型调用限制管“思考次数”，工具调用限制管“行动次数”。</p>
+<p>比如一个数据库助手可以调用：</p>
+<ul>
+<li>查询数据库表名工具；</li>
+<li>查询表结构工具；</li>
+<li>执行 SQL 工具。</li>
+</ul>
+<p>如果工具没有限制，Agent 可能反复查表结构、反复执行相似 SQL。数据库、网络搜索、RAG 这类工具本身就有成本或性能压力，更需要限制。</p>
+<h3 id="5-2-全局限制和单工具限制"><a href="#5-2-全局限制和单工具限制" class="headerlink" title="5.2 全局限制和单工具限制"></a>5.2 全局限制和单工具限制</h3><p>工具调用限制可以分成两类：</p>
+<div class="data-grid data-grid-link-table"><div class="grid-header"><div class="grid-cell">限制类型</div><div class="grid-cell">说明</div></div><div class="grid-row"><div class="grid-cell">全局限制</div><div class="grid-cell">所有工具加起来最多调用多少次</div></div><div class="grid-row"><div class="grid-cell">单工具限制</div><div class="grid-cell">指定某个工具最多调用多少次</div></div></div>
+
+<p>示意代码：</p>
+<pre class="line-numbers language-python" data-language="python"><code class="language-python"><span class="token keyword">from</span> langchain<span class="token punctuation">.</span>agents<span class="token punctuation">.</span>middleware <span class="token keyword">import</span> ToolCallLimitMiddleware
+
+global_tool_limit <span class="token operator">=</span> ToolCallLimitMiddleware<span class="token punctuation">(</span>
+    thread_limit<span class="token operator">=</span><span class="token number">10</span><span class="token punctuation">,</span>  <span class="token comment"># 同一条会话线程里，所有工具累计最多调用 10 次</span>
+    run_limit<span class="token operator">=</span><span class="token number">5</span><span class="token punctuation">,</span>  <span class="token comment"># 当前这次 invoke 内，所有工具最多调用 5 次</span>
+<span class="token punctuation">)</span>
+
+search_tool_limit <span class="token operator">=</span> ToolCallLimitMiddleware<span class="token punctuation">(</span>
+    tool_name<span class="token operator">=</span><span class="token string">"search_web"</span><span class="token punctuation">,</span>  <span class="token comment"># 只限制 search_web 这个工具</span>
+    run_limit<span class="token operator">=</span><span class="token number">3</span><span class="token punctuation">,</span>  <span class="token comment"># 当前这次 invoke 内最多搜索 3 次</span>
+    exit_behavior<span class="token operator">=</span><span class="token string">"error"</span><span class="token punctuation">,</span>  <span class="token comment"># 超限后直接抛异常，交给业务层处理</span>
+<span class="token punctuation">)</span>
+
+sql_tool_limit <span class="token operator">=</span> ToolCallLimitMiddleware<span class="token punctuation">(</span>
+    tool_name<span class="token operator">=</span><span class="token string">"execute_sql"</span><span class="token punctuation">,</span>  <span class="token comment"># 只限制 execute_sql 这个工具</span>
+    run_limit<span class="token operator">=</span><span class="token number">2</span><span class="token punctuation">,</span>  <span class="token comment"># 当前这次 invoke 内最多执行 2 次 SQL</span>
+    exit_behavior<span class="token operator">=</span><span class="token string">"error"</span><span class="token punctuation">,</span>
+<span class="token punctuation">)</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<p>这段配置可以读成：</p>
+<ul>
+<li>同一个线程里，所有工具调用总次数最多 10 次；</li>
+<li>单次执行里，所有工具调用总次数最多 5 次；</li>
+<li>单次执行里，<code>search_web</code> 最多调用 3 次；</li>
+<li>单次执行里，<code>execute_sql</code> 最多调用 2 次；</li>
+<li>指定工具超限后抛异常。</li>
+</ul>
+<p>和模型调用限制一样，只要用到 <code>thread_limit</code>，就要保证同一条会话有稳定的 <code>thread_id</code>，并配置能保存线程状态的检查点。</p>
+<p>工具调用限制的 <code>exit_behavior</code> 比模型调用限制多一个常见选择：<code>&quot;continue&quot;</code>。</p>
+<div class="data-grid data-grid-link-table"><div class="grid-header"><div class="grid-cell">取值</div><div class="grid-cell">行为</div><div class="grid-cell">适合场景</div></div><div class="grid-row"><div class="grid-cell">`"continue"`</div><div class="grid-cell">阻止这次工具调用，把错误作为工具消息交回给 Agent</div><div class="grid-cell">希望 Agent 自己换一种方式处理</div></div><div class="grid-row"><div class="grid-cell">`"error"`</div><div class="grid-cell">立刻抛异常</div><div class="grid-cell">后端统一捕获、统一返回错误结构</div></div><div class="grid-row"><div class="grid-cell">`"end"`</div><div class="grid-cell">直接结束当前执行</div><div class="grid-cell">单工具场景下给出明确终止提示</div></div></div>
+
+<p>然后把它们一起放进 <code>middleware</code> 列表：</p>
+<pre class="line-numbers language-python" data-language="python"><code class="language-python">main_agent <span class="token operator">=</span> create_deep_agent<span class="token punctuation">(</span>
+    model<span class="token operator">=</span>llm<span class="token punctuation">,</span>
+    tools<span class="token operator">=</span><span class="token punctuation">[</span>search_web<span class="token punctuation">,</span> execute_sql<span class="token punctuation">]</span><span class="token punctuation">,</span>
+    middleware<span class="token operator">=</span><span class="token punctuation">[</span>
+        global_tool_limit<span class="token punctuation">,</span>
+        search_tool_limit<span class="token punctuation">,</span>
+        sql_tool_limit<span class="token punctuation">,</span>
+    <span class="token punctuation">]</span><span class="token punctuation">,</span>
+<span class="token punctuation">)</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<p>这里是基于同一套中间件机制补充的工程示意。它的配置方式和 <code>ModelCallLimitMiddleware</code> 一样，都是放进 <code>middleware</code> 列表。</p>
+<h3 id="5-3-阈值怎么设置"><a href="#5-3-阈值怎么设置" class="headerlink" title="5.3 阈值怎么设置"></a>5.3 阈值怎么设置</h3><p>阈值不能凭感觉乱写，建议先观察正常任务链路。</p>
+<p>比如“查询数据库中的药品信息并生成 PDF”可能需要：</p>
+<ol>
+<li>查询有哪些表；</li>
+<li>查询目标表结构；</li>
+<li>执行 SQL；</li>
+<li>生成 Markdown；</li>
+<li>转成 PDF。</li>
+</ol>
+<p>如果一次正常链路大概会调 5 个工具，那 <code>run_limit</code> 可以设置得稍微大一点，比如 8 或 10。设置太小，会误伤正常任务；设置太大，又拦不住循环。</p>
+<p>工程上常用的思路是：<code>正常调用次数 + 适当冗余 = 限制阈值</code>。</p>
+<hr>
+<h2 id="6、自定义工具中间件：-wrap-tool-call"><a href="#6、自定义工具中间件：-wrap-tool-call" class="headerlink" title="6、自定义工具中间件：@wrap_tool_call"></a>6、自定义工具中间件：@wrap_tool_call</h2><h3 id="6-1-什么时候需要自定义"><a href="#6-1-什么时候需要自定义" class="headerlink" title="6.1 什么时候需要自定义"></a>6.1 什么时候需要自定义</h3><p>前面讲的摘要、模型调用限制、工具调用限制，都是现成中间件。它们可以直接配置，但逻辑是框架预设好的。</p>
+<p>实际开发中，经常会遇到更细的需求：</p>
+<ul>
+<li>调用某个工具前记录日志；</li>
+<li>调用工具前检查用户权限；</li>
+<li>调用工具前统一改写参数；</li>
+<li>调用工具后过滤敏感结果；</li>
+<li>调用工具后把结果包装成统一格式；</li>
+<li>调用失败时改成业务可读的错误信息。</li>
+</ul>
+<p>这些逻辑适合用自定义中间件。</p>
+<p>在 LangChain Agent Middleware 里，工具调用中间件可以用 <code>@wrap_tool_call</code> 装饰器来定义。它的名字可以拆开理解：</p>
+<pre class="line-numbers language-text" data-language="text"><code class="language-text">wrap_tool_call = 包住一次工具调用<span aria-hidden="true" class="line-numbers-rows"><span></span></span></code></pre>
+
+<p>也就是说，Agent 原本要直接调用工具，现在先把这次工具调用交给你的函数。你的函数可以在工具执行前做一些事，也可以在工具执行后做一些事。</p>
+<h3 id="6-2-最小示例"><a href="#6-2-最小示例" class="headerlink" title="6.2 最小示例"></a>6.2 最小示例</h3><p>项目对应文件路径：<code>deepsearch-agents/examples/14-custom-tool-call-middleware.py</code></p>
+<pre class="line-numbers language-python" data-language="python"><code class="language-python"><span class="token keyword">from</span> langchain<span class="token punctuation">.</span>agents<span class="token punctuation">.</span>middleware <span class="token keyword">import</span> wrap_tool_call
+
+
+<span class="token decorator annotation punctuation">@wrap_tool_call</span>
+<span class="token keyword">def</span> <span class="token function">log_tool_call</span><span class="token punctuation">(</span>request<span class="token punctuation">,</span> handler<span class="token punctuation">)</span><span class="token punctuation">:</span>
+    <span class="token triple-quoted-string string">"""
+    工具调用中间件：在目标工具执行前后打印调用信息
+    """</span>
+    <span class="token keyword">print</span><span class="token punctuation">(</span><span class="token string">"--------进入了工具中间件----------"</span><span class="token punctuation">)</span>
+    <span class="token keyword">print</span><span class="token punctuation">(</span><span class="token string-interpolation"><span class="token string">f"request : </span><span class="token interpolation"><span class="token punctuation">&#123;</span>request<span class="token punctuation">&#125;</span></span><span class="token string">"</span></span><span class="token punctuation">)</span>  <span class="token comment"># 本次工具调用请求，包含工具名、工具参数等信息</span>
+    <span class="token keyword">print</span><span class="token punctuation">(</span><span class="token string-interpolation"><span class="token string">f"handler : </span><span class="token interpolation"><span class="token punctuation">&#123;</span>handler<span class="token punctuation">&#125;</span></span><span class="token string">"</span></span><span class="token punctuation">)</span>  <span class="token comment"># 真正执行目标工具的调用器</span>
+
+    <span class="token comment"># 前置增强：这里可以记录日志、做权限校验，或者改写 request 中的工具参数</span>
+    <span class="token comment"># handler(request) 是真正执行目标工具的关键步骤；不调用它，工具就会被中间件拦住</span>
+    result <span class="token operator">=</span> handler<span class="token punctuation">(</span>request<span class="token punctuation">)</span>
+
+    <span class="token comment"># 后置增强：这里可以包装返回结果、做敏感信息过滤，或者记录工具耗时</span>
+    <span class="token keyword">print</span><span class="token punctuation">(</span><span class="token string">"--------退出工具中间件----------"</span><span class="token punctuation">)</span>
+    <span class="token keyword">print</span><span class="token punctuation">(</span><span class="token string-interpolation"><span class="token string">f"result:</span><span class="token interpolation"><span class="token punctuation">&#123;</span>result<span class="token punctuation">&#125;</span></span><span class="token string">"</span></span><span class="token punctuation">)</span>
+
+    <span class="token keyword">return</span> result<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<p>这个函数有两个固定参数：</p>
+<div class="data-grid data-grid-link-table"><div class="grid-header"><div class="grid-cell">参数</div><div class="grid-cell">作用</div></div><div class="grid-row"><div class="grid-cell">`request`</div><div class="grid-cell">本次工具调用请求，里面包含工具名、工具参数等信息</div></div><div class="grid-row"><div class="grid-cell">`handler`</div><div class="grid-cell">真正执行目标工具的调用器</div></div></div>
+
+<p>最关键的一行是：</p>
+<pre class="line-numbers language-python" data-language="python"><code class="language-python">result <span class="token operator">=</span> handler<span class="token punctuation">(</span>request<span class="token punctuation">)</span><span aria-hidden="true" class="line-numbers-rows"><span></span></span></code></pre>
+
+<p>它表示：继续执行原本要调用的那个工具。如果没有这一行，中间件就把工具调用拦住了，后面的工具不会真正执行。这个特性有时也有用。比如权限检查失败时，可以不调用真实工具，直接返回一条业务错误消息。但初学时先记住：想让工具照常执行，就必须调用 <code>handler(request)</code>。</p>
+<h3 id="6-3-request、handler-与-handler-request"><a href="#6-3-request、handler-与-handler-request" class="headerlink" title="6.3 request、handler 与 handler(request)"></a>6.3 request、handler 与 handler(request)</h3><p>没有中间件时，Agent 调用工具可以抽象成：</p>
+<pre class="line-numbers language-text" data-language="text"><code class="language-text">Agent -> 工具调用器(handler) + 工具参数(request) -> Tool -> 返回结果<span aria-hidden="true" class="line-numbers-rows"><span></span></span></code></pre>
+
+<p>有了中间件后，Agent 不再直接调用工具，而是把“调用器”和“参数”交给中间件：</p>
+<pre class="line-numbers language-text" data-language="text"><code class="language-text">Agent -> 中间件(request, handler) -> handler(request) -> Tool -> result -> Agent<span aria-hidden="true" class="line-numbers-rows"><span></span></span></code></pre>
+
+<p>所以中间件既能看到调用前的参数，也能看到调用后的结果。</p>
+<p>这带来两个扩展点：</p>
+<div class="data-grid data-grid-link-table"><div class="grid-header"><div class="grid-cell">位置</div><div class="grid-cell">可以做什么</div></div><div class="grid-row"><div class="grid-cell">`handler(request)` 之前</div><div class="grid-cell">前置增强：日志、权限、参数改写</div></div><div class="grid-row"><div class="grid-cell">`handler(request)` 之后</div><div class="grid-cell">后置增强：结果包装、敏感词过滤、格式转换</div></div></div>
+
+<p>如果要看工具名和参数，通常会从 <code>request.tool_call</code> 中取：</p>
+<pre class="line-numbers language-python" data-language="python"><code class="language-python"><span class="token decorator annotation punctuation">@wrap_tool_call</span>
+<span class="token keyword">def</span> <span class="token function">monitor_tool</span><span class="token punctuation">(</span>request<span class="token punctuation">,</span> handler<span class="token punctuation">)</span><span class="token punctuation">:</span>
+    tool_name <span class="token operator">=</span> request<span class="token punctuation">.</span>tool_call<span class="token punctuation">[</span><span class="token string">"name"</span><span class="token punctuation">]</span>
+    tool_args <span class="token operator">=</span> request<span class="token punctuation">.</span>tool_call<span class="token punctuation">[</span><span class="token string">"args"</span><span class="token punctuation">]</span>
+
+    <span class="token keyword">print</span><span class="token punctuation">(</span><span class="token string-interpolation"><span class="token string">f"准备调用工具: </span><span class="token interpolation"><span class="token punctuation">&#123;</span>tool_name<span class="token punctuation">&#125;</span></span><span class="token string">"</span></span><span class="token punctuation">)</span>
+    <span class="token keyword">print</span><span class="token punctuation">(</span><span class="token string-interpolation"><span class="token string">f"工具参数: </span><span class="token interpolation"><span class="token punctuation">&#123;</span>tool_args<span class="token punctuation">&#125;</span></span><span class="token string">"</span></span><span class="token punctuation">)</span>
+
+    result <span class="token operator">=</span> handler<span class="token punctuation">(</span>request<span class="token punctuation">)</span>
+
+    <span class="token keyword">print</span><span class="token punctuation">(</span><span class="token string-interpolation"><span class="token string">f"工具调用完成: </span><span class="token interpolation"><span class="token punctuation">&#123;</span>tool_name<span class="token punctuation">&#125;</span></span><span class="token string">"</span></span><span class="token punctuation">)</span>
+    <span class="token keyword">return</span> result<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<p>这个结构和 Web 框架里的中间件、AOP 里的环绕增强很像：目标函数还在那里，只是调用路径先经过你写的这层逻辑。</p>
+<h3 id="6-4-配置到-DeepAgent"><a href="#6-4-配置到-DeepAgent" class="headerlink" title="6.4 配置到 DeepAgent"></a>6.4 配置到 DeepAgent</h3><p>定义好中间件以后，还需要配置到 Agent 的 <code>middleware</code> 列表中。</p>
+<pre class="line-numbers language-python" data-language="python"><code class="language-python"><span class="token keyword">from</span> deepagents <span class="token keyword">import</span> create_deep_agent
+<span class="token keyword">from</span> langgraph<span class="token punctuation">.</span>checkpoint<span class="token punctuation">.</span>memory <span class="token keyword">import</span> InMemorySaver
+
+<span class="token comment"># 自定义中间件和框架内置中间件一样，</span>
+<span class="token comment"># 都需要放到 middleware 列表里才会生效</span>
+deep_agent <span class="token operator">=</span> create_deep_agent<span class="token punctuation">(</span>
+    model<span class="token operator">=</span>llm<span class="token punctuation">,</span>
+    tools<span class="token operator">=</span><span class="token punctuation">[</span>add_numbers<span class="token punctuation">]</span><span class="token punctuation">,</span>
+    checkpointer<span class="token operator">=</span>InMemorySaver<span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">,</span>
+    middleware<span class="token operator">=</span><span class="token punctuation">[</span>log_tool_call<span class="token punctuation">]</span><span class="token punctuation">,</span>
+    system_prompt<span class="token operator">=</span><span class="token string">"你是一个计算器助手，使用add_numbers工具完成加法计算，回答仅返回计算结果。"</span><span class="token punctuation">,</span>
+<span class="token punctuation">)</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<p>只要 Agent 调用了 <code>add_numbers</code>，就会经过 <code>log_tool_call</code>。</p>
+<p>完整测试入口如下：</p>
+<pre class="line-numbers language-python" data-language="python"><code class="language-python"><span class="token keyword">if</span> __name__ <span class="token operator">==</span> <span class="token string">"__main__"</span><span class="token punctuation">:</span>
+    <span class="token comment"># 使用固定 thread_id，便于把一次测试调用归到同一个会话线程</span>
+    thread_config <span class="token operator">=</span> <span class="token punctuation">&#123;</span><span class="token string">"configurable"</span><span class="token punctuation">:</span> <span class="token punctuation">&#123;</span><span class="token string">"thread_id"</span><span class="token punctuation">:</span> <span class="token string">"middleware_test_1"</span><span class="token punctuation">&#125;</span><span class="token punctuation">&#125;</span>
+
+    result <span class="token operator">=</span> deep_agent<span class="token punctuation">.</span>invoke<span class="token punctuation">(</span>
+        <span class="token punctuation">&#123;</span><span class="token string">"messages"</span><span class="token punctuation">:</span> <span class="token punctuation">[</span><span class="token punctuation">&#123;</span><span class="token string">"role"</span><span class="token punctuation">:</span> <span class="token string">"user"</span><span class="token punctuation">,</span> <span class="token string">"content"</span><span class="token punctuation">:</span> <span class="token string">"帮我计算 100 + 200 的结果"</span><span class="token punctuation">&#125;</span><span class="token punctuation">]</span><span class="token punctuation">&#125;</span><span class="token punctuation">,</span>
+        config<span class="token operator">=</span>thread_config<span class="token punctuation">,</span>
+    <span class="token punctuation">)</span>
+
+    <span class="token keyword">print</span><span class="token punctuation">(</span><span class="token string">"\n=== 最终回复 ==="</span><span class="token punctuation">)</span>
+    <span class="token keyword">print</span><span class="token punctuation">(</span>result<span class="token punctuation">[</span><span class="token string">"messages"</span><span class="token punctuation">]</span><span class="token punctuation">[</span><span class="token operator">-</span><span class="token number">1</span><span class="token punctuation">]</span><span class="token punctuation">.</span>content<span class="token punctuation">)</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<p>无论是 LangChain 提供好的中间件，还是用 <code>@wrap_tool_call</code> 自己写出来的中间件，都要放到 <code>middleware</code> 列表里才会生效。</p>
+<h3 id="6-5-运行结果解析"><a href="#6-5-运行结果解析" class="headerlink" title="6.5 运行结果解析"></a>6.5 运行结果解析</h3><p>运行 <code>14-custom-tool-call-middleware.py</code> 时，输出很长，不需要逐字看完，重点抓住三类信息。</p>
+<p>第一，<code>request</code> 是一个 <code>ToolCallRequest</code>，里面最关键的是 <code>tool_call</code>：</p>
+<pre class="line-numbers language-text" data-language="text"><code class="language-text">ToolCallRequest(
+  tool_call=&#123;
+    'name': 'add_numbers',
+    'args': &#123;'a': 100, 'b': 200&#125;,
+    'id': 'call_...',
+    'type': 'tool_call'
+  &#125;,
+  ...
+)<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<p>这说明中间件可以拿到工具名、工具参数和工具调用 ID。项目里做日志、权限、参数保护时，通常就是从这里取值。</p>
+<p>第二，<code>handler</code> 是真正执行目标工具的调用器：</p>
+<pre class="line-numbers language-text" data-language="text"><code class="language-text">handler : &lt;function ToolNode._run_one.&lt;locals>.execute at ...><span aria-hidden="true" class="line-numbers-rows"><span></span></span></code></pre>
+
+<p>所以 <code>handler(request)</code> 不是普通打印语句，而是“继续执行 add_numbers 工具”的关键动作。输出中的工具日志也验证了这一点：</p>
+<pre class="line-numbers language-text" data-language="text"><code class="language-text">[工具执行] 100 + 200 = 300<span aria-hidden="true" class="line-numbers-rows"><span></span></span></code></pre>
+
+<p>第三，<code>result</code> 通常会带有工具返回内容、工具名和 <code>tool_call_id</code>：</p>
+<pre class="line-numbers language-text" data-language="text"><code class="language-text">result:content='300' name='add_numbers' tool_call_id='call_...'
+
+=== 最终回复 ===
+300<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span></span></code></pre>
+
+<p>这就是为什么后置增强里经常会读取 <code>result.content</code>：它才是工具真正返回给 Agent 的内容。实际项目里可以把 <code>tool_call[&quot;name&quot;]</code>、<code>tool_call[&quot;args&quot;]</code>、<code>result.content</code>、耗时和异常信息统一交给监控模块。</p>
+<h3 id="6-6-工程使用场景"><a href="#6-6-工程使用场景" class="headerlink" title="6.6 工程使用场景"></a>6.6 工程使用场景</h3><p>自定义工具中间件适合做“所有工具都要经过的统一逻辑”。</p>
+<p>比如在「深度研搜」项目中，后续可以考虑这些场景：</p>
+<div class="data-grid data-grid-link-table"><div class="grid-header"><div class="grid-cell">场景</div><div class="grid-cell">中间件可以做什么</div></div><div class="grid-row"><div class="grid-cell">工具调用日志</div><div class="grid-cell">记录工具名、参数、耗时、返回摘要</div></div><div class="grid-row"><div class="grid-cell">权限控制</div><div class="grid-cell">某些工具只有登录用户或企业用户可以调用</div></div><div class="grid-row"><div class="grid-cell">参数保护</div><div class="grid-cell">禁止模型传入危险路径或危险 SQL</div></div><div class="grid-row"><div class="grid-cell">结果脱敏</div><div class="grid-cell">数据库结果里隐藏手机号、身份证号等敏感字段</div></div><div class="grid-row"><div class="grid-cell">前端进度推送</div><div class="grid-cell">工具开始和结束时向 WebSocket 推送状态</div></div></div>
+
+<p>中间件的优势是集中处理。否则每个工具里都写一遍日志、权限、异常包装，代码会很散。</p>
+<p>后续进入「深度研搜」项目实战后，前端需要实时看到任务进度，例如“正在搜索网页”“正在查询数据库”“正在生成报告”。这类状态不适合散落在每个工具里，更适合由工具中间件统一采集工具名、参数、开始时间、结束时间、异常信息，再交给后端的监控模块，通过 WebSocket 推送给前端。这样既能做实时进度展示，也能沉淀一条可排查的执行链路。</p>
+<p>但也不要把所有业务逻辑都塞进中间件。可以按这个标准区分：</p>
+<div class="data-grid data-grid-link-table"><div class="grid-header"><div class="grid-cell">逻辑类型</div><div class="grid-cell">更适合放在哪里</div></div><div class="grid-row"><div class="grid-cell">某个工具自己的核心业务</div><div class="grid-cell">工具函数内部</div></div><div class="grid-row"><div class="grid-cell">所有工具都需要的日志、权限、脱敏、异常包装</div><div class="grid-cell">自定义工具中间件</div></div><div class="grid-row"><div class="grid-cell">是否允许执行高风险动作，需要人工确认</div><div class="grid-cell">`interrupt_on`</div></div><div class="grid-row"><div class="grid-cell">调用次数、上下文长度、成本边界</div><div class="grid-cell">现成限制类中间件</div></div></div>
+
+<p>这样分层后，工具负责业务动作，中间件负责执行链路治理，人机协作负责危险动作审批，职责会更清楚。</p>
+<hr>
+<h2 id="7、中间件与人机协作、进度推送"><a href="#7、中间件与人机协作、进度推送" class="headerlink" title="7、中间件与人机协作、进度推送"></a>7、中间件与人机协作、进度推送</h2><h3 id="7-1-middleware-与-interrupt-on-的区别"><a href="#7-1-middleware-与-interrupt-on-的区别" class="headerlink" title="7.1 middleware 与 interrupt_on 的区别"></a>7.1 middleware 与 interrupt_on 的区别</h3><p>上一章讲过 <code>interrupt_on</code>，它也是在工具执行前做拦截。但它和中间件的目标不同：</p>
+<div class="data-grid data-grid-link-table"><div class="grid-header"><div class="grid-cell">能力</div><div class="grid-cell">关注点</div><div class="grid-cell">典型用途</div></div><div class="grid-row"><div class="grid-cell">`interrupt_on`</div><div class="grid-cell">某个工具是否需要人工审批</div><div class="grid-cell">删除文件、删除表、发送邮件</div></div><div class="grid-row"><div class="grid-cell">`middleware`</div><div class="grid-cell">调用链路中统一加规则或限制</div><div class="grid-cell">日志、限流、压缩、权限、结果处理</div></div></div>
+
+<p><code>interrupt_on</code> 更像“危险动作审批”。<code>middleware</code> 更像“执行链路治理”。</p>
+<pre class="line-numbers language-mermaid" data-language="mermaid"><code class="language-mermaid"><span class="token keyword">flowchart</span> LR
+    A<span class="token text string">["Agent 准备调用工具"]</span> <span class="token arrow operator">--></span> B<span class="token text string">&#123;是否是高风险工具&#125;</span>
+    B <span class="token inter-arrow-label"><span class="token arrow-head arrow operator">--</span> <span class="token label property">是</span> <span class="token arrow operator">--></span></span> C<span class="token text string">["interrupt_on：暂停并等待人工决策"]</span>
+    B <span class="token inter-arrow-label"><span class="token arrow-head arrow operator">--</span> <span class="token label property">否</span> <span class="token arrow operator">--></span></span> D<span class="token text string">["middleware：日志、限流、脱敏、重试"]</span>
+    C <span class="token arrow operator">--></span> E<span class="token text string">&#123;人工决策&#125;</span>
+    E <span class="token inter-arrow-label"><span class="token arrow-head arrow operator">--</span> <span class="token label property">approve</span> <span class="token arrow operator">--></span></span> D
+    E <span class="token inter-arrow-label"><span class="token arrow-head arrow operator">--</span> <span class="token label property">reject</span> <span class="token arrow operator">--></span></span> F<span class="token text string">["终止或返回拒绝信息"]</span>
+    E <span class="token inter-arrow-label"><span class="token arrow-head arrow operator">--</span> <span class="token label property">edit</span> <span class="token arrow operator">--></span></span> G<span class="token text string">["修改参数后继续"]</span>
+    G <span class="token arrow operator">--></span> D
+    D <span class="token arrow operator">--></span> H<span class="token text string">["执行工具或继续链路"]</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<h3 id="7-2-组合配置示例"><a href="#7-2-组合配置示例" class="headerlink" title="7.2 组合配置示例"></a>7.2 组合配置示例</h3><p>在教学示例里，<code>create_deep_agent</code> 同时配置了 <code>checkpointer</code>、<code>middleware</code> 和 <code>interrupt_on</code>。</p>
+<pre class="line-numbers language-python" data-language="python"><code class="language-python">main_agent <span class="token operator">=</span> create_deep_agent<span class="token punctuation">(</span>
+    model<span class="token operator">=</span>llm<span class="token punctuation">,</span>
+    tools<span class="token operator">=</span><span class="token punctuation">[</span>delete_database<span class="token punctuation">,</span> delete_file<span class="token punctuation">,</span> select_database<span class="token punctuation">]</span><span class="token punctuation">,</span>
+    checkpointer<span class="token operator">=</span>checkpointer<span class="token punctuation">,</span>
+    middleware<span class="token operator">=</span><span class="token punctuation">[</span>
+        ModelCallLimitMiddleware<span class="token punctuation">(</span>
+            thread_limit<span class="token operator">=</span><span class="token number">1</span><span class="token punctuation">,</span>
+            run_limit<span class="token operator">=</span><span class="token number">1</span><span class="token punctuation">,</span>
+            exit_behavior<span class="token operator">=</span><span class="token string">"error"</span><span class="token punctuation">,</span>
+        <span class="token punctuation">)</span>
+    <span class="token punctuation">]</span><span class="token punctuation">,</span>
+    interrupt_on<span class="token operator">=</span><span class="token punctuation">&#123;</span>
+        <span class="token string">"delete_database"</span><span class="token punctuation">:</span> <span class="token boolean">False</span><span class="token punctuation">,</span>
+        <span class="token string">"delete_file"</span><span class="token punctuation">:</span> <span class="token boolean">False</span><span class="token punctuation">,</span>
+        <span class="token string">"select_database"</span><span class="token punctuation">:</span> <span class="token boolean">False</span><span class="token punctuation">,</span>
+    <span class="token punctuation">&#125;</span><span class="token punctuation">,</span>
+<span class="token punctuation">)</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<p>这个示例里 <code>interrupt_on</code> 都设置为 <code>False</code>，表示暂时不做人工审批，重点测试模型调用限制。</p>
+<p>真实项目里可以这样组合：</p>
+<pre class="line-numbers language-python" data-language="python"><code class="language-python">main_agent <span class="token operator">=</span> create_deep_agent<span class="token punctuation">(</span>
+    model<span class="token operator">=</span>llm<span class="token punctuation">,</span>
+    tools<span class="token operator">=</span><span class="token punctuation">[</span>delete_database<span class="token punctuation">,</span> delete_file<span class="token punctuation">,</span> select_database<span class="token punctuation">]</span><span class="token punctuation">,</span>
+    checkpointer<span class="token operator">=</span>checkpointer<span class="token punctuation">,</span>
+    middleware<span class="token operator">=</span><span class="token punctuation">[</span>
+        ModelCallLimitMiddleware<span class="token punctuation">(</span>
+            run_limit<span class="token operator">=</span><span class="token number">8</span><span class="token punctuation">,</span>
+            exit_behavior<span class="token operator">=</span><span class="token string">"error"</span><span class="token punctuation">,</span>
+        <span class="token punctuation">)</span>
+    <span class="token punctuation">]</span><span class="token punctuation">,</span>
+    interrupt_on<span class="token operator">=</span><span class="token punctuation">&#123;</span>
+        <span class="token string">"delete_database"</span><span class="token punctuation">:</span> <span class="token boolean">True</span><span class="token punctuation">,</span>
+        <span class="token string">"delete_file"</span><span class="token punctuation">:</span> <span class="token boolean">True</span><span class="token punctuation">,</span>
+    <span class="token punctuation">&#125;</span><span class="token punctuation">,</span>
+<span class="token punctuation">)</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<p>这样既能防止模型反复调用，又能拦住真正高风险的删除动作。</p>
+<h3 id="7-3-与-WebSocket-进度推送的关系"><a href="#7-3-与-WebSocket-进度推送的关系" class="headerlink" title="7.3 与 WebSocket 进度推送的关系"></a>7.3 与 WebSocket 进度推送的关系</h3><p>中间件本身不等于 WebSocket，但它很适合作为进度事件的采集点。</p>
+<p>比如工具中间件可以在这几个时刻记录事件：</p>
+<pre class="line-numbers language-text" data-language="text"><code class="language-text">准备调用工具 -> 推送 tool_started
+工具返回结果 -> 推送 tool_finished
+工具抛出异常 -> 推送 tool_failed<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span></span></code></pre>
+
+<p>WebSocket 层负责把事件发给前端；中间件负责在 Agent 执行链路中找到这些事件。两者职责分开，后面项目实战会更容易维护。</p>
+<p>这里还会再次用到稳定的 <code>thread_id</code>：HTTP 创建任务时返回 <code>thread_id</code>，前端再用这个 <code>thread_id</code> 建立 WebSocket 连接，服务端就能把同一条 Agent 链路里的进度推给对应用户。</p>
+<hr>
+<h2 id="8、工程使用建议"><a href="#8、工程使用建议" class="headerlink" title="8、工程使用建议"></a>8、工程使用建议</h2><h3 id="8-1-先观测，再设置限制"><a href="#8-1-先观测，再设置限制" class="headerlink" title="8.1 先观测，再设置限制"></a>8.1 先观测，再设置限制</h3><p>刚开始接入中间件时，不建议一上来就把限制设置得很死。</p>
+<p>更稳妥的路径是：</p>
+<ol>
+<li>先用日志或监控观察正常任务会调用几次模型、几次工具；</li>
+<li>找出常见任务的调用次数区间；</li>
+<li>再设置 <code>run_limit</code> 和 <code>thread_limit</code>；</li>
+<li>对超过阈值的异常任务做统一提示。</li>
+</ol>
+<p>否则很容易出现：用户问一个稍微复杂的问题，Agent 还没完成就被限制打断。</p>
+<h3 id="8-2-按子智能体分层设置限制"><a href="#8-2-按子智能体分层设置限制" class="headerlink" title="8.2 按子智能体分层设置限制"></a>8.2 按子智能体分层设置限制</h3><p>不要把所有 Agent 都用同一套限制。</p>
+<div class="data-grid data-grid-link-table"><div class="grid-header"><div class="grid-cell">智能体</div><div class="grid-cell">推荐限制思路</div></div><div class="grid-row"><div class="grid-cell">网络搜索助手</div><div class="grid-cell">限制搜索工具次数，避免重复搜</div></div><div class="grid-row"><div class="grid-cell">数据库查询助手</div><div class="grid-cell">限制 SQL 执行次数，避免反复试错</div></div><div class="grid-row"><div class="grid-cell">RAG 助手</div><div class="grid-cell">限制知识库问答次数，避免长链路循环</div></div><div class="grid-row"><div class="grid-cell">主智能体</div><div class="grid-cell">限制整体模型调用次数，控制总成本</div></div></div>
+
+<p>这也是多智能体项目要做“分层治理”的原因。</p>
+<h3 id="8-3-统一异常处理"><a href="#8-3-统一异常处理" class="headerlink" title="8.3 统一异常处理"></a>8.3 统一异常处理</h3><p>如果后续项目对接前端，建议后端统一捕获中间件抛出的异常，再给前端返回标准结构。</p>
+<p>这样前端能清楚区分：</p>
+<ul>
+<li>正常回答；</li>
+<li>模型调用次数超限；</li>
+<li>工具调用次数超限；</li>
+<li>人工审批拒绝；</li>
+<li>业务工具异常。</li>
+</ul>
+<p>否则所有内容都混在普通文本里，前端很难做稳定交互。</p>
+<h3 id="8-4-脱敏、重试与降级"><a href="#8-4-脱敏、重试与降级" class="headerlink" title="8.4 脱敏、重试与降级"></a>8.4 脱敏、重试与降级</h3><p>本章重点讲“限制”，但真实项目不能只靠限制。参考官方内置中间件，生产环境通常还会补三类能力：</p>
+<div class="data-grid data-grid-link-table"><div class="grid-header"><div class="grid-cell">能力</div><div class="grid-cell">可以考虑的中间件</div><div class="grid-cell">使用场景</div></div><div class="grid-row"><div class="grid-cell">敏感信息处理</div><div class="grid-cell">`PIIMiddleware`</div><div class="grid-cell">对邮箱、手机号、身份证号等做遮蔽或阻断</div></div><div class="grid-row"><div class="grid-cell">模型失败恢复</div><div class="grid-cell">`ModelRetryMiddleware`、`ModelFallbackMiddleware`</div><div class="grid-cell">模型超时、限流、服务不可用时重试或切换备用模型</div></div><div class="grid-row"><div class="grid-cell">工具失败恢复</div><div class="grid-cell">`ToolRetryMiddleware`</div><div class="grid-cell">搜索、网页抓取、RAG 查询这类外部工具偶发失败时重试</div></div></div>
+
+<p>这里要注意一个边界：不是所有工具都适合重试。搜索、读取网页这类“多调一次问题不大”的工具可以重试；删除文件、删除数据库、发送邮件、扣款这类有副作用的工具，不要轻易自动重试，更适合走人工审批或业务幂等设计。</p>
+<hr>
+<h2 id="9、DeepAgents-中的-Skill-配置"><a href="#9、DeepAgents-中的-Skill-配置" class="headerlink" title="9、DeepAgents 中的 Skill 配置"></a>9、DeepAgents 中的 Skill 配置</h2><p>前面几章已经讲过工具、子智能体、Backend 和中间件。DeepAgents 里还有一个常用扩展能力：<code>skills</code>。</p>
+<p>这里不再展开 Skill 的完整概念，完整基础知识放到 <a href="/2023/09/28/llm/1-29-skills-and-ai-coding-tools/">第 29 章 Agent Skills 智能体技能与 AI 编程工具实践</a>。本节只解决一个工程问题：<strong>在 DeepAgents 中，怎么把 Skill 目录挂到 Agent 上。</strong></p>
+<h3 id="9-1-FilesystemBackend-的作用"><a href="#9-1-FilesystemBackend-的作用" class="headerlink" title="9.1 FilesystemBackend 的作用"></a>9.1 FilesystemBackend 的作用</h3><p>DeepAgents 读取 Skill 时，本质上要访问一个文件夹。</p>
+<p>前面讲 Backend 时说过，<code>FilesystemBackend</code> 可以把 Agent 的文件系统映射到本地目录。配置 Skill 时，也要先告诉 Agent：技能文件夹在哪里。</p>
+<p>这个示例的核心链路是：用户请求 -&gt; Agent 读取 Skill 元数据 -&gt; 按需加载 <code>SKILL.md</code> -&gt; 根据技能规则生成回复。</p>
+<p>示例开头先完成环境变量加载和模型初始化：</p>
+<pre class="line-numbers language-python" data-language="python"><code class="language-python"><span class="token keyword">from</span> pathlib <span class="token keyword">import</span> Path
+
+<span class="token keyword">from</span> deepagents <span class="token keyword">import</span> create_deep_agent
+<span class="token keyword">from</span> deepagents<span class="token punctuation">.</span>backends <span class="token keyword">import</span> FilesystemBackend
+<span class="token keyword">from</span> dotenv <span class="token keyword">import</span> find_dotenv<span class="token punctuation">,</span> load_dotenv
+<span class="token keyword">from</span> langchain<span class="token punctuation">.</span>chat_models <span class="token keyword">import</span> init_chat_model
+
+load_dotenv<span class="token punctuation">(</span>find_dotenv<span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span>
+
+llm <span class="token operator">=</span> init_chat_model<span class="token punctuation">(</span>model<span class="token operator">=</span><span class="token string">"qwen-max"</span><span class="token punctuation">,</span> model_provider<span class="token operator">=</span><span class="token string">"openai"</span><span class="token punctuation">)</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<h3 id="9-2-创建-FilesystemBackend"><a href="#9-2-创建-FilesystemBackend" class="headerlink" title="9.2 创建 FilesystemBackend"></a>9.2 创建 FilesystemBackend</h3><p>Skill 文件需要通过 Backend 暴露给 Agent。示例中把当前 Python 文件所在目录作为根目录，后续 <code>skills</code> 路径都相对于它查找。</p>
+<pre class="line-numbers language-python" data-language="python"><code class="language-python"><span class="token comment"># Skill 文件需要通过 Backend 暴露给 Agent</span>
+<span class="token comment"># 当前文件在 examples/ 下，所以 current_dir 指向 examples/</span>
+current_dir <span class="token operator">=</span> Path<span class="token punctuation">(</span>__file__<span class="token punctuation">)</span><span class="token punctuation">.</span>parent<span class="token punctuation">.</span>resolve<span class="token punctuation">(</span><span class="token punctuation">)</span>
+
+file_backend <span class="token operator">=</span> FilesystemBackend<span class="token punctuation">(</span>
+    <span class="token comment"># Agent 能访问的文件系统根目录</span>
+    root_dir<span class="token operator">=</span>current_dir<span class="token punctuation">,</span>
+    <span class="token comment"># 开启虚拟沙箱，限制 Agent 只能在这个根目录下访问文件</span>
+    virtual_mode<span class="token operator">=</span><span class="token boolean">True</span><span class="token punctuation">,</span>
+<span class="token punctuation">)</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<p>这段代码表示：</p>
+<div class="data-grid data-grid-link-table"><div class="grid-header"><div class="grid-cell">配置</div><div class="grid-cell">含义</div></div><div class="grid-row"><div class="grid-cell">`root_dir=current_dir`</div><div class="grid-cell">把当前示例文件所在目录作为文件系统根目录</div></div><div class="grid-row"><div class="grid-cell">`virtual_mode=True`</div><div class="grid-cell">开启虚拟沙箱，限制 Agent 只能在这个根目录下访问文件</div></div></div>
+
+<h3 id="9-3-注册-skills-参数"><a href="#9-3-注册-skills-参数" class="headerlink" title="9.3 注册 skills 参数"></a>9.3 注册 skills 参数</h3><p>接着在 <code>create_deep_agent</code> 中同时配置 <code>backend</code> 和 <code>skills</code>。</p>
+<pre class="line-numbers language-python" data-language="python"><code class="language-python"><span class="token comment"># skills=["skills"] 表示加载 current_dir/skills 目录下的技能包</span>
+<span class="token comment"># 每个技能包至少需要一个 SKILL.md，模型会先读取元数据，再按需读取完整技能说明</span>
+main_agent <span class="token operator">=</span> create_deep_agent<span class="token punctuation">(</span>
+    model<span class="token operator">=</span>llm<span class="token punctuation">,</span>
+    backend<span class="token operator">=</span>file_backend<span class="token punctuation">,</span>
+    skills<span class="token operator">=</span><span class="token punctuation">[</span>
+        <span class="token string">"skills"</span><span class="token punctuation">,</span>
+    <span class="token punctuation">]</span><span class="token punctuation">,</span>
+    system_prompt<span class="token operator">=</span><span class="token string">"你是一个智能助手，可以使用 SKILL 技能"</span><span class="token punctuation">,</span>
+<span class="token punctuation">)</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<p>这里的 <code>&quot;skills&quot;</code> 是相对于 <code>file_backend.root_dir</code> 的目录名。</p>
+<p>如果本地结构是：</p>
+<pre class="line-numbers language-text" data-language="text"><code class="language-text">examples/
+  15-skills-from-filesystem.py
+  skills/
+    emoji-translator/
+      SKILL.md
+    code-reviewer/
+      SKILL.md<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<p>那么 <code>skills=[&quot;skills&quot;]</code> 就表示：去 <code>examples/skills</code> 目录下找技能。</p>
+<p>这里要分清三个路径概念：</p>
+<div class="data-grid data-grid-link-table"><div class="grid-header"><div class="grid-cell">概念</div><div class="grid-cell">示例</div><div class="grid-cell">说明</div></div><div class="grid-row"><div class="grid-cell">物理路径</div><div class="grid-cell">`examples/skills/`</div><div class="grid-cell">本地磁盘上真正存放 Skill 的目录</div></div><div class="grid-row"><div class="grid-cell">Backend 根目录</div><div class="grid-cell">`examples/`</div><div class="grid-cell">`FilesystemBackend(root_dir=...)` 指向的位置</div></div><div class="grid-row"><div class="grid-cell">Agent 配置路径</div><div class="grid-cell">`skills=["skills"]`</div><div class="grid-cell">相对于 Backend 根目录的 Skill 目录</div></div></div>
+
+<p>也就是说，<code>skills=[&quot;skills&quot;]</code> 不是随便写一个字符串，而是让 Agent 通过 Backend 去它能访问的文件系统中查找 <code>skills/</code> 目录。</p>
+<p>以 <code>emoji-translator/SKILL.md</code> 为例，文件开头的元数据大致是这样：</p>
+<pre class="line-numbers language-markdown" data-language="markdown"><code class="language-markdown"><span class="token front-matter-block"><span class="token punctuation">---</span>
+<span class="token front-matter yaml language-yaml"><span class="token key atrule">name</span><span class="token punctuation">:</span> emoji<span class="token punctuation">-</span>translator
+<span class="token key atrule">description</span><span class="token punctuation">:</span> 当用户明确要求把自然语言翻译成 Emoji、把 Emoji 解释成文字，或要求“表情翻译/emoji 翻译”时使用。</span>
+<span class="token punctuation">---</span></span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span></span></code></pre>
+
+<p>这里的 <code>description</code> 很关键。DeepAgents 会先根据 Skill 元数据判断是否需要加载完整的 <code>SKILL.md</code>，所以描述越清楚，模型越容易在合适的场景触发正确技能。</p>
+<h3 id="9-4-执行调用示例"><a href="#9-4-执行调用示例" class="headerlink" title="9.4 执行调用示例"></a>9.4 执行调用示例</h3><pre class="line-numbers language-python" data-language="python"><code class="language-python"><span class="token comment"># 这句话明确要求使用“表情翻译技能”，便于触发 emoji-translator/SKILL.md。</span>
+query <span class="token operator">=</span> <span class="token string">"我早上起床晚了，赶公交车差点摔倒，还好最后到了公司。请你只用表情翻译技能。"</span>
+
+<span class="token comment"># DeepAgents 沿用 messages 输入结构，最终回复在 messages 最后一条。</span>
+result <span class="token operator">=</span> main_agent<span class="token punctuation">.</span>invoke<span class="token punctuation">(</span>
+    <span class="token punctuation">&#123;</span>
+        <span class="token string">"messages"</span><span class="token punctuation">:</span> <span class="token punctuation">[</span>
+            <span class="token punctuation">&#123;</span>
+                <span class="token string">"role"</span><span class="token punctuation">:</span> <span class="token string">"user"</span><span class="token punctuation">,</span>
+                <span class="token string">"content"</span><span class="token punctuation">:</span> query<span class="token punctuation">,</span>
+            <span class="token punctuation">&#125;</span>
+        <span class="token punctuation">]</span>
+    <span class="token punctuation">&#125;</span>
+<span class="token punctuation">)</span>
+
+<span class="token keyword">print</span><span class="token punctuation">(</span><span class="token string-interpolation"><span class="token string">f"最终输出结果：</span><span class="token interpolation"><span class="token punctuation">&#123;</span>result<span class="token punctuation">[</span><span class="token string">'messages'</span><span class="token punctuation">]</span><span class="token punctuation">[</span><span class="token operator">-</span><span class="token number">1</span><span class="token punctuation">]</span><span class="token punctuation">.</span>content<span class="token punctuation">&#125;</span></span><span class="token string">"</span></span><span class="token punctuation">)</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<p>如果 <code>emoji-translator</code> 的 <code>description</code> 写得清楚，模型会根据 <code>emoji-translator/SKILL.md</code> 里的规则输出表情组合。</p>
+<p>在示例代码仓库根目录运行：</p>
+<pre class="line-numbers language-bash" data-language="bash"><code class="language-bash">uv run examples/15-skills-from-filesystem.py<span aria-hidden="true" class="line-numbers-rows"><span></span></span></code></pre>
+
+<p>关键输出大致是：</p>
+<pre class="line-numbers language-text" data-language="text"><code class="language-text">最终输出结果：🛌⏰🏃‍♀️🚌💨🏢<span aria-hidden="true" class="line-numbers-rows"><span></span></span></code></pre>
+
+<p>这个结果说明 <code>emoji-translator</code> 技能已经被触发：用户输入的“起晚、赶公交、到公司”被转换成了对应的 Emoji 序列。</p>
+<h3 id="9-5-配置注意事项"><a href="#9-5-配置注意事项" class="headerlink" title="9.5 配置注意事项"></a>9.5 配置注意事项</h3><p>使用 DeepAgents Skills 时重点记住这些点：</p>
+<div class="data-grid data-grid-link-table"><div class="grid-header"><div class="grid-cell">注意事项</div><div class="grid-cell">说明</div></div><div class="grid-row"><div class="grid-cell">先配置 `backend`</div><div class="grid-cell">没有文件系统 Backend，Agent 不知道去哪里找 Skill</div></div><div class="grid-row"><div class="grid-cell">`skills` 写目录名</div><div class="grid-cell">写的是相对于 `FilesystemBackend.root_dir` 的技能目录</div></div><div class="grid-row"><div class="grid-cell">文件夹名和 `name` 对齐</div><div class="grid-cell">技能文件夹名建议等于 `SKILL.md` 中的 `name`</div></div><div class="grid-row"><div class="grid-cell">`description` 要清晰</div><div class="grid-cell">它决定模型什么时候加载该 Skill</div></div><div class="grid-row"><div class="grid-cell">采用渐进式加载</div><div class="grid-cell">先看 YAML 元数据，再按需读取完整 `SKILL.md`</div></div><div class="grid-row"><div class="grid-cell">Skill 不是越多越好</div><div class="grid-cell">技能过多、功能重复，会降低触发稳定性</div></div></div>
+
+<p>教学里给出的经验是：不要一次塞太多 Skill，尤其不要塞功能重复的 Skill。模型不是人类的插件管理器，技能太多时，它也会难以选择。</p>
+<h3 id="9-6-常见问题排查"><a href="#9-6-常见问题排查" class="headerlink" title="9.6 常见问题排查"></a>9.6 常见问题排查</h3><p>如果 Skill 没有按预期触发，可以按下面几个方向检查：</p>
+<div class="data-grid data-grid-link-table"><div class="grid-header"><div class="grid-cell">问题现象</div><div class="grid-cell">排查方向</div></div><div class="grid-row"><div class="grid-cell">Agent 完全不知道 Skill 存在</div><div class="grid-cell">是否配置了 `FilesystemBackend`，`skills` 路径是否写对</div></div><div class="grid-row"><div class="grid-cell">Skill 目录存在但没有触发</div><div class="grid-cell">`description` 是否明确写出触发场景</div></div><div class="grid-row"><div class="grid-cell">触发了错误的 Skill</div><div class="grid-cell">多个 Skill 的描述是否过于接近，职责是否重叠</div></div><div class="grid-row"><div class="grid-cell">找不到资源或脚本</div><div class="grid-cell">`SKILL.md` 中的相对路径是否和 Skill 目录结构一致</div></div><div class="grid-row"><div class="grid-cell">输出格式不稳定</div><div class="grid-cell">`SKILL.md` 是否写清楚输入边界、执行步骤和最终输出格式</div></div></div>
+
+<p>这里要记住一句话：Skill 不是自动插件系统，它主要靠元数据和提示词让模型判断“什么时候该用哪项能力”。</p>
+<hr>
+<p><strong>本章小结：</strong></p>
+<p>中间件是 Agent 工程化里很重要的一层。它不直接完成业务任务，而是统一治理执行链路。</p>
+<p>本章要掌握的重点有这些：</p>
+<div class="data-grid data-grid-link-table"><div class="grid-header"><div class="grid-cell">知识点</div><div class="grid-cell">结论</div></div><div class="grid-row"><div class="grid-cell">中间件的位置</div><div class="grid-cell">位于 Agent 与模型、工具、子智能体之间</div></div><div class="grid-row"><div class="grid-cell">常用现成中间件</div><div class="grid-cell">本章重点讲摘要压缩、模型调用限制、工具调用限制</div></div><div class="grid-row"><div class="grid-cell">官方扩展方向</div><div class="grid-cell">还包括脱敏、重试、降级、人工审批、工具筛选等</div></div><div class="grid-row"><div class="grid-cell">自定义工具中间件</div><div class="grid-cell">使用 `@wrap_tool_call` 包住工具调用</div></div><div class="grid-row"><div class="grid-cell">`handler(request)`</div><div class="grid-cell">在自定义中间件里继续执行目标工具</div></div><div class="grid-row"><div class="grid-cell">`thread_limit`</div><div class="grid-cell">限制同一个 `thread_id` 下的累计调用</div></div><div class="grid-row"><div class="grid-cell">`run_limit`</div><div class="grid-cell">限制单次执行里的调用</div></div><div class="grid-row"><div class="grid-cell">`exit_behavior`</div><div class="grid-cell">超限后选择继续、正常结束或抛异常</div></div><div class="grid-row"><div class="grid-cell">配置位置</div><div class="grid-cell">主智能体和子智能体都可以配置</div></div><div class="grid-row"><div class="grid-cell">Skills 配置</div><div class="grid-cell">通过 Backend 暴露 Skill 目录，再用 `skills` 参数注册</div></div></div>
+
+<p>从下一章开始，会正式进入「深度研搜」项目实战，把前面学过的子智能体、工具、Backend、中间件和 Skill 配置组合起来，搭建一个完整的企业级多智能体应用。</p>
+</div>
+      </div>
+    </main>
+  </div>
+
+  <div class="float-buttons">
+    <button id="back-to-top" class="float-btn" title="返回顶部">↑</button>
+    <a href="/" class="float-btn" title="返回首页">🏠</a>
+  </div>
+
+  
+  <!-- 浮动按钮脚本：外链（源文件 themes/butterfly/source/js/theme/post-float-btn.js） -->
+  <script src="/js/theme/post-float-btn.js"></script>
+
+  
+  <!--
+  ============================================
+  音频播放器组件
+  文件：APlayer.njk
+  适用终端：电脑端
+  作用：APlayer + Meting 外链播放，按需渲染到页面底部
+  最后修改：2026-11-11
+  ============================================
+-->
+<link rel="stylesheet" href="https://cdn.bootcdn.net/ajax/libs/aplayer/1.10.1/APlayer.min.css">
+<script src="https://cdn.bootcdn.net/ajax/libs/aplayer/1.10.1/APlayer.min.js"></script>
+<script src="https://cdn.bootcdn.net/ajax/libs/meting/2.0.1/Meting.min.js"></script>
+<div class="aplayer no-destroy"
+     data-id="2182931917"
+     data-server="netease"
+     data-type="playlist"
+     data-fixed="true"
+     data-mini="true">
+</div>
+
+
+
+<script>
+  async function renderMermaidDiagram(){
+    const blocks = document.querySelectorAll('pre[class*="language-mermaid"]');
+    if(!blocks.length) return;
+
+    const mermaidBlocks = [];
+    blocks.forEach(el=>{
+      const codeEl = el.querySelector('code');
+      if(codeEl){
+        const codeText = codeEl.innerText;
+        mermaidBlocks.push({fig: el, codeText});
+      }
+    })
+    if(!mermaidBlocks.length) return;
+
+    // ESM 按需引入 mermaid
+    const { default: mermaid } = await import('https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs');
+    
+    mermaid.initialize({
+      startOnLoad: false,
+      theme: 'base'
+    });
+
+    for(const {fig,codeText} of mermaidBlocks){
+      const div = document.createElement('div');
+      div.className = 'mermaid';
+      div.innerText = codeText;
+      fig.parentNode.replaceChild(div, fig);
+    }
+    await mermaid.run();
+  }
+  document.addEventListener('DOMContentLoaded', renderMermaidDiagram);
+  document.addEventListener('pjax:complete', renderMermaidDiagram);
+</script>
+
+
+  <script>
+    /* 返回按钮来源判定：从星迹索引进来回 /tags/，从星图手记进来回 /archives/；
+       直接从地址栏/站外进入时默认回星图手记，保证按钮始终可用 */
+    (function () {
+      var back = document.getElementById('articleBack');
+      if (!back) return;
+      var from = '';
+      try {
+        var q = new URLSearchParams(location.search);
+        from = q.get('from') || '';
+      } catch (e) {}
+      if (!from) {
+        var ref = document.referrer || '';
+        if (ref.indexOf('/tags') > -1) from = 'tags';
+        else if (ref.indexOf('/archives') > -1) from = 'archive';
+      }
+      if (from === 'tags') {
+        back.href = '/tags/';
+        back.textContent = '← 返回星迹索引';
+      } else if (from === 'search') {
+        back.href = '/';
+        back.textContent = '← 返回首页';
+      } else {
+        back.href = '/archives/';
+        back.textContent = '← 返回星图手记';
+      }
+    })();
+  </script>
+</body>
+</html>

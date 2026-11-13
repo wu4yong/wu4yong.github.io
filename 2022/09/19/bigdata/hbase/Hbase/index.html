@@ -1,0 +1,2049 @@
+<!--
+  ============================================
+  文章原文页模板
+  文件：post.njk
+  适用终端：电脑端
+  作用：文章正文 + 侧栏；手机 UA 跳 /phone/p/<slug>/
+  最后修改：2026-11-11
+  ============================================
+-->
+
+
+<!DOCTYPE html>
+<html class="post-page">
+<!--
+  ============================================
+  公共 head 组件
+  文件：Head.njk
+  适用终端：电脑端
+  作用：输出 charset/viewport/title，并按 pageCss 输出外链样式表
+  样式资源：themes/butterfly/source/css/theme/*.css（Hexo 复制到 /css/theme/）
+  引入层级顺序（= CSS 层叠顺序，调整只允许追加，不要打乱前后）：
+    1 基础  common.css
+    2 布局  post-layout.css
+    3 组件  sidebar.css
+    4 正文  post.css
+    5 页面  tags.css / chronicle.css / about.css / tag.css / category-shared.css / pc-home.css
+    6 浮层  star-reader.css
+    7 特效  starmap-live.css
+  最后修改：2026-11-12
+  ============================================
+--><head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="color-scheme" content="dark">
+  <meta name="theme-color" content="#020817">
+  <!-- 首帧兜底：浏览器默认画布是白的，样式表还没解析完就画会闪一下白。这条 8 字节规则先锁死深空底色 -->
+  <style>html{background-color:#020817}</style>
+  <title>时空秘境 - HBase理论篇</title>
+  
+  <link rel="stylesheet" href="/css/theme/common.css">
+  
+  <link rel="stylesheet" href="/css/theme/post-layout.css">
+  
+  <link rel="stylesheet" href="/css/theme/sidebar.css">
+  
+  <link rel="stylesheet" href="/css/theme/post.css">
+  
+<meta name="generator" content="Hexo 8.1.2"></head>
+
+<script>
+  /* 手机 UA 分流：电脑端这套控制台不再给手机用，直接换成手机版页面 */
+  (function () {
+    var ua = navigator.userAgent || '';
+    if (/Android|iPhone|iPod|HarmonyOS|Windows Phone|MicroMessenger|Mobile Safari/i.test(ua)) {
+      location.replace('/phone/p/bigdata/hbase/Hbase/');
+    }
+  })();
+</script>
+<link rel="stylesheet" href="/css/code-table.css">
+
+<body>
+  <!--
+  ============================================
+  星空粒子背景组件
+  文件：Particles.njk
+  适用终端：电脑端
+  作用：particles.js 全站星空动画，鼠标悬停互动
+  最后修改：2026-11-11
+  ============================================
+--><!-- z-index 必须是 0 而不是 -1：body 带着不透明的 radial-gradient 底色，
+     负层级的子元素会被父元素背景整个盖住，粒子在跑但一个点都看不见 -->
+<div id="particles" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 0; pointer-events: none;"></div>
+<!-- 星座层：随机零星散布星座图形，叠在粒子之上、页面内容之下 -->
+<div id="constellations" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 1; pointer-events: none;" aria-hidden="true"></div>
+<script src="/js/particles.min.js"></script>
+<script>/* 本地库失效时回退 CDN，保证星空背景不丢 */
+if (typeof particlesJS === "undefined") {
+  document.write('<script src="https://cdn.jsdelivr.net/particles.js/2.0.0/particles.min.js"><\/script>');
+}
+</script>
+<script>
+particlesJS("particles", {
+  particles: {
+    number: {
+      value: 95,
+      density: {
+        enable: true,
+        value_area: 800
+      }
+    },
+    color: {
+      value: "#00eeff"
+    },
+    shape: {
+      type: "circle",
+      stroke: {
+        width: 0,
+        color: "#000000"
+      }
+    },
+    opacity: {
+      value: 0.6,
+      random: true,
+      anim: {
+        enable: true,
+        speed: 0.5,
+        opacity_min: 0.1,
+        sync: false
+      }
+    },
+    size: {
+      value: 3,
+      random: true,
+      anim: {
+        enable: true,
+        speed: 2,
+        size_min: 0.1,
+        sync: false
+      }
+    },
+    line_linked: {
+      enable: true,
+      distance: 118,          /* 比原来 150 收紧，让粒子网络稀疏些，给星座留出视觉空间 */
+      color: "#00eeff",
+      opacity: 0.32,
+      width: 1
+    },
+    move: {
+      enable: true,
+      speed: 0.8,
+      direction: "none",
+      random: true,
+      straight: false,
+      out_mode: "out",
+      bounce: false,
+      attract: {
+        enable: true,
+        rotateX: 600,
+        rotateY: 1200
+      }
+    }
+  },
+  interactivity: {
+    detect_on: "canvas",
+    events: {
+      onhover: {
+        enable: true,
+        mode: "grab"       // 鼠标悬停时粒子聚集
+      },
+      onclick: {
+        enable: true,
+        mode: "push"       // 点击时产生新粒子
+      },
+      resize: true
+    },
+    modes: {
+      grab: {
+        distance: 200,
+        line_linked: {
+          opacity: 1
+        }
+      },
+      push: {
+        particles_nb: 6
+      }
+    }
+  },
+  retina_detect: true
+});
+</script>
+<!-- 星座层：独立 canvas，随机散布真实星座图形（依赖上面的 #constellations 容器） -->
+<script src="/js/theme/starfield.js"></script>
+
+  <!-- 返回按钮：按来源回到星图手记 / 星迹索引，默认回星图手记。
+       放在 body 顶层（不进 main-content），避免被其溢出裁剪切掉右半边 -->
+  <a class="article-back" id="articleBack" href="/archives/">← 返回星图手记</a>
+
+  <div class="app-layout">
+    <!--
+  ============================================
+  左侧栏个人卡组件
+  文件：_components/Sidebar.njk
+  适用终端：电脑端（星图手记 / 星迹索引 / 秘境主人 页面通栏侧栏）
+  作用：头像、昵称、站点统计、导航菜单、底部信息与全局搜索面板（结果落在雷达区，无结果播「内容走丢 → 404」动画）
+  样式依赖：source/css/theme/sidebar.css
+  脚本依赖：source/js/theme/sidebar.js
+  最后修改：2026-11-11
+  ============================================
+-->
+<aside class="sidebar" id="sidebar">
+  <div class="profile-card">
+    <div class="avatar">
+      <div
+        style="width:80px;height:80px;border-radius:50%;background:linear-gradient(135deg,#0a0e27,#1a1a4e);display:flex;align-items:center;justify-content:center;margin:0 auto;font-size:40px;border:2px solid #00eeff;box-shadow:0 0 30px rgba(0,238,255,0.3);">
+        ✨</div>
+    </div>
+    <h3 class="nickname">时空行者</h3>
+    <p class="bio">星辰大海，代码为舟</p>
+    <div class="stats">
+      <div class="stat-item">
+        <span class="stat-num">174</span>
+        <span class="stat-label">文章</span>
+      </div>
+      <div class="stat-item">
+        <span class="stat-num" id="fans-count" style="cursor:pointer;">1088</span>
+        <span class="stat-label">粉丝</span>
+      </div>
+      <div class="stat-item">
+        <span class="stat-num" id="follow-count" style="cursor:pointer;">66</span>
+        <span class="stat-label">关注</span>
+      </div>
+    </div>
+    <button class="follow-btn">+ 关注</button>
+  </div>
+  <div class="search-box">
+    <input type="text" placeholder="找找看..." id="search-input">
+    <button class="search-btn" id="searchModalOpen">🔍</button>
+  </div>
+  <div class="links-card">
+    <h4>常用链接</h4>
+    <ul>
+      <li><a href="/about/">秘境主人</a></li>
+      <li><a href="/archives/">星图手记</a></li>
+      <li><a href="/tags/">星迹索引</a></li>
+      <!-- ✅ 新增联系我 -->
+      <li><a class="contact-trigger" href="javascript:void(0)">星语传书</a></li>
+      <li><a class="donate-trigger" href="javascript:void(0)">星芒赠礼</a></li>
+    </ul>
+  </div>
+  <div class="tags-card">
+    <h4>热门标签</h4>
+    
+    <div class="tag-cloud">
+      
+      <a href="/tags/MySQL数据库/" class="tag-link" data-tag="MySQL数据库"
+        data-count="7">MySQL数据库</a>
+      
+      <a href="/tags/redis/" class="tag-link" data-tag="redis"
+        data-count="7">redis</a>
+      
+      <a href="/tags/深度研搜/" class="tag-link" data-tag="深度研搜"
+        data-count="15">深度研搜</a>
+      
+      <a href="/tags/电商问数/" class="tag-link" data-tag="电商问数"
+        data-count="18">电商问数</a>
+      
+      <a href="/tags/git/" class="tag-link" data-tag="git"
+        data-count="5">git</a>
+      
+      <a href="/tags/面试/" class="tag-link" data-tag="面试"
+        data-count="11">面试</a>
+      
+      <a href="/tags/Java/" class="tag-link" data-tag="Java"
+        data-count="10">Java</a>
+      
+      <a href="/tags/langchain/" class="tag-link" data-tag="langchain"
+        data-count="10">langchain</a>
+      
+      <a href="/tags/Netty/" class="tag-link" data-tag="Netty"
+        data-count="4">Netty</a>
+      
+      <a href="/tags/大模型/" class="tag-link" data-tag="大模型"
+        data-count="35">大模型</a>
+      
+      <a href="/tags/AICoding/" class="tag-link" data-tag="AICoding"
+        data-count="9">AICoding</a>
+      
+      <a href="/tags/SpringAi/" class="tag-link" data-tag="SpringAi"
+        data-count="15">SpringAi</a>
+      
+      <a href="/tags/随笔杂谈/" class="tag-link" data-tag="随笔杂谈"
+        data-count="2">随笔杂谈</a>
+      
+      <a href="/tags/vue/" class="tag-link" data-tag="vue"
+        data-count="9">vue</a>
+      
+      <a href="/tags/视频剪辑/" class="tag-link" data-tag="视频剪辑"
+        data-count="1">视频剪辑</a>
+      
+      <a href="/tags/大数据/" class="tag-link" data-tag="大数据"
+        data-count="3">大数据</a>
+      
+      <a href="/tags/电影/" class="tag-link" data-tag="电影"
+        data-count="2">电影</a>
+      
+      <a href="/tags/游戏/" class="tag-link" data-tag="游戏"
+        data-count="1">游戏</a>
+      
+      <a href="/tags/音乐/" class="tag-link" data-tag="音乐"
+        data-count="8">音乐</a>
+      
+      <a href="/tags/图片/" class="tag-link" data-tag="图片"
+        data-count="2">图片</a>
+      
+    </div>
+    <script>
+      /*
+  ============================================
+  侧栏热门标签排序（首帧前执行）
+  文件：_js/hot-tags.js
+  引入位置：_components/Sidebar.njk 里 .tag-cloud 闭合标签之后（紧跟着写死）
+  作用：按点击次数排序、只露前 5 个、点一下立刻重排
+  为什么单独拆出来：以前放在 sidebar.js 的 DOMContentLoaded 里，首帧渲染的还是
+  模板顺序的 20 个标签，等脚本跑完才收成 5 个；配合跨页淡入（View Transition）
+  会出现「新旧两套标签叠在一起、影子跳一下」。紧跟标签节点内联执行就没有中间态。
+  最后修改：2026-11-12
+  ============================================
+*/
+(function () {
+  var cloud = document.querySelector('.tag-cloud');
+  if (!cloud) return;
+  var links = Array.prototype.slice.call(cloud.querySelectorAll('.tag-link'));
+  if (!links.length) return;
+
+  var KEY = 'starry_tag_visits'; // 标签名 -> 点击次数
+  var TOP = 5;
+  var visits = {};
+
+  try {
+    var raw = JSON.parse(localStorage.getItem(KEY) || '{}');
+    visits = (raw && typeof raw === 'object') ? raw : {};
+  } catch (e) {
+    visits = {};
+  }
+
+  links.forEach(function (link) {
+    var name = link.dataset.tag || (link.textContent || '').trim();
+    link.dataset.tag = name;
+    if (!link.dataset.count) link.dataset.count = '0';
+  });
+
+  // 排序：点击次数降序 → 文章数降序 → 名字，保证同分时顺序稳定不来回跳
+  function order() {
+    return links.slice().sort(function (a, b) {
+      var va = visits[a.dataset.tag] || 0;
+      var vb = visits[b.dataset.tag] || 0;
+      if (vb !== va) return vb - va;
+      var ca = Number(a.dataset.count) || 0;
+      var cb = Number(b.dataset.count) || 0;
+      if (cb !== ca) return cb - ca;
+      return String(a.dataset.tag).localeCompare(String(b.dataset.tag), 'zh');
+    });
+  }
+
+  // 重排 DOM：按名次 append，超出 5 个的 hidden（仍留在 DOM，等名次升上来再显示）
+  function render() {
+    order().forEach(function (link, i) {
+      link.dataset.visits = visits[link.dataset.tag] || 0;
+      cloud.appendChild(link);
+      link.hidden = i >= TOP;
+    });
+  }
+
+  links.forEach(function (link) {
+    link.addEventListener('click', function () {
+      var name = link.dataset.tag;
+      visits[name] = (visits[name] || 0) + 1;
+      try { localStorage.setItem(KEY, JSON.stringify(visits)); } catch (e) { /* 忽略配额错误 */ }
+      render(); // 当前页立刻看到「谁被点多了谁上前」
+    });
+  });
+
+  render();
+})();
+
+    </script>
+  </div>
+  <div class="archive-card">
+    <h4>按月归档</h4>
+    <ul class="archive-list">
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2026/12/">
+          2026年12月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2026/11/">
+          2026年11月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2026/10/">
+          2026年10月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2026/09/">
+          2026年09月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2026/08/">
+          2026年08月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2026/07/">
+          2026年07月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2026/06/">
+          2026年06月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2026/05/">
+          2026年05月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2026/04/">
+          2026年04月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2026/03/">
+          2026年03月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2026/02/">
+          2026年02月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2026/01/">
+          2026年01月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2025/12/">
+          2025年12月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2025/11/">
+          2025年11月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2025/10/">
+          2025年10月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2025/09/">
+          2025年09月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2025/08/">
+          2025年08月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2025/07/">
+          2025年07月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2025/06/">
+          2025年06月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2025/05/">
+          2025年05月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2025/04/">
+          2025年04月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2025/03/">
+          2025年03月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2025/02/">
+          2025年02月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2025/01/">
+          2025年01月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2024/11/">
+          2024年11月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2024/10/">
+          2024年10月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2024/09/">
+          2024年09月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2024/08/">
+          2024年08月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2024/07/">
+          2024年07月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2024/05/">
+          2024年05月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2024/04/">
+          2024年04月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2024/03/">
+          2024年03月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2024/02/">
+          2024年02月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2024/01/">
+          2024年01月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2023/12/">
+          2023年12月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2023/11/">
+          2023年11月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2023/10/">
+          2023年10月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2023/09/">
+          2023年09月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2023/08/">
+          2023年08月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2023/07/">
+          2023年07月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2023/06/">
+          2023年06月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2023/05/">
+          2023年05月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2023/04/">
+          2023年04月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2023/03/">
+          2023年03月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2023/02/">
+          2023年02月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2023/01/">
+          2023年01月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2022/09/">
+          2022年09月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2022/05/">
+          2022年05月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2022/01/">
+          2022年01月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2021/12/">
+          2021年12月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2021/11/">
+          2021年11月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2021/10/">
+          2021年10月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2021/09/">
+          2021年09月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2021/08/">
+          2021年08月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2021/07/">
+          2021年07月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2021/06/">
+          2021年06月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2021/05/">
+          2021年05月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2021/04/">
+          2021年04月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2021/03/">
+          2021年03月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2021/02/">
+          2021年02月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2021/01/">
+          2021年01月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2020/10/">
+          2020年10月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2020/07/">
+          2020年07月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2020/04/">
+          2020年04月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2020/01/">
+          2020年01月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2019/12/">
+          2019年12月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2019/11/">
+          2019年11月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2019/10/">
+          2019年10月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2019/09/">
+          2019年09月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2019/08/">
+          2019年08月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2019/07/">
+          2019年07月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2019/06/">
+          2019年06月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2019/05/">
+          2019年05月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2019/04/">
+          2019年04月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2019/03/">
+          2019年03月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2019/02/">
+          2019年02月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2019/01/">
+          2019年01月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2018/12/">
+          2018年12月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2018/11/">
+          2018年11月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2018/10/">
+          2018年10月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2018/09/">
+          2018年09月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2018/08/">
+          2018年08月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2018/07/">
+          2018年07月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2018/06/">
+          2018年06月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2018/05/">
+          2018年05月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2018/04/">
+          2018年04月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2018/03/">
+          2018年03月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2018/02/">
+          2018年02月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2018/01/">
+          2018年01月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+    </ul>
+  </div>
+
+  <!-- ========== 星语传书（雷达区弹窗，与搜索面板同一套面板样式） ========== -->
+  <div class="search-panel dock-panel" id="contactModal" hidden>
+    <div class="sp-mask" data-dock-close></div>
+    <div class="sp-box" role="dialog" aria-modal="true" aria-label="星语传书">
+      <div class="sp-head">
+        <span class="sp-dot"></span>
+        <span class="sp-title">星语传书</span>
+        <span class="sp-title-sub">/ SIGNAL CHANNEL</span>
+        <span class="sp-meta">SYS.REPLY ≤ 48H</span>
+        <button class="sp-close" type="button" data-dock-close title="关闭">×</button>
+      </div>
+      <div class="sp-body dock-body">
+        <p class="dock-lead">写信给时空行者：文章里的错字、跑不通的 demo、想聊的一句技术，都可以从这里进来。信号收到，我会尽量回。</p>
+        <div class="dock-grid">
+          <div class="dock-list">
+            <a class="dock-row" href="https://wpa.qq.com/msgrd?v=3&amp;uin=372109355&amp;site=qq&amp;menu=yes"
+              target="_blank" rel="noopener">
+              <span class="dock-ico">企</span>
+              <span class="dock-k"><b>QQ</b><span>372109355</span></span>
+            </a>
+            <a class="dock-row" href="https://wu4yong.github.io" target="_blank" rel="noopener">
+              <span class="dock-ico">⌂</span>
+              <span class="dock-k"><b>站点主站</b><span>wu4yong.github.io</span></span>
+            </a>
+            <div class="dock-row dock-row-static">
+              <span class="dock-ico">✉</span>
+              <span class="dock-k"><b>电子邮箱</b><span>暂未公开 · 任何问题QQ留言</span></span>
+            </div>
+            <a class="dock-row" href="#" target="_blank" rel="noopener">
+              <span class="dock-ico">◈</span>
+              <span class="dock-k"><b>GitHub</b><span>暂未公开 · 任何问题QQ留言</span></span>
+            </a>
+            <a class="dock-row" href="#" target="_blank" rel="noopener">
+              <span class="dock-ico">◇</span>
+              <span class="dock-k"><b>Gitee</b><span>暂未公开 · 任何问题QQ留言</span></span>
+            </a>
+          </div>
+          <div class="dock-side">
+            <div class="dock-qr">
+              <em>WECHAT · 微信</em>
+              <img src="/assets/images/wechat-qr.png" alt="微信二维码">
+              <span class="dock-qr-tip">扫码添加，备注「来自时空秘境」</span>
+            </div>
+          </div>
+        </div>
+        <div class="dock-chips">
+          <span class="dock-chip">文章纠错</span>
+          <span class="dock-chip">Demo 答疑</span>
+          <span class="dock-chip">转载授权</span>
+          <span class="dock-chip">技术交流</span>
+          <span class="dock-chip">内推 / 合作</span>
+        </div>
+        <p class="dock-note">无正文的「在吗」容易被当作信号干扰滤掉，直接把问题写清楚，回信会快很多。</p>
+      </div>
+      <!-- 开合转场层：百叶窗 / 电影幕布 / 淡入，由 source/js/theme/sidebar.js 轮换播放 -->
+      <div class="dock-fx" aria-hidden="true">
+        <div class="dock-fx-slats"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+        <div class="dock-fx-curtain"><span class="top"></span><span class="bottom"></span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========== 全局搜索面板 ==========
+       索引来自构建期生成的 /search.json（hexo-generator-searchdb），随文章新增自动更新；
+       打开时由 source/js/theme/sidebar.js 把整块挪进 Radar 中间区（无雷达的页面退化为居中浮层） -->
+  <div class="search-panel" id="searchPanel" hidden>
+    <div class="sp-mask" id="searchMask"></div>
+    <div class="sp-box" role="dialog" aria-modal="true" aria-label="全文搜索">
+      <div class="sp-head">
+        <span class="sp-dot"></span>
+        <span class="sp-title">全文搜索</span>
+        <span class="sp-title-sub">/ GLOBAL SEARCH</span>
+        <span class="sp-meta" id="spMeta"></span>
+        <button class="sp-close" id="searchPanelClose" type="button" title="关闭搜索">×</button>
+      </div>
+      <div class="sp-body" id="spBody">
+        <div class="sp-loading" id="spLoading">正在扫描星图索引…</div>
+        <ul class="sp-list" id="spList"></ul>
+        <!-- 无结果：内容走丢 → 慢速落 404 -->
+        <div class="sp-empty" id="spEmpty" hidden>
+          <div class="sp-drift-wrap">
+            <span class="sp-trail"></span>
+            <span class="sp-drift"></span>
+            <span class="sp-lost">SIGNAL LOST · 信号已丢失</span>
+          </div>
+          <div class="sp-404"><span>4</span><span>0</span><span>4</span></div>
+          <p class="sp-empty-main">内容走丢在星海里了</p>
+          <p class="sp-empty-tip">换个关键词，或去〈星迹索引 / 星图手记〉里慢慢逛</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========== 星芒赠礼（雷达区弹窗，收款码图片沿用原图不改） ========== -->
+  <div class="search-panel dock-panel" id="donateModal" hidden>
+    <div class="sp-mask" data-dock-close></div>
+    <div class="sp-box" role="dialog" aria-modal="true" aria-label="星芒赠礼">
+      <div class="sp-head">
+        <span class="sp-dot"></span>
+        <span class="sp-title">星芒赠礼</span>
+        <span class="sp-title-sub">/ STAR OFFERING</span>
+        <span class="sp-meta">THANKS FOR THE LIGHT</span>
+        <button class="sp-close" type="button" data-dock-close title="关闭">×</button>
+      </div>
+      <div class="sp-body dock-body">
+        <div class="dock-thanks">
+          <p>这片星空是工作闲暇时光一个个凌晨攒出来的：一篇文章、一次复盘、一个修不完的 bug。</p>
+          <p>如果你在这里找到了能用的东西，愿意赏一杯凌晨三点的咖啡 —— 这份心意我会记很久。</p>
+          <p>不打赏也完全没关系：所有文章永久免费，愿你我在各自的轨道上都跑得稳一点。</p>
+        </div>
+        <div class="dock-donate">
+          <div class="dock-hero">
+            <div class="dock-hero-pic">
+              <span class="dock-hero-halo" aria-hidden="true"></span>
+              <span class="dock-hero-ring dock-hero-ring-a" aria-hidden="true"></span>
+              <span class="dock-hero-ring dock-hero-ring-b" aria-hidden="true"></span>
+              <img src="/assets/images/donate-boy.png" alt="感谢支持">
+            </div>
+            <em>THANKS FOR THE LIGHT</em>
+            <span class="dock-hero-tip">愿每一次凌晨，都有人替你留一盏灯</span>
+          </div>
+          <div class="dock-pay">
+            <div class="dock-qr dock-qr-row">
+              <img src="/assets/images/alipay-qr.jpg" alt="支付宝收款码">
+              <div class="dock-qr-txt">
+                <b>支付宝 · 星途赞赏</b>
+                <span>请我喝一杯凌晨三点的咖啡</span>
+              </div>
+            </div>
+            <div class="dock-qr dock-qr-row">
+              <img src="/assets/images/wechat-pay-qr.jpg" alt="微信收款码">
+              <div class="dock-qr-txt">
+                <b>微信 · 星河致谢</b>
+                <span>金额随意，心意已经收到</span>
+              </div>
+            </div>
+          </div>
+        </div>        <div class="dock-chips">
+          <span class="dock-chip">域名与服务器</span>
+          <span class="dock-chip">图床与备份</span>
+          <span class="dock-chip">一本技术书</span>
+          <span class="dock-chip">深夜的一杯咖啡</span>
+        </div>
+        <p class="dock-note">赠礼纯属心意，不产生任何付费内容或额外承诺；扫码前请确认收款人，小心仿冒。</p>
+      </div>
+      <!-- 开合转场层：百叶窗 / 电影幕布 / 淡入，由 source/js/theme/sidebar.js 轮换播放 -->
+      <div class="dock-fx" aria-hidden="true">
+        <div class="dock-fx-slats"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+        <div class="dock-fx-curtain"><span class="top"></span><span class="bottom"></span></div>
+      </div>
+    </div>
+  </div>
+
+
+</aside>
+<!-- 引入侧边栏交互脚本：外链（源文件 themes/butterfly/source/js/theme/sidebar.js） -->
+<script src="/js/theme/sidebar.js"></script>
+
+    
+    <button id="sidebarToggle" class="sidebar-toggle" title="隐藏侧栏"></button>
+
+    <main class="main-content">
+      <div class="article-card">
+        <h1 class="article-title">HBase理论篇</h1>
+        <div class="article-meta">📅 2022-09-19</div>
+        <div class="article-content"><div class="essay-banner essay-image11">
+   <!-- HBase  -->
+</div>
+
+<h2 id="一、HBase-基础介绍"><a href="#一、HBase-基础介绍" class="headerlink" title="一、HBase 基础介绍"></a>一、HBase 基础介绍</h2><h3 id="1-核心定义"><a href="#1-核心定义" class="headerlink" title="1. 核心定义"></a>1. 核心定义</h3><p>HBase 是基于Hadoop的KV格式、面向列存储的分布式数据库，<strong>非内存数据库、非传统列式数据库</strong>。</p>
+<h3 id="2-五大核心特点"><a href="#2-五大核心特点" class="headerlink" title="2. 五大核心特点"></a>2. 五大核心特点</h3><ol>
+<li>高可靠性</li>
+<li>可伸缩水平扩容</li>
+<li>面向列（列族）存储</li>
+<li>支持海量数据实时读写</li>
+<li>高性能高并发吞吐</li>
+</ol>
+<h3 id="3-数据规模适配"><a href="#3-数据规模适配" class="headerlink" title="3. 数据规模适配"></a>3. 数据规模适配</h3><ul>
+<li>行：十亿级别海量行</li>
+<li>列：百万级别稀疏列</li>
+</ul>
+<h3 id="4-适用业务场景"><a href="#4-适用业务场景" class="headerlink" title="4. 适用业务场景"></a>4. 适用业务场景</h3><ol>
+<li>存储非结构化&#x2F;半结构化稀疏数据</li>
+<li>高并发客户端读写业务</li>
+<li>低延迟、实时性要求高的海量数据业务</li>
+</ol>
+<br>
+
+<hr>
+<h2 id="二、HBase-集群架构"><a href="#二、HBase-集群架构" class="headerlink" title="二、HBase 集群架构"></a>二、HBase 集群架构</h2><div align="center">
+![HBase集群架构图](https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/hbase/hbase_arch.webp)
+</div>
+
+<h3 id="1-集群角色分工"><a href="#1-集群角色分工" class="headerlink" title="1. 集群角色分工"></a>1. 集群角色分工</h3><h3 id="ZooKeeper-协调组件"><a href="#ZooKeeper-协调组件" class="headerlink" title="ZooKeeper 协调组件"></a>ZooKeeper 协调组件</h3><ul>
+<li>存储元数据表<code>hbase:meta</code>位置入口</li>
+<li>保存Table表元数据</li>
+<li>实时监控<code>RegionServer</code>上下线，通知<code>Master</code>处理故障</li>
+</ul>
+<h3 id="Client-客户端"><a href="#Client-客户端" class="headerlink" title="Client 客户端"></a>Client 客户端</h3><ul>
+<li>提交HBase读写请求</li>
+<li>本地缓存元数据，减少ZK频繁交互</li>
+</ul>
+<h3 id="Master（HMaster）"><a href="#Master（HMaster）" class="headerlink" title="Master（HMaster）"></a>Master（HMaster）</h3><ul>
+<li>管理集群全部<code>RegionServer</code>节点</li>
+<li>分配<code>Region</code>到对应<code>RegionServer</code>，维护负载均衡</li>
+<li>负责<code>Region</code>拆分、迁移、故障重分配</li>
+<li>集群高可用：同一时间仅一台Active Master，其余Standby备用</li>
+</ul>
+<h3 id="RegionServer（数据节点）"><a href="#RegionServer（数据节点）" class="headerlink" title="RegionServer（数据节点）"></a>RegionServer（数据节点）</h3><p>负责承载客户端读写请求，托管所有<code>Region</code>分片，是真正存储数据的节点。</p>
+<h3 id="Region-分片概念"><a href="#Region-分片概念" class="headerlink" title="Region 分片概念"></a>Region 分片概念</h3><ul>
+<li>建表初期整张表仅1个<code>Region</code>，写入数据后自动扩容拆分</li>
+<li><code>Region</code>数据量达到阈值，自动切分为两个新<code>Region</code></li>
+</ul>
+<h3 id="Store-存储单元（对应单个列族）"><a href="#Store-存储单元（对应单个列族）" class="headerlink" title="Store 存储单元（对应单个列族）"></a>Store 存储单元（对应单个列族）</h3><ul>
+<li><code>MemStore</code>：内存有序缓冲区</li>
+<li><code>StoreFile</code>（HFile）：落地磁盘持久化文件</li>
+<li><code>MemStore + StoreFile</code> 共同组成LSM树存储结构</li>
+</ul>
+<h3 id="HLog（WAL预写日志）"><a href="#HLog（WAL预写日志）" class="headerlink" title="HLog（WAL预写日志）"></a>HLog（WAL预写日志）</h3><p>宕机恢复的日志文件，所有写入操作先落WAL再写入内存。</p>
+<h3 id="2-HBase-数据模型示意"><a href="#2-HBase-数据模型示意" class="headerlink" title="2. HBase 数据模型示意"></a>2. HBase 数据模型示意</h3><h3 id="HBase表数据逻辑模型示意图"><a href="#HBase表数据逻辑模型示意图" class="headerlink" title="HBase表数据逻辑模型示意图"></a>HBase表数据逻辑模型示意图</h3><div align="center">
+![HBase表数据逻辑模型示意图](https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/hbase/Logicalmodel.webp)
+</div>
+
+<h3 id="HBase表数据存储模型示意图"><a href="#HBase表数据存储模型示意图" class="headerlink" title="HBase表数据存储模型示意图"></a>HBase表数据存储模型示意图</h3><div align="center">
+![HBase表数据存储模型示意图](https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/hbase/Storagemodel.webp)
+</div>
+
+<h3 id="核心字段概念"><a href="#核心字段概念" class="headerlink" title="核心字段概念"></a>核心字段概念</h3><ol>
+<li><strong><code>RowKey</code>（行键）</strong><ul>
+<li>唯一标识单行数据，等价MySQL主键</li>
+<li>全局字典序排序，分片、查询核心依据</li>
+<li>最大长度64K，工程建议10~100字节</li>
+</ul>
+</li>
+<li><strong><code>Column Family</code>（列族）</strong><ul>
+<li>一组列的集合，建表时提前定义Schema</li>
+<li>列族为物理存储隔离单元，权限控制粒度</li>
+</ul>
+</li>
+<li><strong><code>Qualifier</code>（列限定符）</strong><ul>
+<li>列族下具体字段，无需提前定义，插入时动态新增</li>
+</ul>
+</li>
+<li><strong><code>Timestamp</code>（时间戳）</strong><ul>
+<li>版本号，区分单元格多版本数据</li>
+<li>默认系统自动生成，支持自定义（不推荐）</li>
+</ul>
+</li>
+<li><strong><code>Cell</code>（单元格）</strong><ul>
+<li>最小存储单元，坐标 <code>RowKey + 列族:列 + 时间戳</code></li>
+<li>底层纯字节KV存储，无固定数据类型</li>
+<li>自动保留多版本历史数据</li>
+</ul>
+</li>
+</ol>
+<hr>
+<h2 id="三、HBase-读写流程"><a href="#三、HBase-读写流程" class="headerlink" title="三、HBase 读写流程"></a>三、HBase 读写流程</h2><h3 id="1-读流程（Get-Scan）"><a href="#1-读流程（Get-Scan）" class="headerlink" title="1. 读流程（Get&#x2F;Scan）"></a>1. 读流程（Get&#x2F;Scan）</h3><div align="center">
+![HBase读流程](https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/hbase/hbase_read.webp)
+</div>
+
+<ol>
+<li>Client 请求ZooKeeper，查询<code>hbase:meta</code>，定位RowKey所属<code>RegionServer</code></li>
+<li>访问目标<code>RegionServer</code>，读取表元数据，找到对应<code>Store</code></li>
+<li>优先读取<code>BlockCache</code>读缓存；缓存未命中读取<code>MemStore</code>内存最新数据</li>
+<li>内存无数据则遍历磁盘<code>StoreFile</code>，读取后缓存至<code>BlockCache</code></li>
+<li>合并多版本数据，过滤过期删除标记，返回结果给客户端</li>
+</ol>
+<h3 id="2-写流程（Put）"><a href="#2-写流程（Put）" class="headerlink" title="2. 写流程（Put）"></a>2. 写流程（Put）</h3><div align="center">
+![HBase写流程](https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/hbase/hbase_write1.webp)
+</div>
+<div align="center">
+![HBase写流程时序图](https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/hbase/hbase_write2.webp)
+</div>
+
+<ol>
+<li>Client请求ZK获取元数据，定位目标<code>RegionServer</code></li>
+<li>写入WAL预写日志，保障宕机数据不丢失</li>
+<li>写入对应列族<code>MemStore</code>内存缓冲区</li>
+<li><code>MemStore</code>达到阈值（默认64M）触发Flush刷盘，生成<code>StoreFile</code>写入HDFS</li>
+<li>后台自动Compaction合并大量小<code>StoreFile</code>，优化读查询效率</li>
+</ol>
+<hr>
+<h2 id="四、底层存储结构"><a href="#四、底层存储结构" class="headerlink" title="四、底层存储结构"></a>四、底层存储结构</h2><ol>
+<li><strong>WAL（HLog）预写日志</strong><ul>
+<li>写入操作先持久化日志再写入内存</li>
+<li>LogAsync异步落盘，定期滚动生成新日志文件</li>
+</ul>
+</li>
+<li><strong>MemStore</strong>：内存有序缓冲，LSM树内存层</li>
+<li><strong>StoreFile（HFile）</strong>：磁盘持久化有序KV文件，LSM树磁盘层</li>
+</ol>
+<blockquote>
+<p><code>MemStore + StoreFile</code> 共同构成LSM树，将随机写转换为顺序写，大幅提升写入吞吐量</p>
+</blockquote>
+<hr>
+<h2 id="五、HBase-API"><a href="#五、HBase-API" class="headerlink" title="五、HBase API"></a>五、HBase API</h2><h3 id="1-管理API（HBaseAdmin）"><a href="#1-管理API（HBaseAdmin）" class="headerlink" title="1. 管理API（HBaseAdmin）"></a>1. 管理API（HBaseAdmin）</h3><ul>
+<li><code>createTable</code>：创建表</li>
+<li><code>disableTable</code>：禁用表</li>
+<li><code>deleteTable</code>：删除表</li>
+</ul>
+<h3 id="2-数据读写API（HTable）"><a href="#2-数据读写API（HTable）" class="headerlink" title="2. 数据读写API（HTable）"></a>2. 数据读写API（HTable）</h3><ul>
+<li><code>get</code>：单行查询</li>
+<li><code>put</code>：单行写入</li>
+<li><code>scan</code>：范围批量扫描</li>
+<li><code>delete</code>：删除数据</li>
+</ul>
+<h3 id="3-过滤器-Filter"><a href="#3-过滤器-Filter" class="headerlink" title="3. 过滤器 Filter"></a>3. 过滤器 Filter</h3><ul>
+<li><code>SingleColumnValueFilter</code>：单列值过滤</li>
+<li><code>PrefixFilter</code>：RowKey前缀过滤</li>
+<li><code>FilterList</code>：多过滤器组合</li>
+<li>专用比较过滤器、附加过滤器</li>
+</ul>
+<hr>
+<h2 id="六、HBase-Shell-常用命令"><a href="#六、HBase-Shell-常用命令" class="headerlink" title="六、HBase Shell 常用命令"></a>六、HBase Shell 常用命令</h2><h3 id="状态与版本"><a href="#状态与版本" class="headerlink" title="状态与版本"></a>状态与版本</h3><ul>
+<li><code>status</code>：查看集群状态</li>
+<li><code>whoami</code>：查看当前登录用户</li>
+<li><code>version</code>：查看HBase版本</li>
+</ul>
+<h3 id="表操作"><a href="#表操作" class="headerlink" title="表操作"></a>表操作</h3><ul>
+<li><code>create</code>：建表</li>
+<li><code>drop</code>：删除表</li>
+<li><code>disable</code>&#x2F;<code>enable</code>：禁用&#x2F;启用表</li>
+</ul>
+<h3 id="数据操作"><a href="#数据操作" class="headerlink" title="数据操作"></a>数据操作</h3><ul>
+<li><code>put</code>：写入数据</li>
+<li><code>get</code>：单行查询</li>
+<li><code>scan</code>：全表&#x2F;范围扫描</li>
+<li><code>delete</code>：删除单元格</li>
+</ul>
+<h3 id="运维操作"><a href="#运维操作" class="headerlink" title="运维操作"></a>运维操作</h3><ul>
+<li><code>list</code>：查看所有表</li>
+<li><code>flush</code>：手动刷写MemStore到磁盘</li>
+<li><code>split</code>：手动拆分Region</li>
+</ul>
+<hr>
+<h2 id="七、HBase-MapReduce-集成"><a href="#七、HBase-MapReduce-集成" class="headerlink" title="七、HBase MapReduce 集成"></a>七、HBase MapReduce 集成</h2><ol>
+<li>MR读取HBase：从HBase表提取数据作为Map输入</li>
+<li>MR写入HBase：将MR计算结果落地写入HBase</li>
+<li>两类核心任务：<ul>
+<li><code>TableMapReduceUtil.initTableMapJob</code>（仅读表）</li>
+<li><code>TableMapReduceUtil.initTableReduceJob</code>（读写表）</li>
+</ul>
+</li>
+</ol>
+<hr>
+<h2 id="八、表设计核心规范"><a href="#八、表设计核心规范" class="headerlink" title="八、表设计核心规范"></a>八、表设计核心规范</h2><ol>
+<li>预分区：提前拆分Region，规避写入热点</li>
+<li>RowKey设计五大原则<ul>
+<li>长度越短越好</li>
+<li>加盐Hash打散热点</li>
+<li>前缀时间戳方便范围查询</li>
+<li>禁止过长RowKey</li>
+</ul>
+</li>
+<li>列族数量控制：1~2个为宜，不建议过多列族</li>
+<li><code>SetMaxVersion</code>：设置单元格最大保留版本数</li>
+<li><code>SetTTL</code>：设置数据过期自动删除时间</li>
+<li><code>inMemory</code>：开启内存优先存储，提升热点查询速度</li>
+</ol>
+<hr>
+<h2 id="九、合并与拆分机制"><a href="#九、合并与拆分机制" class="headerlink" title="九、合并与拆分机制"></a>九、合并与拆分机制</h2><h3 id="Compaction-文件合并"><a href="#Compaction-文件合并" class="headerlink" title="Compaction 文件合并"></a>Compaction 文件合并</h3><ul>
+<li>minor 小合并：3~10个小文件自动合并</li>
+<li>major 大合并：该Region全部StoreFile合并为单文件，建议关闭自动合并，手动定时执行</li>
+</ul>
+<h3 id="Split-Region拆分"><a href="#Split-Region拆分" class="headerlink" title="Split Region拆分"></a>Split Region拆分</h3><p>单个Region数据量超限，自动切分为两个Region，分散到不同RegionServer均衡压力</p>
+<hr>
+<h2 id="十、HBase-读写优化"><a href="#十、HBase-读写优化" class="headerlink" title="十、HBase 读写优化"></a>十、HBase 读写优化</h2><h3 id="写入优化"><a href="#写入优化" class="headerlink" title="写入优化"></a>写入优化</h3><ol>
+<li>多客户端并发创建独立HTable对象</li>
+<li>客户端属性配置<ul>
+<li>关闭<code>autoAutoFlush</code>批量提交</li>
+<li>设置客户端写缓冲区大小</li>
+<li>WAL Flag可临时关闭（数据丢失风险，不推荐）</li>
+</ul>
+</li>
+<li>多线程批量写入</li>
+</ol>
+<h3 id="读取优化"><a href="#读取优化" class="headerlink" title="读取优化"></a>读取优化</h3><ol>
+<li>Scan扫描参数优化<ul>
+<li>设置批量读取行数</li>
+<li>关闭缓存Scanner</li>
+<li>指定查询列族，禁止全列读取</li>
+</ul>
+</li>
+<li>多线程并发读取</li>
+<li>BlockCache调优<ul>
+<li>所有RegionServer共享BlockCache</li>
+<li>默认占用堆内存0.2，读多业务可适当调大</li>
+<li>LRU淘汰策略，优先淘汰冷数据</li>
+</ul>
+</li>
+</ol>
+<hr>
+<h2 id="十一、HBase-索引与ES整合"><a href="#十一、HBase-索引与ES整合" class="headerlink" title="十一、HBase 索引与ES整合"></a>十一、HBase 索引与ES整合</h2><h3 id="整合步骤"><a href="#整合步骤" class="headerlink" title="整合步骤"></a>整合步骤</h3><ol>
+<li>程序同步HBase数据至Elasticsearch</li>
+<li>ES构建二级索引，索引存储RowKey</li>
+<li>客户端查询先检索ES，获取匹配RowKey列表</li>
+<li>根据RowKey回查HBase获取完整业务数据</li>
+</ol>
+<hr>
+<h2 id="十二、HBase-优缺点"><a href="#十二、HBase-优缺点" class="headerlink" title="十二、HBase 优缺点"></a>十二、HBase 优缺点</h2><h3 id="优点"><a href="#优点" class="headerlink" title="优点"></a>优点</h3><ol>
+<li>海量实时随机读写：十亿级数据毫秒级单行查询，适配在线业务</li>
+<li>无限水平扩容：RegionServer、DataNode在线扩容，无容量上限</li>
+<li>稀疏列式存储：空单元格不占用磁盘，支持百万动态列</li>
+<li>高可靠容错：底层HDFS三副本，WAL保障宕机数据不丢失</li>
+<li>多版本数据自动保存，支持历史数据回溯</li>
+<li>LSM树消除随机IO，支撑百万级高并发写入</li>
+</ol>
+<h3 id="缺点"><a href="#缺点" class="headerlink" title="缺点"></a>缺点</h3><ol>
+<li>无多表JOIN、跨行事务，仅单行操作原子性</li>
+<li>大范围Scan扫描性能差，不适合全量离线分析</li>
+<li>Compaction合并会占用大量CPU、磁盘IO，写入高峰期压力大</li>
+<li>RowKey设计门槛高，设计不合理极易出现Region热点</li>
+<li>不支持复杂SQL统计分析，离线计算优先Hive&#x2F;Spark</li>
+</ol>
+<hr>
+<h2 id="十三、HBase-Hive-HDFS-核心区别"><a href="#十三、HBase-Hive-HDFS-核心区别" class="headerlink" title="十三、HBase &#x2F; Hive &#x2F; HDFS 核心区别"></a>十三、HBase &#x2F; Hive &#x2F; HDFS 核心区别</h2><ol>
+<li>HDFS：底层分布式文件存储，仅支持文件追加，无随机读写能力</li>
+<li>Hive：离线数据仓库，类SQL批处理引擎，高延迟，用于离线统计分析</li>
+<li>HBase：分布式NoSQL在线数据库，低延迟随机读写，面向实时明细业务存储</li>
+</ol>
+<hr>
+<h2 id="十四、集群核心角色总结"><a href="#十四、集群核心角色总结" class="headerlink" title="十四、集群核心角色总结"></a>十四、集群核心角色总结</h2><h3 id="1-Client客户端"><a href="#1-Client客户端" class="headerlink" title="1. Client客户端"></a>1. Client客户端</h3><p>本地缓存Region元数据，减少ZK重复查询；直连RegionServer读写，不经过HMaster；提供Java、Shell等多套操作API</p>
+<h3 id="2-ZooKeeper"><a href="#2-ZooKeeper" class="headerlink" title="2. ZooKeeper"></a>2. ZooKeeper</h3><p>集群协调中心，不存储业务数据；负责Master选举、元数据表寻址、节点存活监控，所有客户端与服务端均依赖ZK寻址。</p>
+<h3 id="3-HMaster"><a href="#3-HMaster" class="headerlink" title="3. HMaster"></a>3. HMaster</h3><p>集群管理主节点，负责表创建删除、Region调度、故障转移；依赖ZK实现多主高可用，不处理真实读写请求。</p>
+<h3 id="4-RegionServer"><a href="#4-RegionServer" class="headerlink" title="4. RegionServer"></a>4. RegionServer</h3><p>数据承载节点，所有Put&#x2F;Get&#x2F;Scan请求全部由该节点处理；内部包含WAL、MemStore、BlockCache、Store(HFile)；定时向ZK上报心跳，宕机后自动迁移Region。</p>
+</div>
+      </div>
+    </main>
+  </div>
+
+  <div class="float-buttons">
+    <button id="back-to-top" class="float-btn" title="返回顶部">↑</button>
+    <a href="/" class="float-btn" title="返回首页">🏠</a>
+  </div>
+
+  
+  <!-- 浮动按钮脚本：外链（源文件 themes/butterfly/source/js/theme/post-float-btn.js） -->
+  <script src="/js/theme/post-float-btn.js"></script>
+
+  
+  <!--
+  ============================================
+  音频播放器组件
+  文件：APlayer.njk
+  适用终端：电脑端
+  作用：APlayer + Meting 外链播放，按需渲染到页面底部
+  最后修改：2026-11-11
+  ============================================
+-->
+<link rel="stylesheet" href="https://cdn.bootcdn.net/ajax/libs/aplayer/1.10.1/APlayer.min.css">
+<script src="https://cdn.bootcdn.net/ajax/libs/aplayer/1.10.1/APlayer.min.js"></script>
+<script src="https://cdn.bootcdn.net/ajax/libs/meting/2.0.1/Meting.min.js"></script>
+<div class="aplayer no-destroy"
+     data-id="2182931917"
+     data-server="netease"
+     data-type="playlist"
+     data-fixed="true"
+     data-mini="true">
+</div>
+
+
+
+<script>
+  async function renderMermaidDiagram(){
+    const blocks = document.querySelectorAll('pre[class*="language-mermaid"]');
+    if(!blocks.length) return;
+
+    const mermaidBlocks = [];
+    blocks.forEach(el=>{
+      const codeEl = el.querySelector('code');
+      if(codeEl){
+        const codeText = codeEl.innerText;
+        mermaidBlocks.push({fig: el, codeText});
+      }
+    })
+    if(!mermaidBlocks.length) return;
+
+    // ESM 按需引入 mermaid
+    const { default: mermaid } = await import('https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs');
+    
+    mermaid.initialize({
+      startOnLoad: false,
+      theme: 'base'
+    });
+
+    for(const {fig,codeText} of mermaidBlocks){
+      const div = document.createElement('div');
+      div.className = 'mermaid';
+      div.innerText = codeText;
+      fig.parentNode.replaceChild(div, fig);
+    }
+    await mermaid.run();
+  }
+  document.addEventListener('DOMContentLoaded', renderMermaidDiagram);
+  document.addEventListener('pjax:complete', renderMermaidDiagram);
+</script>
+
+
+  <script>
+    /* 返回按钮来源判定：从星迹索引进来回 /tags/，从星图手记进来回 /archives/；
+       直接从地址栏/站外进入时默认回星图手记，保证按钮始终可用 */
+    (function () {
+      var back = document.getElementById('articleBack');
+      if (!back) return;
+      var from = '';
+      try {
+        var q = new URLSearchParams(location.search);
+        from = q.get('from') || '';
+      } catch (e) {}
+      if (!from) {
+        var ref = document.referrer || '';
+        if (ref.indexOf('/tags') > -1) from = 'tags';
+        else if (ref.indexOf('/archives') > -1) from = 'archive';
+      }
+      if (from === 'tags') {
+        back.href = '/tags/';
+        back.textContent = '← 返回星迹索引';
+      } else if (from === 'search') {
+        back.href = '/';
+        back.textContent = '← 返回首页';
+      } else {
+        back.href = '/archives/';
+        back.textContent = '← 返回星图手记';
+      }
+    })();
+  </script>
+</body>
+</html>

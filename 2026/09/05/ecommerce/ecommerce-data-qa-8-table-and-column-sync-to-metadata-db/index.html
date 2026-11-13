@@ -1,0 +1,2137 @@
+<!--
+  ============================================
+  文章原文页模板
+  文件：post.njk
+  适用终端：电脑端
+  作用：文章正文 + 侧栏；手机 UA 跳 /phone/p/<slug>/
+  最后修改：2026-11-11
+  ============================================
+-->
+
+
+<!DOCTYPE html>
+<html class="post-page">
+<!--
+  ============================================
+  公共 head 组件
+  文件：Head.njk
+  适用终端：电脑端
+  作用：输出 charset/viewport/title，并按 pageCss 输出外链样式表
+  样式资源：themes/butterfly/source/css/theme/*.css（Hexo 复制到 /css/theme/）
+  引入层级顺序（= CSS 层叠顺序，调整只允许追加，不要打乱前后）：
+    1 基础  common.css
+    2 布局  post-layout.css
+    3 组件  sidebar.css
+    4 正文  post.css
+    5 页面  tags.css / chronicle.css / about.css / tag.css / category-shared.css / pc-home.css
+    6 浮层  star-reader.css
+    7 特效  starmap-live.css
+  最后修改：2026-11-12
+  ============================================
+--><head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="color-scheme" content="dark">
+  <meta name="theme-color" content="#020817">
+  <!-- 首帧兜底：浏览器默认画布是白的，样式表还没解析完就画会闪一下白。这条 8 字节规则先锁死深空底色 -->
+  <style>html{background-color:#020817}</style>
+  <title>时空秘境 - 八、电商问数：表与字段信息同步到元数据库</title>
+  
+  <link rel="stylesheet" href="/css/theme/common.css">
+  
+  <link rel="stylesheet" href="/css/theme/post-layout.css">
+  
+  <link rel="stylesheet" href="/css/theme/sidebar.css">
+  
+  <link rel="stylesheet" href="/css/theme/post.css">
+  
+<meta name="generator" content="Hexo 8.1.2"></head>
+
+<script>
+  /* 手机 UA 分流：电脑端这套控制台不再给手机用，直接换成手机版页面 */
+  (function () {
+    var ua = navigator.userAgent || '';
+    if (/Android|iPhone|iPod|HarmonyOS|Windows Phone|MicroMessenger|Mobile Safari/i.test(ua)) {
+      location.replace('/phone/p/ecommerce/ecommerce-data-qa-8-table-and-column-sync-to-metadata-db/');
+    }
+  })();
+</script>
+<link rel="stylesheet" href="/css/code-table.css">
+
+<body>
+  <!--
+  ============================================
+  星空粒子背景组件
+  文件：Particles.njk
+  适用终端：电脑端
+  作用：particles.js 全站星空动画，鼠标悬停互动
+  最后修改：2026-11-11
+  ============================================
+--><!-- z-index 必须是 0 而不是 -1：body 带着不透明的 radial-gradient 底色，
+     负层级的子元素会被父元素背景整个盖住，粒子在跑但一个点都看不见 -->
+<div id="particles" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 0; pointer-events: none;"></div>
+<!-- 星座层：随机零星散布星座图形，叠在粒子之上、页面内容之下 -->
+<div id="constellations" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 1; pointer-events: none;" aria-hidden="true"></div>
+<script src="/js/particles.min.js"></script>
+<script>/* 本地库失效时回退 CDN，保证星空背景不丢 */
+if (typeof particlesJS === "undefined") {
+  document.write('<script src="https://cdn.jsdelivr.net/particles.js/2.0.0/particles.min.js"><\/script>');
+}
+</script>
+<script>
+particlesJS("particles", {
+  particles: {
+    number: {
+      value: 95,
+      density: {
+        enable: true,
+        value_area: 800
+      }
+    },
+    color: {
+      value: "#00eeff"
+    },
+    shape: {
+      type: "circle",
+      stroke: {
+        width: 0,
+        color: "#000000"
+      }
+    },
+    opacity: {
+      value: 0.6,
+      random: true,
+      anim: {
+        enable: true,
+        speed: 0.5,
+        opacity_min: 0.1,
+        sync: false
+      }
+    },
+    size: {
+      value: 3,
+      random: true,
+      anim: {
+        enable: true,
+        speed: 2,
+        size_min: 0.1,
+        sync: false
+      }
+    },
+    line_linked: {
+      enable: true,
+      distance: 118,          /* 比原来 150 收紧，让粒子网络稀疏些，给星座留出视觉空间 */
+      color: "#00eeff",
+      opacity: 0.32,
+      width: 1
+    },
+    move: {
+      enable: true,
+      speed: 0.8,
+      direction: "none",
+      random: true,
+      straight: false,
+      out_mode: "out",
+      bounce: false,
+      attract: {
+        enable: true,
+        rotateX: 600,
+        rotateY: 1200
+      }
+    }
+  },
+  interactivity: {
+    detect_on: "canvas",
+    events: {
+      onhover: {
+        enable: true,
+        mode: "grab"       // 鼠标悬停时粒子聚集
+      },
+      onclick: {
+        enable: true,
+        mode: "push"       // 点击时产生新粒子
+      },
+      resize: true
+    },
+    modes: {
+      grab: {
+        distance: 200,
+        line_linked: {
+          opacity: 1
+        }
+      },
+      push: {
+        particles_nb: 6
+      }
+    }
+  },
+  retina_detect: true
+});
+</script>
+<!-- 星座层：独立 canvas，随机散布真实星座图形（依赖上面的 #constellations 容器） -->
+<script src="/js/theme/starfield.js"></script>
+
+  <!-- 返回按钮：按来源回到星图手记 / 星迹索引，默认回星图手记。
+       放在 body 顶层（不进 main-content），避免被其溢出裁剪切掉右半边 -->
+  <a class="article-back" id="articleBack" href="/archives/">← 返回星图手记</a>
+
+  <div class="app-layout">
+    <!--
+  ============================================
+  左侧栏个人卡组件
+  文件：_components/Sidebar.njk
+  适用终端：电脑端（星图手记 / 星迹索引 / 秘境主人 页面通栏侧栏）
+  作用：头像、昵称、站点统计、导航菜单、底部信息与全局搜索面板（结果落在雷达区，无结果播「内容走丢 → 404」动画）
+  样式依赖：source/css/theme/sidebar.css
+  脚本依赖：source/js/theme/sidebar.js
+  最后修改：2026-11-11
+  ============================================
+-->
+<aside class="sidebar" id="sidebar">
+  <div class="profile-card">
+    <div class="avatar">
+      <div
+        style="width:80px;height:80px;border-radius:50%;background:linear-gradient(135deg,#0a0e27,#1a1a4e);display:flex;align-items:center;justify-content:center;margin:0 auto;font-size:40px;border:2px solid #00eeff;box-shadow:0 0 30px rgba(0,238,255,0.3);">
+        ✨</div>
+    </div>
+    <h3 class="nickname">时空行者</h3>
+    <p class="bio">星辰大海，代码为舟</p>
+    <div class="stats">
+      <div class="stat-item">
+        <span class="stat-num">174</span>
+        <span class="stat-label">文章</span>
+      </div>
+      <div class="stat-item">
+        <span class="stat-num" id="fans-count" style="cursor:pointer;">1088</span>
+        <span class="stat-label">粉丝</span>
+      </div>
+      <div class="stat-item">
+        <span class="stat-num" id="follow-count" style="cursor:pointer;">66</span>
+        <span class="stat-label">关注</span>
+      </div>
+    </div>
+    <button class="follow-btn">+ 关注</button>
+  </div>
+  <div class="search-box">
+    <input type="text" placeholder="找找看..." id="search-input">
+    <button class="search-btn" id="searchModalOpen">🔍</button>
+  </div>
+  <div class="links-card">
+    <h4>常用链接</h4>
+    <ul>
+      <li><a href="/about/">秘境主人</a></li>
+      <li><a href="/archives/">星图手记</a></li>
+      <li><a href="/tags/">星迹索引</a></li>
+      <!-- ✅ 新增联系我 -->
+      <li><a class="contact-trigger" href="javascript:void(0)">星语传书</a></li>
+      <li><a class="donate-trigger" href="javascript:void(0)">星芒赠礼</a></li>
+    </ul>
+  </div>
+  <div class="tags-card">
+    <h4>热门标签</h4>
+    
+    <div class="tag-cloud">
+      
+      <a href="/tags/MySQL数据库/" class="tag-link" data-tag="MySQL数据库"
+        data-count="7">MySQL数据库</a>
+      
+      <a href="/tags/redis/" class="tag-link" data-tag="redis"
+        data-count="7">redis</a>
+      
+      <a href="/tags/深度研搜/" class="tag-link" data-tag="深度研搜"
+        data-count="15">深度研搜</a>
+      
+      <a href="/tags/电商问数/" class="tag-link" data-tag="电商问数"
+        data-count="18">电商问数</a>
+      
+      <a href="/tags/git/" class="tag-link" data-tag="git"
+        data-count="5">git</a>
+      
+      <a href="/tags/面试/" class="tag-link" data-tag="面试"
+        data-count="11">面试</a>
+      
+      <a href="/tags/Java/" class="tag-link" data-tag="Java"
+        data-count="10">Java</a>
+      
+      <a href="/tags/langchain/" class="tag-link" data-tag="langchain"
+        data-count="10">langchain</a>
+      
+      <a href="/tags/Netty/" class="tag-link" data-tag="Netty"
+        data-count="4">Netty</a>
+      
+      <a href="/tags/大模型/" class="tag-link" data-tag="大模型"
+        data-count="35">大模型</a>
+      
+      <a href="/tags/AICoding/" class="tag-link" data-tag="AICoding"
+        data-count="9">AICoding</a>
+      
+      <a href="/tags/SpringAi/" class="tag-link" data-tag="SpringAi"
+        data-count="15">SpringAi</a>
+      
+      <a href="/tags/随笔杂谈/" class="tag-link" data-tag="随笔杂谈"
+        data-count="2">随笔杂谈</a>
+      
+      <a href="/tags/vue/" class="tag-link" data-tag="vue"
+        data-count="9">vue</a>
+      
+      <a href="/tags/视频剪辑/" class="tag-link" data-tag="视频剪辑"
+        data-count="1">视频剪辑</a>
+      
+      <a href="/tags/大数据/" class="tag-link" data-tag="大数据"
+        data-count="3">大数据</a>
+      
+      <a href="/tags/电影/" class="tag-link" data-tag="电影"
+        data-count="2">电影</a>
+      
+      <a href="/tags/游戏/" class="tag-link" data-tag="游戏"
+        data-count="1">游戏</a>
+      
+      <a href="/tags/音乐/" class="tag-link" data-tag="音乐"
+        data-count="8">音乐</a>
+      
+      <a href="/tags/图片/" class="tag-link" data-tag="图片"
+        data-count="2">图片</a>
+      
+    </div>
+    <script>
+      /*
+  ============================================
+  侧栏热门标签排序（首帧前执行）
+  文件：_js/hot-tags.js
+  引入位置：_components/Sidebar.njk 里 .tag-cloud 闭合标签之后（紧跟着写死）
+  作用：按点击次数排序、只露前 5 个、点一下立刻重排
+  为什么单独拆出来：以前放在 sidebar.js 的 DOMContentLoaded 里，首帧渲染的还是
+  模板顺序的 20 个标签，等脚本跑完才收成 5 个；配合跨页淡入（View Transition）
+  会出现「新旧两套标签叠在一起、影子跳一下」。紧跟标签节点内联执行就没有中间态。
+  最后修改：2026-11-12
+  ============================================
+*/
+(function () {
+  var cloud = document.querySelector('.tag-cloud');
+  if (!cloud) return;
+  var links = Array.prototype.slice.call(cloud.querySelectorAll('.tag-link'));
+  if (!links.length) return;
+
+  var KEY = 'starry_tag_visits'; // 标签名 -> 点击次数
+  var TOP = 5;
+  var visits = {};
+
+  try {
+    var raw = JSON.parse(localStorage.getItem(KEY) || '{}');
+    visits = (raw && typeof raw === 'object') ? raw : {};
+  } catch (e) {
+    visits = {};
+  }
+
+  links.forEach(function (link) {
+    var name = link.dataset.tag || (link.textContent || '').trim();
+    link.dataset.tag = name;
+    if (!link.dataset.count) link.dataset.count = '0';
+  });
+
+  // 排序：点击次数降序 → 文章数降序 → 名字，保证同分时顺序稳定不来回跳
+  function order() {
+    return links.slice().sort(function (a, b) {
+      var va = visits[a.dataset.tag] || 0;
+      var vb = visits[b.dataset.tag] || 0;
+      if (vb !== va) return vb - va;
+      var ca = Number(a.dataset.count) || 0;
+      var cb = Number(b.dataset.count) || 0;
+      if (cb !== ca) return cb - ca;
+      return String(a.dataset.tag).localeCompare(String(b.dataset.tag), 'zh');
+    });
+  }
+
+  // 重排 DOM：按名次 append，超出 5 个的 hidden（仍留在 DOM，等名次升上来再显示）
+  function render() {
+    order().forEach(function (link, i) {
+      link.dataset.visits = visits[link.dataset.tag] || 0;
+      cloud.appendChild(link);
+      link.hidden = i >= TOP;
+    });
+  }
+
+  links.forEach(function (link) {
+    link.addEventListener('click', function () {
+      var name = link.dataset.tag;
+      visits[name] = (visits[name] || 0) + 1;
+      try { localStorage.setItem(KEY, JSON.stringify(visits)); } catch (e) { /* 忽略配额错误 */ }
+      render(); // 当前页立刻看到「谁被点多了谁上前」
+    });
+  });
+
+  render();
+})();
+
+    </script>
+  </div>
+  <div class="archive-card">
+    <h4>按月归档</h4>
+    <ul class="archive-list">
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2026/12/">
+          2026年12月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2026/11/">
+          2026年11月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2026/10/">
+          2026年10月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2026/09/">
+          2026年09月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2026/08/">
+          2026年08月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2026/07/">
+          2026年07月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2026/06/">
+          2026年06月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2026/05/">
+          2026年05月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2026/04/">
+          2026年04月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2026/03/">
+          2026年03月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2026/02/">
+          2026年02月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2026/01/">
+          2026年01月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2025/12/">
+          2025年12月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2025/11/">
+          2025年11月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2025/10/">
+          2025年10月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2025/09/">
+          2025年09月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2025/08/">
+          2025年08月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2025/07/">
+          2025年07月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2025/06/">
+          2025年06月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2025/05/">
+          2025年05月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2025/04/">
+          2025年04月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2025/03/">
+          2025年03月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2025/02/">
+          2025年02月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2025/01/">
+          2025年01月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2024/11/">
+          2024年11月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2024/10/">
+          2024年10月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2024/09/">
+          2024年09月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2024/08/">
+          2024年08月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2024/07/">
+          2024年07月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2024/05/">
+          2024年05月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2024/04/">
+          2024年04月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2024/03/">
+          2024年03月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2024/02/">
+          2024年02月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2024/01/">
+          2024年01月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2023/12/">
+          2023年12月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2023/11/">
+          2023年11月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2023/10/">
+          2023年10月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2023/09/">
+          2023年09月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2023/08/">
+          2023年08月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2023/07/">
+          2023年07月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2023/06/">
+          2023年06月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2023/05/">
+          2023年05月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2023/04/">
+          2023年04月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2023/03/">
+          2023年03月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2023/02/">
+          2023年02月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2023/01/">
+          2023年01月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2022/09/">
+          2022年09月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2022/05/">
+          2022年05月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2022/01/">
+          2022年01月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2021/12/">
+          2021年12月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2021/11/">
+          2021年11月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2021/10/">
+          2021年10月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2021/09/">
+          2021年09月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2021/08/">
+          2021年08月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2021/07/">
+          2021年07月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2021/06/">
+          2021年06月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2021/05/">
+          2021年05月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2021/04/">
+          2021年04月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2021/03/">
+          2021年03月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2021/02/">
+          2021年02月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2021/01/">
+          2021年01月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2020/10/">
+          2020年10月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2020/07/">
+          2020年07月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2020/04/">
+          2020年04月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2020/01/">
+          2020年01月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2019/12/">
+          2019年12月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2019/11/">
+          2019年11月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2019/10/">
+          2019年10月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2019/09/">
+          2019年09月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2019/08/">
+          2019年08月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2019/07/">
+          2019年07月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2019/06/">
+          2019年06月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2019/05/">
+          2019年05月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2019/04/">
+          2019年04月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2019/03/">
+          2019年03月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2019/02/">
+          2019年02月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2019/01/">
+          2019年01月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2018/12/">
+          2018年12月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2018/11/">
+          2018年11月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2018/10/">
+          2018年10月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2018/09/">
+          2018年09月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2018/08/">
+          2018年08月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2018/07/">
+          2018年07月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2018/06/">
+          2018年06月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2018/05/">
+          2018年05月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2018/04/">
+          2018年04月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2018/03/">
+          2018年03月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2018/02/">
+          2018年02月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2018/01/">
+          2018年01月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+    </ul>
+  </div>
+
+  <!-- ========== 星语传书（雷达区弹窗，与搜索面板同一套面板样式） ========== -->
+  <div class="search-panel dock-panel" id="contactModal" hidden>
+    <div class="sp-mask" data-dock-close></div>
+    <div class="sp-box" role="dialog" aria-modal="true" aria-label="星语传书">
+      <div class="sp-head">
+        <span class="sp-dot"></span>
+        <span class="sp-title">星语传书</span>
+        <span class="sp-title-sub">/ SIGNAL CHANNEL</span>
+        <span class="sp-meta">SYS.REPLY ≤ 48H</span>
+        <button class="sp-close" type="button" data-dock-close title="关闭">×</button>
+      </div>
+      <div class="sp-body dock-body">
+        <p class="dock-lead">写信给时空行者：文章里的错字、跑不通的 demo、想聊的一句技术，都可以从这里进来。信号收到，我会尽量回。</p>
+        <div class="dock-grid">
+          <div class="dock-list">
+            <a class="dock-row" href="https://wpa.qq.com/msgrd?v=3&amp;uin=372109355&amp;site=qq&amp;menu=yes"
+              target="_blank" rel="noopener">
+              <span class="dock-ico">企</span>
+              <span class="dock-k"><b>QQ</b><span>372109355</span></span>
+            </a>
+            <a class="dock-row" href="https://wu4yong.github.io" target="_blank" rel="noopener">
+              <span class="dock-ico">⌂</span>
+              <span class="dock-k"><b>站点主站</b><span>wu4yong.github.io</span></span>
+            </a>
+            <div class="dock-row dock-row-static">
+              <span class="dock-ico">✉</span>
+              <span class="dock-k"><b>电子邮箱</b><span>暂未公开 · 任何问题QQ留言</span></span>
+            </div>
+            <a class="dock-row" href="#" target="_blank" rel="noopener">
+              <span class="dock-ico">◈</span>
+              <span class="dock-k"><b>GitHub</b><span>暂未公开 · 任何问题QQ留言</span></span>
+            </a>
+            <a class="dock-row" href="#" target="_blank" rel="noopener">
+              <span class="dock-ico">◇</span>
+              <span class="dock-k"><b>Gitee</b><span>暂未公开 · 任何问题QQ留言</span></span>
+            </a>
+          </div>
+          <div class="dock-side">
+            <div class="dock-qr">
+              <em>WECHAT · 微信</em>
+              <img src="/assets/images/wechat-qr.png" alt="微信二维码">
+              <span class="dock-qr-tip">扫码添加，备注「来自时空秘境」</span>
+            </div>
+          </div>
+        </div>
+        <div class="dock-chips">
+          <span class="dock-chip">文章纠错</span>
+          <span class="dock-chip">Demo 答疑</span>
+          <span class="dock-chip">转载授权</span>
+          <span class="dock-chip">技术交流</span>
+          <span class="dock-chip">内推 / 合作</span>
+        </div>
+        <p class="dock-note">无正文的「在吗」容易被当作信号干扰滤掉，直接把问题写清楚，回信会快很多。</p>
+      </div>
+      <!-- 开合转场层：百叶窗 / 电影幕布 / 淡入，由 source/js/theme/sidebar.js 轮换播放 -->
+      <div class="dock-fx" aria-hidden="true">
+        <div class="dock-fx-slats"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+        <div class="dock-fx-curtain"><span class="top"></span><span class="bottom"></span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========== 全局搜索面板 ==========
+       索引来自构建期生成的 /search.json（hexo-generator-searchdb），随文章新增自动更新；
+       打开时由 source/js/theme/sidebar.js 把整块挪进 Radar 中间区（无雷达的页面退化为居中浮层） -->
+  <div class="search-panel" id="searchPanel" hidden>
+    <div class="sp-mask" id="searchMask"></div>
+    <div class="sp-box" role="dialog" aria-modal="true" aria-label="全文搜索">
+      <div class="sp-head">
+        <span class="sp-dot"></span>
+        <span class="sp-title">全文搜索</span>
+        <span class="sp-title-sub">/ GLOBAL SEARCH</span>
+        <span class="sp-meta" id="spMeta"></span>
+        <button class="sp-close" id="searchPanelClose" type="button" title="关闭搜索">×</button>
+      </div>
+      <div class="sp-body" id="spBody">
+        <div class="sp-loading" id="spLoading">正在扫描星图索引…</div>
+        <ul class="sp-list" id="spList"></ul>
+        <!-- 无结果：内容走丢 → 慢速落 404 -->
+        <div class="sp-empty" id="spEmpty" hidden>
+          <div class="sp-drift-wrap">
+            <span class="sp-trail"></span>
+            <span class="sp-drift"></span>
+            <span class="sp-lost">SIGNAL LOST · 信号已丢失</span>
+          </div>
+          <div class="sp-404"><span>4</span><span>0</span><span>4</span></div>
+          <p class="sp-empty-main">内容走丢在星海里了</p>
+          <p class="sp-empty-tip">换个关键词，或去〈星迹索引 / 星图手记〉里慢慢逛</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========== 星芒赠礼（雷达区弹窗，收款码图片沿用原图不改） ========== -->
+  <div class="search-panel dock-panel" id="donateModal" hidden>
+    <div class="sp-mask" data-dock-close></div>
+    <div class="sp-box" role="dialog" aria-modal="true" aria-label="星芒赠礼">
+      <div class="sp-head">
+        <span class="sp-dot"></span>
+        <span class="sp-title">星芒赠礼</span>
+        <span class="sp-title-sub">/ STAR OFFERING</span>
+        <span class="sp-meta">THANKS FOR THE LIGHT</span>
+        <button class="sp-close" type="button" data-dock-close title="关闭">×</button>
+      </div>
+      <div class="sp-body dock-body">
+        <div class="dock-thanks">
+          <p>这片星空是工作闲暇时光一个个凌晨攒出来的：一篇文章、一次复盘、一个修不完的 bug。</p>
+          <p>如果你在这里找到了能用的东西，愿意赏一杯凌晨三点的咖啡 —— 这份心意我会记很久。</p>
+          <p>不打赏也完全没关系：所有文章永久免费，愿你我在各自的轨道上都跑得稳一点。</p>
+        </div>
+        <div class="dock-donate">
+          <div class="dock-hero">
+            <div class="dock-hero-pic">
+              <span class="dock-hero-halo" aria-hidden="true"></span>
+              <span class="dock-hero-ring dock-hero-ring-a" aria-hidden="true"></span>
+              <span class="dock-hero-ring dock-hero-ring-b" aria-hidden="true"></span>
+              <img src="/assets/images/donate-boy.png" alt="感谢支持">
+            </div>
+            <em>THANKS FOR THE LIGHT</em>
+            <span class="dock-hero-tip">愿每一次凌晨，都有人替你留一盏灯</span>
+          </div>
+          <div class="dock-pay">
+            <div class="dock-qr dock-qr-row">
+              <img src="/assets/images/alipay-qr.jpg" alt="支付宝收款码">
+              <div class="dock-qr-txt">
+                <b>支付宝 · 星途赞赏</b>
+                <span>请我喝一杯凌晨三点的咖啡</span>
+              </div>
+            </div>
+            <div class="dock-qr dock-qr-row">
+              <img src="/assets/images/wechat-pay-qr.jpg" alt="微信收款码">
+              <div class="dock-qr-txt">
+                <b>微信 · 星河致谢</b>
+                <span>金额随意，心意已经收到</span>
+              </div>
+            </div>
+          </div>
+        </div>        <div class="dock-chips">
+          <span class="dock-chip">域名与服务器</span>
+          <span class="dock-chip">图床与备份</span>
+          <span class="dock-chip">一本技术书</span>
+          <span class="dock-chip">深夜的一杯咖啡</span>
+        </div>
+        <p class="dock-note">赠礼纯属心意，不产生任何付费内容或额外承诺；扫码前请确认收款人，小心仿冒。</p>
+      </div>
+      <!-- 开合转场层：百叶窗 / 电影幕布 / 淡入，由 source/js/theme/sidebar.js 轮换播放 -->
+      <div class="dock-fx" aria-hidden="true">
+        <div class="dock-fx-slats"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+        <div class="dock-fx-curtain"><span class="top"></span><span class="bottom"></span></div>
+      </div>
+    </div>
+  </div>
+
+
+</aside>
+<!-- 引入侧边栏交互脚本：外链（源文件 themes/butterfly/source/js/theme/sidebar.js） -->
+<script src="/js/theme/sidebar.js"></script>
+
+    
+    <button id="sidebarToggle" class="sidebar-toggle" title="隐藏侧栏"></button>
+
+    <main class="main-content">
+      <div class="article-card">
+        <h1 class="article-title">八、电商问数：表与字段信息同步到元数据库</h1>
+        <div class="article-meta">📅 2026-09-05</div>
+        <div class="article-content"><div class="essay-banner essay-image11">
+    <!-- table-and-column-sync-to-metadata-db -->
+</div>
+
+<h1 id="8-电商问数：表与字段信息同步到元数据库"><a href="#8-电商问数：表与字段信息同步到元数据库" class="headerlink" title="8 电商问数：表与字段信息同步到元数据库"></a>8 电商问数：表与字段信息同步到元数据库</h1><hr>
+<p><strong>本章课程目标：</strong></p>
+<ul>
+<li>理解为什么元数据知识库的第一步，一定是先把表信息和字段信息沉淀到 <code>Meta MySQL</code>。</li>
+<li>看懂“配置描述 -&gt; 业务实体 -&gt; DW 补齐真实信息 -&gt; Meta MySQL 落库”这条完整链路。</li>
+<li>建立清晰的分层认识：<code>Service</code> 负责组织流程，<code>DW Repository</code> 负责查询真实结构，<code>Meta Repository</code> 负责落库，<code>Mapper</code> 负责对象转换。</li>
+</ul>
+<p><strong>学习建议：</strong> 这一章先抓住一条落库链路：配置文件描述表字段，系统去数仓补齐真实结构，再转换成内部实体，最后写入 Meta MySQL。ORM、Repository、事务这些细节都服务于这条链路。读代码时重点看哪些数据来自配置，哪些数据来自 DW，哪些数据最终沉淀到元数据库。</p>
+<p><strong>对应代码分支：</strong> <code>08-metadata-table-column-sync</code></p>
+<hr>
+<p>上一章我们已经把“元数据知识库构建”的入口说明白了：脚本如何启动、配置如何加载、服务层如何接过 <code>config_path</code> 并进入真正的业务流程。</p>
+<p>从这一章开始，我们正式进入第一条真正落地的业务链路：<strong>把配置文件里描述的表和字段，转换成系统内部统一的数据对象，并写入 <code>Meta MySQL</code>。</strong></p>
+<p>这一步很基础，但也非常关键。因为后面的字段向量索引、字段取值全文索引、SQL 生成上下文组织，全部都建立在这批结构化元数据之上。也就是说，<strong>只有表信息和字段信息先稳定落下来，后面的检索和问数链路才有可靠的基础。</strong></p>
+<hr>
+<h2 id="1、本章在整条构建流程中的位置"><a href="#1、本章在整条构建流程中的位置" class="headerlink" title="1、本章在整条构建流程中的位置"></a>1、本章在整条构建流程中的位置</h2><p>回到 <code>MetaKnowledgeService.build(config_path)</code>，表链路对应的是下面这一段：</p>
+<p>项目对应文件路径：<code>shopkeeper-agent/app/services/meta_knowledge_service.py</code></p>
+<pre class="line-numbers language-python" data-language="python"><code class="language-python"><span class="token keyword">async</span> <span class="token keyword">def</span> <span class="token function">build</span><span class="token punctuation">(</span>self<span class="token punctuation">,</span> config_path<span class="token punctuation">:</span> Path<span class="token punctuation">)</span><span class="token punctuation">:</span>
+    context <span class="token operator">=</span> OmegaConf<span class="token punctuation">.</span>load<span class="token punctuation">(</span>config_path<span class="token punctuation">)</span>
+    schema <span class="token operator">=</span> OmegaConf<span class="token punctuation">.</span>structured<span class="token punctuation">(</span>MetaConfig<span class="token punctuation">)</span>
+    meta_config<span class="token punctuation">:</span> MetaConfig <span class="token operator">=</span> OmegaConf<span class="token punctuation">.</span>to_object<span class="token punctuation">(</span>OmegaConf<span class="token punctuation">.</span>merge<span class="token punctuation">(</span>schema<span class="token punctuation">,</span> context<span class="token punctuation">)</span><span class="token punctuation">)</span>
+
+    <span class="token keyword">if</span> meta_config<span class="token punctuation">.</span>tables<span class="token punctuation">:</span>
+        column_infos <span class="token operator">=</span> <span class="token keyword">await</span> self<span class="token punctuation">.</span>_save_tables_to_meta_db<span class="token punctuation">(</span>meta_config<span class="token punctuation">)</span>
+        <span class="token keyword">await</span> self<span class="token punctuation">.</span>_save_column_info_to_qdrant<span class="token punctuation">(</span>column_infos<span class="token punctuation">)</span>
+        <span class="token keyword">await</span> self<span class="token punctuation">.</span>_save_value_info_to_es<span class="token punctuation">(</span>meta_config<span class="token punctuation">,</span> column_infos<span class="token punctuation">)</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<p>只要配置里存在 <code>tables</code>，系统就会依次做 3 件事：</p>
+<ol>
+<li>先把表信息和字段信息写入 <code>Meta MySQL</code></li>
+<li>再根据 <code>column_infos</code> 为字段建立向量索引</li>
+<li>最后根据配置中的 <code>sync</code> 标记，为部分字段建立字段值全文索引</li>
+</ol>
+<p>本章只讲第一步，也就是：</p>
+<pre class="line-numbers language-python" data-language="python"><code class="language-python">column_infos <span class="token operator">=</span> <span class="token keyword">await</span> self<span class="token punctuation">.</span>_save_tables_to_meta_db<span class="token punctuation">(</span>meta_config<span class="token punctuation">)</span><span aria-hidden="true" class="line-numbers-rows"><span></span></span></code></pre>
+
+<p>可以把这一章看作：<strong>先把“字段是什么”这件事讲清楚，后面再讲“字段怎么被检索”。</strong></p>
+<hr>
+<h2 id="2、先抓主线：-save-tables-to-meta-db-…-到底做了什么"><a href="#2、先抓主线：-save-tables-to-meta-db-…-到底做了什么" class="headerlink" title="2、先抓主线：_save_tables_to_meta_db(…) 到底做了什么"></a>2、先抓主线：_save_tables_to_meta_db(…) 到底做了什么</h2><p>进入细节之前，先看本章最核心的方法。</p>
+<p>项目对应文件路径：<code>shopkeeper-agent/app/services/meta_knowledge_service.py</code></p>
+<pre class="line-numbers language-python" data-language="python"><code class="language-python"><span class="token keyword">async</span> <span class="token keyword">def</span> <span class="token function">_save_tables_to_meta_db</span><span class="token punctuation">(</span>self<span class="token punctuation">,</span> meta_config<span class="token punctuation">:</span> MetaConfig<span class="token punctuation">)</span> <span class="token operator">-</span><span class="token operator">></span> <span class="token builtin">list</span><span class="token punctuation">[</span>ColumnInfo<span class="token punctuation">]</span><span class="token punctuation">:</span>
+    table_infos<span class="token punctuation">:</span> <span class="token builtin">list</span><span class="token punctuation">[</span>TableInfo<span class="token punctuation">]</span> <span class="token operator">=</span> <span class="token punctuation">[</span><span class="token punctuation">]</span>
+    column_infos<span class="token punctuation">:</span> <span class="token builtin">list</span><span class="token punctuation">[</span>ColumnInfo<span class="token punctuation">]</span> <span class="token operator">=</span> <span class="token punctuation">[</span><span class="token punctuation">]</span>
+
+    <span class="token keyword">for</span> table <span class="token keyword">in</span> meta_config<span class="token punctuation">.</span>tables<span class="token punctuation">:</span>
+        table_info <span class="token operator">=</span> TableInfo<span class="token punctuation">(</span>
+            <span class="token builtin">id</span><span class="token operator">=</span>table<span class="token punctuation">.</span>name<span class="token punctuation">,</span>
+            name<span class="token operator">=</span>table<span class="token punctuation">.</span>name<span class="token punctuation">,</span>
+            role<span class="token operator">=</span>table<span class="token punctuation">.</span>role<span class="token punctuation">,</span>
+            description<span class="token operator">=</span>table<span class="token punctuation">.</span>description<span class="token punctuation">,</span>
+        <span class="token punctuation">)</span>
+        table_infos<span class="token punctuation">.</span>append<span class="token punctuation">(</span>table_info<span class="token punctuation">)</span>
+
+        column_types<span class="token punctuation">:</span> <span class="token builtin">dict</span><span class="token punctuation">[</span><span class="token builtin">str</span><span class="token punctuation">,</span> <span class="token builtin">str</span><span class="token punctuation">]</span> <span class="token operator">=</span> <span class="token keyword">await</span> self<span class="token punctuation">.</span>dw_mysql_repository<span class="token punctuation">.</span>get_column_types<span class="token punctuation">(</span>
+            table<span class="token punctuation">.</span>name
+        <span class="token punctuation">)</span>
+        <span class="token keyword">for</span> column <span class="token keyword">in</span> table<span class="token punctuation">.</span>columns<span class="token punctuation">:</span>
+            column_values<span class="token punctuation">:</span> <span class="token builtin">list</span> <span class="token operator">=</span> <span class="token keyword">await</span> self<span class="token punctuation">.</span>dw_mysql_repository<span class="token punctuation">.</span>get_column_values<span class="token punctuation">(</span>
+                table<span class="token punctuation">.</span>name<span class="token punctuation">,</span> column<span class="token punctuation">.</span>name<span class="token punctuation">,</span> <span class="token number">10</span>
+            <span class="token punctuation">)</span>
+            column_info <span class="token operator">=</span> ColumnInfo<span class="token punctuation">(</span>
+                <span class="token builtin">id</span><span class="token operator">=</span><span class="token string-interpolation"><span class="token string">f"</span><span class="token interpolation"><span class="token punctuation">&#123;</span>table<span class="token punctuation">.</span>name<span class="token punctuation">&#125;</span></span><span class="token string">.</span><span class="token interpolation"><span class="token punctuation">&#123;</span>column<span class="token punctuation">.</span>name<span class="token punctuation">&#125;</span></span><span class="token string">"</span></span><span class="token punctuation">,</span>
+                name<span class="token operator">=</span>column<span class="token punctuation">.</span>name<span class="token punctuation">,</span>
+                <span class="token builtin">type</span><span class="token operator">=</span>column_types<span class="token punctuation">[</span>column<span class="token punctuation">.</span>name<span class="token punctuation">]</span><span class="token punctuation">,</span>
+                role<span class="token operator">=</span>column<span class="token punctuation">.</span>role<span class="token punctuation">,</span>
+                examples<span class="token operator">=</span>column_values<span class="token punctuation">,</span>
+                description<span class="token operator">=</span>column<span class="token punctuation">.</span>description<span class="token punctuation">,</span>
+                alias<span class="token operator">=</span>column<span class="token punctuation">.</span>alias<span class="token punctuation">,</span>
+                table_id<span class="token operator">=</span>table<span class="token punctuation">.</span>name<span class="token punctuation">,</span>
+            <span class="token punctuation">)</span>
+            column_infos<span class="token punctuation">.</span>append<span class="token punctuation">(</span>column_info<span class="token punctuation">)</span>
+
+    <span class="token keyword">async</span> <span class="token keyword">with</span> self<span class="token punctuation">.</span>meta_mysql_repository<span class="token punctuation">.</span>session<span class="token punctuation">.</span>begin<span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">:</span>
+        <span class="token keyword">await</span> self<span class="token punctuation">.</span>meta_mysql_repository<span class="token punctuation">.</span>save_table_infos<span class="token punctuation">(</span>table_infos<span class="token punctuation">)</span>
+        <span class="token keyword">await</span> self<span class="token punctuation">.</span>meta_mysql_repository<span class="token punctuation">.</span>save_column_infos<span class="token punctuation">(</span>column_infos<span class="token punctuation">)</span>
+
+    <span class="token keyword">return</span> column_infos<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<p>它做的事情其实非常清楚：</p>
+<ol>
+<li>遍历配置中的每张表，先构造 <code>TableInfo</code></li>
+<li>去 <code>DW</code> 查询这张表所有字段的真实类型</li>
+<li>再遍历这张表下的每个字段，查询一部分真实取值作为示例</li>
+<li>构造 <code>ColumnInfo</code></li>
+<li>开启事务，把表信息和字段信息统一写入 <code>Meta MySQL</code></li>
+</ol>
+<p>所以后面整章的内容，本质上就是把这 5 步一层层拆开来看。</p>
+<hr>
+<h2 id="3、第一步：配置里的表和字段，如何变成业务实体"><a href="#3、第一步：配置里的表和字段，如何变成业务实体" class="headerlink" title="3、第一步：配置里的表和字段，如何变成业务实体"></a>3、第一步：配置里的表和字段，如何变成业务实体</h2><p>这一层最重要的认知是：<strong>配置文件不是直接入库的，配置文件会先被转换成业务实体。</strong></p>
+<p>如果你对“配置文件、业务实体、ORM 模型、mappers”这几类角色的区别还不够稳，这里建议先回看第 7 章前面的概念说明。第 10 章从这里开始，默认你已经先接受一个前提：</p>
+<ul>
+<li>配置文件负责描述“这次要处理什么”</li>
+<li>业务实体负责表示“系统内部怎么统一表达这些数据”</li>
+<li><code>Mapper</code> 负责在业务实体和 ORM 模型之间做转换</li>
+<li>ORM 模型负责把数据映射到数据库表</li>
+</ul>
+<p>也就是说，这一章不是把 <code>YAML</code> 逐行塞进数据库，而是先把配置中的描述组织成系统内部统一的数据对象。</p>
+<h3 id="3-1-先看配置长什么样"><a href="#3-1-先看配置长什么样" class="headerlink" title="3.1 先看配置长什么样"></a>3.1 先看配置长什么样</h3><p>项目对应文件路径：<code>shopkeeper-agent/conf/meta_config.yaml</code></p>
+<pre class="line-numbers language-yaml" data-language="yaml"><code class="language-yaml"><span class="token key atrule">tables</span><span class="token punctuation">:</span>
+  <span class="token punctuation">-</span> <span class="token key atrule">name</span><span class="token punctuation">:</span> dim_region
+    <span class="token key atrule">role</span><span class="token punctuation">:</span> dim
+    <span class="token key atrule">description</span><span class="token punctuation">:</span> 地区维度表，用于描述订单发生的地理区域信息。
+    <span class="token key atrule">columns</span><span class="token punctuation">:</span>
+      <span class="token punctuation">-</span> <span class="token key atrule">name</span><span class="token punctuation">:</span> region_id
+        <span class="token key atrule">role</span><span class="token punctuation">:</span> primary_key
+        <span class="token key atrule">description</span><span class="token punctuation">:</span> 地区唯一标识。
+        <span class="token key atrule">alias</span><span class="token punctuation">:</span> <span class="token punctuation">[</span>地区ID<span class="token punctuation">,</span> 区域ID<span class="token punctuation">]</span>
+        <span class="token key atrule">sync</span><span class="token punctuation">:</span> <span class="token boolean important">false</span>
+
+      <span class="token punctuation">-</span> <span class="token key atrule">name</span><span class="token punctuation">:</span> region_name
+        <span class="token key atrule">role</span><span class="token punctuation">:</span> dimension
+        <span class="token key atrule">description</span><span class="token punctuation">:</span> 订单所属的大区名称，如华东、华南等。
+        <span class="token key atrule">alias</span><span class="token punctuation">:</span> <span class="token punctuation">[</span>地区<span class="token punctuation">,</span> 区域<span class="token punctuation">,</span> 大区<span class="token punctuation">]</span>
+        <span class="token key atrule">sync</span><span class="token punctuation">:</span> <span class="token boolean important">true</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<p>这份配置主要负责告诉系统两件事：哪些表、哪些字段要进入元数据知识库；这些表和字段的业务语义是什么。</p>
+<p>这里能看到的内容，大多是业务描述信息，比如：表角色 <code>role</code>，字段角色 <code>role</code>，字段说明</p>
+<h3 id="3-2-再看系统内部统一的数据对象"><a href="#3-2-再看系统内部统一的数据对象" class="headerlink" title="3.2 再看系统内部统一的数据对象"></a>3.2 再看系统内部统一的数据对象</h3><p>项目对应文件路径：</p>
+<ul>
+<li><code>shopkeeper-agent/app/entities/table_info.py</code></li>
+<li><code>shopkeeper-agent/app/entities/column_info.py</code></li>
+</ul>
+<pre class="line-numbers language-python" data-language="python"><code class="language-python"><span class="token decorator annotation punctuation">@dataclass</span>
+<span class="token keyword">class</span> <span class="token class-name">TableInfo</span><span class="token punctuation">:</span>
+    <span class="token builtin">id</span><span class="token punctuation">:</span> <span class="token builtin">str</span>
+    name<span class="token punctuation">:</span> <span class="token builtin">str</span>
+    role<span class="token punctuation">:</span> <span class="token builtin">str</span>
+    description<span class="token punctuation">:</span> <span class="token builtin">str</span>
+
+
+<span class="token decorator annotation punctuation">@dataclass</span>
+<span class="token keyword">class</span> <span class="token class-name">ColumnInfo</span><span class="token punctuation">:</span>
+    <span class="token builtin">id</span><span class="token punctuation">:</span> <span class="token builtin">str</span>
+    name<span class="token punctuation">:</span> <span class="token builtin">str</span>
+    <span class="token builtin">type</span><span class="token punctuation">:</span> <span class="token builtin">str</span>
+    role<span class="token punctuation">:</span> <span class="token builtin">str</span>
+    examples<span class="token punctuation">:</span> <span class="token builtin">list</span><span class="token punctuation">[</span>Any<span class="token punctuation">]</span>
+    description<span class="token punctuation">:</span> <span class="token builtin">str</span>
+    alias<span class="token punctuation">:</span> <span class="token builtin">list</span><span class="token punctuation">[</span><span class="token builtin">str</span><span class="token punctuation">]</span>
+    table_id<span class="token punctuation">:</span> <span class="token builtin">str</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<p>这里的 <code>TableInfo</code> 是系统内部流转的表元数据对象，<code>ColumnInfo</code> 则是系统内部流转的字段元数据对象。</p>
+<p>它们还不是 ORM 模型，而是更轻量、更偏业务语义的数据载体。</p>
+<h3 id="3-3-为什么-ColumnInfo-id-不是直接用字段名"><a href="#3-3-为什么-ColumnInfo-id-不是直接用字段名" class="headerlink" title="3.3 为什么 ColumnInfo.id 不是直接用字段名"></a>3.3 为什么 ColumnInfo.id 不是直接用字段名</h3><p>对应代码：</p>
+<pre class="line-numbers language-python" data-language="python"><code class="language-python"><span class="token builtin">id</span><span class="token operator">=</span><span class="token string-interpolation"><span class="token string">f"</span><span class="token interpolation"><span class="token punctuation">&#123;</span>table<span class="token punctuation">.</span>name<span class="token punctuation">&#125;</span></span><span class="token string">.</span><span class="token interpolation"><span class="token punctuation">&#123;</span>column<span class="token punctuation">.</span>name<span class="token punctuation">&#125;</span></span><span class="token string">"</span></span><span aria-hidden="true" class="line-numbers-rows"><span></span></span></code></pre>
+
+<p>原因很简单：真实数仓里会有大量同名字段。例如很多表里都会出现：<code>id</code>、<code>customer_id</code>、<code>product_id</code>、<code>date_id</code>等同名字段。</p>
+<p>如果只用字段名做唯一标识，不同表中的同名字段很快就会冲突。所以当前项目把字段 ID 设计成：<strong>表名 + 点号 + 字段名</strong></p>
+<p>例如：</p>
+<ul>
+<li><code>fact_order.order_amount</code></li>
+<li><code>dim_customer.customer_id</code></li>
+<li><code>dim_product.category</code></li>
+</ul>
+<p>这样字段在系统内部才具备稳定、明确的唯一性。</p>
+<h3 id="3-4-为什么-type-和-examples-不是直接从配置里来"><a href="#3-4-为什么-type-和-examples-不是直接从配置里来" class="headerlink" title="3.4 为什么 type 和 examples 不是直接从配置里来"></a>3.4 为什么 type 和 examples 不是直接从配置里来</h3><p>看 <code>ColumnInfo</code> 的构造代码：</p>
+<pre class="line-numbers language-python" data-language="python"><code class="language-python">column_info <span class="token operator">=</span> ColumnInfo<span class="token punctuation">(</span>
+    <span class="token builtin">id</span><span class="token operator">=</span><span class="token string-interpolation"><span class="token string">f"</span><span class="token interpolation"><span class="token punctuation">&#123;</span>table<span class="token punctuation">.</span>name<span class="token punctuation">&#125;</span></span><span class="token string">.</span><span class="token interpolation"><span class="token punctuation">&#123;</span>column<span class="token punctuation">.</span>name<span class="token punctuation">&#125;</span></span><span class="token string">"</span></span><span class="token punctuation">,</span>
+    name<span class="token operator">=</span>column<span class="token punctuation">.</span>name<span class="token punctuation">,</span>
+    <span class="token builtin">type</span><span class="token operator">=</span>column_types<span class="token punctuation">[</span>column<span class="token punctuation">.</span>name<span class="token punctuation">]</span><span class="token punctuation">,</span>
+    role<span class="token operator">=</span>column<span class="token punctuation">.</span>role<span class="token punctuation">,</span>
+    examples<span class="token operator">=</span>column_values<span class="token punctuation">,</span>
+    description<span class="token operator">=</span>column<span class="token punctuation">.</span>description<span class="token punctuation">,</span>
+    alias<span class="token operator">=</span>column<span class="token punctuation">.</span>alias<span class="token punctuation">,</span>
+    table_id<span class="token operator">=</span>table<span class="token punctuation">.</span>name<span class="token punctuation">,</span>
+<span class="token punctuation">)</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<p>这里很值得注意：</p>
+<ul>
+<li><code>role</code>、<code>description</code>、<code>alias</code> 来自配置</li>
+<li><code>type</code>、<code>examples</code> 来自运行时查询</li>
+</ul>
+<p>这背后对应的是一个很重要的工程原则：<strong>能从系统自动获取的真实信息，就尽量不要让用户手工重复维护。</strong></p>
+<p>字段类型本来就是数据库表结构的一部分，示例值本来就存在于真实数据里。如果这些内容也要求用户在配置里手填，会带来两个明显问题：维护成本高，很容易和真实数仓脱节。所以配置文件主要负责描述<strong>业务语义</strong>，而程序运行时负责补齐<strong>真实结构和真实样本</strong>。</p>
+<hr>
+<h2 id="4、第二步：为什么要专门有一个-DW-Repository"><a href="#4、第二步：为什么要专门有一个-DW-Repository" class="headerlink" title="4、第二步：为什么要专门有一个 DW Repository"></a>4、第二步：为什么要专门有一个 DW Repository</h2><p>前面已经看到，字段类型和字段示例值都不是配置里直接给出的，而是运行时从数仓中查出来的。<br>这部分职责，就落在 <code>DWMySQLRepository</code> 上。</p>
+<p>项目对应文件路径：<code>shopkeeper-agent/app/repositories/mysql/dw/dw_mysql_repository.py</code></p>
+<pre class="line-numbers language-python" data-language="python"><code class="language-python"><span class="token keyword">async</span> <span class="token keyword">def</span> <span class="token function">get_column_types</span><span class="token punctuation">(</span>self<span class="token punctuation">,</span> table_name<span class="token punctuation">:</span> <span class="token builtin">str</span><span class="token punctuation">)</span> <span class="token operator">-</span><span class="token operator">></span> <span class="token builtin">dict</span><span class="token punctuation">[</span><span class="token builtin">str</span><span class="token punctuation">,</span> <span class="token builtin">str</span><span class="token punctuation">]</span><span class="token punctuation">:</span>
+    sql <span class="token operator">=</span> <span class="token string-interpolation"><span class="token string">f"show columns from </span><span class="token interpolation"><span class="token punctuation">&#123;</span>table_name<span class="token punctuation">&#125;</span></span><span class="token string">"</span></span>
+    result <span class="token operator">=</span> <span class="token keyword">await</span> self<span class="token punctuation">.</span>session<span class="token punctuation">.</span>execute<span class="token punctuation">(</span>text<span class="token punctuation">(</span>sql<span class="token punctuation">)</span><span class="token punctuation">)</span>
+    <span class="token keyword">return</span> <span class="token punctuation">&#123;</span>row<span class="token punctuation">.</span>Field<span class="token punctuation">:</span> row<span class="token punctuation">.</span>Type <span class="token keyword">for</span> row <span class="token keyword">in</span> result<span class="token punctuation">.</span>fetchall<span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">&#125;</span>
+
+
+<span class="token keyword">async</span> <span class="token keyword">def</span> <span class="token function">get_column_values</span><span class="token punctuation">(</span>self<span class="token punctuation">,</span> table_name<span class="token punctuation">:</span> <span class="token builtin">str</span><span class="token punctuation">,</span> column_name<span class="token punctuation">:</span> <span class="token builtin">str</span><span class="token punctuation">,</span> limit<span class="token punctuation">:</span> <span class="token builtin">int</span><span class="token punctuation">)</span><span class="token punctuation">:</span>
+    sql <span class="token operator">=</span> <span class="token string-interpolation"><span class="token string">f"select distinct </span><span class="token interpolation"><span class="token punctuation">&#123;</span>column_name<span class="token punctuation">&#125;</span></span><span class="token string"> from </span><span class="token interpolation"><span class="token punctuation">&#123;</span>table_name<span class="token punctuation">&#125;</span></span><span class="token string"> limit </span><span class="token interpolation"><span class="token punctuation">&#123;</span>limit<span class="token punctuation">&#125;</span></span><span class="token string">"</span></span>
+    result <span class="token operator">=</span> <span class="token keyword">await</span> self<span class="token punctuation">.</span>session<span class="token punctuation">.</span>execute<span class="token punctuation">(</span>text<span class="token punctuation">(</span>sql<span class="token punctuation">)</span><span class="token punctuation">)</span>
+    <span class="token keyword">return</span> result<span class="token punctuation">.</span>scalars<span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">.</span>fetchall<span class="token punctuation">(</span><span class="token punctuation">)</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<p>这两个方法分别做两件事：</p>
+<ul>
+<li><code>get_column_types(table_name)</code>：查一张表所有字段的真实类型</li>
+<li><code>get_column_values(table_name, column_name, limit)</code>：查某个字段的一部分真实取值</li>
+</ul>
+<h3 id="4-1-为什么字段类型是一张表查一次"><a href="#4-1-为什么字段类型是一张表查一次" class="headerlink" title="4.1 为什么字段类型是一张表查一次"></a>4.1 为什么字段类型是一张表查一次</h3><p>先看这行代码：</p>
+<pre class="line-numbers language-python" data-language="python"><code class="language-python">column_types <span class="token operator">=</span> <span class="token keyword">await</span> self<span class="token punctuation">.</span>dw_mysql_repository<span class="token punctuation">.</span>get_column_types<span class="token punctuation">(</span>table<span class="token punctuation">.</span>name<span class="token punctuation">)</span><span aria-hidden="true" class="line-numbers-rows"><span></span></span></code></pre>
+
+<p>它放在外层表循环里，是因为字段类型的查询粒度是“按表”。</p>
+<p>例如查询 <code>fact_order</code>，返回结果可能类似：</p>
+<pre class="line-numbers language-python" data-language="python"><code class="language-python"><span class="token punctuation">&#123;</span>
+    <span class="token string">"order_id"</span><span class="token punctuation">:</span> <span class="token string">"varchar(30)"</span><span class="token punctuation">,</span>
+    <span class="token string">"customer_id"</span><span class="token punctuation">:</span> <span class="token string">"varchar(20)"</span><span class="token punctuation">,</span>
+    <span class="token string">"order_amount"</span><span class="token punctuation">:</span> <span class="token string">"float"</span><span class="token punctuation">,</span>
+<span class="token punctuation">&#125;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<p>这样后面遍历字段时，就可以直接通过：</p>
+<pre class="line-numbers language-python" data-language="python"><code class="language-python">column_types<span class="token punctuation">[</span>column<span class="token punctuation">.</span>name<span class="token punctuation">]</span><span aria-hidden="true" class="line-numbers-rows"><span></span></span></code></pre>
+
+<p>拿到当前字段的真实类型。</p>
+<h3 id="4-2-为什么字段示例值要一列一查"><a href="#4-2-为什么字段示例值要一列一查" class="headerlink" title="4.2 为什么字段示例值要一列一查"></a>4.2 为什么字段示例值要一列一查</h3><p>再看这行代码：</p>
+<pre class="line-numbers language-python" data-language="python"><code class="language-python">column_values <span class="token operator">=</span> <span class="token keyword">await</span> self<span class="token punctuation">.</span>dw_mysql_repository<span class="token punctuation">.</span>get_column_values<span class="token punctuation">(</span>
+    table<span class="token punctuation">.</span>name<span class="token punctuation">,</span> column<span class="token punctuation">.</span>name<span class="token punctuation">,</span> <span class="token number">10</span>
+<span class="token punctuation">)</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span></span></code></pre>
+
+<p>它放在内层字段循环里，是因为示例值的查询粒度是“按字段”。</p>
+<p>例如：</p>
+<pre class="line-numbers language-sql" data-language="sql"><code class="language-sql"><span class="token keyword">select</span> <span class="token keyword">distinct</span> category <span class="token keyword">from</span> dim_product <span class="token keyword">limit</span> <span class="token number">10</span><span aria-hidden="true" class="line-numbers-rows"><span></span></span></code></pre>
+
+<p>可能返回：</p>
+<pre class="line-numbers language-python" data-language="python"><code class="language-python"><span class="token punctuation">[</span><span class="token string">"饮料"</span><span class="token punctuation">,</span> <span class="token string">"休闲食品"</span><span class="token punctuation">,</span> <span class="token string">"粮油调味"</span><span class="token punctuation">,</span> <span class="token string">"家居清洁"</span><span class="token punctuation">]</span><span aria-hidden="true" class="line-numbers-rows"><span></span></span></code></pre>
+
+<p>这些值最终会写入：</p>
+<pre class="line-numbers language-python" data-language="python"><code class="language-python">examples<span class="token operator">=</span>column_values<span aria-hidden="true" class="line-numbers-rows"><span></span></span></code></pre>
+
+<p>写进 <code>ColumnInfo.examples</code>。</p>
+<p>这里要特别注意一点：<strong>这一章拿到的是“示例值”，不是该字段的全部取值。</strong></p>
+<p>所以这一层的目标不是为了直接构建全文索引，而是为了让字段元数据先带上一小部分有代表性的真实样本。真正的大规模字段值同步，会在后面的 <code>Elasticsearch</code> 章节展开。</p>
+<hr>
+<h2 id="5、第三步：为什么-Service-先处理业务实体，而不是直接操作-ORM"><a href="#5、第三步：为什么-Service-先处理业务实体，而不是直接操作-ORM" class="headerlink" title="5、第三步：为什么 Service 先处理业务实体，而不是直接操作 ORM"></a>5、第三步：为什么 Service 先处理业务实体，而不是直接操作 ORM</h2><p>这是本章非常值得建立起来的分层意识。当前项目里，<code>Service</code> 层并没有直接构造 <code>SQLAlchemy</code> 的 ORM 模型，而是先处理：<code>TableInfo</code>、<code>ColumnInfo</code>这样的业务实体。这样做的关键目的，不是“多套一层”，而是为了<strong>解耦</strong>。</p>
+<p>如果 <code>Service</code> 层直接依赖 ORM 模型，会带来一个明显问题：业务逻辑会直接绑定到底层存储实现，一旦 ORM 模型变化，业务层代码也要跟着改。</p>
+<p>而现在这样分层之后：</p>
+<ul>
+<li><code>Service</code> 层只关心业务对象怎么组织</li>
+<li><code>Repository</code> 层才关心底层如何写入数据库</li>
+</ul>
+<p>这也是为什么后面同一批 <code>ColumnInfo</code> 还能继续被拿去构建 <code>Qdrant</code> 向量索引、参与 <code>Elasticsearch</code> 取值索引，而不必让业务层到处带着 ORM 对象跑。</p>
+<hr>
+<h2 id="6、第四步：Meta-Repository-和-Mapper-到底负责什么"><a href="#6、第四步：Meta-Repository-和-Mapper-到底负责什么" class="headerlink" title="6、第四步：Meta Repository 和 Mapper 到底负责什么"></a>6、第四步：Meta Repository 和 Mapper 到底负责什么</h2><p>现在我们已经有了两类业务实体：<code>TableInfo</code>、<code>ColumnInfo</code>。接下来要做的，就是把它们写入 <code>Meta MySQL</code>。这部分职责在 <code>MetaMySQLRepository</code> 中。</p>
+<p>项目对应文件路径：<code>shopkeeper-agent/app/repositories/mysql/meta/meta_mysql_repository.py</code></p>
+<pre class="line-numbers language-python" data-language="python"><code class="language-python"><span class="token keyword">async</span> <span class="token keyword">def</span> <span class="token function">save_table_infos</span><span class="token punctuation">(</span>self<span class="token punctuation">,</span> table_infos<span class="token punctuation">:</span> <span class="token builtin">list</span><span class="token punctuation">[</span>TableInfo<span class="token punctuation">]</span><span class="token punctuation">)</span><span class="token punctuation">:</span>
+    models <span class="token operator">=</span> <span class="token punctuation">[</span>TableInfoMapper<span class="token punctuation">.</span>to_model<span class="token punctuation">(</span>table_info<span class="token punctuation">)</span> <span class="token keyword">for</span> table_info <span class="token keyword">in</span> table_infos<span class="token punctuation">]</span>
+    self<span class="token punctuation">.</span>session<span class="token punctuation">.</span>add_all<span class="token punctuation">(</span>models<span class="token punctuation">)</span>
+
+
+<span class="token keyword">async</span> <span class="token keyword">def</span> <span class="token function">save_column_infos</span><span class="token punctuation">(</span>self<span class="token punctuation">,</span> columns_info<span class="token punctuation">:</span> <span class="token builtin">list</span><span class="token punctuation">[</span>ColumnInfo<span class="token punctuation">]</span><span class="token punctuation">)</span><span class="token punctuation">:</span>
+    models <span class="token operator">=</span> <span class="token punctuation">[</span>ColumnInfoMapper<span class="token punctuation">.</span>to_model<span class="token punctuation">(</span>column_info<span class="token punctuation">)</span> <span class="token keyword">for</span> column_info <span class="token keyword">in</span> columns_info<span class="token punctuation">]</span>
+    self<span class="token punctuation">.</span>session<span class="token punctuation">.</span>add_all<span class="token punctuation">(</span>models<span class="token punctuation">)</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<p>这里最关键的点，不是 <code>add_all()</code>，而是：<code>Repository</code> 对外暴露的输入仍然是业务实体，而不是 ORM 模型。</p>
+<p>也就是说，<code>Service</code> 层只需要把“业务上已经整理好的数据对象”交给仓储层，至于怎么转换、怎么落库，由仓储层继续往下吸收。</p>
+<h3 id="6-1-Mapper-的作用是翻译"><a href="#6-1-Mapper-的作用是翻译" class="headerlink" title="6.1 Mapper 的作用是翻译"></a>6.1 Mapper 的作用是翻译</h3><p>项目对应文件路径：</p>
+<ul>
+<li><code>shopkeeper-agent/app/repositories/mysql/meta/mappers/table_info_mapper.py</code></li>
+<li><code>shopkeeper-agent/app/repositories/mysql/meta/mappers/column_info_mapper.py</code></li>
+</ul>
+<pre class="line-numbers language-python" data-language="python"><code class="language-python"><span class="token keyword">class</span> <span class="token class-name">TableInfoMapper</span><span class="token punctuation">:</span>
+    <span class="token decorator annotation punctuation">@staticmethod</span>
+    <span class="token keyword">def</span> <span class="token function">to_model</span><span class="token punctuation">(</span>table_info<span class="token punctuation">:</span> TableInfo<span class="token punctuation">)</span> <span class="token operator">-</span><span class="token operator">></span> TableInfoMySQL<span class="token punctuation">:</span>
+        <span class="token keyword">return</span> TableInfoMySQL<span class="token punctuation">(</span><span class="token operator">**</span>asdict<span class="token punctuation">(</span>table_info<span class="token punctuation">)</span><span class="token punctuation">)</span>
+
+
+<span class="token keyword">class</span> <span class="token class-name">ColumnInfoMapper</span><span class="token punctuation">:</span>
+    <span class="token decorator annotation punctuation">@staticmethod</span>
+    <span class="token keyword">def</span> <span class="token function">to_model</span><span class="token punctuation">(</span>column_info<span class="token punctuation">:</span> ColumnInfo<span class="token punctuation">)</span> <span class="token operator">-</span><span class="token operator">></span> ColumnInfoMySQL<span class="token punctuation">:</span>
+        <span class="token keyword">return</span> ColumnInfoMySQL<span class="token punctuation">(</span><span class="token operator">**</span>asdict<span class="token punctuation">(</span>column_info<span class="token punctuation">)</span><span class="token punctuation">)</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<p>这里的角色分工非常清楚：</p>
+<ul>
+<li><code>TableInfo</code>、<code>ColumnInfo</code> 是业务实体</li>
+<li><code>TableInfoMySQL</code>、<code>ColumnInfoMySQL</code> 是 ORM 模型</li>
+<li><code>Mapper</code> 负责把前者转换成后者</li>
+</ul>
+<p>所以整条写库链路可以压缩成下面这样：</p>
+<pre class="line-numbers language-text" data-language="text"><code class="language-text">MetaConfig
+  -> TableInfo / ColumnInfo
+  -> TableInfoMapper / ColumnInfoMapper
+  -> TableInfoMySQL / ColumnInfoMySQL
+  -> Meta MySQL<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<h3 id="6-2-add-all-不等于真正提交数据库"><a href="#6-2-add-all-不等于真正提交数据库" class="headerlink" title="6.2 add_all() 不等于真正提交数据库"></a>6.2 add_all() 不等于真正提交数据库</h3><p>很多初学者第一次接触 ORM 时，看到：</p>
+<pre class="line-numbers language-python" data-language="python"><code class="language-python">self<span class="token punctuation">.</span>session<span class="token punctuation">.</span>add_all<span class="token punctuation">(</span>models<span class="token punctuation">)</span><span aria-hidden="true" class="line-numbers-rows"><span></span></span></code></pre>
+
+<p>很容易以为“已经写进数据库了”。其实不是。</p>
+<p><code>add_all()</code> 做的事情，本质上只是：</p>
+<ul>
+<li>把这些 ORM 对象加入当前 <code>Session</code></li>
+<li>告诉 ORM：这些对象后续需要被持久化</li>
+</ul>
+<p>它本身还不是最终的提交动作。真正的数据落库，要发生在事务提交阶段。</p>
+<hr>
+<h2 id="7、第五步：为什么事务要放在-Service-层统一管理"><a href="#7、第五步：为什么事务要放在-Service-层统一管理" class="headerlink" title="7、第五步：为什么事务要放在 Service 层统一管理"></a>7、第五步：为什么事务要放在 Service 层统一管理</h2><p>回到本章主方法：</p>
+<pre class="line-numbers language-python" data-language="python"><code class="language-python"><span class="token keyword">async</span> <span class="token keyword">with</span> self<span class="token punctuation">.</span>meta_mysql_repository<span class="token punctuation">.</span>session<span class="token punctuation">.</span>begin<span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">:</span>
+    <span class="token keyword">await</span> self<span class="token punctuation">.</span>meta_mysql_repository<span class="token punctuation">.</span>save_table_infos<span class="token punctuation">(</span>table_infos<span class="token punctuation">)</span>
+    <span class="token keyword">await</span> self<span class="token punctuation">.</span>meta_mysql_repository<span class="token punctuation">.</span>save_column_infos<span class="token punctuation">(</span>column_infos<span class="token punctuation">)</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span></span></code></pre>
+
+<p>这里使用的是：</p>
+<pre class="line-numbers language-python" data-language="python"><code class="language-python"><span class="token keyword">async</span> <span class="token keyword">with</span> session<span class="token punctuation">.</span>begin<span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">:</span><span aria-hidden="true" class="line-numbers-rows"><span></span></span></code></pre>
+
+<p>这种写法在当前场景下非常合适，因为它把事务边界说得很清楚：“保存表信息”和“保存字段信息”属于同一批业务操作，它们要么一起成功，要么一起失败。</p>
+<p>这背后体现的是一个很重要的分层原则：</p>
+<ul>
+<li><code>Repository</code> 负责“怎么写”</li>
+<li><code>Service</code> 负责“这些写操作要以什么业务事务组织起来”</li>
+</ul>
+<p>所以事务边界放在 <code>Service</code> 层，是合理的。它还有两个很实用的好处：1. 如果上下文中的操作都成功，事务会自动提交。2. 如果中途抛出异常，事务会自动回滚。</p>
+<p>这样代码会比手写 <code>try/except + commit + rollback</code> 更简洁，也更不容易出错。</p>
+<hr>
+<h2 id="8、整条链路回顾"><a href="#8、整条链路回顾" class="headerlink" title="8、整条链路回顾"></a>8、整条链路回顾</h2><p>到这里，我们就可以把“一次表信息与字段信息同步到元数据库”的完整顺序串起来了：</p>
+<ol>
+<li>脚本读取 <code>meta_config.yaml</code></li>
+<li><code>MetaKnowledgeService.build(config_path)</code> 进入表链路</li>
+<li>遍历配置中的每张表，构造 <code>TableInfo</code></li>
+<li>通过 <code>DWMySQLRepository.get_column_types(...)</code> 查询该表所有字段的真实类型</li>
+<li>遍历该表中的每个字段，再通过 <code>DWMySQLRepository.get_column_values(...)</code> 查询示例值</li>
+<li>构造 <code>ColumnInfo</code></li>
+<li>打开一笔事务</li>
+<li><code>MetaMySQLRepository</code> 接收业务实体，并通过 <code>Mapper</code> 转成 ORM 模型</li>
+<li><code>session.add_all()</code> 把这些 ORM 对象加入当前 <code>Session</code></li>
+<li>事务结束后统一提交，数据真正写入 <code>Meta MySQL</code></li>
+</ol>
+<p>如果把这段流程再压缩成一句话，可以记成：<strong>配置描述先变成业务实体，业务实体再补齐真实结构与样本，最后以事务方式落到元数据库。</strong></p>
+<hr>
+<h2 id="9、验证本章效果"><a href="#9、验证本章效果" class="headerlink" title="9、验证本章效果"></a>9、验证本章效果</h2><p>这一章完成后，最合适的验证方式不是先去看 <code>Qdrant</code> 或 <code>Elasticsearch</code>，而是先确认 <code>Meta MySQL</code> 里的结构化元数据是否已经正确落下来。</p>
+<h3 id="9-1-运行同步脚本"><a href="#9-1-运行同步脚本" class="headerlink" title="9.1 运行同步脚本"></a>9.1 运行同步脚本</h3><pre class="line-numbers language-bash" data-language="bash"><code class="language-bash">python <span class="token parameter variable">-m</span> app.scripts.build_meta_knowledge <span class="token parameter variable">-c</span> conf/meta_config.yaml<span aria-hidden="true" class="line-numbers-rows"><span></span></span></code></pre>
+
+<h3 id="9-2-重点检查-table-info-和-column-info"><a href="#9-2-重点检查-table-info-和-column-info" class="headerlink" title="9.2 重点检查 table_info 和 column_info"></a>9.2 重点检查 table_info 和 column_info</h3><p>这一章最值得重点看的，不是有没有“插入成功”这 4 个字，而是下面这些字段是否真的带上了应有的信息。</p>
+<p>先看 <code>table_info</code>：</p>
+<ul>
+<li>是否已经写入每张配置中的表</li>
+<li><code>id</code>、<code>name</code>、<code>role</code>、<code>description</code> 是否正确</li>
+</ul>
+<p>再看 <code>column_info</code>：</p>
+<ul>
+<li><code>id</code> 是否是 <code>表名.字段名</code></li>
+<li><code>type</code> 是否已经带上真实字段类型</li>
+<li><code>examples</code> 是否已经带上一部分真实示例值</li>
+<li><code>description</code>、<code>alias</code>、<code>table_id</code> 是否和配置保持一致</li>
+</ul>
+<p>其中最关键的是 <code>type</code> 和 <code>examples</code>。<br>只要这两个字段已经有值，就说明本章最核心的“配置 + 动态补齐 + 落库”链路已经跑通了。</p>
+<h2 id=""><a href="#" class="headerlink" title=""></a><img src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/ecommerce/8/8-9-2-1.webp" alt="验证本章效果"></h2><p><strong>本章小结：</strong></p>
+<ul>
+<li>元数据知识库的第一步，不是建向量索引，而是先把表和字段沉淀成结构化元数据。</li>
+<li>配置文件负责描述业务语义，真实字段类型和字段示例值由程序运行时从 <code>DW</code> 自动补齐。</li>
+<li><code>Service</code> 负责编排流程，<code>DW Repository</code> 负责查真实结构，<code>Meta Repository</code> 负责落库，<code>Mapper</code> 负责对象转换，事务边界由 <code>Service</code> 统一管理。</li>
+</ul>
+<p>下一章开始，我们继续沿着这条表链路往后走，进入第二步：<strong>为字段信息建立向量索引，并写入 <code>Qdrant</code>。</strong></p>
+</div>
+      </div>
+    </main>
+  </div>
+
+  <div class="float-buttons">
+    <button id="back-to-top" class="float-btn" title="返回顶部">↑</button>
+    <a href="/" class="float-btn" title="返回首页">🏠</a>
+  </div>
+
+  
+  <!-- 浮动按钮脚本：外链（源文件 themes/butterfly/source/js/theme/post-float-btn.js） -->
+  <script src="/js/theme/post-float-btn.js"></script>
+
+  
+  <!--
+  ============================================
+  音频播放器组件
+  文件：APlayer.njk
+  适用终端：电脑端
+  作用：APlayer + Meting 外链播放，按需渲染到页面底部
+  最后修改：2026-11-11
+  ============================================
+-->
+<link rel="stylesheet" href="https://cdn.bootcdn.net/ajax/libs/aplayer/1.10.1/APlayer.min.css">
+<script src="https://cdn.bootcdn.net/ajax/libs/aplayer/1.10.1/APlayer.min.js"></script>
+<script src="https://cdn.bootcdn.net/ajax/libs/meting/2.0.1/Meting.min.js"></script>
+<div class="aplayer no-destroy"
+     data-id="2182931917"
+     data-server="netease"
+     data-type="playlist"
+     data-fixed="true"
+     data-mini="true">
+</div>
+
+
+
+<script>
+  async function renderMermaidDiagram(){
+    const blocks = document.querySelectorAll('pre[class*="language-mermaid"]');
+    if(!blocks.length) return;
+
+    const mermaidBlocks = [];
+    blocks.forEach(el=>{
+      const codeEl = el.querySelector('code');
+      if(codeEl){
+        const codeText = codeEl.innerText;
+        mermaidBlocks.push({fig: el, codeText});
+      }
+    })
+    if(!mermaidBlocks.length) return;
+
+    // ESM 按需引入 mermaid
+    const { default: mermaid } = await import('https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs');
+    
+    mermaid.initialize({
+      startOnLoad: false,
+      theme: 'base'
+    });
+
+    for(const {fig,codeText} of mermaidBlocks){
+      const div = document.createElement('div');
+      div.className = 'mermaid';
+      div.innerText = codeText;
+      fig.parentNode.replaceChild(div, fig);
+    }
+    await mermaid.run();
+  }
+  document.addEventListener('DOMContentLoaded', renderMermaidDiagram);
+  document.addEventListener('pjax:complete', renderMermaidDiagram);
+</script>
+
+
+  <script>
+    /* 返回按钮来源判定：从星迹索引进来回 /tags/，从星图手记进来回 /archives/；
+       直接从地址栏/站外进入时默认回星图手记，保证按钮始终可用 */
+    (function () {
+      var back = document.getElementById('articleBack');
+      if (!back) return;
+      var from = '';
+      try {
+        var q = new URLSearchParams(location.search);
+        from = q.get('from') || '';
+      } catch (e) {}
+      if (!from) {
+        var ref = document.referrer || '';
+        if (ref.indexOf('/tags') > -1) from = 'tags';
+        else if (ref.indexOf('/archives') > -1) from = 'archive';
+      }
+      if (from === 'tags') {
+        back.href = '/tags/';
+        back.textContent = '← 返回星迹索引';
+      } else if (from === 'search') {
+        back.href = '/';
+        back.textContent = '← 返回首页';
+      } else {
+        back.href = '/archives/';
+        back.textContent = '← 返回星图手记';
+      }
+    })();
+  </script>
+</body>
+</html>

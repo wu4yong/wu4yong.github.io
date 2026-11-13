@@ -1,0 +1,2289 @@
+<!--
+  ============================================
+  文章原文页模板
+  文件：post.njk
+  适用终端：电脑端
+  作用：文章正文 + 侧栏；手机 UA 跳 /phone/p/<slug>/
+  最后修改：2026-11-11
+  ============================================
+-->
+
+
+<!DOCTYPE html>
+<html class="post-page">
+<!--
+  ============================================
+  公共 head 组件
+  文件：Head.njk
+  适用终端：电脑端
+  作用：输出 charset/viewport/title，并按 pageCss 输出外链样式表
+  样式资源：themes/butterfly/source/css/theme/*.css（Hexo 复制到 /css/theme/）
+  引入层级顺序（= CSS 层叠顺序，调整只允许追加，不要打乱前后）：
+    1 基础  common.css
+    2 布局  post-layout.css
+    3 组件  sidebar.css
+    4 正文  post.css
+    5 页面  tags.css / chronicle.css / about.css / tag.css / category-shared.css / pc-home.css
+    6 浮层  star-reader.css
+    7 特效  starmap-live.css
+  最后修改：2026-11-12
+  ============================================
+--><head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="color-scheme" content="dark">
+  <meta name="theme-color" content="#020817">
+  <!-- 首帧兜底：浏览器默认画布是白的，样式表还没解析完就画会闪一下白。这条 8 字节规则先锁死深空底色 -->
+  <style>html{background-color:#020817}</style>
+  <title>时空秘境 - 十四、电商问数：SQL 生成与执行闭环</title>
+  
+  <link rel="stylesheet" href="/css/theme/common.css">
+  
+  <link rel="stylesheet" href="/css/theme/post-layout.css">
+  
+  <link rel="stylesheet" href="/css/theme/sidebar.css">
+  
+  <link rel="stylesheet" href="/css/theme/post.css">
+  
+<meta name="generator" content="Hexo 8.1.2"></head>
+
+<script>
+  /* 手机 UA 分流：电脑端这套控制台不再给手机用，直接换成手机版页面 */
+  (function () {
+    var ua = navigator.userAgent || '';
+    if (/Android|iPhone|iPod|HarmonyOS|Windows Phone|MicroMessenger|Mobile Safari/i.test(ua)) {
+      location.replace('/phone/p/ecommerce/ecommerce-data-qa-14-sql-generation-and-execution-loop/');
+    }
+  })();
+</script>
+<link rel="stylesheet" href="/css/code-table.css">
+
+<body>
+  <!--
+  ============================================
+  星空粒子背景组件
+  文件：Particles.njk
+  适用终端：电脑端
+  作用：particles.js 全站星空动画，鼠标悬停互动
+  最后修改：2026-11-11
+  ============================================
+--><!-- z-index 必须是 0 而不是 -1：body 带着不透明的 radial-gradient 底色，
+     负层级的子元素会被父元素背景整个盖住，粒子在跑但一个点都看不见 -->
+<div id="particles" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 0; pointer-events: none;"></div>
+<!-- 星座层：随机零星散布星座图形，叠在粒子之上、页面内容之下 -->
+<div id="constellations" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 1; pointer-events: none;" aria-hidden="true"></div>
+<script src="/js/particles.min.js"></script>
+<script>/* 本地库失效时回退 CDN，保证星空背景不丢 */
+if (typeof particlesJS === "undefined") {
+  document.write('<script src="https://cdn.jsdelivr.net/particles.js/2.0.0/particles.min.js"><\/script>');
+}
+</script>
+<script>
+particlesJS("particles", {
+  particles: {
+    number: {
+      value: 95,
+      density: {
+        enable: true,
+        value_area: 800
+      }
+    },
+    color: {
+      value: "#00eeff"
+    },
+    shape: {
+      type: "circle",
+      stroke: {
+        width: 0,
+        color: "#000000"
+      }
+    },
+    opacity: {
+      value: 0.6,
+      random: true,
+      anim: {
+        enable: true,
+        speed: 0.5,
+        opacity_min: 0.1,
+        sync: false
+      }
+    },
+    size: {
+      value: 3,
+      random: true,
+      anim: {
+        enable: true,
+        speed: 2,
+        size_min: 0.1,
+        sync: false
+      }
+    },
+    line_linked: {
+      enable: true,
+      distance: 118,          /* 比原来 150 收紧，让粒子网络稀疏些，给星座留出视觉空间 */
+      color: "#00eeff",
+      opacity: 0.32,
+      width: 1
+    },
+    move: {
+      enable: true,
+      speed: 0.8,
+      direction: "none",
+      random: true,
+      straight: false,
+      out_mode: "out",
+      bounce: false,
+      attract: {
+        enable: true,
+        rotateX: 600,
+        rotateY: 1200
+      }
+    }
+  },
+  interactivity: {
+    detect_on: "canvas",
+    events: {
+      onhover: {
+        enable: true,
+        mode: "grab"       // 鼠标悬停时粒子聚集
+      },
+      onclick: {
+        enable: true,
+        mode: "push"       // 点击时产生新粒子
+      },
+      resize: true
+    },
+    modes: {
+      grab: {
+        distance: 200,
+        line_linked: {
+          opacity: 1
+        }
+      },
+      push: {
+        particles_nb: 6
+      }
+    }
+  },
+  retina_detect: true
+});
+</script>
+<!-- 星座层：独立 canvas，随机散布真实星座图形（依赖上面的 #constellations 容器） -->
+<script src="/js/theme/starfield.js"></script>
+
+  <!-- 返回按钮：按来源回到星图手记 / 星迹索引，默认回星图手记。
+       放在 body 顶层（不进 main-content），避免被其溢出裁剪切掉右半边 -->
+  <a class="article-back" id="articleBack" href="/archives/">← 返回星图手记</a>
+
+  <div class="app-layout">
+    <!--
+  ============================================
+  左侧栏个人卡组件
+  文件：_components/Sidebar.njk
+  适用终端：电脑端（星图手记 / 星迹索引 / 秘境主人 页面通栏侧栏）
+  作用：头像、昵称、站点统计、导航菜单、底部信息与全局搜索面板（结果落在雷达区，无结果播「内容走丢 → 404」动画）
+  样式依赖：source/css/theme/sidebar.css
+  脚本依赖：source/js/theme/sidebar.js
+  最后修改：2026-11-11
+  ============================================
+-->
+<aside class="sidebar" id="sidebar">
+  <div class="profile-card">
+    <div class="avatar">
+      <div
+        style="width:80px;height:80px;border-radius:50%;background:linear-gradient(135deg,#0a0e27,#1a1a4e);display:flex;align-items:center;justify-content:center;margin:0 auto;font-size:40px;border:2px solid #00eeff;box-shadow:0 0 30px rgba(0,238,255,0.3);">
+        ✨</div>
+    </div>
+    <h3 class="nickname">时空行者</h3>
+    <p class="bio">星辰大海，代码为舟</p>
+    <div class="stats">
+      <div class="stat-item">
+        <span class="stat-num">174</span>
+        <span class="stat-label">文章</span>
+      </div>
+      <div class="stat-item">
+        <span class="stat-num" id="fans-count" style="cursor:pointer;">1088</span>
+        <span class="stat-label">粉丝</span>
+      </div>
+      <div class="stat-item">
+        <span class="stat-num" id="follow-count" style="cursor:pointer;">66</span>
+        <span class="stat-label">关注</span>
+      </div>
+    </div>
+    <button class="follow-btn">+ 关注</button>
+  </div>
+  <div class="search-box">
+    <input type="text" placeholder="找找看..." id="search-input">
+    <button class="search-btn" id="searchModalOpen">🔍</button>
+  </div>
+  <div class="links-card">
+    <h4>常用链接</h4>
+    <ul>
+      <li><a href="/about/">秘境主人</a></li>
+      <li><a href="/archives/">星图手记</a></li>
+      <li><a href="/tags/">星迹索引</a></li>
+      <!-- ✅ 新增联系我 -->
+      <li><a class="contact-trigger" href="javascript:void(0)">星语传书</a></li>
+      <li><a class="donate-trigger" href="javascript:void(0)">星芒赠礼</a></li>
+    </ul>
+  </div>
+  <div class="tags-card">
+    <h4>热门标签</h4>
+    
+    <div class="tag-cloud">
+      
+      <a href="/tags/MySQL数据库/" class="tag-link" data-tag="MySQL数据库"
+        data-count="7">MySQL数据库</a>
+      
+      <a href="/tags/redis/" class="tag-link" data-tag="redis"
+        data-count="7">redis</a>
+      
+      <a href="/tags/深度研搜/" class="tag-link" data-tag="深度研搜"
+        data-count="15">深度研搜</a>
+      
+      <a href="/tags/电商问数/" class="tag-link" data-tag="电商问数"
+        data-count="18">电商问数</a>
+      
+      <a href="/tags/git/" class="tag-link" data-tag="git"
+        data-count="5">git</a>
+      
+      <a href="/tags/面试/" class="tag-link" data-tag="面试"
+        data-count="11">面试</a>
+      
+      <a href="/tags/Java/" class="tag-link" data-tag="Java"
+        data-count="10">Java</a>
+      
+      <a href="/tags/langchain/" class="tag-link" data-tag="langchain"
+        data-count="10">langchain</a>
+      
+      <a href="/tags/Netty/" class="tag-link" data-tag="Netty"
+        data-count="4">Netty</a>
+      
+      <a href="/tags/大模型/" class="tag-link" data-tag="大模型"
+        data-count="35">大模型</a>
+      
+      <a href="/tags/AICoding/" class="tag-link" data-tag="AICoding"
+        data-count="9">AICoding</a>
+      
+      <a href="/tags/SpringAi/" class="tag-link" data-tag="SpringAi"
+        data-count="15">SpringAi</a>
+      
+      <a href="/tags/随笔杂谈/" class="tag-link" data-tag="随笔杂谈"
+        data-count="2">随笔杂谈</a>
+      
+      <a href="/tags/vue/" class="tag-link" data-tag="vue"
+        data-count="9">vue</a>
+      
+      <a href="/tags/视频剪辑/" class="tag-link" data-tag="视频剪辑"
+        data-count="1">视频剪辑</a>
+      
+      <a href="/tags/大数据/" class="tag-link" data-tag="大数据"
+        data-count="3">大数据</a>
+      
+      <a href="/tags/电影/" class="tag-link" data-tag="电影"
+        data-count="2">电影</a>
+      
+      <a href="/tags/游戏/" class="tag-link" data-tag="游戏"
+        data-count="1">游戏</a>
+      
+      <a href="/tags/音乐/" class="tag-link" data-tag="音乐"
+        data-count="8">音乐</a>
+      
+      <a href="/tags/图片/" class="tag-link" data-tag="图片"
+        data-count="2">图片</a>
+      
+    </div>
+    <script>
+      /*
+  ============================================
+  侧栏热门标签排序（首帧前执行）
+  文件：_js/hot-tags.js
+  引入位置：_components/Sidebar.njk 里 .tag-cloud 闭合标签之后（紧跟着写死）
+  作用：按点击次数排序、只露前 5 个、点一下立刻重排
+  为什么单独拆出来：以前放在 sidebar.js 的 DOMContentLoaded 里，首帧渲染的还是
+  模板顺序的 20 个标签，等脚本跑完才收成 5 个；配合跨页淡入（View Transition）
+  会出现「新旧两套标签叠在一起、影子跳一下」。紧跟标签节点内联执行就没有中间态。
+  最后修改：2026-11-12
+  ============================================
+*/
+(function () {
+  var cloud = document.querySelector('.tag-cloud');
+  if (!cloud) return;
+  var links = Array.prototype.slice.call(cloud.querySelectorAll('.tag-link'));
+  if (!links.length) return;
+
+  var KEY = 'starry_tag_visits'; // 标签名 -> 点击次数
+  var TOP = 5;
+  var visits = {};
+
+  try {
+    var raw = JSON.parse(localStorage.getItem(KEY) || '{}');
+    visits = (raw && typeof raw === 'object') ? raw : {};
+  } catch (e) {
+    visits = {};
+  }
+
+  links.forEach(function (link) {
+    var name = link.dataset.tag || (link.textContent || '').trim();
+    link.dataset.tag = name;
+    if (!link.dataset.count) link.dataset.count = '0';
+  });
+
+  // 排序：点击次数降序 → 文章数降序 → 名字，保证同分时顺序稳定不来回跳
+  function order() {
+    return links.slice().sort(function (a, b) {
+      var va = visits[a.dataset.tag] || 0;
+      var vb = visits[b.dataset.tag] || 0;
+      if (vb !== va) return vb - va;
+      var ca = Number(a.dataset.count) || 0;
+      var cb = Number(b.dataset.count) || 0;
+      if (cb !== ca) return cb - ca;
+      return String(a.dataset.tag).localeCompare(String(b.dataset.tag), 'zh');
+    });
+  }
+
+  // 重排 DOM：按名次 append，超出 5 个的 hidden（仍留在 DOM，等名次升上来再显示）
+  function render() {
+    order().forEach(function (link, i) {
+      link.dataset.visits = visits[link.dataset.tag] || 0;
+      cloud.appendChild(link);
+      link.hidden = i >= TOP;
+    });
+  }
+
+  links.forEach(function (link) {
+    link.addEventListener('click', function () {
+      var name = link.dataset.tag;
+      visits[name] = (visits[name] || 0) + 1;
+      try { localStorage.setItem(KEY, JSON.stringify(visits)); } catch (e) { /* 忽略配额错误 */ }
+      render(); // 当前页立刻看到「谁被点多了谁上前」
+    });
+  });
+
+  render();
+})();
+
+    </script>
+  </div>
+  <div class="archive-card">
+    <h4>按月归档</h4>
+    <ul class="archive-list">
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2026/12/">
+          2026年12月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2026/11/">
+          2026年11月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2026/10/">
+          2026年10月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2026/09/">
+          2026年09月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2026/08/">
+          2026年08月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2026/07/">
+          2026年07月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2026/06/">
+          2026年06月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2026/05/">
+          2026年05月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2026/04/">
+          2026年04月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2026/03/">
+          2026年03月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2026/02/">
+          2026年02月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2026/01/">
+          2026年01月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2025/12/">
+          2025年12月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2025/11/">
+          2025年11月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2025/10/">
+          2025年10月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2025/09/">
+          2025年09月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2025/08/">
+          2025年08月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2025/07/">
+          2025年07月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2025/06/">
+          2025年06月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2025/05/">
+          2025年05月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2025/04/">
+          2025年04月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2025/03/">
+          2025年03月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2025/02/">
+          2025年02月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2025/01/">
+          2025年01月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2024/11/">
+          2024年11月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2024/10/">
+          2024年10月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2024/09/">
+          2024年09月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2024/08/">
+          2024年08月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2024/07/">
+          2024年07月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2024/05/">
+          2024年05月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2024/04/">
+          2024年04月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2024/03/">
+          2024年03月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2024/02/">
+          2024年02月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2024/01/">
+          2024年01月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2023/12/">
+          2023年12月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2023/11/">
+          2023年11月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2023/10/">
+          2023年10月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2023/09/">
+          2023年09月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2023/08/">
+          2023年08月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2023/07/">
+          2023年07月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2023/06/">
+          2023年06月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2023/05/">
+          2023年05月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2023/04/">
+          2023年04月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2023/03/">
+          2023年03月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2023/02/">
+          2023年02月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2023/01/">
+          2023年01月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2022/09/">
+          2022年09月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2022/05/">
+          2022年05月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2022/01/">
+          2022年01月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2021/12/">
+          2021年12月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2021/11/">
+          2021年11月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2021/10/">
+          2021年10月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2021/09/">
+          2021年09月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2021/08/">
+          2021年08月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2021/07/">
+          2021年07月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2021/06/">
+          2021年06月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2021/05/">
+          2021年05月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2021/04/">
+          2021年04月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2021/03/">
+          2021年03月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2021/02/">
+          2021年02月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2021/01/">
+          2021年01月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2020/10/">
+          2020年10月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2020/07/">
+          2020年07月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2020/04/">
+          2020年04月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2020/01/">
+          2020年01月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2019/12/">
+          2019年12月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2019/11/">
+          2019年11月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2019/10/">
+          2019年10月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2019/09/">
+          2019年09月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2019/08/">
+          2019年08月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2019/07/">
+          2019年07月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2019/06/">
+          2019年06月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2019/05/">
+          2019年05月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2019/04/">
+          2019年04月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2019/03/">
+          2019年03月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2019/02/">
+          2019年02月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2019/01/">
+          2019年01月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2018/12/">
+          2018年12月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2018/11/">
+          2018年11月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2018/10/">
+          2018年10月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2018/09/">
+          2018年09月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2018/08/">
+          2018年08月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2018/07/">
+          2018年07月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2018/06/">
+          2018年06月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2018/05/">
+          2018年05月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2018/04/">
+          2018年04月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2018/03/">
+          2018年03月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2018/02/">
+          2018年02月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2018/01/">
+          2018年01月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+    </ul>
+  </div>
+
+  <!-- ========== 星语传书（雷达区弹窗，与搜索面板同一套面板样式） ========== -->
+  <div class="search-panel dock-panel" id="contactModal" hidden>
+    <div class="sp-mask" data-dock-close></div>
+    <div class="sp-box" role="dialog" aria-modal="true" aria-label="星语传书">
+      <div class="sp-head">
+        <span class="sp-dot"></span>
+        <span class="sp-title">星语传书</span>
+        <span class="sp-title-sub">/ SIGNAL CHANNEL</span>
+        <span class="sp-meta">SYS.REPLY ≤ 48H</span>
+        <button class="sp-close" type="button" data-dock-close title="关闭">×</button>
+      </div>
+      <div class="sp-body dock-body">
+        <p class="dock-lead">写信给时空行者：文章里的错字、跑不通的 demo、想聊的一句技术，都可以从这里进来。信号收到，我会尽量回。</p>
+        <div class="dock-grid">
+          <div class="dock-list">
+            <a class="dock-row" href="https://wpa.qq.com/msgrd?v=3&amp;uin=372109355&amp;site=qq&amp;menu=yes"
+              target="_blank" rel="noopener">
+              <span class="dock-ico">企</span>
+              <span class="dock-k"><b>QQ</b><span>372109355</span></span>
+            </a>
+            <a class="dock-row" href="https://wu4yong.github.io" target="_blank" rel="noopener">
+              <span class="dock-ico">⌂</span>
+              <span class="dock-k"><b>站点主站</b><span>wu4yong.github.io</span></span>
+            </a>
+            <div class="dock-row dock-row-static">
+              <span class="dock-ico">✉</span>
+              <span class="dock-k"><b>电子邮箱</b><span>暂未公开 · 任何问题QQ留言</span></span>
+            </div>
+            <a class="dock-row" href="#" target="_blank" rel="noopener">
+              <span class="dock-ico">◈</span>
+              <span class="dock-k"><b>GitHub</b><span>暂未公开 · 任何问题QQ留言</span></span>
+            </a>
+            <a class="dock-row" href="#" target="_blank" rel="noopener">
+              <span class="dock-ico">◇</span>
+              <span class="dock-k"><b>Gitee</b><span>暂未公开 · 任何问题QQ留言</span></span>
+            </a>
+          </div>
+          <div class="dock-side">
+            <div class="dock-qr">
+              <em>WECHAT · 微信</em>
+              <img src="/assets/images/wechat-qr.png" alt="微信二维码">
+              <span class="dock-qr-tip">扫码添加，备注「来自时空秘境」</span>
+            </div>
+          </div>
+        </div>
+        <div class="dock-chips">
+          <span class="dock-chip">文章纠错</span>
+          <span class="dock-chip">Demo 答疑</span>
+          <span class="dock-chip">转载授权</span>
+          <span class="dock-chip">技术交流</span>
+          <span class="dock-chip">内推 / 合作</span>
+        </div>
+        <p class="dock-note">无正文的「在吗」容易被当作信号干扰滤掉，直接把问题写清楚，回信会快很多。</p>
+      </div>
+      <!-- 开合转场层：百叶窗 / 电影幕布 / 淡入，由 source/js/theme/sidebar.js 轮换播放 -->
+      <div class="dock-fx" aria-hidden="true">
+        <div class="dock-fx-slats"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+        <div class="dock-fx-curtain"><span class="top"></span><span class="bottom"></span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========== 全局搜索面板 ==========
+       索引来自构建期生成的 /search.json（hexo-generator-searchdb），随文章新增自动更新；
+       打开时由 source/js/theme/sidebar.js 把整块挪进 Radar 中间区（无雷达的页面退化为居中浮层） -->
+  <div class="search-panel" id="searchPanel" hidden>
+    <div class="sp-mask" id="searchMask"></div>
+    <div class="sp-box" role="dialog" aria-modal="true" aria-label="全文搜索">
+      <div class="sp-head">
+        <span class="sp-dot"></span>
+        <span class="sp-title">全文搜索</span>
+        <span class="sp-title-sub">/ GLOBAL SEARCH</span>
+        <span class="sp-meta" id="spMeta"></span>
+        <button class="sp-close" id="searchPanelClose" type="button" title="关闭搜索">×</button>
+      </div>
+      <div class="sp-body" id="spBody">
+        <div class="sp-loading" id="spLoading">正在扫描星图索引…</div>
+        <ul class="sp-list" id="spList"></ul>
+        <!-- 无结果：内容走丢 → 慢速落 404 -->
+        <div class="sp-empty" id="spEmpty" hidden>
+          <div class="sp-drift-wrap">
+            <span class="sp-trail"></span>
+            <span class="sp-drift"></span>
+            <span class="sp-lost">SIGNAL LOST · 信号已丢失</span>
+          </div>
+          <div class="sp-404"><span>4</span><span>0</span><span>4</span></div>
+          <p class="sp-empty-main">内容走丢在星海里了</p>
+          <p class="sp-empty-tip">换个关键词，或去〈星迹索引 / 星图手记〉里慢慢逛</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========== 星芒赠礼（雷达区弹窗，收款码图片沿用原图不改） ========== -->
+  <div class="search-panel dock-panel" id="donateModal" hidden>
+    <div class="sp-mask" data-dock-close></div>
+    <div class="sp-box" role="dialog" aria-modal="true" aria-label="星芒赠礼">
+      <div class="sp-head">
+        <span class="sp-dot"></span>
+        <span class="sp-title">星芒赠礼</span>
+        <span class="sp-title-sub">/ STAR OFFERING</span>
+        <span class="sp-meta">THANKS FOR THE LIGHT</span>
+        <button class="sp-close" type="button" data-dock-close title="关闭">×</button>
+      </div>
+      <div class="sp-body dock-body">
+        <div class="dock-thanks">
+          <p>这片星空是工作闲暇时光一个个凌晨攒出来的：一篇文章、一次复盘、一个修不完的 bug。</p>
+          <p>如果你在这里找到了能用的东西，愿意赏一杯凌晨三点的咖啡 —— 这份心意我会记很久。</p>
+          <p>不打赏也完全没关系：所有文章永久免费，愿你我在各自的轨道上都跑得稳一点。</p>
+        </div>
+        <div class="dock-donate">
+          <div class="dock-hero">
+            <div class="dock-hero-pic">
+              <span class="dock-hero-halo" aria-hidden="true"></span>
+              <span class="dock-hero-ring dock-hero-ring-a" aria-hidden="true"></span>
+              <span class="dock-hero-ring dock-hero-ring-b" aria-hidden="true"></span>
+              <img src="/assets/images/donate-boy.png" alt="感谢支持">
+            </div>
+            <em>THANKS FOR THE LIGHT</em>
+            <span class="dock-hero-tip">愿每一次凌晨，都有人替你留一盏灯</span>
+          </div>
+          <div class="dock-pay">
+            <div class="dock-qr dock-qr-row">
+              <img src="/assets/images/alipay-qr.jpg" alt="支付宝收款码">
+              <div class="dock-qr-txt">
+                <b>支付宝 · 星途赞赏</b>
+                <span>请我喝一杯凌晨三点的咖啡</span>
+              </div>
+            </div>
+            <div class="dock-qr dock-qr-row">
+              <img src="/assets/images/wechat-pay-qr.jpg" alt="微信收款码">
+              <div class="dock-qr-txt">
+                <b>微信 · 星河致谢</b>
+                <span>金额随意，心意已经收到</span>
+              </div>
+            </div>
+          </div>
+        </div>        <div class="dock-chips">
+          <span class="dock-chip">域名与服务器</span>
+          <span class="dock-chip">图床与备份</span>
+          <span class="dock-chip">一本技术书</span>
+          <span class="dock-chip">深夜的一杯咖啡</span>
+        </div>
+        <p class="dock-note">赠礼纯属心意，不产生任何付费内容或额外承诺；扫码前请确认收款人，小心仿冒。</p>
+      </div>
+      <!-- 开合转场层：百叶窗 / 电影幕布 / 淡入，由 source/js/theme/sidebar.js 轮换播放 -->
+      <div class="dock-fx" aria-hidden="true">
+        <div class="dock-fx-slats"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+        <div class="dock-fx-curtain"><span class="top"></span><span class="bottom"></span></div>
+      </div>
+    </div>
+  </div>
+
+
+</aside>
+<!-- 引入侧边栏交互脚本：外链（源文件 themes/butterfly/source/js/theme/sidebar.js） -->
+<script src="/js/theme/sidebar.js"></script>
+
+    
+    <button id="sidebarToggle" class="sidebar-toggle" title="隐藏侧栏"></button>
+
+    <main class="main-content">
+      <div class="article-card">
+        <h1 class="article-title">十四、电商问数：SQL 生成与执行闭环</h1>
+        <div class="article-meta">📅 2026-11-17</div>
+        <div class="article-content"><div class="essay-banner essay-image11">
+    <!-- sql-generation-and-execution-loop -->
+</div>
+
+<h1 id="14-电商问数：SQL-生成与执行闭环"><a href="#14-电商问数：SQL-生成与执行闭环" class="headerlink" title="14 电商问数：SQL 生成与执行闭环"></a>14 电商问数：SQL 生成与执行闭环</h1><hr>
+<p><strong>本章课程目标：</strong></p>
+<ul>
+<li>理解 SQL 生成前，智能体已经准备好了哪些上下文。</li>
+<li>理解为什么生成 SQL 后不能马上执行，而要先用 <code>EXPLAIN</code> 做校验。</li>
+<li>完成一次端到端测试，把问数智能体从自然语言问题跑到 SQL 查询结果。</li>
+</ul>
+<p><strong>学习建议：</strong> 这一章要看闭环，不要只看生成提示词。完整顺序是生成 SQL、校验 SQL、必要时校正、最后执行查询。重点留意条件分支如何决定走校正还是执行，以及错误信息怎样被带回给模型修正。跑通这条链路后，问数智能体才真正从“理解问题”走到“查出结果”。</p>
+<p><strong>对应代码分支：</strong> <code>14-agent-sql-loop</code></p>
+<hr>
+<h2 id="1、本章在问数链路中的位置"><a href="#1、本章在问数链路中的位置" class="headerlink" title="1、本章在问数链路中的位置"></a>1、本章在问数链路中的位置</h2><p>前面几章已经完成了 SQL 生成前的准备工作：</p>
+<pre class="line-numbers language-text" data-language="text"><code class="language-text">用户问题
+  -> extract_keywords
+  -> recall_column / recall_metric / recall_value
+  -> merge_retrieved_info
+  -> filter_table / filter_metric
+  -> add_extra_context<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<p>到这里，智能体已经不再只有一句用户问题，而是拥有了一组相对完整的 SQL 生成上下文。</p>
+<p>本章要完成最后四个节点：</p>
+<pre class="line-numbers language-text" data-language="text"><code class="language-text">generate_sql  # 生成 SQL
+validate_sql  # 校验 SQL
+correct_sql   # 校正 SQL
+run_sql       # 执行 SQL<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span></span></code></pre>
+
+<p><img src="/assets/images/404-image.webp" alt="基于 LangGraph 的问数智能体全流程：从自然语言问题进入召回、过滤、SQL 生成、校验、校正和执行"></p>
+<hr>
+<h2 id="2、SQL-生成前已经有什么"><a href="#2、SQL-生成前已经有什么" class="headerlink" title="2、SQL 生成前已经有什么"></a>2、SQL 生成前已经有什么</h2><p>生成 SQL 之前，<code>state</code> 里最重要的是下面几类信息：</p>
+<pre class="line-numbers language-text" data-language="text"><code class="language-text">query         # 用户原始问题
+table_infos   # 可使用的表、字段、字段类型、字段描述、示例值
+metric_infos  # 可参考的业务指标、指标口径、依赖字段
+date_info     # 当前日期、星期、季度
+db_info       # 当前数据库方言和版本<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<p>它们分别解决不同问题。</p>
+<p><code>query</code> 负责告诉模型“用户到底问了什么”：</p>
+<pre class="line-numbers language-text" data-language="text"><code class="language-text">统计华北地区的销售总额<span aria-hidden="true" class="line-numbers-rows"><span></span></span></code></pre>
+
+<p><code>table_infos</code> 负责告诉模型“数据库里有什么表、什么字段可以用”：</p>
+<pre class="line-numbers language-yaml" data-language="yaml"><code class="language-yaml"><span class="token punctuation">-</span> <span class="token key atrule">name</span><span class="token punctuation">:</span> fact_order
+  <span class="token key atrule">role</span><span class="token punctuation">:</span> fact
+  <span class="token key atrule">description</span><span class="token punctuation">:</span> 订单事实表
+  <span class="token key atrule">columns</span><span class="token punctuation">:</span>
+    <span class="token punctuation">-</span> <span class="token key atrule">name</span><span class="token punctuation">:</span> order_amount
+      <span class="token key atrule">type</span><span class="token punctuation">:</span> decimal
+      <span class="token key atrule">role</span><span class="token punctuation">:</span> measure
+      <span class="token key atrule">description</span><span class="token punctuation">:</span> 订单金额
+<span class="token punctuation">-</span> <span class="token key atrule">name</span><span class="token punctuation">:</span> dim_region
+  <span class="token key atrule">role</span><span class="token punctuation">:</span> dimension
+  <span class="token key atrule">description</span><span class="token punctuation">:</span> 地区维度表
+  <span class="token key atrule">columns</span><span class="token punctuation">:</span>
+    <span class="token punctuation">-</span> <span class="token key atrule">name</span><span class="token punctuation">:</span> region_name
+      <span class="token key atrule">type</span><span class="token punctuation">:</span> varchar
+      <span class="token key atrule">role</span><span class="token punctuation">:</span> dimension
+      <span class="token key atrule">examples</span><span class="token punctuation">:</span>
+        <span class="token punctuation">-</span> 华北<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<p><code>metric_infos</code> 负责告诉模型“业务口径怎么算”：</p>
+<pre class="line-numbers language-yaml" data-language="yaml"><code class="language-yaml"><span class="token punctuation">-</span> <span class="token key atrule">name</span><span class="token punctuation">:</span> GMV
+  <span class="token key atrule">description</span><span class="token punctuation">:</span> 所有订单成交金额总和
+  <span class="token key atrule">relevant_columns</span><span class="token punctuation">:</span>
+    <span class="token punctuation">-</span> fact_order.order_amount
+  <span class="token key atrule">alias</span><span class="token punctuation">:</span>
+    <span class="token punctuation">-</span> 销售总额
+    <span class="token punctuation">-</span> 成交额<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<p><code>date_info</code> 和 <code>db_info</code> 则补充模型不能凭空确定的信息：</p>
+<pre class="line-numbers language-yaml" data-language="yaml"><code class="language-yaml"><span class="token key atrule">date_info</span><span class="token punctuation">:</span>
+  <span class="token key atrule">date</span><span class="token punctuation">:</span> <span class="token string">"2026-04-27"</span>
+  <span class="token key atrule">weekday</span><span class="token punctuation">:</span> <span class="token string">"Monday"</span>
+  <span class="token key atrule">quarter</span><span class="token punctuation">:</span> <span class="token string">"Q2"</span>
+
+<span class="token key atrule">db_info</span><span class="token punctuation">:</span>
+  <span class="token key atrule">dialect</span><span class="token punctuation">:</span> mysql
+  <span class="token key atrule">version</span><span class="token punctuation">:</span> 8.0.44<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<p>如果缺少这些上下文，模型也能写出一条“看起来像 SQL”的语句，但那条 SQL 很可能用错表、用错字段、写错指标口径，甚至不符合当前数据库版本。</p>
+<p>所以本章的重点不是让模型自由发挥，而是让模型在前面整理好的约束范围内生成 SQL。</p>
+<hr>
+<h2 id="3、生成-SQL：generate-sql"><a href="#3、生成-SQL：generate-sql" class="headerlink" title="3、生成 SQL：generate_sql"></a>3、生成 SQL：generate_sql</h2><p><img src="/assets/images/404-image.webp" alt="问数智能体「生成 SQL」：基于表结构、指标、日期和数据库环境，将自然语言问题转成 SQL"></p>
+<p><code>generate_sql</code> 的职责很单纯：<strong>生成一条候选 SQL，并写入 <code>state[&quot;sql&quot;]</code>。</strong></p>
+<p>它不负责校验，也不负责执行。</p>
+<h3 id="3-1-提示词关注什么"><a href="#3-1-提示词关注什么" class="headerlink" title="3.1 提示词关注什么"></a>3.1 提示词关注什么</h3><p>项目对应提示词路径：<code>shopkeeper-agent/prompts/generate_sql.prompt</code></p>
+<p>这份提示词的核心输入有五个：</p>
+<pre class="line-numbers language-text" data-language="text"><code class="language-text">table_infos
+metric_infos
+date_info
+db_info
+query<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<p>其中最关键的约束是：<strong>输出必须只包含一条完整 SQL 语句的纯文本</strong>。</p>
+<p>需要注意的是，很多大模型在写代码时，会习惯性输出 Markdown 代码块：</p>
+<pre class="line-numbers language-markdown" data-language="markdown"><code class="language-markdown"><span class="token code"><span class="token punctuation">```</span><span class="token code-language">sql</span>
+<span class="token code-block language-sql"><span class="token keyword">select</span> <span class="token punctuation">.</span><span class="token punctuation">.</span><span class="token punctuation">.</span></span>
+<span class="token punctuation">```</span></span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span></span></code></pre>
+
+<p>但项目拿到 SQL 后要直接交给数据库校验和执行。如果 SQL 字符串里混入 Markdown 代码块，数据库并不认识这些符号，就会报语法错误。</p>
+<p>所以提示词必须明确要求：</p>
+<pre class="line-numbers language-text" data-language="text"><code class="language-text">不要解释
+不要 Markdown 代码块
+不要 ```sql
+只输出 SQL 本身<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span></span></code></pre>
+
+<h3 id="3-2-核心代码"><a href="#3-2-核心代码" class="headerlink" title="3.2 核心代码"></a>3.2 核心代码</h3><p>项目对应文件路径：<code>shopkeeper-agent/app/agent/nodes/generate_sql.py</code></p>
+<pre class="line-numbers language-python" data-language="python"><code class="language-python"><span class="token keyword">async</span> <span class="token keyword">def</span> <span class="token function">generate_sql</span><span class="token punctuation">(</span>state<span class="token punctuation">:</span> DataAgentState<span class="token punctuation">,</span> runtime<span class="token punctuation">:</span> Runtime<span class="token punctuation">[</span>DataAgentContext<span class="token punctuation">]</span><span class="token punctuation">)</span><span class="token punctuation">:</span>
+    writer <span class="token operator">=</span> runtime<span class="token punctuation">.</span>stream_writer
+    writer<span class="token punctuation">(</span><span class="token string">"生成SQL"</span><span class="token punctuation">)</span>
+
+    <span class="token comment"># 这些上下文都由前置节点准备完成，模型只在给定表、字段、指标口径范围内生成 SQL</span>
+    table_infos <span class="token operator">=</span> state<span class="token punctuation">[</span><span class="token string">"table_infos"</span><span class="token punctuation">]</span>
+    metric_infos <span class="token operator">=</span> state<span class="token punctuation">[</span><span class="token string">"metric_infos"</span><span class="token punctuation">]</span>
+    date_info <span class="token operator">=</span> state<span class="token punctuation">[</span><span class="token string">"date_info"</span><span class="token punctuation">]</span>
+    db_info <span class="token operator">=</span> state<span class="token punctuation">[</span><span class="token string">"db_info"</span><span class="token punctuation">]</span>
+    query <span class="token operator">=</span> state<span class="token punctuation">[</span><span class="token string">"query"</span><span class="token punctuation">]</span>
+
+    prompt <span class="token operator">=</span> PromptTemplate<span class="token punctuation">(</span>
+        template<span class="token operator">=</span>load_prompt<span class="token punctuation">(</span><span class="token string">"generate_sql"</span><span class="token punctuation">)</span><span class="token punctuation">,</span>
+        input_variables<span class="token operator">=</span><span class="token punctuation">[</span><span class="token string">"table_infos"</span><span class="token punctuation">,</span> <span class="token string">"metric_infos"</span><span class="token punctuation">,</span> <span class="token string">"date_info"</span><span class="token punctuation">,</span> <span class="token string">"db_info"</span><span class="token punctuation">,</span> <span class="token string">"query"</span><span class="token punctuation">]</span><span class="token punctuation">,</span>
+    <span class="token punctuation">)</span>
+
+    <span class="token comment"># 生成 SQL 只需要一段纯文本，所以这里使用 StrOutputParser</span>
+    output_parser <span class="token operator">=</span> StrOutputParser<span class="token punctuation">(</span><span class="token punctuation">)</span>
+    chain <span class="token operator">=</span> prompt <span class="token operator">|</span> llm <span class="token operator">|</span> output_parser
+
+    result <span class="token operator">=</span> <span class="token keyword">await</span> chain<span class="token punctuation">.</span>ainvoke<span class="token punctuation">(</span>
+        <span class="token punctuation">&#123;</span>
+            <span class="token comment"># YAML 更适合放进提示词：保留嵌套结构、顺序和中文说明，方便模型理解表字段关系</span>
+            <span class="token string">"table_infos"</span><span class="token punctuation">:</span> yaml<span class="token punctuation">.</span>dump<span class="token punctuation">(</span>table_infos<span class="token punctuation">,</span> allow_unicode<span class="token operator">=</span><span class="token boolean">True</span><span class="token punctuation">,</span> sort_keys<span class="token operator">=</span><span class="token boolean">False</span><span class="token punctuation">)</span><span class="token punctuation">,</span>
+            <span class="token string">"metric_infos"</span><span class="token punctuation">:</span> yaml<span class="token punctuation">.</span>dump<span class="token punctuation">(</span>metric_infos<span class="token punctuation">,</span> allow_unicode<span class="token operator">=</span><span class="token boolean">True</span><span class="token punctuation">,</span> sort_keys<span class="token operator">=</span><span class="token boolean">False</span><span class="token punctuation">)</span><span class="token punctuation">,</span>
+            <span class="token string">"date_info"</span><span class="token punctuation">:</span> yaml<span class="token punctuation">.</span>dump<span class="token punctuation">(</span>date_info<span class="token punctuation">,</span> allow_unicode<span class="token operator">=</span><span class="token boolean">True</span><span class="token punctuation">,</span> sort_keys<span class="token operator">=</span><span class="token boolean">False</span><span class="token punctuation">)</span><span class="token punctuation">,</span>
+            <span class="token string">"db_info"</span><span class="token punctuation">:</span> yaml<span class="token punctuation">.</span>dump<span class="token punctuation">(</span>db_info<span class="token punctuation">,</span> allow_unicode<span class="token operator">=</span><span class="token boolean">True</span><span class="token punctuation">,</span> sort_keys<span class="token operator">=</span><span class="token boolean">False</span><span class="token punctuation">)</span><span class="token punctuation">,</span>
+            <span class="token string">"query"</span><span class="token punctuation">:</span> query<span class="token punctuation">,</span>
+        <span class="token punctuation">&#125;</span>
+    <span class="token punctuation">)</span>
+
+    logger<span class="token punctuation">.</span>info<span class="token punctuation">(</span><span class="token string-interpolation"><span class="token string">f"生成的SQL：</span><span class="token interpolation"><span class="token punctuation">&#123;</span>result<span class="token punctuation">&#125;</span></span><span class="token string">"</span></span><span class="token punctuation">)</span>
+    <span class="token keyword">return</span> <span class="token punctuation">&#123;</span><span class="token string">"sql"</span><span class="token punctuation">:</span> result<span class="token punctuation">&#125;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<p>这段代码里有两个点值得注意。</p>
+<p>第一，结构化上下文会先转成 YAML：</p>
+<pre class="line-numbers language-python" data-language="python"><code class="language-python">yaml<span class="token punctuation">.</span>dump<span class="token punctuation">(</span>table_infos<span class="token punctuation">,</span> allow_unicode<span class="token operator">=</span><span class="token boolean">True</span><span class="token punctuation">,</span> sort_keys<span class="token operator">=</span><span class="token boolean">False</span><span class="token punctuation">)</span><span aria-hidden="true" class="line-numbers-rows"><span></span></span></code></pre>
+
+<p><code>allow_unicode=True</code> 可以保留中文，<code>sort_keys=False</code> 可以保留字段原始顺序。相比直接把 Python 对象转成字符串，YAML 更适合放进提示词。</p>
+<p>第二，输出解析器使用的是 <code>StrOutputParser</code>，不是 <code>JsonOutputParser</code>。因为这一节点只需要一条 SQL 字符串，不需要 JSON 对象。</p>
+<hr>
+<h2 id="4、校验-SQL：validate-sql"><a href="#4、校验-SQL：validate-sql" class="headerlink" title="4、校验 SQL：validate_sql"></a>4、校验 SQL：validate_sql</h2><p>生成 SQL 之后，不能直接执行。大模型即使拿到了上下文，也仍然可能出错。常见错误包括：</p>
+<ul>
+<li>表名写错；</li>
+<li>字段名写错；</li>
+<li>字段别名写错；</li>
+<li><code>join</code> 条件不完整；</li>
+<li>聚合函数和 <code>group by</code> 不匹配；</li>
+<li>SQL 方言不符合当前数据库；</li>
+<li>使用了提示词里没有提供的表或字段。</li>
+</ul>
+<p>更稳的做法是：先让数据库帮我们检查这条 SQL 能不能解析，也就是执行：</p>
+<pre class="line-numbers language-sql" data-language="sql"><code class="language-sql"><span class="token keyword">explain</span> <span class="token operator">&lt;</span>generated_sql<span class="token operator">></span><span aria-hidden="true" class="line-numbers-rows"><span></span></span></code></pre>
+
+<p><code>EXPLAIN</code> 原本是用来看 SQL 执行计划的，但这里主要利用它的副作用：<strong>让数据库提前解析 SQL。</strong></p>
+<p>如果 SQL 里有字段不存在，数据库会直接报错，例如：</p>
+<pre class="line-numbers language-text" data-language="text"><code class="language-text">Unknown column 'd.region_name1' in 'where clause'<span aria-hidden="true" class="line-numbers-rows"><span></span></span></code></pre>
+
+<p>这条错误信息非常有用。后面 <code>correct_sql</code> 可以把它连同原 SQL 一起交给大模型，让模型做有依据的修正。</p>
+<h3 id="4-1-validate-sql-核心代码"><a href="#4-1-validate-sql-核心代码" class="headerlink" title="4.1 validate_sql 核心代码"></a>4.1 validate_sql 核心代码</h3><p>项目对应文件路径：<code>shopkeeper-agent/app/agent/nodes/validate_sql.py</code></p>
+<pre class="line-numbers language-python" data-language="python"><code class="language-python"><span class="token keyword">async</span> <span class="token keyword">def</span> <span class="token function">validate_sql</span><span class="token punctuation">(</span>state<span class="token punctuation">:</span> DataAgentState<span class="token punctuation">,</span> runtime<span class="token punctuation">:</span> Runtime<span class="token punctuation">[</span>DataAgentContext<span class="token punctuation">]</span><span class="token punctuation">)</span><span class="token punctuation">:</span>
+    writer <span class="token operator">=</span> runtime<span class="token punctuation">.</span>stream_writer
+    writer<span class="token punctuation">(</span><span class="token string">"校验SQL"</span><span class="token punctuation">)</span>
+
+    <span class="token comment"># 读取 generate_sql 写入状态的 SQL。</span>
+    sql <span class="token operator">=</span> state<span class="token punctuation">[</span><span class="token string">"sql"</span><span class="token punctuation">]</span>
+
+    <span class="token comment"># SQL 可用性必须交给真实数仓判断，这里从运行时 context 中取 DW Repository。</span>
+    dw_mysql_repository<span class="token punctuation">:</span> DWMySQLRepository <span class="token operator">=</span> runtime<span class="token punctuation">.</span>context<span class="token punctuation">[</span><span class="token string">"dw_mysql_repository"</span><span class="token punctuation">]</span>
+
+    <span class="token keyword">try</span><span class="token punctuation">:</span>
+        <span class="token comment"># validate 内部使用 explain &lt;sql>，只关心数据库能否成功解析这条 SQL。</span>
+        <span class="token keyword">await</span> dw_mysql_repository<span class="token punctuation">.</span>validate<span class="token punctuation">(</span>sql<span class="token punctuation">)</span>
+        logger<span class="token punctuation">.</span>info<span class="token punctuation">(</span><span class="token string">"SQL语法正确"</span><span class="token punctuation">)</span>
+        <span class="token keyword">return</span> <span class="token punctuation">&#123;</span><span class="token string">"error"</span><span class="token punctuation">:</span> <span class="token boolean">None</span><span class="token punctuation">&#125;</span>
+    <span class="token keyword">except</span> Exception <span class="token keyword">as</span> e<span class="token punctuation">:</span>
+        <span class="token comment"># 不直接抛异常，而是把错误信息写入 state，交给条件边判断。</span>
+        logger<span class="token punctuation">.</span>info<span class="token punctuation">(</span><span class="token string-interpolation"><span class="token string">f"SQL语法错误：</span><span class="token interpolation"><span class="token punctuation">&#123;</span><span class="token builtin">str</span><span class="token punctuation">(</span>e<span class="token punctuation">)</span><span class="token punctuation">&#125;</span></span><span class="token string">"</span></span><span class="token punctuation">)</span>
+        <span class="token keyword">return</span> <span class="token punctuation">&#123;</span><span class="token string">"error"</span><span class="token punctuation">:</span> <span class="token builtin">str</span><span class="token punctuation">(</span>e<span class="token punctuation">)</span><span class="token punctuation">&#125;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<p>校验失败时，节点没有直接抛异常，而是把错误转成字符串，写入状态：</p>
+<pre class="line-numbers language-python" data-language="python"><code class="language-python"><span class="token keyword">return</span> <span class="token punctuation">&#123;</span><span class="token string">"error"</span><span class="token punctuation">:</span> <span class="token builtin">str</span><span class="token punctuation">(</span>e<span class="token punctuation">)</span><span class="token punctuation">&#125;</span><span aria-hidden="true" class="line-numbers-rows"><span></span></span></code></pre>
+
+<p>这是为了交给 LangGraph 的条件分支处理。</p>
+<p>也就是说，<code>validate_sql</code> 只负责判断 SQL 是否有问题，不负责决定下一步去哪。下一步走 <code>run_sql</code> 还是 <code>correct_sql</code>，由图结构来决定。</p>
+<h3 id="4-2-DWMySQLRepository-validate"><a href="#4-2-DWMySQLRepository-validate" class="headerlink" title="4.2 DWMySQLRepository.validate"></a>4.2 DWMySQLRepository.validate</h3><p>项目对应文件路径：<code>shopkeeper-agent/app/repositories/mysql/dw/dw_mysql_repository.py</code></p>
+<pre class="line-numbers language-python" data-language="python"><code class="language-python"><span class="token keyword">async</span> <span class="token keyword">def</span> <span class="token function">validate</span><span class="token punctuation">(</span>self<span class="token punctuation">,</span> sql<span class="token punctuation">:</span> <span class="token builtin">str</span><span class="token punctuation">)</span><span class="token punctuation">:</span>
+    <span class="token comment"># 用 explain 让数据库解析 SQL，提前发现语法、表名、字段名等问题。</span>
+    sql <span class="token operator">=</span> <span class="token string-interpolation"><span class="token string">f"explain </span><span class="token interpolation"><span class="token punctuation">&#123;</span>sql<span class="token punctuation">&#125;</span></span><span class="token string">"</span></span>
+    <span class="token keyword">await</span> self<span class="token punctuation">.</span>session<span class="token punctuation">.</span>execute<span class="token punctuation">(</span>text<span class="token punctuation">(</span>sql<span class="token punctuation">)</span><span class="token punctuation">)</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span></span></code></pre>
+
+<p>这里不需要关心 <code>EXPLAIN</code> 的返回值，因为当前只关心一件事：<strong>这条 SQL 能不能被数据库正常解析？</strong></p>
+<p>如果能解析，<code>execute</code> 正常结束；如果不能解析，<code>execute</code> 会抛出异常。上层的 <code>validate_sql</code> 捕获异常后，再把错误信息写进 <code>state[&quot;error&quot;]</code>。</p>
+<hr>
+<h2 id="5、用条件分支决定校正还是执行"><a href="#5、用条件分支决定校正还是执行" class="headerlink" title="5、用条件分支决定校正还是执行"></a>5、用条件分支决定校正还是执行</h2><p><code>validate_sql</code> 写入 <code>error</code> 后，图结构要根据它决定下一步。</p>
+<pre class="line-numbers language-mermaid" data-language="mermaid"><code class="language-mermaid"><span class="token keyword">flowchart</span> TD
+    A<span class="token text string">["generate_sql 生成 SQL"]</span>
+    B<span class="token text string">["validate_sql 校验 SQL"]</span>
+    C<span class="token text string">&#123;"error 是否为空"&#125;</span>
+    D<span class="token text string">["run_sql 执行 SQL"]</span>
+    E<span class="token text string">["correct_sql 根据错误修正 SQL"]</span>
+    F<span class="token text string">["返回查询结果"]</span>
+
+    A <span class="token arrow operator">--></span> B <span class="token arrow operator">--></span> C
+    C <span class="token arrow operator">--></span><span class="token label property">|"是，校验通过"|</span> D <span class="token arrow operator">--></span> F
+    C <span class="token arrow operator">--></span><span class="token label property">|"否，校验失败"|</span> E <span class="token arrow operator">--></span> B<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<p>这就是本章的核心闭环：不是一次生成就盲目执行，而是先校验；校验失败就把错误信息带回模型，让它基于真实错误修正 SQL。</p>
+<p>项目对应文件路径：<code>shopkeeper-agent/app/agent/graph.py</code></p>
+<pre class="line-numbers language-python" data-language="python"><code class="language-python">graph_builder<span class="token punctuation">.</span>add_edge<span class="token punctuation">(</span><span class="token string">"generate_sql"</span><span class="token punctuation">,</span> <span class="token string">"validate_sql"</span><span class="token punctuation">)</span>
+
+graph_builder<span class="token punctuation">.</span>add_conditional_edges<span class="token punctuation">(</span>
+    source<span class="token operator">=</span><span class="token string">"validate_sql"</span><span class="token punctuation">,</span>
+    path<span class="token operator">=</span><span class="token keyword">lambda</span> state<span class="token punctuation">:</span> <span class="token string">"run_sql"</span> <span class="token keyword">if</span> state<span class="token punctuation">[</span><span class="token string">"error"</span><span class="token punctuation">]</span> <span class="token keyword">is</span> <span class="token boolean">None</span> <span class="token keyword">else</span> <span class="token string">"correct_sql"</span><span class="token punctuation">,</span>
+    path_map<span class="token operator">=</span><span class="token punctuation">&#123;</span><span class="token string">"run_sql"</span><span class="token punctuation">:</span> <span class="token string">"run_sql"</span><span class="token punctuation">,</span> <span class="token string">"correct_sql"</span><span class="token punctuation">:</span> <span class="token string">"correct_sql"</span><span class="token punctuation">&#125;</span><span class="token punctuation">,</span>
+<span class="token punctuation">)</span>
+
+graph_builder<span class="token punctuation">.</span>add_edge<span class="token punctuation">(</span><span class="token string">"correct_sql"</span><span class="token punctuation">,</span> <span class="token string">"run_sql"</span><span class="token punctuation">)</span>
+graph_builder<span class="token punctuation">.</span>add_edge<span class="token punctuation">(</span><span class="token string">"run_sql"</span><span class="token punctuation">,</span> END<span class="token punctuation">)</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<p>它表达的逻辑是：</p>
+<pre class="line-numbers language-text" data-language="text"><code class="language-text">generate_sql
+  -> validate_sql
+       -> 校验通过 -> run_sql -> END
+       -> 校验失败 -> correct_sql -> run_sql -> END<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span></span></code></pre>
+
+<p>这里有一个细节要注意：当前项目代码里，<code>correct_sql</code> 之后是直接进入 <code>run_sql</code>，没有再次回到 <code>validate_sql</code>。</p>
+<p>也就是说，当前实现是一个简化版：</p>
+<pre class="line-numbers language-text" data-language="text"><code class="language-text">生成 SQL -> 校验一次 -> 如果失败则校正一次 -> 执行<span aria-hidden="true" class="line-numbers-rows"><span></span></span></code></pre>
+
+<p>在生产级系统里，通常会扩展成带次数限制的循环：</p>
+<pre class="line-numbers language-text" data-language="text"><code class="language-text">生成 SQL -> 校验 -> 校正 -> 再校验 -> 最多重试 N 次 -> 执行或返回失败<span aria-hidden="true" class="line-numbers-rows"><span></span></span></code></pre>
+
+<p>本章先按当前代码实现，不额外展开多轮重试。</p>
+<hr>
+<h2 id="6、校正-SQL：correct-sql"><a href="#6、校正-SQL：correct-sql" class="headerlink" title="6、校正 SQL：correct_sql"></a>6、校正 SQL：correct_sql</h2><p><code>correct_sql</code> 的职责是：<strong>在 SQL 校验失败时，根据错误信息修正 SQL。</strong></p>
+<p>它不是重新生成一条完全不同的 SQL，而是在尽量保持原业务语义不变的前提下，修复导致 SQL 无法执行的问题。</p>
+<h3 id="6-1-校正提示词关注什么"><a href="#6-1-校正提示词关注什么" class="headerlink" title="6.1 校正提示词关注什么"></a>6.1 校正提示词关注什么</h3><p>项目对应提示词路径：<code>shopkeeper-agent/prompts/correct_sql.prompt</code></p>
+<p>这份提示词的重点不是“重新发挥”，而是“最小必要修复”。</p>
+<p>核心规则可以概括成几条：</p>
+<ul>
+<li>必须严格基于 SQL 执行错误信息进行修正；</li>
+<li>不得改变原始业务语义；</li>
+<li>不得新增、删除或替换统计指标、统计维度、过滤条件或时间范围；</li>
+<li>只能使用上下文中真实存在的表和字段；</li>
+<li>如果涉及指标计算，要继续遵循指标信息中的业务口径；</li>
+<li>修正后的 SQL 仍然只能是一条查询 SQL；</li>
+<li>输出仍然必须是纯文本 SQL，不能带 Markdown 代码块。</li>
+</ul>
+<p>校正节点需要的上下文比 <code>generate_sql</code> 更多。除了原始问题、表结构、指标、日期和数据库信息，还要额外传入：</p>
+<pre class="line-numbers language-text" data-language="text"><code class="language-text">sql    # 待纠正的错误 SQL
+error  # 数据库返回的错误信息<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span></span></code></pre>
+
+<p>为什么不能只传 <code>error</code>？</p>
+<p>因为错误信息只告诉模型“哪里错了”，但不能完整告诉模型“用户原来想查什么、有哪些表字段可以用、指标口径是什么”。如果只传错误信息，模型可能修好了语法，却改丢了业务含义。</p>
+<h3 id="6-2-correct-sql-核心代码"><a href="#6-2-correct-sql-核心代码" class="headerlink" title="6.2 correct_sql 核心代码"></a>6.2 correct_sql 核心代码</h3><p>项目对应文件路径：<code>shopkeeper-agent/app/agent/nodes/correct_sql.py</code></p>
+<pre class="line-numbers language-python" data-language="python"><code class="language-python"><span class="token keyword">async</span> <span class="token keyword">def</span> <span class="token function">correct_sql</span><span class="token punctuation">(</span>state<span class="token punctuation">:</span> DataAgentState<span class="token punctuation">,</span> runtime<span class="token punctuation">:</span> Runtime<span class="token punctuation">[</span>DataAgentContext<span class="token punctuation">]</span><span class="token punctuation">)</span><span class="token punctuation">:</span>
+    writer <span class="token operator">=</span> runtime<span class="token punctuation">.</span>stream_writer
+    writer<span class="token punctuation">(</span><span class="token string">"校正SQL"</span><span class="token punctuation">)</span>
+
+    <span class="token comment"># 校正 SQL 仍然需要完整上下文，避免模型只根据报错修语法却改丢业务语义</span>
+    table_infos <span class="token operator">=</span> state<span class="token punctuation">[</span><span class="token string">"table_infos"</span><span class="token punctuation">]</span>
+    metric_infos <span class="token operator">=</span> state<span class="token punctuation">[</span><span class="token string">"metric_infos"</span><span class="token punctuation">]</span>
+    date_info <span class="token operator">=</span> state<span class="token punctuation">[</span><span class="token string">"date_info"</span><span class="token punctuation">]</span>
+    db_info <span class="token operator">=</span> state<span class="token punctuation">[</span><span class="token string">"db_info"</span><span class="token punctuation">]</span>
+    query <span class="token operator">=</span> state<span class="token punctuation">[</span><span class="token string">"query"</span><span class="token punctuation">]</span>
+
+    <span class="token comment"># sql 是待修正的候选 SQL，error 是数据库 explain 返回的具体错误信息</span>
+    sql <span class="token operator">=</span> state<span class="token punctuation">[</span><span class="token string">"sql"</span><span class="token punctuation">]</span>
+    error <span class="token operator">=</span> state<span class="token punctuation">[</span><span class="token string">"error"</span><span class="token punctuation">]</span>
+
+    prompt <span class="token operator">=</span> PromptTemplate<span class="token punctuation">(</span>
+        template<span class="token operator">=</span>load_prompt<span class="token punctuation">(</span><span class="token string">"correct_sql"</span><span class="token punctuation">)</span><span class="token punctuation">,</span>
+        input_variables<span class="token operator">=</span><span class="token punctuation">[</span>
+            <span class="token string">"table_infos"</span><span class="token punctuation">,</span>
+            <span class="token string">"metric_infos"</span><span class="token punctuation">,</span>
+            <span class="token string">"date_info"</span><span class="token punctuation">,</span>
+            <span class="token string">"db_info"</span><span class="token punctuation">,</span>
+            <span class="token string">"query"</span><span class="token punctuation">,</span>
+            <span class="token string">"sql"</span><span class="token punctuation">,</span>
+            <span class="token string">"error"</span><span class="token punctuation">,</span>
+        <span class="token punctuation">]</span><span class="token punctuation">,</span>
+    <span class="token punctuation">)</span>
+
+    output_parser <span class="token operator">=</span> StrOutputParser<span class="token punctuation">(</span><span class="token punctuation">)</span>
+    chain <span class="token operator">=</span> prompt <span class="token operator">|</span> llm <span class="token operator">|</span> output_parser
+
+    result <span class="token operator">=</span> <span class="token keyword">await</span> chain<span class="token punctuation">.</span>ainvoke<span class="token punctuation">(</span>
+        <span class="token punctuation">&#123;</span>
+            <span class="token comment"># 与生成节点保持一致，用 YAML 向模型提供稳定、可读的结构化上下文</span>
+            <span class="token string">"table_infos"</span><span class="token punctuation">:</span> yaml<span class="token punctuation">.</span>dump<span class="token punctuation">(</span>table_infos<span class="token punctuation">,</span> allow_unicode<span class="token operator">=</span><span class="token boolean">True</span><span class="token punctuation">,</span> sort_keys<span class="token operator">=</span><span class="token boolean">False</span><span class="token punctuation">)</span><span class="token punctuation">,</span>
+            <span class="token string">"metric_infos"</span><span class="token punctuation">:</span> yaml<span class="token punctuation">.</span>dump<span class="token punctuation">(</span>metric_infos<span class="token punctuation">,</span> allow_unicode<span class="token operator">=</span><span class="token boolean">True</span><span class="token punctuation">,</span> sort_keys<span class="token operator">=</span><span class="token boolean">False</span><span class="token punctuation">)</span><span class="token punctuation">,</span>
+            <span class="token string">"date_info"</span><span class="token punctuation">:</span> yaml<span class="token punctuation">.</span>dump<span class="token punctuation">(</span>date_info<span class="token punctuation">,</span> allow_unicode<span class="token operator">=</span><span class="token boolean">True</span><span class="token punctuation">,</span> sort_keys<span class="token operator">=</span><span class="token boolean">False</span><span class="token punctuation">)</span><span class="token punctuation">,</span>
+            <span class="token string">"db_info"</span><span class="token punctuation">:</span> yaml<span class="token punctuation">.</span>dump<span class="token punctuation">(</span>db_info<span class="token punctuation">,</span> allow_unicode<span class="token operator">=</span><span class="token boolean">True</span><span class="token punctuation">,</span> sort_keys<span class="token operator">=</span><span class="token boolean">False</span><span class="token punctuation">)</span><span class="token punctuation">,</span>
+            <span class="token string">"query"</span><span class="token punctuation">:</span> query<span class="token punctuation">,</span>
+            <span class="token string">"sql"</span><span class="token punctuation">:</span> sql<span class="token punctuation">,</span>
+            <span class="token string">"error"</span><span class="token punctuation">:</span> error<span class="token punctuation">,</span>
+        <span class="token punctuation">&#125;</span>
+    <span class="token punctuation">)</span>
+
+    logger<span class="token punctuation">.</span>info<span class="token punctuation">(</span><span class="token string-interpolation"><span class="token string">f"校正后的SQL：</span><span class="token interpolation"><span class="token punctuation">&#123;</span>result<span class="token punctuation">&#125;</span></span><span class="token string">"</span></span><span class="token punctuation">)</span>
+    <span class="token keyword">return</span> <span class="token punctuation">&#123;</span><span class="token string">"sql"</span><span class="token punctuation">:</span> result<span class="token punctuation">&#125;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<p>整体结构和 <code>generate_sql</code> 很像：</p>
+<pre class="line-numbers language-text" data-language="text"><code class="language-text">准备上下文
+  -> 加载提示词
+  -> PromptTemplate | llm | StrOutputParser
+  -> 写回 state["sql"]<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span></span></code></pre>
+
+<p>区别在于，<code>correct_sql</code> 多传了 <code>sql</code> 和 <code>error</code>。最后返回的仍然是：</p>
+<pre class="line-numbers language-python" data-language="python"><code class="language-python"><span class="token keyword">return</span> <span class="token punctuation">&#123;</span><span class="token string">"sql"</span><span class="token punctuation">:</span> result<span class="token punctuation">&#125;</span><span aria-hidden="true" class="line-numbers-rows"><span></span></span></code></pre>
+
+<p>也就是用修正后的 SQL 覆盖原来的错误 SQL。</p>
+<hr>
+<h2 id="7、执行-SQL：run-sql"><a href="#7、执行-SQL：run-sql" class="headerlink" title="7、执行 SQL：run_sql"></a>7、执行 SQL：run_sql</h2><p><code>run_sql</code> 是当前工作流的最后一个节点。它的职责是：<strong>执行最终 SQL，并拿到查询结果。</strong></p>
+<p>项目对应文件路径：<code>shopkeeper-agent/app/agent/nodes/run_sql.py</code></p>
+<pre class="line-numbers language-python" data-language="python"><code class="language-python"><span class="token keyword">async</span> <span class="token keyword">def</span> <span class="token function">run_sql</span><span class="token punctuation">(</span>state<span class="token punctuation">:</span> DataAgentState<span class="token punctuation">,</span> runtime<span class="token punctuation">:</span> Runtime<span class="token punctuation">[</span>DataAgentContext<span class="token punctuation">]</span><span class="token punctuation">)</span><span class="token punctuation">:</span>
+    writer <span class="token operator">=</span> runtime<span class="token punctuation">.</span>stream_writer
+    writer<span class="token punctuation">(</span><span class="token string">"执行SQL"</span><span class="token punctuation">)</span>
+
+    <span class="token comment"># 这里拿到的是 generate_sql 生成的 SQL，</span>
+    <span class="token comment"># 或 correct_sql 修正后覆盖进去的 SQL。</span>
+    sql <span class="token operator">=</span> state<span class="token punctuation">[</span><span class="token string">"sql"</span><span class="token punctuation">]</span>
+    dw_mysql_repository <span class="token operator">=</span> runtime<span class="token punctuation">.</span>context<span class="token punctuation">[</span><span class="token string">"dw_mysql_repository"</span><span class="token punctuation">]</span>
+
+    result <span class="token operator">=</span> <span class="token keyword">await</span> dw_mysql_repository<span class="token punctuation">.</span>run<span class="token punctuation">(</span>sql<span class="token punctuation">)</span>
+
+    logger<span class="token punctuation">.</span>info<span class="token punctuation">(</span><span class="token string-interpolation"><span class="token string">f"SQL执行结果：</span><span class="token interpolation"><span class="token punctuation">&#123;</span>result<span class="token punctuation">&#125;</span></span><span class="token string">"</span></span><span class="token punctuation">)</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<p>这段代码很短，因为真正的数据库访问被封装到了 <code>DWMySQLRepository</code>。</p>
+<p>注意，当前实现里 <code>run_sql</code> 会执行 SQL 并把结果写入日志，但还没有把 <code>result</code> 返回到 <code>DataAgentState</code>。所以本章本地测试时主要通过日志确认查询结果。后面进入 API 封装时，如果要把最终结果返回给前端，就需要在接口层或执行节点里继续补充结果输出。</p>
+<p>这里统一使用当前项目里的文件名和函数名：</p>
+<pre class="line-numbers language-text" data-language="text"><code class="language-text">run_sql.py
+run_sql(...)<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span></span></code></pre>
+
+<p>避免和“执行 SQL”这个口头描述混在一起。</p>
+<h3 id="7-1-DWMySQLRepository-run"><a href="#7-1-DWMySQLRepository-run" class="headerlink" title="7.1 DWMySQLRepository.run"></a>7.1 DWMySQLRepository.run</h3><p>项目对应文件路径：<code>shopkeeper-agent/app/repositories/mysql/dw/dw_mysql_repository.py</code></p>
+<pre class="line-numbers language-python" data-language="python"><code class="language-python"><span class="token keyword">async</span> <span class="token keyword">def</span> <span class="token function">run</span><span class="token punctuation">(</span>self<span class="token punctuation">,</span> sql<span class="token punctuation">:</span> <span class="token builtin">str</span><span class="token punctuation">)</span> <span class="token operator">-</span><span class="token operator">></span> <span class="token builtin">list</span><span class="token punctuation">[</span><span class="token builtin">dict</span><span class="token punctuation">]</span><span class="token punctuation">:</span>
+    result <span class="token operator">=</span> <span class="token keyword">await</span> self<span class="token punctuation">.</span>session<span class="token punctuation">.</span>execute<span class="token punctuation">(</span>text<span class="token punctuation">(</span>sql<span class="token punctuation">)</span><span class="token punctuation">)</span>
+    <span class="token keyword">return</span> <span class="token punctuation">[</span><span class="token builtin">dict</span><span class="token punctuation">(</span>row<span class="token punctuation">)</span> <span class="token keyword">for</span> row <span class="token keyword">in</span> result<span class="token punctuation">.</span>mappings<span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">.</span>fetchall<span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">]</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span></span></code></pre>
+
+<p>这里做了两件事。</p>
+<p>第一，执行 SQL：</p>
+<pre class="line-numbers language-python" data-language="python"><code class="language-python">result <span class="token operator">=</span> <span class="token keyword">await</span> self<span class="token punctuation">.</span>session<span class="token punctuation">.</span>execute<span class="token punctuation">(</span>text<span class="token punctuation">(</span>sql<span class="token punctuation">)</span><span class="token punctuation">)</span><span aria-hidden="true" class="line-numbers-rows"><span></span></span></code></pre>
+
+<p>第二，把查询结果转成字典列表：</p>
+<pre class="line-numbers language-python" data-language="python"><code class="language-python"><span class="token keyword">return</span> <span class="token punctuation">[</span><span class="token builtin">dict</span><span class="token punctuation">(</span>row<span class="token punctuation">)</span> <span class="token keyword">for</span> row <span class="token keyword">in</span> result<span class="token punctuation">.</span>mappings<span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">.</span>fetchall<span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">]</span><span aria-hidden="true" class="line-numbers-rows"><span></span></span></code></pre>
+
+<p>为什么要转成 <code>list[dict]</code>？</p>
+<p>因为查询结果最终通常要返回给前端。前端更容易消费下面这种结构：</p>
+<pre class="line-numbers language-json" data-language="json"><code class="language-json"><span class="token punctuation">[</span>
+  <span class="token punctuation">&#123;</span>
+    <span class="token property">"gmv"</span><span class="token operator">:</span> <span class="token number">41099.5</span>
+  <span class="token punctuation">&#125;</span>
+<span class="token punctuation">]</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<p>而不是 SQLAlchemy 内部的 <code>Row</code> 或 <code>RowMapping</code> 对象。</p>
+<hr>
+<h2 id="8、补齐状态字段"><a href="#8、补齐状态字段" class="headerlink" title="8、补齐状态字段"></a>8、补齐状态字段</h2><p>本章新增了两个关键状态字段：</p>
+<pre class="line-numbers language-python" data-language="python"><code class="language-python"><span class="token keyword">class</span> <span class="token class-name">DataAgentState</span><span class="token punctuation">(</span>TypedDict<span class="token punctuation">)</span><span class="token punctuation">:</span>
+    <span class="token comment"># 省略前面已经讲过的字段...</span>
+
+    sql<span class="token punctuation">:</span> <span class="token builtin">str</span>    <span class="token comment"># 生成或校正后的 SQL</span>
+    error<span class="token punctuation">:</span> <span class="token builtin">str</span>  <span class="token comment"># 校验 SQL 时出现的错误信息</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<p>它们分别由不同节点读写：</p>
+<div class="data-grid data-grid-link-table"><div class="grid-header"><div class="grid-cell">字段</div><div class="grid-cell">谁写入</div><div class="grid-cell">谁读取</div><div class="grid-cell">作用</div></div><div class="grid-row"><div class="grid-cell">`sql`</div><div class="grid-cell">`generate_sql`、`correct_sql`</div><div class="grid-cell">`validate_sql`、`correct_sql`、`run_sql`</div><div class="grid-cell">保存候选或修正后的 SQL</div></div><div class="grid-row"><div class="grid-cell">`error`</div><div class="grid-cell">`validate_sql`</div><div class="grid-cell">`graph` 条件分支、`correct_sql`</div><div class="grid-cell">保存 SQL 校验错误</div></div></div>
+
+<p>可以按下面的流向理解：</p>
+<pre class="line-numbers language-text" data-language="text"><code class="language-text">generate_sql 写入 sql
+  -> validate_sql 读取 sql，并写入 error
+  -> graph 根据 error 判断分支
+  -> correct_sql 读取 sql 和 error，并覆盖 sql
+  -> run_sql 读取最终 sql<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<p>这里 <code>error</code> 在类型上写的是 <code>str</code>，但校验通过时会返回：</p>
+<pre class="line-numbers language-python" data-language="python"><code class="language-python"><span class="token punctuation">&#123;</span><span class="token string">"error"</span><span class="token punctuation">:</span> <span class="token boolean">None</span><span class="token punctuation">&#125;</span><span aria-hidden="true" class="line-numbers-rows"><span></span></span></code></pre>
+
+<p>如果希望类型更严谨，可以在后续代码里改成：</p>
+<pre class="line-numbers language-python" data-language="python"><code class="language-python">error<span class="token punctuation">:</span> <span class="token builtin">str</span> <span class="token operator">|</span> <span class="token boolean">None</span><span aria-hidden="true" class="line-numbers-rows"><span></span></span></code></pre>
+
+<p>本章先保持当前代码结构不变。</p>
+<hr>
+<h2 id="9、端到端测试"><a href="#9、端到端测试" class="headerlink" title="9、端到端测试"></a>9、端到端测试</h2><p>在项目根目录下运行：</p>
+<pre class="line-numbers language-bash" data-language="bash"><code class="language-bash">uv run python <span class="token parameter variable">-m</span> app.agent.graph<span aria-hidden="true" class="line-numbers-rows"><span></span></span></code></pre>
+
+<p>运行测试时，不要只盯最终结果。更建议按节点顺序观察：</p>
+<pre class="line-numbers language-text" data-language="text"><code class="language-text">抽取关键词
+召回字段信息
+召回字段取值
+召回指标信息
+合并召回信息
+过滤表信息
+过滤指标信息
+添加额外上下文
+生成SQL
+校验SQL
+执行SQL<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<p>如果生成的 SQL 有问题，中间会多走一步：</p>
+<pre class="line-numbers language-text" data-language="text"><code class="language-text">校正SQL<span aria-hidden="true" class="line-numbers-rows"><span></span></span></code></pre>
+
+<p>日志里可以重点观察三类信息：</p>
+<pre class="line-numbers language-text" data-language="text"><code class="language-text">生成的SQL：SELECT SUM(fact_order.order_amount) ...
+SQL语法正确
+SQL执行结果：[&#123;'SUM(fact_order.order_amount)': 41099.5&#125;]<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span></span></code></pre>
+
+<p>如果结果能正常输出，说明从自然语言问题到 SQL 查询结果的核心链路已经跑通。</p>
+<p>这里结果字段名之所以是 <code>SUM(fact_order.order_amount)</code>，是因为当前实际生成的 SQL 没有给聚合表达式设置别名。如果 SQL 写成 <code>SELECT SUM(fact_order.order_amount) AS gmv ...</code>，返回结果里的 key 才会变成 <code>gmv</code>。</p>
+<p>下面是一次实际运行日志。</p>
+<pre class="line-numbers language-text" data-language="text"><code class="language-text">(shopkeeper-agent-backend) tools@ToolsMacBook-Pro shopkeeper-agent % uv run python -m app.agent.graph
+
+2026-04-27 17:29:31.699 | INFO     | request_id - 1 | app.agent.nodes.extract_keywords:extract_keywords:46 - 抽取关键词: ['销售总额', '华北地区', '统计', '统计华北地区的销售总额']
+抽取关键词
+召回字段信息
+召回指标信息
+召回字段取值
+2026-04-27 17:29:46.676 | INFO     | request_id - 1 | app.agent.nodes.recall_column:recall_column:64 - 检索到字段信息：['dim_region.region_name', 'fact_order.order_amount', 'fact_order.order_quantity', 'dim_region.province', 'dim_region.country', 'dim_region.region_id', 'fact_order.region_id', 'dim_date.year', 'dim_date.month', 'dim_date.date_id', 'fact_order.date_id']
+2026-04-27 17:29:48.781 | INFO     | request_id - 1 | app.agent.nodes.recall_value:recall_value:59 - 检索到字段取值：['dim_region.region_name.华北']
+2026-04-27 17:29:50.668 | INFO     | request_id - 1 | app.agent.nodes.recall_metric:recall_metric:64 - 检索到指标信息：['GMV', 'AOV']
+合并召回信息
+2026-04-27 17:29:51.164 | INFO     | request_id - 1 | app.agent.nodes.merge_retrieved_info:merge_retrieved_info:137 - 合并后的表信息：['dim_region', 'fact_order', 'dim_date']
+2026-04-27 17:29:51.164 | INFO     | request_id - 1 | app.agent.nodes.merge_retrieved_info:merge_retrieved_info:138 - 合并后的指标信息：['GMV', 'AOV']
+过滤指标信息
+过滤表信息
+2026-04-27 17:29:57.605 | INFO     | request_id - 1 | app.agent.nodes.filter_metric:filter_metric:52 - 过滤后的指标信息：['GMV']
+2026-04-27 17:29:59.346 | INFO     | request_id - 1 | app.agent.nodes.filter_table:filter_table:56 - 过滤后的表信息：['dim_region', 'fact_order']
+添加额外上下文
+2026-04-27 17:29:59.419 | INFO     | request_id - 1 | app.agent.nodes.add_extra_context:add_extra_context:35 - 数据库信息：&#123;'dialect': 'mysql', 'version': '8.0.45'&#125;
+2026-04-27 17:29:59.419 | INFO     | request_id - 1 | app.agent.nodes.add_extra_context:add_extra_context:36 - 日期信息：&#123;'date': '2026-04-27', 'weekday': 'Monday', 'quarter': 'Q2'&#125;
+生成SQL
+2026-04-27 17:30:11.243 | INFO     | request_id - 1 | app.agent.nodes.generate_sql:generate_sql:56 - 生成的SQL：SELECT SUM(fact_order.order_amount) FROM fact_order JOIN dim_region ON fact_order.region_id = dim_region.region_id WHERE dim_region.region_name = '华北'
+校验SQL
+/* select#1 */ select sum(`dw`.`fact_order`.`order_amount`) AS `SUM(fact_order.order_amount)` from `dw`.`fact_order` join `dw`.`dim_region` where ((`dw`.`dim_region`.`region_id` = `dw`.`fact_order`.`region_id`) and (`dw`.`dim_region`.`region_name` = '华北'))
+2026-04-27 17:30:11.326 | INFO     | request_id - 1 | app.agent.nodes.validate_sql:validate_sql:28 - SQL语法正确
+执行SQL
+2026-04-27 17:30:11.335 | INFO     | request_id - 1 | app.agent.nodes.run_sql:run_sql:26 - SQL执行结果：[&#123;'SUM(fact_order.order_amount)': 41099.5&#125;]<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<p>从这段日志里可以看到几件事：</p>
+<ul>
+<li>召回阶段先找到了字段、字段取值和指标，其中指标召回到了 <code>GMV</code> 和 <code>AOV</code>；</li>
+<li>过滤阶段把指标收窄成 <code>GMV</code>，把表收窄成 <code>dim_region</code> 和 <code>fact_order</code>；</li>
+<li><code>generate_sql</code> 生成了一条按 <code>dim_region.region_name = &#39;华北&#39;</code> 过滤、汇总 <code>fact_order.order_amount</code> 的 SQL；</li>
+<li><code>validate_sql</code> 通过 <code>EXPLAIN</code> 校验成功；</li>
+<li><code>run_sql</code> 最终查到了结果 <code>41099.5</code>。</li>
+</ul>
+<hr>
+<h2 id="10、常见问题排查"><a href="#10、常见问题排查" class="headerlink" title="10、常见问题排查"></a>10、常见问题排查</h2><h3 id="10-1-SQL-输出里带了-Markdown-代码块"><a href="#10-1-SQL-输出里带了-Markdown-代码块" class="headerlink" title="10.1 SQL 输出里带了 Markdown 代码块"></a>10.1 SQL 输出里带了 Markdown 代码块</h3><p>如果日志里看到类似：</p>
+<pre class="line-numbers language-markdown" data-language="markdown"><code class="language-markdown"><span class="token code"><span class="token punctuation">```</span><span class="token code-language">sql</span>
+<span class="token code-block language-sql"><span class="token keyword">SELECT</span> <span class="token punctuation">.</span><span class="token punctuation">.</span><span class="token punctuation">.</span></span>
+<span class="token punctuation">```</span></span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span></span></code></pre>
+
+<p>说明模型没有严格遵守提示词输出格式。</p>
+<p>可以优先检查 <code>generate_sql.prompt</code> 和 <code>correct_sql.prompt</code> 中是否明确写了：</p>
+<pre class="line-numbers language-text" data-language="text"><code class="language-text">输出必须仅包含一条完整 SQL 语句的纯文本<span aria-hidden="true" class="line-numbers-rows"><span></span></span></code></pre>
+
+<p>因为后面会把这个字符串直接交给数据库，不能包含 Markdown 符号。</p>
+<h3 id="10-2-校验时报-Unknown-column"><a href="#10-2-校验时报-Unknown-column" class="headerlink" title="10.2 校验时报 Unknown column"></a>10.2 校验时报 Unknown column</h3><p>这通常说明模型用了不存在的字段，或者字段别名写错。</p>
+<p>排查顺序建议是：</p>
+<pre class="line-numbers language-text" data-language="text"><code class="language-text">先看 table_infos 是否包含正确字段
+再看 filter_table 是否误删了关键字段
+再看 generate_sql 是否写错字段名或别名<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span></span></code></pre>
+
+<p>如果 <code>error</code> 能正常进入 <code>correct_sql</code>，模型就有机会根据错误信息修正。</p>
+<h3 id="10-3-校验通过但结果为空"><a href="#10-3-校验通过但结果为空" class="headerlink" title="10.3 校验通过但结果为空"></a>10.3 校验通过但结果为空</h3><p>校验通过只能说明 SQL 语法、表名、字段名大体没问题，不代表业务结果一定正确。</p>
+<p>如果结果为空，可以重点检查：</p>
+<ul>
+<li>过滤条件里的字段取值是否和数据库真实值一致；</li>
+<li>时间条件是否过窄；</li>
+<li>指标口径是否带了额外过滤条件；</li>
+<li>表关联条件是否把数据过滤掉了。</li>
+</ul>
+<p>这类问题通常要回看字段取值召回、指标召回和表结构上下文。</p>
+<h3 id="10-4-校正后仍然失败"><a href="#10-4-校正后仍然失败" class="headerlink" title="10.4 校正后仍然失败"></a>10.4 校正后仍然失败</h3><p>当前项目代码里，<code>correct_sql</code> 后会直接进入 <code>run_sql</code>，不会再次校验。</p>
+<p>所以如果校正后的 SQL 仍然有问题，执行阶段仍可能报错。</p>
+<p>后续如果要做得更稳，可以把图结构改成带重试次数的循环：</p>
+<pre class="line-numbers language-text" data-language="text"><code class="language-text">validate_sql -> correct_sql -> validate_sql<span aria-hidden="true" class="line-numbers-rows"><span></span></span></code></pre>
+
+<p>同时在 <code>state</code> 里增加重试计数，避免无限循环。</p>
+<hr>
+<p><strong>本章小结：</strong></p>
+<p>这一章完成了问数智能体的最后一段核心链路：</p>
+<pre class="line-numbers language-text" data-language="text"><code class="language-text">generate_sql -> validate_sql -> correct_sql -> run_sql<span aria-hidden="true" class="line-numbers-rows"><span></span></span></code></pre>
+
+<p>可以把它们的职责压缩成一句话：</p>
+<pre class="line-numbers language-text" data-language="text"><code class="language-text">generate_sql 负责生成候选 SQL
+validate_sql 负责用数据库提前检查 SQL
+correct_sql 负责根据错误信息修复 SQL
+run_sql 负责执行最终 SQL 并拿到查询结果<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span></span></code></pre>
+
+<p>到这里，「电商问数」的后端核心链路已经从一句自然语言问题，完整走到了数据库查询结果。</p>
+<p>不过真正做成产品，还需要继续处理接口封装、结果返回格式、异常兜底和前端展示等问题。后面的章节会在这个核心链路之上继续补齐 API 能力。</p>
+</div>
+      </div>
+    </main>
+  </div>
+
+  <div class="float-buttons">
+    <button id="back-to-top" class="float-btn" title="返回顶部">↑</button>
+    <a href="/" class="float-btn" title="返回首页">🏠</a>
+  </div>
+
+  
+  <!-- 浮动按钮脚本：外链（源文件 themes/butterfly/source/js/theme/post-float-btn.js） -->
+  <script src="/js/theme/post-float-btn.js"></script>
+
+  
+  <!--
+  ============================================
+  音频播放器组件
+  文件：APlayer.njk
+  适用终端：电脑端
+  作用：APlayer + Meting 外链播放，按需渲染到页面底部
+  最后修改：2026-11-11
+  ============================================
+-->
+<link rel="stylesheet" href="https://cdn.bootcdn.net/ajax/libs/aplayer/1.10.1/APlayer.min.css">
+<script src="https://cdn.bootcdn.net/ajax/libs/aplayer/1.10.1/APlayer.min.js"></script>
+<script src="https://cdn.bootcdn.net/ajax/libs/meting/2.0.1/Meting.min.js"></script>
+<div class="aplayer no-destroy"
+     data-id="2182931917"
+     data-server="netease"
+     data-type="playlist"
+     data-fixed="true"
+     data-mini="true">
+</div>
+
+
+
+<script>
+  async function renderMermaidDiagram(){
+    const blocks = document.querySelectorAll('pre[class*="language-mermaid"]');
+    if(!blocks.length) return;
+
+    const mermaidBlocks = [];
+    blocks.forEach(el=>{
+      const codeEl = el.querySelector('code');
+      if(codeEl){
+        const codeText = codeEl.innerText;
+        mermaidBlocks.push({fig: el, codeText});
+      }
+    })
+    if(!mermaidBlocks.length) return;
+
+    // ESM 按需引入 mermaid
+    const { default: mermaid } = await import('https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs');
+    
+    mermaid.initialize({
+      startOnLoad: false,
+      theme: 'base'
+    });
+
+    for(const {fig,codeText} of mermaidBlocks){
+      const div = document.createElement('div');
+      div.className = 'mermaid';
+      div.innerText = codeText;
+      fig.parentNode.replaceChild(div, fig);
+    }
+    await mermaid.run();
+  }
+  document.addEventListener('DOMContentLoaded', renderMermaidDiagram);
+  document.addEventListener('pjax:complete', renderMermaidDiagram);
+</script>
+
+
+  <script>
+    /* 返回按钮来源判定：从星迹索引进来回 /tags/，从星图手记进来回 /archives/；
+       直接从地址栏/站外进入时默认回星图手记，保证按钮始终可用 */
+    (function () {
+      var back = document.getElementById('articleBack');
+      if (!back) return;
+      var from = '';
+      try {
+        var q = new URLSearchParams(location.search);
+        from = q.get('from') || '';
+      } catch (e) {}
+      if (!from) {
+        var ref = document.referrer || '';
+        if (ref.indexOf('/tags') > -1) from = 'tags';
+        else if (ref.indexOf('/archives') > -1) from = 'archive';
+      }
+      if (from === 'tags') {
+        back.href = '/tags/';
+        back.textContent = '← 返回星迹索引';
+      } else if (from === 'search') {
+        back.href = '/';
+        back.textContent = '← 返回首页';
+      } else {
+        back.href = '/archives/';
+        back.textContent = '← 返回星图手记';
+      }
+    })();
+  </script>
+</body>
+</html>

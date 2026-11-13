@@ -1,0 +1,2454 @@
+<!--
+  ============================================
+  文章原文页模板
+  文件：post.njk
+  适用终端：电脑端
+  作用：文章正文 + 侧栏；手机 UA 跳 /phone/p/<slug>/
+  最后修改：2026-11-11
+  ============================================
+-->
+
+
+<!DOCTYPE html>
+<html class="post-page">
+<!--
+  ============================================
+  公共 head 组件
+  文件：Head.njk
+  适用终端：电脑端
+  作用：输出 charset/viewport/title，并按 pageCss 输出外链样式表
+  样式资源：themes/butterfly/source/css/theme/*.css（Hexo 复制到 /css/theme/）
+  引入层级顺序（= CSS 层叠顺序，调整只允许追加，不要打乱前后）：
+    1 基础  common.css
+    2 布局  post-layout.css
+    3 组件  sidebar.css
+    4 正文  post.css
+    5 页面  tags.css / chronicle.css / about.css / tag.css / category-shared.css / pc-home.css
+    6 浮层  star-reader.css
+    7 特效  starmap-live.css
+  最后修改：2026-11-12
+  ============================================
+--><head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="color-scheme" content="dark">
+  <meta name="theme-color" content="#020817">
+  <!-- 首帧兜底：浏览器默认画布是白的，样式表还没解析完就画会闪一下白。这条 8 字节规则先锁死深空底色 -->
+  <style>html{background-color:#020817}</style>
+  <title>时空秘境 - 十五、提示词与消息模板</title>
+  
+  <link rel="stylesheet" href="/css/theme/common.css">
+  
+  <link rel="stylesheet" href="/css/theme/post-layout.css">
+  
+  <link rel="stylesheet" href="/css/theme/sidebar.css">
+  
+  <link rel="stylesheet" href="/css/theme/post.css">
+  
+<meta name="generator" content="Hexo 8.1.2"></head>
+
+<script>
+  /* 手机 UA 分流：电脑端这套控制台不再给手机用，直接换成手机版页面 */
+  (function () {
+    var ua = navigator.userAgent || '';
+    if (/Android|iPhone|iPod|HarmonyOS|Windows Phone|MicroMessenger|Mobile Safari/i.test(ua)) {
+      location.replace('/phone/p/llm/1-15-prompts-and-message-templates/');
+    }
+  })();
+</script>
+<link rel="stylesheet" href="/css/code-table.css">
+
+<body>
+  <!--
+  ============================================
+  星空粒子背景组件
+  文件：Particles.njk
+  适用终端：电脑端
+  作用：particles.js 全站星空动画，鼠标悬停互动
+  最后修改：2026-11-11
+  ============================================
+--><!-- z-index 必须是 0 而不是 -1：body 带着不透明的 radial-gradient 底色，
+     负层级的子元素会被父元素背景整个盖住，粒子在跑但一个点都看不见 -->
+<div id="particles" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 0; pointer-events: none;"></div>
+<!-- 星座层：随机零星散布星座图形，叠在粒子之上、页面内容之下 -->
+<div id="constellations" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 1; pointer-events: none;" aria-hidden="true"></div>
+<script src="/js/particles.min.js"></script>
+<script>/* 本地库失效时回退 CDN，保证星空背景不丢 */
+if (typeof particlesJS === "undefined") {
+  document.write('<script src="https://cdn.jsdelivr.net/particles.js/2.0.0/particles.min.js"><\/script>');
+}
+</script>
+<script>
+particlesJS("particles", {
+  particles: {
+    number: {
+      value: 95,
+      density: {
+        enable: true,
+        value_area: 800
+      }
+    },
+    color: {
+      value: "#00eeff"
+    },
+    shape: {
+      type: "circle",
+      stroke: {
+        width: 0,
+        color: "#000000"
+      }
+    },
+    opacity: {
+      value: 0.6,
+      random: true,
+      anim: {
+        enable: true,
+        speed: 0.5,
+        opacity_min: 0.1,
+        sync: false
+      }
+    },
+    size: {
+      value: 3,
+      random: true,
+      anim: {
+        enable: true,
+        speed: 2,
+        size_min: 0.1,
+        sync: false
+      }
+    },
+    line_linked: {
+      enable: true,
+      distance: 118,          /* 比原来 150 收紧，让粒子网络稀疏些，给星座留出视觉空间 */
+      color: "#00eeff",
+      opacity: 0.32,
+      width: 1
+    },
+    move: {
+      enable: true,
+      speed: 0.8,
+      direction: "none",
+      random: true,
+      straight: false,
+      out_mode: "out",
+      bounce: false,
+      attract: {
+        enable: true,
+        rotateX: 600,
+        rotateY: 1200
+      }
+    }
+  },
+  interactivity: {
+    detect_on: "canvas",
+    events: {
+      onhover: {
+        enable: true,
+        mode: "grab"       // 鼠标悬停时粒子聚集
+      },
+      onclick: {
+        enable: true,
+        mode: "push"       // 点击时产生新粒子
+      },
+      resize: true
+    },
+    modes: {
+      grab: {
+        distance: 200,
+        line_linked: {
+          opacity: 1
+        }
+      },
+      push: {
+        particles_nb: 6
+      }
+    }
+  },
+  retina_detect: true
+});
+</script>
+<!-- 星座层：独立 canvas，随机散布真实星座图形（依赖上面的 #constellations 容器） -->
+<script src="/js/theme/starfield.js"></script>
+
+  <!-- 返回按钮：按来源回到星图手记 / 星迹索引，默认回星图手记。
+       放在 body 顶层（不进 main-content），避免被其溢出裁剪切掉右半边 -->
+  <a class="article-back" id="articleBack" href="/archives/">← 返回星图手记</a>
+
+  <div class="app-layout">
+    <!--
+  ============================================
+  左侧栏个人卡组件
+  文件：_components/Sidebar.njk
+  适用终端：电脑端（星图手记 / 星迹索引 / 秘境主人 页面通栏侧栏）
+  作用：头像、昵称、站点统计、导航菜单、底部信息与全局搜索面板（结果落在雷达区，无结果播「内容走丢 → 404」动画）
+  样式依赖：source/css/theme/sidebar.css
+  脚本依赖：source/js/theme/sidebar.js
+  最后修改：2026-11-11
+  ============================================
+-->
+<aside class="sidebar" id="sidebar">
+  <div class="profile-card">
+    <div class="avatar">
+      <div
+        style="width:80px;height:80px;border-radius:50%;background:linear-gradient(135deg,#0a0e27,#1a1a4e);display:flex;align-items:center;justify-content:center;margin:0 auto;font-size:40px;border:2px solid #00eeff;box-shadow:0 0 30px rgba(0,238,255,0.3);">
+        ✨</div>
+    </div>
+    <h3 class="nickname">时空行者</h3>
+    <p class="bio">星辰大海，代码为舟</p>
+    <div class="stats">
+      <div class="stat-item">
+        <span class="stat-num">174</span>
+        <span class="stat-label">文章</span>
+      </div>
+      <div class="stat-item">
+        <span class="stat-num" id="fans-count" style="cursor:pointer;">1088</span>
+        <span class="stat-label">粉丝</span>
+      </div>
+      <div class="stat-item">
+        <span class="stat-num" id="follow-count" style="cursor:pointer;">66</span>
+        <span class="stat-label">关注</span>
+      </div>
+    </div>
+    <button class="follow-btn">+ 关注</button>
+  </div>
+  <div class="search-box">
+    <input type="text" placeholder="找找看..." id="search-input">
+    <button class="search-btn" id="searchModalOpen">🔍</button>
+  </div>
+  <div class="links-card">
+    <h4>常用链接</h4>
+    <ul>
+      <li><a href="/about/">秘境主人</a></li>
+      <li><a href="/archives/">星图手记</a></li>
+      <li><a href="/tags/">星迹索引</a></li>
+      <!-- ✅ 新增联系我 -->
+      <li><a class="contact-trigger" href="javascript:void(0)">星语传书</a></li>
+      <li><a class="donate-trigger" href="javascript:void(0)">星芒赠礼</a></li>
+    </ul>
+  </div>
+  <div class="tags-card">
+    <h4>热门标签</h4>
+    
+    <div class="tag-cloud">
+      
+      <a href="/tags/MySQL数据库/" class="tag-link" data-tag="MySQL数据库"
+        data-count="7">MySQL数据库</a>
+      
+      <a href="/tags/redis/" class="tag-link" data-tag="redis"
+        data-count="7">redis</a>
+      
+      <a href="/tags/深度研搜/" class="tag-link" data-tag="深度研搜"
+        data-count="15">深度研搜</a>
+      
+      <a href="/tags/电商问数/" class="tag-link" data-tag="电商问数"
+        data-count="18">电商问数</a>
+      
+      <a href="/tags/git/" class="tag-link" data-tag="git"
+        data-count="5">git</a>
+      
+      <a href="/tags/面试/" class="tag-link" data-tag="面试"
+        data-count="11">面试</a>
+      
+      <a href="/tags/Java/" class="tag-link" data-tag="Java"
+        data-count="10">Java</a>
+      
+      <a href="/tags/langchain/" class="tag-link" data-tag="langchain"
+        data-count="10">langchain</a>
+      
+      <a href="/tags/Netty/" class="tag-link" data-tag="Netty"
+        data-count="4">Netty</a>
+      
+      <a href="/tags/大模型/" class="tag-link" data-tag="大模型"
+        data-count="35">大模型</a>
+      
+      <a href="/tags/AICoding/" class="tag-link" data-tag="AICoding"
+        data-count="9">AICoding</a>
+      
+      <a href="/tags/SpringAi/" class="tag-link" data-tag="SpringAi"
+        data-count="15">SpringAi</a>
+      
+      <a href="/tags/随笔杂谈/" class="tag-link" data-tag="随笔杂谈"
+        data-count="2">随笔杂谈</a>
+      
+      <a href="/tags/vue/" class="tag-link" data-tag="vue"
+        data-count="9">vue</a>
+      
+      <a href="/tags/视频剪辑/" class="tag-link" data-tag="视频剪辑"
+        data-count="1">视频剪辑</a>
+      
+      <a href="/tags/大数据/" class="tag-link" data-tag="大数据"
+        data-count="3">大数据</a>
+      
+      <a href="/tags/电影/" class="tag-link" data-tag="电影"
+        data-count="2">电影</a>
+      
+      <a href="/tags/游戏/" class="tag-link" data-tag="游戏"
+        data-count="1">游戏</a>
+      
+      <a href="/tags/音乐/" class="tag-link" data-tag="音乐"
+        data-count="8">音乐</a>
+      
+      <a href="/tags/图片/" class="tag-link" data-tag="图片"
+        data-count="2">图片</a>
+      
+    </div>
+    <script>
+      /*
+  ============================================
+  侧栏热门标签排序（首帧前执行）
+  文件：_js/hot-tags.js
+  引入位置：_components/Sidebar.njk 里 .tag-cloud 闭合标签之后（紧跟着写死）
+  作用：按点击次数排序、只露前 5 个、点一下立刻重排
+  为什么单独拆出来：以前放在 sidebar.js 的 DOMContentLoaded 里，首帧渲染的还是
+  模板顺序的 20 个标签，等脚本跑完才收成 5 个；配合跨页淡入（View Transition）
+  会出现「新旧两套标签叠在一起、影子跳一下」。紧跟标签节点内联执行就没有中间态。
+  最后修改：2026-11-12
+  ============================================
+*/
+(function () {
+  var cloud = document.querySelector('.tag-cloud');
+  if (!cloud) return;
+  var links = Array.prototype.slice.call(cloud.querySelectorAll('.tag-link'));
+  if (!links.length) return;
+
+  var KEY = 'starry_tag_visits'; // 标签名 -> 点击次数
+  var TOP = 5;
+  var visits = {};
+
+  try {
+    var raw = JSON.parse(localStorage.getItem(KEY) || '{}');
+    visits = (raw && typeof raw === 'object') ? raw : {};
+  } catch (e) {
+    visits = {};
+  }
+
+  links.forEach(function (link) {
+    var name = link.dataset.tag || (link.textContent || '').trim();
+    link.dataset.tag = name;
+    if (!link.dataset.count) link.dataset.count = '0';
+  });
+
+  // 排序：点击次数降序 → 文章数降序 → 名字，保证同分时顺序稳定不来回跳
+  function order() {
+    return links.slice().sort(function (a, b) {
+      var va = visits[a.dataset.tag] || 0;
+      var vb = visits[b.dataset.tag] || 0;
+      if (vb !== va) return vb - va;
+      var ca = Number(a.dataset.count) || 0;
+      var cb = Number(b.dataset.count) || 0;
+      if (cb !== ca) return cb - ca;
+      return String(a.dataset.tag).localeCompare(String(b.dataset.tag), 'zh');
+    });
+  }
+
+  // 重排 DOM：按名次 append，超出 5 个的 hidden（仍留在 DOM，等名次升上来再显示）
+  function render() {
+    order().forEach(function (link, i) {
+      link.dataset.visits = visits[link.dataset.tag] || 0;
+      cloud.appendChild(link);
+      link.hidden = i >= TOP;
+    });
+  }
+
+  links.forEach(function (link) {
+    link.addEventListener('click', function () {
+      var name = link.dataset.tag;
+      visits[name] = (visits[name] || 0) + 1;
+      try { localStorage.setItem(KEY, JSON.stringify(visits)); } catch (e) { /* 忽略配额错误 */ }
+      render(); // 当前页立刻看到「谁被点多了谁上前」
+    });
+  });
+
+  render();
+})();
+
+    </script>
+  </div>
+  <div class="archive-card">
+    <h4>按月归档</h4>
+    <ul class="archive-list">
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2026/12/">
+          2026年12月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2026/11/">
+          2026年11月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2026/10/">
+          2026年10月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2026/09/">
+          2026年09月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2026/08/">
+          2026年08月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2026/07/">
+          2026年07月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2026/06/">
+          2026年06月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2026/05/">
+          2026年05月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2026/04/">
+          2026年04月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2026/03/">
+          2026年03月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2026/02/">
+          2026年02月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2026/01/">
+          2026年01月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2025/12/">
+          2025年12月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2025/11/">
+          2025年11月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2025/10/">
+          2025年10月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2025/09/">
+          2025年09月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2025/08/">
+          2025年08月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2025/07/">
+          2025年07月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2025/06/">
+          2025年06月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2025/05/">
+          2025年05月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2025/04/">
+          2025年04月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2025/03/">
+          2025年03月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2025/02/">
+          2025年02月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2025/01/">
+          2025年01月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2024/11/">
+          2024年11月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2024/10/">
+          2024年10月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2024/09/">
+          2024年09月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2024/08/">
+          2024年08月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2024/07/">
+          2024年07月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2024/05/">
+          2024年05月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2024/04/">
+          2024年04月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2024/03/">
+          2024年03月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2024/02/">
+          2024年02月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2024/01/">
+          2024年01月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2023/12/">
+          2023年12月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2023/11/">
+          2023年11月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2023/10/">
+          2023年10月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2023/09/">
+          2023年09月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2023/08/">
+          2023年08月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2023/07/">
+          2023年07月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2023/06/">
+          2023年06月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2023/05/">
+          2023年05月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2023/04/">
+          2023年04月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2023/03/">
+          2023年03月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2023/02/">
+          2023年02月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2023/01/">
+          2023年01月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2022/09/">
+          2022年09月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2022/05/">
+          2022年05月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2022/01/">
+          2022年01月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2021/12/">
+          2021年12月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2021/11/">
+          2021年11月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2021/10/">
+          2021年10月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2021/09/">
+          2021年09月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2021/08/">
+          2021年08月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2021/07/">
+          2021年07月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2021/06/">
+          2021年06月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2021/05/">
+          2021年05月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2021/04/">
+          2021年04月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2021/03/">
+          2021年03月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2021/02/">
+          2021年02月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2021/01/">
+          2021年01月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2020/10/">
+          2020年10月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2020/07/">
+          2020年07月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2020/04/">
+          2020年04月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2020/01/">
+          2020年01月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2019/12/">
+          2019年12月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2019/11/">
+          2019年11月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2019/10/">
+          2019年10月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2019/09/">
+          2019年09月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2019/08/">
+          2019年08月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2019/07/">
+          2019年07月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2019/06/">
+          2019年06月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2019/05/">
+          2019年05月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2019/04/">
+          2019年04月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2019/03/">
+          2019年03月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2019/02/">
+          2019年02月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2019/01/">
+          2019年01月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2018/12/">
+          2018年12月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2018/11/">
+          2018年11月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2018/10/">
+          2018年10月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2018/09/">
+          2018年09月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2018/08/">
+          2018年08月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2018/07/">
+          2018年07月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2018/06/">
+          2018年06月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2018/05/">
+          2018年05月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2018/04/">
+          2018年04月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2018/03/">
+          2018年03月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2018/02/">
+          2018年02月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2018/01/">
+          2018年01月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+    </ul>
+  </div>
+
+  <!-- ========== 星语传书（雷达区弹窗，与搜索面板同一套面板样式） ========== -->
+  <div class="search-panel dock-panel" id="contactModal" hidden>
+    <div class="sp-mask" data-dock-close></div>
+    <div class="sp-box" role="dialog" aria-modal="true" aria-label="星语传书">
+      <div class="sp-head">
+        <span class="sp-dot"></span>
+        <span class="sp-title">星语传书</span>
+        <span class="sp-title-sub">/ SIGNAL CHANNEL</span>
+        <span class="sp-meta">SYS.REPLY ≤ 48H</span>
+        <button class="sp-close" type="button" data-dock-close title="关闭">×</button>
+      </div>
+      <div class="sp-body dock-body">
+        <p class="dock-lead">写信给时空行者：文章里的错字、跑不通的 demo、想聊的一句技术，都可以从这里进来。信号收到，我会尽量回。</p>
+        <div class="dock-grid">
+          <div class="dock-list">
+            <a class="dock-row" href="https://wpa.qq.com/msgrd?v=3&amp;uin=372109355&amp;site=qq&amp;menu=yes"
+              target="_blank" rel="noopener">
+              <span class="dock-ico">企</span>
+              <span class="dock-k"><b>QQ</b><span>372109355</span></span>
+            </a>
+            <a class="dock-row" href="https://wu4yong.github.io" target="_blank" rel="noopener">
+              <span class="dock-ico">⌂</span>
+              <span class="dock-k"><b>站点主站</b><span>wu4yong.github.io</span></span>
+            </a>
+            <div class="dock-row dock-row-static">
+              <span class="dock-ico">✉</span>
+              <span class="dock-k"><b>电子邮箱</b><span>暂未公开 · 任何问题QQ留言</span></span>
+            </div>
+            <a class="dock-row" href="#" target="_blank" rel="noopener">
+              <span class="dock-ico">◈</span>
+              <span class="dock-k"><b>GitHub</b><span>暂未公开 · 任何问题QQ留言</span></span>
+            </a>
+            <a class="dock-row" href="#" target="_blank" rel="noopener">
+              <span class="dock-ico">◇</span>
+              <span class="dock-k"><b>Gitee</b><span>暂未公开 · 任何问题QQ留言</span></span>
+            </a>
+          </div>
+          <div class="dock-side">
+            <div class="dock-qr">
+              <em>WECHAT · 微信</em>
+              <img src="/assets/images/wechat-qr.png" alt="微信二维码">
+              <span class="dock-qr-tip">扫码添加，备注「来自时空秘境」</span>
+            </div>
+          </div>
+        </div>
+        <div class="dock-chips">
+          <span class="dock-chip">文章纠错</span>
+          <span class="dock-chip">Demo 答疑</span>
+          <span class="dock-chip">转载授权</span>
+          <span class="dock-chip">技术交流</span>
+          <span class="dock-chip">内推 / 合作</span>
+        </div>
+        <p class="dock-note">无正文的「在吗」容易被当作信号干扰滤掉，直接把问题写清楚，回信会快很多。</p>
+      </div>
+      <!-- 开合转场层：百叶窗 / 电影幕布 / 淡入，由 source/js/theme/sidebar.js 轮换播放 -->
+      <div class="dock-fx" aria-hidden="true">
+        <div class="dock-fx-slats"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+        <div class="dock-fx-curtain"><span class="top"></span><span class="bottom"></span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========== 全局搜索面板 ==========
+       索引来自构建期生成的 /search.json（hexo-generator-searchdb），随文章新增自动更新；
+       打开时由 source/js/theme/sidebar.js 把整块挪进 Radar 中间区（无雷达的页面退化为居中浮层） -->
+  <div class="search-panel" id="searchPanel" hidden>
+    <div class="sp-mask" id="searchMask"></div>
+    <div class="sp-box" role="dialog" aria-modal="true" aria-label="全文搜索">
+      <div class="sp-head">
+        <span class="sp-dot"></span>
+        <span class="sp-title">全文搜索</span>
+        <span class="sp-title-sub">/ GLOBAL SEARCH</span>
+        <span class="sp-meta" id="spMeta"></span>
+        <button class="sp-close" id="searchPanelClose" type="button" title="关闭搜索">×</button>
+      </div>
+      <div class="sp-body" id="spBody">
+        <div class="sp-loading" id="spLoading">正在扫描星图索引…</div>
+        <ul class="sp-list" id="spList"></ul>
+        <!-- 无结果：内容走丢 → 慢速落 404 -->
+        <div class="sp-empty" id="spEmpty" hidden>
+          <div class="sp-drift-wrap">
+            <span class="sp-trail"></span>
+            <span class="sp-drift"></span>
+            <span class="sp-lost">SIGNAL LOST · 信号已丢失</span>
+          </div>
+          <div class="sp-404"><span>4</span><span>0</span><span>4</span></div>
+          <p class="sp-empty-main">内容走丢在星海里了</p>
+          <p class="sp-empty-tip">换个关键词，或去〈星迹索引 / 星图手记〉里慢慢逛</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========== 星芒赠礼（雷达区弹窗，收款码图片沿用原图不改） ========== -->
+  <div class="search-panel dock-panel" id="donateModal" hidden>
+    <div class="sp-mask" data-dock-close></div>
+    <div class="sp-box" role="dialog" aria-modal="true" aria-label="星芒赠礼">
+      <div class="sp-head">
+        <span class="sp-dot"></span>
+        <span class="sp-title">星芒赠礼</span>
+        <span class="sp-title-sub">/ STAR OFFERING</span>
+        <span class="sp-meta">THANKS FOR THE LIGHT</span>
+        <button class="sp-close" type="button" data-dock-close title="关闭">×</button>
+      </div>
+      <div class="sp-body dock-body">
+        <div class="dock-thanks">
+          <p>这片星空是工作闲暇时光一个个凌晨攒出来的：一篇文章、一次复盘、一个修不完的 bug。</p>
+          <p>如果你在这里找到了能用的东西，愿意赏一杯凌晨三点的咖啡 —— 这份心意我会记很久。</p>
+          <p>不打赏也完全没关系：所有文章永久免费，愿你我在各自的轨道上都跑得稳一点。</p>
+        </div>
+        <div class="dock-donate">
+          <div class="dock-hero">
+            <div class="dock-hero-pic">
+              <span class="dock-hero-halo" aria-hidden="true"></span>
+              <span class="dock-hero-ring dock-hero-ring-a" aria-hidden="true"></span>
+              <span class="dock-hero-ring dock-hero-ring-b" aria-hidden="true"></span>
+              <img src="/assets/images/donate-boy.png" alt="感谢支持">
+            </div>
+            <em>THANKS FOR THE LIGHT</em>
+            <span class="dock-hero-tip">愿每一次凌晨，都有人替你留一盏灯</span>
+          </div>
+          <div class="dock-pay">
+            <div class="dock-qr dock-qr-row">
+              <img src="/assets/images/alipay-qr.jpg" alt="支付宝收款码">
+              <div class="dock-qr-txt">
+                <b>支付宝 · 星途赞赏</b>
+                <span>请我喝一杯凌晨三点的咖啡</span>
+              </div>
+            </div>
+            <div class="dock-qr dock-qr-row">
+              <img src="/assets/images/wechat-pay-qr.jpg" alt="微信收款码">
+              <div class="dock-qr-txt">
+                <b>微信 · 星河致谢</b>
+                <span>金额随意，心意已经收到</span>
+              </div>
+            </div>
+          </div>
+        </div>        <div class="dock-chips">
+          <span class="dock-chip">域名与服务器</span>
+          <span class="dock-chip">图床与备份</span>
+          <span class="dock-chip">一本技术书</span>
+          <span class="dock-chip">深夜的一杯咖啡</span>
+        </div>
+        <p class="dock-note">赠礼纯属心意，不产生任何付费内容或额外承诺；扫码前请确认收款人，小心仿冒。</p>
+      </div>
+      <!-- 开合转场层：百叶窗 / 电影幕布 / 淡入，由 source/js/theme/sidebar.js 轮换播放 -->
+      <div class="dock-fx" aria-hidden="true">
+        <div class="dock-fx-slats"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+        <div class="dock-fx-curtain"><span class="top"></span><span class="bottom"></span></div>
+      </div>
+    </div>
+  </div>
+
+
+</aside>
+<!-- 引入侧边栏交互脚本：外链（源文件 themes/butterfly/source/js/theme/sidebar.js） -->
+<script src="/js/theme/sidebar.js"></script>
+
+    
+    <button id="sidebarToggle" class="sidebar-toggle" title="隐藏侧栏"></button>
+
+    <main class="main-content">
+      <div class="article-card">
+        <h1 class="article-title">十五、提示词与消息模板</h1>
+        <div class="article-meta">📅 2023-06-05</div>
+        <div class="article-content"><div class="essay-banner essay-image11">
+    <!-- prompts-and-message-templates -->
+</div>
+
+<h1 id="1-15-提示词与消息模板"><a href="#1-15-提示词与消息模板" class="headerlink" title="1-15 提示词与消息模板"></a>1-15 提示词与消息模板</h1><hr>
+<p><strong>本章课程目标：</strong></p>
+<ul>
+<li>理解 <strong>Prompt</strong> 是什么，知道它为什么会从“一段字符串”逐步演化成“多角色消息 + 模板 + 占位符”。</li>
+<li>掌握 LangChain 中与输入组织最相关的三块内容：<strong>消息类型（Message）</strong>、<strong>模型调用方式（invoke &#x2F; stream &#x2F; batch）</strong>、<strong>提示词模板（PromptTemplate &#x2F; ChatPromptTemplate）</strong>。</li>
+<li>会运行并理解本章全部案例：<strong>输入类型、同步与异步调用、文本模板、对话模板、消息占位符、从 JSON &#x2F; YAML 加载提示词</strong>，为后续 <a href="/2023/06/13/llm/1-16-output-parsers/">输出解析器</a>、<a href="/2023/06/20/llm/1-17-lcel-and-chaining/">LCEL 与链式调用</a>、<a href="/2023/06/28/llm/1-18-memory-and-chat-history-with-redis/">记忆与对话历史</a> 打基础。</li>
+</ul>
+<p><strong>学习建议：</strong> 读这一章时，拿一条普通用户问题练手，把它改造成消息列表：系统消息放规则，用户消息放任务，历史消息放上下文。先理解模型到底吃进去什么，再看 <code>PromptTemplate</code>、<code>ChatPromptTemplate</code>、<code>MessagesPlaceholder</code> 怎么帮你复用这些结构。读完后最好能判断：什么时候写死提示词，什么时候抽成模板，什么时候需要把模板放到文件里。</p>
+<p><strong>官方文档与资源</strong>：详见 <a href="/2023/01/28/llm/tools-and-references-index/#%E6%8F%90%E7%A4%BA%E8%AF%8D%E4%B8%8E%E7%BB%93%E6%9E%84%E5%8C%96%E8%BE%93%E5%87%BA">工具导航与参考资料索引 - 提示词与结构化输出</a>。</p>
+<hr>
+<h2 id="1、Prompt-简介"><a href="#1、Prompt-简介" class="headerlink" title="1、Prompt 简介"></a>1、Prompt 简介</h2><p>本章对应 <a href="/2023/05/17/llm/1-13-model-io-and-model-access/">第 13 章 Model I&#x2F;O</a> 里的 <strong>输入格式化（Format）</strong> 与 <strong>模型调用（Predict）</strong> 两部分。模型并不是“凭空思考”，它始终是在读取我们提供的输入后再生成输出；而 Prompt、Message、Template，正是组织这份输入的核心工具。</p>
+<p>如果你已经学过 <a href="/2023/02/13/llm/1-2-prompt-engineering-basics/">1-2 提示词工程基础</a>，那么本章可以直接理解为它的代码实现版：前一章讲“怎么把角色、任务、上下文、输入、输出和约束说清楚”，这一章讲“这些内容进入 LangChain 后，应该以什么输入形态存在、如何复用、如何插入多轮历史、如何外置到文件”。</p>
+<h3 id="1-1-定义"><a href="#1-1-定义" class="headerlink" title="1.1 定义"></a>1.1 定义</h3><p><strong>Prompt（提示词）</strong>，就是你发给大模型的输入内容。</p>
+<p>最简单的 Prompt，是一句自然语言，比如“什么是 LangChain？”；再进一步，你会给它增加角色，比如“你是一名法律顾问，请用 50 字介绍广告法”；再往后，为了让代码可复用、可维护、可协作，你会把这段输入写成模板，并把会变化的部分改成占位符。这就是从“随手提问”走向“工程化输入管理”的过程。</p>
+<p>入门阶段可先把握一个基本判断：<strong>Prompt 不只是把一句话写漂亮，而是把模型输入组织清楚。</strong></p>
+<p>在真实项目中，Prompt 通常承担几件事：</p>
+<ul>
+<li>告诉模型它是谁，要扮演什么角色。</li>
+<li>告诉模型当前任务是什么，回答边界是什么。</li>
+<li>告诉模型输出格式应该长什么样。</li>
+<li>把用户问题、历史对话、检索结果、工具结果组合成一次完整输入。</li>
+</ul>
+<p>这也是为什么随着项目复杂度提高，Prompt 会从“一个字符串”逐步演化成“多角色消息 + 模板 + 占位符 + 外部配置文件”。</p>
+<p><img src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/llm/13/13-1-1-1.webp" alt="DeepSeek 官方提示词示例库入口"></p>
+<h3 id="1-2-Prompt-的作用"><a href="#1-2-Prompt-的作用" class="headerlink" title="1.2 Prompt 的作用"></a>1.2 Prompt 的作用</h3><p>很多人在学 LangChain 时，会把注意力都放在“接哪个模型”“换哪个平台”“怎么配 API Key”上，但真正到了项目里，最容易让系统效果不稳定的，往往不是模型接入，而是<strong>输入组织得不够清楚</strong>。</p>
+<p>下面这些真实开发场景，都离不开本章内容：</p>
+<ul>
+<li><strong>智能客服</strong>：需要系统提示词规定语气、身份和拒答策略。</li>
+<li><strong>企业知识库问答</strong>：需要把“检索出来的上下文 + 用户问题”组合成一条清晰提示。</li>
+<li><strong>多轮聊天</strong>：需要把历史对话插回当前输入，而不是每轮都从头问。</li>
+<li><strong>结构化输出</strong>：需要提前在 Prompt 里写清楚输出格式要求，方便后面交给解析器处理。</li>
+<li><strong>团队协作与 A&#x2F;B 测试</strong>：需要把 Prompt 模板从代码里抽出来，放到 JSON &#x2F; YAML 中做版本管理。</li>
+</ul>
+<p>一句话：<strong>模型能力决定上限，Prompt 设计决定你能不能稳定接近这个上限。</strong></p>
+<h3 id="1-3-本章在项目中的位置"><a href="#1-3-本章在项目中的位置" class="headerlink" title="1.3 本章在项目中的位置"></a>1.3 本章在项目中的位置</h3><p>本章对应仓库中的 <code>案例与源码-2-LangChain框架/04-prompt</code> 目录，按学习顺序可以分成 4 类：</p>
+<div class="data-grid data-grid-link-table"><div class="grid-header"><div class="grid-cell">目录</div><div class="grid-cell">作用</div><div class="grid-cell">你会学到什么</div></div><div class="grid-row"><div class="grid-cell">`invoke/`</div><div class="grid-cell">模型调用方式</div><div class="grid-cell">`invoke`、`stream`、`batch` 及异步版本</div></div><div class="grid-row"><div class="grid-cell">`prompt_templates/`</div><div class="grid-cell">文本模板</div><div class="grid-cell">`PromptTemplate` 的创建、格式化、复用</div></div><div class="grid-row"><div class="grid-cell">`chat_prompt_template/`</div><div class="grid-cell">对话模板</div><div class="grid-cell">`ChatPromptTemplate`、消息参数、消息占位符</div></div><div class="grid-row"><div class="grid-cell">`load_external/`</div><div class="grid-cell">外部文件加载</div><div class="grid-cell">如何从 JSON / YAML 加载 Prompt</div></div></div>
+
+<p>这一章不是零散的 API 介绍，而是在回答一个问题：<strong>开发 LLM 应用时，怎样把 <a href="/2023/02/13/llm/1-2-prompt-engineering-basics/">1-2 提示词工程基础</a> 里学到的写法和原则，组织成一套可复用、可维护、可扩展的结构？</strong></p>
+<hr>
+<h2 id="2、调用大模型的入参类型"><a href="#2、调用大模型的入参类型" class="headerlink" title="2、调用大模型的入参类型"></a>2、调用大模型的入参类型</h2><p>初学者容易误以为：调用聊天模型时，输入永远只能是“一段字符串”。实际上，LangChain 聊天模型为了适配真实对话场景，通常支持多种输入形态。这些写法表面不同，核心都一样：<strong>把 <a href="/2023/02/13/llm/1-2-prompt-engineering-basics/">1-2 章</a> 里讲过的角色、任务、上下文、输入和约束，以合适的消息结构交给模型。</strong></p>
+<h3 id="2-1-入参形态总览"><a href="#2-1-入参形态总览" class="headerlink" title="2.1 入参形态总览"></a>2.1 入参形态总览</h3><p>同一次 <code>invoke</code>，左侧可以是多种类型的输入，中间由聊天模型处理，右侧典型返回值是 <code>AIMessage</code>。这也是为什么你在 <a href="/2023/05/17/llm/1-13-model-io-and-model-access/">第 13 章</a> 会经常看到“正文一般通过 <code>.content</code> 读取”。</p>
+<p><img src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/llm/13/13-2-1-1.webp" alt="聊天模型 invoke：常见入参类型与 AIMessage 输出"></p>
+<p>常见对应关系如下：</p>
+<div class="data-grid data-grid-link-table"><div class="grid-header"><div class="grid-cell">入参形态</div><div class="grid-cell">调用时大致长什么样</div><div class="grid-cell">适合场景</div></div><div class="grid-row"><div class="grid-cell">`str`</div><div class="grid-cell">`model.invoke("请解释什么是 LangChain")`</div><div class="grid-cell">单轮、轻量、快速试接口</div></div><div class="grid-row"><div class="grid-cell">`PromptTemplate.format(...)` 后的字符串</div><div class="grid-cell">`model.invoke(prompt_str)`</div><div class="grid-cell">固定句式 + 少量变量替换</div></div><div class="grid-row"><div class="grid-cell">消息对象列表</div><div class="grid-cell">`model.invoke([SystemMessage(...), HumanMessage(...)])`</div><div class="grid-cell">推荐写法，适合系统提示、多轮对话</div></div><div class="grid-row"><div class="grid-cell">`(role, content)` 元组列表</div><div class="grid-cell">`[("system", "..."), ("user", "...")]`</div><div class="grid-cell">简洁、贴近 ChatPromptTemplate 风格</div></div><div class="grid-row"><div class="grid-cell">`{"role": "...", "content": "..."}` 字典列表</div><div class="grid-cell">`[{"role":"system","content":"..."}, ...]`</div><div class="grid-cell">贴近 OpenAI 风格 JSON 数据</div></div></div>
+
+<p>【案例源码】<code>案例与源码-2-LangChain框架/04-prompt/invoke/LLM_Invoke_InputTypes.py</code></p>
+<p><a href="%E6%A1%88%E4%BE%8B%E4%B8%8E%E6%BA%90%E7%A0%81-2-LangChain%E6%A1%86%E6%9E%B6/04-prompt/invoke/LLM_Invoke_InputTypes.py" title=":include :type&#x3D;code">LLM_Invoke_InputTypes.py</a></p>
+<h3 id="2-2-写法一：纯字符串"><a href="#2-2-写法一：纯字符串" class="headerlink" title="2.2 写法一：纯字符串"></a>2.2 写法一：纯字符串</h3><p>最简单的输入方式，把整段说明写在一个字符串里交给模型，适合快速试接口、或单轮一句话任务。</p>
+<pre class="line-numbers language-python" data-language="python"><code class="language-python">resp <span class="token operator">=</span> model<span class="token punctuation">.</span>invoke<span class="token punctuation">(</span><span class="token string">"用一句话解释什么是 LangChain"</span><span class="token punctuation">)</span>
+<span class="token keyword">print</span><span class="token punctuation">(</span>resp<span class="token punctuation">.</span>content<span class="token punctuation">)</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span></span></code></pre>
+
+<p>不过在真实项目里，纯字符串也有明显局限：不方便表达系统角色与用户问题的边界；不方便插入历史对话；不利于后期维护和多人协作。</p>
+<p>所以，<strong>纯字符串适合起步，不适合复杂对话场景长期使用。</strong></p>
+<h3 id="2-3-写法二：模板-占位符"><a href="#2-3-写法二：模板-占位符" class="headerlink" title="2.3 写法二：模板 + 占位符"></a>2.3 写法二：模板 + 占位符</h3><p>如果一句 Prompt 里只有少数变量会变化，就没必要每次手写整段长文本。更合理的做法，是把固定部分写成模板，把变化部分留成占位符。</p>
+<p>这一节本质上仍然是“字符串输入”，只是我们把字符串的生成过程工程化了。</p>
+<pre class="line-numbers language-python" data-language="python"><code class="language-python"><span class="token keyword">from</span> langchain_core<span class="token punctuation">.</span>prompts <span class="token keyword">import</span> PromptTemplate
+
+template <span class="token operator">=</span> PromptTemplate<span class="token punctuation">.</span>from_template<span class="token punctuation">(</span>
+    <span class="token string">"用不超过 50 字介绍：&#123;topic&#125; 是什么？"</span>
+<span class="token punctuation">)</span>
+prompt_str <span class="token operator">=</span> template<span class="token punctuation">.</span><span class="token builtin">format</span><span class="token punctuation">(</span>topic<span class="token operator">=</span><span class="token string">"LangChain"</span><span class="token punctuation">)</span>
+resp <span class="token operator">=</span> model<span class="token punctuation">.</span>invoke<span class="token punctuation">(</span>prompt_str<span class="token punctuation">)</span>
+<span class="token keyword">print</span><span class="token punctuation">(</span>resp<span class="token punctuation">.</span>content<span class="token punctuation">)</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<p>也就是说：</p>
+<ul>
+<li><strong><code>PromptTemplate</code> 负责生产输入</strong></li>
+<li><strong><code>model.invoke(...)</code> 负责把输入发给模型</strong></li>
+</ul>
+<p>它和 2.2 的区别不在于模型收到了不同类型，而在于<strong>我们是手写字符串，还是用模板生成字符串</strong>。</p>
+<h3 id="2-4-写法三：多角色消息列表"><a href="#2-4-写法三：多角色消息列表" class="headerlink" title="2.4 写法三：多角色消息列表"></a>2.4 写法三：多角色消息列表</h3><p>当你开始做聊天机器人、问答助手、企业知识库、代码助手时，最推荐的入参方式通常不是字符串，而是<strong>消息列表</strong>。</p>
+<p>原因很简单：聊天模型更擅长理解“谁在说话”。把输入拆成 <code>SystemMessage</code>、<code>HumanMessage</code>、<code>AIMessage</code> 等不同角色，模型更容易正确理解上下文结构，而不是把所有东西都当成一大段平铺文本。</p>
+<pre class="line-numbers language-python" data-language="python"><code class="language-python"><span class="token keyword">from</span> langchain_core<span class="token punctuation">.</span>messages <span class="token keyword">import</span> SystemMessage<span class="token punctuation">,</span> HumanMessage<span class="token punctuation">,</span> AIMessage
+
+messages <span class="token operator">=</span> <span class="token punctuation">[</span>
+    SystemMessage<span class="token punctuation">(</span>content<span class="token operator">=</span><span class="token string">"你是只回答技术问题的助手，回答要简短。"</span><span class="token punctuation">)</span><span class="token punctuation">,</span>
+    HumanMessage<span class="token punctuation">(</span>content<span class="token operator">=</span><span class="token string">"什么是 LangChain？"</span><span class="token punctuation">)</span><span class="token punctuation">,</span>
+    <span class="token comment"># 多轮示例：</span>
+    <span class="token comment"># AIMessage(content="LangChain 是用于编排 LLM 应用的框架……"),</span>
+    <span class="token comment"># HumanMessage(content="它和直接调 API 有什么区别？"),</span>
+<span class="token punctuation">]</span>
+resp <span class="token operator">=</span> model<span class="token punctuation">.</span>invoke<span class="token punctuation">(</span>messages<span class="token punctuation">)</span>
+<span class="token keyword">print</span><span class="token punctuation">(</span>resp<span class="token punctuation">.</span>content<span class="token punctuation">)</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<p>在实际项目里，这种写法特别常见：</p>
+<ul>
+<li><strong>系统提示词</strong>放在 <code>SystemMessage</code></li>
+<li><strong>用户问题</strong>放在 <code>HumanMessage</code></li>
+<li><strong>历史回复</strong>可放回 <code>AIMessage</code></li>
+<li><strong>工具执行结果</strong>后续可用 <code>ToolMessage</code></li>
+</ul>
+<p>如果你后面要做多轮对话、Agent、RAG，这种消息列表思维会反复用到。</p>
+<p>还有一种等价包装是 <code>ChatPromptValue</code>：链式编排里更常见的是由 <code>ChatPromptTemplate.invoke(...)</code> 得到 <code>ChatPromptValue</code>；下面直接构造对象，便于理解「<code>PromptValue</code> → <code>to_messages()</code> → <code>model.invoke</code>」的衔接。</p>
+<pre class="line-numbers language-python" data-language="python"><code class="language-python"><span class="token keyword">from</span> langchain_core<span class="token punctuation">.</span>messages <span class="token keyword">import</span> SystemMessage<span class="token punctuation">,</span> HumanMessage<span class="token punctuation">,</span> AIMessage
+<span class="token keyword">from</span> langchain_core<span class="token punctuation">.</span>prompt_values <span class="token keyword">import</span> ChatPromptValue
+
+prompt_value <span class="token operator">=</span> ChatPromptValue<span class="token punctuation">(</span>
+    messages<span class="token operator">=</span><span class="token punctuation">[</span>
+        SystemMessage<span class="token punctuation">(</span>content<span class="token operator">=</span><span class="token string">"You are a helpful AI bot. Your name is Bob."</span><span class="token punctuation">)</span><span class="token punctuation">,</span>
+        HumanMessage<span class="token punctuation">(</span>content<span class="token operator">=</span><span class="token string">"Hello, how are you doing?"</span><span class="token punctuation">)</span><span class="token punctuation">,</span>
+        AIMessage<span class="token punctuation">(</span>content<span class="token operator">=</span><span class="token string">"I'm doing well, thanks!"</span><span class="token punctuation">)</span><span class="token punctuation">,</span>
+        HumanMessage<span class="token punctuation">(</span>content<span class="token operator">=</span><span class="token string">"What is your name?"</span><span class="token punctuation">)</span><span class="token punctuation">,</span>
+    <span class="token punctuation">]</span>
+<span class="token punctuation">)</span>
+resp <span class="token operator">=</span> model<span class="token punctuation">.</span>invoke<span class="token punctuation">(</span>prompt_value<span class="token punctuation">.</span>to_messages<span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<h3 id="2-5-写法四：元组列表与字典列表"><a href="#2-5-写法四：元组列表与字典列表" class="headerlink" title="2.5 写法四：元组列表与字典列表"></a>2.5 写法四：元组列表与字典列表</h3><p>除了显式使用 <code>SystemMessage</code>、<code>HumanMessage</code> 等类，LangChain 聊天模型通常还支持两种常见简写。</p>
+<ul>
+<li><strong>元组列表</strong>：每项写成 <code>(role, content)</code></li>
+<li><strong>字典列表</strong>：每项写成 <code>&#123;&quot;role&quot;: &quot;...&quot;, &quot;content&quot;: &quot;...&quot;&#125;</code></li>
+</ul>
+<p>这两种写法与消息对象列表在语义上基本等价，只是更接近手写列表或 OpenAI 风格的数据结构。</p>
+<pre class="line-numbers language-python" data-language="python"><code class="language-python"><span class="token keyword">import</span> os
+<span class="token keyword">from</span> langchain_openai <span class="token keyword">import</span> ChatOpenAI
+
+llm <span class="token operator">=</span> ChatOpenAI<span class="token punctuation">(</span>
+    model<span class="token operator">=</span><span class="token string">"gpt-4o-mini"</span><span class="token punctuation">,</span>
+    temperature<span class="token operator">=</span><span class="token number">0.0</span><span class="token punctuation">,</span>
+    base_url<span class="token operator">=</span>os<span class="token punctuation">.</span>getenv<span class="token punctuation">(</span><span class="token string">"OPENAI_BASE_URL"</span><span class="token punctuation">)</span><span class="token punctuation">,</span>
+    api_key<span class="token operator">=</span>os<span class="token punctuation">.</span>getenv<span class="token punctuation">(</span><span class="token string">"OPENAI_API_KEY"</span><span class="token punctuation">)</span><span class="token punctuation">,</span>
+<span class="token punctuation">)</span>
+
+messages_as_tuples <span class="token operator">=</span> <span class="token punctuation">[</span>
+    <span class="token punctuation">(</span><span class="token string">"system"</span><span class="token punctuation">,</span> <span class="token string">"你是一个专业的数学助手"</span><span class="token punctuation">)</span><span class="token punctuation">,</span>
+    <span class="token punctuation">(</span><span class="token string">"user"</span><span class="token punctuation">,</span> <span class="token string">"你好，你是谁"</span><span class="token punctuation">)</span><span class="token punctuation">,</span>
+<span class="token punctuation">]</span>
+messages_as_dicts <span class="token operator">=</span> <span class="token punctuation">[</span>
+    <span class="token punctuation">&#123;</span><span class="token string">"role"</span><span class="token punctuation">:</span> <span class="token string">"system"</span><span class="token punctuation">,</span> <span class="token string">"content"</span><span class="token punctuation">:</span> <span class="token string">"你是一个专业的数学助手"</span><span class="token punctuation">&#125;</span><span class="token punctuation">,</span>
+    <span class="token punctuation">&#123;</span><span class="token string">"role"</span><span class="token punctuation">:</span> <span class="token string">"user"</span><span class="token punctuation">,</span> <span class="token string">"content"</span><span class="token punctuation">:</span> <span class="token string">"你好，你是谁"</span><span class="token punctuation">&#125;</span><span class="token punctuation">,</span>
+<span class="token punctuation">]</span>
+
+resp <span class="token operator">=</span> llm<span class="token punctuation">.</span>invoke<span class="token punctuation">(</span>messages_as_tuples<span class="token punctuation">)</span>
+<span class="token keyword">print</span><span class="token punctuation">(</span><span class="token builtin">type</span><span class="token punctuation">(</span>resp<span class="token punctuation">)</span><span class="token punctuation">)</span>
+<span class="token keyword">print</span><span class="token punctuation">(</span>resp<span class="token punctuation">.</span>content<span class="token punctuation">)</span>
+
+resp2 <span class="token operator">=</span> llm<span class="token punctuation">.</span>invoke<span class="token punctuation">(</span>messages_as_dicts<span class="token punctuation">)</span>
+<span class="token keyword">print</span><span class="token punctuation">(</span>resp2<span class="token punctuation">.</span>content<span class="token punctuation">)</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<p>关于选择策略，可按下面的思路理解：</p>
+<ul>
+<li><strong>想学得最清楚</strong>：优先用 <code>Message</code> 类</li>
+<li><strong>想写得最简洁</strong>：可以用元组列表</li>
+<li><strong>想和 OpenAI 风格请求体对齐</strong>：可以用字典列表</li>
+</ul>
+<p>无论哪种方式，同步 <code>invoke</code> 的返回值通常仍是 <code>AIMessage</code>。</p>
+<h3 id="2-6-扩展：Java-生态中的多角色"><a href="#2-6-扩展：Java-生态中的多角色" class="headerlink" title="2.6 扩展：Java 生态中的多角色"></a>2.6 扩展：Java 生态中的多角色</h3><p>“System &#x2F; User &#x2F; Assistant &#x2F; Tool” 这套思路并不是 LangChain Python 独有的，Java 生态中的 <strong>LangChain4J</strong>、<strong>Spring AI</strong> 也有类似设计。理解这一点很有价值，因为它说明：</p>
+<p><strong>多角色消息并不是某个框架的语法技巧，而是现代聊天模型交互的一种通用抽象。</strong></p>
+<p><strong>LangChain4J：</strong></p>
+<pre class="line-numbers language-java" data-language="java"><code class="language-java"><span class="token keyword">package</span> <span class="token namespace">dev<span class="token punctuation">.</span>langchain4j<span class="token punctuation">.</span>data<span class="token punctuation">.</span>message</span><span class="token punctuation">;</span>
+
+<span class="token keyword">public</span> <span class="token keyword">enum</span> <span class="token class-name">ChatMessageType</span> <span class="token punctuation">&#123;</span>
+    <span class="token function">SYSTEM</span><span class="token punctuation">(</span><span class="token class-name">SystemMessage</span><span class="token punctuation">.</span><span class="token keyword">class</span><span class="token punctuation">)</span><span class="token punctuation">,</span>
+    <span class="token function">USER</span><span class="token punctuation">(</span><span class="token class-name">UserMessage</span><span class="token punctuation">.</span><span class="token keyword">class</span><span class="token punctuation">)</span><span class="token punctuation">,</span>
+    <span class="token function">AI</span><span class="token punctuation">(</span><span class="token class-name">AiMessage</span><span class="token punctuation">.</span><span class="token keyword">class</span><span class="token punctuation">)</span><span class="token punctuation">,</span>
+    <span class="token function">TOOL_EXECUTION_RESULT</span><span class="token punctuation">(</span><span class="token class-name">ToolExecutionResultMessage</span><span class="token punctuation">.</span><span class="token keyword">class</span><span class="token punctuation">)</span><span class="token punctuation">,</span>
+    <span class="token function">CUSTOM</span><span class="token punctuation">(</span><span class="token class-name">CustomMessage</span><span class="token punctuation">.</span><span class="token keyword">class</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+    <span class="token keyword">private</span> <span class="token keyword">final</span> <span class="token class-name">Class</span><span class="token generics"><span class="token punctuation">&lt;</span><span class="token operator">?</span> <span class="token keyword">extends</span> <span class="token class-name">ChatMessage</span><span class="token punctuation">></span></span> messageClass<span class="token punctuation">;</span>
+
+    <span class="token class-name">ChatMessageType</span><span class="token punctuation">(</span><span class="token class-name">Class</span><span class="token generics"><span class="token punctuation">&lt;</span><span class="token operator">?</span> <span class="token keyword">extends</span> <span class="token class-name">ChatMessage</span><span class="token punctuation">></span></span> messageClass<span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+        <span class="token keyword">this</span><span class="token punctuation">.</span>messageClass <span class="token operator">=</span> messageClass<span class="token punctuation">;</span>
+    <span class="token punctuation">&#125;</span>
+
+    <span class="token keyword">public</span> <span class="token class-name">Class</span><span class="token generics"><span class="token punctuation">&lt;</span><span class="token operator">?</span> <span class="token keyword">extends</span> <span class="token class-name">ChatMessage</span><span class="token punctuation">></span></span> <span class="token function">messageClass</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+        <span class="token keyword">return</span> messageClass<span class="token punctuation">;</span>
+    <span class="token punctuation">&#125;</span>
+<span class="token punctuation">&#125;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<p><strong>Spring AI：</strong></p>
+<pre class="line-numbers language-java" data-language="java"><code class="language-java"><span class="token keyword">package</span> <span class="token namespace">org<span class="token punctuation">.</span>springframework<span class="token punctuation">.</span>ai<span class="token punctuation">.</span>chat<span class="token punctuation">.</span>messages</span><span class="token punctuation">;</span>
+
+<span class="token keyword">public</span> <span class="token keyword">enum</span> <span class="token class-name">MessageType</span> <span class="token punctuation">&#123;</span>
+    <span class="token function">USER</span><span class="token punctuation">(</span><span class="token string">"user"</span><span class="token punctuation">)</span><span class="token punctuation">,</span>
+    <span class="token function">ASSISTANT</span><span class="token punctuation">(</span><span class="token string">"assistant"</span><span class="token punctuation">)</span><span class="token punctuation">,</span>
+    <span class="token function">SYSTEM</span><span class="token punctuation">(</span><span class="token string">"system"</span><span class="token punctuation">)</span><span class="token punctuation">,</span>
+    <span class="token function">TOOL</span><span class="token punctuation">(</span><span class="token string">"tool"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+    <span class="token keyword">private</span> <span class="token keyword">final</span> <span class="token class-name">String</span> value<span class="token punctuation">;</span>
+
+    <span class="token class-name">MessageType</span><span class="token punctuation">(</span><span class="token class-name">String</span> value<span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+        <span class="token keyword">this</span><span class="token punctuation">.</span>value <span class="token operator">=</span> value<span class="token punctuation">;</span>
+    <span class="token punctuation">&#125;</span>
+
+    <span class="token keyword">public</span> <span class="token keyword">static</span> <span class="token class-name">MessageType</span> <span class="token function">fromValue</span><span class="token punctuation">(</span><span class="token class-name">String</span> value<span class="token punctuation">)</span> <span class="token punctuation">&#123;</span> <span class="token punctuation">.</span><span class="token punctuation">.</span><span class="token punctuation">.</span> <span class="token punctuation">&#125;</span>
+
+    <span class="token keyword">public</span> <span class="token class-name">String</span> <span class="token function">getValue</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+        <span class="token keyword">return</span> <span class="token keyword">this</span><span class="token punctuation">.</span>value<span class="token punctuation">;</span>
+    <span class="token punctuation">&#125;</span>
+<span class="token punctuation">&#125;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<hr>
+<h2 id="3、入参的消息类型"><a href="#3、入参的消息类型" class="headerlink" title="3、入参的消息类型"></a>3、入参的消息类型</h2><p>当你把输入组织成“消息列表”之后，就需要知道每种消息类型代表什么。在 LangChain 官方语境里，最核心的几类消息是：<strong>SystemMessage</strong>、<strong>HumanMessage</strong>、<strong>AIMessage</strong>、<strong>ToolMessage</strong>。</p>
+<p><strong>文档</strong>：<a target="_blank" rel="noopener" href="https://docs.langchain.com/oss/python/langchain/messages">https://docs.langchain.com/oss/python/langchain/messages</a> （英文）；<a target="_blank" rel="noopener" href="https://docs.langchain.org.cn/oss/python/langchain/messages">https://docs.langchain.org.cn/oss/python/langchain/messages</a> (中文)</p>
+<h3 id="3-1-四类核心消息"><a href="#3-1-四类核心消息" class="headerlink" title="3.1 四类核心消息"></a>3.1 四类核心消息</h3><div class="data-grid data-grid-link-table"><div class="grid-header"><div class="grid-cell">类型</div><div class="grid-cell">说明</div><div class="grid-cell">项目里最常见的用途</div></div><div class="grid-row"><div class="grid-cell">`SystemMessage`</div><div class="grid-cell">系统消息，通常用于规定角色、风格、边界、输出格式</div><div class="grid-cell">设定人设、回答规则、拒答策略</div></div><div class="grid-row"><div class="grid-cell">`HumanMessage`</div><div class="grid-cell">用户消息，对应用户当前输入</div><div class="grid-cell">放用户问题、补充条件、后续追问</div></div><div class="grid-row"><div class="grid-cell">`AIMessage`</div><div class="grid-cell">模型回复消息</div><div class="grid-cell">保存上一轮回复，支持多轮上下文</div></div><div class="grid-row"><div class="grid-cell">`ToolMessage`</div><div class="grid-cell">工具执行结果消息</div><div class="grid-cell">把外部工具/函数的返回结果回传给模型</div></div></div>
+
+<p>需要注意两个细节：</p>
+<ol>
+<li><p>**LangChain 的类名叫 <code>HumanMessage</code>，但很多平台的角色字段写的是 <code>user</code>。**这不是冲突，而是不同层的命名习惯。你可以把它们理解成同一个角色。</p>
+</li>
+<li><p>**旧版本资料里可能会看到 <code>FunctionMessage</code>。**在 LangChain 1.x 语境下，更常见的是 <code>ToolMessage</code>。如果你阅读旧教程或旧代码，看到这类差异，先把它理解为工具调用结果的旧命名即可。</p>
+</li>
+</ol>
+<h3 id="3-2-SystemMessage-的作用"><a href="#3-2-SystemMessage-的作用" class="headerlink" title="3.2 SystemMessage 的作用"></a>3.2 SystemMessage 的作用</h3><p>很多新手会把系统提示词和用户问题混在一段字符串里写，这样虽然也能跑，但可维护性很差。更稳妥的做法是把“规则”和“问题”拆开：</p>
+<ul>
+<li><strong>SystemMessage</strong> 负责定义系统层规则</li>
+<li><strong>HumanMessage</strong> 负责承载当前用户问题</li>
+</ul>
+<p>例如：</p>
+<ul>
+<li>“你是一个法律助手，只回答法律问题”</li>
+<li>“输出请控制在 80 字内”</li>
+<li>“如果超出范围，请明确拒答”</li>
+</ul>
+<p>这些内容更适合放在 <code>SystemMessage</code> 里，因为它们属于“长期规则”，而不是某一轮具体问题。</p>
+<p>这正对应了 <a href="/2023/02/13/llm/1-2-prompt-engineering-basics/">1-2 提示词工程基础</a> 里强调的那条原则：**稳定约束和动态输入要拆开写。**在 LangChain 里，这条原则最直接的落地方式就是把稳定规则放进 <code>SystemMessage</code>，把当前任务放进 <code>HumanMessage</code>。</p>
+<p>在真实项目里，SystemMessage 往往决定：</p>
+<ul>
+<li>回答口吻是否专业</li>
+<li>是否允许推测</li>
+<li>是否必须引用上下文</li>
+<li>是否必须按 JSON 输出</li>
+<li>是否需要保守拒答</li>
+</ul>
+<p>这也是为什么 Prompt 工程里经常会说：<strong>系统提示词是行为边界，用户提示词是当前任务。</strong></p>
+<h3 id="3-3-ToolMessage-什么时候会出现"><a href="#3-3-ToolMessage-什么时候会出现" class="headerlink" title="3.3 ToolMessage 什么时候会出现"></a>3.3 ToolMessage 什么时候会出现</h3><p><code>ToolMessage</code> 不会在普通问答里频繁出现，它更常见于函数调用、工具调用、Agent 编排场景。</p>
+<p>简单理解就是：</p>
+<ul>
+<li>模型先在 <code>AIMessage</code> 里表达“我想调用某个工具”</li>
+<li>代码真的去执行工具</li>
+<li>工具结果再以 <code>ToolMessage</code> 的形式回传给模型</li>
+</ul>
+<p>这样模型才能基于工具结果继续回答。</p>
+<p>下面是一个简化示例：</p>
+<pre class="line-numbers language-python" data-language="python"><code class="language-python"><span class="token keyword">from</span> langchain_core<span class="token punctuation">.</span>messages <span class="token keyword">import</span> SystemMessage<span class="token punctuation">,</span> HumanMessage<span class="token punctuation">,</span> AIMessage<span class="token punctuation">,</span> ToolMessage
+
+messages <span class="token operator">=</span> <span class="token punctuation">[</span>
+    SystemMessage<span class="token punctuation">(</span>content<span class="token operator">=</span><span class="token string">"你是一位乐于助人的智能小助手"</span><span class="token punctuation">)</span><span class="token punctuation">,</span>
+    HumanMessage<span class="token punctuation">(</span>content<span class="token operator">=</span><span class="token string">"你好，请你介绍一下你自己"</span><span class="token punctuation">)</span><span class="token punctuation">,</span>
+    AIMessage<span class="token punctuation">(</span>content<span class="token operator">=</span><span class="token string">"我是一名人工智能助手，请问您有什么想问的吗？"</span><span class="token punctuation">)</span><span class="token punctuation">,</span>
+    ToolMessage<span class="token punctuation">(</span>
+        content<span class="token operator">=</span><span class="token string">'&#123;"population": 21540000, "area": "16410平方公里"&#125;'</span><span class="token punctuation">,</span>
+        tool_call_id<span class="token operator">=</span><span class="token string">"call_abc123"</span><span class="token punctuation">,</span>
+    <span class="token punctuation">)</span><span class="token punctuation">,</span>
+<span class="token punctuation">]</span>
+<span class="token keyword">print</span><span class="token punctuation">(</span>messages<span class="token punctuation">)</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<p>对当前章节来说，你只需要先建立基本印象：<strong>最常用的是 System &#x2F; Human &#x2F; AI 三类；ToolMessage 是后续 Agent、工具调用章节的重要铺垫。</strong></p>
+<hr>
+<h2 id="4、调用大模型的调用方式"><a href="#4、调用大模型的调用方式" class="headerlink" title="4、调用大模型的调用方式"></a>4、调用大模型的调用方式</h2><p>当输入组织好之后，下一步就是把它交给模型。LangChain 聊天模型常见的调用方式有四类：普通调用、流式调用、批量调用，以及它们各自的异步版本。</p>
+<p>这部分看起来像 API 记忆题，其实可以用一个更直观的方式理解：</p>
+<ul>
+<li><strong>invoke &#x2F; ainvoke</strong>：一次发一条</li>
+<li><strong>stream &#x2F; astream</strong>：一边生成一边返回</li>
+<li><strong>batch &#x2F; abatch</strong>：一次发很多条</li>
+</ul>
+<h3 id="4-1-普通调用（invoke-ainvoke）"><a href="#4-1-普通调用（invoke-ainvoke）" class="headerlink" title="4.1 普通调用（invoke &#x2F; ainvoke）"></a>4.1 普通调用（invoke &#x2F; ainvoke）</h3><p>【案例源码】<code>案例与源码-2-LangChain框架/04-prompt/invoke/LLM_Invoke.py</code>、<code>LLM_aInvoke.py</code></p>
+<ul>
+<li><code>invoke</code>：同步调用，最常用，适合单轮问答与脚本演示。</li>
+<li><code>ainvoke</code>：异步调用，适合异步 Web 服务、并发任务和高吞吐场景。</li>
+</ul>
+<pre class="line-numbers language-python" data-language="python"><code class="language-python"><span class="token keyword">import</span> os
+<span class="token keyword">from</span> langchain<span class="token punctuation">.</span>chat_models <span class="token keyword">import</span> init_chat_model
+<span class="token keyword">from</span> langchain_core<span class="token punctuation">.</span>messages <span class="token keyword">import</span> HumanMessage<span class="token punctuation">,</span> SystemMessage
+
+model <span class="token operator">=</span> init_chat_model<span class="token punctuation">(</span>
+    model<span class="token operator">=</span><span class="token string">"qwen-plus"</span><span class="token punctuation">,</span>
+    model_provider<span class="token operator">=</span><span class="token string">"openai"</span><span class="token punctuation">,</span>
+    api_key<span class="token operator">=</span>os<span class="token punctuation">.</span>getenv<span class="token punctuation">(</span><span class="token string">"aliQwen-api"</span><span class="token punctuation">)</span><span class="token punctuation">,</span>
+    base_url<span class="token operator">=</span><span class="token string">"https://dashscope.aliyuncs.com/compatible-mode/v1"</span>
+<span class="token punctuation">)</span>
+messages <span class="token operator">=</span> <span class="token punctuation">[</span>
+    SystemMessage<span class="token punctuation">(</span>content<span class="token operator">=</span><span class="token string">"你是一个法律助手，只回答法律问题，超出范围回答：非法律问题无可奉告"</span><span class="token punctuation">)</span><span class="token punctuation">,</span>
+    HumanMessage<span class="token punctuation">(</span>content<span class="token operator">=</span><span class="token string">"简单介绍下广告法，一句话 50 字以内"</span><span class="token punctuation">)</span>
+<span class="token punctuation">]</span>
+response <span class="token operator">=</span> model<span class="token punctuation">.</span>invoke<span class="token punctuation">(</span>messages<span class="token punctuation">)</span>
+<span class="token keyword">print</span><span class="token punctuation">(</span><span class="token builtin">type</span><span class="token punctuation">(</span>response<span class="token punctuation">)</span><span class="token punctuation">)</span>
+<span class="token keyword">print</span><span class="token punctuation">(</span>response<span class="token punctuation">.</span>content<span class="token punctuation">)</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<p>实际项目里怎么选：</p>
+<ul>
+<li><strong>命令行脚本、教学示例、简单后台任务</strong>：优先 <code>invoke</code></li>
+<li><strong>FastAPI、异步服务、并发请求</strong>：优先 <code>ainvoke</code></li>
+<li><strong>本地开源模型（Ollama 等）</strong>：实例化与端点配置见 <a href="/2023/05/28/llm/1-14-ollama-local-deployment-and-usage/">第 14 章 Ollama 本地部署与调用</a>，本章的 <code>invoke</code> &#x2F; <code>stream</code> &#x2F; <code>batch</code> 用法同样适用。</li>
+</ul>
+<p><a href="%E6%A1%88%E4%BE%8B%E4%B8%8E%E6%BA%90%E7%A0%81-2-LangChain%E6%A1%86%E6%9E%B6/04-prompt/invoke/LLM_Invoke.py" title=":include :type&#x3D;code">LLM_Invoke.py</a></p>
+<p><a href="%E6%A1%88%E4%BE%8B%E4%B8%8E%E6%BA%90%E7%A0%81-2-LangChain%E6%A1%86%E6%9E%B6/04-prompt/invoke/LLM_aInvoke.py" title=":include :type&#x3D;code">LLM_aInvoke.py</a></p>
+<h3 id="4-2-流式调用（stream-astream）"><a href="#4-2-流式调用（stream-astream）" class="headerlink" title="4.2 流式调用（stream &#x2F; astream）"></a>4.2 流式调用（stream &#x2F; astream）</h3><p>【案例源码】<code>案例与源码-2-LangChain框架/04-prompt/invoke/LLM_Stream.py</code>、<code>LLM_aStream.py</code></p>
+<ul>
+<li><strong>stream</strong>：同步流式输出</li>
+<li><strong>astream</strong>：异步流式输出</li>
+</ul>
+<p>流式的最大价值不是“更快算完”，而是<strong>更快把正在生成的内容展示给用户</strong>。在聊天机器人、报告生成、代码生成等场景里，用户体验会明显更好。</p>
+<pre class="line-numbers language-python" data-language="python"><code class="language-python">messages <span class="token operator">=</span> <span class="token punctuation">[</span>
+    SystemMessage<span class="token punctuation">(</span>content<span class="token operator">=</span><span class="token string">"你叫小问，是一个乐于助人的AI助手"</span><span class="token punctuation">)</span><span class="token punctuation">,</span>
+    HumanMessage<span class="token punctuation">(</span>content<span class="token operator">=</span><span class="token string">"你是谁"</span><span class="token punctuation">)</span>
+<span class="token punctuation">]</span>
+<span class="token keyword">for</span> chunk <span class="token keyword">in</span> model<span class="token punctuation">.</span>stream<span class="token punctuation">(</span>messages<span class="token punctuation">)</span><span class="token punctuation">:</span>
+    <span class="token keyword">print</span><span class="token punctuation">(</span>chunk<span class="token punctuation">.</span>content<span class="token punctuation">,</span> end<span class="token operator">=</span><span class="token string">""</span><span class="token punctuation">,</span> flush<span class="token operator">=</span><span class="token boolean">True</span><span class="token punctuation">)</span>
+<span class="token keyword">print</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<p>真实项目里，<code>stream</code> &#x2F; <code>astream</code> 很常用于：</p>
+<ul>
+<li>聊天界面的“打字机效果”</li>
+<li>长回答提前回显</li>
+<li>减少用户等待焦虑</li>
+</ul>
+<p><a href="%E6%A1%88%E4%BE%8B%E4%B8%8E%E6%BA%90%E7%A0%81-2-LangChain%E6%A1%86%E6%9E%B6/04-prompt/invoke/LLM_Stream.py" title=":include :type&#x3D;code">LLM_Stream.py</a></p>
+<p><a href="%E6%A1%88%E4%BE%8B%E4%B8%8E%E6%BA%90%E7%A0%81-2-LangChain%E6%A1%86%E6%9E%B6/04-prompt/invoke/LLM_aStream.py" title=":include :type&#x3D;code">LLM_aStream.py</a></p>
+<h3 id="4-3-批处理（batch-abatch）"><a href="#4-3-批处理（batch-abatch）" class="headerlink" title="4.3 批处理（batch &#x2F; abatch）"></a>4.3 批处理（batch &#x2F; abatch）</h3><p>【案例源码】<code>案例与源码-2-LangChain框架/04-prompt/invoke/LLM_Batch.py</code>、<code>LLM_aBatch.py</code></p>
+<ul>
+<li><strong>batch</strong>：一次提交多条输入，统一获得多条结果</li>
+<li><strong>abatch</strong>：异步批处理</li>
+</ul>
+<p>它特别适合离线任务，而不是交互式聊天。例如：</p>
+<ul>
+<li>批量摘要一批文档</li>
+<li>批量清洗问答数据</li>
+<li>批量评估 Prompt 效果</li>
+<li>批量为商品、评论、工单做标签分类</li>
+</ul>
+<pre class="line-numbers language-python" data-language="python"><code class="language-python">questions <span class="token operator">=</span> <span class="token punctuation">[</span>
+    <span class="token string">"什么是 Redis？简洁 100 字以内"</span><span class="token punctuation">,</span>
+    <span class="token string">"Python 的生成器是做什么的？简洁 100 字以内"</span><span class="token punctuation">,</span>
+<span class="token punctuation">]</span>
+response <span class="token operator">=</span> model<span class="token punctuation">.</span>batch<span class="token punctuation">(</span>questions<span class="token punctuation">)</span>
+<span class="token keyword">for</span> q<span class="token punctuation">,</span> r <span class="token keyword">in</span> <span class="token builtin">zip</span><span class="token punctuation">(</span>questions<span class="token punctuation">,</span> response<span class="token punctuation">)</span><span class="token punctuation">:</span>
+    <span class="token keyword">print</span><span class="token punctuation">(</span><span class="token string-interpolation"><span class="token string">f"问题：</span><span class="token interpolation"><span class="token punctuation">&#123;</span>q<span class="token punctuation">&#125;</span></span><span class="token string">\n回答：</span><span class="token interpolation"><span class="token punctuation">&#123;</span>r<span class="token punctuation">.</span>content<span class="token punctuation">&#125;</span></span><span class="token string">\n"</span></span><span class="token punctuation">)</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<p><a href="%E6%A1%88%E4%BE%8B%E4%B8%8E%E6%BA%90%E7%A0%81-2-LangChain%E6%A1%86%E6%9E%B6/04-prompt/invoke/LLM_Batch.py" title=":include :type&#x3D;code">LLM_Batch.py</a></p>
+<p><a href="%E6%A1%88%E4%BE%8B%E4%B8%8E%E6%BA%90%E7%A0%81-2-LangChain%E6%A1%86%E6%9E%B6/04-prompt/invoke/LLM_aBatch.py" title=":include :type&#x3D;code">LLM_aBatch.py</a></p>
+<h3 id="4-4-小结"><a href="#4-4-小结" class="headerlink" title="4.4 小结"></a>4.4 小结</h3><div class="data-grid data-grid-link-table"><div class="grid-header"><div class="grid-cell">场景</div><div class="grid-cell">同步</div><div class="grid-cell">异步</div><div class="grid-cell">适合什么情况</div></div><div class="grid-row"><div class="grid-cell">单条调用</div><div class="grid-cell">`invoke`</div><div class="grid-cell">`ainvoke`</div><div class="grid-cell">单轮问答、接口服务</div></div><div class="grid-row"><div class="grid-cell">流式输出</div><div class="grid-cell">`stream`</div><div class="grid-cell">`astream`</div><div class="grid-cell">聊天 UI、长文本生成</div></div><div class="grid-row"><div class="grid-cell">批量处理</div><div class="grid-cell">`batch`</div><div class="grid-cell">`abatch`</div><div class="grid-cell">离线任务、批量评估</div></div></div>
+
+<p>如果你一时记不住，也没关系，先记住这条基本规则：</p>
+<p><strong>先会 <code>invoke</code>，再学 <code>stream</code>，最后再补 <code>batch</code> 和异步版本。</strong></p>
+<hr>
+<h2 id="5、提示词模板概览"><a href="#5、提示词模板概览" class="headerlink" title="5、提示词模板概览"></a>5、提示词模板概览</h2><h3 id="5-1-提示词简介"><a href="#5-1-提示词简介" class="headerlink" title="5.1 提示词简介"></a>5.1 提示词简介</h3><p>在真正的项目里，Prompt 几乎不可能永远写死在代码中。原因很现实：</p>
+<ul>
+<li>用户问题会变</li>
+<li>角色设定会变</li>
+<li>输出要求会变</li>
+<li>业务策略会调整</li>
+<li>团队成员需要一起维护</li>
+</ul>
+<p>如果每次都手写一整段 Prompt，不仅容易重复，还非常难维护。提示词模板的作用，就是把<strong>固定部分沉淀下来，把变化部分改成变量</strong>，从而让同一套提示逻辑可以反复复用。</p>
+<p>这和 Python 的 <code>f-string</code> 很像：</p>
+<pre class="line-numbers language-python" data-language="python"><code class="language-python"><span class="token keyword">def</span> <span class="token function">hello</span><span class="token punctuation">(</span>name<span class="token punctuation">:</span> <span class="token builtin">str</span><span class="token punctuation">)</span> <span class="token operator">-</span><span class="token operator">></span> <span class="token boolean">None</span><span class="token punctuation">:</span>
+    <span class="token keyword">print</span><span class="token punctuation">(</span><span class="token string-interpolation"><span class="token string">f"你好：</span><span class="token interpolation"><span class="token punctuation">&#123;</span>name<span class="token punctuation">&#125;</span></span><span class="token string">"</span></span><span class="token punctuation">)</span>
+
+<span class="token keyword">if</span> __name__ <span class="token operator">==</span> <span class="token string">"__main__"</span><span class="token punctuation">:</span>
+    hello<span class="token punctuation">(</span><span class="token string">"李四"</span><span class="token punctuation">)</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<p>这里的 <code>&#123;name&#125;</code> 就像 Prompt 模板里的占位符，直接把它看成“先留坑，后填值”就行。</p>
+<h3 id="5-2-提示词模板类型"><a href="#5-2-提示词模板类型" class="headerlink" title="5.2 提示词模板类型"></a>5.2 提示词模板类型</h3><p>LangChain 中常见的提示词模板主要有下面几类，本课程重点掌握前两种即可：</p>
+<div class="data-grid data-grid-link-table"><div class="grid-header"><div class="grid-cell">类型</div><div class="grid-cell">说明</div><div class="grid-cell">本课程定位</div></div><div class="grid-row"><div class="grid-cell">**PromptTemplate**</div><div class="grid-cell">面向纯文本模板，填值后通常得到一条字符串</div><div class="grid-cell">重点掌握</div></div><div class="grid-row"><div class="grid-cell">**ChatPromptTemplate**</div><div class="grid-cell">面向聊天模型的多角色模板，填值后得到多条消息</div><div class="grid-cell">重点掌握</div></div><div class="grid-row"><div class="grid-cell">**FewShotPromptTemplate**</div><div class="grid-cell">把若干“示例输入-输出”嵌入提示词</div><div class="grid-cell">了解即可</div></div><div class="grid-row"><div class="grid-cell">**PipelinePrompt**</div><div class="grid-cell">把多个子提示按顺序组合</div><div class="grid-cell">了解即可</div></div></div>
+
+<p>入门阶段可以先作一个简化理解：</p>
+<ul>
+<li><strong>单条文本任务</strong>，先看 <code>PromptTemplate</code></li>
+<li><strong>聊天模型、多角色、多轮对话</strong>，重点看 <code>ChatPromptTemplate</code></li>
+</ul>
+<h3 id="5-3-Few-shot-模板"><a href="#5-3-Few-shot-模板" class="headerlink" title="5.3 Few-shot 模板"></a>5.3 Few-shot 模板</h3><p>Few-shot 的意思是：不要只告诉模型“按什么规则做”，还给它几组“输入应该怎么变成输出”的示例。</p>
+<p>它适合下面这类场景：</p>
+<ul>
+<li>分类标签容易混，需要给几个标准样例</li>
+<li>输出风格有要求，单靠文字说明不够稳</li>
+<li>任务规则不复杂，但希望模型模仿固定格式</li>
+</ul>
+<p>入门阶段不用急着背 <code>FewShotPromptTemplate</code> 的所有参数，先记住一句话：**Few-shot 是把示例变成提示词的一部分，让模型照着样子做。**等你后面做分类、抽取、客服话术生成时，再把它作为提高稳定性的手段即可。</p>
+<hr>
+<h2 id="6、文本提示词模板（PromptTemplate）"><a href="#6、文本提示词模板（PromptTemplate）" class="headerlink" title="6、文本提示词模板（PromptTemplate）"></a>6、文本提示词模板（PromptTemplate）</h2><h3 id="6-1-简介"><a href="#6-1-简介" class="headerlink" title="6.1 简介"></a>6.1 简介</h3><p><code>PromptTemplate</code> 是 LangChain 中最基础的模板类，适合把一段文本 Prompt 做成“固定骨架 + 动态变量”的形式。</p>
+<p>它最适合的场景是：</p>
+<ul>
+<li>摘要、改写、翻译、分类等单轮文本任务</li>
+<li>还不需要明确区分 system &#x2F; user 角色</li>
+<li>需要频繁替换少量变量</li>
+</ul>
+<p>如果你把它和第 2 节联系起来看，会更容易理解：<strong>PromptTemplate 的结果通常还是字符串，只不过这条字符串不再靠手写，而是由模板生成。</strong></p>
+<h3 id="6-2-常用参数"><a href="#6-2-常用参数" class="headerlink" title="6.2 常用参数"></a>6.2 常用参数</h3><div class="data-grid data-grid-link-table"><div class="grid-header"><div class="grid-cell">参数</div><div class="grid-cell">说明</div></div><div class="grid-row"><div class="grid-cell">`template`</div><div class="grid-cell">模板字符串，内部可包含 `{变量名}` 占位符</div></div><div class="grid-row"><div class="grid-cell">`input_variables`</div><div class="grid-cell">调用时需要传入的变量名列表</div></div><div class="grid-row"><div class="grid-cell">`partial_variables`</div><div class="grid-cell">在模板创建阶段就预先固定的一部分变量</div></div></div>
+
+<p>其中，<code>partial_variables</code> 尤其值得理解。它的作用很直接：</p>
+<p><strong>把那些“经常不变”的变量先固定住，后续每次只传真正会变化的部分。</strong></p>
+<p>典型例子：</p>
+<ul>
+<li>系统角色长期固定为“Python 工程师”</li>
+<li>但用户问题每次都不同</li>
+</ul>
+<p>这样一来，你就不用每次都重复传 <code>role=&quot;Python 工程师&quot;</code>。</p>
+<h3 id="6-3-常用方法"><a href="#6-3-常用方法" class="headerlink" title="6.3 常用方法"></a>6.3 常用方法</h3><div class="data-grid data-grid-link-table"><div class="grid-header"><div class="grid-cell">方法</div><div class="grid-cell">返回值</div><div class="grid-cell">适合场景</div><div class="grid-cell">案例源码</div></div><div class="grid-row"><div class="grid-cell">`format(...)`</div><div class="grid-cell">`str`</div><div class="grid-cell">最常用，拿到字符串后直接给模型或自己继续拼接</div><div class="grid-cell">`PromptTemplate_FormatMethod.py`</div></div><div class="grid-row"><div class="grid-cell">`invoke({...})`</div><div class="grid-cell">`PromptValue`</div><div class="grid-cell">需要接入 LangChain 链时更自然</div><div class="grid-cell">`PromptTemplate_InvokeMethod.py`</div></div><div class="grid-row"><div class="grid-cell">`partial(...)`</div><div class="grid-cell">新的 `PromptTemplate`</div><div class="grid-cell">先固定部分变量，再多次复用</div><div class="grid-cell">`PromptTemplate_PartialMethod.py`</div></div></div>
+
+<pre class="line-numbers language-python" data-language="python"><code class="language-python"><span class="token keyword">from</span> langchain_core<span class="token punctuation">.</span>prompts <span class="token keyword">import</span> PromptTemplate
+
+template <span class="token operator">=</span> PromptTemplate<span class="token punctuation">.</span>from_template<span class="token punctuation">(</span>
+    <span class="token string">"你是一个专业的&#123;role&#125;工程师，请回答我的问题，我的问题是：&#123;question&#125;"</span>
+<span class="token punctuation">)</span>
+
+<span class="token comment"># 1）format：得到 str</span>
+prompt_str <span class="token operator">=</span> template<span class="token punctuation">.</span><span class="token builtin">format</span><span class="token punctuation">(</span>role<span class="token operator">=</span><span class="token string">"python开发"</span><span class="token punctuation">,</span> question<span class="token operator">=</span><span class="token string">"二分查找怎么写？"</span><span class="token punctuation">)</span>
+
+<span class="token comment"># 2）invoke：得到 PromptValue</span>
+prompt_value <span class="token operator">=</span> template<span class="token punctuation">.</span>invoke<span class="token punctuation">(</span><span class="token punctuation">&#123;</span><span class="token string">"role"</span><span class="token punctuation">:</span> <span class="token string">"python开发"</span><span class="token punctuation">,</span> <span class="token string">"question"</span><span class="token punctuation">:</span> <span class="token string">"冒泡排序怎么写？"</span><span class="token punctuation">&#125;</span><span class="token punctuation">)</span>
+prompt_value<span class="token punctuation">.</span>to_string<span class="token punctuation">(</span><span class="token punctuation">)</span>
+prompt_value<span class="token punctuation">.</span>to_messages<span class="token punctuation">(</span><span class="token punctuation">)</span>
+
+<span class="token comment"># 3）partial：固定 role，得到新模板</span>
+new_template <span class="token operator">=</span> template<span class="token punctuation">.</span>partial<span class="token punctuation">(</span>role<span class="token operator">=</span><span class="token string">"python开发"</span><span class="token punctuation">)</span>
+prompt_str <span class="token operator">=</span> new_template<span class="token punctuation">.</span><span class="token builtin">format</span><span class="token punctuation">(</span>question<span class="token operator">=</span><span class="token string">"快速排序怎么写？"</span><span class="token punctuation">)</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<p>对初学者的实用建议是：</p>
+<ul>
+<li><strong>刚入门时优先用 <code>format</code></strong></li>
+<li><strong>做 LCEL 或链式调用时再逐渐理解 <code>invoke</code></strong></li>
+<li><strong>同一模板长期复用时再考虑 <code>partial</code></strong></li>
+</ul>
+<p>【案例源码】<br>format：<code>案例与源码-2-LangChain框架/04-prompt/prompt_templates/method/PromptTemplate_FormatMethod.py</code><br>invoke：<code>案例与源码-2-LangChain框架/04-prompt/prompt_templates/method/PromptTemplate_InvokeMethod.py</code><br>partial：<code>案例与源码-2-LangChain框架/04-prompt/prompt_templates/method/PromptTemplate_PartialMethod.py</code></p>
+<p><a href="%E6%A1%88%E4%BE%8B%E4%B8%8E%E6%BA%90%E7%A0%81-2-LangChain%E6%A1%86%E6%9E%B6/04-prompt/prompt_templates/method/PromptTemplate_FormatMethod.py" title=":include :type&#x3D;code">PromptTemplate_FormatMethod.py</a></p>
+<p><a href="%E6%A1%88%E4%BE%8B%E4%B8%8E%E6%BA%90%E7%A0%81-2-LangChain%E6%A1%86%E6%9E%B6/04-prompt/prompt_templates/method/PromptTemplate_InvokeMethod.py" title=":include :type&#x3D;code">PromptTemplate_InvokeMethod.py</a></p>
+<p><a href="%E6%A1%88%E4%BE%8B%E4%B8%8E%E6%BA%90%E7%A0%81-2-LangChain%E6%A1%86%E6%9E%B6/04-prompt/prompt_templates/method/PromptTemplate_PartialMethod.py" title=":include :type&#x3D;code">PromptTemplate_PartialMethod.py</a></p>
+<h3 id="6-4-创建方式"><a href="#6-4-创建方式" class="headerlink" title="6.4 创建方式"></a>6.4 创建方式</h3><p><code>PromptTemplate</code> 常见有两种创建方式：</p>
+<ul>
+<li>构造函数：手动指定 <code>template</code> 和 <code>input_variables</code></li>
+<li><code>from_template(...)</code>：由 LangChain 自动推断变量名</li>
+</ul>
+<pre class="line-numbers language-python" data-language="python"><code class="language-python"><span class="token keyword">from</span> langchain_core<span class="token punctuation">.</span>prompts <span class="token keyword">import</span> PromptTemplate
+
+<span class="token comment"># 方式一：构造函数</span>
+template <span class="token operator">=</span> PromptTemplate<span class="token punctuation">(</span>
+    template<span class="token operator">=</span><span class="token string">"你是一个专业的&#123;role&#125;工程师，请回答：&#123;question&#125;"</span><span class="token punctuation">,</span>
+    input_variables<span class="token operator">=</span><span class="token punctuation">[</span><span class="token string">"role"</span><span class="token punctuation">,</span> <span class="token string">"question"</span><span class="token punctuation">]</span>
+<span class="token punctuation">)</span>
+prompt <span class="token operator">=</span> template<span class="token punctuation">.</span><span class="token builtin">format</span><span class="token punctuation">(</span>role<span class="token operator">=</span><span class="token string">"python开发"</span><span class="token punctuation">,</span> question<span class="token operator">=</span><span class="token string">"快速排序怎么写？"</span><span class="token punctuation">)</span>
+
+<span class="token comment"># 方式二：from_template</span>
+template <span class="token operator">=</span> PromptTemplate<span class="token punctuation">.</span>from_template<span class="token punctuation">(</span><span class="token string">"请给我一个关于&#123;topic&#125;的&#123;type&#125;解释。"</span><span class="token punctuation">)</span>
+prompt <span class="token operator">=</span> template<span class="token punctuation">.</span><span class="token builtin">format</span><span class="token punctuation">(</span>topic<span class="token operator">=</span><span class="token string">"量子力学"</span><span class="token punctuation">,</span> <span class="token builtin">type</span><span class="token operator">=</span><span class="token string">"详细"</span><span class="token punctuation">)</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<p>从经验上看，可按下面的方式选择：</p>
+<ul>
+<li><strong>模板简单</strong>：优先 <code>from_template(...)</code></li>
+<li><strong>你想显式表达变量名</strong>：用构造函数</li>
+</ul>
+<p>【案例源码】构造函数：<code>案例与源码-2-LangChain框架/04-prompt/prompt_templates/PromptTemplate_Constructor.py</code><br>【案例源码】<code>from_template</code>：<code>案例与源码-2-LangChain框架/04-prompt/prompt_templates/PromptTemplate_FromTemplate.py</code></p>
+<p><a href="%E6%A1%88%E4%BE%8B%E4%B8%8E%E6%BA%90%E7%A0%81-2-LangChain%E6%A1%86%E6%9E%B6/04-prompt/prompt_templates/PromptTemplate_Constructor.py" title=":include :type&#x3D;code">PromptTemplate_Constructor.py</a></p>
+<p><a href="%E6%A1%88%E4%BE%8B%E4%B8%8E%E6%BA%90%E7%A0%81-2-LangChain%E6%A1%86%E6%9E%B6/04-prompt/prompt_templates/PromptTemplate_FromTemplate.py" title=":include :type&#x3D;code">PromptTemplate_FromTemplate.py</a></p>
+<p>除了创建方式，本章还保留了两个补充案例。</p>
+<p><strong>第一，组合多个模板。</strong><br>当一个 Prompt 由多个子部分拼起来时，可以通过 <code>+</code> 组合模板，而不是手写超长字符串。真实项目里，这在“角色说明 + 业务规则 + 当前任务”这种分段组织里很有用。</p>
+<p><a href="%E6%A1%88%E4%BE%8B%E4%B8%8E%E6%BA%90%E7%A0%81-2-LangChain%E6%A1%86%E6%9E%B6/04-prompt/prompt_templates/PromptTemplate_Combined.py" title=":include :type&#x3D;code">PromptTemplate_Combined.py</a></p>
+<p><strong>第二，比较 <code>partial_variables</code> 与 <code>partial()</code>。</strong><br>二者都能做到“先固定一部分变量，后续只传剩余变量”，但一个发生在模板创建阶段，一个发生在已有模板基础上。</p>
+<p><a href="%E6%A1%88%E4%BE%8B%E4%B8%8E%E6%BA%90%E7%A0%81-2-LangChain%E6%A1%86%E6%9E%B6/04-prompt/prompt_templates/PromptTemplate_PartialVariables.py" title=":include :type&#x3D;code">PromptTemplate_PartialVariables.py</a></p>
+<hr>
+<h2 id="7、对话提示词模板（ChatPromptTemplate）"><a href="#7、对话提示词模板（ChatPromptTemplate）" class="headerlink" title="7、对话提示词模板（ChatPromptTemplate）"></a>7、对话提示词模板（ChatPromptTemplate）</h2><h3 id="7-1-简介"><a href="#7-1-简介" class="headerlink" title="7.1 简介"></a>7.1 简介</h3><p>如果说 <code>PromptTemplate</code> 更适合“单条文本输入”，那么 <code>ChatPromptTemplate</code> 就是为“聊天模型场景”准备的模板类。</p>
+<p>它比 <code>PromptTemplate</code> 更贴合真实项目，因为真实聊天应用往往不只是“一句话”，而是：</p>
+<ul>
+<li>一条系统设定</li>
+<li>一条或多条用户消息</li>
+<li>可能还有历史 AI 回复</li>
+<li>可能再插入工具结果或历史上下文</li>
+</ul>
+<p>这时，把所有内容写成一大段纯文本虽然也能跑，但不如把它们拆成带角色的消息来得清晰。</p>
+<pre class="line-numbers language-python" data-language="python"><code class="language-python"><span class="token keyword">from</span> langchain_core<span class="token punctuation">.</span>messages <span class="token keyword">import</span> SystemMessage<span class="token punctuation">,</span> HumanMessage<span class="token punctuation">,</span> AIMessage
+
+messages <span class="token operator">=</span> <span class="token punctuation">[</span>
+    SystemMessage<span class="token punctuation">(</span>content<span class="token operator">=</span><span class="token string">"你是一个AI开发工程师"</span><span class="token punctuation">)</span><span class="token punctuation">,</span>
+    HumanMessage<span class="token punctuation">(</span>content<span class="token operator">=</span><span class="token string">"你能开发哪些AI应用?"</span><span class="token punctuation">)</span><span class="token punctuation">,</span>
+    AIMessage<span class="token punctuation">(</span>content<span class="token operator">=</span><span class="token string">"我能开发很多AI应用，比如聊天机器人、图像识别等"</span><span class="token punctuation">)</span>
+<span class="token punctuation">]</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<p>所以你可以把 <code>ChatPromptTemplate</code> 简单理解成：<strong>“面向多角色消息的模板系统”。</strong></p>
+<h3 id="7-2-常用参数"><a href="#7-2-常用参数" class="headerlink" title="7.2 常用参数"></a>7.2 常用参数</h3><p><code>ChatPromptTemplate</code> 的核心不是单个 <code>template</code> 字符串，而是一组“消息模板”。每一项都可以是下面这些形式：</p>
+<div class="data-grid data-grid-link-table"><div class="grid-header"><div class="grid-cell">类型</div><div class="grid-cell">说明</div><div class="grid-cell">案例源码</div></div><div class="grid-row"><div class="grid-cell">元组</div><div class="grid-cell">`("system", "你是{name}")`</div><div class="grid-cell">`ChatPromptTemplate_TupleParam.py`</div></div><div class="grid-row"><div class="grid-cell">字典</div><div class="grid-cell">`{"role": "system", "content": "你是{name}"}`</div><div class="grid-cell">`ChatPromptTemplate_DictParam.py`</div></div><div class="grid-row"><div class="grid-cell">Message 类</div><div class="grid-cell">`SystemMessage(content="你是{name}")`</div><div class="grid-cell">`ChatPromptTemplate_MessageParam.py`</div></div><div class="grid-row"><div class="grid-cell">`MessagesPlaceholder`</div><div class="grid-cell">在模板中预留一段“消息列表占位”</div><div class="grid-cell">见 7.5 节</div></div></div>
+
+<p>三种常规写法里，没有绝对的谁对谁错，可以按下面的经验来选：</p>
+<ul>
+<li><strong>元组</strong>：最简洁，教学和业务代码里都很常见</li>
+<li><strong>字典</strong>：更贴近 OpenAI 风格 JSON，方便和网关数据结构对齐</li>
+<li><strong>Message 类</strong>：最显式，角色最清楚，适合教学和复杂场景</li>
+</ul>
+<p>【案例源码】<br>元组：<code>案例与源码-2-LangChain框架/04-prompt/chat_prompt_template/parameter/ChatPromptTemplate_TupleParam.py</code><br>字典：<code>案例与源码-2-LangChain框架/04-prompt/chat_prompt_template/parameter/ChatPromptTemplate_DictParam.py</code><br>Message 类：<code>案例与源码-2-LangChain框架/04-prompt/chat_prompt_template/parameter/ChatPromptTemplate_MessageParam.py</code></p>
+<p><a href="%E6%A1%88%E4%BE%8B%E4%B8%8E%E6%BA%90%E7%A0%81-2-LangChain%E6%A1%86%E6%9E%B6/04-prompt/chat_prompt_template/parameter/ChatPromptTemplate_TupleParam.py" title=":include :type&#x3D;code">ChatPromptTemplate_TupleParam.py</a></p>
+<p><a href="%E6%A1%88%E4%BE%8B%E4%B8%8E%E6%BA%90%E7%A0%81-2-LangChain%E6%A1%86%E6%9E%B6/04-prompt/chat_prompt_template/parameter/ChatPromptTemplate_DictParam.py" title=":include :type&#x3D;code">ChatPromptTemplate_DictParam.py</a></p>
+<p><a href="%E6%A1%88%E4%BE%8B%E4%B8%8E%E6%BA%90%E7%A0%81-2-LangChain%E6%A1%86%E6%9E%B6/04-prompt/chat_prompt_template/parameter/ChatPromptTemplate_MessageParam.py" title=":include :type&#x3D;code">ChatPromptTemplate_MessageParam.py</a></p>
+<p>下面这个基础示例能帮助你直观看懂三种写法的共同点：它们都是在定义“系统说什么、用户说什么、哪些部分由运行时填值”。</p>
+<pre class="line-numbers language-python" data-language="python"><code class="language-python"><span class="token keyword">from</span> langchain_core<span class="token punctuation">.</span>messages <span class="token keyword">import</span> SystemMessage<span class="token punctuation">,</span> HumanMessage
+<span class="token keyword">from</span> langchain_core<span class="token punctuation">.</span>prompts <span class="token keyword">import</span> ChatPromptTemplate
+
+prompt1 <span class="token operator">=</span> ChatPromptTemplate<span class="token punctuation">.</span>from_messages<span class="token punctuation">(</span><span class="token punctuation">[</span>
+    <span class="token punctuation">(</span><span class="token string">"system"</span><span class="token punctuation">,</span> <span class="token string">"你是助手，名字叫&#123;name&#125;。"</span><span class="token punctuation">)</span><span class="token punctuation">,</span>
+    <span class="token punctuation">(</span><span class="token string">"human"</span><span class="token punctuation">,</span> <span class="token string">"&#123;question&#125;"</span><span class="token punctuation">)</span>
+<span class="token punctuation">]</span><span class="token punctuation">)</span>
+
+prompt2 <span class="token operator">=</span> ChatPromptTemplate<span class="token punctuation">.</span>from_messages<span class="token punctuation">(</span><span class="token punctuation">[</span>
+    <span class="token punctuation">&#123;</span><span class="token string">"role"</span><span class="token punctuation">:</span> <span class="token string">"system"</span><span class="token punctuation">,</span> <span class="token string">"content"</span><span class="token punctuation">:</span> <span class="token string">"你是助手，名字叫&#123;name&#125;。"</span><span class="token punctuation">&#125;</span><span class="token punctuation">,</span>
+    <span class="token punctuation">&#123;</span><span class="token string">"role"</span><span class="token punctuation">:</span> <span class="token string">"user"</span><span class="token punctuation">,</span> <span class="token string">"content"</span><span class="token punctuation">:</span> <span class="token string">"&#123;question&#125;"</span><span class="token punctuation">&#125;</span>
+<span class="token punctuation">]</span><span class="token punctuation">)</span>
+
+prompt3 <span class="token operator">=</span> ChatPromptTemplate<span class="token punctuation">.</span>from_messages<span class="token punctuation">(</span><span class="token punctuation">[</span>
+    SystemMessage<span class="token punctuation">(</span>content<span class="token operator">=</span><span class="token string">"你是助手，名字叫&#123;name&#125;。"</span><span class="token punctuation">)</span><span class="token punctuation">,</span>
+    HumanMessage<span class="token punctuation">(</span>content<span class="token operator">=</span><span class="token string">"&#123;question&#125;"</span><span class="token punctuation">)</span>
+<span class="token punctuation">]</span><span class="token punctuation">)</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<h3 id="7-3-常用方法"><a href="#7-3-常用方法" class="headerlink" title="7.3 常用方法"></a>7.3 常用方法</h3><div class="data-grid data-grid-link-table"><div class="grid-header"><div class="grid-cell">方法</div><div class="grid-cell">返回值</div><div class="grid-cell">使用建议</div></div><div class="grid-row"><div class="grid-cell">`format_messages(...)`</div><div class="grid-cell">`List[BaseMessage]`</div><div class="grid-cell">最直观，得到消息列表后交给模型</div></div><div class="grid-row"><div class="grid-cell">`invoke({...})`</div><div class="grid-cell">`ChatPromptValue`</div><div class="grid-cell">适合与 LangChain 链条衔接，也可直接交给模型</div></div><div class="grid-row"><div class="grid-cell">`format(...)`</div><div class="grid-cell">`str`</div><div class="grid-cell">适合查看最终拼接效果，不推荐作为聊天主写法</div></div></div>
+
+<p>这三个方法最容易混淆，建议这样理解：</p>
+<ul>
+<li><code>format_messages</code>：我要的是“消息列表”</li>
+<li><code>invoke</code>：我要的是“PromptValue 对象”</li>
+<li><code>format</code>：我要的是“纯字符串”</li>
+</ul>
+<pre class="line-numbers language-python" data-language="python"><code class="language-python"><span class="token keyword">from</span> langchain_core<span class="token punctuation">.</span>prompts <span class="token keyword">import</span> ChatPromptTemplate
+
+chat_prompt <span class="token operator">=</span> ChatPromptTemplate<span class="token punctuation">.</span>from_messages<span class="token punctuation">(</span><span class="token punctuation">[</span>
+    <span class="token punctuation">(</span><span class="token string">"system"</span><span class="token punctuation">,</span> <span class="token string">"你是一个&#123;role&#125;，请回答我提出的问题"</span><span class="token punctuation">)</span><span class="token punctuation">,</span>
+    <span class="token punctuation">(</span><span class="token string">"human"</span><span class="token punctuation">,</span> <span class="token string">"请回答：&#123;question&#125;"</span><span class="token punctuation">)</span>
+<span class="token punctuation">]</span><span class="token punctuation">)</span>
+
+<span class="token comment"># 方式一：得到消息列表</span>
+messages <span class="token operator">=</span> chat_prompt<span class="token punctuation">.</span>format_messages<span class="token punctuation">(</span>
+    role<span class="token operator">=</span><span class="token string">"python开发工程师"</span><span class="token punctuation">,</span>
+    question<span class="token operator">=</span><span class="token string">"堆排序怎么写"</span>
+<span class="token punctuation">)</span>
+result <span class="token operator">=</span> model<span class="token punctuation">.</span>invoke<span class="token punctuation">(</span>messages<span class="token punctuation">)</span>
+
+<span class="token comment"># 方式二：得到 ChatPromptValue</span>
+prompt_value <span class="token operator">=</span> chat_prompt<span class="token punctuation">.</span>invoke<span class="token punctuation">(</span><span class="token punctuation">&#123;</span>
+    <span class="token string">"role"</span><span class="token punctuation">:</span> <span class="token string">"python开发工程师"</span><span class="token punctuation">,</span>
+    <span class="token string">"question"</span><span class="token punctuation">:</span> <span class="token string">"快速排序怎么写"</span>
+<span class="token punctuation">&#125;</span><span class="token punctuation">)</span>
+result <span class="token operator">=</span> model<span class="token punctuation">.</span>invoke<span class="token punctuation">(</span>prompt_value<span class="token punctuation">)</span>
+
+<span class="token comment"># 方式三：得到纯字符串</span>
+prompt_str <span class="token operator">=</span> chat_prompt<span class="token punctuation">.</span><span class="token builtin">format</span><span class="token punctuation">(</span>
+    role<span class="token operator">=</span><span class="token string">"python开发工程师"</span><span class="token punctuation">,</span>
+    question<span class="token operator">=</span><span class="token string">"快速排序怎么写"</span>
+<span class="token punctuation">)</span>
+<span class="token keyword">print</span><span class="token punctuation">(</span>prompt_str<span class="token punctuation">)</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<p>对实际项目来说，建议优先采用这两种：</p>
+<ul>
+<li><code>format_messages(...) -&gt; model.invoke(messages)</code></li>
+<li><code>invoke(&#123;...&#125;) -&gt; model.invoke(prompt_value)</code></li>
+</ul>
+<p>因为这两种方式都能保留清晰的消息角色结构。</p>
+<p>【案例源码】<code>案例与源码-2-LangChain框架/04-prompt/chat_prompt_template/ChatPromptTemplate_FormatMessages.py</code></p>
+<p><a href="%E6%A1%88%E4%BE%8B%E4%B8%8E%E6%BA%90%E7%A0%81-2-LangChain%E6%A1%86%E6%9E%B6/04-prompt/chat_prompt_template/ChatPromptTemplate_FormatMessages.py" title=":include :type&#x3D;code">ChatPromptTemplate_FormatMessages.py</a></p>
+<h3 id="7-4-创建方式"><a href="#7-4-创建方式" class="headerlink" title="7.4 创建方式"></a>7.4 创建方式</h3><p><code>ChatPromptTemplate</code> 常见也有两种创建方式：</p>
+<ul>
+<li><code>ChatPromptTemplate.from_messages([...])</code></li>
+<li><code>ChatPromptTemplate([...])</code></li>
+</ul>
+<p>它们的核心差别不大，本质上都是把一组消息模板交给 <code>ChatPromptTemplate</code>。</p>
+<pre class="line-numbers language-python" data-language="python"><code class="language-python"><span class="token keyword">from</span> langchain_core<span class="token punctuation">.</span>prompts <span class="token keyword">import</span> ChatPromptTemplate
+
+messages <span class="token operator">=</span> <span class="token punctuation">[</span>
+    <span class="token punctuation">(</span><span class="token string">"system"</span><span class="token punctuation">,</span> <span class="token string">"你是一个&#123;role&#125;，请回答我提出的问题"</span><span class="token punctuation">)</span><span class="token punctuation">,</span>
+    <span class="token punctuation">(</span><span class="token string">"human"</span><span class="token punctuation">,</span> <span class="token string">"请回答：&#123;question&#125;"</span><span class="token punctuation">)</span>
+<span class="token punctuation">]</span>
+
+chat_prompt1 <span class="token operator">=</span> ChatPromptTemplate<span class="token punctuation">.</span>from_messages<span class="token punctuation">(</span>messages<span class="token punctuation">)</span>
+chat_prompt2 <span class="token operator">=</span> ChatPromptTemplate<span class="token punctuation">(</span>messages<span class="token punctuation">)</span>
+
+<span class="token keyword">print</span><span class="token punctuation">(</span>chat_prompt1<span class="token punctuation">.</span>format_messages<span class="token punctuation">(</span>role<span class="token operator">=</span><span class="token string">"python开发工程师"</span><span class="token punctuation">,</span> question<span class="token operator">=</span><span class="token string">"堆排序怎么写"</span><span class="token punctuation">)</span><span class="token punctuation">)</span>
+<span class="token keyword">print</span><span class="token punctuation">(</span>chat_prompt2<span class="token punctuation">.</span>format_messages<span class="token punctuation">(</span>role<span class="token operator">=</span><span class="token string">"python开发工程师"</span><span class="token punctuation">,</span> question<span class="token operator">=</span><span class="token string">"堆排序怎么写"</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<p>经验上更推荐优先使用 <code>from_messages(...)</code>，因为可读性更好，也更符合官方文档和社区示例的主流写法。</p>
+<p>【案例源码】<code>案例与源码-2-LangChain框架/04-prompt/chat_prompt_template/ChatPromptTemplate_Constructor.py</code></p>
+<p><a href="%E6%A1%88%E4%BE%8B%E4%B8%8E%E6%BA%90%E7%A0%81-2-LangChain%E6%A1%86%E6%9E%B6/04-prompt/chat_prompt_template/ChatPromptTemplate_Constructor.py" title=":include :type&#x3D;code">ChatPromptTemplate_Constructor.py</a></p>
+<h3 id="7-5-MessagesPlaceholder"><a href="#7-5-MessagesPlaceholder" class="headerlink" title="7.5 MessagesPlaceholder"></a>7.5 MessagesPlaceholder</h3><p>MessagesPlaceholder（消息占位符）这是本章最重要的知识点之一，很多人一开始会觉得它抽象，但一旦理解，就会发现它几乎是多轮对话、记忆、历史上下文拼接的关键。</p>
+<p><strong>先说结论：<code>MessagesPlaceholder</code> 的作用，就是在模板里先留出一段“消息列表的位置”，等真正调用时再把历史对话整块塞进去。</strong></p>
+<p><img src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/llm/13/13-7-5-1.svg" alt="MessagesPlaceholder 将历史消息动态插入 ChatPromptTemplate：模板先留占位，运行时再填入多轮消息"></p>
+<p>为什么它重要？因为真实项目里的“历史对话”往往不是固定写死的：</p>
+<ul>
+<li>有时只有 2 轮</li>
+<li>有时有 10 轮</li>
+<li>有时还要先裁剪、总结、过滤</li>
+</ul>
+<p>如果没有占位符，你就只能在代码里手动拼接 <code>HumanMessage</code>、<code>AIMessage</code>，又乱又难维护。</p>
+<p>它常见有两种写法：</p>
+<ul>
+<li><strong>显式写法</strong>：<code>MessagesPlaceholder(&quot;memory&quot;)</code></li>
+<li><strong>隐式写法</strong>：<code>(&quot;placeholder&quot;, &quot;&#123;memory&#125;&quot;)</code></li>
+</ul>
+<p>二者的核心思想完全一样，只是语法风格不同。</p>
+<p>典型结构通常是：</p>
+<ul>
+<li>系统设定</li>
+<li>历史消息占位</li>
+<li>当前用户问题</li>
+</ul>
+<pre class="line-numbers language-python" data-language="python"><code class="language-python"><span class="token keyword">from</span> langchain_core<span class="token punctuation">.</span>messages <span class="token keyword">import</span> HumanMessage<span class="token punctuation">,</span> AIMessage
+<span class="token keyword">from</span> langchain_core<span class="token punctuation">.</span>prompts <span class="token keyword">import</span> ChatPromptTemplate<span class="token punctuation">,</span> MessagesPlaceholder
+
+prompt <span class="token operator">=</span> ChatPromptTemplate<span class="token punctuation">.</span>from_messages<span class="token punctuation">(</span><span class="token punctuation">[</span>
+    <span class="token punctuation">(</span><span class="token string">"system"</span><span class="token punctuation">,</span> <span class="token string">"你是一个资深的Python应用开发工程师，请认真回答我提出的Python相关的问题"</span><span class="token punctuation">)</span><span class="token punctuation">,</span>
+    MessagesPlaceholder<span class="token punctuation">(</span><span class="token string">"memory"</span><span class="token punctuation">)</span><span class="token punctuation">,</span>
+    <span class="token punctuation">(</span><span class="token string">"human"</span><span class="token punctuation">,</span> <span class="token string">"&#123;question&#125;"</span><span class="token punctuation">)</span>
+<span class="token punctuation">]</span><span class="token punctuation">)</span>
+
+prompt_value <span class="token operator">=</span> prompt<span class="token punctuation">.</span>invoke<span class="token punctuation">(</span><span class="token punctuation">&#123;</span>
+    <span class="token string">"memory"</span><span class="token punctuation">:</span> <span class="token punctuation">[</span>
+        HumanMessage<span class="token punctuation">(</span>content<span class="token operator">=</span><span class="token string">"我的名字叫亮仔，是一名程序员"</span><span class="token punctuation">)</span><span class="token punctuation">,</span>
+        AIMessage<span class="token punctuation">(</span>content<span class="token operator">=</span><span class="token string">"好的，亮仔你好"</span><span class="token punctuation">)</span>
+    <span class="token punctuation">]</span><span class="token punctuation">,</span>
+    <span class="token string">"question"</span><span class="token punctuation">:</span> <span class="token string">"请问我的名字叫什么？"</span>
+<span class="token punctuation">&#125;</span><span class="token punctuation">)</span>
+
+<span class="token keyword">print</span><span class="token punctuation">(</span>prompt_value<span class="token punctuation">.</span>to_string<span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<p>这段代码的价值在于，它让模板本身变得非常稳定，而把“历史有几轮、具体内容是什么”延迟到运行时再决定。后面学 <a href="/2023/06/28/llm/1-18-memory-and-chat-history-with-redis/">第 18 章 记忆与对话历史</a> 时，你会频繁看到这种模式。</p>
+<p>【案例源码】<br>显式：<code>案例与源码-2-LangChain框架/04-prompt/chat_prompt_template/placeholder/ChatPromptTemplate_ExplicitPlaceholder.py</code><br>隐式：<code>案例与源码-2-LangChain框架/04-prompt/chat_prompt_template/placeholder/ChatPromptTemplate_ImplicitPlaceholder.py</code></p>
+<p><a href="%E6%A1%88%E4%BE%8B%E4%B8%8E%E6%BA%90%E7%A0%81-2-LangChain%E6%A1%86%E6%9E%B6/04-prompt/chat_prompt_template/placeholder/ChatPromptTemplate_ExplicitPlaceholder.py" title=":include :type&#x3D;code">ChatPromptTemplate_ExplicitPlaceholder.py</a></p>
+<p><a href="%E6%A1%88%E4%BE%8B%E4%B8%8E%E6%BA%90%E7%A0%81-2-LangChain%E6%A1%86%E6%9E%B6/04-prompt/chat_prompt_template/placeholder/ChatPromptTemplate_ImplicitPlaceholder.py" title=":include :type&#x3D;code">ChatPromptTemplate_ImplicitPlaceholder.py</a></p>
+<hr>
+<h2 id="8、从文件加载提示词"><a href="#8、从文件加载提示词" class="headerlink" title="8、从文件加载提示词"></a>8、从文件加载提示词</h2><p>当 Prompt 还很短时，把它直接写在 Python 代码里问题不大；但只要你开始做真实项目，就会很快遇到几个问题：Prompt 越来越长，代码越来越乱；产品、运营、算法同学希望一起改 Prompt；需要保留多个版本做 A&#x2F;B 测试；想把 Prompt 与代码逻辑分离。</p>
+<p>这时候，把 Prompt 放到 <strong>JSON &#x2F; YAML</strong> 等外部文件中，就会更工程化。LangChain 提供了 <code>load_prompt(...)</code>，可以根据文件内容加载为模板对象。对于本章案例来说，最常见的是 <code>_type: &quot;prompt&quot;</code>，即加载为 <code>PromptTemplate</code>。</p>
+<h3 id="8-1-从-JSON-加载"><a href="#8-1-从-JSON-加载" class="headerlink" title="8.1 从 JSON 加载"></a>8.1 从 JSON 加载</h3><pre class="line-numbers language-json" data-language="json"><code class="language-json"><span class="token punctuation">&#123;</span>
+  <span class="token property">"_type"</span><span class="token operator">:</span> <span class="token string">"prompt"</span><span class="token punctuation">,</span>
+  <span class="token property">"input_variables"</span><span class="token operator">:</span> <span class="token punctuation">[</span><span class="token string">"name"</span><span class="token punctuation">,</span> <span class="token string">"what"</span><span class="token punctuation">]</span><span class="token punctuation">,</span>
+  <span class="token property">"template"</span><span class="token operator">:</span> <span class="token string">"请&#123;name&#125;讲一个&#123;what&#125;的故事"</span>
+<span class="token punctuation">&#125;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<pre class="line-numbers language-python" data-language="python"><code class="language-python"><span class="token keyword">from</span> langchain_core<span class="token punctuation">.</span>prompts <span class="token keyword">import</span> load_prompt
+
+template <span class="token operator">=</span> load_prompt<span class="token punctuation">(</span><span class="token string">"prompt.json"</span><span class="token punctuation">,</span> encoding<span class="token operator">=</span><span class="token string">"utf-8"</span><span class="token punctuation">)</span>
+<span class="token keyword">print</span><span class="token punctuation">(</span>template<span class="token punctuation">.</span><span class="token builtin">format</span><span class="token punctuation">(</span>name<span class="token operator">=</span><span class="token string">"张三"</span><span class="token punctuation">,</span> what<span class="token operator">=</span><span class="token string">"搞笑"</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span></span></code></pre>
+
+<h3 id="8-2-从-YAML-加载"><a href="#8-2-从-YAML-加载" class="headerlink" title="8.2 从 YAML 加载"></a>8.2 从 YAML 加载</h3><p>YAML 与 JSON 的核心思路完全相同，只是文件格式更适合人工阅读，也更方便写注释。对团队协作来说，很多场景会更喜欢 YAML。</p>
+<p>运行这类案例时，先确认<strong>当前工作目录</strong>，否则相对路径可能找不到文件。这一点和 <a href="/2023/05/05/llm/1-12-langchain-quickstart-and-helloworld/">第 12 章 HelloWorld</a> 中的 <code>.env</code> 读取问题本质很像，都是“脚本运行位置”和“相对路径”的关系。</p>
+<p>【案例源码】<br>JSON：<code>案例与源码-2-LangChain框架/04-prompt/load_external/PromptLoadDemo01.py</code><br>YAML：<code>案例与源码-2-LangChain框架/04-prompt/load_external/PromptLoadDemo02.py</code><br>配套文件：<code>prompt.json</code>、<code>prompt.yaml</code></p>
+<p><a href="%E6%A1%88%E4%BE%8B%E4%B8%8E%E6%BA%90%E7%A0%81-2-LangChain%E6%A1%86%E6%9E%B6/04-prompt/load_external/PromptLoadDemo01.py" title=":include :type&#x3D;code">PromptLoadDemo01.py</a></p>
+<p><a href="%E6%A1%88%E4%BE%8B%E4%B8%8E%E6%BA%90%E7%A0%81-2-LangChain%E6%A1%86%E6%9E%B6/04-prompt/load_external/PromptLoadDemo02.py" title=":include :type&#x3D;code">PromptLoadDemo02.py</a></p>
+<p>到这里你可以看到，本章知识已经形成了一个比较完整的工程化闭环：</p>
+<ul>
+<li><strong>消息类型</strong> 解决“输入按什么角色组织”</li>
+<li><strong>调用方式</strong> 解决“输入如何发给模型”</li>
+<li><strong>PromptTemplate &#x2F; ChatPromptTemplate</strong> 解决“输入如何复用”</li>
+<li><strong>MessagesPlaceholder</strong> 解决“历史对话如何动态插入”</li>
+<li><strong>JSON &#x2F; YAML 外置文件</strong> 解决“模板如何协作与版本管理”</li>
+</ul>
+<hr>
+<p><strong>章节思考题：</strong></p>
+<ol>
+<li><p>普通字符串 Prompt 和消息模板最大的工程差别是什么？</p>
+<p><strong>参考思路：</strong> 普通字符串适合临时调用，消息模板更适合长期维护。它把系统规则、用户输入、历史消息和变量占位分清楚，后续改规则、换输入、接多轮历史都会更稳。</p>
+</li>
+<li><p>什么时候应该用 <code>MessagesPlaceholder</code>，而不是把历史对话拼成一大段字符串？</p>
+<p><strong>参考思路：</strong> 需要保留消息角色、顺序和多轮结构时，应使用 <code>MessagesPlaceholder</code>。拼字符串会丢掉角色信息，也不利于后续和记忆、工具调用、消息对象体系衔接。</p>
+</li>
+<li><p>如果一个模板变量越来越多，你会如何判断它是不是该拆分？</p>
+<p><strong>参考思路：</strong> 看变量是否服务同一个任务、是否来自同一层上下文、是否经常一起变化。如果一个模板同时管规则、业务输入、检索结果、历史消息和输出格式，可能就该拆成更小的模板或链路节点。</p>
+</li>
+<li><p>把提示词放到外部文件有什么好处和风险？</p>
+<p><strong>参考思路：</strong> 好处是便于版本管理、运营调整和复用；风险是变量名、格式和代码调用容易不一致。外置后要配套校验、示例输入和变更记录，不能只把文本搬出去。</p>
+</li>
+</ol>
+<p><strong>本章小结：</strong></p>
+<ul>
+<li><strong>Prompt 的本质</strong>：Prompt 不是“随便写一句话”，而是对模型输入进行结构化组织。随着项目复杂度提升，输入会从纯字符串演化成多角色消息，再进一步演化成模板、占位符与外部配置文件。</li>
+<li><strong>消息与调用</strong>：聊天模型常见输入包括 <code>str</code>、消息对象列表、元组列表、字典列表；常见调用方式包括 <code>invoke / ainvoke</code>、<code>stream / astream</code>、<code>batch / abatch</code>。返回值通常是 <code>AIMessage</code>，正文一般通过 <code>.content</code> 读取。</li>
+<li><strong>模板与工程化</strong>：<code>PromptTemplate</code> 适合文本模板，<code>ChatPromptTemplate</code> 适合聊天模型与多角色场景，<code>MessagesPlaceholder</code> 是多轮历史拼接的关键；将 Prompt 放入 JSON &#x2F; YAML 更适合真实项目中的版本管理、多人协作与 A&#x2F;B 测试。</li>
+<li>学完本章后，你至少应该能区分四类输入组织方式：<strong>纯字符串、消息列表、模板 + 占位符、外部文件加载</strong>；也要知道 <code>PromptTemplate</code>、<code>ChatPromptTemplate</code>、<code>MessagesPlaceholder</code> 分别适合什么场景。</li>
+</ul>
+<p><strong>建议下一步：</strong> 继续学习 <a href="/2023/06/13/llm/1-16-output-parsers/">第 16 章 输出解析器</a>，把本章的“输入组织”与下一章的“输出结构化”连起来；再配合 <a href="/2023/06/20/llm/1-17-lcel-and-chaining/">第 17 章 LCEL 与链式调用</a>，就能形成 LangChain 中最核心的“输入 -&gt; 模型 -&gt; 输出 -&gt; 链式编排”主线。如果你读到这里，仍然对“为什么要这样拆 Prompt”不够踏实，也可以回看 <a href="/2023/02/13/llm/1-2-prompt-engineering-basics/">1-2 提示词工程基础</a> 中的六要素、Few-shot 和结构化组织方式部分。</p>
+</div>
+      </div>
+    </main>
+  </div>
+
+  <div class="float-buttons">
+    <button id="back-to-top" class="float-btn" title="返回顶部">↑</button>
+    <a href="/" class="float-btn" title="返回首页">🏠</a>
+  </div>
+
+  
+  <!-- 浮动按钮脚本：外链（源文件 themes/butterfly/source/js/theme/post-float-btn.js） -->
+  <script src="/js/theme/post-float-btn.js"></script>
+
+  
+  <!--
+  ============================================
+  音频播放器组件
+  文件：APlayer.njk
+  适用终端：电脑端
+  作用：APlayer + Meting 外链播放，按需渲染到页面底部
+  最后修改：2026-11-11
+  ============================================
+-->
+<link rel="stylesheet" href="https://cdn.bootcdn.net/ajax/libs/aplayer/1.10.1/APlayer.min.css">
+<script src="https://cdn.bootcdn.net/ajax/libs/aplayer/1.10.1/APlayer.min.js"></script>
+<script src="https://cdn.bootcdn.net/ajax/libs/meting/2.0.1/Meting.min.js"></script>
+<div class="aplayer no-destroy"
+     data-id="2182931917"
+     data-server="netease"
+     data-type="playlist"
+     data-fixed="true"
+     data-mini="true">
+</div>
+
+
+
+<script>
+  async function renderMermaidDiagram(){
+    const blocks = document.querySelectorAll('pre[class*="language-mermaid"]');
+    if(!blocks.length) return;
+
+    const mermaidBlocks = [];
+    blocks.forEach(el=>{
+      const codeEl = el.querySelector('code');
+      if(codeEl){
+        const codeText = codeEl.innerText;
+        mermaidBlocks.push({fig: el, codeText});
+      }
+    })
+    if(!mermaidBlocks.length) return;
+
+    // ESM 按需引入 mermaid
+    const { default: mermaid } = await import('https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs');
+    
+    mermaid.initialize({
+      startOnLoad: false,
+      theme: 'base'
+    });
+
+    for(const {fig,codeText} of mermaidBlocks){
+      const div = document.createElement('div');
+      div.className = 'mermaid';
+      div.innerText = codeText;
+      fig.parentNode.replaceChild(div, fig);
+    }
+    await mermaid.run();
+  }
+  document.addEventListener('DOMContentLoaded', renderMermaidDiagram);
+  document.addEventListener('pjax:complete', renderMermaidDiagram);
+</script>
+
+
+  <script>
+    /* 返回按钮来源判定：从星迹索引进来回 /tags/，从星图手记进来回 /archives/；
+       直接从地址栏/站外进入时默认回星图手记，保证按钮始终可用 */
+    (function () {
+      var back = document.getElementById('articleBack');
+      if (!back) return;
+      var from = '';
+      try {
+        var q = new URLSearchParams(location.search);
+        from = q.get('from') || '';
+      } catch (e) {}
+      if (!from) {
+        var ref = document.referrer || '';
+        if (ref.indexOf('/tags') > -1) from = 'tags';
+        else if (ref.indexOf('/archives') > -1) from = 'archive';
+      }
+      if (from === 'tags') {
+        back.href = '/tags/';
+        back.textContent = '← 返回星迹索引';
+      } else if (from === 'search') {
+        back.href = '/';
+        back.textContent = '← 返回首页';
+      } else {
+        back.href = '/archives/';
+        back.textContent = '← 返回星图手记';
+      }
+    })();
+  </script>
+</body>
+</html>

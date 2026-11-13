@@ -83,6 +83,9 @@
       node.style.animationDuration = rnd(5.5, 11).toFixed(2) + 's';
       node.style.animationDelay = (-rnd(0, 6)).toFixed(2) + 's';
       node.title = item.title + (item.date ? ' · ' + item.date : '');
+      /* 把来源文章信息挂到节点上：radar-core.js 靠它把星点吸附到对应轨道 / 标签 */
+      node.setAttribute('data-url', item.url || '');
+      node.setAttribute('data-date', item.date || '');
 
       var glyph = document.createElement('span');
       glyph.className = 'rt-shape rt-shape-' + shape;

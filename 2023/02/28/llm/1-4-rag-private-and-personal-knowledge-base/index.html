@@ -1,0 +1,2215 @@
+<!--
+  ============================================
+  文章原文页模板
+  文件：post.njk
+  适用终端：电脑端
+  作用：文章正文 + 侧栏；手机 UA 跳 /phone/p/<slug>/
+  最后修改：2026-11-11
+  ============================================
+-->
+
+
+<!DOCTYPE html>
+<html class="post-page">
+<!--
+  ============================================
+  公共 head 组件
+  文件：Head.njk
+  适用终端：电脑端
+  作用：输出 charset/viewport/title，并按 pageCss 输出外链样式表
+  样式资源：themes/butterfly/source/css/theme/*.css（Hexo 复制到 /css/theme/）
+  引入层级顺序（= CSS 层叠顺序，调整只允许追加，不要打乱前后）：
+    1 基础  common.css
+    2 布局  post-layout.css
+    3 组件  sidebar.css
+    4 正文  post.css
+    5 页面  tags.css / chronicle.css / about.css / tag.css / category-shared.css / pc-home.css
+    6 浮层  star-reader.css
+    7 特效  starmap-live.css
+  最后修改：2026-11-12
+  ============================================
+--><head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="color-scheme" content="dark">
+  <meta name="theme-color" content="#020817">
+  <!-- 首帧兜底：浏览器默认画布是白的，样式表还没解析完就画会闪一下白。这条 8 字节规则先锁死深空底色 -->
+  <style>html{background-color:#020817}</style>
+  <title>时空秘境 - 四、RAG 搭建企业私有&个人知识库</title>
+  
+  <link rel="stylesheet" href="/css/theme/common.css">
+  
+  <link rel="stylesheet" href="/css/theme/post-layout.css">
+  
+  <link rel="stylesheet" href="/css/theme/sidebar.css">
+  
+  <link rel="stylesheet" href="/css/theme/post.css">
+  
+<meta name="generator" content="Hexo 8.1.2"></head>
+
+<script>
+  /* 手机 UA 分流：电脑端这套控制台不再给手机用，直接换成手机版页面 */
+  (function () {
+    var ua = navigator.userAgent || '';
+    if (/Android|iPhone|iPod|HarmonyOS|Windows Phone|MicroMessenger|Mobile Safari/i.test(ua)) {
+      location.replace('/phone/p/llm/1-4-rag-private-and-personal-knowledge-base/');
+    }
+  })();
+</script>
+<link rel="stylesheet" href="/css/code-table.css">
+
+<body>
+  <!--
+  ============================================
+  星空粒子背景组件
+  文件：Particles.njk
+  适用终端：电脑端
+  作用：particles.js 全站星空动画，鼠标悬停互动
+  最后修改：2026-11-11
+  ============================================
+--><!-- z-index 必须是 0 而不是 -1：body 带着不透明的 radial-gradient 底色，
+     负层级的子元素会被父元素背景整个盖住，粒子在跑但一个点都看不见 -->
+<div id="particles" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 0; pointer-events: none;"></div>
+<!-- 星座层：随机零星散布星座图形，叠在粒子之上、页面内容之下 -->
+<div id="constellations" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 1; pointer-events: none;" aria-hidden="true"></div>
+<script src="/js/particles.min.js"></script>
+<script>/* 本地库失效时回退 CDN，保证星空背景不丢 */
+if (typeof particlesJS === "undefined") {
+  document.write('<script src="https://cdn.jsdelivr.net/particles.js/2.0.0/particles.min.js"><\/script>');
+}
+</script>
+<script>
+particlesJS("particles", {
+  particles: {
+    number: {
+      value: 95,
+      density: {
+        enable: true,
+        value_area: 800
+      }
+    },
+    color: {
+      value: "#00eeff"
+    },
+    shape: {
+      type: "circle",
+      stroke: {
+        width: 0,
+        color: "#000000"
+      }
+    },
+    opacity: {
+      value: 0.6,
+      random: true,
+      anim: {
+        enable: true,
+        speed: 0.5,
+        opacity_min: 0.1,
+        sync: false
+      }
+    },
+    size: {
+      value: 3,
+      random: true,
+      anim: {
+        enable: true,
+        speed: 2,
+        size_min: 0.1,
+        sync: false
+      }
+    },
+    line_linked: {
+      enable: true,
+      distance: 118,          /* 比原来 150 收紧，让粒子网络稀疏些，给星座留出视觉空间 */
+      color: "#00eeff",
+      opacity: 0.32,
+      width: 1
+    },
+    move: {
+      enable: true,
+      speed: 0.8,
+      direction: "none",
+      random: true,
+      straight: false,
+      out_mode: "out",
+      bounce: false,
+      attract: {
+        enable: true,
+        rotateX: 600,
+        rotateY: 1200
+      }
+    }
+  },
+  interactivity: {
+    detect_on: "canvas",
+    events: {
+      onhover: {
+        enable: true,
+        mode: "grab"       // 鼠标悬停时粒子聚集
+      },
+      onclick: {
+        enable: true,
+        mode: "push"       // 点击时产生新粒子
+      },
+      resize: true
+    },
+    modes: {
+      grab: {
+        distance: 200,
+        line_linked: {
+          opacity: 1
+        }
+      },
+      push: {
+        particles_nb: 6
+      }
+    }
+  },
+  retina_detect: true
+});
+</script>
+<!-- 星座层：独立 canvas，随机散布真实星座图形（依赖上面的 #constellations 容器） -->
+<script src="/js/theme/starfield.js"></script>
+
+  <!-- 返回按钮：按来源回到星图手记 / 星迹索引，默认回星图手记。
+       放在 body 顶层（不进 main-content），避免被其溢出裁剪切掉右半边 -->
+  <a class="article-back" id="articleBack" href="/archives/">← 返回星图手记</a>
+
+  <div class="app-layout">
+    <!--
+  ============================================
+  左侧栏个人卡组件
+  文件：_components/Sidebar.njk
+  适用终端：电脑端（星图手记 / 星迹索引 / 秘境主人 页面通栏侧栏）
+  作用：头像、昵称、站点统计、导航菜单、底部信息与全局搜索面板（结果落在雷达区，无结果播「内容走丢 → 404」动画）
+  样式依赖：source/css/theme/sidebar.css
+  脚本依赖：source/js/theme/sidebar.js
+  最后修改：2026-11-11
+  ============================================
+-->
+<aside class="sidebar" id="sidebar">
+  <div class="profile-card">
+    <div class="avatar">
+      <div
+        style="width:80px;height:80px;border-radius:50%;background:linear-gradient(135deg,#0a0e27,#1a1a4e);display:flex;align-items:center;justify-content:center;margin:0 auto;font-size:40px;border:2px solid #00eeff;box-shadow:0 0 30px rgba(0,238,255,0.3);">
+        ✨</div>
+    </div>
+    <h3 class="nickname">时空行者</h3>
+    <p class="bio">星辰大海，代码为舟</p>
+    <div class="stats">
+      <div class="stat-item">
+        <span class="stat-num">174</span>
+        <span class="stat-label">文章</span>
+      </div>
+      <div class="stat-item">
+        <span class="stat-num" id="fans-count" style="cursor:pointer;">1088</span>
+        <span class="stat-label">粉丝</span>
+      </div>
+      <div class="stat-item">
+        <span class="stat-num" id="follow-count" style="cursor:pointer;">66</span>
+        <span class="stat-label">关注</span>
+      </div>
+    </div>
+    <button class="follow-btn">+ 关注</button>
+  </div>
+  <div class="search-box">
+    <input type="text" placeholder="找找看..." id="search-input">
+    <button class="search-btn" id="searchModalOpen">🔍</button>
+  </div>
+  <div class="links-card">
+    <h4>常用链接</h4>
+    <ul>
+      <li><a href="/about/">秘境主人</a></li>
+      <li><a href="/archives/">星图手记</a></li>
+      <li><a href="/tags/">星迹索引</a></li>
+      <!-- ✅ 新增联系我 -->
+      <li><a class="contact-trigger" href="javascript:void(0)">星语传书</a></li>
+      <li><a class="donate-trigger" href="javascript:void(0)">星芒赠礼</a></li>
+    </ul>
+  </div>
+  <div class="tags-card">
+    <h4>热门标签</h4>
+    
+    <div class="tag-cloud">
+      
+      <a href="/tags/MySQL数据库/" class="tag-link" data-tag="MySQL数据库"
+        data-count="7">MySQL数据库</a>
+      
+      <a href="/tags/redis/" class="tag-link" data-tag="redis"
+        data-count="7">redis</a>
+      
+      <a href="/tags/深度研搜/" class="tag-link" data-tag="深度研搜"
+        data-count="15">深度研搜</a>
+      
+      <a href="/tags/电商问数/" class="tag-link" data-tag="电商问数"
+        data-count="18">电商问数</a>
+      
+      <a href="/tags/git/" class="tag-link" data-tag="git"
+        data-count="5">git</a>
+      
+      <a href="/tags/面试/" class="tag-link" data-tag="面试"
+        data-count="11">面试</a>
+      
+      <a href="/tags/Java/" class="tag-link" data-tag="Java"
+        data-count="10">Java</a>
+      
+      <a href="/tags/langchain/" class="tag-link" data-tag="langchain"
+        data-count="10">langchain</a>
+      
+      <a href="/tags/Netty/" class="tag-link" data-tag="Netty"
+        data-count="4">Netty</a>
+      
+      <a href="/tags/大模型/" class="tag-link" data-tag="大模型"
+        data-count="35">大模型</a>
+      
+      <a href="/tags/AICoding/" class="tag-link" data-tag="AICoding"
+        data-count="9">AICoding</a>
+      
+      <a href="/tags/SpringAi/" class="tag-link" data-tag="SpringAi"
+        data-count="15">SpringAi</a>
+      
+      <a href="/tags/随笔杂谈/" class="tag-link" data-tag="随笔杂谈"
+        data-count="2">随笔杂谈</a>
+      
+      <a href="/tags/vue/" class="tag-link" data-tag="vue"
+        data-count="9">vue</a>
+      
+      <a href="/tags/视频剪辑/" class="tag-link" data-tag="视频剪辑"
+        data-count="1">视频剪辑</a>
+      
+      <a href="/tags/大数据/" class="tag-link" data-tag="大数据"
+        data-count="3">大数据</a>
+      
+      <a href="/tags/电影/" class="tag-link" data-tag="电影"
+        data-count="2">电影</a>
+      
+      <a href="/tags/游戏/" class="tag-link" data-tag="游戏"
+        data-count="1">游戏</a>
+      
+      <a href="/tags/音乐/" class="tag-link" data-tag="音乐"
+        data-count="8">音乐</a>
+      
+      <a href="/tags/图片/" class="tag-link" data-tag="图片"
+        data-count="2">图片</a>
+      
+    </div>
+    <script>
+      /*
+  ============================================
+  侧栏热门标签排序（首帧前执行）
+  文件：_js/hot-tags.js
+  引入位置：_components/Sidebar.njk 里 .tag-cloud 闭合标签之后（紧跟着写死）
+  作用：按点击次数排序、只露前 5 个、点一下立刻重排
+  为什么单独拆出来：以前放在 sidebar.js 的 DOMContentLoaded 里，首帧渲染的还是
+  模板顺序的 20 个标签，等脚本跑完才收成 5 个；配合跨页淡入（View Transition）
+  会出现「新旧两套标签叠在一起、影子跳一下」。紧跟标签节点内联执行就没有中间态。
+  最后修改：2026-11-12
+  ============================================
+*/
+(function () {
+  var cloud = document.querySelector('.tag-cloud');
+  if (!cloud) return;
+  var links = Array.prototype.slice.call(cloud.querySelectorAll('.tag-link'));
+  if (!links.length) return;
+
+  var KEY = 'starry_tag_visits'; // 标签名 -> 点击次数
+  var TOP = 5;
+  var visits = {};
+
+  try {
+    var raw = JSON.parse(localStorage.getItem(KEY) || '{}');
+    visits = (raw && typeof raw === 'object') ? raw : {};
+  } catch (e) {
+    visits = {};
+  }
+
+  links.forEach(function (link) {
+    var name = link.dataset.tag || (link.textContent || '').trim();
+    link.dataset.tag = name;
+    if (!link.dataset.count) link.dataset.count = '0';
+  });
+
+  // 排序：点击次数降序 → 文章数降序 → 名字，保证同分时顺序稳定不来回跳
+  function order() {
+    return links.slice().sort(function (a, b) {
+      var va = visits[a.dataset.tag] || 0;
+      var vb = visits[b.dataset.tag] || 0;
+      if (vb !== va) return vb - va;
+      var ca = Number(a.dataset.count) || 0;
+      var cb = Number(b.dataset.count) || 0;
+      if (cb !== ca) return cb - ca;
+      return String(a.dataset.tag).localeCompare(String(b.dataset.tag), 'zh');
+    });
+  }
+
+  // 重排 DOM：按名次 append，超出 5 个的 hidden（仍留在 DOM，等名次升上来再显示）
+  function render() {
+    order().forEach(function (link, i) {
+      link.dataset.visits = visits[link.dataset.tag] || 0;
+      cloud.appendChild(link);
+      link.hidden = i >= TOP;
+    });
+  }
+
+  links.forEach(function (link) {
+    link.addEventListener('click', function () {
+      var name = link.dataset.tag;
+      visits[name] = (visits[name] || 0) + 1;
+      try { localStorage.setItem(KEY, JSON.stringify(visits)); } catch (e) { /* 忽略配额错误 */ }
+      render(); // 当前页立刻看到「谁被点多了谁上前」
+    });
+  });
+
+  render();
+})();
+
+    </script>
+  </div>
+  <div class="archive-card">
+    <h4>按月归档</h4>
+    <ul class="archive-list">
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2026/12/">
+          2026年12月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2026/11/">
+          2026年11月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2026/10/">
+          2026年10月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2026/09/">
+          2026年09月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2026/08/">
+          2026年08月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2026/07/">
+          2026年07月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2026/06/">
+          2026年06月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2026/05/">
+          2026年05月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2026/04/">
+          2026年04月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2026/03/">
+          2026年03月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2026/02/">
+          2026年02月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2026/01/">
+          2026年01月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2025/12/">
+          2025年12月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2025/11/">
+          2025年11月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2025/10/">
+          2025年10月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2025/09/">
+          2025年09月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2025/08/">
+          2025年08月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2025/07/">
+          2025年07月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2025/06/">
+          2025年06月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2025/05/">
+          2025年05月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2025/04/">
+          2025年04月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2025/03/">
+          2025年03月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2025/02/">
+          2025年02月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2025/01/">
+          2025年01月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2024/11/">
+          2024年11月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2024/10/">
+          2024年10月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2024/09/">
+          2024年09月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2024/08/">
+          2024年08月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2024/07/">
+          2024年07月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2024/05/">
+          2024年05月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2024/04/">
+          2024年04月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2024/03/">
+          2024年03月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2024/02/">
+          2024年02月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2024/01/">
+          2024年01月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2023/12/">
+          2023年12月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2023/11/">
+          2023年11月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2023/10/">
+          2023年10月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2023/09/">
+          2023年09月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2023/08/">
+          2023年08月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2023/07/">
+          2023年07月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2023/06/">
+          2023年06月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2023/05/">
+          2023年05月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2023/04/">
+          2023年04月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2023/03/">
+          2023年03月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2023/02/">
+          2023年02月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2023/01/">
+          2023年01月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2022/09/">
+          2022年09月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2022/05/">
+          2022年05月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2022/01/">
+          2022年01月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2021/12/">
+          2021年12月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2021/11/">
+          2021年11月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2021/10/">
+          2021年10月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2021/09/">
+          2021年09月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2021/08/">
+          2021年08月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2021/07/">
+          2021年07月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2021/06/">
+          2021年06月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2021/05/">
+          2021年05月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2021/04/">
+          2021年04月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2021/03/">
+          2021年03月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2021/02/">
+          2021年02月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2021/01/">
+          2021年01月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2020/10/">
+          2020年10月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2020/07/">
+          2020年07月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2020/04/">
+          2020年04月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2020/01/">
+          2020年01月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2019/12/">
+          2019年12月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2019/11/">
+          2019年11月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2019/10/">
+          2019年10月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2019/09/">
+          2019年09月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2019/08/">
+          2019年08月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2019/07/">
+          2019年07月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2019/06/">
+          2019年06月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2019/05/">
+          2019年05月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2019/04/">
+          2019年04月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2019/03/">
+          2019年03月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2019/02/">
+          2019年02月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2019/01/">
+          2019年01月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2018/12/">
+          2018年12月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2018/11/">
+          2018年11月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2018/10/">
+          2018年10月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2018/09/">
+          2018年09月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2018/08/">
+          2018年08月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2018/07/">
+          2018年07月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2018/06/">
+          2018年06月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2018/05/">
+          2018年05月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2018/04/">
+          2018年04月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2018/03/">
+          2018年03月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2018/02/">
+          2018年02月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2018/01/">
+          2018年01月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+    </ul>
+  </div>
+
+  <!-- ========== 星语传书（雷达区弹窗，与搜索面板同一套面板样式） ========== -->
+  <div class="search-panel dock-panel" id="contactModal" hidden>
+    <div class="sp-mask" data-dock-close></div>
+    <div class="sp-box" role="dialog" aria-modal="true" aria-label="星语传书">
+      <div class="sp-head">
+        <span class="sp-dot"></span>
+        <span class="sp-title">星语传书</span>
+        <span class="sp-title-sub">/ SIGNAL CHANNEL</span>
+        <span class="sp-meta">SYS.REPLY ≤ 48H</span>
+        <button class="sp-close" type="button" data-dock-close title="关闭">×</button>
+      </div>
+      <div class="sp-body dock-body">
+        <p class="dock-lead">写信给时空行者：文章里的错字、跑不通的 demo、想聊的一句技术，都可以从这里进来。信号收到，我会尽量回。</p>
+        <div class="dock-grid">
+          <div class="dock-list">
+            <a class="dock-row" href="https://wpa.qq.com/msgrd?v=3&amp;uin=372109355&amp;site=qq&amp;menu=yes"
+              target="_blank" rel="noopener">
+              <span class="dock-ico">企</span>
+              <span class="dock-k"><b>QQ</b><span>372109355</span></span>
+            </a>
+            <a class="dock-row" href="https://wu4yong.github.io" target="_blank" rel="noopener">
+              <span class="dock-ico">⌂</span>
+              <span class="dock-k"><b>站点主站</b><span>wu4yong.github.io</span></span>
+            </a>
+            <div class="dock-row dock-row-static">
+              <span class="dock-ico">✉</span>
+              <span class="dock-k"><b>电子邮箱</b><span>暂未公开 · 任何问题QQ留言</span></span>
+            </div>
+            <a class="dock-row" href="#" target="_blank" rel="noopener">
+              <span class="dock-ico">◈</span>
+              <span class="dock-k"><b>GitHub</b><span>暂未公开 · 任何问题QQ留言</span></span>
+            </a>
+            <a class="dock-row" href="#" target="_blank" rel="noopener">
+              <span class="dock-ico">◇</span>
+              <span class="dock-k"><b>Gitee</b><span>暂未公开 · 任何问题QQ留言</span></span>
+            </a>
+          </div>
+          <div class="dock-side">
+            <div class="dock-qr">
+              <em>WECHAT · 微信</em>
+              <img src="/assets/images/wechat-qr.png" alt="微信二维码">
+              <span class="dock-qr-tip">扫码添加，备注「来自时空秘境」</span>
+            </div>
+          </div>
+        </div>
+        <div class="dock-chips">
+          <span class="dock-chip">文章纠错</span>
+          <span class="dock-chip">Demo 答疑</span>
+          <span class="dock-chip">转载授权</span>
+          <span class="dock-chip">技术交流</span>
+          <span class="dock-chip">内推 / 合作</span>
+        </div>
+        <p class="dock-note">无正文的「在吗」容易被当作信号干扰滤掉，直接把问题写清楚，回信会快很多。</p>
+      </div>
+      <!-- 开合转场层：百叶窗 / 电影幕布 / 淡入，由 source/js/theme/sidebar.js 轮换播放 -->
+      <div class="dock-fx" aria-hidden="true">
+        <div class="dock-fx-slats"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+        <div class="dock-fx-curtain"><span class="top"></span><span class="bottom"></span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========== 全局搜索面板 ==========
+       索引来自构建期生成的 /search.json（hexo-generator-searchdb），随文章新增自动更新；
+       打开时由 source/js/theme/sidebar.js 把整块挪进 Radar 中间区（无雷达的页面退化为居中浮层） -->
+  <div class="search-panel" id="searchPanel" hidden>
+    <div class="sp-mask" id="searchMask"></div>
+    <div class="sp-box" role="dialog" aria-modal="true" aria-label="全文搜索">
+      <div class="sp-head">
+        <span class="sp-dot"></span>
+        <span class="sp-title">全文搜索</span>
+        <span class="sp-title-sub">/ GLOBAL SEARCH</span>
+        <span class="sp-meta" id="spMeta"></span>
+        <button class="sp-close" id="searchPanelClose" type="button" title="关闭搜索">×</button>
+      </div>
+      <div class="sp-body" id="spBody">
+        <div class="sp-loading" id="spLoading">正在扫描星图索引…</div>
+        <ul class="sp-list" id="spList"></ul>
+        <!-- 无结果：内容走丢 → 慢速落 404 -->
+        <div class="sp-empty" id="spEmpty" hidden>
+          <div class="sp-drift-wrap">
+            <span class="sp-trail"></span>
+            <span class="sp-drift"></span>
+            <span class="sp-lost">SIGNAL LOST · 信号已丢失</span>
+          </div>
+          <div class="sp-404"><span>4</span><span>0</span><span>4</span></div>
+          <p class="sp-empty-main">内容走丢在星海里了</p>
+          <p class="sp-empty-tip">换个关键词，或去〈星迹索引 / 星图手记〉里慢慢逛</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========== 星芒赠礼（雷达区弹窗，收款码图片沿用原图不改） ========== -->
+  <div class="search-panel dock-panel" id="donateModal" hidden>
+    <div class="sp-mask" data-dock-close></div>
+    <div class="sp-box" role="dialog" aria-modal="true" aria-label="星芒赠礼">
+      <div class="sp-head">
+        <span class="sp-dot"></span>
+        <span class="sp-title">星芒赠礼</span>
+        <span class="sp-title-sub">/ STAR OFFERING</span>
+        <span class="sp-meta">THANKS FOR THE LIGHT</span>
+        <button class="sp-close" type="button" data-dock-close title="关闭">×</button>
+      </div>
+      <div class="sp-body dock-body">
+        <div class="dock-thanks">
+          <p>这片星空是工作闲暇时光一个个凌晨攒出来的：一篇文章、一次复盘、一个修不完的 bug。</p>
+          <p>如果你在这里找到了能用的东西，愿意赏一杯凌晨三点的咖啡 —— 这份心意我会记很久。</p>
+          <p>不打赏也完全没关系：所有文章永久免费，愿你我在各自的轨道上都跑得稳一点。</p>
+        </div>
+        <div class="dock-donate">
+          <div class="dock-hero">
+            <div class="dock-hero-pic">
+              <span class="dock-hero-halo" aria-hidden="true"></span>
+              <span class="dock-hero-ring dock-hero-ring-a" aria-hidden="true"></span>
+              <span class="dock-hero-ring dock-hero-ring-b" aria-hidden="true"></span>
+              <img src="/assets/images/donate-boy.png" alt="感谢支持">
+            </div>
+            <em>THANKS FOR THE LIGHT</em>
+            <span class="dock-hero-tip">愿每一次凌晨，都有人替你留一盏灯</span>
+          </div>
+          <div class="dock-pay">
+            <div class="dock-qr dock-qr-row">
+              <img src="/assets/images/alipay-qr.jpg" alt="支付宝收款码">
+              <div class="dock-qr-txt">
+                <b>支付宝 · 星途赞赏</b>
+                <span>请我喝一杯凌晨三点的咖啡</span>
+              </div>
+            </div>
+            <div class="dock-qr dock-qr-row">
+              <img src="/assets/images/wechat-pay-qr.jpg" alt="微信收款码">
+              <div class="dock-qr-txt">
+                <b>微信 · 星河致谢</b>
+                <span>金额随意，心意已经收到</span>
+              </div>
+            </div>
+          </div>
+        </div>        <div class="dock-chips">
+          <span class="dock-chip">域名与服务器</span>
+          <span class="dock-chip">图床与备份</span>
+          <span class="dock-chip">一本技术书</span>
+          <span class="dock-chip">深夜的一杯咖啡</span>
+        </div>
+        <p class="dock-note">赠礼纯属心意，不产生任何付费内容或额外承诺；扫码前请确认收款人，小心仿冒。</p>
+      </div>
+      <!-- 开合转场层：百叶窗 / 电影幕布 / 淡入，由 source/js/theme/sidebar.js 轮换播放 -->
+      <div class="dock-fx" aria-hidden="true">
+        <div class="dock-fx-slats"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+        <div class="dock-fx-curtain"><span class="top"></span><span class="bottom"></span></div>
+      </div>
+    </div>
+  </div>
+
+
+</aside>
+<!-- 引入侧边栏交互脚本：外链（源文件 themes/butterfly/source/js/theme/sidebar.js） -->
+<script src="/js/theme/sidebar.js"></script>
+
+    
+    <button id="sidebarToggle" class="sidebar-toggle" title="隐藏侧栏"></button>
+
+    <main class="main-content">
+      <div class="article-card">
+        <h1 class="article-title">四、RAG 搭建企业私有&个人知识库</h1>
+        <div class="article-meta">📅 2023-02-28</div>
+        <div class="article-content"><div class="essay-banner essay-image11">
+    <!-- rag-private-and-personal-knowledge-base -->
+</div>
+
+<h1 id="1-4-RAG-搭建企业私有-个人知识库"><a href="#1-4-RAG-搭建企业私有-个人知识库" class="headerlink" title="1-4 RAG 搭建企业私有&amp;个人知识库"></a>1-4 RAG 搭建企业私有&amp;个人知识库</h1><p>本章是全书里第一篇把 <strong>RAG 与知识库</strong> 落到产品和平台上的章节。前面的 <a href="/2023/02/20/llm/1-3-rag-finetuning-continued-training-and-agent-selection/">1-3 RAG、微调、续训与智能体选型</a> 更偏“为什么选 RAG、什么时候该选 RAG”；<br>本章更偏“如果已经决定用 RAG，该怎样把知识库搭起来”；后面的 <a href="/2023/07/20/llm/1-21-rag-retrieval-augmented-generation/">21-RAG检索增强生成</a> 会继续从 LangChain 代码侧，把文档加载、切块、Embedding、向量库、检索与生成串成完整工程链路。</p>
+<hr>
+<p><strong>本章课程目标：</strong></p>
+<ul>
+<li>理解 RAG 是什么、为什么需要，以及它与知识库、向量库、Embedding、提示词增强之间的关系。</li>
+<li>建立对 RAG 两阶段流程的完整认识：<strong>知识库构建（离线）</strong> 与 <strong>检索生成（在线）</strong>。</li>
+<li>知道什么是“个人&#x2F;企业知识库”，哪些人适合先从知识库入手，而不是一上来就考虑微调。</li>
+<li>能使用 <strong>Cherry Studio</strong>、<strong>ima</strong>、<strong>Dify</strong> 三种方式搭建知识库，保留直观的产品体验与操作路径。</li>
+</ul>
+<p><strong>学习建议：</strong> 这篇适合一边看平台，一边画出 RAG 链路：文档从哪里来、如何切分和索引、用户提问时怎么召回、召回内容又怎么交给模型。按钮不用一次记全，<br>但每做一步都要问自己：这一步是在“准备知识”，还是在“查询知识”。能分清这两段，后面换 Cherry Studio、ima 或 Dify 都不容易迷路。</p>
+<p><strong>官方文档与资源</strong>：详见 <a href="/2023/01/28/llm/tools-and-references-index/#RAG%E4%B8%8E%E5%90%91%E9%87%8F%E6%A3%80%E7%B4%A2">工具导航与参考资料索引 - RAG与向量检索</a>。</p>
+<hr>
+<h2 id="1、RAG-的理解"><a href="#1、RAG-的理解" class="headerlink" title="1、RAG 的理解"></a>1、RAG 的理解</h2><h3 id="1-1-什么是-RAG"><a href="#1-1-什么是-RAG" class="headerlink" title="1.1 什么是 RAG"></a>1.1 什么是 RAG</h3><p>RAG（Retrieval-Augmented Generation，检索增强生成）是一种把 <strong>信息检索</strong> 与 <strong>大模型生成</strong> 结合起来的应用架构。</p>
+<p>它的核心思路并不复杂：</p>
+<ol>
+<li>用户先提问。</li>
+<li>系统先去外部知识源里找相关资料。</li>
+<li>把“问题 + 资料”一起发给大模型。</li>
+<li>由大模型基于这些资料生成答案。</li>
+</ol>
+<p>RAG 的重点不是“重新训练模型”，而是<strong>在运行时给模型补充它当前需要的上下文</strong>。入门阶段先记住：</p>
+<blockquote>
+<p><strong>RAG &#x3D; 先查资料，再回答问题。</strong></p>
+</blockquote>
+<p>再说得更工程化一点：</p>
+<ul>
+<li><strong>Retrieval（检索）</strong>：先找到和问题最相关的资料片段。</li>
+<li><strong>Augmented（增强）</strong>：把检索到的资料拼进当前 Prompt 或消息上下文。</li>
+<li><strong>Generation（生成）</strong>：让大模型基于这些资料生成最终答案。</li>
+</ul>
+<p>所以，RAG 常被形容成“让模型开卷答题”，而不是“再学一遍新知识”。它不改模型参数，不改变模型的“大脑”；它做的是给模型外挂一个可检索的资料层。</p>
+<h3 id="1-2-为什么需要-RAG"><a href="#1-2-为什么需要-RAG" class="headerlink" title="1.2 为什么需要 RAG"></a>1.2 为什么需要 RAG</h3><p>第一次接触知识库时，很多人会把 RAG 当成更高级的聊天技巧。这个理解不准确。RAG 出现的根本原因，是大模型单独使用时天然有几类限制，而这些限制在真实项目里很常见。</p>
+<p>常见问题有三类：</p>
+<ul>
+<li><strong>知识冻结</strong>：模型训练完成后，知识并不会自动随现实世界更新。</li>
+<li><strong>私有知识缺失</strong>：企业制度、内部文档、项目资料、课程讲义这类内容，模型训练时通常没见过。</li>
+<li><strong>幻觉与不可追溯</strong>：模型没把握时容易“猜一个像样答案”，而且很难告诉你依据来自哪里。</li>
+</ul>
+<p>可以从两个角度理解这件事。</p>
+<p><strong>第一，时间维度。</strong><br>随着模型规模增大，训练成本和周期也更高，因此大模型不可能天天重新训练。于是“最新信息、刚变更的信息、实时更新的信息”天然不是它的强项。</p>
+<p><strong>第二，数据来源维度。</strong><br>大模型主要学到的是公开语料，而企业内部资料、个人笔记、项目规范、客户材料、课程总结，往往根本不在训练范围内。你直接问模型，它要么不知道，要么半猜半答。</p>
+<p><strong>举例 1：</strong></p>
+<p>随着 LLM 规模扩大，训练成本与周期相应增加。因此，包含最新信息的数据难以融入模型训练过程，无法及时反映最新的信息或动态变化，导致 LLM 难以应对诸如“请推荐当前热门影片”等时间敏感性问题。</p>
+<p><strong>举例 2：</strong></p>
+<p>大型语言模型（LLM）的训练依赖于网络上<code>海量公开的静态数据</code>，而某些<code>特定领域</code>（如企业内部资料、专有技术文档等）的数据通常不会作为公开的训练数据，导致模型在面对这些领域的查询时，可能因缺乏足够的信息而生成不准确甚至虚构的回复。</p>
+<p>RAG 的价值就在这里：它不要求模型“自己就知道”，而是让系统在回答前先去你的资料里找证据。</p>
+<p><strong>解决方案：</strong></p>
+<p>为了解决这一问题，RAG 技术通过引入<code>向量数据库（Vector Database）</code>等外部知识源，把模型缺失的知识以结构化、可检索的方式提供出来。完整的 RAG 不只是“向量数据库”四个字，它背后还包括文档加载、清洗、切块、Embedding、检索、Prompt 组装和最终生成等一整条链路。</p>
+<p><strong>举例 1：</strong></p>
+<p>LLM 在考试的时候面对陌生的领域，答复能力有限，然后就准备放飞自我了，而此时 RAG 给了一些提示和思路，让 LLM 懂了开始往这个提示的方向做，最终考试的正确率从 60%到了 90%！</p>
+<p><img src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/llm/2/2-1-2-1.webp" alt="RAG 通过外部知识提示模型答题并提升正确率的示意图"></p>
+<p><strong>举例 2：</strong></p>
+<p><img src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/llm/2/2-1-2-2.webp" alt="RAG 结合外部资料回答领域问题的示意图"></p>
+<p>放到真实项目里，大致是：</p>
+<ul>
+<li>公司有制度、产品说明、FAQ、接口文档；</li>
+<li>模型自己并不知道这些资料；</li>
+<li>但当用户提问时，系统先去资料里找最相关的部分；</li>
+<li>然后让模型基于这些资料回答。</li>
+</ul>
+<p>这样回答会更像“有依据地作答”，而不是“靠模型印象发挥”。</p>
+<h3 id="1-3-执行流程"><a href="#1-3-执行流程" class="headerlink" title="1.3 执行流程"></a>1.3 执行流程</h3><p>理解 RAG，最重要的是把它看成<strong>两个阶段</strong>，而不是一句“先检索再生成”。</p>
+<p>第一阶段是 <strong>知识库构建</strong>，面向的是原始资料；第二阶段是 <strong>检索与答案生成</strong>，面向的是用户提问。</p>
+<pre class="line-numbers language-mermaid" data-language="mermaid"><code class="language-mermaid"><span class="token keyword">flowchart</span> LR
+    <span class="token keyword">subgraph</span> Offline<span class="token text string">["阶段一：知识库构建（离线）"]</span>
+        D<span class="token text string">["原始资料&lt;br/>PDF / Word / Markdown / 网页"]</span> <span class="token arrow operator">--></span> Parse<span class="token text string">["文档解析与清洗"]</span>
+        Parse <span class="token arrow operator">--></span> Split<span class="token text string">["文本切分&lt;br/>Chunk"]</span>
+        Split <span class="token arrow operator">--></span> EmbedDoc<span class="token text string">["Embedding&lt;br/>文本转向量"]</span>
+        EmbedDoc <span class="token arrow operator">--></span> Store<span class="token text string">["向量库 / 知识库&lt;br/>保存文本块、向量、元数据"]</span>
+    <span class="token keyword">end</span>
+
+    <span class="token keyword">subgraph</span> Online<span class="token text string">["阶段二：检索与生成（在线）"]</span>
+        Q<span class="token text string">["用户问题"]</span> <span class="token arrow operator">--></span> EmbedQuery<span class="token text string">["问题向量化"]</span>
+        EmbedQuery <span class="token arrow operator">--></span> Retrieve<span class="token text string">["检索相关文本块"]</span>
+        Store <span class="token arrow operator">--></span> Retrieve
+        Retrieve <span class="token arrow operator">--></span> Augment<span class="token text string">["Prompt 增强&lt;br/>问题 + 检索结果"]</span>
+        Augment <span class="token arrow operator">--></span> LLM<span class="token text string">["大模型生成"]</span>
+        LLM <span class="token arrow operator">--></span> Answer<span class="token text string">["带依据的回答"]</span>
+    <span class="token keyword">end</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<p><img src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/llm/2/2-1-3-1.webp" alt="LangChain 与 ChatGLM 构建知识库及问答流程的整体示意图"></p>
+<p><strong>流程说明：</strong></p>
+<p>整张图分为<strong>两个阶段</strong>：上方是<strong>知识库构建</strong>，下方是<strong>查询与答案生成</strong>。它做的事情是：先把本地文档变成一个可检索的知识库，再在用户提问时动态查资料，并把资料增强进模型输入。</p>
+<div class="data-grid data-grid-link-table"><div class="grid-header"><div class="grid-cell">步骤</div><div class="grid-cell">英文名</div><div class="grid-cell">中文名</div><div class="grid-cell">在做什么</div></div><div class="grid-row"><div class="grid-cell">**阶段一：知识库构建**</div></div><div class="grid-row"><div class="grid-cell">1</div><div class="grid-cell">Local Documents</div><div class="grid-cell">本地文档</div><div class="grid-cell">流程起点：你的 PDF、Word、Markdown、TXT 等原始文件，是私有知识库的数据来源。</div></div><div class="grid-row"><div class="grid-cell">2</div><div class="grid-cell">Unstructured Loader</div><div class="grid-cell">非结构化加载器</div><div class="grid-cell">读取并解析各种格式的本地文档，从中抽出纯文本，统一成后续可处理的格式。</div></div><div class="grid-row"><div class="grid-cell">3</div><div class="grid-cell">Text</div><div class="grid-cell">文本</div><div class="grid-cell">加载器产出的纯文本内容。</div></div><div class="grid-row"><div class="grid-cell">4</div><div class="grid-cell">Text Splitter</div><div class="grid-cell">文本分割器</div><div class="grid-cell">把长文本按规则切成小块，便于嵌入和放入 LLM 上下文。</div></div><div class="grid-row"><div class="grid-cell">5</div><div class="grid-cell">Text Chunks</div><div class="grid-cell">文本块</div><div class="grid-cell">分割后得到的一段段文本，是后续嵌入和检索的基本单位。</div></div><div class="grid-row"><div class="grid-cell">6</div><div class="grid-cell">Embedding</div><div class="grid-cell">嵌入</div><div class="grid-cell">用嵌入模型把每个文本块转成向量。语义相近的块，向量距离也更近。</div></div><div class="grid-row"><div class="grid-cell">7</div><div class="grid-cell">VectorStore</div><div class="grid-cell">向量存储</div><div class="grid-cell">把文本块的向量、原文和元数据存入向量数据库，支持后续按相似度检索。</div></div><div class="grid-row"><div class="grid-cell">**阶段二：查询与答案生成**</div></div><div class="grid-row"><div class="grid-cell">8</div><div class="grid-cell">Query</div><div class="grid-cell">查询</div><div class="grid-cell">用户用自然语言提出的问题或请求。</div></div><div class="grid-row"><div class="grid-cell">9</div><div class="grid-cell">Embedding</div><div class="grid-cell">嵌入</div><div class="grid-cell">用**同一套**嵌入模型把用户查询也转成向量，保证和知识库在同一向量空间里。</div></div><div class="grid-row"><div class="grid-cell">10</div><div class="grid-cell">Query Vector</div><div class="grid-cell">查询向量</div><div class="grid-cell">用户查询的向量表示。用它去向量库里找最相关的文档块。</div></div><div class="grid-row"><div class="grid-cell">11</div><div class="grid-cell">Vector Similarity</div><div class="grid-cell">向量相似度</div><div class="grid-cell">在向量存储中做相似度搜索，找出与问题最接近的文本块。</div></div><div class="grid-row"><div class="grid-cell">12</div><div class="grid-cell">Related Text Chunks</div><div class="grid-cell">相关文本块</div><div class="grid-cell">检索得到的文本片段，是回答问题时最关键的依据。</div></div><div class="grid-row"><div class="grid-cell">13</div><div class="grid-cell">Prompt Template</div><div class="grid-cell">提示模板</div><div class="grid-cell">把“用户问题 + 检索结果”组装成一段结构化输入。这里对应 RAG 里的“增强”。</div></div><div class="grid-row"><div class="grid-cell">14</div><div class="grid-cell">Prompt</div><div class="grid-cell">提示</div><div class="grid-cell">最终送入大模型的内容。</div></div><div class="grid-row"><div class="grid-cell">15</div><div class="grid-cell">LLM</div><div class="grid-cell">大语言模型</div><div class="grid-cell">基于检索结果和用户问题生成答案。这里对应 RAG 里的“生成”。</div></div><div class="grid-row"><div class="grid-cell">16</div><div class="grid-cell">Answer</div><div class="grid-cell">答案</div><div class="grid-cell">模型基于检索到的资料给出的最终回答。</div></div></div>
+
+<p><img src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/llm/2/2-1-3-2.webp" alt="RAG 从知识库构建到检索增强生成的完整架构图"></p>
+<blockquote>
+<p>检索-增强-生成过程：<strong>检索</strong>对应第 9 ～ 11 步（查询嵌入 → 查询向量 → 向量相似度搜索）；<strong>增强</strong>对应第 13 步（把检索结果注入到提示词 &#x2F; 消息上下文）；<strong>生成</strong>对应第 15 步（LLM 输出答案）。</p>
+</blockquote>
+<blockquote>
+<p><strong>你可能会问：</strong> 为什么“建知识库”和“用户提问时”都要用<strong>同一套</strong>嵌入模型？因为嵌入模型本质上是在定义一套“语义坐标系”。建库用模型 A、提问时用模型 B，就像拿两种完全不同的尺子去量距离，算出来的相似度会乱掉，检索效果就会明显变差。</p>
+</blockquote>
+<p>理解这张图时，还建议先记住四个最容易混的词：</p>
+<ul>
+<li><strong>知识库</strong>：承载外部知识的整体容器，可能包含文档、分块、向量、元数据、检索配置等。</li>
+<li><strong>向量库</strong>：知识库内部用于做相似度检索的存储组件，不等于整个知识库。</li>
+<li><strong>Embedding</strong>：把文本变成向量的模型或过程。</li>
+<li><strong>Prompt 增强</strong>：把检索结果交给模型的那一步。</li>
+</ul>
+<p>如果你后面继续看 <a href="/2023/07/20/llm/1-21-rag-retrieval-augmented-generation/">21-RAG检索增强生成</a>，会发现这四个词会分别落到更具体的代码对象上，例如：</p>
+<ul>
+<li>文档 -&gt; <code>Document</code></li>
+<li>文本分割 -&gt; <code>TextSplitter</code></li>
+<li>向量化 -&gt; <code>Embeddings</code></li>
+<li>检索 -&gt; <code>Retriever</code></li>
+<li>增强输入 -&gt; <code>PromptTemplate / ChatPromptTemplate</code></li>
+</ul>
+<p><strong>强调一下难点的步骤（蓝色部分）：</strong></p>
+<p><img src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/llm/2/2-1-3-3.webp" alt="RAG 中最容易影响效果的关键步骤示意图"></p>
+<p>这张图提醒的是：RAG 最难的地方通常不在“上传文件”本身，而在这些环节是否做得合理：</p>
+<ul>
+<li>文档有没有被正确解析</li>
+<li>文本是不是切得太碎或太大</li>
+<li>Embedding 模型是否合适</li>
+<li>检索出来的内容是否真的相关</li>
+<li>拼给模型的上下文里有没有太多噪音</li>
+</ul>
+<p>RAG 不是“有知识库就一定答得好”，而是“知识库链路质量越高，回答越稳”。</p>
+<h3 id="1-4-RAG-工程质量框架"><a href="#1-4-RAG-工程质量框架" class="headerlink" title="1.4 RAG 工程质量框架"></a>1.4 RAG 工程质量框架</h3><p>理解流程之后，再看一个更贴近真实项目的问题：<strong>为什么同样叫知识库，有的回答很稳，有的却经常胡说？</strong></p>
+<p>可以用这个公式做排查：<strong>RAG 效果 &#x3D; 文档质量 x 解析质量 x 切分质量 x 检索质量 x 重排质量 x Prompt 组织质量 x 生成模型质量 x 评测闭环</strong></p>
+<p>这里的乘号表示：只要某个环节特别差，整体效果就会被明显拉低。</p>
+<p>知识库答不准时，不要一上来就怪模型。可以先看现象，再往回查：</p>
+<pre class="line-numbers language-mermaid" data-language="mermaid"><code class="language-mermaid"><span class="token keyword">flowchart</span> TD
+    Start<span class="token text string">["RAG 效果不好"]</span> <span class="token arrow operator">--></span> A<span class="token text string">&#123;"完全找不到资料？"&#125;</span>
+    A <span class="token inter-arrow-label"><span class="token arrow-head arrow operator">--</span> <span class="token label property">"是"</span> <span class="token arrow operator">--></span></span> A1<span class="token text string">["查入库链路&lt;br/>文档是否上传、解析是否成功、Embedding 是否一致"]</span>
+    A <span class="token inter-arrow-label"><span class="token arrow-head arrow operator">--</span> <span class="token label property">"否"</span> <span class="token arrow operator">--></span></span> B<span class="token text string">&#123;"召回内容答非所问？"&#125;</span>
+    B <span class="token inter-arrow-label"><span class="token arrow-head arrow operator">--</span> <span class="token label property">"是"</span> <span class="token arrow operator">--></span></span> B1<span class="token text string">["查检索策略&lt;br/>关键词检索、向量检索、Top K、阈值、Rerank"]</span>
+    B <span class="token inter-arrow-label"><span class="token arrow-head arrow operator">--</span> <span class="token label property">"否"</span> <span class="token arrow operator">--></span></span> C<span class="token text string">&#123;"资料找到了但模型乱答？"&#125;</span>
+    C <span class="token inter-arrow-label"><span class="token arrow-head arrow operator">--</span> <span class="token label property">"是"</span> <span class="token arrow operator">--></span></span> C1<span class="token text string">["查 Prompt 约束&lt;br/>仅基于资料回答、允许不知道、要求引用来源"]</span>
+    C <span class="token inter-arrow-label"><span class="token arrow-head arrow operator">--</span> <span class="token label property">"否"</span> <span class="token arrow operator">--></span></span> D<span class="token text string">&#123;"答案不完整或漏重点？"&#125;</span>
+    D <span class="token inter-arrow-label"><span class="token arrow-head arrow operator">--</span> <span class="token label property">"是"</span> <span class="token arrow operator">--></span></span> D1<span class="token text string">["查上下文组织&lt;br/>Chunk 大小、Overlap、Top K、上下文窗口"]</span>
+    D <span class="token inter-arrow-label"><span class="token arrow-head arrow operator">--</span> <span class="token label property">"否"</span> <span class="token arrow operator">--></span></span> E<span class="token text string">&#123;"无法追溯来源？"&#125;</span>
+    E <span class="token inter-arrow-label"><span class="token arrow-head arrow operator">--</span> <span class="token label property">"是"</span> <span class="token arrow operator">--></span></span> E1<span class="token text string">["查元数据与引用&lt;br/>文件名、页码、标题、段落 ID"]</span>
+    E <span class="token inter-arrow-label"><span class="token arrow-head arrow operator">--</span> <span class="token label property">"否"</span> <span class="token arrow operator">--></span></span> F<span class="token text string">["整理一组测试问题&lt;br/>记录召回片段、引用和最终答案"]</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<hr>
+<h2 id="2、知识库的概述"><a href="#2、知识库的概述" class="headerlink" title="2、知识库的概述"></a>2、知识库的概述</h2><p>这一节从“产品使用者”的角度来理解知识库。可以把知识库理解成：<strong>把你的资料做成可检索、可引用、可被大模型调用的一套外部知识层。</strong></p>
+<p>它不只是一个“文件夹”，也不只是一个“向量库”：</p>
+<ul>
+<li>从用户视角看，知识库像是“把很多资料整理成一个能问答的仓库”。</li>
+<li>从工程视角看，知识库背后通常包含文档、切块、Embedding、向量检索、元数据、召回策略等多个环节。</li>
+</ul>
+<h3 id="2-1-什么是知识库"><a href="#2-1-什么是知识库" class="headerlink" title="2.1 什么是知识库"></a>2.1 什么是知识库</h3><p>先给一个简短定义：</p>
+<blockquote>
+<p><strong>知识库 &#x3D; 让模型能访问你自己的资料，并在提问时按需调用这些资料。</strong></p>
+</blockquote>
+<p>它特别适合下面这些人群：</p>
+<p><strong>小型企业主或创业者：</strong><br>经常要查阅和分享制度文档、产品说明、客户反馈、市场分析。把这些资料整理成知识库后，问答和复用效率会明显提高。</p>
+<p><strong>职场打工人或自由职业者：</strong><br>无论是写作、设计、开发，还是视频制作，你都会积累大量素材、需求、规范和项目资料。知识库的价值不是“存起来”，而是“下次还能快速找到并继续用”。</p>
+<p><strong>教育工作者或学生：</strong><br>老师可以整理课程资料、讲义、案例、答疑文档；学生可以把课堂笔记、论文资料、考试重点、知识点总结做成自己的复习型知识库。</p>
+<p><strong>生活中的普通人：</strong><br>旅行计划、阅读笔记、兴趣资料、学习记录、求职资料，全部都可以做成个人知识库。知识库不是企业专属工具，它同样适合个人成长与日常信息管理。</p>
+<p>从“为什么值得做”这个角度看，知识库至少有三层价值：</p>
+<ul>
+<li><strong>管理资料</strong>：资料不再散落在聊天记录、网盘、文件夹里。</li>
+<li><strong>快速检索</strong>：不必每次手动翻 PDF 或翻网页。</li>
+<li><strong>增强生成</strong>：检索结果还能继续交给模型做总结、改写、问答和二次创作。</li>
+</ul>
+<h3 id="2-2-知识库各个搭建平台对比"><a href="#2-2-知识库各个搭建平台对比" class="headerlink" title="2.2 知识库各个搭建平台对比"></a>2.2 知识库各个搭建平台对比</h3><p>本仓库里会分别从<strong>平台搭建</strong>和<strong>代码实现</strong>两个方向讲 RAG。站在平台视角，你可以先把常见工具按能力定位分成三类。这里列举的是学习和选型时常见的代表工具，不是固定排名；具体功能、价格和部署方式会随版本变化，以各平台官方说明为准。</p>
+<ol>
+<li><strong>个人轻量型</strong>：上手快、图形化强、适合个人或小团队先做 Demo。</li>
+<li><strong>平台协作型</strong>：不仅能做知识库，还能接工作流、应用发布、团队协作。</li>
+<li><strong>复杂文档解析型</strong>：重点是文档理解质量，尤其适合长 PDF、复杂表格、扫描件。</li>
+</ol>
+<h3 id="2-2-1-核心定位和技术特点"><a href="#2-2-1-核心定位和技术特点" class="headerlink" title="2.2.1 核心定位和技术特点"></a>2.2.1 核心定位和技术特点</h3><p><strong>AnythingLLM、Cherry Studio</strong>：<code>桌面/图形化 AI 助手 + 知识库（RAG）</code>，支持对接云模型与本地模型，适合<code>个人/小团队</code>快速验证。在“多租户治理、复杂系统集成、生产化观测”等方面通常不如平台型产品。</p>
+<p><strong>Dify、FastGPT</strong>：<code>LLM 应用与工作流编排平台</code>，支持创建知识库，并把知识库接到对话应用、工作流、Agent 中，更适合“从 Demo 走向团队协作和应用交付”的场景。</p>
+<p><strong>RAGFlow</strong>：强调<code>复杂文档解析</code>、<code>高精度混合检索</code>、<code>重排</code>、<code>可视化干预</code>，适合把“文档解析质量”和“召回质量”看得很重的场景。这类工具的重点不是“能不能上传文件”，而是能不能把复杂文档解析成更适合检索和引用的知识片段。</p>
+<h3 id="2-2-2-典型场景与选型建议"><a href="#2-2-2-典型场景与选型建议" class="headerlink" title="2.2.2 典型场景与选型建议"></a>2.2.2 典型场景与选型建议</h3><p><strong>1. 个人知识管理（轻量级）</strong></p>
+<ul>
+<li>需求：快速验证、低预算、个人&#x2F;小团队使用，以“先跑起来”为主。</li>
+<li>推荐工具：Cherry Studio &#x2F; AnythingLLM &#x2F; ima</li>
+<li>理由：<ul>
+<li>部署和操作简单，上手快</li>
+<li>适合接在线模型 API，也可接本地模型</li>
+<li>更适合做“个人知识助手”而不是复杂业务平台</li>
+</ul>
+</li>
+</ul>
+<p><strong>2. 应用化交付与团队协作（平台型场景）</strong></p>
+<ul>
+<li>需求：将知识库能力封装成可复用 AI 应用、支持多人协作、工作流编排、权限与版本管理。</li>
+<li>推荐工具：Dify &#x2F; FastGPT</li>
+<li>理由：<ul>
+<li>知识库只是整个平台的一部分，后续还能接工作流、工具调用、Agent</li>
+<li>更适合与业务系统集成</li>
+<li>更贴近“内部产品交付”而不是单机个人使用</li>
+</ul>
+</li>
+</ul>
+<p><strong>3. 企业级文档解析（高精度需求）</strong></p>
+<ul>
+<li>需求：处理复杂版式、长 PDF、扫描件、图文混排、表格等，强调解析质量与引用可追溯。</li>
+<li>推荐工具：RAGFlow</li>
+<li>理由：<ul>
+<li>更强调文档理解与检索精度</li>
+<li>支持混合检索、重排与更强的文档处理链路</li>
+<li>适合把“RAG 效果”当成核心竞争力的场景</li>
+</ul>
+</li>
+</ul>
+<p><img src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/llm/2/2-2-2-1.webp" alt="Cherry Studio、AnythingLLM、Dify、FastGPT 与 RAGFlow 等知识库平台对比图"></p>
+<hr>
+<h2 id="3、Cherry-Studio-搭建个人知识库"><a href="#3、Cherry-Studio-搭建个人知识库" class="headerlink" title="3、Cherry Studio 搭建个人知识库"></a>3、Cherry Studio 搭建个人知识库</h2><blockquote>
+<p>后续我们会重点拿 Coze 和 Dify 讲工作流和智能体，所以知识库这里，先选更适合个人快速上手的 <strong>Cherry Studio</strong> 和腾讯出品的 <strong>ima</strong>。</p>
+</blockquote>
+<h3 id="3-1-Cherry-Studio-特点"><a href="#3-1-Cherry-Studio-特点" class="headerlink" title="3.1 Cherry Studio 特点"></a>3.1 Cherry Studio 特点</h3><p>Cherry Studio 更适合被理解成一个“<strong>个人向、桌面化、模型聚合型 AI 工作台</strong>”。它的优势不是企业平台能力，而是：上手快；图形化强；适合个人快速搭知识库和多模型对比。</p>
+<p><strong>小白友好</strong>：Cherry Studio 致力于降低技术门槛，零基础用户也能快速上手，让用户更专注于工作、学习或创作本身。</p>
+<p><strong>一问多答</strong>：支持同一问题通过多个模型同时生成回复，方便对比不同模型的表现。</p>
+<p><img src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/llm/2/2-3-1-1.webp" alt="Cherry Studio 一问多答功能界面示意图"></p>
+<p><strong>助手市场</strong>：内置千余个行业专用助手，涵盖翻译、编程、写作等场景，同时支持自定义助手。</p>
+<p><img src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/llm/2/2-3-1-2.webp" alt="Cherry Studio 助手市场界面示意图"></p>
+<p><strong>服务商模型聚合</strong>：支持 OpenAI、Gemini、Anthropic、Azure 等规范的三方服务商接入，兼容性较强。</p>
+<p><img src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/llm/2/2-3-1-3.webp" alt="Cherry Studio 服务商模型聚合配置界面"></p>
+<p><strong>数据安全</strong>：支持全本地场景使用，结合本地大模型时，更适合对数据安全较敏感的用户。</p>
+<h3 id="3-2-LLM-的使用"><a href="#3-2-LLM-的使用" class="headerlink" title="3.2 LLM 的使用"></a>3.2 LLM 的使用</h3><p>在 Cherry Studio 里，知识库问答并不是“只要上传文件就行”。你至少要先把<strong>聊天模型</strong>和<strong>Embedding 模型</strong>两个角色理解清楚：</p>
+<ul>
+<li><strong>聊天模型（LLM）</strong>：负责最后生成回答。</li>
+<li><strong>Embedding 模型</strong>：负责把文档和问题变成向量，用于检索。</li>
+</ul>
+<p>所以要先完成模型接入。</p>
+<p><strong>步骤 1：下载与安装客户端工具</strong></p>
+<p>下载地址：<a target="_blank" rel="noopener" href="https://www.cherry-ai.com/download">https://www.cherry-ai.com/download</a></p>
+<p><strong>步骤 2：硅基流动注册账号</strong></p>
+<p>这里的大模型服务，以硅基流动平台为例说明。</p>
+<p>网址：<a target="_blank" rel="noopener" href="https://siliconflow.cn/zh-cn/models">https://siliconflow.cn/zh-cn/models</a></p>
+<p><strong>步骤 3：创建 API 密钥</strong></p>
+<p><img src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/llm/2/2-3-2-1.webp" alt="在硅基流动平台创建 API 密钥的界面"></p>
+<p><strong>步骤 4：复制 API 密钥</strong></p>
+<p><strong>步骤 5：配置 API 密钥</strong></p>
+<p><img src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/llm/2/2-3-2-2.webp" alt="在 Cherry Studio 中配置 API 密钥的界面一"></p>
+<p><strong>步骤 6：选择大语言模型</strong></p>
+<p><img src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/llm/2/2-3-2-3.webp" alt="在 Cherry Studio 中选择大语言模型的界面一"></p>
+<p><img src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/llm/2/2-3-2-4.webp" alt="在 Cherry Studio 中选择大语言模型的界面二"></p>
+<p>到这里完成的是“生成模型”接入，也就是后面负责回答问题的那部分能力。</p>
+<h3 id="3-3-知识库的使用"><a href="#3-3-知识库的使用" class="headerlink" title="3.3 知识库的使用"></a>3.3 知识库的使用</h3><p>这一部分是从“普通聊天”进入“知识库问答”的关键。建议你一边做，一边记住：<strong>上传文档不是终点，能不能检索对、能不能基于知识库生成，才是效果关键。</strong></p>
+<p><strong>步骤 1：添加嵌入模型</strong></p>
+<p>根据下图确认名称：</p>
+<p><img src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/llm/2/2-3-3-1.webp" alt="确认嵌入模型名称的界面示意图"></p>
+<p>回到 Cherry Studio 添加：</p>
+<p><img src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/llm/2/2-3-3-2.webp" alt="在 Cherry Studio 中添加嵌入模型的界面"></p>
+<p>这一步对应的是 RAG 里的“Embedding”环节。后续上传文档建库、用户提问检索，都会依赖这一模型。</p>
+<p><strong>步骤 2：创建知识库</strong></p>
+<p><img src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/llm/2/2-3-3-3.webp" alt="在 Cherry Studio 中创建知识库的界面"></p>
+<p>提供知识库内容：</p>
+<p><img src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/llm/2/2-3-3-4.webp" alt="在 Cherry Studio 中向知识库导入文件、网页或文本内容的界面"></p>
+<p>这里支持不同格式文件、文件夹、网页地址、大段文本内容等多种方式添加到知识库。</p>
+<blockquote>
+<p>注意：上传文件如果包含大量手写内容、复杂表格、扫描件、公式或复杂版式，解析效果通常会明显下降。很多人以为“RAG 效果差”是模型问题，实际上常常是文档解析阶段已经出了问题。</p>
+</blockquote>
+<p><strong>步骤 3：支持直接检索</strong></p>
+<p>检索：</p>
+<p><img src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/llm/2/2-3-3-5.webp" alt="Cherry Studio 知识库直接检索结果界面"></p>
+<p>这里展示的是“先搜知识库”的能力。此时系统还没有让大模型长篇生成，而是在数据库中基于 RAG 思路做召回。相关片段和匹配得分都能看到，很适合用来排查效果。</p>
+<p><strong>步骤 4：基于知识库生成</strong></p>
+<p>选中后，提问：</p>
+<p><img src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/llm/2/2-3-3-6.webp" alt="Cherry Studio 基于知识库生成回答的界面一"></p>
+<p><img src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/llm/2/2-3-3-7.webp" alt="Cherry Studio 基于知识库生成回答的界面二"></p>
+<p>这一步对应的才是“完整 RAG”：先检索，再增强上下文，再由模型生成答案。</p>
+<p><strong>补充：增强文档解析能力</strong></p>
+<p>如果上传文件中有手写内容、复杂表格、扫描件或复杂公式，解析效果会较差。此时可以先用专门的文档解析工具做预处理，再把处理后的内容上传到知识库。</p>
+<p>使用工具：Doc2X</p>
+<p>网址：<a target="_blank" rel="noopener" href="https://doc2x.noedgeai.com/">https://doc2x.noedgeai.com/</a></p>
+<p><img src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/llm/2/2-3-3-8.webp" alt="Doc2X 文档解析工具官网界面"></p>
+<p>这里你要建立一个很实用的工程意识：</p>
+<ul>
+<li><strong>RAG 效果不是只由大模型决定</strong>，还会受到文档质量、解析质量、切分质量、检索质量、重排质量和 Prompt 组织质量影响。</li>
+<li>不是所有问题都该怪模型，很多问题发生在前面的数据链路里。</li>
+</ul>
+<h3 id="3-4-流程分析"><a href="#3-4-流程分析" class="headerlink" title="3.4 流程分析"></a>3.4 流程分析</h3><p><img src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/llm/2/2-3-4-1.webp" alt="个人知识库从导入资料到检索生成的整体流程图"></p>
+<p>Cherry Studio 这整套流程可以拆成：</p>
+<ol>
+<li>接好聊天模型</li>
+<li>接好 Embedding 模型</li>
+<li>上传文档并建知识库</li>
+<li>先检索相关内容</li>
+<li>再基于知识库生成回答</li>
+</ol>
+<p>这条链路和前面第 1 节讲的 RAG 标准流程是一一对应的。也正因为如此，后面你切换到 Dify、LangChain、RAGFlow 时，虽然界面不同，但底层思路并没有变。</p>
+<hr>
+<h2 id="4、ima-搭建个人知识库"><a href="#4、ima-搭建个人知识库" class="headerlink" title="4、ima 搭建个人知识库"></a>4、ima 搭建个人知识库</h2><h3 id="4-1-ima-特点"><a href="#4-1-ima-特点" class="headerlink" title="4.1 ima 特点"></a>4.1 ima 特点</h3><p>如果说 Cherry Studio 更像“桌面化模型工作台”，那么 <strong>ima</strong> 更像“更偏 C 端、更轻量、上手成本更低的知识助手”。它特别适合初学者快速体验“把资料接进模型”这件事。</p>
+<ul>
+<li><strong>操作简单、零上手成本</strong>：界面和流程都很直观，更偏普通用户使用。</li>
+<li><strong>多端同步</strong>：支持客户端、小程序、网页等多端访问与同步。</li>
+<li><strong>共享知识库</strong>：支持将知识库分享给他人，方便协作与传递。</li>
+<li><strong>模型与入口</strong>：通常会接入平台方提供或合作的大模型能力，并支持通过客户端、微信等入口提问，模型基于知识库生成答案。具体模型名称和入口形态会随产品版本变化。</li>
+</ul>
+<p>在入门阶段，ima 的价值主要是：<strong>很容易先建立“知识库问答”的使用直觉</strong>。它的可定制化不如 Dify，但上手门槛更低。</p>
+<h3 id="4-2-搭建知识库过程"><a href="#4-2-搭建知识库过程" class="headerlink" title="4.2 搭建知识库过程"></a>4.2 搭建知识库过程</h3><p><strong>步骤 1：下载与安装</strong></p>
+<p>网址：<a target="_blank" rel="noopener" href="https://ima.qq.com/">https://ima.qq.com/</a></p>
+<p><img src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/llm/2/2-4-2-1.webp" alt="ima 登录界面"></p>
+<p><strong>步骤 2：新建知识库</strong></p>
+<p><img src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/llm/2/2-4-2-2.webp" alt="在 ima 中新建知识库的界面"></p>
+<p><strong>步骤 3：导入本地文件</strong></p>
+<p><img src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/llm/2/2-4-2-3.webp" alt="在 ima 中导入本地文件的界面三"></p>
+<p><strong>步骤 4：基于知识库「生成」</strong></p>
+<p><img src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/llm/2/2-4-2-4.webp" alt="ima 基于知识库生成回答的界面一"></p>
+<p><img src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/llm/2/2-4-2-5.webp" alt="ima 基于知识库生成回答的界面二"></p>
+<p>这部分最值得你体会的是：即使平台界面和 Cherry Studio 不同，但底层做的事情仍然是同一套逻辑：</p>
+<ul>
+<li>把文件导入</li>
+<li>变成可检索内容</li>
+<li>用户提问</li>
+<li>检索知识</li>
+<li>基于知识回答</li>
+</ul>
+<h3 id="4-3-组合互联网网页构成知识库"><a href="#4-3-组合互联网网页构成知识库" class="headerlink" title="4.3 组合互联网网页构成知识库"></a>4.3 组合互联网网页构成知识库</h3><p>知识库不一定只来自本地文件，也可以来自网页内容。这个能力在做个人学习型知识库时很常用。</p>
+<p>步骤 1：在微信公众号中搜索相关主题的文章，并将它们加入到 ima。</p>
+<p>步骤 2：在 ima 中新建个人知识库，将相关文章加入到此知识库。</p>
+<p><img src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/llm/2/2-4-3-1.webp" alt="在微信公众号中查找可加入知识库的文章界面一"></p>
+<p>步骤 3：文章导入完成后，即可生成知识库，并基于大模型进行检索与问答。</p>
+<p><img src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/llm/2/2-4-3-2.webp" alt="ima 基于网页文章构建知识库后的界面一"></p>
+<p>这个案例很有代表性，因为它说明了一个重要认知：</p>
+<blockquote>
+<p><strong>知识库不等于“上传 PDF”</strong>。只要资料能整理成可用文本，它就有机会成为知识库的一部分。</p>
+</blockquote>
+<h3 id="4-4-添加第三方知识库"><a href="#4-4-添加第三方知识库" class="headerlink" title="4.4 添加第三方知识库"></a>4.4 添加第三方知识库</h3><p><img src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/llm/2/2-4-4-1.webp" alt="ima 查看第三方知识库的界面一"></p>
+<p><img src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/llm/2/2-4-4-2.webp" alt="ima 查看第三方知识库的界面二"></p>
+<p>这一点对应的是“知识库协作和复用”的能力。对于企业或团队来说，知识库的价值不只是你自己能查，而是它能成为多人共享的知识入口。</p>
+<hr>
+<h2 id="5、使用-Dify-搭建知识库"><a href="#5、使用-Dify-搭建知识库" class="headerlink" title="5、使用 Dify 搭建知识库"></a>5、使用 Dify 搭建知识库</h2><h3 id="5-1-Dify-介绍"><a href="#5-1-Dify-介绍" class="headerlink" title="5.1 Dify 介绍"></a>5.1 Dify 介绍</h3><p>Dify 是一个开源的大语言模型（LLM）应用开发平台。和 Cherry Studio、ima 相比，它更偏向“<strong>应用平台 + 工作流平台 + 知识库平台</strong>”的综合形态。</p>
+<p>这意味着 Dify 里的知识库不只是“让你自己问答”的工具，还可以继续被接到：</p>
+<ul>
+<li>聊天应用</li>
+<li>工作流</li>
+<li>Agent</li>
+<li>API 对外服务</li>
+</ul>
+<p>结合官方文档，Dify 知识库可以理解为：</p>
+<ul>
+<li>知识库是你自有数据的集合</li>
+<li>每个知识库可以包含多个文档</li>
+<li>每个文档最终会被切成多个分段（chunks）</li>
+<li>应用在运行时会从这些分段中检索相关内容，再交给模型生成回答</li>
+</ul>
+<p>所以，如果 Cherry Studio &#x2F; ima 更像“个人先用起来”，Dify 更像“知识库要进入产品和工作流体系”。</p>
+<h3 id="5-2-源数据格式"><a href="#5-2-源数据格式" class="headerlink" title="5.2 源数据格式"></a>5.2 源数据格式</h3><p>通过 Dify，可以方便快捷地构建私有知识库，并进一步把知识库放到工作流和应用中协同使用。Dify 提供了相对完整的可视化界面来管理文档、分段、检索策略和应用接入。</p>
+<p>目前 Dify 支持多种源数据格式，包括：</p>
+<ul>
+<li><strong>长文本内容</strong>：TXT、Markdown、DOCX、HTML、JSON、PDF</li>
+<li><strong>结构化数据</strong>：CSV、Excel</li>
+</ul>
+<p>从 Dify 官方知识库文档的表述看，知识库里最关键的对象关系是：</p>
+<ul>
+<li><strong>Knowledge Base（知识库）</strong>：整体容器</li>
+<li><strong>Document（文档）</strong>：导入的文件或数据源</li>
+<li><strong>Chunk（分段）</strong>：文档切分后的可检索片段</li>
+</ul>
+<p><strong>注：</strong> 私有知识库要达到较好效果，通常需要配合 <strong>Embedding 模型</strong>与 <strong>Rerank 模型</strong>使用。Embedding 决定“怎么找相关文本”，Rerank 决定“候选结果怎么重新排序”。在要求更高的场景下，Rerank 往往值得开启。</p>
+<h3 id="5-3-构建私有知识库"><a href="#5-3-构建私有知识库" class="headerlink" title="5.3 构建私有知识库"></a>5.3 构建私有知识库</h3><p>这一部分的重点不只是“按步骤点完”，更重要的是理解：<strong>为什么这些参数会直接影响最终知识库问答质量。</strong></p>
+<p><strong>步骤 1：首先创建一个新的知识库</strong></p>
+<p><img src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/llm/2/2-5-3-1.webp" alt="在 Dify 中创建知识库的界面"></p>
+<p><strong>步骤 2：上传知识库文件</strong></p>
+<p>这里准备的是一份《刑法》的 TXT 格式文本，按自然段划分了每一条法条。</p>
+<p><img src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/llm/2/2-5-3-2.webp" alt="在 Dify 中上传知识库文件的界面"></p>
+<p>这个案例适合作为入门演示，因为法律条文天然分段清晰、知识边界明确，也更容易观察检索是否准确。</p>
+<p><strong>步骤 3：分段设置</strong></p>
+<p>大语言模型存在有限的上下文窗口，因此通常需要先把长文本进行分段，再从中召回与问题关联度最高的几个段落。分段太粗会带来噪音，分段太细又会把语义切碎，所以“怎么切块”是 RAG 里最关键的调参点之一。</p>
+<p>分段标识符如果是 <code>\n</code>，则是以换行为一个分段；如果是 <code>\n\n</code>，则是以一个段落为一个分段。点击“预览块”可以查看目前块划分的情况。</p>
+<p>分段重叠长度一般是分段最大长度的 <code>10%-20%</code>。</p>
+<p>知识库文档中若有 URL、邮箱等，也可以在预处理时过滤掉。</p>
+<p><strong>分段设置说明（这些项是干嘛的、对知识库有什么影响）</strong></p>
+<div class="data-grid data-grid-link-table"><div class="grid-header"><div class="grid-cell">配置项</div><div class="grid-cell">作用</div><div class="grid-cell">对知识库的影响</div></div><div class="grid-row"><div class="grid-cell">**分段标识符**</div><div class="grid-cell">决定“按什么边界”把长文切成小块。`\n` = 按换行切，`\n\n` = 按空行切。</div><div class="grid-cell">选得合适，切出来的块语义更完整；选得不合适，可能把一整段话切碎，后面检索就容易只命中半句。</div></div><div class="grid-row"><div class="grid-cell">**分段最大长度**</div><div class="grid-cell">单块文本的字数 / 字符上限，超过就再切一刀。</div><div class="grid-cell">设太大，单块里无关内容太多，容易把噪音带进 Prompt；设太小，语义被拆散，召回容易漏关键信息。一般可从 200～800 字（或约 100～500 token）起步，再按文档类型调。</div></div><div class="grid-row"><div class="grid-cell">**分段重叠长度**</div><div class="grid-cell">相邻两块之间重复一段文字，避免边界处语义断裂。</div><div class="grid-cell">有一定重叠，边界上的句子不容易被截断；重叠太大则会造成内容重复、存储浪费和检索噪声。</div></div></div>
+
+<p><img src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/llm/2/2-5-3-3.webp" alt="Dify 知识库分段设置界面"></p>
+<p><strong>步骤 4：选择索引方式</strong></p>
+<p>这里自动选择高质量。高质量的准确性更高，但 token 消耗也会增加；如果用的是本地部署模型，成本敏感度会低一些。</p>
+<p><img src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/llm/2/2-5-3-4.webp" alt="Dify 知识库索引方式选择界面"></p>
+<p>还有 <strong>Q&amp;A 方式</strong>：如果文档本身就是问答对形式，这种方式通常更契合。</p>
+<p><strong>步骤 5：检索设置</strong></p>
+<p>在这里可选择 <strong>Embedding 模型</strong>与 <strong>Rerank 模型</strong>，也可以设置 Top K，也就是选出最相似的前 n 条。还可以设置 Score 阈值，即筛选文本的相似度下限。</p>
+<p><img src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/llm/2/2-5-3-5.webp" alt="Dify 知识库检索设置界面"></p>
+<p>混合检索：既包括向量检索（可选用 Rerank 模型做精排），也包含全文检索。</p>
+<p><strong>检索设置说明（这些项是干嘛的、对知识库有什么影响）</strong></p>
+<div class="data-grid data-grid-link-table"><div class="grid-header"><div class="grid-cell">配置项</div><div class="grid-cell">作用</div><div class="grid-cell">对知识库的影响</div></div><div class="grid-row"><div class="grid-cell">**Embedding 模型**</div><div class="grid-cell">把“文档块”和“用户问题”都变成向量，用来算语义相似度。</div><div class="grid-cell">建库和检索必须用**同一个** Embedding 模型，否则向量不在同一个空间里，检索效果会明显变差。</div></div><div class="grid-row"><div class="grid-cell">**向量检索**</div><div class="grid-cell">用问题向量在向量库里找“最像”的文档块。</div><div class="grid-cell">是 RAG 的核心检索步骤，没有它就无法按语义从知识库中召回内容。</div></div><div class="grid-row"><div class="grid-cell">**Rerank 模型**</div><div class="grid-cell">在向量检索拿到一批候选块后，再用专门模型对“问题 + 每条候选”打更精细的相关性分。</div><div class="grid-cell">不开 Rerank 时，只靠向量相似度，有时会混进“看起来相关但答非所问”的片段；开启后通常能显著提升最终送给模型的上下文质量，但也会增加延迟与成本。</div></div><div class="grid-row"><div class="grid-cell">**Top K**</div><div class="grid-cell">检索时最多取几条文档块交给后续步骤。</div><div class="grid-cell">K 太小，可能漏掉关键信息；K 太大，又容易把无关内容塞进上下文，增加噪音与 token 开销。一般可先试 5，再根据效果微调。</div></div><div class="grid-row"><div class="grid-cell">**Score 阈值**</div><div class="grid-cell">相似度下限，只有达到阈值的块才会被保留。</div><div class="grid-cell">阈值高，结果更干净但可能漏召回；阈值低，信息更全但噪音变多。排查效果时，可以根据“找不到内容”还是“召回太杂”来升降阈值。</div></div><div class="grid-row"><div class="grid-cell">**混合检索**</div><div class="grid-cell">同时做向量检索和全文检索，再合并、去重、排序。</div><div class="grid-cell">当文档里既有自然语言段落，又有条目编号、专有名词、法条编号时，混合检索通常比纯向量检索更稳。</div></div></div>
+
+<p>设置完成后，保存并处理即可。</p>
+<p><img src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/llm/2/2-5-3-6.webp" alt="Dify 保存并处理知识库的界面"></p>
+<p>这一节最值得你带走的工程结论是：</p>
+<blockquote>
+<p><strong>RAG 的效果，不是“上传完文件”那一刻决定的，而是由文档质量、切块策略、Embedding 质量、检索策略和重排策略共同决定的。</strong></p>
+</blockquote>
+<p>如果你想继续把这些平台里的配置项和代码实现一一对上，可以把这一节和 <a href="/2023/07/20/llm/1-21-rag-retrieval-augmented-generation/">21-RAG检索增强生成</a> 的“文档加载器、文本分割器、检索器”几节对照着看，理解会更快。</p>
+<h3 id="5-4-测试"><a href="#5-4-测试" class="headerlink" title="5.4 测试"></a>5.4 测试</h3><p>接下来进行测试。创建一个聊天助手，将提示词设置为：</p>
+<pre class="line-numbers language-text" data-language="text"><code class="language-text">你是一个法律小助手，请只根据知识库中的信息，简要回答用户提问的案件触犯了哪些法律<span aria-hidden="true" class="line-numbers-rows"><span></span></span></code></pre>
+
+<p>知识库选择刚才添加的 <code>刑法.txt</code>，然后可以开始提问。</p>
+<p>可以观察到，聊天助手会自动引用知识库中的内容进行回答。</p>
+<p><img src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/llm/2/2-5-4-1.webp" alt="Dify 中基于知识库进行测试问答的界面"></p>
+<p>这个案例和前面 Cherry Studio、ima 的案例一起看，会更容易形成完整理解：</p>
+<ul>
+<li>Cherry Studio：更适合个人快速搭一个知识库试试效果</li>
+<li>ima：更适合普通用户低门槛体验知识库问答</li>
+<li>Dify：更适合把知识库放进应用、工作流和团队协作环境里</li>
+</ul>
+<hr>
+<p><strong>章节思考题：</strong></p>
+<ol>
+<li><p>如果一个知识库问答效果不好，你会先检查文档、切块、Embedding、检索参数还是提示词？为什么？</p>
+<p><strong>参考思路：</strong> 先看问题表现。完全找不到资料，优先查文档是否入库、切块是否合理、Embedding 是否一致；召回很多杂内容，再调 Top K、阈值、Rerank；召回对了但回答乱，再看提示词和引用约束。</p>
+</li>
+<li><p>为什么“上传了文件”不等于“知识库已经可用”？</p>
+<p><strong>参考思路：</strong> 文件还要被解析、清洗、切块、向量化、写入索引，并且查询时能被正确召回。任何一环出问题，用户看到的都是“答不准”。知识库质量不是上传动作决定的，而是整条处理链路决定的。</p>
+</li>
+<li><p>Cherry Studio、ima、Dify 这类平台适合分别用来验证什么？</p>
+<p><strong>参考思路：</strong> Cherry Studio 适合个人快速试效果，ima 适合低门槛体验知识库问答，Dify 更适合把知识库接进应用、工作流和团队协作。选择平台时看目标是个人验证、普通使用，还是工程交付。</p>
+</li>
+<li><p>给一个新人解释 Top K、阈值、Rerank 时，你会用什么排查例子？</p>
+<p><strong>参考思路：</strong> 可以用“查资料”类比：Top K 决定拿几段材料，阈值决定太不相关的材料要不要丢掉，Rerank 决定候选材料重新排序。答案漏信息时可能 K 太小或阈值太高，答案跑偏时可能 K 太大或缺少重排。</p>
+</li>
+</ol>
+<p><strong>本章小结：</strong></p>
+<ul>
+<li><strong>RAG 是什么</strong>：检索（从你的文档里找相关段落）→ 增强（把段落塞进当前输入）→ 生成（大模型基于这些内容回答）；它不改模型参数，而是在运行时补上下文。</li>
+<li><strong>为什么需要 RAG</strong>：它主要解决知识冻结、私有知识缺失、最新信息不可用和幻觉等问题。很多业务问题本质上不是“模型不会”，而是“模型没看到资料”。</li>
+<li><strong>知识库是什么</strong>：知识库是承载外部知识的整体容器，不等于向量库。知识库背后通常包含文档、分块、Embedding、检索、元数据和检索策略等环节。</li>
+<li><strong>三类平台怎么理解</strong>：Cherry Studio、ima 适合个人快速上手；Dify 更适合应用化交付和工作流集成；RAGFlow 更适合复杂文档解析和高精度检索场景。</li>
+<li><strong>真正影响效果的因素</strong>：文档质量、解析质量、分块策略、Embedding 模型、Rerank、Top K、阈值，都会直接影响“查得准不准、答得稳不稳”。</li>
+</ul>
+<p><strong>建议下一步：</strong></p>
+<ul>
+<li>如果你想继续往平台化应用和工作流方向走，建议接着看 <a href="/2023/03/05/llm/1-5-agent-development-on-coze-and-dify/">5-基于Coze&amp;Dify平台的智能体开发</a> 和 <a href="/2023/03/17/llm/1-6-calling-dify-workflows-with-python/">6-Python调用Dify平台工作流</a>。</li>
+<li>如果你想从代码角度真正把 RAG 跑起来，建议先看 <a href="/2023/07/13/llm/1-20-vector-database-and-embedding-in-practice/">20-向量数据库与Embedding实战</a>，再继续看 <a href="/2023/07/20/llm/1-21-rag-retrieval-augmented-generation/">21-RAG检索增强生成</a>。</li>
+</ul>
+</div>
+      </div>
+    </main>
+  </div>
+
+  <div class="float-buttons">
+    <button id="back-to-top" class="float-btn" title="返回顶部">↑</button>
+    <a href="/" class="float-btn" title="返回首页">🏠</a>
+  </div>
+
+  
+  <!-- 浮动按钮脚本：外链（源文件 themes/butterfly/source/js/theme/post-float-btn.js） -->
+  <script src="/js/theme/post-float-btn.js"></script>
+
+  
+  <!--
+  ============================================
+  音频播放器组件
+  文件：APlayer.njk
+  适用终端：电脑端
+  作用：APlayer + Meting 外链播放，按需渲染到页面底部
+  最后修改：2026-11-11
+  ============================================
+-->
+<link rel="stylesheet" href="https://cdn.bootcdn.net/ajax/libs/aplayer/1.10.1/APlayer.min.css">
+<script src="https://cdn.bootcdn.net/ajax/libs/aplayer/1.10.1/APlayer.min.js"></script>
+<script src="https://cdn.bootcdn.net/ajax/libs/meting/2.0.1/Meting.min.js"></script>
+<div class="aplayer no-destroy"
+     data-id="2182931917"
+     data-server="netease"
+     data-type="playlist"
+     data-fixed="true"
+     data-mini="true">
+</div>
+
+
+
+<script>
+  async function renderMermaidDiagram(){
+    const blocks = document.querySelectorAll('pre[class*="language-mermaid"]');
+    if(!blocks.length) return;
+
+    const mermaidBlocks = [];
+    blocks.forEach(el=>{
+      const codeEl = el.querySelector('code');
+      if(codeEl){
+        const codeText = codeEl.innerText;
+        mermaidBlocks.push({fig: el, codeText});
+      }
+    })
+    if(!mermaidBlocks.length) return;
+
+    // ESM 按需引入 mermaid
+    const { default: mermaid } = await import('https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs');
+    
+    mermaid.initialize({
+      startOnLoad: false,
+      theme: 'base'
+    });
+
+    for(const {fig,codeText} of mermaidBlocks){
+      const div = document.createElement('div');
+      div.className = 'mermaid';
+      div.innerText = codeText;
+      fig.parentNode.replaceChild(div, fig);
+    }
+    await mermaid.run();
+  }
+  document.addEventListener('DOMContentLoaded', renderMermaidDiagram);
+  document.addEventListener('pjax:complete', renderMermaidDiagram);
+</script>
+
+
+  <script>
+    /* 返回按钮来源判定：从星迹索引进来回 /tags/，从星图手记进来回 /archives/；
+       直接从地址栏/站外进入时默认回星图手记，保证按钮始终可用 */
+    (function () {
+      var back = document.getElementById('articleBack');
+      if (!back) return;
+      var from = '';
+      try {
+        var q = new URLSearchParams(location.search);
+        from = q.get('from') || '';
+      } catch (e) {}
+      if (!from) {
+        var ref = document.referrer || '';
+        if (ref.indexOf('/tags') > -1) from = 'tags';
+        else if (ref.indexOf('/archives') > -1) from = 'archive';
+      }
+      if (from === 'tags') {
+        back.href = '/tags/';
+        back.textContent = '← 返回星迹索引';
+      } else if (from === 'search') {
+        back.href = '/';
+        back.textContent = '← 返回首页';
+      } else {
+        back.href = '/archives/';
+        back.textContent = '← 返回星图手记';
+      }
+    })();
+  </script>
+</body>
+</html>

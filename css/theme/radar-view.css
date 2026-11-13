@@ -1,0 +1,375 @@
+/*
+  ============================================
+  星图雷达视图样式（阶段 1 + 2）
+  文件：source/css/theme/radar-view.css
+  适用终端：电脑端（/archives/ 时间矩阵、/tags/ 标签图谱）
+  作用：两套视图共用的 HUD 骨架 + 各自的空间规则皮肤
+        .radar-view[data-view="timeline"]  视图 A 时间引力奇点
+        .radar-view[data-view="graph"]     视图 B 多节点引力场
+  依赖：radar-core.js、star-reader.css、chronicle.css、tags.css
+  最后修改：2026-11-13
+  ============================================
+*/
+
+/* ---------- 公共底层：画布 / HUD / 网格 ---------- */
+.radar-view {
+  --rv-a: #00eeff;
+  --rv-b: #8f7dff;
+  --rv-dim: rgba(150, 200, 230, 0.28);
+  overflow: hidden;
+  border-radius: 18px;
+}
+
+/* 粒子画布：最底层，不接事件 */
+.rv-canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* HUD 外圈刻度：用 repeating-conic-gradient 画 72 格刻度，不用 72 个 DOM */
+.rv-hud {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 92%;
+  aspect-ratio: 1 / 1;
+  max-height: 92%;
+  transform: translate(-50%, -50%);
+  border-radius: 50%;
+  pointer-events: none;
+  z-index: 1;
+  opacity: 0.55;
+  background:
+    repeating-conic-gradient(from 0deg, var(--rv-dim) 0deg 0.6deg, transparent 0.6deg 5deg);
+  -webkit-mask-image: radial-gradient(circle, transparent 0 calc(100% - 14px), #000 calc(100% - 13px), transparent calc(100% - 8px));
+  mask-image: radial-gradient(circle, transparent 0 calc(100% - 14px), #000 calc(100% - 13px), transparent calc(100% - 8px));
+}
+
+/* 内核网格：极坐标细环 + 十字标尺 */
+.rv-grid {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 86%;
+  aspect-ratio: 1 / 1;
+  max-height: 86%;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+  z-index: 1;
+  opacity: 0.4;
+  border-radius: 50%;
+  background:
+    radial-gradient(circle, transparent 0 27%, var(--rv-dim) 27.4% 27.8%, transparent 28.2% 44%, var(--rv-dim) 44.4% 44.8%, transparent 45.2% 61%, var(--rv-dim) 61.4% 61.8%, transparent 62.2%);
+}
+
+.rv-grid::before,
+.rv-grid::after {
+  content: "";
+  position: absolute;
+  background: linear-gradient(90deg, transparent, var(--rv-dim), transparent);
+}
+.rv-grid::before { left: 0; right: 0; top: 50%; height: 1px; }
+.rv-grid::after { top: 0; bottom: 0; left: 50%; width: 1px;
+  background: linear-gradient(180deg, transparent, var(--rv-dim), transparent); }
+
+/* 连线画布（SVG）在上、节点之上不再需要额外层 */
+.rv-links {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 2;
+}
+
+/* 扫掠速度按视图区分：A 慢而稳（单向时序），B 不再扫掠
+   B 视图原来用 conic-gradient 的锐边做扫描，边缘只有 4deg，
+   转起来就是一根紫色直线横穿雷达 —— 用户点名要去掉的那根“实线”就是它。
+   这里直接关掉，B 视图的动感交给节点脉冲与星点闪烁。 */
+.radar-view[data-view="timeline"] .radar-scan { animation-duration: 9s; opacity: 0.55; }
+.radar-view[data-view="graph"] .radar-scan { display: none; }
+
+/* A：时序光带单向向外流动（旧 → 新） */
+.radar-view .rv-flow-out { animation: rvDashOut 3.6s linear infinite; }
+@keyframes rvDashOut {
+  to { stroke-dashoffset: -17; }
+}
+/* B：引力丝保持静止（呼吸交给节点脉冲），聚焦态才能稳定改写透明度 */
+
+/* 入场：整体从中心泛开，轨道随后逐条展开 */
+.radar-view.is-entering { animation: rvSceneIn 0.9s cubic-bezier(0.22, 0.68, 0.2, 1) both; }
+@keyframes rvSceneIn {
+  from { opacity: 0; transform: scale(0.94); }
+  to   { opacity: 1; transform: scale(1); }
+}
+
+/* ---------- 视图 A：时间引力奇点（/archives/） ---------- */
+.radar-view[data-view="timeline"] .rv-orbit {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  border-radius: 50%;
+  transform: translate(-50%, -50%) scale(0.2);
+  opacity: 0;
+  pointer-events: none;
+  z-index: 1;
+  border: 1px dashed rgba(0, 238, 255, 0.22);
+  animation: rvOrbitIn 1.1s cubic-bezier(0.2, 0.7, 0.2, 1) forwards;
+}
+@keyframes rvOrbitIn {
+  to { transform: translate(-50%, -50%) scale(1); opacity: 1; }
+}
+/* 内圈（旧年份）更细更暗：归档沉淀 */
+.radar-view[data-view="timeline"] .rv-orbit[data-age="old"] {
+  border-color: rgba(120, 180, 215, 0.16);
+  border-style: dotted;
+}
+
+/* 年份节点：吸附在轨道上，亮度按新旧分档 */
+.radar-view[data-view="timeline"] .year-node {
+  z-index: 4;
+  transition: left 0.9s cubic-bezier(0.2, 0.7, 0.2, 1), top 0.9s cubic-bezier(0.2, 0.7, 0.2, 1), opacity 0.35s;
+}
+.radar-view[data-view="timeline"] .year-node[data-age="old"] { opacity: 0.58; }
+.radar-view[data-view="timeline"] .year-node[data-age="new"] .node-dot { animation: rvNewBlink 2.4s ease-in-out infinite; }
+@keyframes rvNewBlink {
+  0%, 100% { box-shadow: 0 0 14px #00eeff, 0 0 28px rgba(0, 238, 255, 0.7); }
+  50%      { box-shadow: 0 0 22px #00eeff, 0 0 54px rgba(0, 238, 255, 0.95); }
+}
+
+/* ---------- 视图 B：多节点引力场（/tags/） ---------- */
+.radar-view[data-view="graph"] .stargate-node {
+  z-index: 4;
+  transition: left 1s cubic-bezier(0.2, 0.7, 0.2, 1), top 1s cubic-bezier(0.2, 0.7, 0.2, 1),
+              opacity 0.4s, filter 0.4s;
+}
+/* 质量越大越亮、脉冲越密（质量=篇数，CSS 变量由脚本写入） */
+.radar-view[data-view="graph"] .stargate-node {
+  --rv-mass: 0.5;
+  filter: brightness(calc(0.75 + var(--rv-mass) * 0.45));
+}
+.radar-view[data-view="graph"] .stargate-node.node-large .node-pulse {
+  animation-duration: 1.8s;
+}
+.radar-view[data-view="graph"] .stargate-node.node-small {
+  opacity: 0.55;
+}
+
+/* ---------- 文章星点吸附后的收敛（阶段 2 空间规则） ---------- */
+/* 星点层降到 3：年份 / 标签节点（z-index 4）永远压在星点之上，
+   否则吸附后的星点会挡住节点的 hover 与点击 */
+.radar-view .radar-titles { z-index: 3; }
+
+.radar-view .rt-node.is-snapped {
+  opacity: 0.62;
+  filter: saturate(0.85);
+}
+.radar-view .rt-node.is-snapped:hover {
+  opacity: 1;
+  filter: none;
+  z-index: 6;
+}
+
+/* ---------- 选中 / 聚焦态（两视图共用外壳，反馈不同） ---------- */
+.radar-view.is-focused .rv-dimmed {
+  opacity: 0.22;
+  filter: saturate(0.5);
+}
+
+/* A：奇点光束 + 相邻时序链 */
+.radar-view[data-view="timeline"] .rv-beam {
+  stroke: #9ff4ff;
+  stroke-width: 2;
+  filter: drop-shadow(0 0 6px #00eeff);
+  animation: rvBeamIn 0.45s ease-out both;
+}
+@keyframes rvBeamIn {
+  from { stroke-opacity: 0; stroke-width: 8; }
+  to   { stroke-opacity: 0.9; stroke-width: 2; }
+}
+
+/* B：冲击波环 */
+.rv-shock {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 20px;
+  height: 20px;
+  margin: -10px 0 0 -10px;
+  border-radius: 50%;
+  border: 1px solid rgba(143, 125, 255, 0.9);
+  pointer-events: none;
+  z-index: 3;
+  animation: rvShock 0.9s ease-out forwards;
+}
+@keyframes rvShock {
+  from { transform: scale(0.4); opacity: 0.95; }
+  to   { transform: scale(7); opacity: 0; }
+}
+
+/* ---------- 选中的跨页携带：回到本页时给一个短暂的锚点呼吸 ---------- */
+.rv-anchor-pulse {
+  animation: rvAnchor 1.6s ease-in-out 2;
+}
+@keyframes rvAnchor {
+  0%, 100% { filter: none; }
+  50%      { filter: drop-shadow(0 0 12px #00eeff) brightness(1.4); }
+}
+
+/* ---------- 降级：窄屏或低配机器 ---------- */
+@media (max-width: 1500px) {
+  .rv-hud, .rv-grid { opacity: 0.32; }
+  /* 窄屏雷达区矮，标签文字收小一档，减少互相压字 */
+  .radar-view .node-label { font-size: 11px; }
+}
+@media (max-height: 900px) and (max-width: 1500px) {
+  .radar-view .rt-node .rt-label { font-size: 9px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .radar-view[data-view="timeline"] .rv-orbit { animation: none; transform: translate(-50%, -50%) scale(1); opacity: 1; }
+  .rv-canvas { display: none; }
+}
+
+/* ============================================================
+   控制台尺寸校准（第 3 轮）
+   目标：顶部条矮 12px、侧栏窄 24px、左右两栏各收一截、缝隙收紧，
+        把省下的宽度/高度全给中间雷达；底部年度分布反而抬高 14px。
+   只作用在两个控制台页（html.post-page），不影响首页与文章页。
+   ============================================================ */
+
+/* ----- 1. 顶部 HUD：垂直 padding 16 → 11，标题 18 → 16，按钮同步收 ----- */
+.console-header {
+  padding: 11px 22px;
+  margin-bottom: 15px;
+  border-radius: 14px;
+}
+.console-title { gap: 10px; }
+.title-dot { width: 9px; height: 9px; }
+.title-label { font-size: 16px; letter-spacing: 3px; }
+.title-sub { font-size: 11px; letter-spacing: 2px; }
+.console-status { gap: 18px; }
+.status-item { gap: 7px; }
+.status-text { font-size: 11px; letter-spacing: 2px; }
+.status-dot { width: 6px; height: 6px; }
+.back-home {
+  gap: 7px;
+  padding: 7px 15px;
+  font-size: 12px;
+  border-radius: 10px;
+}
+.back-home-icon { font-size: 12px; }
+.console-header::after { top: 5px; right: 16px; font-size: 9px; letter-spacing: 2px; }
+
+/* ----- 2. 侧栏 320 → 296，内容区跟着收 2px 内边距 ----- */
+.post-page .sidebar { width: 296px; padding: 18px 8px 18px 18px; }
+
+/* ----- 3. 三栏列宽：左 -24、右 -20、缝 24 → 18（≥1501 档） ----- */
+@media (min-width: 1501px) {
+  .starmap-main {
+    grid-template-columns:
+      clamp(258px, calc(19vw - 58px), 394px)
+      minmax(0, 1fr)
+      clamp(282px, calc(20vw - 64px), 426px);
+    gap: 18px;
+  }
+  /* 面板内边距同步收 2px，雷达再多吃 4px */
+  .starmap-panel { padding: 14px 16px; }
+}
+
+/* ----- 4. 底部年度分布 134 → 148（+14px），年份条更好读
+       只在 ≥1501 的「视口锁定」模式改行高；≤1500 是页面滚动堆叠，改行高会挤压右栏 */
+@media (min-width: 1501px) {
+  .archive-main .starmap-main { grid-template-rows: minmax(0, 1fr) 148px; }
+}
+
+/* 11 个年份竖排一列塞不进 148px，必然内部滚动、只露出前四行；
+   改成三列网格 —— 11 条变 4 行，整年谱一眼看完，条长也够读 */
+.archive-main .bottom-panel .year-bars {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 4px 26px;
+  align-content: start;
+  overflow: visible;
+}
+
+/* ----- 5. 窄屏档（≤1500）：只收缝与内边距
+   注意：≤1500 时 chronicle.css 把三栏改成「纵向堆叠 + 页面滚动」（rows auto auto auto），
+   这里不能覆盖 rows，否则会把右栏卡片挤进一条 132px 的行里 */
+@media (max-width: 1500px) {
+  .starmap-main { gap: 16px; }
+  .starmap-panel { padding: 12px 14px; }
+  .archive-main .bottom-panel .year-bars { gap: 4px 16px; }
+}
+
+/* 吸附星点的小标签：长标题截断显示，窄屏再收窄一档，避免几十个小字糊成一团 */
+.radar-view .rt-label { text-overflow: ellipsis; }
+.radar-view .rt-node .rt-label,
+.radar-view .node-label { border-radius: 4px; }
+@media (max-width: 1500px) {
+  .radar-view .rt-label { max-width: 96px; }
+}
+
+/* ============================================================
+   点击脉冲闪烁（替代从核心拉出的直线光束）
+   节点自身闪 2 轮：星点亮 → 灭 → 亮，外加一圈扩散光环
+   ============================================================ */@keyframes rvHitPulse {
+  0%   { transform: scale(1);    opacity: 1;   filter: brightness(1); }
+  25%  { transform: scale(2.1);  opacity: 1;   filter: brightness(1.9) drop-shadow(0 0 12px currentColor); }
+  55%  { transform: scale(1);    opacity: 0.55; filter: brightness(1); }
+  75%  { transform: scale(1.8);  opacity: 1;   filter: brightness(1.7) drop-shadow(0 0 10px currentColor); }
+  100% { transform: scale(1);    opacity: 1;   filter: brightness(1); }
+}
+@keyframes rvHitRing {
+  0%   { box-shadow: 0 0 0 0 rgba(143, 125, 255, 0.55); }
+  70%  { box-shadow: 0 0 0 16px rgba(143, 125, 255, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(143, 125, 255, 0); }
+}
+.year-node.rv-hit .node-dot,
+.stargate-node.rv-hit .node-dot,
+.rt-node.rv-hit .rt-dot {
+  animation: rvHitPulse 0.7s ease-in-out 2;
+}
+.year-node.rv-hit,
+.stargate-node.rv-hit,
+.rt-node.rv-hit {
+  animation: rvHitRing 1.4s ease-out 1;
+  border-radius: 50%;
+}
+@media (prefers-reduced-motion: reduce) {
+  .year-node.rv-hit .node-dot,
+  .stargate-node.rv-hit .node-dot,
+  .rt-node.rv-hit .rt-dot,
+  .year-node.rv-hit,
+  .stargate-node.rv-hit,
+  .rt-node.rv-hit { animation: none; }
+}
+
+/* ============================================================
+   星图手记：行星沿轨道顺时针滑行
+   radar-core.js 每 5s 给每个节点 deg += 9°，这里把 left/top 的跳变
+   抹成 1.2s 缓动，看起来就是「跟着轨道转」而不是瞬移。
+   ============================================================ */
+.radar-view[data-view="timeline"] .year-node,
+.radar-view[data-view="timeline"] .rt-node {
+  transition: left 1.2s cubic-bezier(.33, 0, .67, 1), top 1.2s cubic-bezier(.33, 0, .67, 1);
+}
+@media (prefers-reduced-motion: reduce) {
+  .radar-view[data-view="timeline"] .year-node,
+  .radar-view[data-view="timeline"] .rt-node { transition: none; }
+}
+
+/* 真实用户点击日志（与模拟日志同形，标签换成青色「操作」） */
+.log-item-user .log-tag {
+  color: #9ff4ff;
+  border-color: rgba(0, 238, 255, 0.55);
+  background: rgba(0, 238, 255, 0.12);
+}
+.log-item-user .log-text { color: #d8f6ff; }
+
+
+
+

@@ -1,0 +1,2317 @@
+<!--
+  ============================================
+  文章原文页模板
+  文件：post.njk
+  适用终端：电脑端
+  作用：文章正文 + 侧栏；手机 UA 跳 /phone/p/<slug>/
+  最后修改：2026-11-11
+  ============================================
+-->
+
+
+<!DOCTYPE html>
+<html class="post-page">
+<!--
+  ============================================
+  公共 head 组件
+  文件：Head.njk
+  适用终端：电脑端
+  作用：输出 charset/viewport/title，并按 pageCss 输出外链样式表
+  样式资源：themes/butterfly/source/css/theme/*.css（Hexo 复制到 /css/theme/）
+  引入层级顺序（= CSS 层叠顺序，调整只允许追加，不要打乱前后）：
+    1 基础  common.css
+    2 布局  post-layout.css
+    3 组件  sidebar.css
+    4 正文  post.css
+    5 页面  tags.css / chronicle.css / about.css / tag.css / category-shared.css / pc-home.css
+    6 浮层  star-reader.css
+    7 特效  starmap-live.css
+  最后修改：2026-11-12
+  ============================================
+--><head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="color-scheme" content="dark">
+  <meta name="theme-color" content="#020817">
+  <!-- 首帧兜底：浏览器默认画布是白的，样式表还没解析完就画会闪一下白。这条 8 字节规则先锁死深空底色 -->
+  <style>html{background-color:#020817}</style>
+  <title>时空秘境 - JUC多线程篇(五) Wait/Notif</title>
+  
+  <link rel="stylesheet" href="/css/theme/common.css">
+  
+  <link rel="stylesheet" href="/css/theme/post-layout.css">
+  
+  <link rel="stylesheet" href="/css/theme/sidebar.css">
+  
+  <link rel="stylesheet" href="/css/theme/post.css">
+  
+<meta name="generator" content="Hexo 8.1.2"></head>
+
+<script>
+  /* 手机 UA 分流：电脑端这套控制台不再给手机用，直接换成手机版页面 */
+  (function () {
+    var ua = navigator.userAgent || '';
+    if (/Android|iPhone|iPod|HarmonyOS|Windows Phone|MicroMessenger|Mobile Safari/i.test(ua)) {
+      location.replace('/phone/p/java/juc-5-wait-notify/');
+    }
+  })();
+</script>
+<link rel="stylesheet" href="/css/code-table.css">
+
+<body>
+  <!--
+  ============================================
+  星空粒子背景组件
+  文件：Particles.njk
+  适用终端：电脑端
+  作用：particles.js 全站星空动画，鼠标悬停互动
+  最后修改：2026-11-11
+  ============================================
+--><!-- z-index 必须是 0 而不是 -1：body 带着不透明的 radial-gradient 底色，
+     负层级的子元素会被父元素背景整个盖住，粒子在跑但一个点都看不见 -->
+<div id="particles" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 0; pointer-events: none;"></div>
+<!-- 星座层：随机零星散布星座图形，叠在粒子之上、页面内容之下 -->
+<div id="constellations" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 1; pointer-events: none;" aria-hidden="true"></div>
+<script src="/js/particles.min.js"></script>
+<script>/* 本地库失效时回退 CDN，保证星空背景不丢 */
+if (typeof particlesJS === "undefined") {
+  document.write('<script src="https://cdn.jsdelivr.net/particles.js/2.0.0/particles.min.js"><\/script>');
+}
+</script>
+<script>
+particlesJS("particles", {
+  particles: {
+    number: {
+      value: 95,
+      density: {
+        enable: true,
+        value_area: 800
+      }
+    },
+    color: {
+      value: "#00eeff"
+    },
+    shape: {
+      type: "circle",
+      stroke: {
+        width: 0,
+        color: "#000000"
+      }
+    },
+    opacity: {
+      value: 0.6,
+      random: true,
+      anim: {
+        enable: true,
+        speed: 0.5,
+        opacity_min: 0.1,
+        sync: false
+      }
+    },
+    size: {
+      value: 3,
+      random: true,
+      anim: {
+        enable: true,
+        speed: 2,
+        size_min: 0.1,
+        sync: false
+      }
+    },
+    line_linked: {
+      enable: true,
+      distance: 118,          /* 比原来 150 收紧，让粒子网络稀疏些，给星座留出视觉空间 */
+      color: "#00eeff",
+      opacity: 0.32,
+      width: 1
+    },
+    move: {
+      enable: true,
+      speed: 0.8,
+      direction: "none",
+      random: true,
+      straight: false,
+      out_mode: "out",
+      bounce: false,
+      attract: {
+        enable: true,
+        rotateX: 600,
+        rotateY: 1200
+      }
+    }
+  },
+  interactivity: {
+    detect_on: "canvas",
+    events: {
+      onhover: {
+        enable: true,
+        mode: "grab"       // 鼠标悬停时粒子聚集
+      },
+      onclick: {
+        enable: true,
+        mode: "push"       // 点击时产生新粒子
+      },
+      resize: true
+    },
+    modes: {
+      grab: {
+        distance: 200,
+        line_linked: {
+          opacity: 1
+        }
+      },
+      push: {
+        particles_nb: 6
+      }
+    }
+  },
+  retina_detect: true
+});
+</script>
+<!-- 星座层：独立 canvas，随机散布真实星座图形（依赖上面的 #constellations 容器） -->
+<script src="/js/theme/starfield.js"></script>
+
+  <!-- 返回按钮：按来源回到星图手记 / 星迹索引，默认回星图手记。
+       放在 body 顶层（不进 main-content），避免被其溢出裁剪切掉右半边 -->
+  <a class="article-back" id="articleBack" href="/archives/">← 返回星图手记</a>
+
+  <div class="app-layout">
+    <!--
+  ============================================
+  左侧栏个人卡组件
+  文件：_components/Sidebar.njk
+  适用终端：电脑端（星图手记 / 星迹索引 / 秘境主人 页面通栏侧栏）
+  作用：头像、昵称、站点统计、导航菜单、底部信息与全局搜索面板（结果落在雷达区，无结果播「内容走丢 → 404」动画）
+  样式依赖：source/css/theme/sidebar.css
+  脚本依赖：source/js/theme/sidebar.js
+  最后修改：2026-11-11
+  ============================================
+-->
+<aside class="sidebar" id="sidebar">
+  <div class="profile-card">
+    <div class="avatar">
+      <div
+        style="width:80px;height:80px;border-radius:50%;background:linear-gradient(135deg,#0a0e27,#1a1a4e);display:flex;align-items:center;justify-content:center;margin:0 auto;font-size:40px;border:2px solid #00eeff;box-shadow:0 0 30px rgba(0,238,255,0.3);">
+        ✨</div>
+    </div>
+    <h3 class="nickname">时空行者</h3>
+    <p class="bio">星辰大海，代码为舟</p>
+    <div class="stats">
+      <div class="stat-item">
+        <span class="stat-num">174</span>
+        <span class="stat-label">文章</span>
+      </div>
+      <div class="stat-item">
+        <span class="stat-num" id="fans-count" style="cursor:pointer;">1088</span>
+        <span class="stat-label">粉丝</span>
+      </div>
+      <div class="stat-item">
+        <span class="stat-num" id="follow-count" style="cursor:pointer;">66</span>
+        <span class="stat-label">关注</span>
+      </div>
+    </div>
+    <button class="follow-btn">+ 关注</button>
+  </div>
+  <div class="search-box">
+    <input type="text" placeholder="找找看..." id="search-input">
+    <button class="search-btn" id="searchModalOpen">🔍</button>
+  </div>
+  <div class="links-card">
+    <h4>常用链接</h4>
+    <ul>
+      <li><a href="/about/">秘境主人</a></li>
+      <li><a href="/archives/">星图手记</a></li>
+      <li><a href="/tags/">星迹索引</a></li>
+      <!-- ✅ 新增联系我 -->
+      <li><a class="contact-trigger" href="javascript:void(0)">星语传书</a></li>
+      <li><a class="donate-trigger" href="javascript:void(0)">星芒赠礼</a></li>
+    </ul>
+  </div>
+  <div class="tags-card">
+    <h4>热门标签</h4>
+    
+    <div class="tag-cloud">
+      
+      <a href="/tags/MySQL数据库/" class="tag-link" data-tag="MySQL数据库"
+        data-count="7">MySQL数据库</a>
+      
+      <a href="/tags/redis/" class="tag-link" data-tag="redis"
+        data-count="7">redis</a>
+      
+      <a href="/tags/深度研搜/" class="tag-link" data-tag="深度研搜"
+        data-count="15">深度研搜</a>
+      
+      <a href="/tags/电商问数/" class="tag-link" data-tag="电商问数"
+        data-count="18">电商问数</a>
+      
+      <a href="/tags/git/" class="tag-link" data-tag="git"
+        data-count="5">git</a>
+      
+      <a href="/tags/面试/" class="tag-link" data-tag="面试"
+        data-count="11">面试</a>
+      
+      <a href="/tags/Java/" class="tag-link" data-tag="Java"
+        data-count="10">Java</a>
+      
+      <a href="/tags/langchain/" class="tag-link" data-tag="langchain"
+        data-count="10">langchain</a>
+      
+      <a href="/tags/Netty/" class="tag-link" data-tag="Netty"
+        data-count="4">Netty</a>
+      
+      <a href="/tags/大模型/" class="tag-link" data-tag="大模型"
+        data-count="35">大模型</a>
+      
+      <a href="/tags/AICoding/" class="tag-link" data-tag="AICoding"
+        data-count="9">AICoding</a>
+      
+      <a href="/tags/SpringAi/" class="tag-link" data-tag="SpringAi"
+        data-count="15">SpringAi</a>
+      
+      <a href="/tags/随笔杂谈/" class="tag-link" data-tag="随笔杂谈"
+        data-count="2">随笔杂谈</a>
+      
+      <a href="/tags/vue/" class="tag-link" data-tag="vue"
+        data-count="9">vue</a>
+      
+      <a href="/tags/视频剪辑/" class="tag-link" data-tag="视频剪辑"
+        data-count="1">视频剪辑</a>
+      
+      <a href="/tags/大数据/" class="tag-link" data-tag="大数据"
+        data-count="3">大数据</a>
+      
+      <a href="/tags/电影/" class="tag-link" data-tag="电影"
+        data-count="2">电影</a>
+      
+      <a href="/tags/游戏/" class="tag-link" data-tag="游戏"
+        data-count="1">游戏</a>
+      
+      <a href="/tags/音乐/" class="tag-link" data-tag="音乐"
+        data-count="8">音乐</a>
+      
+      <a href="/tags/图片/" class="tag-link" data-tag="图片"
+        data-count="2">图片</a>
+      
+    </div>
+    <script>
+      /*
+  ============================================
+  侧栏热门标签排序（首帧前执行）
+  文件：_js/hot-tags.js
+  引入位置：_components/Sidebar.njk 里 .tag-cloud 闭合标签之后（紧跟着写死）
+  作用：按点击次数排序、只露前 5 个、点一下立刻重排
+  为什么单独拆出来：以前放在 sidebar.js 的 DOMContentLoaded 里，首帧渲染的还是
+  模板顺序的 20 个标签，等脚本跑完才收成 5 个；配合跨页淡入（View Transition）
+  会出现「新旧两套标签叠在一起、影子跳一下」。紧跟标签节点内联执行就没有中间态。
+  最后修改：2026-11-12
+  ============================================
+*/
+(function () {
+  var cloud = document.querySelector('.tag-cloud');
+  if (!cloud) return;
+  var links = Array.prototype.slice.call(cloud.querySelectorAll('.tag-link'));
+  if (!links.length) return;
+
+  var KEY = 'starry_tag_visits'; // 标签名 -> 点击次数
+  var TOP = 5;
+  var visits = {};
+
+  try {
+    var raw = JSON.parse(localStorage.getItem(KEY) || '{}');
+    visits = (raw && typeof raw === 'object') ? raw : {};
+  } catch (e) {
+    visits = {};
+  }
+
+  links.forEach(function (link) {
+    var name = link.dataset.tag || (link.textContent || '').trim();
+    link.dataset.tag = name;
+    if (!link.dataset.count) link.dataset.count = '0';
+  });
+
+  // 排序：点击次数降序 → 文章数降序 → 名字，保证同分时顺序稳定不来回跳
+  function order() {
+    return links.slice().sort(function (a, b) {
+      var va = visits[a.dataset.tag] || 0;
+      var vb = visits[b.dataset.tag] || 0;
+      if (vb !== va) return vb - va;
+      var ca = Number(a.dataset.count) || 0;
+      var cb = Number(b.dataset.count) || 0;
+      if (cb !== ca) return cb - ca;
+      return String(a.dataset.tag).localeCompare(String(b.dataset.tag), 'zh');
+    });
+  }
+
+  // 重排 DOM：按名次 append，超出 5 个的 hidden（仍留在 DOM，等名次升上来再显示）
+  function render() {
+    order().forEach(function (link, i) {
+      link.dataset.visits = visits[link.dataset.tag] || 0;
+      cloud.appendChild(link);
+      link.hidden = i >= TOP;
+    });
+  }
+
+  links.forEach(function (link) {
+    link.addEventListener('click', function () {
+      var name = link.dataset.tag;
+      visits[name] = (visits[name] || 0) + 1;
+      try { localStorage.setItem(KEY, JSON.stringify(visits)); } catch (e) { /* 忽略配额错误 */ }
+      render(); // 当前页立刻看到「谁被点多了谁上前」
+    });
+  });
+
+  render();
+})();
+
+    </script>
+  </div>
+  <div class="archive-card">
+    <h4>按月归档</h4>
+    <ul class="archive-list">
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2026/12/">
+          2026年12月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2026/11/">
+          2026年11月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2026/10/">
+          2026年10月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2026/09/">
+          2026年09月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2026/08/">
+          2026年08月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2026/07/">
+          2026年07月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2026/06/">
+          2026年06月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2026/05/">
+          2026年05月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2026/04/">
+          2026年04月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2026/03/">
+          2026年03月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2026/02/">
+          2026年02月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2026/01/">
+          2026年01月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2025/12/">
+          2025年12月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2025/11/">
+          2025年11月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2025/10/">
+          2025年10月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2025/09/">
+          2025年09月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2025/08/">
+          2025年08月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2025/07/">
+          2025年07月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2025/06/">
+          2025年06月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2025/05/">
+          2025年05月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2025/04/">
+          2025年04月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2025/03/">
+          2025年03月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2025/02/">
+          2025年02月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2025/01/">
+          2025年01月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2024/11/">
+          2024年11月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2024/10/">
+          2024年10月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2024/09/">
+          2024年09月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2024/08/">
+          2024年08月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2024/07/">
+          2024年07月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2024/05/">
+          2024年05月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2024/04/">
+          2024年04月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2024/03/">
+          2024年03月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2024/02/">
+          2024年02月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2024/01/">
+          2024年01月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2023/12/">
+          2023年12月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2023/11/">
+          2023年11月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2023/10/">
+          2023年10月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2023/09/">
+          2023年09月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2023/08/">
+          2023年08月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2023/07/">
+          2023年07月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2023/06/">
+          2023年06月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2023/05/">
+          2023年05月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2023/04/">
+          2023年04月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2023/03/">
+          2023年03月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2023/02/">
+          2023年02月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2023/01/">
+          2023年01月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2022/09/">
+          2022年09月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2022/05/">
+          2022年05月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2022/01/">
+          2022年01月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2021/12/">
+          2021年12月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2021/11/">
+          2021年11月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2021/10/">
+          2021年10月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2021/09/">
+          2021年09月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2021/08/">
+          2021年08月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2021/07/">
+          2021年07月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2021/06/">
+          2021年06月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2021/05/">
+          2021年05月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2021/04/">
+          2021年04月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2021/03/">
+          2021年03月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2021/02/">
+          2021年02月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2021/01/">
+          2021年01月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2020/10/">
+          2020年10月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2020/07/">
+          2020年07月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2020/04/">
+          2020年04月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2020/01/">
+          2020年01月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2019/12/">
+          2019年12月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2019/11/">
+          2019年11月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2019/10/">
+          2019年10月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2019/09/">
+          2019年09月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2019/08/">
+          2019年08月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2019/07/">
+          2019年07月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2019/06/">
+          2019年06月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2019/05/">
+          2019年05月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2019/04/">
+          2019年04月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2019/03/">
+          2019年03月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2019/02/">
+          2019年02月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2019/01/">
+          2019年01月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2018/12/">
+          2018年12月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2018/11/">
+          2018年11月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2018/10/">
+          2018年10月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2018/09/">
+          2018年09月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2018/08/">
+          2018年08月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2018/07/">
+          2018年07月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2018/06/">
+          2018年06月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2018/05/">
+          2018年05月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2018/04/">
+          2018年04月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2018/03/">
+          2018年03月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2018/02/">
+          2018年02月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2018/01/">
+          2018年01月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+    </ul>
+  </div>
+
+  <!-- ========== 星语传书（雷达区弹窗，与搜索面板同一套面板样式） ========== -->
+  <div class="search-panel dock-panel" id="contactModal" hidden>
+    <div class="sp-mask" data-dock-close></div>
+    <div class="sp-box" role="dialog" aria-modal="true" aria-label="星语传书">
+      <div class="sp-head">
+        <span class="sp-dot"></span>
+        <span class="sp-title">星语传书</span>
+        <span class="sp-title-sub">/ SIGNAL CHANNEL</span>
+        <span class="sp-meta">SYS.REPLY ≤ 48H</span>
+        <button class="sp-close" type="button" data-dock-close title="关闭">×</button>
+      </div>
+      <div class="sp-body dock-body">
+        <p class="dock-lead">写信给时空行者：文章里的错字、跑不通的 demo、想聊的一句技术，都可以从这里进来。信号收到，我会尽量回。</p>
+        <div class="dock-grid">
+          <div class="dock-list">
+            <a class="dock-row" href="https://wpa.qq.com/msgrd?v=3&amp;uin=372109355&amp;site=qq&amp;menu=yes"
+              target="_blank" rel="noopener">
+              <span class="dock-ico">企</span>
+              <span class="dock-k"><b>QQ</b><span>372109355</span></span>
+            </a>
+            <a class="dock-row" href="https://wu4yong.github.io" target="_blank" rel="noopener">
+              <span class="dock-ico">⌂</span>
+              <span class="dock-k"><b>站点主站</b><span>wu4yong.github.io</span></span>
+            </a>
+            <div class="dock-row dock-row-static">
+              <span class="dock-ico">✉</span>
+              <span class="dock-k"><b>电子邮箱</b><span>暂未公开 · 任何问题QQ留言</span></span>
+            </div>
+            <a class="dock-row" href="#" target="_blank" rel="noopener">
+              <span class="dock-ico">◈</span>
+              <span class="dock-k"><b>GitHub</b><span>暂未公开 · 任何问题QQ留言</span></span>
+            </a>
+            <a class="dock-row" href="#" target="_blank" rel="noopener">
+              <span class="dock-ico">◇</span>
+              <span class="dock-k"><b>Gitee</b><span>暂未公开 · 任何问题QQ留言</span></span>
+            </a>
+          </div>
+          <div class="dock-side">
+            <div class="dock-qr">
+              <em>WECHAT · 微信</em>
+              <img src="/assets/images/wechat-qr.png" alt="微信二维码">
+              <span class="dock-qr-tip">扫码添加，备注「来自时空秘境」</span>
+            </div>
+          </div>
+        </div>
+        <div class="dock-chips">
+          <span class="dock-chip">文章纠错</span>
+          <span class="dock-chip">Demo 答疑</span>
+          <span class="dock-chip">转载授权</span>
+          <span class="dock-chip">技术交流</span>
+          <span class="dock-chip">内推 / 合作</span>
+        </div>
+        <p class="dock-note">无正文的「在吗」容易被当作信号干扰滤掉，直接把问题写清楚，回信会快很多。</p>
+      </div>
+      <!-- 开合转场层：百叶窗 / 电影幕布 / 淡入，由 source/js/theme/sidebar.js 轮换播放 -->
+      <div class="dock-fx" aria-hidden="true">
+        <div class="dock-fx-slats"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+        <div class="dock-fx-curtain"><span class="top"></span><span class="bottom"></span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========== 全局搜索面板 ==========
+       索引来自构建期生成的 /search.json（hexo-generator-searchdb），随文章新增自动更新；
+       打开时由 source/js/theme/sidebar.js 把整块挪进 Radar 中间区（无雷达的页面退化为居中浮层） -->
+  <div class="search-panel" id="searchPanel" hidden>
+    <div class="sp-mask" id="searchMask"></div>
+    <div class="sp-box" role="dialog" aria-modal="true" aria-label="全文搜索">
+      <div class="sp-head">
+        <span class="sp-dot"></span>
+        <span class="sp-title">全文搜索</span>
+        <span class="sp-title-sub">/ GLOBAL SEARCH</span>
+        <span class="sp-meta" id="spMeta"></span>
+        <button class="sp-close" id="searchPanelClose" type="button" title="关闭搜索">×</button>
+      </div>
+      <div class="sp-body" id="spBody">
+        <div class="sp-loading" id="spLoading">正在扫描星图索引…</div>
+        <ul class="sp-list" id="spList"></ul>
+        <!-- 无结果：内容走丢 → 慢速落 404 -->
+        <div class="sp-empty" id="spEmpty" hidden>
+          <div class="sp-drift-wrap">
+            <span class="sp-trail"></span>
+            <span class="sp-drift"></span>
+            <span class="sp-lost">SIGNAL LOST · 信号已丢失</span>
+          </div>
+          <div class="sp-404"><span>4</span><span>0</span><span>4</span></div>
+          <p class="sp-empty-main">内容走丢在星海里了</p>
+          <p class="sp-empty-tip">换个关键词，或去〈星迹索引 / 星图手记〉里慢慢逛</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========== 星芒赠礼（雷达区弹窗，收款码图片沿用原图不改） ========== -->
+  <div class="search-panel dock-panel" id="donateModal" hidden>
+    <div class="sp-mask" data-dock-close></div>
+    <div class="sp-box" role="dialog" aria-modal="true" aria-label="星芒赠礼">
+      <div class="sp-head">
+        <span class="sp-dot"></span>
+        <span class="sp-title">星芒赠礼</span>
+        <span class="sp-title-sub">/ STAR OFFERING</span>
+        <span class="sp-meta">THANKS FOR THE LIGHT</span>
+        <button class="sp-close" type="button" data-dock-close title="关闭">×</button>
+      </div>
+      <div class="sp-body dock-body">
+        <div class="dock-thanks">
+          <p>这片星空是工作闲暇时光一个个凌晨攒出来的：一篇文章、一次复盘、一个修不完的 bug。</p>
+          <p>如果你在这里找到了能用的东西，愿意赏一杯凌晨三点的咖啡 —— 这份心意我会记很久。</p>
+          <p>不打赏也完全没关系：所有文章永久免费，愿你我在各自的轨道上都跑得稳一点。</p>
+        </div>
+        <div class="dock-donate">
+          <div class="dock-hero">
+            <div class="dock-hero-pic">
+              <span class="dock-hero-halo" aria-hidden="true"></span>
+              <span class="dock-hero-ring dock-hero-ring-a" aria-hidden="true"></span>
+              <span class="dock-hero-ring dock-hero-ring-b" aria-hidden="true"></span>
+              <img src="/assets/images/donate-boy.png" alt="感谢支持">
+            </div>
+            <em>THANKS FOR THE LIGHT</em>
+            <span class="dock-hero-tip">愿每一次凌晨，都有人替你留一盏灯</span>
+          </div>
+          <div class="dock-pay">
+            <div class="dock-qr dock-qr-row">
+              <img src="/assets/images/alipay-qr.jpg" alt="支付宝收款码">
+              <div class="dock-qr-txt">
+                <b>支付宝 · 星途赞赏</b>
+                <span>请我喝一杯凌晨三点的咖啡</span>
+              </div>
+            </div>
+            <div class="dock-qr dock-qr-row">
+              <img src="/assets/images/wechat-pay-qr.jpg" alt="微信收款码">
+              <div class="dock-qr-txt">
+                <b>微信 · 星河致谢</b>
+                <span>金额随意，心意已经收到</span>
+              </div>
+            </div>
+          </div>
+        </div>        <div class="dock-chips">
+          <span class="dock-chip">域名与服务器</span>
+          <span class="dock-chip">图床与备份</span>
+          <span class="dock-chip">一本技术书</span>
+          <span class="dock-chip">深夜的一杯咖啡</span>
+        </div>
+        <p class="dock-note">赠礼纯属心意，不产生任何付费内容或额外承诺；扫码前请确认收款人，小心仿冒。</p>
+      </div>
+      <!-- 开合转场层：百叶窗 / 电影幕布 / 淡入，由 source/js/theme/sidebar.js 轮换播放 -->
+      <div class="dock-fx" aria-hidden="true">
+        <div class="dock-fx-slats"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+        <div class="dock-fx-curtain"><span class="top"></span><span class="bottom"></span></div>
+      </div>
+    </div>
+  </div>
+
+
+</aside>
+<!-- 引入侧边栏交互脚本：外链（源文件 themes/butterfly/source/js/theme/sidebar.js） -->
+<script src="/js/theme/sidebar.js"></script>
+
+    
+    <button id="sidebarToggle" class="sidebar-toggle" title="隐藏侧栏"></button>
+
+    <main class="main-content">
+      <div class="article-card">
+        <h1 class="article-title">JUC多线程篇(五) Wait/Notif</h1>
+        <div class="article-meta">📅 2018-04-17</div>
+        <div class="article-content"><div class="essay-banner essay-image1">
+    <!-- Wait  Notify    -->
+</div>
+
+<h1 id="Wait-Notify-线程等待唤醒机制"><a href="#Wait-Notify-线程等待唤醒机制" class="headerlink" title="Wait&#x2F;Notify 线程等待唤醒机制"></a><strong>Wait&#x2F;Notify</strong> 线程等待唤醒机制</h1><p>Wait&#x2F;notify 是 synchronized 内置的线程协作机制，依托 Monitor 的 WaitSet 等待队列实现，<br>核心作用是<strong>实现线程间通信、控制线程执行顺序、优化并发效率</strong>，解决线程条件不满足时的无效阻塞问题，是多线程同步的核心基础机制。</p>
+<h2 id="5-1-通俗小故事：为什么需要-wait-等待机制"><a href="#5-1-通俗小故事：为什么需要-wait-等待机制" class="headerlink" title="5.1 通俗小故事：为什么需要 wait 等待机制"></a>5.1 通俗小故事：为什么需要 wait 等待机制</h2><p>我们可以结合生活化场景，彻底理解 wait&#x2F;notify 的设计初衷，解决线程持有锁空等的低效问题：<br>● 由于条件不满足，小南不能继续进行计算<br>● 但小南如果一直占用着锁，其它人就得一直阻塞，效率太低</p>
+<p><img src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/java/concurrent/waitStory1.webp" alt="waitStory1示意图"></p>
+<p>● 于是老王单开了一间休息室（调用 wait 方法），让小南到休息室（WaitSet）等着去了，但这时锁释放开，其它人可以由老王随机安排进屋<br>● 直到小M将烟送来，大叫一声 [ 你的烟到了 ] （调用 notify 方法）</p>
+<p><img src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/java/concurrent/waitStory2.webp" alt="waitStory2示意图"></p>
+<p>● 小南于是可以离开休息室，重新进入竞争锁的队列</p>
+<p><img src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/java/concurrent/waitStory3.webp" alt="waitStory示意图"></p>
+<blockquote>
+<p>● 线程小南获取到对象锁（占用房间）后，发现自身执行条件不满足（没有烟无法干活），无法继续执行业务代码；<br>● 如果小南一直持有锁空等，其他所有线程都会被阻塞在EntryList，无法执行任何操作，系统并发效率极低；<br>● 为解决该问题，Monitor 提供了专属休息室 WaitSet：小南调用 wait() 主动释放锁，进入 WaitSet 休眠等待，此时锁空闲，其他线程可以正常竞争锁、执行业务；<br>● 当外部条件满足（小M把烟送达），其他线程调用 notify() 发出唤醒通知；<br>● 休眠的小南被唤醒，离开 WaitSet 休息室，重新进入 EntryList 竞争锁资源，获取锁成功后继续执行剩余代码。</p>
+</blockquote>
+<h2 id="5-2-wait-notify-底层原理（Monitor-机制）"><a href="#5-2-wait-notify-底层原理（Monitor-机制）" class="headerlink" title="5.2 wait&#x2F;notify 底层原理（Monitor 机制）"></a>5.2 wait&#x2F;notify 底层原理（Monitor 机制）</h2><p><img src="https://cdn.jsdelivr.net/gh/wu4yong/starry-images@main/assets/img/java/concurrent/wait%E5%8E%9F%E7%90%86.webp" alt="wait原理示意图"></p>
+<p><strong>Wait&#x2F;Notify:</strong>  所有操作都依托对象的 Monitor 监视器实现，核心涉及 Monitor 的 Owner、EntryList、WaitSet 三大核心模块，线程状态流转清晰明确：</p>
+<p><strong>等待流程</strong>：持有锁的Owner线程，判断执行条件不满足，调用 wait() 方法，主动释放Monitor锁，线程状态从运行态转为 <strong>WAITING</strong>，进入 WaitSet 等待队列休眠；</p>
+<p><strong>阻塞与等待核心区别</strong>：BLOCKED（阻塞）、WAITING（等待）状态的线程均不占用CPU时间片，无CPU消耗；BLOCKED线程仅在锁释放时被唤醒，WAITING线程必须主动被 notify&#x2F;notifyAll 唤醒；</p>
+<p><strong>唤醒流程</strong>：其他线程获取锁后，调用 notify()&#x2F;notifyAll()，唤醒 WaitSet 中的等待线程；</p>
+<p><strong>唤醒后续操作</strong>：WAITING线程被唤醒后不会立即执行，必须转入 EntryList 重新参与锁竞争，成功获取锁后，从 wait() 断点处继续执行代码。</p>
+<h2 id="5-3-核心API详解与使用前提"><a href="#5-3-核心API详解与使用前提" class="headerlink" title="5.3 核心API详解与使用前提"></a>5.3 核心API详解与使用前提</h2><p>wait()、notify()、notifyAll() 是 Object 类的原生方法，所有Java对象都具备该能力，专门配合 synchronized 锁实现线程协作，<br><strong>核心强制前提</strong>：必须在同步代码块&#x2F;同步方法内调用，必须持有当前对象的Monitor锁，否则直接抛出 <code>IllegalMonitorStateException</code> 非法监视器异常。</p>
+<p><strong>obj.wait()</strong>：当前线程释放对象锁，进入该对象的WaitSet无限等待，直到被其他线程唤醒；</p>
+<p><strong>obj.wait(long n)</strong>：限时等待，线程释放锁进入等待，n毫秒后自动结束等待，或提前被notify唤醒；</p>
+<p><strong>obj.notify()</strong>：随机唤醒 WaitSet 中<strong>一个</strong>等待线程，唤醒后线程重新竞争锁；</p>
+<p><strong>obj.notifyAll()</strong>：唤醒 WaitSet 中<strong>所有</strong>等待线程，所有线程统一进入锁竞争队列。</p>
+<h2 id="5-4-完整代码实战案例"><a href="#5-4-完整代码实战案例" class="headerlink" title="5.4 完整代码实战案例"></a>5.4 完整代码实战案例</h2><p>通过双线程等待、主线程延时唤醒的案例，直观展示 notify 和 notifyAll 的执行效果差异：</p>
+<div class="full-code-box">
+<pre>
+final static Object obj = new Object();
+
+<p>public static void main(String[] args) {<br>    &#x2F;&#x2F; 线程0：等待唤醒<br>    new Thread(() -&gt; {<br>        synchronized (obj) {<br>            log.debug(“Thread-0 执行，进入等待状态….”);<br>            try {<br>                obj.wait(); &#x2F;&#x2F; 释放锁，无限等待<br>            } catch (InterruptedException e) {<br>                e.printStackTrace();<br>            }<br>            log.debug(“Thread-0 被唤醒，执行后续代码….”);<br>        }<br>    }).start();</p>
+<pre><code>// 线程1：等待唤醒
+new Thread(() -&gt; {
+    synchronized (obj) {
+        log.debug(&quot;Thread-1 执行，进入等待状态....&quot;);
+        try {
+            obj.wait(); // 释放锁，无限等待
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+        log.debug(&quot;Thread-1 被唤醒，执行后续代码....&quot;);
+    }
+}).start();
+
+// 主线程延时2秒后执行唤醒操作
+Sleeper.sleep(2);
+log.debug(&quot;主线程开始唤醒等待线程&quot;);
+synchronized (obj) {
+    obj.notify(); // 仅唤醒WaitSet中一个线程
+    // obj.notifyAll(); // 唤醒WaitSet中所有等待线程
+}
+</code></pre>
+<p>}<br></pre></p>
+</div>
+
+<h3 id="1-notify-执行结果（单线程唤醒）"><a href="#1-notify-执行结果（单线程唤醒）" class="headerlink" title="1. notify() 执行结果（单线程唤醒）"></a>1. notify() 执行结果（单线程唤醒）</h3><p>随机唤醒一个等待线程，另一个线程继续休眠等待：</p>
+<div class="full-code-box">
+<pre>
+20:00:53.096 [Thread-0] c.TestWaitNotify - Thread-0 执行，进入等待状态.... 
+20:00:53.099 [Thread-1] c.TestWaitNotify - Thread-1 执行，进入等待状态.... 
+20:00:55.096 [main] c.TestWaitNotify - 主线程开始唤醒等待线程
+20:00:55.096 [Thread-0] c.TestWaitNotify - Thread-0 被唤醒，执行后续代码....
+</pre>
+</div>
+
+<h3 id="2-notifyAll-执行结果（全线程唤醒）"><a href="#2-notifyAll-执行结果（全线程唤醒）" class="headerlink" title="2. notifyAll() 执行结果（全线程唤醒）"></a>2. notifyAll() 执行结果（全线程唤醒）</h3><p>一次性唤醒所有等待线程，所有线程重新竞争锁执行后续逻辑：</p>
+<div class="full-code-box">
+<pre>
+19:58:15.457 [Thread-0] c.TestWaitNotify - Thread-0 执行，进入等待状态.... 
+19:58:15.460 [Thread-1] c.TestWaitNotify - Thread-1 执行，进入等待状态.... 
+19:58:17.456 [main] c.TestWaitNotify - 主线程开始唤醒等待线程
+19:58:17.456 [Thread-1] c.TestWaitNotify - Thread-1 被唤醒，执行后续代码.... 
+19:58:17.456 [Thread-0] c.TestWaitNotify - Thread-0 被唤醒，执行后续代码....
+</pre>
+</div>
+
+<h2 id="5-5-wait-notify-核心特性与关键注意点"><a href="#5-5-wait-notify-核心特性与关键注意点" class="headerlink" title="5.5 wait&#x2F;notify 核心特性与关键注意点"></a>5.5 wait&#x2F;notify 核心特性与关键注意点</h2><p>wait()、notify()、notifyAll() 均为 Object 原生方法，必须在<strong>同步代码块&#x2F;同步方法内调用</strong>（必须持有对象Monitor锁），否则抛出 IllegalMonitorStateException。同时结合锁机制有两个核心特性、两个高频问题：</p>
+<ul>
+<li><p><strong>锁释放特性</strong>：调用 wait() 会<strong>主动释放当前持有的锁</strong>，让其他线程有机会竞争锁执行业务，彻底避免线程空占锁导致的并发阻塞问题；notify&#x2F;notifyAll 唤醒线程时，不会立即释放锁，需当前同步代码块执行完毕后才会自动释放。</p>
+</li>
+<li><p><strong>锁升级特性</strong>：偏向锁、轻量级锁不支持 wait&#x2F;notify 机制，线程调用该方法后，JVM 会直接将锁<strong>升级为重量级锁</strong>，依托Monitor实现等待唤醒逻辑。</p>
+</li>
+<li><p><strong>虚假唤醒问题</strong>：线程可能在无notify唤醒的情况下自动从wait状态苏醒，因此业务中<strong>必须使用while循环校验等待条件</strong>，禁止使用if判断，苏醒后重新校验条件，不满足则继续等待。</p>
+</li>
+<li><p><strong>唤醒差异</strong>：notify随机唤醒单一线程，效率高但可能导致部分线程长期饥饿；notifyAll唤醒全部线程，无饥饿问题，但锁竞争开销更大。</p>
+</li>
+</ul>
+<h2 id="5-6-sleep-与-wait-核心区别"><a href="#5-6-sleep-与-wait-核心区别" class="headerlink" title="5.6 sleep 与 wait 核心区别"></a>5.6 sleep 与 wait 核心区别</h2><p>很多新手容易混淆 <code>Thread.sleep(long n)</code> 和 <code>Object.wait(long n)</code>，二者均可让线程进入 <strong>TIMED_WAITING</strong> 超时等待状态，但底层机制、使用场景差异极大，核心区别如下：</p>
+<ul>
+<li><p><strong>方法归属不同</strong>：sleep 是 Thread 线程类静态方法；wait 是 Object 顶级对象方法，所有对象均可调用</p>
+</li>
+<li><p><strong>锁依赖不同</strong>：sleep 无需配合同步锁，任意场景可直接调用；wait 必须在 synchronized 同步代码块&#x2F;方法内调用，需持有对象监视器锁</p>
+</li>
+<li><p><strong>锁释放特性不同</strong>：sleep 睡眠期间<strong>不释放任何锁</strong>，持续占用锁资源；wait 等待时<strong>主动释放对象锁</strong>，其他线程可正常竞争锁执行业务</p>
+</li>
+<li><p><strong>唤醒机制不同</strong>：sleep 仅能超时自动唤醒；wait 可超时自动唤醒，也可被 notify&#x2F;notifyAll 主动唤醒</p>
+</li>
+</ul>
+<h2 id="5-7-wait-notify-正确使用姿势（避坑实战）"><a href="#5-7-wait-notify-正确使用姿势（避坑实战）" class="headerlink" title="5.7 wait&#x2F;notify 正确使用姿势（避坑实战）"></a>5.7 wait&#x2F;notify 正确使用姿势（避坑实战）</h2><p>通过四组递进式案例，从错误示范到最终最优写法，彻底掌握 wait&#x2F;notify 规范用法，解决锁占用、虚假唤醒、唤醒错乱等核心问题。</p>
+<h3 id="案例1：sleep-写法的致命缺陷"><a href="#案例1：sleep-写法的致命缺陷" class="headerlink" title="案例1：sleep 写法的致命缺陷"></a>案例1：sleep 写法的致命缺陷</h3><p>在线程条件不满足时，使用 sleep 休眠，会持续占用锁，阻塞所有其他线程，并发效率极低。</p>
+<div class="full-code-box">
+<pre>
+static final Object room = new Object();
+static boolean hasCigarette = false;
+static boolean hasTakeout = false;
+
+<p>public static void main(String[] args) {<br>    &#x2F;&#x2F; 干活线程：没烟就sleep休眠<br>    new Thread(() -&gt; {<br>        synchronized (room) {<br>            log.debug(“有烟没？[{}]”, hasCigarette);<br>            if (!hasCigarette) {<br>                log.debug(“没烟，先歇会！”);<br>                Sleeper.sleep(2); &#x2F;&#x2F; 占用锁休眠，不释放锁<br>            }<br>            log.debug(“有烟没？[{}]”, hasCigarette);<br>            if (hasCigarette) {<br>                log.debug(“可以开始干活了”);<br>            }<br>        }<br>    }, “小南”).start();</p>
+<pre><code>// 5个普通工作线程
+for (int i = 0; i &lt; 5; i++) {
+    new Thread(() -&gt; {
+        synchronized (room) {
+            log.debug(&quot;可以开始干活了&quot;);
+        }
+    }, &quot;其它人&quot;).start();
+}
+
+// 送烟线程（未加锁，可直接修改变量）
+Sleeper.sleep(1);
+new Thread(() -&gt; {
+    hasCigarette = true;
+    log.debug(&quot;烟到了噢！&quot;);
+}, &quot;送烟的&quot;).start();
+</code></pre>
+<p>}<br></pre></p>
+</div>
+
+<p><strong>问题总结</strong>：</p>
+<ul>
+<li><p>小南线程休眠2秒期间，持续占用room锁，5个其他线程全部阻塞等待，无法执行业务</p>
+</li>
+<li><p>即使1秒后烟提前送达，小南必须睡满2秒才能唤醒，无法及时响应条件变化</p>
+</li>
+<li><p>核心症结：<strong>sleep 不释放锁，造成线程资源阻塞浪费</strong></p>
+</li>
+</ul>
+<h3 id="案例2：基础-wait-优化（解决锁阻塞问题）"><a href="#案例2：基础-wait-优化（解决锁阻塞问题）" class="headerlink" title="案例2：基础 wait 优化（解决锁阻塞问题）"></a>案例2：基础 wait 优化（解决锁阻塞问题）</h3><p>用 wait 替代 sleep，等待时主动释放锁，让其他线程正常执行，解决并发阻塞问题。</p>
+<div class="full-code-box">
+<pre>
+// 核心代码改造
+new Thread(() -> {
+    synchronized (room) {
+        log.debug("有烟没？[{}]", hasCigarette);
+        if (!hasCigarette) {
+            log.debug("没烟，先歇会！");
+            try {
+                room.wait(2000); // 等待并释放锁
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+        }
+        log.debug("有烟没？[{}]", hasCigarette);
+        if (hasCigarette) {
+            log.debug("可以开始干活了");
+        }
+    }
+}, "小南").start();
+
+<p>&#x2F;&#x2F; 送烟线程加锁、主动唤醒<br>Sleeper.sleep(1);<br>new Thread(() -&gt; {<br>    synchronized (room) {<br>        hasCigarette &#x3D; true;<br>        log.debug(“烟到了噢！”);<br>        room.notify(); &#x2F;&#x2F; 唤醒等待线程<br>    }<br>}, “送烟的”).start();<br></pre></p>
+</div>
+
+<p><strong>优化效果</strong>：小南等待时释放锁，5个普通线程可正常执行，并发效率大幅提升；<strong>遗留问题</strong>：多线程多条件等待时，会出现唤醒错乱、虚假唤醒问题。</p>
+<h3 id="案例3：虚假唤醒问题（if-wait-坑点）"><a href="#案例3：虚假唤醒问题（if-wait-坑点）" class="headerlink" title="案例3：虚假唤醒问题（if+wait 坑点）"></a>案例3：虚假唤醒问题（if+wait 坑点）</h3><p>多个线程基于同一锁、不同条件等待时，notify 会随机唤醒线程，导致线程被唤醒后条件依旧不满足，出现<strong>虚假唤醒</strong>。</p>
+<div class="full-code-box">
+<pre>
+public static void main(String[] args) {
+    // 等待烟的线程
+    new Thread(() -> {
+        synchronized (room) {
+            log.debug("有烟没？[{}]", hasCigarette);
+            if (!hasCigarette) { // if单次判断，存在漏洞
+                log.debug("没烟，先歇会！");
+                try {
+                    room.wait();
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+            }
+            // 被唤醒后直接执行，不再校验条件
+            if (hasCigarette) {
+                log.debug("小南：可以开始干活了");
+            } else {
+                log.debug("小南：没干成活...");
+            }
+        }
+    }, "小南").start();
+
+<pre><code>// 等待外卖的线程
+new Thread(() -&gt; {
+    synchronized (room) {
+        log.debug(&quot;外卖送到没？[{}]&quot;, hasTakeout);
+        if (!hasTakeout) {
+            log.debug(&quot;没外卖，先歇会！&quot;);
+            try {
+                room.wait();
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+        }
+        if (hasTakeout) {
+            log.debug(&quot;小女：可以开始干活了&quot;);
+        } else {
+            log.debug(&quot;小女：没干成活...&quot;);
+        }
+    }
+}, &quot;小女&quot;).start();
+
+// 仅送达外卖、唤醒随机线程
+Sleeper.sleep(1);
+new Thread(() -&gt; {
+    synchronized (room) {
+        hasTakeout = true;
+        log.debug(&quot;外卖到了噢！&quot;);
+        room.notify();
+    }
+}, &quot;送外卖的&quot;).start();
+</code></pre>
+<p>}<br></pre></p>
+</div>
+
+
+<p><strong>问题根源</strong>：notify 随机唤醒 WaitSet 中的线程，本例中唤醒了等待烟的小南线程，此时香烟条件仍不满足，但 if 仅判断一次，线程直接执行后续代码，任务失败。</p>
+<h3 id="案例4：notifyAll-优化（解决唤醒不全问题）"><a href="#案例4：notifyAll-优化（解决唤醒不全问题）" class="headerlink" title="案例4：notifyAll 优化（解决唤醒不全问题）"></a>案例4：notifyAll 优化（解决唤醒不全问题）</h3><p>将 notify 改为 notifyAll，唤醒所有等待线程，解决线程唤醒遗漏问题，但 if 判断的单次校验漏洞依旧存在。</p>
+<h3 id="案例5：最终最优写法（while-wait-notifyAll）"><a href="#案例5：最终最优写法（while-wait-notifyAll）" class="headerlink" title="案例5：最终最优写法（while+wait+notifyAll）"></a>案例5：最终最优写法（while+wait+notifyAll）</h3><p><strong>核心规范</strong>：必须使用 <strong>while 循环 + wait</strong> 做条件重试判断，搭配 notifyAll 全局唤醒，彻底杜绝虚假唤醒。</p>
+<div class="full-code-box">
+<pre>
+// 最优条件判断写法
+synchronized (room) {
+    // while 循环：唤醒后重新校验条件，不满足继续等待
+    while (!hasCigarette) {
+        log.debug("没烟，先歇会！");
+        try {
+            room.wait();
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+    }
+    // 条件满足，执行业务
+    log.debug("小南：可以开始干活了");
+}
+
+<p>&#x2F;&#x2F; 唤醒线程统一使用 notifyAll<br>synchronized (room) {<br>    hasTakeout &#x3D; true;<br>    room.notifyAll(); &#x2F;&#x2F; 唤醒所有等待线程，各自重新校验条件<br>}<br></pre></p>
+</div>
+
+
+<p><strong>终极使用公式</strong>：</p>
+<ul>
+<li><p>等待方：<code>synchronized(锁) { while(条件不满足) { 锁.wait(); } 执行业务; }</code></p>
+</li>
+<li><p>唤醒方：<code>synchronized(锁) { 变更条件; 锁.notifyAll(); }</code></p>
+</li>
+</ul>
+<h2 id="5-8-同步模式一：保护性暂停（Guarded-Suspension）"><a href="#5-8-同步模式一：保护性暂停（Guarded-Suspension）" class="headerlink" title="5.8 同步模式一：保护性暂停（Guarded Suspension）"></a>5.8 同步模式一：保护性暂停（Guarded Suspension）</h2><h3 id="1-核心要点"><a href="#1-核心要点" class="headerlink" title="1. 核心要点"></a>1. 核心要点</h3><ol>
+<li><strong>定义:</strong> 经典线程同步设计模式，核心场景：<strong>一个线程等待另一个线程的执行结果，线程一对一结果传递</strong>，JDK 中 <code>join()</code>、<code>Future</code> 底层均基于该模式实现。<br>即 Guarded Suspension，用在一个线程等待另一个线程的执行结果.<br><strong>要点:</strong><br>● 有一个结果需要从一个线程传递到另一个线程，让他们关联同一个 GuardedObject<br>● 如果有结果不断从一个线程到另一个线程那么可以使用消息队列（见生产者&#x2F;消费者）<br>● JDK 中，join 的实现、Future 的实现，采用的就是此模式<br>● 因为要等待另一方的结果，因此归类到同步模式</li>
+</ol>
+<h3 id="2-基础版实现（无超时）"><a href="#2-基础版实现（无超时）" class="headerlink" title="2. 基础版实现（无超时）"></a>2. 基础版实现（无超时）</h3><div class="full-code-box">
+<pre>
+class GuardedObject {
+    private Object response; // 存储线程执行结果
+    private final Object lock = new Object();
+
+<pre><code>// 等待获取结果
+public Object get() {
+    synchronized (lock) {
+        // while循环杜绝虚假唤醒
+        while (response == null) {
+            try {
+                lock.wait();
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+        }
+        return response;
+    }
+}
+
+// 生产结果、唤醒等待线程
+public void complete(Object response) {
+    synchronized (lock) {
+        this.response = response;
+        lock.notifyAll();
+    }
+}
+</code></pre>
+<p>}<br></pre></p>
+</div>
+
+
+<h3 id="3-超时版实现（防止永久阻塞）"><a href="#3-超时版实现（防止永久阻塞）" class="headerlink" title="3. 超时版实现（防止永久阻塞）"></a>3. 超时版实现（防止永久阻塞）</h3><p>优化后支持自定义等待时长，提前唤醒后会重新计算剩余等待时间，精准控制超时逻辑。</p>
+<div class="full-code-box">
+<pre>
+class GuardedObjectV2 {
+    private Object response;
+    private final Object lock = new Object();
+
+<pre><code>public Object get(long millis) {
+    synchronized (lock) {
+        long begin = System.currentTimeMillis();
+        long timePassed = 0;
+        while (response == null) {
+            // 计算剩余等待时间
+            long waitTime = millis - timePassed;
+            if (waitTime &lt;= 0) {
+                break; // 超时退出
+            }
+            try {
+                lock.wait(waitTime);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+            // 统计已等待时长
+            timePassed = System.currentTimeMillis() - begin;
+        }
+        return response;
+    }
+}
+
+public void complete(Object response) {
+    synchronized (lock) {
+        this.response = response;
+        lock.notifyAll();
+    }
+}
+</code></pre>
+<p>}<br></pre></p>
+</div>
+
+<h3 id="3-多任务版实现（解耦多线程任务）"><a href="#3-多任务版实现（解耦多线程任务）" class="headerlink" title="3. 多任务版实现（解耦多线程任务）"></a>3. 多任务版实现（解耦多线程任务）</h3><p>通过唯一ID标识不同任务，结合信箱容器解耦生产者与消费者，支持多线程同时等待、多线程批量生产结果。</p>
+<div class="full-code-box">
+<pre>
+// 带唯一任务ID的守护者对象
+class GuardedObject {
+    private int id;
+    private Object response;
+
+<pre><code>public GuardedObject(int id) {
+    this.id = id;
+}
+
+public int getId() {
+    return id;
+}
+
+public Object get(long timeout) {
+    synchronized (this) {
+        long begin = System.currentTimeMillis();
+        long passedTime = 0;
+        while (response == null) {
+            long waitTime = timeout - passedTime;
+            if (waitTime &lt;= 0) break;
+            try {
+                this.wait(waitTime);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+            passedTime = System.currentTimeMillis() - begin;
+        }
+        return response;
+    }
+}
+
+public void complete(Object response) {
+    synchronized (this) {
+        this.response = response;
+        this.notifyAll();
+    }
+}
+</code></pre>
+<p>}</p>
+<p>&#x2F;&#x2F; 信箱解耦工具类<br>class Mailboxes {<br>    private static final Map&lt;Integer, GuardedObject&gt; boxes &#x3D; new Hashtable&lt;&gt;();<br>    private static int id &#x3D; 1;</p>
+<pre><code>// 生成唯一任务ID
+private static synchronized int generateId() {
+    return id++;
+}
+
+// 创建守护者对象
+public static GuardedObject createGuardedObject() {
+    GuardedObject go = new GuardedObject(generateId());
+    boxes.put(go.getId(), go);
+    return go;
+}
+
+// 获取对应任务守护者
+public static GuardedObject getGuardedObject(int id) {
+    return boxes.remove(id);
+}
+
+// 获取所有任务ID
+public static Set&lt;Integer&gt; getIds() {
+    return boxes.keySet();
+}
+</code></pre>
+<p>}<br></pre></p>
+</div>
+
+<h3 id="5-JDK底层原理：join方法实现"><a href="#5-JDK底层原理：join方法实现" class="headerlink" title="5. JDK底层原理：join方法实现"></a>5. JDK底层原理：join方法实现</h3><p>线程 <code>join()</code> 方法底层完全基于保护性暂停模式实现，通过 while+wait 循环等待目标线程执行完毕：</p>
+<div class="full-code-box">
+<pre>
+public final synchronized void join(long millis) throws InterruptedException {
+    long base = System.currentTimeMillis();
+    long now = 0;
+    if (millis < 0) throw new IllegalArgumentException("timeout value is negative");
+    if (millis == 0) {
+        // 永久等待：目标线程存活则持续等待
+        while (isAlive()) {
+            wait(0);
+        }
+    } else {
+        // 限时等待
+        while (isAlive()) {
+            long delay = millis - now;
+            if (delay <= 0) break;
+            wait(delay);
+            now = System.currentTimeMillis() - base;
+        }
+    }
+}
+</pre>
+</div>
+
+<h2 id="5-9-异步模式二：生产者消费者模式"><a href="#5-9-异步模式二：生产者消费者模式" class="headerlink" title="5.9 异步模式二：生产者消费者模式"></a>5.9 异步模式二：生产者消费者模式</h2><p>多线程核心异步协作模式，<strong>彻底解耦生产线程与消费线程</strong>，通过阻塞队列平衡生产、消费速率，JDK 所有阻塞队列（ArrayBlockingQueue、LinkedBlockingQueue）均基于该模式实现。</p>
+<h3 id="1-核心特点"><a href="#1-核心特点" class="headerlink" title="1. 核心特点"></a>1. 核心特点</h3><ul>
+<li><p>无需线程一对一匹配，多生产者、多消费者可并行工作</p>
+</li>
+<li><p>通过带容量的阻塞队列缓冲数据，平衡生产消费速度</p>
+</li>
+<li><p>队列空：消费者阻塞等待；队列满：生产者阻塞等待</p>
+</li>
+<li><p>生产者只负责生产数据，消费者只负责处理数据，职责解耦</p>
+</li>
+</ul>
+<h3 id="2-完整代码实现"><a href="#2-完整代码实现" class="headerlink" title="2. 完整代码实现"></a>2. 完整代码实现</h3><div class="full-code-box">
+<pre>
+// 消息实体类
+class Message {
+    private int id;
+    private Object message;
+
+<pre><code>public Message(int id, Object message) {
+    this.id = id;
+    this.message = message;
+}
+
+public int getId() {
+    return id;
+}
+
+public Object getMessage() {
+    return message;
+}
+</code></pre>
+<p>}</p>
+<p>&#x2F;&#x2F; 阻塞消息队列<br>class MessageQueue {<br>    private final LinkedList<Message> queue;<br>    private final int capacity; &#x2F;&#x2F; 队列最大容量</p>
+<pre><code>public MessageQueue(int capacity) {
+    this.capacity = capacity;
+    queue = new LinkedList&lt;&gt;();
+}
+
+// 消费者获取消息
+public Message take() {
+    synchronized (queue) {
+        // 队列空，消费者等待
+        while (queue.isEmpty()) {
+            log.debug(&quot;队列无数据，消费者等待...&quot;);
+            try {
+                queue.wait();
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+        }
+        Message message = queue.removeFirst();
+        queue.notifyAll(); // 唤醒生产者（队列有空位）
+        return message;
+    }
+}
+
+// 生产者存入消息
+public void put(Message message) {
+    synchronized (queue) {
+        // 队列满，生产者等待
+        while (queue.size() == capacity) {
+            log.debug(&quot;队列已满，生产者等待...&quot;);
+            try {
+                queue.wait();
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+        }
+        queue.addLast(message);
+        queue.notifyAll(); // 唤醒消费者（队列有数据）
+    }
+}
+</code></pre>
+<p>}<br></pre></p>
+</div>
+
+<h3 id="3-业务场景测试"><a href="#3-业务场景测试" class="headerlink" title="3. 业务场景测试"></a>3. 业务场景测试</h3><div class="full-code-box">
+<pre>
+public static void main(String[] args) {
+    // 创建容量为2的消息队列
+    MessageQueue messageQueue = new MessageQueue(2);
+
+<pre><code>// 4个生产者线程生产任务
+for (int i = 0; i &lt; 4; i++) {
+    int id = i;
+    new Thread(() -&gt; {
+        log.debug(&quot;生产者{}：开始下载任务&quot;, id);
+        List&lt;String&gt; response = download(); // 模拟业务下载
+        log.debug(&quot;生产者{}：任务完成，存入队列&quot;, id);
+        messageQueue.put(new Message(id, response));
+    }, &quot;生产者&quot; + i).start();
+}
+
+// 1个消费者线程持续处理任务
+new Thread(() -&gt; {
+    while (true) {
+        Message message = messageQueue.take();
+        List&lt;String&gt; data = (List&lt;String&gt;) message.getMessage();
+        log.debug(&quot;消费者：处理任务{}，数据量：{}&quot;, message.getId(), data.size());
+    }
+}, &quot;消费者&quot;).start();
+</code></pre>
+<p>}<br></pre></p>
+</div>
+
+<h2 id="5-10-章节核心总结"><a href="#5-10-章节核心总结" class="headerlink" title="5.10 章节核心总结"></a>5.10 章节核心总结</h2><p><strong>核心区别</strong>：sleep 不释放锁、无锁依赖；wait 释放锁、必须配合 synchronized</p>
+<p><strong>wait&#x2F;notify 黄金规范</strong>：while循环判条件 + notifyAll唤醒，彻底解决虚假唤醒</p>
+<p><strong>保护性暂停</strong>：一对一线程结果同步，适合等待单次任务结果，join&#x2F;Future底层实现</p>
+<p><strong>生产者消费者</strong>：多线程异步协作，队列缓冲解耦，平衡生产消费速率，适配批量任务处理</p>
+</div>
+      </div>
+    </main>
+  </div>
+
+  <div class="float-buttons">
+    <button id="back-to-top" class="float-btn" title="返回顶部">↑</button>
+    <a href="/" class="float-btn" title="返回首页">🏠</a>
+  </div>
+
+  
+  <!-- 浮动按钮脚本：外链（源文件 themes/butterfly/source/js/theme/post-float-btn.js） -->
+  <script src="/js/theme/post-float-btn.js"></script>
+
+  
+  <!--
+  ============================================
+  音频播放器组件
+  文件：APlayer.njk
+  适用终端：电脑端
+  作用：APlayer + Meting 外链播放，按需渲染到页面底部
+  最后修改：2026-11-11
+  ============================================
+-->
+<link rel="stylesheet" href="https://cdn.bootcdn.net/ajax/libs/aplayer/1.10.1/APlayer.min.css">
+<script src="https://cdn.bootcdn.net/ajax/libs/aplayer/1.10.1/APlayer.min.js"></script>
+<script src="https://cdn.bootcdn.net/ajax/libs/meting/2.0.1/Meting.min.js"></script>
+<div class="aplayer no-destroy"
+     data-id="2182931917"
+     data-server="netease"
+     data-type="playlist"
+     data-fixed="true"
+     data-mini="true">
+</div>
+
+
+
+<script>
+  async function renderMermaidDiagram(){
+    const blocks = document.querySelectorAll('pre[class*="language-mermaid"]');
+    if(!blocks.length) return;
+
+    const mermaidBlocks = [];
+    blocks.forEach(el=>{
+      const codeEl = el.querySelector('code');
+      if(codeEl){
+        const codeText = codeEl.innerText;
+        mermaidBlocks.push({fig: el, codeText});
+      }
+    })
+    if(!mermaidBlocks.length) return;
+
+    // ESM 按需引入 mermaid
+    const { default: mermaid } = await import('https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs');
+    
+    mermaid.initialize({
+      startOnLoad: false,
+      theme: 'base'
+    });
+
+    for(const {fig,codeText} of mermaidBlocks){
+      const div = document.createElement('div');
+      div.className = 'mermaid';
+      div.innerText = codeText;
+      fig.parentNode.replaceChild(div, fig);
+    }
+    await mermaid.run();
+  }
+  document.addEventListener('DOMContentLoaded', renderMermaidDiagram);
+  document.addEventListener('pjax:complete', renderMermaidDiagram);
+</script>
+
+
+  <script>
+    /* 返回按钮来源判定：从星迹索引进来回 /tags/，从星图手记进来回 /archives/；
+       直接从地址栏/站外进入时默认回星图手记，保证按钮始终可用 */
+    (function () {
+      var back = document.getElementById('articleBack');
+      if (!back) return;
+      var from = '';
+      try {
+        var q = new URLSearchParams(location.search);
+        from = q.get('from') || '';
+      } catch (e) {}
+      if (!from) {
+        var ref = document.referrer || '';
+        if (ref.indexOf('/tags') > -1) from = 'tags';
+        else if (ref.indexOf('/archives') > -1) from = 'archive';
+      }
+      if (from === 'tags') {
+        back.href = '/tags/';
+        back.textContent = '← 返回星迹索引';
+      } else if (from === 'search') {
+        back.href = '/';
+        back.textContent = '← 返回首页';
+      } else {
+        back.href = '/archives/';
+        back.textContent = '← 返回星图手记';
+      }
+    })();
+  </script>
+</body>
+</html>
