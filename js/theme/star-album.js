@@ -63,7 +63,10 @@ window.StarAlbum = (function () {
   /* 必须在用户点击的那一次手势任务里同步调用，否则自动播放会被浏览器拦 */
   function begin(m, src) {
     mode = m || '';
-    if (src) setBgm(src);     /* 每篇 md 可以指定自己的背景音，没给就沿用上一篇/默认 */
+    /* 每篇 md 可以指定自己的背景音；没写的必须回落到全局默认，
+       不能沿用上一篇——否则「游戏 / 影评」这类没写 album_bgm 的
+       会继续播上一条摄影或电影留下的曲子 */
+    bgmSrc = src || BGM_SRC;
     if (!mode) return;
     try {
       var a = ensureAudio();

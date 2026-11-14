@@ -2,11 +2,11 @@
  * ============================================================
  * 星野歌单播放器
  * 文件：themes/butterfly/source/js/theme/star-player.js
- * 适用终端：电脑端（全站迷你播放器 + /music/ 歌单页大播放器）
+ * 适用终端：电脑端（全站迷你播放器 + /fun/music/ 歌单页大播放器）
  * 作用：
  *   1) 页面里存在 #star-mini 时，渲染左下角固定迷你播放器（全站文章/独立页）
  *   2) 页面里存在 #star-player 时，渲染歌单页的完整播放器 + 环形频谱
- *   3) 歌单数据统一读 /music/playlist.json —— 以后加歌只改那一个 JSON
+ *   3) 歌单数据统一读 /fun/music/playlist.json —— 以后加歌只改那一个 JSON
  * 依赖：
  *   - APlayer：/js/third-party/aplayer/APlayer.min.js（必须先于本文件加载）
  *   - 样式：/css/theme/star-player.css
@@ -20,7 +20,7 @@
 window.StarPlayer = (function () {
   'use strict';
 
-  var PLAYLIST_URL = '/music/playlist.json';
+  var PLAYLIST_URL = '/fun/music/playlist.json';
   var THEME = '#63e0ff';
   var cache = null;
   var booted = false;
@@ -264,7 +264,7 @@ window.StarPlayer = (function () {
       if (!list.length) {
         var tip = pageEl || miniEl;
         if (tip) {
-          tip.innerHTML = '<p class="star-player-empty">歌单加载失败：请检查 /music/playlist.json 是否存在</p>';
+          tip.innerHTML = '<p class="star-player-empty">歌单加载失败：请检查 /fun/music/playlist.json 是否存在</p>';
           tip.classList.add('star-player-empty-box');
         }
         return;
