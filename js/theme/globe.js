@@ -64,6 +64,8 @@
     return list;
   })();
 
+  // resize：按容器实际尺寸重算画布像素（含 DPR 放大）、轨道半径与中心点。
+  // 宽度优先但受高度约束，保证大屏铺满、小屏不出界
   function resize() {
     var rect = box.getBoundingClientRect();
     W = Math.max(1, Math.round(rect.width));
@@ -81,7 +83,16 @@
   }
 
   resize();
-  window.addEventListener('resize', resize);
+  // resize 监听：拖窗口时会连续触发，用 requestAnimationFrame 合帧，
+  // 一帧内只重算一次画布尺寸，否则每次 resize 都重建 canvas 会明显掉帧
+  var resizeRaf = null;
+  window.addEventListener('resize', function () {
+    if (resizeRaf) return;
+    resizeRaf = window.requestAnimationFrame(function () {
+      resizeRaf = null;
+      resize();
+    });
+  });
 
   var t = 0;              /* 秒 */
   var last = 0;
@@ -100,6 +111,8 @@
     };
   }
 
+  // drawOrbit：画一条轨道椭圆。strong=true 的那两条（k=1.00 与 k=0.76）线更亮更粗，
+  // 让主轨道在众多细线里有主次，不至于糊成一片
   function drawOrbit(orbit, strong) {
     ctx.save();
     ctx.translate(cx, cy);
@@ -112,6 +125,7 @@
     ctx.restore();
   }
 
+  // drawCore：中心星体 = 外层光晕 + 球面渐变 + 两条经线 + 一圈边线，四层叠出球体感
   function drawCore() {
     var r = Math.max(9, RX * 0.10);
 
@@ -156,6 +170,8 @@
     ctx.stroke();
   }
 
+  // drawAsteroid：一颗公转小行星。z>0 视为近侧——更大更亮；远侧缩到 72%、透明度 55%，
+  // 这是「轨道有纵深」的唯一视觉依据，别把这段判定删了
   function drawAsteroid(a) {
     var orbit = ORBITS[a.orbit];
     var ang = a.a + t * orbit.speed;
@@ -176,6 +192,8 @@
     ctx.fill();
   }
 
+  // drawDust：区块里的星尘微光点，每颗按自己的相位做 sin 呼吸，让空白区一直在「活着」。
+  // 坐标来自 DUST 的确定性伪随机，刷新后位置完全不变，不会让人眼捕捉到跳动
   function drawDust() {
     for (var i = 0; i < DUST.length; i++) {
       var d = DUST[i];
@@ -187,6 +205,8 @@
     }
   }
 
+  // draw：一帧的完整绘制顺序 —— 星尘 → 轨道 → 后半圈小行星 → 中心球 → 前半圈小行星。
+  // dt 上限 0.05s：切标签页回来时不做一次性大跳，动画从原状态继续
   function draw(now) {
     if (!W || !H) resize();
     if (!last) last = now;
@@ -220,6 +240,8 @@
 
   rafId = window.requestAnimationFrame(loop);
 
+  // visibilitychange：切走标签页就停掉 rAF（后台标签页里继续跑 canvas 纯属烧电），
+  // 切回来把 last 归零重置时间基准，避免恢复瞬间用巨大的 dt 跳帧
   document.addEventListener('visibilitychange', function () {
     if (document.hidden) {
       if (rafId) {

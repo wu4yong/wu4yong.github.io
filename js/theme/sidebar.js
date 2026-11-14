@@ -225,6 +225,7 @@
     spSearch(q);
   }
 
+  // 搜索按钮：click → 打开面板并立刻搜当前输入值（空值则把焦点留在输入框，不弹空面板）
   if (searchBtn) {
     searchBtn.addEventListener('click', function (e) {
       e.preventDefault();
@@ -232,6 +233,7 @@
     });
   }
   if (searchInput) {
+    // 输入框 keydown：只接 Enter 提交；isComposing 判掉中文输入法「回车选词」那一刻，否则选字会误触发整段搜索
     searchInput.addEventListener('keydown', function (e) {
       if (e.key === 'Enter' && !e.isComposing) { e.preventDefault(); spSubmit(); }
     });
@@ -246,6 +248,7 @@
       }, 220);
     });
   }
+  // 两个关闭入口：面板右上 ✕ 与背后遮罩，点哪个都走同一个 spClose（关面板 + 清结果）
   if (spCloseBtn) spCloseBtn.addEventListener('click', spClose);
   if (spMask) spMask.addEventListener('click', spClose);
 
@@ -257,10 +260,12 @@
     var trigger = document.querySelector(pair[0]);
     var panel = document.getElementById(pair[1]);
     if (!trigger || !panel) return;
+    // 触发按钮 click：打开对应雷达区弹窗（星语传书 / 星芒赠礼共用 openDock）
     trigger.addEventListener('click', function (e) {
       e.preventDefault();
       openDock(panel);
     });
+    // 面板内所有带 data-dock-close 的元素（关闭按钮、底部「知道了」之类）click → 关同一个面板
     panel.querySelectorAll('[data-dock-close]').forEach(function (el) {
       el.addEventListener('click', function () {
         closeDock(panel);
@@ -356,6 +361,7 @@
       var saved = sessionStorage.getItem('sidebarScrollTop');
       if (saved) sb.scrollTop = parseInt(saved, 10) || 0;
     } catch (e) { /* 忽略隐私模式报错 */ }
+    // scroll：被动记录侧栏滚动位置（passive 不阻塞滚动），只写 sessionStorage，开销可忽略
     sb.addEventListener('scroll', function () {
       try { sessionStorage.setItem('sidebarScrollTop', String(sb.scrollTop)); } catch (e) { /* 忽略 */ }
     }, { passive: true });
@@ -419,6 +425,8 @@
     localStorage.setItem('sidebarCollapsed', collapsed ? '1' : '0');
   }
   setUi(isCollapsed);
+  // click：折叠/展开侧栏，状态写 localStorage（下次进站保持上次选择）；
+  // stopPropagation 拦住 document 上的连点保护，避免「折叠」这种非导航操作被当成换页点击
   toggleBtn.addEventListener('click', function (e) {
     e.stopPropagation();
     isCollapsed = !isCollapsed;

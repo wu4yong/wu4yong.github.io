@@ -784,6 +784,7 @@
       /* 节点点击：先做视觉反馈（capture 阶段，不拦默认行为，交给模板里的跳转/展开逻辑） */
       n.el.addEventListener('click', function () { focusNode(n); }, true);
 
+      // mouseenter：悬停即聚焦（雷达高亮该节点及其连线），不等点击，读起来像扫描仪锁定目标
       n.el.addEventListener('mouseenter', function () { focusNode(n); });
 
       /* 离开时清空聚焦，但要给模板自己的 hover 逻辑留出空间，用微延迟 */
@@ -813,6 +814,8 @@
       if (act && act.getAttribute('data-url')) writeStore({ articleUrl: act.getAttribute('data-url') });
     });
 
+    // resize：视口一变就清空聚焦并重排节点坐标 —— 节点位置是按百分比 + 像素混合算的，
+    // 重排前必须先 clearFocus，否则高亮框会留在旧坐标上错位
     window.addEventListener('resize', function () {
       clearFocus();
       layout();
@@ -839,6 +842,8 @@
 
     /* 5 秒节奏由 7.6 的定时器统一驱动，指针动作不再打断旋转 / 换位 */
 
+    // visibilitychange：切走标签页停掉粒子与旋转（后台标签页继续画 canvas 纯耗电），
+    // 切回来重新计时，避免用一个巨大的时间差瞬间跳转一大截
     document.addEventListener('visibilitychange', function () {
       if (document.hidden) {
         if (rafId) { cancelAnimationFrame(rafId); rafId = 0; }
@@ -862,6 +867,8 @@
     setTimeout(function () { layout(); restoreContext(); startRotation(); }, 260);
   }
 
+  // 脚本可能在 head 里被同步加载，此时 DOM 尚未解析完：loading 状态挂 DOMContentLoaded，
+  // 否则直接 boot（hexo 把本文件放在 body 末尾时会走到 else 分支）
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', boot);
   } else {

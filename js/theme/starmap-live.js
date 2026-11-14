@@ -100,6 +100,8 @@
       layer.appendChild(node);
 
       (function (data) {
+        // click：雷达图上的文章标题点一下 → 调 StarmapReader 就地打开正文（不跳页）。
+        // 只认左键；stopPropagation 是为了拦住外层雷达容器的点击，避免弹出别的面板
         node.addEventListener('click', function (e) {
           if (e.button !== 0) return;
           e.preventDefault();
@@ -190,6 +192,8 @@
 
     box.appendChild(track);
 
+    // mouseenter / mouseleave：鼠标进入频谱区就暂停自动滚动（.is-paused 由 CSS 停掉 animation），
+    // 移出即恢复——否则用户想看清某根蜡烛时内容一直在走
     box.addEventListener('mouseenter', function () { box.classList.add('is-paused'); });
     box.addEventListener('mouseleave', function () { box.classList.remove('is-paused'); });
   }
@@ -225,8 +229,10 @@
 
     var box = list.closest('.log-box');
     if (box) {
-      box.addEventListener('mouseenter', function () { box.classList.add('is-hovering'); });
-      box.addEventListener('mouseleave', function () { box.classList.remove('is-hovering'); });
+    // mouseenter / mouseleave：鼠标停在日志框上时挂 .is-hovering，CSS 借此停掉自动滚动，
+    // 让用户能安心读某一条日志；移出后继续往下走
+    box.addEventListener('mouseenter', function () { box.classList.add('is-hovering'); });
+    box.addEventListener('mouseleave', function () { box.classList.remove('is-hovering'); });
     }
 
     /* 时间戳：第一行（系统）用电脑本机时间，往下每行依次减 5 秒，形成「逐条发生」的时序 */
@@ -242,6 +248,7 @@
       });
     }
     stamp();
+    // 每秒刷新一次时间戳（stamp 只改文本，不重建节点），关掉页面时随 DOM 一起回收
     setInterval(stamp, 1000);
   }
 
@@ -285,6 +292,8 @@
       (function (data) {
         star.style.pointerEvents = 'auto';
         star.style.cursor = 'pointer';
+        // click：轨道星点上的文章名点一下 → 交给 StarmapReader 就地打开（与雷达标题同一套行为）。
+        // 星点本身只做视觉，靠这里显式打开 pointerEvents，否则会被 .orbital-track 的遮罩挡住
         star.addEventListener('click', function (e) {
           if (e.button !== 0) return;
           e.preventDefault();
@@ -304,6 +313,8 @@
      排序与点击计数已统一挪到 source/js/theme/sidebar.js（Sidebar.njk 全站引入），
      这里不再重复绑定，避免同一页面点击被计两次。 */
 
+  // DOMContentLoaded：等整份 HTML 解析完再收集文章卡片（collectPosts 依赖 .post-item 上的 data-*），
+  // 然后依次搭出雷达标题、K 线频谱、日志流、轨道星点四个面板
   document.addEventListener('DOMContentLoaded', function () {
     var posts = collectPosts();
     buildRadarTitles(posts);

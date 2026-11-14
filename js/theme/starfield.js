@@ -225,6 +225,8 @@
     }
   }
 
+  // draw(t)：一帧绘制 = 逐个星座（漂移 + 连线呼吸 + 星点各自闪烁）→ 最后叠零星闪现。
+  // 参数 t 是秒；所有闪烁都靠 t 与各自 phase 的 sin 相位差，不用额外定时器
   function draw(t) {
     ctx.clearRect(0, 0, W, H);
 
@@ -283,6 +285,8 @@
 
   resize();
   var timer = null;
+  // 尺寸变化处理：resize 会重建整套星座（位置按新面积重新随机），
+  // 因此用 220ms 防抖，拖窗口过程中不反复重建，避免星座一路闪跳
   window.addEventListener("resize", function () {
     if (timer) clearTimeout(timer);
     timer = setTimeout(resize, 220);

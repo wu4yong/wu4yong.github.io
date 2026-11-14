@@ -45,6 +45,8 @@
     reduce = !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
   } catch (e) {}
 
+  // escapeHtml：打字过程中要不断把已打的片段重新塞回 innerHTML，
+  // 先把 & < > 转义，避免正文里的尖括号被当成标签解析
   function escapeHtml(s) {
     return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
   }
@@ -59,7 +61,8 @@
     if (title.dataset.typedOnce === '1') return;
     title.dataset.typedOnce = '1';
 
-    var l1 = document.querySelector('.pc-title-line1');
+    // 局部变量原本叫 l1，与外层 l1（.pc-lead-dim 文案块）同名但指向完全不同，改名避免误用
+    var titleLine1 = document.querySelector('.pc-title-line1');
     var art = document.querySelector('.pc-title-art');
 
     /* 1. 量出「可见笔画」的外框（line1 + 字形图），以及雷达中心，
@@ -81,10 +84,10 @@
     }
     /* line1 的元素盒被左栏撑到整列宽，只有字是真的；量文字本身的范围，
        否则整列空白会被算进放大倍数，标题也会偏左 */
-    if (l1) {
+    if (titleLine1) {
       try {
         var range = document.createRange();
-        range.selectNodeContents(l1);
+        range.selectNodeContents(titleLine1);
         var lr = range.getBoundingClientRect();
         if (lr && lr.width) addBox(lr.left, lr.top, lr.right, lr.bottom);
       } catch (e) {}
@@ -125,12 +128,12 @@
       'translate(' + dx + 'px,' + dy + 'px) scale(' + scale.toFixed(2) + ')';
 
     /* 2. 放大态下打字：整段只跑一次 —— WELCOME TO 打完立刻接「时空秘境！」 */
-    if (l1) {
-      l1.style.animation = 'pcTitleType 0.74s steps(10, end) both';
+    if (titleLine1) {
+      titleLine1.style.animation = 'pcTitleType 0.74s steps(10, end) both';
       window.setTimeout(function () {
-        l1.style.animation = 'none';
-        l1.style.clipPath = 'none';
-        l1.style.webkitClipPath = 'none';
+        titleLine1.style.animation = 'none';
+        titleLine1.style.clipPath = 'none';
+        titleLine1.style.webkitClipPath = 'none';
       }, 780);
     }
     if (art) {
@@ -164,6 +167,9 @@
     }, flyDelay + 2800);
   }
 
+  // typeInto：把 text 逐字写进 el（speed 为基准间隔 ms）。
+  // 每帧用「已打片段 + 闪烁光标」重建 innerHTML，打完回调 done；
+  // 中文标点后停留 speed*2.4，模拟真人打字的呼吸，不至于匀速到机械
   function typeInto(el, text, speed, done) {
     el.style.opacity = '1';
     el.classList.add('is-typing');
@@ -197,6 +203,8 @@
     revealTitle(true);
   }
 
+  // start：入场总调度。回访（本次会话已看过）或系统开了「减少动态效果」时直接跳到终态，
+  // 否则区域1 先打（52ms/字），完成后区域2 用稍慢的 62ms/字接上，最后交给 revealTitle
   function start() {
     if (!shouldAnimate || reduce) {
       finishInstant();

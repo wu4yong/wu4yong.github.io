@@ -458,6 +458,7 @@ window.StarAlbum = (function () {
     }
   }
 
+  // 阅读器关闭（starmap:reader-close）→ 停掉自动播放与音频，否则画册关了音乐还在响
   document.addEventListener('starmap:reader-close', function () {
     stop();
   });

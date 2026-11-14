@@ -15,6 +15,9 @@
   var dialog = document.querySelector('.dialog');
   var buttons = document.querySelectorAll('.choice-btn, .collapse-trigger, .normal-btn');
 
+  // mousemove：把指针位置换算成 [-1,1] 的偏移量，对话框同向轻移（最大 6px），
+  // 按钮反向移动（4px 起、按序数递增）并各加 0.02s 递延，做出前后分层、先后跟随的视差感。
+  // 手机上不会触发（无指针），只有电脑浏览 /phone/ 时才有这份效果
   document.addEventListener('mousemove', function(e) {
     // 计算鼠标在视口中的百分比位置 (0~1)
     var x = e.clientX / window.innerWidth;
@@ -41,7 +44,7 @@
     });
   });
 
-  // 鼠标离开窗口时复位
+  // mouseleave：指针离开视口时把所有 transform 归零，否则元素会停在最后一帧的偏移上回不来
   document.addEventListener('mouseleave', function() {
     if (dialog) {
       dialog.style.transform = 'translate(0, 0)';

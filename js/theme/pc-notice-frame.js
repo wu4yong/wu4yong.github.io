@@ -126,6 +126,9 @@
     return ar.right - drawnW + (visiblePct || MASK_END) * drawnW;
   }
 
+  // apply：核心计算。取标题墨迹右缘 tr 与人物可见左缘 pl，中缝宽度 = pl-tr；
+  // 面板宽 = 中缝减两侧各 30px，再用「52vh / 34vw」封顶（宽度封住后多余空间转成高度，
+  // 于是面板是上下长大而不是无限变宽）；雷达直径取中缝可用宽度与可用高度中的较小值
   function apply() {
     var heroRect = hero.getBoundingClientRect();
     var tr = titleInkRight();
@@ -165,9 +168,12 @@
     if (raf) return;
     raf = requestAnimationFrame(function () { raf = 0; apply(); });
   }
+  // resize：视口变化 → requestAnimationFrame 合帧后再算一次，避免拖拽窗口时每像素重排一次
   window.addEventListener('resize', schedule);
+  // orientationchange：手机横竖屏切换（会先触发一次 resize，这里补一次防止中间态错位）
   window.addEventListener('orientationchange', schedule);
   if (window.ResizeObserver) new ResizeObserver(schedule).observe(hero);
   if (document.fonts && document.fonts.ready) document.fonts.ready.then(boot);
+  // load：图片真正解码完成后再算一次（boot 里第一次算时人物图可能还是 0 尺寸）
   window.addEventListener('load', boot);
 })();

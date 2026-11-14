@@ -41,6 +41,8 @@
     return Math.round(w + fs * 0.6);
   }
 
+  /* sync：把副标题的定宽改成标题实测宽度。2px 阈值过滤打字机逐帧的微抖，
+     避免每帧都写一次 style.width 触发重排 */
   function sync() {
     var w = measure();
     if (!w || Math.abs(w - lastWidth) < 2) return;
@@ -50,6 +52,8 @@
 
   sync();
 
+  // 观察目标：标题宽度一变就同步。ResizeObserver 覆盖 clamp 字号随视口变化、
+  // 以及打字机过程中宽度增长；老浏览器退回 window resize（只覆盖视口变化那种场景）
   if (window.ResizeObserver) {
     new ResizeObserver(sync).observe(title);
   } else {
