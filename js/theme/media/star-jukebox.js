@@ -23,6 +23,8 @@
 
   var PLAYLIST_URL = '/music/playlist.json';
   var LYRIC_DIR = '/music/lyrics/';
+  /* 改过 .lrc 内容就把这个数字加一，否则浏览器缓存会继续给你旧歌词 */
+  var LYRIC_VER = '20261115A';
   var THEME = [99, 224, 255];
 
   var root, stageEl, titleEl, artistEl, lyricsEl, listEl;
@@ -92,7 +94,9 @@
   function loadLyric(item, cb) {
     var key = item.key || '';
     if (!key || !window.fetch) return cb([]);
-    fetch(LYRIC_DIR + encodeURIComponent(key) + '.lrc', { cache: 'force-cache' })
+    /* 带版本号：lrc 是静态小文件，浏览器会整块缓存住旧内容，
+       以前填完歌词刷新还是「还没填」，加个 ?lyricv 才拿得到新文件 */
+    fetch(LYRIC_DIR + encodeURIComponent(key) + '.lrc?lyricv=' + LYRIC_VER, { cache: 'no-cache' })
       .then(function (r) { return r.ok ? r.text() : ''; })
       .then(function (t) { cb(parseLrc(t)); })
       .catch(function () { cb([]); });
