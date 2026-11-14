@@ -195,6 +195,9 @@
         if (!n) return;
         if (slot) slot.textContent = '(' + n + ')';
         if (item) item.setAttribute('data-count', n);
+        /* 右栏「分区速览」那一行也要跟着歌单数走，而且单位是「首」不是「篇」 */
+        var stat = document.querySelector('[data-music-stat]');
+        if (stat) stat.textContent = n + ' 首';
       })
       .catch(function () { if (slot) slot.textContent = ''; });
   })();

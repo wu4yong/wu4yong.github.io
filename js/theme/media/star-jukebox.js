@@ -24,7 +24,7 @@
   var PLAYLIST_URL = '/music/playlist.json';
   var LYRIC_DIR = '/music/lyrics/';
   /* 改过 .lrc 内容就把这个数字加一，否则浏览器缓存会继续给你旧歌词 */
-  var LYRIC_VER = '20261115A';
+  var LYRIC_VER = '20261115B';
   var THEME = [99, 224, 255];
 
   var root, stageEl, titleEl, artistEl, lyricsEl, listEl;
@@ -204,7 +204,16 @@
     if (!list.length) return;
     idx = ((i % list.length) + list.length) % list.length;
     var item = list[idx];
+    /* 换歌必须先彻底停掉上一首再换源：
+       只赋 src 时，部分浏览器会把上一首已经开始播的缓冲继续放完，
+       听感就是「点了第二首，第一首还在响」。pause + currentTime 归零 + 显式
+       load() 三件一起做，旧缓冲才会被真正丢弃 */
+    try {
+      audio.pause();
+      audio.currentTime = 0;
+    } catch (e) {}
     audio.src = item.url;
+    try { audio.load(); } catch (e) {}
     titleEl.textContent = item.name;
     artistEl.textContent = item.artist || '';
     durEl.textContent = '00:00';
@@ -227,9 +236,14 @@
 
   function play() {
     if (!list.length) return;
-    /* 先把全站迷你播放器掐掉，避免两路同时发声 */
-    var mini = document.querySelector('#star-mini audio');
-    if (mini && !mini.paused) mini.pause();
+    /* 掐掉全站其它任何一路 <audio>（侧栏迷你播放器、文章里带 controls 的音频），
+       避免播放器一起播就变成两路合奏 */
+    var others = document.querySelectorAll('audio');
+    for (var i = 0; i < others.length; i++) {
+      if (others[i] !== audio && !others[i].paused) {
+        try { others[i].pause(); } catch (e) {}
+      }
+    }
 
     var p = audio.play();
     if (p && p.catch) p.catch(function (e) { console.warn('[star-jukebox] 播放失败：', e); });
@@ -354,6 +368,9 @@
 
   function drawRadar() {
     if (!ctx2d) return;
+    /* 底图雷达改由 /fun/ 专区那一层统一负责（速度、轨道、扫描全站同款），
+       这块 canvas 已被 display:none 关掉，宽度为 0 时直接不再排帧 */
+    if (!canvas || canvas.offsetWidth === 0) return;
     ctx2d.clearRect(0, 0, w, h);
 
     var t = Date.now() / 1000;
