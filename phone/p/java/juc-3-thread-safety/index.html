@@ -152,7 +152,7 @@ particlesJS("particles", {
 
 <h1 id="多线程共享变量与线程安全"><a href="#多线程共享变量与线程安全" class="headerlink" title="多线程共享变量与线程安全"></a>多线程共享变量与线程安全</h1><p><strong>本章核心目标</strong>：解决多线程访问共享变量的线程安全问题，保证临界区代码执行的<strong>原子性</strong>，掌握synchronized、Lock锁、线程状态、活跃性问题、线程安全分析等核心知识点。</p>
 <p><strong>本章知识体系</strong>：共享问题 → synchronized解决方案 → 线程安全分析 → Monitor与wait&#x2F;notify → 线程状态转换 → 线程活跃性问题 → ReentrantLock锁</p>
-<h1 id="3-1-多线程共享带来的安全问题"><a href="#3-1-多线程共享带来的安全问题" class="headerlink" title="3.1 多线程共享带来的安全问题"></a>3.1 多线程共享带来的安全问题</h1><h1 id="共享带来的问题之故事篇"><a href="#共享带来的问题之故事篇" class="headerlink" title="共享带来的问题之故事篇"></a>共享带来的问题之故事篇</h1><p>● 老王（操作系统）有一个功能强大的算盘（CPU），现在想把它租出去，赚一点外快<br><img src="https://raw.githubusercontent.com/wu4yong/starry-images/main/assets/img/java/concurrent/concurrent31.webp" alt="示意图"><br>● 小南、小女（线程）来使用这个算盘来进行一些计算，并按照时间给老王支付费用<br>● 但小南不能一天24小时使用算盘，他经常要小憩一会（sleep），又或是去吃饭上厕所（阻塞 io 操作），有时还需要一根烟，没烟时思路全无（wait）这些情况统称为（阻塞）<br><img src="https://raw.githubusercontent.com/wu4yong/starry-images/main/assets/img/java/concurrent/concurrent32.webp" alt="示意图"><br>● 在这些时候，算盘没利用起来（不能收钱了），老王觉得有点不划算<br>● 另外，小女也想用用算盘，如果总是小南占着算盘，让小女觉得不公平<br>● 于是，老王灵机一动，想了个办法 [ 让他们每人用一会，轮流使用算盘 ]<br>● 这样，当小南阻塞的时候，算盘可以分给小女使用，不会浪费，反之亦然<br>● 最近执行的计算比较复杂，需要存储一些中间结果，而学生们的脑容量（工作内存）不够，所以老王申请了一个笔记本（主存），把一些中间结果先记在本上<br>● 计算流程是这样的<br><img src="https://raw.githubusercontent.com/wu4yong/starry-images/main/assets/img/java/concurrent/concurrent33.webp" alt="示意图"><br>● 但是由于分时系统，有一天还是发生了事故<br>● 小南刚读取了初始值 0 做了个 +1 运算，还没来得及写回结果<br>● 老王说 [ 小南，你的时间到了，该别人了，记住结果走吧 ]，于是小南念叨着 [ 结果是1，结果是1…] 不甘心地到一边待着去了（上下文切换）<br>● 老王说 [ 小女，该你了 ]，小女看到了笔记本上还写着 0 做了一个 -1 运算，将结果 -1 写入笔记本<br>● 这时小女的时间也用完了，老王又叫醒了小南：[小南，把你上次的题目算完吧]，小南将他脑海中的结果 1 写入了笔记本<br><img src="https://raw.githubusercontent.com/wu4yong/starry-images/main/assets/img/java/concurrent/concurrent34.webp" alt="示意图"><br>● 小南和小女都觉得自己没做错，但笔记本里的结果是 1 而不是 0</p>
+<h1 id="3-1-多线程共享带来的安全问题"><a href="#3-1-多线程共享带来的安全问题" class="headerlink" title="3.1 多线程共享带来的安全问题"></a>3.1 多线程共享带来的安全问题</h1><h1 id="共享带来的问题之故事篇"><a href="#共享带来的问题之故事篇" class="headerlink" title="共享带来的问题之故事篇"></a>共享带来的问题之故事篇</h1><p>● 老王（操作系统）有一个功能强大的算盘（CPU），现在想把它租出去，赚一点外快<br><img src="https://wu4yong.github.io/starry-images/assets/img/java/concurrent/concurrent31.webp" alt="示意图"><br>● 小南、小女（线程）来使用这个算盘来进行一些计算，并按照时间给老王支付费用<br>● 但小南不能一天24小时使用算盘，他经常要小憩一会（sleep），又或是去吃饭上厕所（阻塞 io 操作），有时还需要一根烟，没烟时思路全无（wait）这些情况统称为（阻塞）<br><img src="https://wu4yong.github.io/starry-images/assets/img/java/concurrent/concurrent32.webp" alt="示意图"><br>● 在这些时候，算盘没利用起来（不能收钱了），老王觉得有点不划算<br>● 另外，小女也想用用算盘，如果总是小南占着算盘，让小女觉得不公平<br>● 于是，老王灵机一动，想了个办法 [ 让他们每人用一会，轮流使用算盘 ]<br>● 这样，当小南阻塞的时候，算盘可以分给小女使用，不会浪费，反之亦然<br>● 最近执行的计算比较复杂，需要存储一些中间结果，而学生们的脑容量（工作内存）不够，所以老王申请了一个笔记本（主存），把一些中间结果先记在本上<br>● 计算流程是这样的<br><img src="https://wu4yong.github.io/starry-images/assets/img/java/concurrent/concurrent33.webp" alt="示意图"><br>● 但是由于分时系统，有一天还是发生了事故<br>● 小南刚读取了初始值 0 做了个 +1 运算，还没来得及写回结果<br>● 老王说 [ 小南，你的时间到了，该别人了，记住结果走吧 ]，于是小南念叨着 [ 结果是1，结果是1…] 不甘心地到一边待着去了（上下文切换）<br>● 老王说 [ 小女，该你了 ]，小女看到了笔记本上还写着 0 做了一个 -1 运算，将结果 -1 写入笔记本<br>● 这时小女的时间也用完了，老王又叫醒了小南：[小南，把你上次的题目算完吧]，小南将他脑海中的结果 1 写入了笔记本<br><img src="https://wu4yong.github.io/starry-images/assets/img/java/concurrent/concurrent34.webp" alt="示意图"><br>● 小南和小女都觉得自己没做错，但笔记本里的结果是 1 而不是 0</p>
 <h2 id="3-1-1-通俗场景理解"><a href="#3-1-1-通俗场景理解" class="headerlink" title="3.1.1 通俗场景理解"></a>3.1.1 通俗场景理解</h2><p>操作系统（老王）的CPU（算盘）支持多线程分时复用，多个线程（小南、小女）轮流占用CPU执行任务。线程执行中会出现阻塞（sleep、IO、wait），此时CPU切换给其他线程，提升资源利用率。</p>
 <p>为存储计算中间结果，线程会读写主存中的共享变量，<strong>分时切换+共享读写</strong>会引发数据错乱问题：</p>
 <p>典型场景：小南读取变量0、执行+1未写回时，时间片用完发生上下文切换；小女读取变量0、执行-1并写回-1；后续小南恢复执行，将内存覆盖写为1，最终结果不符合预期。</p>
@@ -197,10 +197,10 @@ putstatic i    // 写回主存
 
 <p><strong>i– 字节码指令</strong>：将iadd替换为isub（减法），流程一致。</p>
 <p>单线程下指令顺序执行无问题；多线程下8条指令随机交错，最终结果出现正数、负数、零三种情况。</p>
-<p>而 Java 的内存模型如下，完成静态变量的自增，自减需要在主存和工作内存中进行数据交换：<br><img src="https://raw.githubusercontent.com/wu4yong/starry-images/main/assets/img/java/concurrent/concurrent35.webp" alt="并发示意图"></p>
-<p>如果是单线程以上 8 行代码是顺序执行（不会交错）没有问题：<br><img src="https://raw.githubusercontent.com/wu4yong/starry-images/main/assets/img/java/concurrent/concurrent36.webp" alt="并发示意图"></p>
-<p>但多线程下这 8 行代码可能交错运行：<br>出现负数的情况：<br><img src="https://raw.githubusercontent.com/wu4yong/starry-images/main/assets/img/java/concurrent/concurrent37.webp" alt="并发示意图"></p>
-<p>出现正数的情况：<br><img src="https://raw.githubusercontent.com/wu4yong/starry-images/main/assets/img/java/concurrent/concurrent38.webp" alt="并发示意图"></p>
+<p>而 Java 的内存模型如下，完成静态变量的自增，自减需要在主存和工作内存中进行数据交换：<br><img src="https://wu4yong.github.io/starry-images/assets/img/java/concurrent/concurrent35.webp" alt="并发示意图"></p>
+<p>如果是单线程以上 8 行代码是顺序执行（不会交错）没有问题：<br><img src="https://wu4yong.github.io/starry-images/assets/img/java/concurrent/concurrent36.webp" alt="并发示意图"></p>
+<p>但多线程下这 8 行代码可能交错运行：<br>出现负数的情况：<br><img src="https://wu4yong.github.io/starry-images/assets/img/java/concurrent/concurrent37.webp" alt="并发示意图"></p>
+<p>出现正数的情况：<br><img src="https://wu4yong.github.io/starry-images/assets/img/java/concurrent/concurrent38.webp" alt="并发示意图"></p>
 <h2 id="3-1-4-核心概念定义"><a href="#3-1-4-核心概念定义" class="headerlink" title="3.1.4 核心概念定义"></a>3.1.4 核心概念定义</h2><h3 id="1-临界区（Critical-Section）"><a href="#1-临界区（Critical-Section）" class="headerlink" title="1. 临界区（Critical Section）"></a>1. 临界区（Critical Section）</h3><p>存在<strong>多线程对共享变量读写操作</strong>的代码块。仅多线程读共享资源无安全问题，读写共存才会触发风险。</p>
 <p>示例临界区代码：</p>
 <div class="full-code-box">
@@ -251,7 +251,7 @@ log.debug(&quot;{}&quot;,counter); // 最终结果固定为0
 </code></pre>
 <p>}<br></pre></p>
 </div>
-![示意图](https://raw.githubusercontent.com/wu4yong/starry-images/main/assets/img/java/concurrent/concurrent39.webp)
+![示意图](https://wu4yong.github.io/starry-images/assets/img/java/concurrent/concurrent39.webp)
 你可以做这样的类比： 
 ● synchronized(对象) 中的对象，可以想象为一个房间（room），有唯一入口（门）房间只能一次进入一人进行计算，线程 t1，t2 想象成两个人 
 ● 当线程 t1 执行到 synchronized(room) 时就好比 t1 进入了这个房间，并锁住了门拿走了钥匙，在门内执行count++ 代码 
@@ -259,7 +259,7 @@ log.debug(&quot;{}&quot;,counter); // 最终结果固定为0
 ● 这中间即使 t1 的 cpu 时间片不幸用完，被踢出了门外（不要错误理解为锁住了对象就能一直执行下去哦），这时门还是锁住的，t1 仍拿着钥匙，t2 线程还在阻塞状态进不来，只有下次轮到 t1 自己再次获得时间片时才能开门进入 
 ● 当 t1 执行完 synchronized{} 块内的代码，这时候才会从 obj 房间出来并解开门上的锁，唤醒 t2 线程把钥匙给他。t2 线程这时才可以进入 obj 房间，锁住了门拿上钥匙，执行它的 count-- 代码.
 用图表示
-![示意图](https://raw.githubusercontent.com/wu4yong/starry-images/main/assets/img/java/concurrent/concurrent40.webp)
+![示意图](https://wu4yong.github.io/starry-images/assets/img/java/concurrent/concurrent40.webp)
 
 <p>思考<br>synchronized 实际是用对象锁保证了临界区内代码的原子性，临界区内的代码对外是不可分割的，不会被线程切换所打断。 </p>
 <p>为了加深理解，请思考下面的问题<br>● 如果把 synchronized(obj) 放在 for 循环的外面，如何理解？– 原子性<br>● 如果 t1 synchronized(obj1) 而 t2 synchronized(obj2) 会怎样运作？– 锁对象<br>● 如果 t1 synchronized(obj) 而 t2 没有加会怎么样？如何理解？– 锁对象</p>
@@ -572,7 +572,7 @@ public static void test1();
 </pre>
 </div>
 如图
-![并发示意图](https://raw.githubusercontent.com/wu4yong/starry-images/main/assets/img/java/concurrent/concurrent41.webp)
+![并发示意图](https://wu4yong.github.io/starry-images/assets/img/java/concurrent/concurrent41.webp)
 
 <p>局部变量的引用稍有不同<br>先看一个成员变量的例子：</p>
 <div class="full-code-box">
@@ -614,7 +614,7 @@ public static void main(String[] args) {
 </pre>
 </div>
 
-<p>分析：<br>● 无论哪个线程中的 method2 引用的都是同一个对象中的 list 成员变量<br>● method3 与 method2 分析相同<br><img src="https://raw.githubusercontent.com/wu4yong/starry-images/main/assets/img/java/concurrent/concurrent42.webp" alt="并发示意图"></p>
+<p>分析：<br>● 无论哪个线程中的 method2 引用的都是同一个对象中的 list 成员变量<br>● method3 与 method2 分析相同<br><img src="https://wu4yong.github.io/starry-images/assets/img/java/concurrent/concurrent42.webp" alt="并发示意图"></p>
 <p>将 list 修改为局部变量</p>
 <div class="full-code-box">
 <pre>
@@ -637,7 +637,7 @@ class ThreadSafe {
 </div>
 
 <p>那么就不会有上述问题了<br>分析：<br>● list 是局部变量，每个线程调用时会创建其不同实例，没有共享<br>● 而 method2 的参数是从 method1 中传递过来的，与 method1 中引用同一个对象<br>● method3 的参数分析与 method2 相同</p>
-<p><img src="https://raw.githubusercontent.com/wu4yong/starry-images/main/assets/img/java/concurrent/concurrent43.webp" alt="并发示意图"></p>
+<p><img src="https://wu4yong.github.io/starry-images/assets/img/java/concurrent/concurrent43.webp" alt="并发示意图"></p>
 <p>方法访问修饰符带来的思考，如果把 method2 和 method3 的方法修改为 public 会不会出现线程安全问题？<br>● 情况1：有其它线程调用 method2 和 method3<br>● 情况2：在 情况1 的基础上，为 ThreadSafe 类添加子类，子类覆盖 method2 或 method3 方法，即</p>
 <div class="full-code-box">
 <pre>
@@ -698,7 +698,7 @@ if( table.get("key") == null) {
 </pre>
 </div>
 
-<p><img src="https://raw.githubusercontent.com/wu4yong/starry-images/main/assets/img/java/concurrent/concurrent44.webp" alt="并发示意图"></p>
+<p><img src="https://wu4yong.github.io/starry-images/assets/img/java/concurrent/concurrent44.webp" alt="并发示意图"></p>
 <h2 id="3-4-5-不可变类线程安全原理"><a href="#3-4-5-不可变类线程安全原理" class="headerlink" title="3.4.5 不可变类线程安全原理"></a>3.4.5 不可变类线程安全原理</h2><p>String、Integer等类内部状态不可修改，所有修改操作都会返回新对象，原对象数据永久不变，天然线程安全。</p>
 <h2 id="3-4-6-实战场景线程安全分析"><a href="#3-4-6-实战场景线程安全分析" class="headerlink" title="3.4.6 实战场景线程安全分析"></a>3.4.6 实战场景线程安全分析</h2><p>覆盖Servlet、切面、DAO层等常见业务场景，核心结论：<strong>全局共享可变变量不安全，局部变量、无状态对象安全</strong>，典型风险点：</p>
 <ul>
