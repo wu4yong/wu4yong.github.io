@@ -17,7 +17,12 @@
  * ============================================================
  */
 window.StarAlbum = (function () {
-  var BGM_SRC = '/assets/audio/be-with-you.mp3';  /* 全局兜底背景音：文章没写 album_bgm 时用它 */
+  /* 媒体基地址：与 _config.yml 的 image_cdn.base 保持一致。
+     换图床/换 CDN 时，这里和 _config.yml 各改一处即可。
+     之所以硬编码而不走 @@CDN@@ 占位符：占位符只在文章正文里替换，
+     主题静态 JS 不经过 before_post_render 过滤器。 */
+  var CDN_BASE = 'https://wu4yong.github.io/starry-images';
+  var BGM_SRC = CDN_BASE + '/media/audio/be-with-you.mp3';  /* 全局兜底背景音：文章没写 album_bgm 时用它 */
   var bgmSrc = BGM_SRC;      /* 当前这一篇实际用的背景音，由 begin() 按 md 的 album_bgm 覆盖 */
   var VOLUME = 0.3;        /* 背景音乐音量 30，与视频播放器同一档 */
   var AUTO_MS = 5000;      /* 无人操作时的自动翻页间隔（与雷达换位同一节奏） */
@@ -48,7 +53,8 @@ window.StarAlbum = (function () {
     return audio;
   }
 
-  /* md front-matter 里的 album_bgm（例如 /assets/audio/ni-zhan.mp3）落到这里 */
+  /* md front-matter 里的 album_bgm（例：CDN_BASE + /media/audio/ni-zhan.mp3）落到这里。
+     注意 front-matter 不经过 @@CDN@@ 替换，所以那里必须写完整 URL。 */
   function setBgm(src) {
     if (!src || src === bgmSrc) return;
     bgmSrc = src;
