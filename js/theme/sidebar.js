@@ -386,6 +386,22 @@
     }, { passive: true });
   })();
 
+  // =========头像星空徽标：三颗小星随机闪烁=========
+  // 页面里的 .orb-star 拿不到「真随机」的 CSS 动画，这里给每颗星单独写入随机周期与相位（负延迟即从周期中段起播），
+  // 每次进站/刷新节奏都不一样，三颗星永不同步
+  (function randomizeOrbStars() {
+    var stars = document.querySelectorAll('.avatar-orb .orb-star');
+    if (!stars.length) return;
+    for (var i = 0; i < stars.length; i++) {
+      var dur = 1.5 + Math.random() * 2.7;        // 1.50s ~ 4.20s
+      var delay = -Math.random() * 3.2;           // -3.20s ~ 0s（负值 = 直接跳到周期中段）
+      stars[i].style.setProperty('--tw-dur', dur.toFixed(2) + 's');
+      stars[i].style.setProperty('--tw-delay', delay.toFixed(2) + 's');
+    }
+    var main = document.querySelector('.avatar-orb .orb-star-main');
+    if (main) main.style.animationDuration = (4.2 + Math.random() * 2.4).toFixed(2) + 's';
+  })();
+
   // =========侧边栏折叠展开逻辑=========
   const toggleBtn = document.getElementById('sidebarToggle');
   const sidebar = document.getElementById('sidebar');
