@@ -184,11 +184,11 @@
     markActive(null);
   });
 
-  /* 音乐专区不再是文章分类，矩阵括号里的数字改成歌单曲目数（读 /fun/music/playlist.json） */
+  /* 音乐专区不再是文章分类，矩阵括号里的数字改成歌单曲目数（读 /music/playlist.json） */
   (function fillMusicCount() {
     var slot = document.querySelector('[data-music-count]');
     var item = document.querySelector('#funGrid .coord-item[data-sector="music"]');
-    fetch('/fun/music/playlist.json', { credentials: 'same-origin' })
+    fetch('/music/playlist.json', { credentials: 'same-origin' })
       .then(function (r) { return r.json(); })
       .then(function (data) {
         var n = Array.isArray(data) ? data.length : (data && data.length) || 0;

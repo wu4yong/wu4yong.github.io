@@ -10,8 +10,8 @@
  *   4) canvas 绘制星图雷达背景：同心轨道 + 旋转扫描 + 星座连线 + 漂浮粒子
  *   5) 播放时 Web Audio 取真实频谱驱动扫描亮度，取不到就按时间呼吸
  * 数据：
- *   - 曲目：/fun/music/playlist.json（name / artist / url / key）
- *   - 歌词：/fun/music/lyrics/<key>.lrc（缺省自动降级，不报错）
+ *   - 曲目：/music/playlist.json（name / artist / url / key）
+ *   - 歌词：/music/lyrics/<key>.lrc（缺省自动降级，不报错）
  * 依赖：star-jukebox.css
  * 最后修改：2026-11-14
  * ============================================================
@@ -21,8 +21,8 @@
 (function () {
   'use strict';
 
-  var PLAYLIST_URL = '/fun/music/playlist.json';
-  var LYRIC_DIR = '/fun/music/lyrics/';
+  var PLAYLIST_URL = '/music/playlist.json';
+  var LYRIC_DIR = '/music/lyrics/';
   var THEME = [99, 224, 255];
 
   var root, stageEl, titleEl, artistEl, lyricsEl, listEl;
@@ -109,7 +109,7 @@
     if (!lyricLines.length) {
       var empty = document.createElement('div');
       empty.className = 'sj-lyric-empty';
-      empty.textContent = '这首歌还没有歌词文件，去 source/fun/music/lyrics/ 里加一个同名 .lrc 就能滚动';
+      empty.textContent = '这首歌还没有歌词文件，去 source/music/lyrics/ 里加一个同名 .lrc 就能滚动';
       lyricsEl.appendChild(empty);
       return;
     }
@@ -480,7 +480,7 @@
     if (main) main.classList.add('is-jukebox');
     resizeCanvas();
     if (!list.length) {
-      artistEl.textContent = '歌单还没加载出来，检查 /fun/music/playlist.json 是否能访问';
+      artistEl.textContent = '歌单还没加载出来，检查 /music/playlist.json 是否能访问';
       return;
     }
     if (typeof i === 'number') switchTo(i, true);
@@ -605,7 +605,7 @@
   /* ---------------- 侧栏入口拦截 ---------------- */
 
   function hookSidebar() {
-    var links = document.querySelectorAll('.links-card a[href="/fun/music/"], .links-card a[href$="/fun/music/"]');
+    var links = document.querySelectorAll('.links-card a[href="/music/"], .links-card a[href$="/music/"]');
     links.forEach(function (a) {
       a.setAttribute('data-jukebox-trigger', '1');
       a.addEventListener('click', function (e) {
@@ -652,7 +652,7 @@
 
     loadList(function (data) {
       if (!data.length) {
-        artistEl.textContent = '歌单读取失败：/fun/music/playlist.json';
+        artistEl.textContent = '歌单读取失败：/music/playlist.json';
         return;
       }
       renderListRows();
