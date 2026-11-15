@@ -602,6 +602,72 @@
       playBtn.textContent = '▶';
     });
 
+    /* ---------------- 音量 ----------------
+       按钮：点一下弹出滑块 / 再点收起；静音状态下点它会先恢复上一次的音量
+       滑块：按下即定位，拖动实时改，松手落定
+       音量会记到 localStorage，下次打开播放器还是这个值 */
+    var volWrap = $('sjVolWrap');
+    var volBtn = $('sjVolBtn');
+    var volPop = $('sjVolPop');
+    var volTrack = $('sjVolTrack');
+    var volFill = $('sjVolFill');
+    var volDot = $('sjVolDot');
+    var volNum = $('sjVolNum');
+    var volume = 1;
+    var lastVolume = 1;
+    var volDrag = false;
+
+    try {
+      var savedVol = parseFloat(window.localStorage.getItem('sj-vol'));
+      if (isFinite(savedVol) && savedVol >= 0 && savedVol <= 1) volume = savedVol;
+    } catch (err) {}
+    lastVolume = volume > 0 ? volume : 1;
+
+    function paintVolume() {
+      var pct = Math.round(volume * 100);
+      volFill.style.width = pct + '%';
+      volDot.style.left = pct + '%';
+      volNum.textContent = pct;
+      volBtn.classList.toggle('is-mute', volume <= 0);
+      volBtn.title = volume <= 0 ? '已静音，点击恢复' : '音量 ' + pct + '%';
+      audio.volume = volume;
+    }
+
+    function setVolume(v) {
+      volume = Math.max(0, Math.min(1, v));
+      if (volume > 0) lastVolume = volume;
+      paintVolume();
+      try { window.localStorage.setItem('sj-vol', String(volume)); } catch (err) {}
+    }
+
+    function volRatioFromEvent(e) {
+      var rect = volTrack.getBoundingClientRect();
+      var x = (e.touches ? e.touches[0].clientX : e.clientX) - rect.left;
+      return Math.max(0, Math.min(1, x / rect.width));
+    }
+
+    if (volTrack) {
+      volTrack.addEventListener('mousedown', function (e) {
+        volDrag = true;
+        setVolume(volRatioFromEvent(e));
+        e.preventDefault();
+      });
+      window.addEventListener('mousemove', function (e) {
+        if (!volDrag) return;
+        setVolume(volRatioFromEvent(e));
+      });
+      window.addEventListener('mouseup', function () { volDrag = false; });
+
+      volBtn.addEventListener('click', function (e) {
+        e.stopPropagation();
+        /* 按钮只管静音/恢复；滑块由 CSS 的 hover 负责展开，鼠标离开自己收起 */
+        if (volume > 0) setVolume(0);
+        else setVolume(lastVolume || 1);
+      });
+
+      paintVolume();
+    }
+
     window.addEventListener('resize', function () {
       if (opened) resizeCanvas();
     });
