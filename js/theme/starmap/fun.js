@@ -40,6 +40,8 @@
     /* 选中哪个区，左栏日志与右栏星域仪就跟着切到哪个区 */
     switchSectorLog(key || null);
     updateGlobe(key || null);
+    /* 雷达底下的线稿场景也换台（音乐群舞 / 赛道 / 取景框 / 放映机 / 纸页） */
+    if (window.SectorScene) window.SectorScene.set(key || null);
   }
 
   /* 音乐专区 = 播放器：不列文章子菜单，直接在雷达区展开星野歌单
@@ -335,15 +337,23 @@
     if (!key) {
       addLog('SYS', '矩阵待命 · 请选择左侧分区');
       addLog('SYS', '轨道扫描周期 11s · 已锁定', true);
-      /* 没点专区时也别让这块干着：每 4 秒轮播一个专区的巡览行 */
+      /* 没点专区时也别让这块干着：先把前几个区铺出来，之后每 3.8 秒继续往下轮 */
       var patrol = ['music', 'movie', 'photo', 'game', 'essay'];
       var pi = 0;
-      logTimer = setInterval(function () {
-        if (curSector) return;
+      function patrolLine() {
         var pk = patrol[pi % patrol.length];
         pi++;
         var pm = SECTOR_META[pk];
-        addLog(pm.tag, pm.name + ' · ' + sectorCount(pk) + ' ' + pm.unit + ' · 链路正常');
+        /* 歌单数是异步取的，还没回来时先用矩阵里的占位数，回来了以 playlist 为准 */
+        var cnt = (pk === 'music' && playlist.length) ? playlist.length : sectorCount(pk);
+        addLog(pm.tag, pm.name + ' · ' + cnt + ' ' + pm.unit + ' · 链路正常');
+      }
+      patrolLine();
+      patrolLine();
+      patrolLine();
+      logTimer = setInterval(function () {
+        if (curSector) return;
+        patrolLine();
       }, 3800);
       return;
     }
@@ -413,9 +423,34 @@
         if (curSector === 'music') {
           switchSectorLog('music');
           updateGlobe('music');
+        } else if (!curSector) {
+          /* 待命态首屏那几行是用占位数写的，歌单回来后重铺一遍，别把「10 首」留在屏上 */
+          switchSectorLog(null);
         }
       })
       .catch(function () { if (slot) slot.textContent = ''; });
+  })();
+
+  /* 右栏「星屿漫游」：随机挑一篇就地展开。
+     池子直接取 fun-board 里已渲染好的四区文章按钮（音乐区是播放器，不参与），
+     所以不需要额外拉接口；跳到哪一篇就把左栏日志与右栏球体一起带过去。 */
+  (function bindWarp() {
+    var btn = document.getElementById('funWarpBtn');
+    if (!btn) return;
+    btn.addEventListener('click', function () {
+      var pool = Array.prototype.slice.call(document.querySelectorAll('.fun-board .fun-post'));
+      if (!pool.length) {
+        addLog('WARP', '暂无可用坐标');
+        return;
+      }
+      var pick = pool[Math.floor(Math.random() * pool.length)];
+      var sec = pick.closest ? pick.closest('.fun-sector') : null;
+      var key = sec ? sec.getAttribute('data-sector') : '';
+      if (key && key !== curSector) toggleSector(rowOf(key), key);
+      var title = pick.getAttribute('data-title') || '未命名';
+      addLog('WARP', '随机跳跃 · ' + title);
+      openPost(pick);
+    });
   })();
 
   /* 首屏就把两块点亮：日志先给「待命」，球体给 STANDBY，

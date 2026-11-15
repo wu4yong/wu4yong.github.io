@@ -515,6 +515,7 @@
     root.setAttribute('aria-hidden', 'true');
     var main = document.querySelector('.starmap-main');
     if (main) main.classList.remove('is-jukebox');
+    document.dispatchEvent(new CustomEvent('jukebox:close'));
   }
 
   function isOpen() { return opened; }
@@ -595,11 +596,14 @@
       playBtn.textContent = '❚❚';
       attachAnalyser();
       if (actx && actx.state === 'suspended') actx.resume();
+      /* 音乐一起，雷达背后的群舞就闭幕退场（/fun/ 的 sector-scene.js 监听这个） */
+      document.dispatchEvent(new CustomEvent('jukebox:play'));
     });
     audio.addEventListener('pause', function () {
       playing = false;
       root.classList.remove('is-playing');
       playBtn.textContent = '▶';
+      document.dispatchEvent(new CustomEvent('jukebox:pause'));
     });
 
     /* ---------------- 音量 ----------------
