@@ -1,0 +1,269 @@
+<!--
+  ============================================
+  左侧栏个人卡组件
+  文件：_components/Sidebar.njk
+  适用终端：电脑端（星图手记 / 星迹索引 / 秘境主人 页面通栏侧栏）
+  作用：头像、昵称、站点统计、导航菜单、底部信息与全局搜索面板（结果落在雷达区，无结果播「内容走丢 → 404」动画）
+  样式依赖：source/css/theme/base/sidebar.css
+  脚本依赖：source/js/theme/base/sidebar.js
+  最后修改：2026-11-11
+  ============================================
+-->
+<aside class="sidebar" id="sidebar">
+  <div class="profile-card">
+    <div class="avatar">
+      {# 头像：内联 SVG 星空徽标（1 颗主星 + 3 颗小星）
+         三颗小星的闪烁周期/相位由 sidebar.js 随机注入 CSS 变量，每次进站都不一样；主星只做缓慢呼吸 #}
+      <div class="avatar-orb" aria-hidden="true">
+        <svg class="orb-svg" viewBox="0 0 80 80" width="80" height="80" role="img">
+          <defs>
+            <radialGradient id="orbBg" cx="50%" cy="46%" r="56%">
+              <stop offset="0%" stop-color="#0d1b4a" />
+              <stop offset="100%" stop-color="#060a20" />
+            </radialGradient>
+            <linearGradient id="orbMainGrad" x1="0" y1="0" x2="1" y2="1">
+              <stop offset="0%" stop-color="#ffffff" />
+              <stop offset="52%" stop-color="#a8f4ff" />
+              <stop offset="100%" stop-color="#3fd8ff" />
+            </linearGradient>
+          </defs>
+          <circle cx="40" cy="40" r="37" fill="url(#orbBg)" stroke="#00eeff" stroke-width="2" />
+          <circle cx="40" cy="40" r="32.5" fill="none" stroke="rgba(0,238,255,0.22)" stroke-width="1" />
+          <!-- 主星 -->
+          <path class="orb-star-main" fill="url(#orbMainGrad)"
+            d="M40.5 21.5 L43.5 35 L57 38 L43.5 41 L40.5 54.5 L37.5 41 L24 38 L37.5 35 Z" />
+          <!-- 三颗小星：位置/颜色错开，闪烁节奏随机 -->
+          <path class="orb-star s1" fill="#9ff0ff"
+            d="M22 17.4 L23 22 L27.6 23 L23 24 L22 28.6 L21 24 L16.4 23 L21 22 Z" />
+          <path class="orb-star s2" fill="#bcd9ff"
+            d="M58.5 25.6 L59.3 29.2 L62.9 30 L59.3 30.8 L58.5 34.4 L57.7 30.8 L54.1 30 L57.7 29.2 Z" />
+          <path class="orb-star s3" fill="#ffe1a6"
+            d="M33 51 L34.1 55.9 L39 57 L34.1 58.1 L33 63 L31.9 58.1 L27 57 L31.9 55.9 Z" />
+        </svg>
+      </div>
+    </div>
+    <h3 class="nickname">时空行者</h3>
+    <p class="bio">星辰大海，代码为舟</p>
+    <div class="stats">
+      <div class="stat-item">
+        <span class="stat-num">{{ site.posts.length }}</span>
+        <span class="stat-label">文章</span>
+      </div>
+      <div class="stat-item">
+        <span class="stat-num" id="fans-count" data-base="1088">1088</span>
+        <span class="stat-label">粉丝</span>
+      </div>
+      <div class="stat-item">
+        <span class="stat-num" id="follow-count" style="cursor:pointer;">66</span>
+        <span class="stat-label">关注</span>
+      </div>
+    </div>
+    <button class="follow-btn" id="followBtn" type="button" aria-pressed="false">+ 关注</button>
+  </div>
+  <div class="search-box">
+    <input type="text" placeholder="找找看..." id="search-input">
+    <button class="search-btn" id="searchModalOpen">🔍</button>
+  </div>
+  <div class="links-card">
+    <h4>常用链接</h4>
+    <ul>
+      <li><a href="/about/">秘境主人</a></li>
+      <li><a href="/archives/">星图手记</a></li>
+      <li><a href="/tags/">星迹索引</a></li>
+      <li><a href="/fun/">星屿乐园</a></li>
+      <!-- 音乐专区不再放侧栏：入口统一收在「星屿乐园」的休闲分区矩阵里 -->
+      <!-- ✅ 新增联系我 -->
+      <li><a class="contact-trigger" href="javascript:void(0)">星语传书</a></li>
+      <li><a class="donate-trigger" href="javascript:void(0)">星芒赠礼</a></li>
+    </ul>
+  </div>
+  <div class="tags-card">
+    <h4>热门标签</h4>
+    {# 全部标签先落进 DOM，紧跟其后内联排序：首帧就只露前 5，
+       不会出现「模板 20 个 → 脚本收成 5 个」的中间态（跨页淡入时会显成重影） #}
+    <div class="tag-cloud">
+      {% for tag in site.tags.toArray() %}
+      <a href="/tags/{{ tag.slug }}/" class="tag-link" data-tag="{{ tag.name }}"
+        data-count="{{ tag.length }}">{{ tag.name }}</a>
+      {% endfor %}
+    </div>
+    <script>
+      {% include "_js/hot-tags.js" %}
+    </script>
+  </div>
+  <div class="archive-card">
+    <h4>按月归档</h4>
+    <ul class="archive-list">
+      {% set last_month = '' %}
+      {# 按月归档：倒序（新 → 旧）；坐标矩阵内部则统一正序（旧 → 新） #}
+      {% for post in site.posts.toArray() | sort(true, true, 'date') %}
+      {% set current_month = post.date.format('YYYY-MM') %}
+      {% if current_month != last_month %}
+      {% set last_month = current_month %}
+      <li>
+        <a href="/archives/{{ post.date.format('YYYY') }}/{{ post.date.format('MM') }}/">
+          {{ post.date.format('YYYY年MM月') }}
+        </a>
+      </li>
+      {% endif %}
+      {% endfor %}
+    </ul>
+  </div>
+
+  <!-- ========== 星语传书（雷达区弹窗，与搜索面板同一套面板样式） ========== -->
+  <div class="search-panel dock-panel" id="contactModal" hidden>
+    <div class="sp-mask" data-dock-close></div>
+    <div class="sp-box" role="dialog" aria-modal="true" aria-label="星语传书">
+      <div class="sp-head">
+        <span class="sp-dot"></span>
+        <span class="sp-title">星语传书</span>
+        <span class="sp-title-sub">/ SIGNAL CHANNEL</span>
+        <span class="sp-meta">SYS.REPLY ≤ 48H</span>
+        <button class="sp-close" type="button" data-dock-close title="关闭">×</button>
+      </div>
+      <div class="sp-body dock-body">
+        <p class="dock-lead">写信给时空行者：文章里的错字、跑不通的 demo、想聊的一句技术，都可以从这里进来。信号收到，我会尽量回。</p>
+        <div class="dock-grid">
+          <div class="dock-list">
+            <a class="dock-row" href="https://wpa.qq.com/msgrd?v=3&amp;uin=372109355&amp;site=qq&amp;menu=yes"
+              target="_blank" rel="noopener">
+              <span class="dock-ico">企</span>
+              <span class="dock-k"><b>QQ</b><span>372109355</span></span>
+            </a>
+            <a class="dock-row" href="https://wu4yong.github.io" target="_blank" rel="noopener">
+              <span class="dock-ico">⌂</span>
+              <span class="dock-k"><b>站点主站</b><span>wu4yong.github.io</span></span>
+            </a>
+            <div class="dock-row dock-row-static">
+              <span class="dock-ico">✉</span>
+              <span class="dock-k"><b>电子邮箱</b><span>暂未公开 · 任何问题QQ留言</span></span>
+            </div>
+            <a class="dock-row" href="#" target="_blank" rel="noopener">
+              <span class="dock-ico">◈</span>
+              <span class="dock-k"><b>GitHub</b><span>暂未公开 · 任何问题QQ留言</span></span>
+            </a>
+            <a class="dock-row" href="#" target="_blank" rel="noopener">
+              <span class="dock-ico">◇</span>
+              <span class="dock-k"><b>Gitee</b><span>暂未公开 · 任何问题QQ留言</span></span>
+            </a>
+          </div>
+          <div class="dock-side">
+            <div class="dock-qr">
+              <em>WECHAT · 微信</em>
+              <img src="{{ url_for('/images/wechat-qr.png') }}" alt="微信二维码">
+              <span class="dock-qr-tip">扫码添加，备注「来自时空秘境」</span>
+            </div>
+          </div>
+        </div>
+        <div class="dock-chips">
+          <span class="dock-chip">文章纠错</span>
+          <span class="dock-chip">Demo 答疑</span>
+          <span class="dock-chip">转载授权</span>
+          <span class="dock-chip">技术交流</span>
+          <span class="dock-chip">内推 / 合作</span>
+        </div>
+        <p class="dock-note">无正文的「在吗」容易被当作信号干扰滤掉，直接把问题写清楚，回信会快很多。</p>
+      </div>
+      <!-- 开合转场层：百叶窗 / 电影幕布 / 淡入，由 source/js/theme/base/sidebar.js 轮换播放 -->
+      <div class="dock-fx" aria-hidden="true">
+        <div class="dock-fx-slats"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+        <div class="dock-fx-curtain"><span class="top"></span><span class="bottom"></span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========== 全局搜索面板 ==========
+       索引来自构建期生成的 /search.json（hexo-generator-searchdb），随文章新增自动更新；
+       打开时由 source/js/theme/base/sidebar.js 把整块挪进 Radar 中间区（无雷达的页面退化为居中浮层） -->
+  <div class="search-panel" id="searchPanel" hidden>
+    <div class="sp-mask" id="searchMask"></div>
+    <div class="sp-box" role="dialog" aria-modal="true" aria-label="全文搜索">
+      <div class="sp-head">
+        <span class="sp-dot"></span>
+        <span class="sp-title">全文搜索</span>
+        <span class="sp-title-sub">/ GLOBAL SEARCH</span>
+        <span class="sp-meta" id="spMeta"></span>
+        <button class="sp-close" id="searchPanelClose" type="button" title="关闭搜索">×</button>
+      </div>
+      <div class="sp-body" id="spBody">
+        <div class="sp-loading" id="spLoading">正在扫描星图索引…</div>
+        <ul class="sp-list" id="spList"></ul>
+        <!-- 无结果：内容走丢 → 慢速落 404 -->
+        <div class="sp-empty" id="spEmpty" hidden>
+          <div class="sp-drift-wrap">
+            <span class="sp-trail"></span>
+            <span class="sp-drift"></span>
+            <span class="sp-lost">SIGNAL LOST · 信号已丢失</span>
+          </div>
+          <div class="sp-404"><span>4</span><span>0</span><span>4</span></div>
+          <p class="sp-empty-main">内容走丢在星海里了</p>
+          <p class="sp-empty-tip">换个关键词，或去〈星迹索引 / 星图手记〉里慢慢逛</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========== 星芒赠礼（雷达区弹窗，收款码图片沿用原图不改） ========== -->
+  <div class="search-panel dock-panel" id="donateModal" hidden>
+    <div class="sp-mask" data-dock-close></div>
+    <div class="sp-box" role="dialog" aria-modal="true" aria-label="星芒赠礼">
+      <div class="sp-head">
+        <span class="sp-dot"></span>
+        <span class="sp-title">星芒赠礼</span>
+        <span class="sp-title-sub">/ STAR OFFERING</span>
+        <span class="sp-meta">THANKS FOR THE LIGHT</span>
+        <button class="sp-close" type="button" data-dock-close title="关闭">×</button>
+      </div>
+      <div class="sp-body dock-body">
+        <div class="dock-thanks">
+          <p>这片星空是工作闲暇时光一个个凌晨攒出来的：一篇文章、一次复盘、一个修不完的 bug。</p>
+          <p>如果你在这里找到了能用的东西，愿意赏一杯凌晨三点的咖啡 —— 这份心意我会记很久。</p>
+          <p>不打赏也完全没关系：所有文章永久免费，愿你我在各自的轨道上都跑得稳一点。</p>
+        </div>
+        <div class="dock-donate">
+          <div class="dock-hero">
+            <div class="dock-hero-pic">
+              <span class="dock-hero-halo" aria-hidden="true"></span>
+              <span class="dock-hero-ring dock-hero-ring-a" aria-hidden="true"></span>
+              <span class="dock-hero-ring dock-hero-ring-b" aria-hidden="true"></span>
+              <img src="{{ url_for('/images/donate-boy.png') }}" alt="感谢支持">
+            </div>
+            <em>THANKS FOR THE LIGHT</em>
+            <span class="dock-hero-tip">愿每一次凌晨，都有人替你留一盏灯</span>
+          </div>
+          <div class="dock-pay">
+            <div class="dock-qr dock-qr-row">
+              <img src="{{ url_for('/images/alipay-qr.jpg') }}" alt="支付宝收款码">
+              <div class="dock-qr-txt">
+                <b>支付宝 · 星途赞赏</b>
+                <span>请我喝一杯凌晨三点的咖啡</span>
+              </div>
+            </div>
+            <div class="dock-qr dock-qr-row">
+              <img src="{{ url_for('/images/wechat-pay-qr.jpg') }}" alt="微信收款码">
+              <div class="dock-qr-txt">
+                <b>微信 · 星河致谢</b>
+                <span>金额随意，心意已经收到</span>
+              </div>
+            </div>
+          </div>
+        </div>        <div class="dock-chips">
+          <span class="dock-chip">域名与服务器</span>
+          <span class="dock-chip">图床与备份</span>
+          <span class="dock-chip">一本技术书</span>
+          <span class="dock-chip">深夜的一杯咖啡</span>
+        </div>
+        <p class="dock-note">赠礼纯属心意，不产生任何付费内容或额外承诺；扫码前请确认收款人，小心仿冒。</p>
+      </div>
+      <!-- 开合转场层：百叶窗 / 电影幕布 / 淡入，由 source/js/theme/base/sidebar.js 轮换播放 -->
+      <div class="dock-fx" aria-hidden="true">
+        <div class="dock-fx-slats"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+        <div class="dock-fx-curtain"><span class="top"></span><span class="bottom"></span></div>
+      </div>
+    </div>
+  </div>
+
+
+</aside>
+<!-- 引入侧边栏交互脚本：外链（源文件 themes/butterfly/source/js/theme/base/sidebar.js） -->
+<script src="/js/theme/base/sidebar.js"></script>

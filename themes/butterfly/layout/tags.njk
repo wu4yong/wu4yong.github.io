@@ -1,0 +1,625 @@
+<!--
+  ============================================
+  星迹索引页面模板
+  文件：tags.njk
+  适用终端：电脑端
+  作用：电脑端标签三栏控制台 + 坐标矩阵 + 雷达阅读；手机 UA 跳 /phone/tags/
+  最后修改：2026-11-11
+  ============================================
+-->{% set pageTitle = "星迹索引 - 时空秘境" %}
+{# 样式层级顺序：基础 common → 布局 post-layout → 组件 sidebar → 正文 post → 页面 tags → 浮层 star-reader → 特效 starmap-live → 雷达视图 skin（放最后覆盖前面的均布样式）#}
+{% set pageCss = ["base/common.css", "base/post-layout.css", "base/sidebar.css", "base/post.css", "starmap/tags.css", "media/star-reader.css?v=20261115k", "media/star-album.css?v=20261115k", "starmap/starmap-live.css", "starmap/radar-view.css"] %}
+{# 坐标矩阵排序位次：按「该分类下最新文章的日期」倒序，2026 在最上、2018 在最下 #}
+{% set catRanks = starmap_category_time_ranks() %}
+<!DOCTYPE html>
+<html class="post-page">
+{% include "_components/Head.njk" %}
+<script>
+  /* 手机 UA 分流：电脑端这套控制台不再给手机用，直接换成手机版页面 */
+  (function () {
+    var ua = navigator.userAgent || '';
+    if (/Android|iPhone|iPod|HarmonyOS|Windows Phone|MicroMessenger|Mobile Safari/i.test(ua)) {
+      location.replace('/phone/tags/');
+    }
+  })();
+</script>
+
+<body>
+  {% include "_components/Particles.njk" %}
+
+  <div class="app-layout">
+    {% include "_components/Sidebar.njk" %}
+
+    {# 折叠按钮：放在 aside 外部，不受侧边栏 transform 影响 #}
+    <button id="sidebarToggle" class="sidebar-toggle" title="隐藏侧栏"></button>
+
+    <main class="main-content tags-main">
+      <div class="starmap-console">
+        <header class="console-header">
+          <div class="console-title">
+            <span class="title-dot"></span>
+            <span class="title-label">星迹索引</span>
+            <span class="title-divider">·</span>
+            <span class="title-en">STELLAR INDEX</span>
+          </div>
+          {% set catList = site.categories.toArray() %}
+          {% set catTotal = catList.length %}
+          <div class="console-status">
+            <div class="status-item">
+              <span class="status-dot dot-scan"></span>
+              <span class="status-text">SCANNING</span>
+            </div>
+            <div class="status-item">
+              <span class="status-dot dot-node"></span>
+              <span class="status-text">NODES: {{ catTotal - 4 }}</span>
+            </div>
+            <div class="status-item">
+              <span class="status-dot dot-link"></span>
+              <span class="status-text">LINKS: ACTIVE</span>
+            </div>
+          </div>
+          <a href="{{ url_for('/') }}" class="back-home">
+            <span class="back-home-icon">←</span>
+            <span>返回首页</span>
+          </a>
+          <span class="header-scan-line"></span>
+        </header>
+
+        <main class="starmap-main">
+          <!-- 左侧面板 -->
+          <aside class="starmap-panel left-panel">
+            <div class="panel-title">
+              <span class="panel-icon">●</span>
+              <span>索引坐标矩阵 / INDEX MATRIX</span>
+            </div>
+            <div class="coord-grid">
+              {% for cat in catList %}
+                {# 左栏按「栏分类」渲染，而不是标签云：一篇文章只属于一个栏目，
+                   计数才不会把横切标签（吉他、视频剪辑）混进目录。
+                   娱乐五类（fun 及其子类 expand/essay/game/movie/photo）已挪到星屿乐园（/fun/），
+                   这里连同父级 fun 一起排除，雷达节点随之收敛。 #}
+                {% if cat.name != 'fun' and cat.name != 'essay' and cat.name != 'game' and cat.name != 'movie' and cat.name != 'photo' %}
+                {% set num = cat.length %}
+                {% if num >= 20 %}
+                  {% set sizeClass = "coord-level-high" %}
+                {% elif num >= 8 %}
+                  {% set sizeClass = "coord-level-mid" %}
+                {% else %}
+                  {% set sizeClass = "coord-level-low" %}
+                {% endif %}
+                {% set menuRank = catRanks[cat.name] %}
+                <div class="coord-item {{ sizeClass }}" data-tag-name="{{ cat.name }}" data-count="{{ num }}"
+                     data-rank="{% if menuRank is defined %}{{ menuRank }}{% else %}9999{% endif %}">
+                  <span class="coord-dot"></span>
+                  <a href="{{ url_for(cat.path) }}">
+                    {{ cat.name }}
+                    <span class="coord-count">({{ num }})</span>
+                  </a>
+                  <span class="coord-chevron">›</span>
+                </div>
+                {% endif %}
+              {% endfor %}
+            </div>
+          </aside>
+
+          <!-- 中间雷达（视图 B：多节点引力场，质量 = 篇数） -->
+          <section class="starmap-center">
+            <div class="radar-view" id="radarView" data-view="graph">
+            <div class="radar-scan"></div>
+            <div class="starmag-center-node">
+              <span class="core-pulse"></span>
+              <span class="core-text">CORE</span>
+              <span class="core-count">{{ catTotal - 4 }} NODES</span>
+            </div>
+            {% for cat in catList %}
+              {% if cat.name != 'fun' and cat.name != 'essay' and cat.name != 'game' and cat.name != 'movie' and cat.name != 'photo' %}
+              {% set num = cat.length %}
+              {% set index = loop.index0 %}
+              {% if catTotal > 0 %}
+                {% set angle = (index / catTotal) * 360 %}
+              {% else %}
+                {% set angle = 0 %}
+              {% endif %}
+              {% if num >= 20 %}
+                {% set nodeSize = "node-large" %}
+              {% elif num >= 8 %}
+                {% set nodeSize = "node-medium" %}
+              {% else %}
+                {% set nodeSize = "node-small" %}
+              {% endif %}
+              <a class="stargate-node {{ nodeSize }}" data-pos="{{ angle }}" data-tag-name="{{ cat.name }}"
+                 data-count="{{ num }}" data-rank="{% if catRanks[cat.name] is defined %}{{ catRanks[cat.name] }}{% else %}9999{% endif %}"
+                 href="{{ url_for(cat.path) }}">
+                <span class="node-dot"></span>
+                <span class="node-label">{{ cat.name }}</span>
+                <span class="node-pulse"></span>
+              </a>
+              {% endif %}
+            {% endfor %}
+            <svg class="starmap-lines"></svg>
+            </div><!-- /radar-view -->
+
+            {% include "_components/InplaceReader.njk" %}
+
+            {# 星野歌单：点侧栏入口时在雷达区就地展开全屏播放器 #}
+            {% include "_components/StarJukebox.njk" %}
+          </section>
+
+          <!-- 右侧大面板（内部 4 个子卡片 sub-card） -->
+          <aside class="starmap-panel right-panel">
+            <!-- 1 地球仪 -->
+            <div class="sub-card">
+              <div class="panel-title">
+                <span class="panel-icon">●</span>
+                <span>ORBITAL NODE</span>
+              </div>
+              <div class="globe-wrap">
+                <div class="globe">
+                  <div class="globe-core"></div>
+                  <div class="globe-ring ring-1"></div>
+                  <div class="globe-ring ring-2"></div>
+                  <div class="globe-ring ring-3"></div>
+                  <div class="globe-orbit-path"></div>
+                  <span class="orbit-dot orbit-dot-1"></span>
+                  <span class="orbit-dot orbit-dot-2"></span>
+                  <span class="orbit-dot orbit-dot-3"></span>
+                </div>
+                <div class="globe-label">ORBITAL NODE</div>
+              </div>
+            </div>
+
+            <!-- 2 节点图例 -->
+            <div class="sub-card">
+              <div class="panel-title">
+                <span class="panel-icon">●</span>
+                <span>节点图例</span>
+              </div>
+              <div class="legend">
+                <div class="legend-item">
+                  <span class="legend-dot legend-high"></span>
+                  <span>高活跃节点</span>
+                </div>
+                <div class="legend-item">
+                  <span class="legend-dot legend-mid"></span>
+                  <span>中活跃节点</span>
+                </div>
+                <div class="legend-item">
+                  <span class="legend-dot legend-low"></span>
+                  <span>普通节点</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- 3 星图频谱 -->
+            <div class="sub-card">
+              <div class="panel-title">
+                <span class="panel-icon">●</span>
+                <span>星图频谱 / SPECTRUM</span>
+              </div>
+              <div class="local-time">LOCAL TIME: <span id="localTime">--:--:--</span></div>
+              <div class="spectrum-box">
+                <div class="spectrum-bars">
+                  <span class="bar"></span>
+                  <span class="bar"></span>
+                  <span class="bar"></span>
+                  <span class="bar"></span>
+                  <span class="bar"></span>
+                  <span class="bar"></span>
+                  <span class="bar"></span>
+                  <span class="bar"></span>
+                  <span class="bar"></span>
+                  <span class="bar"></span>
+                </div>
+              </div>
+            </div>
+
+            <!-- 4 信息日志 -->
+            <div class="sub-card">
+              <div class="panel-title">
+                <span class="panel-icon">●</span>
+                <span>信息日志 / LOG</span>
+                <span class="log-panel-badge">LIVE</span>
+              </div>
+              <div class="log-box">
+                <div class="log-scan-line"></div>
+                <div class="log-list">
+                  <div class="log-item log-item-system">
+                    <span class="log-time"></span>
+                    <span class="log-tag">系统</span>
+                    <span class="log-text">星图系统已激活</span>
+                  </div>
+                  <div class="log-item log-item-node">
+                    <span class="log-time"></span>
+                    <span class="log-tag">节点</span>
+                    <span class="log-text">节点扫描完成</span>
+                  </div>
+                  <div class="log-item log-item-link">
+                    <span class="log-time"></span>
+                    <span class="log-tag">链路</span>
+                    <span class="log-text">建立安全链路</span>
+                  </div>
+                  <div class="log-item log-item-node">
+                    <span class="log-time"></span>
+                    <span class="log-tag">节点</span>
+                    <span class="log-text">坐标矩阵同步完成</span>
+                  </div>
+                  <div class="log-item log-item-link">
+                    <span class="log-time"></span>
+                    <span class="log-tag">链路</span>
+                    <span class="log-text">核心节点连接稳定</span>
+                  </div>
+                  <div class="log-item log-item-warning">
+                    <span class="log-time"></span>
+                    <span class="log-tag">告警</span>
+                    <span class="log-text">检测到未知轨迹</span>
+                  </div>
+                  <div class="log-item log-item-system">
+                    <span class="log-time"></span>
+                    <span class="log-tag">系统</span>
+                    <span class="log-text">链路节点同步中</span>
+                  </div>
+                  <div class="log-item log-item-node">
+                    <span class="log-time"></span>
+                    <span class="log-tag">节点</span>
+                    <span class="log-text">未知信号源已标记</span>
+                  </div>
+                  <div class="log-item log-item-link">
+                    <span class="log-time"></span>
+                    <span class="log-tag">链路</span>
+                    <span class="log-text">数据心跳检测正常</span>
+                  </div>
+                  <div class="log-item log-item-system">
+                    <span class="log-time"></span>
+                    <span class="log-tag">系统</span>
+                    <span class="log-text">星图控制台运行稳定</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </aside>
+
+          <!-- 底部轨道 -->
+          <footer class="bottom-panel">
+            <div class="bottom-title">
+              <span class="panel-icon">●</span>
+              <span>轨道数据带 / ORBITAL DATA STRIP</span>
+            </div>
+            <div class="orbital-track">
+              <div class="orbital-line line-1"></div>
+              <div class="orbital-line line-2"></div>
+              <div class="orbital-line line-3"></div>
+              <div class="orbital-line line-4"></div>
+              <span class="orbital-dot t1-dot1"></span>
+              <span class="orbital-dot t1-dot2"></span>
+              <span class="orbital-dot t2-dot1"></span>
+              <span class="orbital-dot t2-dot2"></span>
+              <span class="orbital-dot t3-dot1"></span>
+              <span class="orbital-dot t3-dot2"></span>
+              <span class="orbital-dot t4-dot1"></span>
+              <span class="orbital-dot t4-dot2"></span>
+            </div>
+          </footer>
+        </main>
+      </div>
+
+      {# 分类 → 文章清单：供雷达区列表使用，隐藏节点、不参与布局。
+         左栏已经按 categories 渲染，这里必须同源，否则点开坐标项找不到对应的文章清单 #}
+      <div class="tag-dataset" hidden>
+        {% for cat in catList %}
+          <div class="tag-posts" data-tag="{{ cat.name }}">
+            {% for post in cat.posts.toArray() %}
+              <a class="tag-post-data"
+                 data-url="{{ url_for(post.path) }}"
+                 data-title="{{ post.title }}"
+                 data-album="{{ post.album }}"
+                 data-bgm="{{ post.album_bgm }}"
+                 data-date="{{ post.date.format('YYYY.MM.DD') }}"
+                 data-datetime="{{ post.date.format('YYYY.MM.DD HH:mm:ss') }}"></a>
+            {% endfor %}
+          </div>
+        {% endfor %}
+      </div>
+    </main>
+  </div>
+
+<style>
+  /* ===== 侧边栏骨架适配：原「全屏控制台」改为嵌入右侧主内容区 ===== */
+  html.post-page,
+  html.post-page body {
+    height: 100vh;
+    overflow: hidden;
+  }
+  .main-content.tags-main {
+    padding: 18px 22px 26px;
+    height: 100vh;
+    box-sizing: border-box;
+    overflow: hidden;
+  }
+  .tags-main .starmap-console {
+    min-height: 0;
+    width: 100%;
+    padding: 0;
+  }
+  .tags-main .console-header {
+    margin-bottom: 18px;
+  }
+
+  /* ===== 控制台高度锁定：与星图手记、秘境主人两页保持一致 ===== */
+  .tags-main .starmap-main {
+    height: calc(100vh - 124px);
+    grid-template-rows: minmax(0, 1fr) 190px;
+  }
+  .tags-main .left-panel {
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    overflow: hidden;
+  }
+  .tags-main .left-panel .coord-grid {
+    flex: 1;
+    min-height: 0;
+    max-height: none;
+    overflow-y: auto;
+  }
+  .tags-main .starmap-center {
+    min-height: 0;
+    height: auto;
+    overflow: hidden;
+  }
+  .tags-main .right-panel {
+    min-height: 0;
+    overflow-y: auto;
+  }
+  /* 右栏四张卡：频谱固定、日志弹性填满，避免第 4 张被视口切一半 */
+  .tags-main .right-panel .sub-card {
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+  }
+  .tags-main .right-panel .sub-card:nth-child(3) {
+    flex: 0 0 auto;
+  }
+  /* 右栏 4 张卡要挤在 1917 一屏里，球体/频谱/间距收一收，把 ~200px 让给第 4 张日志卡；
+     ≤1500 是纵向堆叠 + 页面滚动，没有空间冲突，保持原尺寸 */
+  @media (min-width: 1501px) {
+    .tags-main .right-panel .sub-card:nth-child(3) .spectrum-box {
+      height: 58px;
+    }
+    .tags-main .right-panel .sub-card { padding-top: 9px; padding-bottom: 9px; }
+    .tags-main .globe {
+      width: 62px;
+      height: 62px;
+      margin: 0 auto 0;
+    }
+    .tags-main .globe-core { width: 38px; height: 38px; }
+    .tags-main .globe-ring.ring-1 { width: 46px; height: 46px; }
+    .tags-main .globe-ring.ring-2 { width: 56px; height: 56px; }
+    .tags-main .globe-ring.ring-3 { width: 68px; height: 68px; }
+    .tags-main .globe-label { display: none; }
+    .tags-main .right-panel { gap: 8px; }
+  }
+  .tags-main .right-panel .sub-card:nth-child(4) {
+    flex: 1 1 auto;
+  }
+  .tags-main .right-panel .sub-card:nth-child(4) .log-box {
+    height: auto;
+    flex: 1 1 auto;
+    min-height: 80px;
+    overflow-y: auto;
+  }
+
+  /* 窄屏（≤1500）三栏塌成「左+中 / 右 / 底部」三行，雷达会被压到 270px 左右，
+     20 个标签节点全挤在一起 —— 这里给第一行留固定高度，整页改为可滚动 */
+  @media (max-width: 1500px) {
+    .main-content.tags-main {
+      height: auto;
+      min-height: 100vh;
+      overflow-y: auto;
+    }
+    .tags-main .starmap-main {
+      height: auto;
+      grid-template-rows: 430px auto auto;
+    }
+    .tags-main .starmap-center { min-height: 430px; }
+    .tags-main .left-panel { height: 430px; }
+  }
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+  var grid = document.querySelector('.coord-grid');
+  if (grid) {
+    var items = Array.prototype.slice.call(grid.querySelectorAll('.coord-item'));
+    /* 先按首页菜单分类从上到下（技术类 → 休闲类 → 未收录），同类内仍按篇数倒序 */
+    items.sort(function (a, b) {
+      var ra = Number(a.dataset.rank);
+      var rb = Number(b.dataset.rank);
+      if (ra !== rb) return ra - rb;
+      return Number(b.dataset.count) - Number(a.dataset.count);
+    });
+    items.forEach(function (el) { grid.appendChild(el); });
+  }
+
+  /* 雷达的节点定位、引力丝、冲击波聚焦统一交给 radar-core.js（window.RadarView），
+     这里只保留页面自身的排序、时间与标签展开逻辑 */
+
+  function pad(num) { return num < 10 ? '0' + num : num; }
+  function updateLocalTime() {
+    const now = new Date();
+    const year = now.getFullYear();
+    const mon = pad(now.getMonth() + 1);
+    const day = pad(now.getDate());
+    const h = pad(now.getHours());
+    const m = pad(now.getMinutes());
+    const s = pad(now.getSeconds());
+    const full = `${year}.${mon}.${day} ${h}:${m}:${s}`;
+    const timeText = `${h}:${m}:${s}`;
+    const timeDom = document.getElementById('localTime');
+    if(timeDom) timeDom.textContent = timeText;
+    document.querySelectorAll('.log-time').forEach(function(el){ el.textContent = full; });
+  }
+  updateLocalTime();
+  setInterval(updateLocalTime,1000);
+
+  /* ================= 标签 → 左栏就地展开 =================
+     点左栏矩阵的标签行，像首页菜单一样在行下面就地展开该标签的文章子列表；
+     点子列表里的标题，才在雷达区就地阅读（右下角可全屏）。 */
+  var coordGrid = document.querySelector('.coord-grid');
+  var dataset = document.querySelector('.tag-dataset');
+  var openTagName = '';
+
+  function postsOf(name) {
+    if (!dataset) return [];
+    var box = null;
+    dataset.querySelectorAll('.tag-posts').forEach(function (b) {
+      if (!box && b.dataset.tag === name) box = b;
+    });
+    if (!box) return [];
+    return Array.prototype.slice.call(box.querySelectorAll('.tag-post-data'));
+  }
+
+  function rowOf(name) {
+    var found = null;
+    document.querySelectorAll('.coord-item[data-tag-name]').forEach(function (el) {
+      if (!found && el.dataset.tagName === name) found = el;
+    });
+    return found;
+  }
+
+  function collapseAll() {
+    if (coordGrid) {
+      coordGrid.querySelectorAll('.coord-children').forEach(function (c) { c.remove(); });
+    }
+    document.querySelectorAll('.coord-item.is-expanded').forEach(function (n) { n.classList.remove('is-expanded'); });
+    document.querySelectorAll('.stargate-node.is-reading').forEach(function (n) { n.classList.remove('is-reading'); });
+    openTagName = '';
+  }
+
+  function expandTag(row, name) {
+    collapseAll();
+    var posts = postsOf(name).sort(function (a, b) {
+      /* 同日多篇时只比到「天」会保持数据源顺序（等于随机），这里用带时分秒的
+         data-datetime 精确排序，保证同一天内按时间正序，如 第1节 01:00 在前 */
+      var ka = String(a.dataset.datetime || a.dataset.date || '');
+      var kb = String(b.dataset.datetime || b.dataset.date || '');
+      return ka.localeCompare(kb);
+    });
+
+    var panel = document.createElement('div');
+    panel.className = 'coord-children';
+    if (!posts.length) {
+      var empty = document.createElement('div');
+      empty.className = 'coord-child-empty';
+      empty.textContent = '该标签下暂无文章';
+      panel.appendChild(empty);
+    }
+    posts.forEach(function (p) {
+      var link = document.createElement('a');
+      link.className = 'coord-child';
+      link.href = p.dataset.url;
+      link.target = '_blank';
+      link.rel = 'noopener';
+      link.dataset.url = p.dataset.url;
+      link.dataset.title = p.dataset.title;
+      link.dataset.album = p.dataset.album || '';
+
+      var date = document.createElement('span');
+      date.className = 'coord-child-date';
+      date.textContent = p.dataset.date;
+      var title = document.createElement('span');
+      title.className = 'coord-child-title';
+      title.textContent = p.dataset.title;
+      link.appendChild(date);
+      link.appendChild(title);
+
+      link.addEventListener('click', function (ev) {
+        if (ev.button !== 0 || ev.metaKey || ev.ctrlKey || ev.shiftKey || ev.altKey) return;
+        ev.preventDefault();
+        if (window.StarmapReader) {
+          window.StarmapReader.open({
+            url: p.dataset.url,
+            title: p.dataset.title,
+            album: p.dataset.album || '',
+            bgm: p.dataset.bgm || '',
+            meta: 'TAGGED · ' + name + ' · ' + p.dataset.date
+          });
+        }
+      });
+      panel.appendChild(link);
+    });
+
+    row.insertAdjacentElement('afterend', panel);
+    row.classList.add('is-expanded');
+    openTagName = name;
+
+    var radarNode = document.querySelector('.stargate-node[data-tag-name="' + name.replace(/"/g, '\\"') + '"]');
+    if (radarNode) radarNode.classList.add('is-reading');
+
+    /* 把展开的标签行顶到面板可视区顶部，子列表才不会被裁在底部 */
+    var scroller = row.parentElement;
+    while (scroller) {
+      var oy = window.getComputedStyle(scroller).overflowY;
+      if (oy === 'auto' || oy === 'scroll') break;
+      scroller = scroller.parentElement;
+    }
+    if (scroller && scroller !== row.parentElement && typeof row.offsetTop === 'number') {
+      scroller.scrollTop = Math.max(0, row.offsetTop - 10);
+    }
+  }
+
+  function toggleTag(name) {
+    var row = rowOf(name);
+    if (!row) return;
+    if (openTagName === name) { collapseAll(); } else { expandTag(row, name); }
+  }
+
+  document.querySelectorAll('.coord-item[data-tag-name]').forEach(function (el) {
+    el.addEventListener('click', function (e) {
+      if (e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+      e.preventDefault();
+      toggleTag(el.dataset.tagName);
+    });
+  });
+
+  /* 雷达上的标签节点：展开左栏对应的标签行，并滚到可见处 */
+  document.querySelectorAll('.stargate-node[data-tag-name]').forEach(function (el) {
+    el.addEventListener('click', function (e) {
+      if (e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+      e.preventDefault();
+      var name = el.dataset.tagName;
+      if (openTagName !== name) expandTag(rowOf(name), name);
+      var row = rowOf(name);
+      if (row && typeof row.scrollIntoView === 'function') row.scrollIntoView({ block: 'nearest' });
+    });
+  });
+
+  document.addEventListener('keydown', function (e) {
+    if (e.key !== 'Escape') return;
+    if (window.StarmapReader && window.StarmapReader.isOpen()) return;
+    if (openTagName) collapseAll();
+  });
+
+  /* 阅读态：右栏四张卡整体让位，正文吃满宽度；关闭后恢复 */
+  document.addEventListener('starmap:reader-open', function () {
+    var sm = document.querySelector('.starmap-main');
+    if (sm) sm.classList.add('is-reading');
+  });
+
+  /* 关闭阅读后把雷达恢复成干净状态：节点高亮一并清掉，视觉上等同「没读过」 */
+  document.addEventListener('starmap:reader-close', function () {
+    var sm = document.querySelector('.starmap-main');
+    if (sm) sm.classList.remove('is-reading');
+    document.querySelectorAll('.stargate-node.is-reading').forEach(function (n) { n.classList.remove('is-reading'); });
+    var rv = document.getElementById('radarView');
+    if (rv) { rv.style.visibility = ''; rv.style.opacity = ''; }
+  });
+
+});
+</script>
+<!-- 星图实时脚本：外链（源文件 themes/butterfly/source/js/theme/starmap/starmap-live.js） -->
+<script src="/js/theme/starmap/starmap-live.js"></script>
+<!-- 星图雷达内核（阶段 1 + 2）：视图 B 多节点引力场 -->
+<script src="/js/theme/starmap/radar-core.js"></script>
+<script src="/js/theme/media/star-album.js"></script>
+</body>
+</html>

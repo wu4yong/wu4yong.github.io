@@ -1,0 +1,424 @@
+<!--
+  ============================================
+  星屿乐园页面模板（四字休闲空间）
+  文件：fun.njk
+  适用终端：电脑端（/fun/）
+  作用：星迹索引下的第二层矩阵 —— 左侧五个专区，点专区在雷达区列出该区文章，
+        点文章沿用 InplaceReader 的文章逻辑就地展开全文
+  复用：tags.css 的三栏布局与三档断点、radar-core.js 的雷达绘制、InplaceReader 的阅读器
+  最后修改：2026-11-14
+  ============================================
+-->{# 样式层级顺序与星迹索引一致，最后追加 fun.css 只为专区列表补少量样式 #}
+{% set pageTitle = "星屿乐园 - 时空秘境" %}
+{% set pageCss = ["base/common.css", "base/post-layout.css", "base/sidebar.css", "base/post.css", "starmap/tags.css", "media/star-reader.css?v=20261115k", "media/star-album.css?v=20261115k", "starmap/starmap-live.css", "starmap/radar-view.css", "starmap/fun.css?v=20261115q"] %}
+{% set catMusic = site.categories.findOne({ name: "music" }) %}
+{% set catMovie = site.categories.findOne({ name: "movie" }) %}
+{% set catPhoto = site.categories.findOne({ name: "photo" }) %}
+{% set catGame = site.categories.findOne({ name: "game" }) %}
+{% set catEssay = site.categories.findOne({ name: "essay" }) %}
+<!DOCTYPE html>
+<html class="post-page">
+{% include "_components/Head.njk" %}
+<script>
+  /* 手机 UA 分流：电脑端这套控制台不再给手机用 */
+  (function () {
+    var ua = navigator.userAgent || '';
+    if (/Android|iPhone|iPod|HarmonyOS|Windows Phone|MicroMessenger|Mobile Safari/i.test(ua)) {
+      location.replace('/phone/');
+    }
+  })();
+</script>
+
+<body>
+  {% include "_components/Particles.njk" %}
+
+  <div class="app-layout">
+    {% include "_components/Sidebar.njk" %}
+
+    {# 折叠按钮：放在 aside 外部，不受侧边栏 transform 影响 #}
+    <button id="sidebarToggle" class="sidebar-toggle" title="隐藏侧栏"></button>
+
+    {# 复用 tags-main 类名，让 tags.css 里的三栏 grid 与三档断点直接生效 #}
+    <main class="main-content tags-main">
+      <div class="starmap-console">
+        <header class="console-header">
+          <div class="console-title">
+            <span class="title-dot"></span>
+            <span class="title-label">星屿乐园</span>
+            <span class="title-divider">·</span>
+            <span class="title-en">LEISURE BAY</span>
+          </div>
+          <div class="console-status">
+            <div class="status-item">
+              <span class="status-dot dot-scan"></span>
+              <span class="status-text">SECTORS</span>
+            </div>
+            <div class="status-item">
+              <span class="status-dot dot-node"></span>
+              <span class="status-text">ZONES: 5</span>
+            </div>
+            <div class="status-item">
+              <span class="status-dot dot-link"></span>
+              <span class="status-text">LINKS: ACTIVE</span>
+            </div>
+          </div>
+          <a href="{{ url_for('/tags/') }}" class="back-home">
+            <span class="back-home-icon">←</span>
+            <span>返回星迹索引</span>
+          </a>
+          <span class="header-scan-line"></span>
+        </header>
+
+        <main class="starmap-main">
+          <!-- 左侧面板：第二层矩阵（五个专区） -->
+          <aside class="starmap-panel left-panel fun-left">
+            <div class="panel-title">
+              <span class="panel-icon">●</span>
+              <span>休闲分区 / SECTOR MATRIX</span>
+            </div>
+            <div class="coord-grid" id="funGrid">
+              <div class="coord-item coord-level-high" data-sector="music" data-count="10">
+                <span class="coord-dot"></span>
+                {# 音乐专区不再是文章分类，括号里的数字由 fun.js 读歌单 JSON 填（曲目数） #}
+                <a href="javascript:void(0)">音乐专区 <span class="coord-count" data-music-count>(…)</span></a>
+                <span class="coord-chevron">›</span>
+              </div>
+              <div class="coord-item coord-level-mid" data-sector="movie" data-count="5">
+                <span class="coord-dot"></span>
+                <a href="javascript:void(0)">电影专区 <span class="coord-count">({{ catMovie.length }})</span></a>
+                <span class="coord-chevron">›</span>
+              </div>
+              <div class="coord-item coord-level-mid" data-sector="photo" data-count="3">
+                <span class="coord-dot"></span>
+                <a href="javascript:void(0)">摄影专区 <span class="coord-count">({{ catPhoto.length }})</span></a>
+                <span class="coord-chevron">›</span>
+              </div>
+              <div class="coord-item coord-level-low" data-sector="game" data-count="1">
+                <span class="coord-dot"></span>
+                <a href="javascript:void(0)">游戏专区 <span class="coord-count">({{ catGame.length }})</span></a>
+                <span class="coord-chevron">›</span>
+              </div>
+              <div class="coord-item coord-level-mid" data-sector="essay" data-count="3">
+                <span class="coord-dot"></span>
+                <a href="javascript:void(0)">随笔杂谈 <span class="coord-count">({{ catEssay.length }})</span></a>
+                <span class="coord-chevron">›</span>
+              </div>
+            </div>
+
+            {# 左栏下半区：星屿日志 —— 按当前专区滚动真实数据（曲目、篇数、日期、播放状态）
+               光带沿用 tags.css 的 .log-scan-line，和索引页那套日志同源 #}
+            <div class="sub-card fun-log-card">
+              <div class="panel-title">
+                <span class="panel-icon">●</span>
+                <span>星屿日志 / SECTOR LOG</span>
+                <span class="fun-log-state" id="funLogState">待命</span>
+              </div>
+              <div class="log-box fun-log-box">
+                <span class="log-scan-line"></span>
+                <div class="log-list fun-log-list" id="funLog">
+                  <div class="fun-log-item"><span class="fl-time">--:--</span><span class="fl-tag">SYS</span><span class="fl-text">矩阵就绪，等待指令</span></div>
+                </div>
+              </div>
+            </div>
+          </aside>
+
+          <!-- 中间雷达（沿用 graph 视图，五个专区作为节点） -->
+          <section class="starmap-center">
+            <div class="radar-view" id="radarView" data-view="graph">
+              <div class="radar-scan"></div>
+              <div class="starmag-center-node">
+                <span class="core-pulse"></span>
+                <span class="core-text">CORE</span>
+                <span class="core-count">5 SECTORS</span>
+              </div>
+              <a class="stargate-node node-large" data-pos="0" data-sector="music" href="javascript:void(0)">
+                <span class="node-dot"></span>
+                <span class="node-label">音乐专区</span>
+                <span class="node-pulse"></span>
+              </a>
+              <a class="stargate-node node-medium" data-pos="72" data-sector="movie" href="javascript:void(0)">
+                <span class="node-dot"></span>
+                <span class="node-label">电影专区</span>
+                <span class="node-pulse"></span>
+              </a>
+              <a class="stargate-node node-medium" data-pos="144" data-sector="photo" href="javascript:void(0)">
+                <span class="node-dot"></span>
+                <span class="node-label">摄影专区</span>
+                <span class="node-pulse"></span>
+              </a>
+              <a class="stargate-node node-small" data-pos="216" data-sector="game" href="javascript:void(0)">
+                <span class="node-dot"></span>
+                <span class="node-label">游戏专区</span>
+                <span class="node-pulse"></span>
+              </a>
+              <a class="stargate-node node-medium" data-pos="288" data-sector="essay" href="javascript:void(0)">
+                <span class="node-dot"></span>
+                <span class="node-label">随笔杂谈</span>
+                <span class="node-pulse"></span>
+              </a>
+              <svg class="starmap-lines"></svg>
+            </div><!-- /radar-view -->
+
+            {# 专区内容板：点专区后在此列出文章，与雷达图互斥显示
+               音乐专区不列清单——它就是播放器，点开直接在雷达区展开星野歌单 #}
+            <div class="fun-board" id="funBoard" hidden>
+              <div class="fun-sector" data-sector="movie" hidden>
+                <div class="fun-list">
+                  {% for post in catMovie.posts.sort('-date').toArray() %}
+                    <button class="fun-post" type="button"
+                            data-url="{{ url_for(post.path) }}"
+                            data-title="{{ post.title }}"
+                            data-date="{{ post.date.format('YYYY.MM.DD') }}"
+                            data-album="{{ post.album }}"
+                            data-bgm="{{ post.album_bgm }}">
+                      <span class="fun-post-date">{{ post.date.format('YYYY.MM.DD') }}</span>
+                      <span class="fun-post-title">{{ post.title }}</span>
+                      <span class="fun-post-go">›</span>
+                    </button>
+                  {% endfor %}
+                </div>
+              </div>
+
+              <div class="fun-sector" data-sector="photo" hidden>
+                <div class="fun-list">
+                  {% for post in catPhoto.posts.sort('-date').toArray() %}
+                    <button class="fun-post" type="button"
+                            data-url="{{ url_for(post.path) }}"
+                            data-title="{{ post.title }}"
+                            data-date="{{ post.date.format('YYYY.MM.DD') }}"
+                            data-album="{{ post.album }}"
+                            data-bgm="{{ post.album_bgm }}">
+                      <span class="fun-post-date">{{ post.date.format('YYYY.MM.DD') }}</span>
+                      <span class="fun-post-title">{{ post.title }}</span>
+                      <span class="fun-post-go">›</span>
+                    </button>
+                  {% endfor %}
+                </div>
+              </div>
+
+              <div class="fun-sector" data-sector="game" hidden>
+                <div class="fun-list">
+                  {% for post in catGame.posts.sort('-date').toArray() %}
+                    <button class="fun-post" type="button"
+                            data-url="{{ url_for(post.path) }}"
+                            data-title="{{ post.title }}"
+                            data-date="{{ post.date.format('YYYY.MM.DD') }}"
+                            data-album="{{ post.album }}"
+                            data-bgm="{{ post.album_bgm }}">
+                      <span class="fun-post-date">{{ post.date.format('YYYY.MM.DD') }}</span>
+                      <span class="fun-post-title">{{ post.title }}</span>
+                      <span class="fun-post-go">›</span>
+                    </button>
+                  {% endfor %}
+                </div>
+              </div>
+
+              <div class="fun-sector" data-sector="essay" hidden>
+                <div class="fun-list">
+                  {% for post in catEssay.posts.sort('-date').toArray() %}
+                    <button class="fun-post" type="button"
+                            data-url="{{ url_for(post.path) }}"
+                            data-title="{{ post.title }}"
+                            data-date="{{ post.date.format('YYYY.MM.DD') }}"
+                            data-album="{{ post.album }}"
+                            data-bgm="{{ post.album_bgm }}">
+                      <span class="fun-post-date">{{ post.date.format('YYYY.MM.DD') }}</span>
+                      <span class="fun-post-title">{{ post.title }}</span>
+                      <span class="fun-post-go">›</span>
+                    </button>
+                  {% endfor %}
+                </div>
+              </div>
+            </div>
+            <!-- /fun-board -->
+
+            {% include "_components/InplaceReader.njk" %}
+
+            {# 音乐专区就是播放器：点左侧「音乐专区」或雷达上的音乐节点，在雷达区全屏展开星野歌单 #}
+            {% include "_components/StarJukebox.njk" %}
+          </section>
+
+          <!-- 右侧面板 -->
+          <aside class="starmap-panel right-panel">
+            <div class="sub-card">
+              <div class="panel-title">
+                <span class="panel-icon">●</span>
+                <span>分区速览 / SECTOR STATS</span>
+              </div>
+              <div class="fun-stats">
+                <div class="fun-stat"><span>音乐专区</span><b data-music-stat>{{ catMusic.length }} 首</b></div>
+                <div class="fun-stat"><span>电影专区</span><b>{{ catMovie.length }} 篇</b></div>
+                <div class="fun-stat"><span>摄影专区</span><b>{{ catPhoto.length }} 篇</b></div>
+                <div class="fun-stat"><span>游戏专区</span><b>{{ catGame.length }} 篇</b></div>
+                <div class="fun-stat"><span>随笔杂谈</span><b>{{ catEssay.length }} 篇</b></div>
+              </div>
+            </div>
+
+            {# 右栏第二张：星屿漫游 —— 原来的「使用说明」三条全是操作提示，读一遍就没用了。
+               换成能真按的：一个随机传送按钮（从四区文章里随机挑一篇就地展开）+ 三个常去入口 #}
+            <div class="sub-card fun-warp-card">
+              <div class="panel-title">
+                <span class="panel-icon">●</span>
+                <span>星屿漫游 / WARP</span>
+              </div>
+              <button class="fun-warp-btn" id="funWarpBtn" type="button">
+                <span class="fun-warp-glyph">✦</span>
+                <span class="fun-warp-label">随机传送一篇</span>
+                <span class="fun-warp-hint">RANDOM</span>
+              </button>
+              <ul class="fun-warp-links">
+                <li><a href="{{ url_for('/tags/') }}">星迹索引</a><span>全部文章脉络</span></li>
+                <li><a href="{{ url_for('/archives/') }}">星图手记</a><span>按年月翻旧账</span></li>
+                <li><a href="{{ url_for('/about/') }}">秘境主人</a><span>写这些字的人</span></li>
+              </ul>
+            </div>
+
+            {# 右栏下半区：星域仪 —— 一个慢慢自转的球体，读数跟着当前专区变
+               纯 CSS 画的（椭圆经线做 scaleX 相位错开，看起来像在转），不额外拉 canvas #}
+            <div class="sub-card fun-globe-card">
+              <div class="panel-title">
+                <span class="panel-icon">●</span>
+                <span>星域仪 / ORBIT GLOBE</span>
+              </div>
+              <div class="fun-globe">
+                <div class="fg-sphere">
+                  <span class="fg-mer fg-mer-1"></span>
+                  <span class="fg-mer fg-mer-2"></span>
+                  <span class="fg-mer fg-mer-3"></span>
+                  <span class="fg-equator"></span>
+                  <span class="fg-sweep"></span>
+                  <span class="fg-pole fg-pole-top"></span>
+                  <span class="fg-pole fg-pole-bot"></span>
+                  <span class="fg-core-dot"></span>
+                </div>
+                <div class="fg-readout">
+                  <span class="fg-line" id="fgLine1">SECTOR · CORE</span>
+                  <span class="fg-line fg-line-strong" id="fgLine2">STANDBY</span>
+                  <span class="fg-line" id="fgLine3">ORBIT 11s · LOCKED</span>
+                </div>
+              </div>
+              <div class="fun-globe-legend">
+                <span><i class="fg-legend-dot is-a"></i>轨道</span>
+                <span><i class="fg-legend-dot is-b"></i>当前区</span>
+                <span><i class="fg-legend-dot is-c"></i>扫描</span>
+              </div>
+            </div>
+          </aside>
+
+          <!-- 底部轨道 -->
+          <footer class="bottom-panel">
+            <div class="bottom-title">
+              <span class="panel-icon">●</span>
+              <span>轨道数据带 / ORBITAL DATA STRIP</span>
+            </div>
+            <div class="orbital-track">
+              <div class="orbital-line line-1"></div>
+              <div class="orbital-line line-2"></div>
+              <div class="orbital-line line-3"></div>
+              <div class="orbital-line line-4"></div>
+              <span class="orbital-dot t1-dot1"></span>
+              <span class="orbital-dot t1-dot2"></span>
+              <span class="orbital-dot t2-dot1"></span>
+              <span class="orbital-dot t2-dot2"></span>
+              <span class="orbital-dot t3-dot1"></span>
+              <span class="orbital-dot t3-dot2"></span>
+              <span class="orbital-dot t4-dot1"></span>
+              <span class="orbital-dot t4-dot2"></span>
+            </div>
+          </footer>
+        </main>
+      </div>
+    </main>
+  </div>
+
+<style>
+  /* ===== 与星迹索引 / 星图手记同一套高度规则：页面锁 100vh，控制台高度固定 =====
+     不加这段的话 starmap-main 是 auto 高度，中间雷达区会被内容压扁，
+     阅读器（.reader-view position:absolute inset:0）也只能铺到压扁后的高度，
+     表现就是「文章只占上半屏、图片被截断」 */
+  html.post-page,
+  html.post-page body {
+    height: 100vh;
+    overflow: hidden;
+  }
+  .main-content.tags-main {
+    padding: 18px 22px 26px;
+    height: 100vh;
+    box-sizing: border-box;
+    overflow: hidden;
+  }
+  .tags-main .starmap-console {
+    min-height: 0;
+    width: 100%;
+    padding: 0;
+  }
+  .tags-main .console-header {
+    margin-bottom: 18px;
+  }
+
+  /* ===== 控制台高度锁定：与星迹索引、星图手记两页保持一致 ===== */
+  .tags-main .starmap-main {
+    height: calc(100vh - 124px);
+    grid-template-rows: minmax(0, 1fr) 190px;
+  }
+  .tags-main .left-panel {
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    overflow: hidden;
+  }
+  .tags-main .left-panel .coord-grid {
+    flex: 1;
+    min-height: 0;
+    max-height: none;
+    overflow-y: auto;
+  }
+  .tags-main .starmap-center {
+    min-height: 0;
+    height: auto;
+    overflow: hidden;
+  }
+  .tags-main .right-panel {
+    min-height: 0;
+    overflow-y: auto;
+  }
+  /* 右栏子卡片：标题固定、内容弹性，避免第二张被视口切一半 */
+  .tags-main .right-panel .sub-card {
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+  }
+  .tags-main .right-panel .sub-card:nth-child(1) {
+    flex: 0 0 auto;
+  }
+  .tags-main .right-panel .sub-card:nth-child(2) {
+    flex: 1 1 auto;
+  }
+
+  /* 窄屏（≤1500）与索引页一致：三栏塌成两行、整页可滚动 */
+  @media (max-width: 1500px) {
+    .main-content.tags-main {
+      height: auto;
+      min-height: 100vh;
+      overflow-y: auto;
+    }
+    .tags-main .starmap-main {
+      height: auto;
+      grid-template-rows: 430px auto auto;
+    }
+    .tags-main .starmap-center { min-height: 430px; }
+    .tags-main .left-panel { height: 430px; }
+  }
+</style>
+
+  <!-- 星图实时脚本：与索引/手记同一套动态层（K 线频谱、滚动日志、轨道带小星星、热门标签重排） -->
+  <script src="/js/theme/starmap/starmap-live.js"></script>
+  <script src="/js/theme/starmap/radar-core.js"></script>
+  <!-- 雷达底下的线稿场景层（音乐群舞 / 赛道 / 取景框 / 放映机 / 纸页），跟着专区切换 -->
+  <script src="/js/theme/starmap/sector-scene.js?v=20261115d"></script>
+  <!-- 画册内核：摄影/游戏专区的 album: book|fill|scroll 版式与 album_bgm 背景音乐都靠它，
+       索引页一直有加载，这里缺了就会把画册降级成普通文章 -->
+  <script src="/js/theme/media/star-album.js"></script>
+  <script src="/js/theme/starmap/fun.js?v=20261115q"></script>
+</body>
+</html>

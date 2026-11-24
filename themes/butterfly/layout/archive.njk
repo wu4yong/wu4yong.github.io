@@ -1,0 +1,404 @@
+<!--
+  ============================================
+  星图手记页面模板
+  文件：archive.njk
+  适用终端：电脑端
+  作用：电脑端归档三栏控制台 + 雷达阅读；手机 UA 跳 /phone/
+  最后修改：2026-11-11
+  ============================================
+-->{# 样式层级顺序：基础 common → 布局 post-layout → 组件 sidebar → 正文 post → 页面 tags/chronicle → 浮层 star-reader → 特效 starmap-live → 雷达视图 skin（放最后覆盖前两者的均布样式）#}
+{% set pageCss = ["base/common.css", "base/post-layout.css", "base/sidebar.css", "base/post.css", "starmap/tags.css", "media/star-reader.css?v=20261115k", "media/star-album.css?v=20261115k", "starmap/chronicle.css", "starmap/starmap-live.css", "starmap/radar-view.css"] %}
+{# 归档生成器会传三种情况：全站（无 year/month）、年度（只有 year）、月度（year+month） #}
+{% set curYear = page.year %}
+{% set curMonth = page.month %}
+{% if curYear and curMonth %}
+  {% set pageTitle = "星图手记 " + curYear + "年" + curMonth + "月 - 时空秘境" %}
+{% elif curYear %}
+  {% set pageTitle = "星图手记 " + curYear + "年 - 时空秘境" %}
+{% else %}
+  {% set pageTitle = "星图手记 - 时空秘境" %}
+{% endif %}
+<!DOCTYPE html>
+<html class="post-page">
+{% include "_components/Head.njk" %}
+<script>
+  /* 手机 UA 分流：电脑端这套控制台不再给手机用，直接换成手机版页面 */
+  (function () {
+    var ua = navigator.userAgent || '';
+    if (/Android|iPhone|iPod|HarmonyOS|Windows Phone|MicroMessenger|Mobile Safari/i.test(ua)) {
+      location.replace('/phone/');
+    }
+  })();
+</script>
+
+{# ========== 数据准备：先筛出当前页要展示的文章，再按年份分组 ==========
+   排序：坐标矩阵内的年份/月份与文章一律「正序」（旧 → 新），
+   与左侧 Sidebar「按月归档」的倒序（新 → 旧）形成分工。 #}
+{% set allPosts = site.posts.toArray() | sort(false, false, 'date') %}
+{% set filtered = [] %}
+{% for post in allPosts %}
+  {% set py = post.date.year() %}
+  {% set pm = post.date.month() + 1 %}
+  {% if (not curYear or py === curYear) and (not curMonth or pm === curMonth) %}
+    {% set filtered = filtered.concat([post]) %}
+  {% endif %}
+{% endfor %}
+
+{% set years = [] %}
+{% for post in filtered %}
+  {% set y = post.date.year() %}
+  {% if years.length === 0 or years[years.length - 1].year !== y %}
+    {% set years = years.concat([{ year: y, posts: [] }]) %}
+  {% endif %}
+  {% set pushed = years[years.length - 1].posts.push(post) %}
+{% endfor %}
+
+{% set maxCount = 1 %}
+{% for grp in years %}
+  {% if grp.posts.length > maxCount %}
+    {% set maxCount = grp.posts.length %}
+  {% endif %}
+{% endfor %}
+
+{# 左栏「时间坐标矩阵」倒序：最新年份在最上面，旧年份往下沉。
+   雷达与底部年度分布仍用正序 years（雷达从内圈旧 → 外圈新） #}
+{% set yearsDesc = years | reverse %}
+
+<body>
+  {% include "_components/Particles.njk" %}
+
+  <div class="app-layout">
+    {% include "_components/Sidebar.njk" %}
+
+    {# 折叠按钮：放在 aside 外部，不受侧边栏 transform 影响 #}
+    <button id="sidebarToggle" class="sidebar-toggle" title="隐藏侧栏"></button>
+
+    <main class="main-content archive-main">
+      <div class="starmap-console">
+        <header class="console-header">
+          <div class="console-title">
+            <span class="title-dot"></span>
+            <span class="title-label">星图手记</span>
+            <span class="title-divider">·</span>
+            <span class="title-en">CHRONICLE INDEX</span>
+          </div>
+          <div class="console-status">
+            <div class="status-item">
+              <span class="status-dot dot-scan"></span>
+              <span class="status-text">ARCHIVING</span>
+            </div>
+            <div class="status-item">
+              <span class="status-dot dot-node"></span>
+              <span class="status-text">RECORDS: {{ filtered.length }}</span>
+            </div>
+            <div class="status-item">
+              <span class="status-dot dot-link"></span>
+              <span class="status-text">YEARS: {{ years.length }}</span>
+            </div>
+          </div>
+          <a href="{{ url_for('/') }}" class="back-home">
+            <span class="back-home-icon">←</span>
+            <span>返回首页</span>
+          </a>
+          <span class="header-scan-line"></span>
+        </header>
+
+        <main class="starmap-main">
+          <!-- 左侧面板：时间坐标矩阵 -->
+          <aside class="starmap-panel left-panel">
+            <div class="panel-title">
+              <span class="panel-icon">●</span>
+              <span>时间坐标矩阵 / TIME MATRIX</span>
+            </div>
+            <div class="coord-grid">
+              {% for grp in yearsDesc %}
+                <div class="year-block">
+                  <div class="year-label" id="year-{{ grp.year }}">
+                    <span class="year-dot"></span>
+                    <span>{{ grp.year }}</span>
+                    <span class="year-count">{{ grp.posts.length }} 篇</span>
+                  </div>
+                  {% for post in grp.posts | reverse %}
+                    {% set num = grp.posts.length %}
+                    {% if num >= 60 %}
+                      {% set sizeClass = "coord-level-high" %}
+                    {% elif num >= 20 %}
+                      {% set sizeClass = "coord-level-mid" %}
+                    {% else %}
+                      {% set sizeClass = "coord-level-low" %}
+                    {% endif %}
+                    <div class="coord-item {{ sizeClass }}" data-year="{{ grp.year }}" data-count="{{ num }}"
+                         data-url="{{ url_for(post.path) }}" data-title="{{ post.title }}"
+                         data-album="{{ post.album }}"
+                         data-bgm="{{ post.album_bgm }}"
+                         data-date="{{ post.date.format('YYYY.MM.DD') }}">
+                      <span class="coord-date">{{ post.date.format('MM.DD') }}</span>
+                      <a href="{{ url_for(post.path) }}">{{ post.title }}</a>
+                    </div>
+                  {% endfor %}
+                </div>
+              {% endfor %}
+              {% if years.length === 0 %}
+                <div class="coord-item coord-level-low">暂无归档记录</div>
+              {% endif %}
+            </div>
+          </aside>
+
+          <!-- 中间：年轮雷达（视图 A：时间引力奇点，一圈 = 一年） -->
+          <section class="starmap-center">
+            <div class="radar-view" id="radarView" data-view="timeline">
+            <div class="radar-scan"></div>
+            <div class="starmag-center-node">
+              <span class="core-pulse"></span>
+              <span class="core-text">SINGULARITY</span>
+              <span class="core-count">{{ filtered.length }} RECORDS</span>
+            </div>
+            {% for grp in years %}
+              {% set num = grp.posts.length %}
+              {% if years.length > 0 %}
+                {% set angle = (loop.index0 / years.length) * 360 %}
+              {% else %}
+                {% set angle = 0 %}
+              {% endif %}
+              {% if num >= 60 %}
+                {% set nodeSize = "node-large" %}
+              {% elif num >= 20 %}
+                {% set nodeSize = "node-medium" %}
+              {% else %}
+                {% set nodeSize = "node-small" %}
+              {% endif %}
+              {% set newest = grp.posts[grp.posts.length - 1] %}
+              <a class="year-node {{ nodeSize }}" data-pos="{{ angle }}" data-year="{{ grp.year }}"
+                 data-count="{{ num }}" data-url="{{ url_for(newest.path) }}" data-title="{{ newest.title }}"
+                 href="{{ url_for('/archives/') }}#year-{{ grp.year }}">
+                <span class="node-dot"></span>
+                <span class="node-label">{{ grp.year }}</span>
+                <span class="node-pulse"></span>
+              </a>
+            {% endfor %}
+            <svg class="starmap-lines"></svg>
+            </div><!-- /radar-view -->
+
+            {% include "_components/InplaceReader.njk" %}
+
+            {# 星野歌单：点侧栏入口时在雷达区就地展开全屏播放器 #}
+            {% include "_components/StarJukebox.njk" %}
+          </section>
+
+          <!-- 右侧大面板：4 个子卡片 -->
+          <aside class="starmap-panel right-panel">
+            <!-- 1 档案总览 -->
+            <div class="sub-card">
+              <div class="panel-title">
+                <span class="panel-icon">●</span>
+                <span>档案总览 / ARCHIVE STATS</span>
+              </div>
+              <div class="archive-stats">
+                <div class="archive-stat-row">
+                  <span>归档记录</span>
+                  <span class="archive-stat-value">{{ filtered.length }}</span>
+                </div>
+                <div class="archive-stat-row">
+                  <span>覆盖年份</span>
+                  <span class="archive-stat-value">{{ years.length }}</span>
+                </div>
+                <div class="archive-stat-row">
+                  <span>标签节点</span>
+                  <span class="archive-stat-value">{{ site.tags.length }}</span>
+                </div>
+                <div class="archive-stat-row">
+                  <span>分类星区</span>
+                  <span class="archive-stat-value">{{ site.categories.length }}</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- 2 记录图例 -->
+            <div class="sub-card">
+              <div class="panel-title">
+                <span class="panel-icon">●</span>
+                <span>记录图例</span>
+              </div>
+              <div class="legend">
+                <div class="legend-item">
+                  <span class="legend-dot legend-high"></span>
+                  <span>高密度年份（60 篇以上）</span>
+                </div>
+                <div class="legend-item">
+                  <span class="legend-dot legend-mid"></span>
+                  <span>中密度年份（20 篇以上）</span>
+                </div>
+                <div class="legend-item">
+                  <span class="legend-dot legend-low"></span>
+                  <span>普通年份</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- 3 星图频谱 -->
+            <div class="sub-card">
+              <div class="panel-title">
+                <span class="panel-icon">●</span>
+                <span>星图频谱 / SPECTRUM</span>
+              </div>
+              <div class="local-time">LOCAL TIME: <span id="localTime">--:--:--</span></div>
+              <div class="spectrum-box">
+                <div class="spectrum-bars">
+                  <span class="bar"></span>
+                  <span class="bar"></span>
+                  <span class="bar"></span>
+                  <span class="bar"></span>
+                  <span class="bar"></span>
+                  <span class="bar"></span>
+                  <span class="bar"></span>
+                  <span class="bar"></span>
+                  <span class="bar"></span>
+                  <span class="bar"></span>
+                </div>
+              </div>
+            </div>
+
+            <!-- 4 信息日志 -->
+            <div class="sub-card">
+              <div class="panel-title">
+                <span class="panel-icon">●</span>
+                <span>信息日志 / LOG</span>
+                <span class="log-panel-badge">LIVE</span>
+              </div>
+              <div class="log-box">
+                <div class="log-scan-line"></div>
+                <div class="log-list">
+                  <div class="log-item log-item-system">
+                    <span class="log-time"></span>
+                    <span class="log-tag">系统</span>
+                    <span class="log-text">档案索引已建立</span>
+                  </div>
+                  <div class="log-item log-item-node">
+                    <span class="log-time"></span>
+                    <span class="log-tag">节点</span>
+                    <span class="log-text">年度卷宗扫描完成</span>
+                  </div>
+                  <div class="log-item log-item-link">
+                    <span class="log-time"></span>
+                    <span class="log-tag">链路</span>
+                    <span class="log-text">时间锚点同步成功</span>
+                  </div>
+                  <div class="log-item log-item-node">
+                    <span class="log-time"></span>
+                    <span class="log-tag">节点</span>
+                    <span class="log-text">共 {{ filtered.length }} 条记录入档</span>
+                  </div>
+                  <div class="log-item log-item-link">
+                    <span class="log-time"></span>
+                    <span class="log-tag">链路</span>
+                    <span class="log-text">跨年度链路连接稳定</span>
+                  </div>
+                  <div class="log-item log-item-warning">
+                    <span class="log-time"></span>
+                    <span class="log-tag">告警</span>
+                    <span class="log-text">检测到未归档轨迹</span>
+                  </div>
+                  <div class="log-item log-item-system">
+                    <span class="log-time"></span>
+                    <span class="log-tag">系统</span>
+                    <span class="log-text">卷宗序号重建中</span>
+                  </div>
+                  <div class="log-item log-item-node">
+                    <span class="log-time"></span>
+                    <span class="log-tag">节点</span>
+                    <span class="log-text">未知记录已标记待审</span>
+                  </div>
+                  <div class="log-item log-item-link">
+                    <span class="log-time"></span>
+                    <span class="log-tag">链路</span>
+                    <span class="log-text">数据心跳检测正常</span>
+                  </div>
+                  <div class="log-item log-item-system">
+                    <span class="log-time"></span>
+                    <span class="log-tag">系统</span>
+                    <span class="log-text">星图手记运行稳定</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </aside>
+
+          <!-- 底部：年度分布条 -->
+          <footer class="bottom-panel">
+            <div class="bottom-title">
+              <span class="panel-icon">●</span>
+              <span>年度分布 / YEAR DISTRIBUTION</span>
+            </div>
+            <div class="year-bars">
+              {% for grp in years %}
+                {% set pct = (grp.posts.length / maxCount) * 100 %}
+                <div class="year-bar-row">
+                  <span class="year-bar-year">{{ grp.year }}</span>
+                  <div class="year-bar-track">
+                    <span class="year-bar-fill" style="width: {{ pct | round(1) }}%"></span>
+                  </div>
+                  <span class="year-bar-count">{{ grp.posts.length }} 篇</span>
+                </div>
+              {% endfor %}
+            </div>
+          </footer>
+        </main>
+      </div>
+    </main>
+  </div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+  /* 雷达的节点定位、时序光带、奇点光束聚焦统一交给 radar-core.js（window.RadarView），
+     这里只保留页面自身的阅读与时间逻辑 */
+
+  function pad(num) { return num < 10 ? '0' + num : num; }
+  function updateLocalTime() {
+    var now = new Date();
+    var full = now.getFullYear() + '.' + pad(now.getMonth() + 1) + '.' + pad(now.getDate())
+      + ' ' + pad(now.getHours()) + ':' + pad(now.getMinutes()) + ':' + pad(now.getSeconds());
+    var timeText = pad(now.getHours()) + ':' + pad(now.getMinutes()) + ':' + pad(now.getSeconds());
+    var timeDom = document.getElementById('localTime');
+    if (timeDom) timeDom.textContent = timeText;
+    document.querySelectorAll('.log-time').forEach(function (el) { el.textContent = full; });
+  }
+  updateLocalTime();
+  setInterval(updateLocalTime, 1000);
+
+  /* 左栏时间坐标矩阵 → 雷达区就地阅读
+     阅读器实现统一在 _components/InplaceReader.njk，这里只做点击绑定 */
+  document.querySelectorAll('.coord-item[data-url]').forEach(function (el) {
+    el.addEventListener('click', function (e) {
+      if (e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+      e.preventDefault();
+      var prev = document.querySelector('.coord-item.is-reading');
+      if (prev && prev !== el) prev.classList.remove('is-reading');
+      el.classList.add('is-reading');
+      window.StarmapReader.open({
+        url: el.dataset.url,
+        title: el.dataset.title,
+        album: el.dataset.album || '',
+        bgm: el.dataset.bgm || '',
+        meta: el.dataset.date ? ('ARCHIVED ' + el.dataset.date) : ''
+      });
+    });
+  });
+  /* 阅读态：右栏四张卡整体让位，正文吃满宽度；关闭后恢复 */
+  var starmapMain = document.querySelector('.starmap-main');
+  document.addEventListener('starmap:reader-open', function () {
+    if (starmapMain) starmapMain.classList.add('is-reading');
+  });
+  document.addEventListener('starmap:reader-close', function () {
+    if (starmapMain) starmapMain.classList.remove('is-reading');
+    var act = document.querySelector('.coord-item.is-reading');
+    if (act) act.classList.remove('is-reading');
+  });
+});
+</script>
+<!-- 星图实时脚本：外链（源文件 themes/butterfly/source/js/theme/starmap/starmap-live.js） -->
+<script src="/js/theme/starmap/starmap-live.js"></script>
+<!-- 星图雷达内核（阶段 1 + 2）：视图 A 时间引力奇点 -->
+<script src="/js/theme/starmap/radar-core.js"></script>
+<script src="/js/theme/media/star-album.js"></script>
+</body>
+</html>

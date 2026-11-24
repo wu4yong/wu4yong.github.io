@@ -1,0 +1,435 @@
+<!--
+  ============================================
+  雷达区就地阅读器组件
+  文件：InplaceReader.njk
+  适用终端：电脑端
+  作用：三栏雷达内的抽屉式阅读：打开/全屏/缩小/原文/关闭
+  最后修改：2026-11-11
+  ============================================
+--><div class="reader-view" id="readerView" hidden>
+  <!-- 开合转场层：百叶窗（8 条叶片）/ 电影幕布（上下两半）/ 纯淡入，
+       每次打开轮换一种；关闭时逆向播同一种 -->
+  <div class="reader-fx" id="readerFx" aria-hidden="true">
+    <div class="reader-fx-slats"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+    <div class="reader-fx-curtain"><span class="top"></span><span class="bottom"></span></div>
+  </div>
+  <div class="reader-bar">
+    <span class="reader-badge">READING</span>
+    <span class="reader-title" id="readerTitle">加载中…</span>
+    <span class="reader-meta" id="readerMeta"></span>
+    <a class="reader-btn" id="readerOrigin" href="#" target="_blank" rel="noopener">原文</a>
+    <button class="reader-btn" id="readerClose" type="button" title="关闭阅读">✕</button>
+  </div>
+  <div class="reader-body" id="readerBody">
+    <div class="article-content" id="readerContent"></div>
+  </div>
+  <button class="reader-fs" id="readerFullscreen" type="button" title="全屏阅读">⛶</button>
+  <!-- 回到顶部：正文出现滚动条时浮出，滚回顶部后自动消失（与文章页的 ↑ 同一个视觉语言） -->
+  <button class="reader-top" id="readerTop" type="button" title="回到顶部" aria-label="回到顶部">↑</button>
+</div>
+
+<script>
+/* 标记本页带阅读器：让「隐藏 sidebar」按钮下沉到右下角全屏按钮旁（见 star-reader.css） */
+document.body.classList.add('has-reader');
+window.StarmapReader = (function () {
+  var el = document.getElementById('readerView');
+  var body = document.getElementById('readerBody');
+  var content = document.getElementById('readerContent');
+  var titleEl = document.getElementById('readerTitle');
+  var metaEl = document.getElementById('readerMeta');
+  var originEl = document.getElementById('readerOrigin');
+  var fsBtn = document.getElementById('readerFullscreen');
+  var topBtn = document.getElementById('readerTop');
+  var radar = document.querySelector('.radar-view');
+  var cache = {};
+  var currentUrl = '';
+  var currentTitle = '';
+  var albumMode = '';
+  var albumBgm = '';     /* md front-matter 的 album_bgm，为空就落回 star-album.js 的默认曲 */
+  var fsParent = null;
+  var fsNext = null;
+  var VOLUME = 0.3;      /* 播放器与背景音乐统一音量 30 */
+
+  /* ---------- 开合转场（百叶窗 / 电影开幕 / 淡入淡出，轮换） ---------- */
+  var FX = ['blinds', 'cinema', 'fade'];
+  var fxIndex = 0;
+  var fxEffect = '';
+  var fxTimer = 0;
+  var fxCloseTimer = 0;
+  var fxClosing = false;
+
+  function clearFx() {
+    if (fxTimer) { window.clearTimeout(fxTimer); fxTimer = 0; }
+    el.classList.remove(
+      'fx-in-blinds', 'fx-in-cinema', 'fx-in-fade',
+      'fx-out-blinds', 'fx-out-cinema', 'fx-out-fade'
+    );
+  }
+
+  function playIn() {
+    fxEffect = FX[fxIndex % FX.length];
+    fxIndex += 1;
+    clearFx();
+    el.classList.add('fx-in-' + fxEffect);
+    if (fxTimer) window.clearTimeout(fxTimer);
+    fxTimer = window.setTimeout(function () {
+      el.classList.remove('fx-in-' + fxEffect);
+      fxTimer = 0;
+    }, 820);
+  }
+
+  function emit(name) {
+    document.dispatchEvent(new CustomEvent('starmap:reader-' + name));
+  }
+
+  function enterFs() {
+    if (el.classList.contains('reader-fs-mode')) return;
+    fsParent = el.parentNode;
+    fsNext = el.nextSibling;
+    document.body.appendChild(el);
+    el.classList.add('reader-fs-mode');
+    document.body.classList.add('reader-lock');
+    fsBtn.textContent = '⤢';
+    fsBtn.title = '退出全屏';
+  }
+
+  function exitFs() {
+    if (!el.classList.contains('reader-fs-mode')) return;
+    el.classList.remove('reader-fs-mode');
+    document.body.classList.remove('reader-lock');
+    if (fsParent) fsParent.insertBefore(el, fsNext);
+    fsParent = null;
+    fsNext = null;
+    fsBtn.textContent = '⛶';
+    fsBtn.title = '全屏阅读';
+  }
+
+  function decorate() {
+    content.querySelectorAll('img').forEach(function (img) {
+      var lazy = img.getAttribute('data-src') || img.getAttribute('data-original');
+      if (lazy && !img.getAttribute('src')) img.setAttribute('src', lazy);
+      img.removeAttribute('loading');
+      img.style.maxWidth = '100%';
+      img.style.height = 'auto';
+    });
+    content.querySelectorAll('a[href^="#"]').forEach(function (a) {
+      a.addEventListener('click', function (ev) {
+        var id = a.getAttribute('href').slice(1).replace(/[^\w-]/g, '');
+        var target = content.querySelector('#' + id);
+        if (target) {
+          ev.preventDefault();
+          target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+      });
+    });
+    if (body) body.scrollTop = 0;
+    syncTop();
+  }
+
+  /* ---------- mermaid：阅读器只搬运 .article-content 的 HTML，
+     被搬过来的 <script> 不会执行，文章页那套渲染也管不到这里，
+     所以浮层里的 ```mermaid 一直是原始代码文本。这里给阅读器补一套自己的渲染 ---------- */
+  var mmReady = false;
+  var mmLoading = false;
+  var mmWaiters = [];
+
+  function initReaderMermaid() {
+    if (!window.mermaid || window.mermaid.__readerInit) return;
+    try {
+      window.mermaid.initialize({
+        startOnLoad: false,
+        theme: 'base',
+        themeVariables: {
+          darkMode: true,
+          background: 'transparent',
+          fontFamily: '"Microsoft YaHei", "PingFang SC", "Segoe UI", sans-serif',
+          fontSize: '14px',
+          primaryColor: '#062f3d',
+          primaryTextColor: '#d6f6ff',
+          primaryBorderColor: '#00eeff',
+          secondaryColor: '#04222d',
+          tertiaryColor: '#04222d',
+          mainBkg: '#062f3d',
+          nodeBorder: '#00eeff',
+          clusterBkg: '#02161f',
+          clusterBorder: '#00eeff55',
+          lineColor: '#00eeff',
+          textColor: '#c0e8ff',
+          edgeLabelBackground: '#02161f'
+        },
+        flowchart: { curve: 'basis', useMaxWidth: true, htmlLabels: false, nodeSpacing: 46, rankSpacing: 64, padding: 14 }
+      });
+      window.mermaid.__readerInit = true;
+    } catch (e) { console.warn('[reader mermaid] 初始化失败：', e); }
+  }
+
+  function ensureReaderMermaid(cb) {
+    if (window.mermaid) {
+      initReaderMermaid();
+      mmReady = true;
+      cb();
+      return;
+    }
+    mmWaiters.push(cb);
+    if (mmLoading) return;
+    mmLoading = true;
+    var s = document.createElement('script');
+    s.src = '/js/third-party/mermaid/mermaid.min.js?v=10';
+    s.onload = function () {
+      mmLoading = false;
+      initReaderMermaid();
+      mmReady = true;
+      var queue = mmWaiters.splice(0);
+      queue.forEach(function (fn) { try { fn(); } catch (e) {} });
+    };
+    s.onerror = function () {
+      mmLoading = false;
+      mmWaiters.splice(0);
+      console.warn('[reader mermaid] 本地库加载失败，图表保留源码');
+    };
+    document.head.appendChild(s);
+  }
+
+  function renderReaderMermaid() {
+    var blocks = content.querySelectorAll('pre[class*="language-mermaid"]');
+    if (!blocks.length) return;
+    var targets = [];
+    Array.prototype.forEach.call(blocks, function (el) {
+      var codeEl = el.querySelector('code');
+      var div = document.createElement('div');
+      div.className = 'mermaid';
+      div.textContent = (codeEl || el).textContent;
+      el.parentNode.replaceChild(div, el);
+      targets.push(div);
+    });
+    if (!targets.length) return;
+    ensureReaderMermaid(function () {
+      try {
+        var p = window.mermaid.run({ nodes: targets });
+        if (p && p.catch) p.catch(function (e) { console.warn('[reader mermaid] 渲染失败：', e); });
+      } catch (e) { console.warn('[reader mermaid] 渲染失败：', e); }
+    });
+  }
+
+  /* 回到顶部按钮的可见性：正文真的能滚（scrollHeight 超过可视高）且已往下滚了一段才浮出，
+     滚回顶部（scrollTop 归零）就自己收回去。开合、切文章、全屏切换都重新同步一次。 */
+  var topRaf = 0;
+  function syncTop() {
+    if (!topBtn) return;
+    if (topRaf) return;
+    topRaf = window.requestAnimationFrame(function () {
+      topRaf = 0;
+      if (!body) return;
+      var canScroll = body.scrollHeight - body.clientHeight > 40;
+      var scrolled = body.scrollTop > 30;
+      topBtn.classList.toggle('is-show', canScroll && scrolled && !el.hidden);
+    });
+  }
+
+  /* 电影 / 音乐打开即播：
+     - bilibili 播放器只能靠 URL 上的 autoplay=1 起播（跨域，博客这边碰不到它的音频控制器）；
+     - 本地 mp4（hexo-tag-dplayer 转出来的原生 video）由这里直接 play()，音量统一 30。 */
+  function applyAutoPlay() {
+    Array.prototype.forEach.call(content.querySelectorAll('iframe'), function (f) {
+      var src = f.getAttribute('src') || f.getAttribute('data-src') || '';
+      if (!src) return;
+      if (/player\.bilibili\.com/.test(src) && !/autoplay=/.test(src)) {
+        f.setAttribute('src', src + (src.indexOf('?') > -1 ? '&' : '?') + 'autoplay=1');
+      }
+    });
+    Array.prototype.forEach.call(content.querySelectorAll('video'), function (v) {
+      v.volume = VOLUME;
+      v.muted = false;
+      try { var p = v.play(); if (p && p.catch) p.catch(function () {}); } catch (e) {}
+    });
+  }
+
+  /* 正文落位后的统一收尾：
+     ① 正文里出现 iframe / video（电影、音乐）→ 直接把阅读器铺满雷达区播放，不再跳新页面；
+     ② 画册类文章 → 交给 star-album.js 把图片排成画册（翻页 / 横向滚动）；
+     ③ 播放器自动起播、音量 30；
+     ④ 最后校准「回到顶部」的可见性。 */
+  function afterContent() {
+    var media = content.querySelector('iframe, video, .dplayer');
+    el.classList.toggle('reader-media', !!media);
+    /* 媒体（电影 / 音乐 / 带视频的游戏）就在雷达面板里铺满播放：
+       不再 enterFs 抢整块屏幕，左侧 sidebar 与顶部导航都留着。 */
+    if (media) applyAutoPlay();
+    if (albumMode && window.StarAlbum) window.StarAlbum.render(albumMode, content, currentTitle);
+    renderReaderMermaid();
+    syncTop();
+    /* 有的内容不需要阅读器再提供全屏：
+       ① 电影 / 音乐：视频播放器自己右下角就有全屏，这里再放一个只是重复；
+       ② 游戏（album: scroll 横向长卷）：只在雷达格里横向拖着看，不上全屏。
+       其余（文字文章、摄影画册 book / fill）保留 ⛶。 */
+    var noFs = !!media || !!el.querySelector('.album-scroll');
+    fsBtn.style.display = noFs ? 'none' : '';
+  }
+
+  /* hexo-tag-dplayer 在文章页里靠内联 <script> new DPlayer(...) 初始化；
+     而阅读器只搬运 .article-content 的 HTML，<script> 插入后不执行 → 只剩一个空壳 div，
+     这就是「人可怕的不是死亡」那篇点进去没画面的原因。这里在解析阶段把空壳换成原生 video，
+     视频地址从脚本里抠出来，顺手把不执行的 script 清掉。 */
+  function hydrateVideo(box) {
+    var holder = box.querySelector('div.dplayer');
+    if (!holder) return;
+    var url = '';
+    Array.prototype.forEach.call(box.querySelectorAll('script'), function (s) {
+      var m = /"url"\s*:\s*"([^"]+)"/.exec(s.textContent || '');
+      if (m && !url) url = m[1];
+    });
+    if (!url) return;
+    var v = document.createElement('video');
+    v.className = 'reader-video';
+    v.src = url;
+    v.controls = true;
+    v.playsInline = true;
+    v.autoplay = true;
+    v.preload = 'auto';
+    holder.parentNode.replaceChild(v, holder);
+    Array.prototype.forEach.call(box.querySelectorAll('script'), function (s) {
+      if (s.parentNode) s.parentNode.removeChild(s);
+    });
+  }
+
+  function pick(html) {
+    var doc = new DOMParser().parseFromString(html, 'text/html');
+    var box = doc.querySelector('.article-content') || doc.querySelector('.post-content') || doc.body;
+    var head = doc.querySelector('.article-head-title');
+    if (box) hydrateVideo(box);
+    return {
+      content: box ? box.innerHTML : '',
+      title: head ? head.textContent.trim() : (doc.title || '').split('|')[0].trim()
+    };
+  }
+
+  function close() {
+    if (el.hidden || fxClosing) return;
+    fxClosing = true;
+    var effect = fxEffect || 'fade';
+    clearFx();
+    el.classList.add('fx-out-' + effect);
+    /* 逆向演完再真正隐藏：百叶窗叶片合拢 / 幕布合幕 / 淡出，约 0.52s */
+    fxCloseTimer = window.setTimeout(function () {
+      fxCloseTimer = 0;
+      fxClosing = false;
+      clearFx();
+      el.hidden = true;
+      exitFs();
+      if (fsBtn) fsBtn.style.display = 'none';
+      content.innerHTML = '';
+      currentUrl = '';
+      albumMode = '';
+      albumBgm = '';
+      el.classList.remove('reader-album', 'reader-media');
+      if (window.StarAlbum) window.StarAlbum.stop();
+      if (topBtn) topBtn.classList.remove('is-show');
+      if (radar) radar.style.visibility = '';
+      emit('close');
+    }, 560);
+  }
+
+  function open(opts) {
+    if (!el || !opts || !opts.url) return;
+    if (currentUrl === opts.url && !el.hidden) return;
+    var wasHidden = el.hidden;
+    var wasClosing = !!fxCloseTimer;
+    /* 上一轮关闭动画还没走完就又打开：先撤销那次待隐藏，避免新打开的阅读器被吞掉 */
+    if (fxCloseTimer) { window.clearTimeout(fxCloseTimer); fxCloseTimer = 0; fxClosing = false; clearFx(); }
+    currentUrl = opts.url;
+    /* 画册类文章（front-matter 里 album: book / scroll）：
+       类名现在就挂上，背景音乐也在这手势任务里同步起播，否则会被自动播放策略拦掉 */
+    albumMode = opts.album || '';
+    albumBgm = opts.bgm || '';
+    el.classList.toggle('reader-album', !!albumMode);
+    el.classList.remove('reader-media');
+    if (window.StarAlbum) {
+      if (albumMode) {
+        window.StarAlbum.stop();          /* 先摘掉上一篇可能残留的画册 */
+        window.StarAlbum.begin(albumMode, albumBgm);
+      } else {
+        window.StarAlbum.stop();          /* 换成非画册文章：音乐与旧画册一起收掉 */
+      }
+    }
+    el.hidden = false;
+    if (wasHidden || wasClosing) playIn();
+    if (fsBtn) fsBtn.style.display = '';
+    if (radar) radar.style.visibility = 'hidden';
+    titleEl.textContent = opts.title || '加载中…';
+    currentTitle = opts.title || '';
+    metaEl.textContent = opts.meta || '';
+    /* 原文链接带上来源标记，文章页右上角「返回」按钮据此回到手记/索引 */
+    var fromTag = location.pathname.indexOf('/tags') > -1 ? 'tags' : (location.pathname.indexOf('/archives') > -1 ? 'archive' : '');
+    originEl.href = opts.url + (fromTag ? (opts.url.indexOf('?') > -1 ? '&' : '?') + 'from=' + fromTag : '');
+    if (body) body.scrollTop = 0;
+    syncTop();
+    emit('open');
+
+    if (cache[opts.url]) {
+      content.innerHTML = cache[opts.url];
+      decorate();
+      afterContent();
+      return;
+    }
+
+    content.innerHTML = '<div class="reader-loading"><span class="reader-spin"></span><span>正在调取档案正文…</span></div>';
+    fetch(opts.url, { credentials: 'same-origin' })
+      .then(function (res) {
+        if (!res.ok) throw new Error('HTTP ' + res.status);
+        return res.text();
+      })
+      .then(function (html) {
+        var data = pick(html);
+        cache[opts.url] = data.content;
+        if (currentUrl !== opts.url) return;
+        content.innerHTML = data.content;
+        if (!opts.title && data.title) { titleEl.textContent = data.title; currentTitle = data.title; }
+        decorate();
+        afterContent();
+      })
+      .catch(function (err) {
+        if (currentUrl !== opts.url) return;
+        content.innerHTML = '<div class="reader-error">正文调取失败（'
+          + (err && err.message ? err.message : '网络异常')
+          + '）。可点右上角「原文」直接打开该篇。</div>';
+      });
+  }
+
+  if (fsBtn) {
+    fsBtn.addEventListener('click', function () {
+      /* 全屏 = 就地铺满（不跳新页面）；再点一次 = 缩小，直接回到雷达页原有布局
+         （exitFs + close 一起做，三栏、地球仪、年度分布都会恢复） */
+      if (el.classList.contains('reader-fs-mode')) { close(); } else { enterFs(); }
+    });
+    /* 把全屏按钮搬到 body 顶层：阅读面板自带定位上下文，按钮留在里面永远对不齐
+       右下角固定的「隐藏 sidebar」按钮。搬出来后两者并排成一组（全屏 → 隐藏 sidebar） */
+    document.body.appendChild(fsBtn);
+    fsBtn.style.display = 'none';
+  }
+  var closeBtn = document.getElementById('readerClose');
+  if (closeBtn) closeBtn.addEventListener('click', close);
+
+  /* 回到顶部：滚动即同步可见性；点击平滑归零，归零后按钮自己收起 */
+  if (body) {
+    body.addEventListener('scroll', syncTop, { passive: true });
+  }
+  if (topBtn) {
+    topBtn.addEventListener('click', function () {
+      if (!body) return;
+      try {
+        body.scrollTo({ top: 0, behavior: 'smooth' });
+      } catch (e) {
+        body.scrollTop = 0;
+      }
+      syncTop();
+    });
+  }
+  window.addEventListener('resize', syncTop);
+  document.addEventListener('keydown', function (e) {
+    if (e.key !== 'Escape' || el.hidden) return;
+    if (el.classList.contains('reader-fs-mode')) { exitFs(); } else { close(); }
+  });
+
+  return { open: open, close: close, isOpen: function () { return !el.hidden; } };
+})();
+</script>
