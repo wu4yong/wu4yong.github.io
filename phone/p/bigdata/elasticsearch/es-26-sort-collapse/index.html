@@ -1,0 +1,302 @@
+<!--
+  ============================================
+  手机端 · 文章原文页
+  文件：phone/post.njk
+  适用终端：手机端（路由 /phone/p/<slug>/，由 scripts/phone-routes.js 生成）
+  作用：手机阅读单篇文章；单列布局、无侧栏无雷达，替代电脑端 post.njk
+        数据由生成期算好：page.item = { title, dateStr, content, cats, tags }
+  样式依赖：source/css/theme/phone/common.css、source/css/theme/phone/list.css
+  组件依赖：phone/_components/Particles.njk
+  最后修改：2026-11-11
+  ============================================
+-->
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="color-scheme" content="dark">
+  <meta name="theme-color" content="#020817">
+  <!-- 首帧兜底：浏览器默认画布是白的，样式未解析前会闪一下白。这条规则先锁死深空底色 -->
+  <style>html{background-color:#020817}</style>
+  <title>ES26-排序与 collapse - 时空秘境</title>
+  <!-- 手机端样式：基础 + 列表/正文，外链引入（源文件 source/css/theme/phone/） -->
+  <link rel="stylesheet" href="/css/theme/phone/common.css">
+  <link rel="stylesheet" href="/css/theme/phone/list.css">
+<meta name="generator" content="Hexo 8.1.2"></head>
+<body>
+<div class="mb-shell">
+  <!--
+  ============================================
+  手机端星空粒子组件
+  文件：Particles.njk
+  适用终端：手机端
+  作用：Particles.njk 的手机端副本（nunjucks 子目录 include 取不到上级）
+        参数与电脑端 _components/Particles.njk 保持一致：
+        粒子 95 / 连线 118px / opacity 0.32，外加星座层与零星闪烁层
+  最后修改：2026-11-12
+  ============================================
+--><!-- z-index 必须是 0：负层级会被 body 不透明背景盖住，粒子在跑却看不见 -->
+<div id="particles" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 0; pointer-events: none;"></div>
+<!-- 星座层（与首页同一套：随机零星散布星座图形 + 偶尔闪烁的小星） -->
+<div id="constellations" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 1; pointer-events: none;" aria-hidden="true"></div>
+<script src="/js/particles.min.js"></script>
+<script>
+particlesJS("particles", {
+  particles: {
+    number: {
+      value: 95,
+      density: {
+        enable: true,
+        value_area: 800
+      }
+    },
+    color: {
+      value: "#00eeff"
+    },
+    shape: {
+      type: "circle",
+      stroke: {
+        width: 0,
+        color: "#000000"
+      }
+    },
+    opacity: {
+      value: 0.6,
+      random: true,
+      anim: {
+        enable: true,
+        speed: 0.5,
+        opacity_min: 0.1,
+        sync: false
+      }
+    },
+    size: {
+      value: 3,
+      random: true,
+      anim: {
+        enable: true,
+        speed: 2,
+        size_min: 0.1,
+        sync: false
+      }
+    },
+    line_linked: {
+      enable: true,
+      distance: 118,
+      color: "#00eeff",
+      opacity: 0.32,
+      width: 1
+    },
+    move: {
+      enable: true,
+      speed: 0.8,
+      direction: "none",
+      random: true,
+      straight: false,
+      out_mode: "out",
+      bounce: false,
+      attract: {
+        enable: true,
+        rotateX: 600,
+        rotateY: 1200
+      }
+    }
+  },
+  interactivity: {
+    detect_on: "canvas",
+    events: {
+      onhover: {
+        enable: true,
+        mode: "grab"       // 手指按住时粒子聚集
+      },
+      onclick: {
+        enable: true,
+        mode: "push"       // 点击时产生新粒子
+      },
+      resize: true
+    },
+    modes: {
+      grab: {
+        distance: 200,
+        line_linked: {
+          opacity: 1
+        }
+      },
+      push: {
+        particles_nb: 6
+      }
+    }
+  },
+  retina_detect: true
+});
+</script>
+<!-- 星座 + 零星闪烁层：与电脑端共用同一份绘制脚本 -->
+<script src="/js/theme/home/starfield.js"></script>
+
+
+  <div class="mb-top">
+    <a class="mb-back" href="/phone/">← 返回手机首页</a>
+    <span class="mb-sub" style="margin:0">2023-12-10</span>
+  </div>
+
+  <h1 class="mb-title">ES26-排序与 collapse</h1>
+  <div class="mb-sub">
+    分类：bigdata · elasticsearch
+     ｜ 标签：Elasticsearch · 系统课
+  </div>
+
+  <div class="mb-article"><div class="essay-banner essay-elasticsearch"></div>
+
+<h1 id="排序与-collapse：按字段排、按分组取头名"><a href="#排序与-collapse：按字段排、按分组取头名" class="headerlink" title="排序与 collapse：按字段排、按分组取头名"></a>排序与 collapse：按字段排、按分组取头名</h1><p><code>sort</code> 决定谁在前，<code>collapse</code> 决定「同组只留一个」。</p>
+<p>两者经常一起出现：商品列表按销量排、同一 SPU 只展示一个最低价 SKU。这一篇把参数讲全，也把「为什么文本字段排不了」讲清。</p>
+<!-- 配图 26-1：待生成，放到图床同名路径后启用下面一行 -->
+<blockquote>
+<p><strong>配图 26-1｜提示词</strong>：左侧一列文档按销量降序堆叠，旁边标注 <code>sort: [&#123;sales: desc&#125;]</code>；右侧同一批文档先按 <code>spu_id</code> 分组（三个彩色分组框），每组只保留顶部一个并标 <code>collapse.field=spu_id</code>，组内其他文档半透明沉到下方并标 <code>inner_hits</code>。中间用一条「doc_values 列式存储」竖条连接左侧排序列表。深色星空背景，青蓝与琥珀配色。</p>
+</blockquote>
+<h2 id="一、学习目标"><a href="#一、学习目标" class="headerlink" title="一、学习目标"></a>一、学习目标</h2><ol>
+<li>会用 <code>_score</code>、字段、<code>_doc</code> 三种排序；</li>
+<li>说清「文本字段为什么不能直接排序」以及 <code>fielddata</code> 的代价；</li>
+<li>会用 <code>missing</code>、<code>mode</code>、<code>numeric_type</code> 处理边界值；</li>
+<li>会用 <code>collapse</code> + <code>inner_hits</code> 实现分组取头名。</li>
+</ol>
+<h2 id="二、前置知识"><a href="#二、前置知识" class="headerlink" title="二、前置知识"></a>二、前置知识</h2><div class="data-grid data-grid-link-table"><div class="grid-header"><div class="grid-cell">需要掌握</div><div class="grid-cell">到什么程度</div><div class="grid-cell">出处</div></div><div class="grid-row"><div class="grid-cell">doc_values</div><div class="grid-cell">知道默认开启、用于排序聚合</div><div class="grid-cell">M2-2</div></div><div class="grid-row"><div class="grid-cell">keyword vs text</div><div class="grid-cell">知道谁能排</div><div class="grid-cell">M2-2</div></div><div class="grid-row"><div class="grid-cell">BM25</div><div class="grid-cell">知道 <code>_score</code> 含义</div><div class="grid-cell">M1-1</div></div></div>
+
+<h2 id="三、理论讲解"><a href="#三、理论讲解" class="headerlink" title="三、理论讲解"></a>三、理论讲解</h2><div class="data-grid data-grid-link-table"><div class="grid-header"><div class="grid-cell">排序方式</div><div class="grid-cell">写法</div><div class="grid-cell">依赖</div><div class="grid-cell">备注</div></div><div class="grid-row"><div class="grid-cell">按相关性</div><div class="grid-cell">默认，或 <code>&quot;_score&quot;</code></div><div class="grid-cell">—</div><div class="grid-cell">只在 query 上下文有效</div></div><div class="grid-row"><div class="grid-cell">按字段</div><div class="grid-cell"><code>{ &quot;price&quot;: &quot;asc&quot; }</code></div><div class="grid-cell"><code>doc_values</code></div><div class="grid-cell">数值&#x2F;日期&#x2F;keyword 都行</div></div><div class="grid-row"><div class="grid-cell">按文档顺序</div><div class="grid-cell"><code>&quot;_doc&quot;</code></div><div class="grid-cell">—</div><div class="grid-cell">最快，适合遍历</div></div><div class="grid-row"><div class="grid-cell">按数组聚合值</div><div class="grid-cell">加 <code>mode: min/max/avg/sum/median</code></div><div class="grid-cell">数组字段</div><div class="grid-cell">默认按最小值</div></div><div class="grid-row"><div class="grid-cell">缺失值</div><div class="grid-cell"><code>missing: &quot;_last&quot;</code>（默认）或 <code>_first</code></div><div class="grid-cell">—</div><div class="grid-cell">也可给具体值</div></div></div>
+
+<p><code>collapse</code> 参数：</p>
+<div class="data-grid data-grid-link-table"><div class="grid-header"><div class="grid-cell">参数</div><div class="grid-cell">作用</div></div><div class="grid-row"><div class="grid-cell"><code>field</code></div><div class="grid-cell">折叠键，必须是有 <code>doc_values</code> 的单值字段（keyword&#x2F;数值）</div></div><div class="grid-row"><div class="grid-cell"><code>inner_hits</code></div><div class="grid-cell">返回每组内被折叠掉的文档</div></div><div class="grid-row"><div class="grid-cell"><code>max_concurrent_group_searches</code></div><div class="grid-cell">并发组查询上限</div></div></div>
+
+<h2 id="四、原理拆解：排序为什么依赖-doc-values-而不是倒排"><a href="#四、原理拆解：排序为什么依赖-doc-values-而不是倒排" class="headerlink" title="四、原理拆解：排序为什么依赖 doc_values 而不是倒排"></a>四、原理拆解：排序为什么依赖 doc_values 而不是倒排</h2><p>倒排表是「词条 → 文档列表」，回答的是「哪些文档含这个词」；排序要回答的是「价格 99 和 100 谁小」。用倒排做数值排序等于把整个词典翻一遍，不现实。<code>doc_values</code> 是写入时额外维护的<strong>列式正排</strong>，按 doc id 顺序存字段值，读取时顺序扫、跳着取都很快，这也是它默认开启的原因。</p>
+<p><code>text</code> 字段没有 doc_values（因为分词后一个字段对应多个词条，无法列存「原值」），所以给 <code>text</code> 排序会报错并提示开启 <code>fielddata</code>。官方对 <code>fielddata</code> 的态度很明确：它把词条加载进堆内存，轻易打爆堆，<strong>不建议用于排序</strong>。正确做法是加一个 <code>keyword</code> 子字段（M2-2 讲过的 <code>fields</code>）。</p>
+<h2 id="五、场景说明"><a href="#五、场景说明" class="headerlink" title="五、场景说明"></a>五、场景说明</h2><div class="data-grid data-grid-link-table"><div class="grid-header"><div class="grid-cell">需求</div><div class="grid-cell">写法</div></div><div class="grid-row"><div class="grid-cell">综合排序（相关性 + 销量）</div><div class="grid-cell"><code>sort: [&quot;_score&quot;, {&quot;sales&quot;: &quot;desc&quot;}]</code></div></div><div class="grid-row"><div class="grid-cell">纯遍历导出</div><div class="grid-cell"><code>sort: [&quot;_doc&quot;]</code></div></div><div class="grid-row"><div class="grid-cell">同 SPU 只留最低价</div><div class="grid-cell"><code>collapse</code> + <code>sort: price asc</code> + <code>inner_hits</code></div></div><div class="grid-row"><div class="grid-cell">缺失值排最后</div><div class="grid-cell"><code>missing: &quot;_last&quot;</code>（默认）</div></div><div class="grid-row"><div class="grid-cell">数组取最大值排</div><div class="grid-cell"><code>mode: &quot;max&quot;</code></div></div></div>
+
+<h2 id="六、实操"><a href="#六、实操" class="headerlink" title="六、实操"></a>六、实操</h2><pre class="line-numbers language-bash" data-language="bash"><code class="language-bash"><span class="token comment"># 多级排序：先相关性，再销量</span>
+<span class="token function">curl</span> <span class="token parameter variable">-s</span> <span class="token parameter variable">-X</span> GET <span class="token string">"http://localhost:9200/goods/_search"</span> <span class="token parameter variable">-H</span> <span class="token string">'Content-Type: application/json'</span> <span class="token parameter variable">-d</span> <span class="token string">'
+&#123; "query": &#123; "match": &#123; "title": "跑鞋" &#125; &#125;,
+  "sort": [ "_score", &#123; "sales": &#123; "order": "desc", "missing": "_last" &#125; &#125; ] &#125;'</span>
+
+<span class="token comment"># collapse：同 spu 取价格最低的一个，并返回组内其余</span>
+<span class="token function">curl</span> <span class="token parameter variable">-s</span> <span class="token parameter variable">-X</span> GET <span class="token string">"http://localhost:9200/goods/_search"</span> <span class="token parameter variable">-H</span> <span class="token string">'Content-Type: application/json'</span> <span class="token parameter variable">-d</span> <span class="token string">'
+&#123; "query": &#123; "match": &#123; "title": "跑鞋" &#125; &#125;,
+  "sort": [ &#123; "price": "asc" &#125; ],
+  "collapse": &#123; "field": "spu_id",
+                "inner_hits": &#123; "name": "other_skus", "size": 3, "sort": [ &#123; "price": "asc" &#125; ] &#125; &#125; &#125;'</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<p><code>collapse</code> 与 <code>scroll</code> 不能同用（官方限制），深翻页要换 <code>search_after</code> + <code>PIT</code>，下一篇讲。</p>
+<h2 id="七、常见坑"><a href="#七、常见坑" class="headerlink" title="七、常见坑"></a>七、常见坑</h2><ol>
+<li><strong>给 <code>text</code> 排序</strong>：报错并建议开 <code>fielddata</code>——别开，加 keyword 子字段。</li>
+<li><strong><code>collapse.field</code> 用了 <code>text</code></strong>：同样因缺 <code>doc_values</code> 失败。</li>
+<li><strong>以为 <code>sort</code> 后 <code>_score</code> 还能用</strong>：显式排序后分数默认不再计算，除非把 <code>_score</code> 写进 <code>sort</code> 或 <code>track_scores</code>。</li>
+<li><strong><code>missing</code> 忘了配</strong>：默认 <code>_last</code> 在升序时会把空值放末尾，与直觉相反的场景要显式设。</li>
+<li><strong>数组字段不设 <code>mode</code></strong>：默认取最小值，用最大值业务会排错。</li>
+<li><strong><code>collapse</code> 与 <code>scroll</code> 混用</strong>：官方明确不支持。</li>
+</ol>
+<h2 id="八、课后小结"><a href="#八、课后小结" class="headerlink" title="八、课后小结"></a>八、课后小结</h2><ol>
+<li>字段排序依赖 <code>doc_values</code>，<code>text</code> 需关键字子字段。</li>
+<li><code>fielddata</code> 吃堆内存，官方不建议用于排序。</li>
+<li><code>missing</code>、<code>mode</code>、<code>numeric_type</code> 是边界值三件套。</li>
+<li><code>collapse</code> 按有 doc_values 的单值字段折叠，<code>inner_hits</code> 取回组内明细。</li>
+<li>显式 <code>sort</code> 后分数不参与，需要就写进排序数组。</li>
+</ol>
+<h2 id="九、思考题"><a href="#九、思考题" class="headerlink" title="九、思考题"></a>九、思考题</h2><ol>
+<li>一个 <code>text</code> 字段既要全文检索又要按原值排序，最小的改动是什么？</li>
+<li><code>collapse</code> 之后再分页，为什么总数与普通查询不一致？这是 bug 吗？</li>
+<li><code>sort: [&quot;_doc&quot;]</code> 为什么比按字段排序快？</li>
+</ol>
+<h2 id="十、官方资料"><a href="#十、官方资料" class="headerlink" title="十、官方资料"></a>十、官方资料</h2><ul>
+<li>Sort：<a target="_blank" rel="noopener" href="https://www.elastic.co/guide/en/elasticsearch/reference/current/sort-search-results.html">https://www.elastic.co/guide/en/elasticsearch/reference/current/sort-search-results.html</a></li>
+<li>Collapse：<a target="_blank" rel="noopener" href="https://www.elastic.co/guide/en/elasticsearch/reference/current/collapse-search-results.html">https://www.elastic.co/guide/en/elasticsearch/reference/current/collapse-search-results.html</a></li>
+<li>Doc values：<a target="_blank" rel="noopener" href="https://www.elastic.co/guide/en/elasticsearch/reference/current/doc-values.html">https://www.elastic.co/guide/en/elasticsearch/reference/current/doc-values.html</a></li>
+</ul>
+<p>上一篇：<a href="/2023/12/07/bigdata/elasticsearch/es-25-scoring/">M4-5 BM25 与打分调优</a> ｜ 下一篇：<a href="/2023/12/13/bigdata/elasticsearch/es-27-pagination/">M4-7 分页四件套</a> ｜ <a href="/2023/09/22/bigdata/elasticsearch/es-00-series-index/">总目录</a></p>
+</div>
+
+  <div class="mb-foot">
+    <a href="/phone/">返回手机首页</a>
+    <a href="/phone/tags/">星迹索引</a>
+  </div>
+</div>
+
+
+<script>
+  /* 作用：懒加载本地 mermaid 库；无 mermaid 代码块时不加载 */
+  function loadLocalMermaid(){
+    return new Promise(function(resolve, reject){
+      if(window.mermaid) return resolve(window.mermaid);
+      var s = document.createElement('script');
+      s.src = '/js/third-party/mermaid/mermaid.min.js?v=10';
+      s.onload = function(){ resolve(window.mermaid); };
+      s.onerror = function(){ reject(new Error('mermaid local load failed')); };
+      document.head.appendChild(s);
+    });
+  }
+
+  /* 作用：把 ```mermaid 代码块替换成 SVG 图（手机端字号略小、图可横向滚动） */
+  async function renderMermaidDiagram(){
+    var blocks = document.querySelectorAll('pre[class*="language-mermaid"]');
+    if(!blocks.length) return;
+    var mermaid;
+    try { mermaid = await loadLocalMermaid(); }
+    catch(e){ console.warn('[mermaid] 本地库加载失败：', e); return; }
+
+    mermaid.initialize({
+      startOnLoad: false,
+      theme: 'base',
+      themeVariables: {
+        darkMode: true,
+        background: 'transparent',
+        fontFamily: '"Microsoft YaHei", "PingFang SC", "Segoe UI", sans-serif',
+        fontSize: '12px',
+        primaryColor: '#062f3d',
+        primaryTextColor: '#d6f6ff',
+        primaryBorderColor: '#00eeff',
+        secondaryColor: '#04222d',
+        tertiaryColor: '#04222d',
+        mainBkg: '#062f3d',
+        nodeBorder: '#00eeff',
+        clusterBkg: '#02161f',
+        clusterBorder: '#00eeff55',
+        lineColor: '#00eeff',
+        textColor: '#c0e8ff',
+        edgeLabelBackground: '#02161f'
+      },
+      flowchart: { curve: 'basis', useMaxWidth: false, htmlLabels: false, nodeSpacing: 30, rankSpacing: 40, padding: 10 }
+    });
+
+    var targets = [];
+    blocks.forEach(function(el){
+      var codeEl = el.querySelector('code');
+      if(!codeEl) return;
+      var div = document.createElement('div');
+      div.className = 'mermaid';
+      div.textContent = codeEl.textContent;
+      el.parentNode.replaceChild(div, el);
+      targets.push(div);
+    });
+    if(!targets.length) return;
+    try { await mermaid.run({ nodes: targets }); }
+    catch(e){ console.warn('[mermaid] 渲染失败：', e); }
+  }
+  /* 作用：多次触发兜底（延迟重试 + DOM 变化），防止某次时机没跑到导致图表留在代码块 */
+  var mmBusy = false;
+  function scheduleMermaid(){
+    if(mmBusy) return;
+    mmBusy = true;
+    renderMermaidDiagram().then(function(){ mmBusy = false; }, function(){ mmBusy = false; });
+  }
+  scheduleMermaid();
+  window.addEventListener('load', scheduleMermaid);
+  [1000, 3000, 8000].forEach(function(ms){ setTimeout(scheduleMermaid, ms); });
+  if(document.readyState !== 'loading') scheduleMermaid();
+  if(window.MutationObserver){
+    var mmTimer = null;
+    var mmObserver = new MutationObserver(function(){
+      clearTimeout(mmTimer);
+      mmTimer = setTimeout(scheduleMermaid, 400);
+    });
+    mmObserver.observe(document.querySelector('.mb-article') || document.body, { childList: true, subtree: true });
+  }
+</script>
+</body>
+</html>

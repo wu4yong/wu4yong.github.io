@@ -1,0 +1,308 @@
+<!--
+  ============================================
+  手机端 · 文章原文页
+  文件：phone/post.njk
+  适用终端：手机端（路由 /phone/p/<slug>/，由 scripts/phone-routes.js 生成）
+  作用：手机阅读单篇文章；单列布局、无侧栏无雷达，替代电脑端 post.njk
+        数据由生成期算好：page.item = { title, dateStr, content, cats, tags }
+  样式依赖：source/css/theme/phone/common.css、source/css/theme/phone/list.css
+  组件依赖：phone/_components/Particles.njk
+  最后修改：2026-11-11
+  ============================================
+-->
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="color-scheme" content="dark">
+  <meta name="theme-color" content="#020817">
+  <!-- 首帧兜底：浏览器默认画布是白的，样式未解析前会闪一下白。这条规则先锁死深空底色 -->
+  <style>html{background-color:#020817}</style>
+  <title>ES29-检索侧性能开关 - 时空秘境</title>
+  <!-- 手机端样式：基础 + 列表/正文，外链引入（源文件 source/css/theme/phone/） -->
+  <link rel="stylesheet" href="/css/theme/phone/common.css">
+  <link rel="stylesheet" href="/css/theme/phone/list.css">
+<meta name="generator" content="Hexo 8.1.2"></head>
+<body>
+<div class="mb-shell">
+  <!--
+  ============================================
+  手机端星空粒子组件
+  文件：Particles.njk
+  适用终端：手机端
+  作用：Particles.njk 的手机端副本（nunjucks 子目录 include 取不到上级）
+        参数与电脑端 _components/Particles.njk 保持一致：
+        粒子 95 / 连线 118px / opacity 0.32，外加星座层与零星闪烁层
+  最后修改：2026-11-12
+  ============================================
+--><!-- z-index 必须是 0：负层级会被 body 不透明背景盖住，粒子在跑却看不见 -->
+<div id="particles" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 0; pointer-events: none;"></div>
+<!-- 星座层（与首页同一套：随机零星散布星座图形 + 偶尔闪烁的小星） -->
+<div id="constellations" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 1; pointer-events: none;" aria-hidden="true"></div>
+<script src="/js/particles.min.js"></script>
+<script>
+particlesJS("particles", {
+  particles: {
+    number: {
+      value: 95,
+      density: {
+        enable: true,
+        value_area: 800
+      }
+    },
+    color: {
+      value: "#00eeff"
+    },
+    shape: {
+      type: "circle",
+      stroke: {
+        width: 0,
+        color: "#000000"
+      }
+    },
+    opacity: {
+      value: 0.6,
+      random: true,
+      anim: {
+        enable: true,
+        speed: 0.5,
+        opacity_min: 0.1,
+        sync: false
+      }
+    },
+    size: {
+      value: 3,
+      random: true,
+      anim: {
+        enable: true,
+        speed: 2,
+        size_min: 0.1,
+        sync: false
+      }
+    },
+    line_linked: {
+      enable: true,
+      distance: 118,
+      color: "#00eeff",
+      opacity: 0.32,
+      width: 1
+    },
+    move: {
+      enable: true,
+      speed: 0.8,
+      direction: "none",
+      random: true,
+      straight: false,
+      out_mode: "out",
+      bounce: false,
+      attract: {
+        enable: true,
+        rotateX: 600,
+        rotateY: 1200
+      }
+    }
+  },
+  interactivity: {
+    detect_on: "canvas",
+    events: {
+      onhover: {
+        enable: true,
+        mode: "grab"       // 手指按住时粒子聚集
+      },
+      onclick: {
+        enable: true,
+        mode: "push"       // 点击时产生新粒子
+      },
+      resize: true
+    },
+    modes: {
+      grab: {
+        distance: 200,
+        line_linked: {
+          opacity: 1
+        }
+      },
+      push: {
+        particles_nb: 6
+      }
+    }
+  },
+  retina_detect: true
+});
+</script>
+<!-- 星座 + 零星闪烁层：与电脑端共用同一份绘制脚本 -->
+<script src="/js/theme/home/starfield.js"></script>
+
+
+  <div class="mb-top">
+    <a class="mb-back" href="/phone/">← 返回手机首页</a>
+    <span class="mb-sub" style="margin:0">2023-12-19</span>
+  </div>
+
+  <h1 class="mb-title">ES29-检索侧性能开关</h1>
+  <div class="mb-sub">
+    分类：bigdata · elasticsearch
+     ｜ 标签：Elasticsearch · 系统课
+  </div>
+
+  <div class="mb-article"><div class="essay-banner essay-elasticsearch"></div>
+
+<h1 id="检索侧性能开关：从-source-裁剪到-profile"><a href="#检索侧性能开关：从-source-裁剪到-profile" class="headerlink" title="检索侧性能开关：从 _source 裁剪到 profile"></a>检索侧性能开关：从 _source 裁剪到 profile</h1><p>查询慢，八成不是「匹配慢」，而是「取数据慢」。</p>
+<p>这一篇把检索侧能拧的开关列全：少取字段、少算总数、少排序、必要时开 profile 看时间花在哪。</p>
+<!-- 配图 29-1：待生成，放到图床同名路径后启用下面一行 -->
+<blockquote>
+<p><strong>配图 29-1｜提示词</strong>：一张「查询请求解剖图」：请求体被拆成四块发光组件 <code>query</code>、<code>sort</code>、<code>_source</code>、<code>highlight</code>，每块旁边标注耗时条；下方一排开关面板：<code>_source: false</code>、<code>includes/excludes</code>、<code>fields</code>、<code>docvalue_fields</code>、<code>track_total_hits</code>、<code>request_cache</code>、<code>terminate_after</code>、<code>profile</code>，每个开关旁有小字代价说明。深色星空背景，青蓝为主，耗时条用琥珀色。</p>
+</blockquote>
+<h2 id="一、学习目标"><a href="#一、学习目标" class="headerlink" title="一、学习目标"></a>一、学习目标</h2><ol>
+<li>会用 <code>_source</code> 裁剪减少网络与解析开销；</li>
+<li>分清 <code>fields</code>、<code>docvalue_fields</code>、<code>stored_fields</code> 各自取什么；</li>
+<li>知道 <code>track_total_hits</code>、<code>request_cache</code>、<code>terminate_after</code> 的适用面；</li>
+<li>会用 <code>profile</code> 定位耗时阶段。</li>
+</ol>
+<h2 id="二、前置知识"><a href="#二、前置知识" class="headerlink" title="二、前置知识"></a>二、前置知识</h2><div class="data-grid data-grid-link-table"><div class="grid-header"><div class="grid-cell">需要掌握</div><div class="grid-cell">到什么程度</div><div class="grid-cell">出处</div></div><div class="grid-row"><div class="grid-cell"><code>_source</code></div><div class="grid-cell">原始 JSON 整存整取</div><div class="grid-cell">M1-2</div></div><div class="grid-row"><div class="grid-cell">doc_values</div><div class="grid-cell">列式正排，默认开启</div><div class="grid-cell">M4-6</div></div><div class="grid-row"><div class="grid-cell">stored fields</div><div class="grid-cell"><code>store: true</code> 的字段</div><div class="grid-cell">M2-5</div></div></div>
+
+<h2 id="三、理论讲解"><a href="#三、理论讲解" class="headerlink" title="三、理论讲解"></a>三、理论讲解</h2><div class="data-grid data-grid-link-table"><div class="grid-header"><div class="grid-cell">开关</div><div class="grid-cell">作用</div><div class="grid-cell">默认</div><div class="grid-cell">代价&#x2F;限制</div></div><div class="grid-row"><div class="grid-cell"><code>_source</code></div><div class="grid-cell">返回&#x2F;不返回原始文档</div><div class="grid-cell">true</div><div class="grid-cell">关掉后拿不到原文</div></div><div class="grid-row"><div class="grid-cell"><code>_source.includes</code> &#x2F; <code>excludes</code></div><div class="grid-cell">只取部分字段</div><div class="grid-cell">全取</div><div class="grid-cell">支持通配</div></div><div class="grid-row"><div class="grid-cell"><code>fields</code></div><div class="grid-cell">按字段规范取「可检索值」</div><div class="grid-cell">—</div><div class="grid-cell">8.x 推荐的新取数方式</div></div><div class="grid-row"><div class="grid-cell"><code>docvalue_fields</code></div><div class="grid-cell">直接读列存</div><div class="grid-cell">—</div><div class="grid-cell">只对有 doc_values 的字段有效</div></div><div class="grid-row"><div class="grid-cell"><code>stored_fields</code></div><div class="grid-cell">读 <code>store: true</code> 字段</div><div class="grid-cell">—</div><div class="grid-cell">未存则返回空</div></div><div class="grid-row"><div class="grid-cell"><code>track_total_hits</code></div><div class="grid-cell">精确&#x2F;近似总数</div><div class="grid-cell">10000</div><div class="grid-cell">精确计数要扫全部</div></div><div class="grid-row"><div class="grid-cell"><code>request_cache</code></div><div class="grid-cell">缓存 <code>size:0</code> 请求结果</div><div class="grid-cell">false</div><div class="grid-cell">只对聚合类请求有效</div></div><div class="grid-row"><div class="grid-cell"><code>terminate_after</code></div><div class="grid-cell">命中 N 条即停</div><div class="grid-cell">—</div><div class="grid-cell">结果不完整，只用于「有没有」</div></div><div class="grid-row"><div class="grid-cell"><code>profile</code></div><div class="grid-cell">输出各阶段耗时</div><div class="grid-cell">false</div><div class="grid-cell">本身有开销，勿常开</div></div></div>
+
+<h2 id="四、原理拆解：一次-search-的时间去哪了"><a href="#四、原理拆解：一次-search-的时间去哪了" class="headerlink" title="四、原理拆解：一次 search 的时间去哪了"></a>四、原理拆解：一次 search 的时间去哪了</h2><p>官方把 search 拆成两个阶段：<strong>query phase</strong>（各分片算匹配与排序，返回 doc id + 排序值）与 <strong>fetch phase</strong>（协调节点按 doc id 去各分片取 <code>_source</code>）。真实生产里，慢常常出在第二阶段：取回一个 200KB 的 <code>_source</code> 只为渲染列表页的三个字段。</p>
+<p>所以优化顺序应当固定：</p>
+<div class="data-grid data-grid-link-table"><div class="grid-header"><div class="grid-cell">顺序</div><div class="grid-cell">动作</div><div class="grid-cell">收益</div></div><div class="grid-row"><div class="grid-cell">1</div><div class="grid-cell"><code>_source.includes</code> 只取需要的字段</div><div class="grid-cell">直接减少网络与反序列化</div></div><div class="grid-row"><div class="grid-cell">2</div><div class="grid-cell">只排序必要字段，避免大字段 doc_values</div><div class="grid-cell">减少内存排序量</div></div><div class="grid-row"><div class="grid-cell">3</div><div class="grid-cell">只要总数就 <code>size: 0</code></div><div class="grid-cell">跳过 fetch phase</div></div><div class="grid-row"><div class="grid-cell">4</div><div class="grid-cell">正常分页就别精确 <code>track_total_hits</code></div><div class="grid-cell">省掉全量计数</div></div><div class="grid-row"><div class="grid-cell">5</div><div class="grid-cell">仍慢再 <code>profile</code> 看是哪一段</div><div class="grid-cell">定位而非猜测</div></div></div>
+
+<h2 id="五、场景说明"><a href="#五、场景说明" class="headerlink" title="五、场景说明"></a>五、场景说明</h2><div class="data-grid data-grid-link-table"><div class="grid-header"><div class="grid-cell">场景</div><div class="grid-cell">配置</div></div><div class="grid-row"><div class="grid-cell">列表页只显示标题价格</div><div class="grid-cell"><code>_source: { includes: [&quot;title&quot;,&quot;price&quot;] }</code></div></div><div class="grid-row"><div class="grid-cell">后台导出完整数据</div><div class="grid-cell">保持 <code>_source: true</code>，用 scroll</div></div><div class="grid-row"><div class="grid-cell">只要「有没有命中」</div><div class="grid-cell"><code>size: 0</code> + <code>terminate_after: 1</code></div></div><div class="grid-row"><div class="grid-cell">看板聚合</div><div class="grid-cell"><code>size: 0</code> + 开 <code>request_cache</code></div></div><div class="grid-row"><div class="grid-cell">排查慢查询</div><div class="grid-cell"><code>&quot;profile&quot;: true</code></div></div></div>
+
+<h2 id="六、实操"><a href="#六、实操" class="headerlink" title="六、实操"></a>六、实操</h2><pre class="line-numbers language-bash" data-language="bash"><code class="language-bash"><span class="token comment"># 只取两个字段</span>
+<span class="token function">curl</span> <span class="token parameter variable">-s</span> <span class="token parameter variable">-X</span> GET <span class="token string">"http://localhost:9200/goods/_search"</span> <span class="token parameter variable">-H</span> <span class="token string">'Content-Type: application/json'</span> <span class="token parameter variable">-d</span> <span class="token string">'
+&#123; "query": &#123; "match": &#123; "title": "跑鞋" &#125; &#125;,
+  "_source": &#123; "includes": ["title", "price"] &#125;, "size": 10 &#125;'</span>
+
+<span class="token comment"># 完全不取原文，只看元数据</span>
+<span class="token function">curl</span> <span class="token parameter variable">-s</span> <span class="token parameter variable">-X</span> GET <span class="token string">"http://localhost:9200/goods/_search"</span> <span class="token parameter variable">-H</span> <span class="token string">'Content-Type: application/json'</span> <span class="token parameter variable">-d</span> <span class="token string">'
+&#123; "query": &#123; "term": &#123; "on_sale": true &#125; &#125;, "_source": false, "size": 10 &#125;'</span>
+
+<span class="token comment"># 聚合 + 请求缓存</span>
+<span class="token function">curl</span> <span class="token parameter variable">-s</span> <span class="token parameter variable">-X</span> GET <span class="token string">"http://localhost:9200/goods/_search?request_cache=true"</span> <span class="token parameter variable">-H</span> <span class="token string">'Content-Type: application/json'</span> <span class="token parameter variable">-d</span> <span class="token string">'
+&#123; "size": 0, "aggs": &#123; "by_tag": &#123; "terms": &#123; "field": "tags" &#125; &#125; &#125; &#125;'</span>
+
+<span class="token comment"># profile 定位耗时</span>
+<span class="token function">curl</span> <span class="token parameter variable">-s</span> <span class="token parameter variable">-X</span> GET <span class="token string">"http://localhost:9200/goods/_search"</span> <span class="token parameter variable">-H</span> <span class="token string">'Content-Type: application/json'</span> <span class="token parameter variable">-d</span> <span class="token string">'
+&#123; "profile": true, "query": &#123; "match": &#123; "title": "跑鞋" &#125; &#125; &#125;'</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<p><code>_source: false</code> 时 <code>highlight</code> 仍可工作（它靠 offsets），但 <code>_source</code> 相关的字段回显全没了，前端要自己判断。</p>
+<h2 id="七、常见坑"><a href="#七、常见坑" class="headerlink" title="七、常见坑"></a>七、常见坑</h2><ol>
+<li><strong>列表页直接返回完整 <code>_source</code></strong>：大文档把 fetch 阶段拖成瓶颈。</li>
+<li><strong><code>stored_fields</code> 用在没 <code>store: true</code> 的字段</strong>：返回空，误以为数据丢了。</li>
+<li><strong><code>docvalue_fields</code> 用在 <code>text</code></strong>：没有 doc_values，取不到。</li>
+<li><strong><code>track_total_hits: true</code> 到处开</strong>：每个请求都全量计数，集群压力翻倍。</li>
+<li><strong><code>request_cache</code> 用在普通分页查询</strong>：官方只对 <code>size: 0</code> 一类请求生效，开了也白开。</li>
+<li><strong><code>profile: true</code> 上生产</strong>：额外统计开销不小，只在排查时临时开。</li>
+<li><strong><code>terminate_after</code> 当分页用</strong>：它返回的是「不完整结果」，语义完全不同。</li>
+</ol>
+<h2 id="八、课后小结"><a href="#八、课后小结" class="headerlink" title="八、课后小结"></a>八、课后小结</h2><ol>
+<li>检索优化先剪数据量，再谈参数。</li>
+<li><code>_source</code> 裁剪是收益最高、风险最低的一步。</li>
+<li><code>fields</code> &#x2F; <code>docvalue_fields</code> &#x2F; <code>stored_fields</code> 取的是三种不同来源的值。</li>
+<li><code>size: 0</code> 跳过 fetch，聚合与计数必备。</li>
+<li><code>profile</code> 用来看时间花在 query 还是 fetch，不靠猜。</li>
+</ol>
+<h2 id="九、思考题"><a href="#九、思考题" class="headerlink" title="九、思考题"></a>九、思考题</h2><ol>
+<li>一个请求 <code>_source: false</code> + <code>highlight</code>，高亮还能出吗？为什么？</li>
+<li>为什么 <code>request_cache</code> 对普通 <code>from/size</code> 查询无效？从「结果可复用性」解释。</li>
+<li>列表页 QPS 很高、每个文档 200KB，你会先做哪三件事？</li>
+</ol>
+<h2 id="十、官方资料"><a href="#十、官方资料" class="headerlink" title="十、官方资料"></a>十、官方资料</h2><ul>
+<li>Search API（<code>_source</code>、<code>fields</code>、<code>profile</code>）：<a target="_blank" rel="noopener" href="https://www.elastic.co/guide/en/elasticsearch/reference/current/search-search.html">https://www.elastic.co/guide/en/elasticsearch/reference/current/search-search.html</a></li>
+<li><code>track_total_hits</code>：<a target="_blank" rel="noopener" href="https://www.elastic.co/guide/en/elasticsearch/reference/current/search-your-data.html">https://www.elastic.co/guide/en/elasticsearch/reference/current/search-your-data.html</a></li>
+<li>Request cache：<a target="_blank" rel="noopener" href="https://www.elastic.co/guide/en/elasticsearch/reference/current/shard-request-cache.html">https://www.elastic.co/guide/en/elasticsearch/reference/current/shard-request-cache.html</a></li>
+<li>Profile API：<a target="_blank" rel="noopener" href="https://www.elastic.co/guide/en/elasticsearch/reference/current/search-profile.html">https://www.elastic.co/guide/en/elasticsearch/reference/current/search-profile.html</a></li>
+</ul>
+<p>上一篇：<a href="/2023/12/16/bigdata/elasticsearch/es-28-highlight-suggest/">M4-8 高亮、suggest 与 _msearch</a> ｜ 下一篇：<a href="/2023/12/22/bigdata/elasticsearch/es-30-aggregation-structure/">M5-1 聚合三层结构</a> ｜ <a href="/2023/09/22/bigdata/elasticsearch/es-00-series-index/">总目录</a></p>
+</div>
+
+  <div class="mb-foot">
+    <a href="/phone/">返回手机首页</a>
+    <a href="/phone/tags/">星迹索引</a>
+  </div>
+</div>
+
+
+<script>
+  /* 作用：懒加载本地 mermaid 库；无 mermaid 代码块时不加载 */
+  function loadLocalMermaid(){
+    return new Promise(function(resolve, reject){
+      if(window.mermaid) return resolve(window.mermaid);
+      var s = document.createElement('script');
+      s.src = '/js/third-party/mermaid/mermaid.min.js?v=10';
+      s.onload = function(){ resolve(window.mermaid); };
+      s.onerror = function(){ reject(new Error('mermaid local load failed')); };
+      document.head.appendChild(s);
+    });
+  }
+
+  /* 作用：把 ```mermaid 代码块替换成 SVG 图（手机端字号略小、图可横向滚动） */
+  async function renderMermaidDiagram(){
+    var blocks = document.querySelectorAll('pre[class*="language-mermaid"]');
+    if(!blocks.length) return;
+    var mermaid;
+    try { mermaid = await loadLocalMermaid(); }
+    catch(e){ console.warn('[mermaid] 本地库加载失败：', e); return; }
+
+    mermaid.initialize({
+      startOnLoad: false,
+      theme: 'base',
+      themeVariables: {
+        darkMode: true,
+        background: 'transparent',
+        fontFamily: '"Microsoft YaHei", "PingFang SC", "Segoe UI", sans-serif',
+        fontSize: '12px',
+        primaryColor: '#062f3d',
+        primaryTextColor: '#d6f6ff',
+        primaryBorderColor: '#00eeff',
+        secondaryColor: '#04222d',
+        tertiaryColor: '#04222d',
+        mainBkg: '#062f3d',
+        nodeBorder: '#00eeff',
+        clusterBkg: '#02161f',
+        clusterBorder: '#00eeff55',
+        lineColor: '#00eeff',
+        textColor: '#c0e8ff',
+        edgeLabelBackground: '#02161f'
+      },
+      flowchart: { curve: 'basis', useMaxWidth: false, htmlLabels: false, nodeSpacing: 30, rankSpacing: 40, padding: 10 }
+    });
+
+    var targets = [];
+    blocks.forEach(function(el){
+      var codeEl = el.querySelector('code');
+      if(!codeEl) return;
+      var div = document.createElement('div');
+      div.className = 'mermaid';
+      div.textContent = codeEl.textContent;
+      el.parentNode.replaceChild(div, el);
+      targets.push(div);
+    });
+    if(!targets.length) return;
+    try { await mermaid.run({ nodes: targets }); }
+    catch(e){ console.warn('[mermaid] 渲染失败：', e); }
+  }
+  /* 作用：多次触发兜底（延迟重试 + DOM 变化），防止某次时机没跑到导致图表留在代码块 */
+  var mmBusy = false;
+  function scheduleMermaid(){
+    if(mmBusy) return;
+    mmBusy = true;
+    renderMermaidDiagram().then(function(){ mmBusy = false; }, function(){ mmBusy = false; });
+  }
+  scheduleMermaid();
+  window.addEventListener('load', scheduleMermaid);
+  [1000, 3000, 8000].forEach(function(ms){ setTimeout(scheduleMermaid, ms); });
+  if(document.readyState !== 'loading') scheduleMermaid();
+  if(window.MutationObserver){
+    var mmTimer = null;
+    var mmObserver = new MutationObserver(function(){
+      clearTimeout(mmTimer);
+      mmTimer = setTimeout(scheduleMermaid, 400);
+    });
+    mmObserver.observe(document.querySelector('.mb-article') || document.body, { childList: true, subtree: true });
+  }
+</script>
+</body>
+</html>

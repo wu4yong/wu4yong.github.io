@@ -1,0 +1,330 @@
+<!--
+  ============================================
+  手机端 · 文章原文页
+  文件：phone/post.njk
+  适用终端：手机端（路由 /phone/p/<slug>/，由 scripts/phone-routes.js 生成）
+  作用：手机阅读单篇文章；单列布局、无侧栏无雷达，替代电脑端 post.njk
+        数据由生成期算好：page.item = { title, dateStr, content, cats, tags }
+  样式依赖：source/css/theme/phone/common.css、source/css/theme/phone/list.css
+  组件依赖：phone/_components/Particles.njk
+  最后修改：2026-11-11
+  ============================================
+-->
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="color-scheme" content="dark">
+  <meta name="theme-color" content="#020817">
+  <!-- 首帧兜底：浏览器默认画布是白的，样式未解析前会闪一下白。这条规则先锁死深空底色 -->
+  <style>html{background-color:#020817}</style>
+  <title>Spring Session（二）并发登录、过期与事件 - 时空秘境</title>
+  <!-- 手机端样式：基础 + 列表/正文，外链引入（源文件 source/css/theme/phone/） -->
+  <link rel="stylesheet" href="/css/theme/phone/common.css">
+  <link rel="stylesheet" href="/css/theme/phone/list.css">
+<meta name="generator" content="Hexo 8.1.2"></head>
+<body>
+<div class="mb-shell">
+  <!--
+  ============================================
+  手机端星空粒子组件
+  文件：Particles.njk
+  适用终端：手机端
+  作用：Particles.njk 的手机端副本（nunjucks 子目录 include 取不到上级）
+        参数与电脑端 _components/Particles.njk 保持一致：
+        粒子 95 / 连线 118px / opacity 0.32，外加星座层与零星闪烁层
+  最后修改：2026-11-12
+  ============================================
+--><!-- z-index 必须是 0：负层级会被 body 不透明背景盖住，粒子在跑却看不见 -->
+<div id="particles" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 0; pointer-events: none;"></div>
+<!-- 星座层（与首页同一套：随机零星散布星座图形 + 偶尔闪烁的小星） -->
+<div id="constellations" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 1; pointer-events: none;" aria-hidden="true"></div>
+<script src="/js/particles.min.js"></script>
+<script>
+particlesJS("particles", {
+  particles: {
+    number: {
+      value: 95,
+      density: {
+        enable: true,
+        value_area: 800
+      }
+    },
+    color: {
+      value: "#00eeff"
+    },
+    shape: {
+      type: "circle",
+      stroke: {
+        width: 0,
+        color: "#000000"
+      }
+    },
+    opacity: {
+      value: 0.6,
+      random: true,
+      anim: {
+        enable: true,
+        speed: 0.5,
+        opacity_min: 0.1,
+        sync: false
+      }
+    },
+    size: {
+      value: 3,
+      random: true,
+      anim: {
+        enable: true,
+        speed: 2,
+        size_min: 0.1,
+        sync: false
+      }
+    },
+    line_linked: {
+      enable: true,
+      distance: 118,
+      color: "#00eeff",
+      opacity: 0.32,
+      width: 1
+    },
+    move: {
+      enable: true,
+      speed: 0.8,
+      direction: "none",
+      random: true,
+      straight: false,
+      out_mode: "out",
+      bounce: false,
+      attract: {
+        enable: true,
+        rotateX: 600,
+        rotateY: 1200
+      }
+    }
+  },
+  interactivity: {
+    detect_on: "canvas",
+    events: {
+      onhover: {
+        enable: true,
+        mode: "grab"       // 手指按住时粒子聚集
+      },
+      onclick: {
+        enable: true,
+        mode: "push"       // 点击时产生新粒子
+      },
+      resize: true
+    },
+    modes: {
+      grab: {
+        distance: 200,
+        line_linked: {
+          opacity: 1
+        }
+      },
+      push: {
+        particles_nb: 6
+      }
+    }
+  },
+  retina_detect: true
+});
+</script>
+<!-- 星座 + 零星闪烁层：与电脑端共用同一份绘制脚本 -->
+<script src="/js/theme/home/starfield.js"></script>
+
+
+  <div class="mb-top">
+    <a class="mb-back" href="/phone/">← 返回手机首页</a>
+    <span class="mb-sub" style="margin:0">2022-10-01</span>
+  </div>
+
+  <h1 class="mb-title">Spring Session（二）并发登录、过期与事件</h1>
+  <div class="mb-sub">
+    分类：java · springsession
+     ｜ 标签：SpringSession
+  </div>
+
+  <div class="mb-article"><div class="essay-banner essay-springsession"></div>
+
+<h1 id="并发登录控制、会话过期与事件"><a href="#并发登录控制、会话过期与事件" class="headerlink" title="并发登录控制、会话过期与事件"></a><strong>并发登录控制、会话过期与事件</strong></h1><p>会话共享解决”多机一致”，接着要解决三个现实问题：同一账号能开几个会话、会话多久过期、过期&#x2F;销毁时要不要做清理（比如释放占用的资源、记录登出日志）。</p>
+<p><img src="https://wu4yong.github.io/starry-images/assets/img/springsession/springsession-02-control.webp" alt="同一账号的多个会话被统一管理"></p>
+<p><em>同一账号的多个会话被统一管理</em></p>
+<h2 id="1-1-并发会话控制"><a href="#1-1-并发会话控制" class="headerlink" title="1.1 并发会话控制"></a>1.1 并发会话控制</h2><p><code>RedisIndexedSessionRepository</code> 维护 <code>principals:&lt;user&gt;</code> 索引，可以按用户查所有会话。</p>
+<p>方式一，限制最大会话数（新登录踢掉最旧的）：</p>
+<pre class="line-numbers language-java" data-language="java"><code class="language-java"><span class="token annotation punctuation">@Component</span>
+<span class="token keyword">public</span> <span class="token keyword">class</span> <span class="token class-name">SessionLimitListener</span> <span class="token keyword">implements</span> <span class="token class-name">ApplicationListener</span><span class="token generics"><span class="token punctuation">&lt;</span><span class="token class-name">SessionCreatedEvent</span><span class="token punctuation">></span></span> <span class="token punctuation">&#123;</span>
+
+    <span class="token keyword">private</span> <span class="token keyword">final</span> <span class="token class-name">FindByIndexNameSessionRepository</span><span class="token generics"><span class="token punctuation">&lt;</span><span class="token operator">?</span> <span class="token keyword">extends</span> <span class="token class-name">Session</span><span class="token punctuation">></span></span> repository<span class="token punctuation">;</span>
+    <span class="token keyword">private</span> <span class="token keyword">final</span> <span class="token keyword">int</span> maxSessions<span class="token punctuation">;</span>
+
+    <span class="token annotation punctuation">@Override</span>
+    <span class="token keyword">public</span> <span class="token keyword">void</span> <span class="token function">onApplicationEvent</span><span class="token punctuation">(</span><span class="token class-name">SessionCreatedEvent</span> event<span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+        <span class="token class-name">Session</span> session <span class="token operator">=</span> <span class="token punctuation">(</span><span class="token class-name">Session</span><span class="token punctuation">)</span> repository<span class="token punctuation">.</span><span class="token function">findById</span><span class="token punctuation">(</span>event<span class="token punctuation">.</span><span class="token function">getSessionId</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+        <span class="token class-name">String</span> principal <span class="token operator">=</span> session<span class="token punctuation">.</span><span class="token function">getAttribute</span><span class="token punctuation">(</span><span class="token class-name">FindByIndexNameSessionRepository</span><span class="token punctuation">.</span><span class="token constant">PRINCIPAL_NAME_INDEX_NAME</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+        <span class="token keyword">if</span> <span class="token punctuation">(</span>principal <span class="token operator">==</span> <span class="token keyword">null</span><span class="token punctuation">)</span> <span class="token keyword">return</span><span class="token punctuation">;</span>
+
+        <span class="token class-name">Map</span><span class="token generics"><span class="token punctuation">&lt;</span><span class="token class-name">String</span><span class="token punctuation">,</span> <span class="token operator">?</span> <span class="token keyword">extends</span> <span class="token class-name">Session</span><span class="token punctuation">></span></span> sessions <span class="token operator">=</span>
+                repository<span class="token punctuation">.</span><span class="token function">findByPrincipalName</span><span class="token punctuation">(</span>principal<span class="token punctuation">)</span><span class="token punctuation">;</span>
+        <span class="token keyword">if</span> <span class="token punctuation">(</span>sessions<span class="token punctuation">.</span><span class="token function">size</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token operator">></span> maxSessions<span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+            sessions<span class="token punctuation">.</span><span class="token function">values</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token function">stream</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+                    <span class="token punctuation">.</span><span class="token function">sorted</span><span class="token punctuation">(</span><span class="token class-name">Comparator</span><span class="token punctuation">.</span><span class="token function">comparing</span><span class="token punctuation">(</span><span class="token class-name">Session</span><span class="token operator">::</span><span class="token function">getLastAccessedTime</span><span class="token punctuation">)</span><span class="token punctuation">)</span>
+                    <span class="token punctuation">.</span><span class="token function">limit</span><span class="token punctuation">(</span>sessions<span class="token punctuation">.</span><span class="token function">size</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token operator">-</span> maxSessions<span class="token punctuation">)</span>
+                    <span class="token punctuation">.</span><span class="token function">forEach</span><span class="token punctuation">(</span>s <span class="token operator">-></span> repository<span class="token punctuation">.</span><span class="token function">deleteById</span><span class="token punctuation">(</span>s<span class="token punctuation">.</span><span class="token function">getId</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+        <span class="token punctuation">&#125;</span>
+    <span class="token punctuation">&#125;</span>
+<span class="token punctuation">&#125;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<p>方式二，禁止第二处登录（登录时先清掉同账号的旧会话）：</p>
+<pre class="line-numbers language-java" data-language="java"><code class="language-java"><span class="token class-name">Map</span><span class="token generics"><span class="token punctuation">&lt;</span><span class="token class-name">String</span><span class="token punctuation">,</span> <span class="token operator">?</span> <span class="token keyword">extends</span> <span class="token class-name">Session</span><span class="token punctuation">></span></span> exist <span class="token operator">=</span> repository<span class="token punctuation">.</span><span class="token function">findByPrincipalName</span><span class="token punctuation">(</span>username<span class="token punctuation">)</span><span class="token punctuation">;</span>
+exist<span class="token punctuation">.</span><span class="token function">values</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token function">forEach</span><span class="token punctuation">(</span>s <span class="token operator">-></span> repository<span class="token punctuation">.</span><span class="token function">deleteById</span><span class="token punctuation">(</span>s<span class="token punctuation">.</span><span class="token function">getId</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span></span></code></pre>
+
+<div class="data-grid data-grid-link-table"><div class="grid-header"><div class="grid-cell">策略</div><div class="grid-cell">行为</div><div class="grid-cell">典型场景</div></div><div class="grid-row"><div class="grid-cell">踢最旧</div><div class="grid-cell">保 N 个会话</div><div class="grid-cell">普通后台</div></div><div class="grid-row"><div class="grid-cell">只留最新</div><div class="grid-cell">后登录踢前登录</div><div class="grid-cell">支付、金融</div></div><div class="grid-row"><div class="grid-cell">允许多会话</div><div class="grid-cell">不做限制</div><div class="grid-cell">内容站</div></div><div class="grid-row"><div class="grid-cell">黑白名单</div><div class="grid-cell">结合设备指纹</div><div class="grid-cell">风控</div></div></div>
+
+<h2 id="1-2-过期与清理"><a href="#1-2-过期与清理" class="headerlink" title="1.2 过期与清理"></a>1.2 过期与清理</h2><pre class="line-numbers language-yaml" data-language="yaml"><code class="language-yaml"><span class="token key atrule">spring</span><span class="token punctuation">:</span>
+  <span class="token key atrule">session</span><span class="token punctuation">:</span>
+    <span class="token key atrule">timeout</span><span class="token punctuation">:</span> 30m<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span></span></code></pre>
+
+<div class="data-grid data-grid-link-table"><div class="grid-header"><div class="grid-cell">概念</div><div class="grid-cell">含义</div><div class="grid-cell">注意</div></div><div class="grid-row"><div class="grid-cell"><code>timeout</code></div><div class="grid-cell">无操作多久后失效</div><div class="grid-cell">不是”登录总时长”</div></div><div class="grid-row"><div class="grid-cell"><code>maxInactiveInterval</code></div><div class="grid-cell">单个会话的闲置上限</div><div class="grid-cell">可运行时改</div></div><div class="grid-row"><div class="grid-cell">Redis TTL</div><div class="grid-cell">实际删除时间</div><div class="grid-cell">由 <code>expirations</code> zset 调度</div></div></div>
+
+<p><code>timeout</code> 只表示”闲置时长”，用户一直操作就能一直续命。要”绝对过期”（登录满 8 小时强制下线），必须在 Session 里存 <code>loginTime</code> 并自己校验：</p>
+<pre class="line-numbers language-java" data-language="java"><code class="language-java"><span class="token class-name">Long</span> loginTime <span class="token operator">=</span> <span class="token punctuation">(</span><span class="token class-name">Long</span><span class="token punctuation">)</span> session<span class="token punctuation">.</span><span class="token function">getAttribute</span><span class="token punctuation">(</span><span class="token string">"loginTime"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token keyword">if</span> <span class="token punctuation">(</span>loginTime <span class="token operator">!=</span> <span class="token keyword">null</span> <span class="token operator">&amp;&amp;</span> <span class="token class-name">System</span><span class="token punctuation">.</span><span class="token function">currentTimeMillis</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token operator">-</span> loginTime <span class="token operator">></span> <span class="token number">8</span> <span class="token operator">*</span> <span class="token number">3600_000L</span><span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+    session<span class="token punctuation">.</span><span class="token function">invalidate</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">&#125;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span></span></code></pre>
+
+<h2 id="1-3-会话事件"><a href="#1-3-会话事件" class="headerlink" title="1.3 会话事件"></a>1.3 会话事件</h2><div class="data-grid data-grid-link-table"><div class="grid-header"><div class="grid-cell">事件</div><div class="grid-cell">触发时机</div><div class="grid-cell">可做的事</div></div><div class="grid-row"><div class="grid-cell"><code>SessionCreatedEvent</code></div><div class="grid-cell">新会话建立</div><div class="grid-cell">并发控制、埋点</div></div><div class="grid-row"><div class="grid-cell"><code>SessionDestroyedEvent</code></div><div class="grid-cell">会话销毁&#x2F;过期</div><div class="grid-cell">清理资源、写登出日志</div></div><div class="grid-row"><div class="grid-cell"><code>SessionExpiredEvent</code></div><div class="grid-cell">过期触发（Redis zset 调度）</div><div class="grid-cell">与业务离线处理</div></div><div class="grid-row"><div class="grid-cell"><code>SessionIdChangedEvent</code></div><div class="grid-cell">ID 变更（防固定攻击）</div><div class="grid-cell">重新绑定</div></div></div>
+
+<pre class="line-numbers language-java" data-language="java"><code class="language-java"><span class="token annotation punctuation">@Component</span>
+<span class="token keyword">public</span> <span class="token keyword">class</span> <span class="token class-name">SessionDestroyedListener</span> <span class="token keyword">implements</span> <span class="token class-name">ApplicationListener</span><span class="token generics"><span class="token punctuation">&lt;</span><span class="token class-name">SessionDestroyedEvent</span><span class="token punctuation">></span></span> <span class="token punctuation">&#123;</span>
+    <span class="token annotation punctuation">@Override</span>
+    <span class="token keyword">public</span> <span class="token keyword">void</span> <span class="token function">onApplicationEvent</span><span class="token punctuation">(</span><span class="token class-name">SessionDestroyedEvent</span> event<span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+        <span class="token class-name">String</span> userId <span class="token operator">=</span> event<span class="token punctuation">.</span><span class="token function">getSession</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token function">getAttribute</span><span class="token punctuation">(</span><span class="token string">"userId"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+        log<span class="token punctuation">.</span><span class="token function">info</span><span class="token punctuation">(</span><span class="token string">"会话结束 userId=&#123;&#125; reason=&#123;&#125;"</span><span class="token punctuation">,</span> userId<span class="token punctuation">,</span> event<span class="token punctuation">.</span><span class="token function">getSession</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token function">getId</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+        <span class="token comment">// 释放占用的坐席、记录在线时长</span>
+    <span class="token punctuation">&#125;</span>
+<span class="token punctuation">&#125;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<p>注意：<code>SessionDestroyedEvent</code> 在<strong>主动 invalidate</strong> 与<strong>过期</strong>时都会触发，但过期事件的触发依赖 Redis 的 keyspace 通知或轮询清理，可能有分钟级延迟——不能当实时登出用。</p>
+<h2 id="1-4-登录态的两种选型"><a href="#1-4-登录态的两种选型" class="headerlink" title="1.4 登录态的两种选型"></a>1.4 登录态的两种选型</h2><div class="data-grid data-grid-link-table"><div class="grid-header"><div class="grid-cell">方案</div><div class="grid-cell">存储</div><div class="grid-cell">优点</div><div class="grid-cell">缺点</div></div><div class="grid-row"><div class="grid-cell">Session（服务端）</div><div class="grid-cell">Redis</div><div class="grid-cell">可主动踢人、随时失效</div><div class="grid-cell">依赖 Cookie，跨域麻烦</div></div><div class="grid-row"><div class="grid-cell">JWT（客户端）</div><div class="grid-cell">客户端 + 黑名单</div><div class="grid-cell">无状态、易跨域</div><div class="grid-cell">无法即时失效（需黑名单）</div></div><div class="grid-row"><div class="grid-cell">混合</div><div class="grid-cell">JWT 短 token + Redis 刷新票</div><div class="grid-cell">兼顾</div><div class="grid-cell">复杂度高</div></div></div>
+
+<p>需要”管理员一键踢下线”的业务，Session 更合适；纯 API、多端、跨域场景倾向 JWT。Spring Session 也支持把 JWT 作为会话 ID 传递，但本质仍是服务端存储。</p>
+<h2 id="1-5-与-Spring-Security-结合"><a href="#1-5-与-Spring-Security-结合" class="headerlink" title="1.5 与 Spring Security 结合"></a>1.5 与 Spring Security 结合</h2><pre class="line-numbers language-java" data-language="java"><code class="language-java">http<span class="token punctuation">.</span><span class="token function">sessionManagement</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+    <span class="token punctuation">.</span><span class="token function">maximumSessions</span><span class="token punctuation">(</span><span class="token number">1</span><span class="token punctuation">)</span>
+    <span class="token punctuation">.</span><span class="token function">maxSessionsPreventsLogin</span><span class="token punctuation">(</span><span class="token boolean">false</span><span class="token punctuation">)</span>      <span class="token comment">// false：新登录踢旧；true：拒绝新登录</span>
+    <span class="token punctuation">.</span><span class="token function">expiredUrl</span><span class="token punctuation">(</span><span class="token string">"/login?expired"</span><span class="token punctuation">)</span><span class="token punctuation">;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span></span></code></pre>
+
+<div class="data-grid data-grid-link-table"><div class="grid-header"><div class="grid-cell">配置</div><div class="grid-cell">效果</div></div><div class="grid-row"><div class="grid-cell"><code>maximumSessions(1)</code></div><div class="grid-cell">单会话</div></div><div class="grid-row"><div class="grid-cell"><code>maxSessionsPreventsLogin(false)</code></div><div class="grid-cell">后登录踢前登录</div></div><div class="grid-row"><div class="grid-cell"><code>maxSessionsPreventsLogin(true)</code></div><div class="grid-cell">已有会话时拒绝新登录</div></div><div class="grid-row"><div class="grid-cell"><code>sessionFixation().migrateSession()</code></div><div class="grid-cell">登录后换 ID，防固定攻击</div></div></div>
+
+<p>Spring Security 的并发控制依赖 <code>SessionRegistry</code>，与 Spring Session 的 principal 索引是两套机制，同时用要确认 <code>SessionRegistry</code> 实现为 <code>SpringSessionBackedSessionRegistry</code>。</p>
+<h2 id="1-6-常见坑"><a href="#1-6-常见坑" class="headerlink" title="1.6 常见坑"></a>1.6 常见坑</h2><ol>
+<li>principal 索引没写 → <code>findByPrincipalName</code> 永远返回空 → 并发控制不生效</li>
+<li>只在登录处写 <code>PRINCIPAL_NAME_INDEX_NAME</code>，注销时忘了清 → 残留会话</li>
+<li><code>timeout</code> 设成 8h 却当成”登录有效期” → 用户一直操作就永不下线</li>
+<li>依赖过期事件做资源释放 → 事件延迟导致资源长时间占用</li>
+<li>前后端跨域用了 <code>SameSite=Strict</code> → 登录成功后立刻掉登录</li>
+</ol>
+<h2 id="1-7-官方资料"><a href="#1-7-官方资料" class="headerlink" title="1.7 官方资料"></a>1.7 官方资料</h2><ul>
+<li>并发会话控制：<a target="_blank" rel="noopener" href="https://docs.spring.io/spring-session/docs/2.5.x/reference/html/spring-security.html">https://docs.spring.io/spring-session/docs/2.5.x/reference/html/spring-security.html</a></li>
+<li><code>FindByIndexNameSessionRepository</code>：<a target="_blank" rel="noopener" href="https://docs.spring.io/spring-session/docs/2.5.x/api/java/org/springframework/session/FindByIndexNameSessionRepository.html">https://docs.spring.io/spring-session/docs/2.5.x/api/java/org/springframework/session/FindByIndexNameSessionRepository.html</a></li>
+</ul>
+<h2 id="1-8-清单"><a href="#1-8-清单" class="headerlink" title="1.8 清单"></a>1.8 清单</h2><ol>
+<li>并发控制靠 <code>principals:&lt;user&gt;</code> 索引，登录时必须写入 principal</li>
+<li>限制会话数的两种策略：踢最旧、只留最新</li>
+<li><code>timeout</code> 是闲置时长，绝对过期要自己存 <code>loginTime</code> 判断</li>
+<li>过期事件有延迟，不能用于实时资源释放</li>
+<li>需要”一键踢人”用 Session，纯 API 跨域倾向 JWT</li>
+<li>Spring Security 并发控制要确认 <code>SessionRegistry</code> 是 Session 后端实现</li>
+<li>注销时同时清 principal 索引，否则残留</li>
+</ol>
+</div>
+
+  <div class="mb-foot">
+    <a href="/phone/">返回手机首页</a>
+    <a href="/phone/tags/">星迹索引</a>
+  </div>
+</div>
+
+
+<script>
+  /* 作用：懒加载本地 mermaid 库；无 mermaid 代码块时不加载 */
+  function loadLocalMermaid(){
+    return new Promise(function(resolve, reject){
+      if(window.mermaid) return resolve(window.mermaid);
+      var s = document.createElement('script');
+      s.src = '/js/third-party/mermaid/mermaid.min.js?v=10';
+      s.onload = function(){ resolve(window.mermaid); };
+      s.onerror = function(){ reject(new Error('mermaid local load failed')); };
+      document.head.appendChild(s);
+    });
+  }
+
+  /* 作用：把 ```mermaid 代码块替换成 SVG 图（手机端字号略小、图可横向滚动） */
+  async function renderMermaidDiagram(){
+    var blocks = document.querySelectorAll('pre[class*="language-mermaid"]');
+    if(!blocks.length) return;
+    var mermaid;
+    try { mermaid = await loadLocalMermaid(); }
+    catch(e){ console.warn('[mermaid] 本地库加载失败：', e); return; }
+
+    mermaid.initialize({
+      startOnLoad: false,
+      theme: 'base',
+      themeVariables: {
+        darkMode: true,
+        background: 'transparent',
+        fontFamily: '"Microsoft YaHei", "PingFang SC", "Segoe UI", sans-serif',
+        fontSize: '12px',
+        primaryColor: '#062f3d',
+        primaryTextColor: '#d6f6ff',
+        primaryBorderColor: '#00eeff',
+        secondaryColor: '#04222d',
+        tertiaryColor: '#04222d',
+        mainBkg: '#062f3d',
+        nodeBorder: '#00eeff',
+        clusterBkg: '#02161f',
+        clusterBorder: '#00eeff55',
+        lineColor: '#00eeff',
+        textColor: '#c0e8ff',
+        edgeLabelBackground: '#02161f'
+      },
+      flowchart: { curve: 'basis', useMaxWidth: false, htmlLabels: false, nodeSpacing: 30, rankSpacing: 40, padding: 10 }
+    });
+
+    var targets = [];
+    blocks.forEach(function(el){
+      var codeEl = el.querySelector('code');
+      if(!codeEl) return;
+      var div = document.createElement('div');
+      div.className = 'mermaid';
+      div.textContent = codeEl.textContent;
+      el.parentNode.replaceChild(div, el);
+      targets.push(div);
+    });
+    if(!targets.length) return;
+    try { await mermaid.run({ nodes: targets }); }
+    catch(e){ console.warn('[mermaid] 渲染失败：', e); }
+  }
+  /* 作用：多次触发兜底（延迟重试 + DOM 变化），防止某次时机没跑到导致图表留在代码块 */
+  var mmBusy = false;
+  function scheduleMermaid(){
+    if(mmBusy) return;
+    mmBusy = true;
+    renderMermaidDiagram().then(function(){ mmBusy = false; }, function(){ mmBusy = false; });
+  }
+  scheduleMermaid();
+  window.addEventListener('load', scheduleMermaid);
+  [1000, 3000, 8000].forEach(function(ms){ setTimeout(scheduleMermaid, ms); });
+  if(document.readyState !== 'loading') scheduleMermaid();
+  if(window.MutationObserver){
+    var mmTimer = null;
+    var mmObserver = new MutationObserver(function(){
+      clearTimeout(mmTimer);
+      mmTimer = setTimeout(scheduleMermaid, 400);
+    });
+    mmObserver.observe(document.querySelector('.mb-article') || document.body, { childList: true, subtree: true });
+  }
+</script>
+</body>
+</html>

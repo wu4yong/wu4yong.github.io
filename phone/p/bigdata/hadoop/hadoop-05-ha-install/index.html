@@ -1,0 +1,328 @@
+<!--
+  ============================================
+  手机端 · 文章原文页
+  文件：phone/post.njk
+  适用终端：手机端（路由 /phone/p/<slug>/，由 scripts/phone-routes.js 生成）
+  作用：手机阅读单篇文章；单列布局、无侧栏无雷达，替代电脑端 post.njk
+        数据由生成期算好：page.item = { title, dateStr, content, cats, tags }
+  样式依赖：source/css/theme/phone/common.css、source/css/theme/phone/list.css
+  组件依赖：phone/_components/Particles.njk
+  最后修改：2026-11-11
+  ============================================
+-->
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="color-scheme" content="dark">
+  <meta name="theme-color" content="#020817">
+  <!-- 首帧兜底：浏览器默认画布是白的，样式未解析前会闪一下白。这条规则先锁死深空底色 -->
+  <style>html{background-color:#020817}</style>
+  <title>Hadoop（五）集群规划与 HA 部署 - 时空秘境</title>
+  <!-- 手机端样式：基础 + 列表/正文，外链引入（源文件 source/css/theme/phone/） -->
+  <link rel="stylesheet" href="/css/theme/phone/common.css">
+  <link rel="stylesheet" href="/css/theme/phone/list.css">
+<meta name="generator" content="Hexo 8.1.2"></head>
+<body>
+<div class="mb-shell">
+  <!--
+  ============================================
+  手机端星空粒子组件
+  文件：Particles.njk
+  适用终端：手机端
+  作用：Particles.njk 的手机端副本（nunjucks 子目录 include 取不到上级）
+        参数与电脑端 _components/Particles.njk 保持一致：
+        粒子 95 / 连线 118px / opacity 0.32，外加星座层与零星闪烁层
+  最后修改：2026-11-12
+  ============================================
+--><!-- z-index 必须是 0：负层级会被 body 不透明背景盖住，粒子在跑却看不见 -->
+<div id="particles" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 0; pointer-events: none;"></div>
+<!-- 星座层（与首页同一套：随机零星散布星座图形 + 偶尔闪烁的小星） -->
+<div id="constellations" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 1; pointer-events: none;" aria-hidden="true"></div>
+<script src="/js/particles.min.js"></script>
+<script>
+particlesJS("particles", {
+  particles: {
+    number: {
+      value: 95,
+      density: {
+        enable: true,
+        value_area: 800
+      }
+    },
+    color: {
+      value: "#00eeff"
+    },
+    shape: {
+      type: "circle",
+      stroke: {
+        width: 0,
+        color: "#000000"
+      }
+    },
+    opacity: {
+      value: 0.6,
+      random: true,
+      anim: {
+        enable: true,
+        speed: 0.5,
+        opacity_min: 0.1,
+        sync: false
+      }
+    },
+    size: {
+      value: 3,
+      random: true,
+      anim: {
+        enable: true,
+        speed: 2,
+        size_min: 0.1,
+        sync: false
+      }
+    },
+    line_linked: {
+      enable: true,
+      distance: 118,
+      color: "#00eeff",
+      opacity: 0.32,
+      width: 1
+    },
+    move: {
+      enable: true,
+      speed: 0.8,
+      direction: "none",
+      random: true,
+      straight: false,
+      out_mode: "out",
+      bounce: false,
+      attract: {
+        enable: true,
+        rotateX: 600,
+        rotateY: 1200
+      }
+    }
+  },
+  interactivity: {
+    detect_on: "canvas",
+    events: {
+      onhover: {
+        enable: true,
+        mode: "grab"       // 手指按住时粒子聚集
+      },
+      onclick: {
+        enable: true,
+        mode: "push"       // 点击时产生新粒子
+      },
+      resize: true
+    },
+    modes: {
+      grab: {
+        distance: 200,
+        line_linked: {
+          opacity: 1
+        }
+      },
+      push: {
+        particles_nb: 6
+      }
+    }
+  },
+  retina_detect: true
+});
+</script>
+<!-- 星座 + 零星闪烁层：与电脑端共用同一份绘制脚本 -->
+<script src="/js/theme/home/starfield.js"></script>
+
+
+  <div class="mb-top">
+    <a class="mb-back" href="/phone/">← 返回手机首页</a>
+    <span class="mb-sub" style="margin:0">2023-02-28</span>
+  </div>
+
+  <h1 class="mb-title">Hadoop（五）集群规划与 HA 部署</h1>
+  <div class="mb-sub">
+    分类：bigdata · hadoop
+     ｜ 标签：Hadoop
+  </div>
+
+  <div class="mb-article"><div class="essay-banner essay-hadoop"></div>
+
+<h1 id="集群规划与-HA-部署"><a href="#集群规划与-HA-部署" class="headerlink" title="集群规划与 HA 部署"></a><strong>集群规划与 HA 部署</strong></h1><p>前面几篇讲的是组件怎么工作，这一篇落到装机：一个生产集群怎么规划角色，三份核心配置各写什么，双 NameNode 高可用靠 JournalNode 与 ZKFC 怎么搭，以及启动顺序为什么不能乱。</p>
+<p><img src="https://wu4yong.github.io/starry-images/assets/img/hadoop/hadoop-05-ha-install.webp" alt="双主节点通过共享日志通道与协调服务互联，外围工作节点统一接入"></p>
+<p><em>双主节点通过共享日志通道与协调服务互联，外围工作节点统一接入</em></p>
+<h2 id="1-1-集群规划：角色先分开再谈机器"><a href="#1-1-集群规划：角色先分开再谈机器" class="headerlink" title="1.1 集群规划：角色先分开再谈机器"></a>1.1 集群规划：角色先分开再谈机器</h2><p>规划集群第一步不是选配置，而是把角色列出来，再按冗余要求分配机器：</p>
+<div class="data-grid data-grid-link-table"><div class="grid-header"><div class="grid-cell">角色</div><div class="grid-cell">数量建议</div><div class="grid-cell">说明</div></div><div class="grid-row"><div class="grid-cell">NameNode（Active&#x2F;Standby）</div><div class="grid-cell">2</div><div class="grid-cell">HA 双主，共享 editlog，ZKFC 随主节点部署</div></div><div class="grid-row"><div class="grid-cell">JournalNode</div><div class="grid-cell">奇数个（3 起步）</div><div class="grid-cell">保存共享 editlog，多数派写入成功才算提交</div></div><div class="grid-row"><div class="grid-cell">ZooKeeper</div><div class="grid-cell">奇数个（3 起步）</div><div class="grid-cell">保存 HA 状态，ZKFC 据此做自动切换</div></div><div class="grid-row"><div class="grid-cell">DataNode &#x2F; NodeManager</div><div class="grid-cell">按数据量与算力扩缩</div><div class="grid-cell">存储与计算混部，也可分开成专用节点</div></div></div>
+
+<p>小集群可以让 NameNode、JournalNode、ZK 挤在同一批主节点上，但生产环境建议 JournalNode 与 ZK 单独落位，避免主节点重启影响多数派。规划时先定机架分布：副本与 JournalNode 都要跨机架，否则机架断电直接击穿冗余。</p>
+<h2 id="1-2-三份核心配置各管什么"><a href="#1-2-三份核心配置各管什么" class="headerlink" title="1.2 三份核心配置各管什么"></a>1.2 三份核心配置各管什么</h2><p>Hadoop 的配置集中在 <code>core-site.xml</code>、<code>hdfs-site.xml</code>、<code>yarn-site.xml</code> 三个文件，职责边界先记清：</p>
+<div class="data-grid data-grid-link-table"><div class="grid-header"><div class="grid-cell">配置文件</div><div class="grid-cell">管什么</div><div class="grid-cell">典型参数</div></div><div class="grid-row"><div class="grid-cell">core-site.xml</div><div class="grid-cell">集群默认文件名、身份、临时目录</div><div class="grid-cell"><code>fs.defaultFS</code>、<code>hadoop.tmp.dir</code></div></div><div class="grid-row"><div class="grid-cell">hdfs-site.xml</div><div class="grid-cell">副本、块大小、HA 命名服务、JournalNode 地址</div><div class="grid-cell"><code>dfs.replication</code>、<code>dfs.namenode.shared.edits.dir</code></div></div><div class="grid-row"><div class="grid-cell">yarn-site.xml</div><div class="grid-cell">调度器、NM 资源、AM 重启策略</div><div class="grid-cell"><code>yarn.resourcemanager.scheduler.class</code></div></div></div>
+
+<p><code>core-site.xml</code> 里最基础的一项是默认文件系统地址：</p>
+<pre class="line-numbers language-markup" data-language="markup"><code class="language-markup"><span class="token comment">&lt;!-- 集群对外的 HDFS 入口，HA 下指向 nameservice 而非单台 NN --></span>
+<span class="token tag"><span class="token tag"><span class="token punctuation">&lt;</span>property</span><span class="token punctuation">></span></span>
+  <span class="token tag"><span class="token tag"><span class="token punctuation">&lt;</span>name</span><span class="token punctuation">></span></span>fs.defaultFS<span class="token tag"><span class="token tag"><span class="token punctuation">&lt;/</span>name</span><span class="token punctuation">></span></span>
+  <span class="token tag"><span class="token tag"><span class="token punctuation">&lt;</span>value</span><span class="token punctuation">></span></span>hdfs://mycluster<span class="token tag"><span class="token tag"><span class="token punctuation">&lt;/</span>value</span><span class="token punctuation">></span></span>
+<span class="token tag"><span class="token tag"><span class="token punctuation">&lt;/</span>property</span><span class="token punctuation">></span></span>
+<span class="token comment">&lt;!-- 各节点本地临时目录，需提前建好并授权 --></span>
+<span class="token tag"><span class="token tag"><span class="token punctuation">&lt;</span>property</span><span class="token punctuation">></span></span>
+  <span class="token tag"><span class="token tag"><span class="token punctuation">&lt;</span>name</span><span class="token punctuation">></span></span>hadoop.tmp.dir<span class="token tag"><span class="token tag"><span class="token punctuation">&lt;/</span>name</span><span class="token punctuation">></span></span>
+  <span class="token tag"><span class="token tag"><span class="token punctuation">&lt;</span>value</span><span class="token punctuation">></span></span>/data/hadoop/tmp<span class="token tag"><span class="token tag"><span class="token punctuation">&lt;/</span>value</span><span class="token punctuation">></span></span>
+<span class="token tag"><span class="token tag"><span class="token punctuation">&lt;/</span>property</span><span class="token punctuation">></span></span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<p><code>hdfs-site.xml</code> 里配置副本、块大小与 HA 通道：</p>
+<pre class="line-numbers language-markup" data-language="markup"><code class="language-markup"><span class="token comment">&lt;!-- 副本因子与块大小，3.x 默认即 3 与 128MB，显式写出便于审计 --></span>
+<span class="token tag"><span class="token tag"><span class="token punctuation">&lt;</span>property</span><span class="token punctuation">></span></span>
+  <span class="token tag"><span class="token tag"><span class="token punctuation">&lt;</span>name</span><span class="token punctuation">></span></span>dfs.replication<span class="token tag"><span class="token tag"><span class="token punctuation">&lt;/</span>name</span><span class="token punctuation">></span></span>
+  <span class="token tag"><span class="token tag"><span class="token punctuation">&lt;</span>value</span><span class="token punctuation">></span></span>3<span class="token tag"><span class="token tag"><span class="token punctuation">&lt;/</span>value</span><span class="token punctuation">></span></span>
+<span class="token tag"><span class="token tag"><span class="token punctuation">&lt;/</span>property</span><span class="token punctuation">></span></span>
+<span class="token tag"><span class="token tag"><span class="token punctuation">&lt;</span>property</span><span class="token punctuation">></span></span>
+  <span class="token tag"><span class="token tag"><span class="token punctuation">&lt;</span>name</span><span class="token punctuation">></span></span>dfs.blocksize<span class="token tag"><span class="token tag"><span class="token punctuation">&lt;/</span>name</span><span class="token punctuation">></span></span>
+  <span class="token tag"><span class="token tag"><span class="token punctuation">&lt;</span>value</span><span class="token punctuation">></span></span>134217728<span class="token tag"><span class="token tag"><span class="token punctuation">&lt;/</span>value</span><span class="token punctuation">></span></span>
+<span class="token tag"><span class="token tag"><span class="token punctuation">&lt;/</span>property</span><span class="token punctuation">></span></span>
+<span class="token comment">&lt;!-- 共享 editlog 的 JournalNode 集合，QJM 多数派写成功即生效 --></span>
+<span class="token tag"><span class="token tag"><span class="token punctuation">&lt;</span>property</span><span class="token punctuation">></span></span>
+  <span class="token tag"><span class="token tag"><span class="token punctuation">&lt;</span>name</span><span class="token punctuation">></span></span>dfs.namenode.shared.edits.dir<span class="token tag"><span class="token tag"><span class="token punctuation">&lt;/</span>name</span><span class="token punctuation">></span></span>
+  <span class="token tag"><span class="token tag"><span class="token punctuation">&lt;</span>value</span><span class="token punctuation">></span></span>qjournal://jn1:8485;jn2:8485;jn3:8485/mycluster<span class="token tag"><span class="token tag"><span class="token punctuation">&lt;/</span>value</span><span class="token punctuation">></span></span>
+<span class="token tag"><span class="token tag"><span class="token punctuation">&lt;/</span>property</span><span class="token punctuation">></span></span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<p><code>yarn-site.xml</code> 选定调度器并声明 RM 角色：</p>
+<pre class="line-numbers language-markup" data-language="markup"><code class="language-markup"><span class="token comment">&lt;!-- 调度器类型，Capacity 与 Fair 二选一，切换需重启 RM --></span>
+<span class="token tag"><span class="token tag"><span class="token punctuation">&lt;</span>property</span><span class="token punctuation">></span></span>
+  <span class="token tag"><span class="token tag"><span class="token punctuation">&lt;</span>name</span><span class="token punctuation">></span></span>yarn.resourcemanager.scheduler.class<span class="token tag"><span class="token tag"><span class="token punctuation">&lt;/</span>name</span><span class="token punctuation">></span></span>
+  <span class="token tag"><span class="token tag"><span class="token punctuation">&lt;</span>value</span><span class="token punctuation">></span></span>org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacityScheduler<span class="token tag"><span class="token tag"><span class="token punctuation">&lt;/</span>value</span><span class="token punctuation">></span></span>
+<span class="token tag"><span class="token tag"><span class="token punctuation">&lt;/</span>property</span><span class="token punctuation">></span></span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<h2 id="1-3-QJM-加-ZKFC：双主怎么保持一致"><a href="#1-3-QJM-加-ZKFC：双主怎么保持一致" class="headerlink" title="1.3 QJM 加 ZKFC：双主怎么保持一致"></a>1.3 QJM 加 ZKFC：双主怎么保持一致</h2><p>单 NameNode 时代最大的风险是主节点单点。HA 方案由两部分组成：</p>
+<p><strong>QJM（Quorum Journal Manager）</strong>：Active NameNode 把 editlog 写入一组 JournalNode，超过半数节点写成功就视为提交；Standby 从同一组 JournalNode 读流水回放，保持元数据追平。JournalNode 数量必须是奇数，3 个节点允许挂 1 个。</p>
+<p><strong>ZKFC（ZooKeeper Failover Controller）</strong>：每个 NameNode 旁边驻留一个 ZKFC 进程，负责健康检查与抢占锁：</p>
+<ul>
+<li>ZKFC 监测本机 NameNode 是否健康，健康则在 ZooKeeper 上持有主锁</li>
+<li>Active 节点失效时，对应 ZKFC 失去锁，Standby 的 ZKFC 抢到锁并触发切换</li>
+<li>切换后新 Active 从 JournalNode 回放最新流水再对外服务</li>
+</ul>
+<div class="data-grid data-grid-link-table"><div class="grid-header"><div class="grid-cell">组件</div><div class="grid-cell">解决什么</div><div class="grid-cell">挂掉的影响</div></div><div class="grid-row"><div class="grid-cell">JournalNode</div><div class="grid-cell">共享 editlog，保证两主元数据一致</div><div class="grid-cell">多数派丢失后 NameNode 无法对外写</div></div><div class="grid-row"><div class="grid-cell">ZKFC</div><div class="grid-cell">健康检查与自动故障切换</div><div class="grid-cell">不会自动切换，需人工介入</div></div><div class="grid-row"><div class="grid-cell">ZooKeeper</div><div class="grid-cell">保存主锁与 HA 状态</div><div class="grid-cell">ZK 不可用时无法完成选主</div></div></div>
+
+<h2 id="1-4-部署步骤与启动顺序"><a href="#1-4-部署步骤与启动顺序" class="headerlink" title="1.4 部署步骤与启动顺序"></a>1.4 部署步骤与启动顺序</h2><p>HA 集群的初始化与启动有严格顺序，跳步会导致元数据不一致：</p>
+<ol>
+<li>准备 JDK、免密 SSH、目录权限，同步 <code>core-site.xml</code>、<code>hdfs-site.xml</code>、<code>yarn-site.xml</code> 到所有节点</li>
+<li>启动 ZooKeeper 集群并确认多数节点在线</li>
+<li>启动所有 JournalNode 进程</li>
+<li>在一台 NameNode 上执行 <code>hdfs namenode -format</code> 初始化元数据，再用 <code>hdfs namenode -bootstrapStandby</code> 把元数据同步到 Standby</li>
+<li>依次启动两台 NameNode 与各自的 ZKFC，由 ZK 选举出 Active</li>
+<li>启动所有 DataNode 与 NodeManager</li>
+<li>通过 Web UI 核对：3.x NameNode 页面端口 <code>9870</code>，DataNode 页面端口 <code>9864</code></li>
+</ol>
+<p>启动顺序反过来记一遍：<strong>先 ZK，再 JournalNode，格式化并同步 NN，起 NN 与 ZKFC，最后起 DN 与 NM</strong>。不能先起 DataNode 再格式化 NN，否则块汇报与元数据对不上。</p>
+<h2 id="1-5-几个容易踩的坑"><a href="#1-5-几个容易踩的坑" class="headerlink" title="1.5 几个容易踩的坑"></a>1.5 几个容易踩的坑</h2><ul>
+<li>三台 JournalNode 部署在同一台物理机上，机架或机器故障时多数派直接丢失，HA 名存实亡</li>
+<li>只格式化了 Active，Standby 没做 <code>bootstrapStandby</code>，两主元数据起点不一致，切换后报流水缺口</li>
+<li>照着 1.x 教程用 <code>50070</code> 端口访问，3.x 默认已改为 <code>9870</code>；DataNode 对应端口为 <code>9864</code></li>
+<li>主机名、<code>/etc/hosts</code> 或 DNS 解析不一致，JournalNode 与 ZKFC 互联超时，选主反复失败</li>
+<li>目录权限只给了当前用户，NM 起 Container 时写临时目录被拒，任务全部失败</li>
+<li>以为配了 HA 就能丢盘，NameNode 本地 fsimage 损坏时仍需从备份或 JournalNode 恢复，日常元数据备份不能省</li>
+</ul>
+<h2 id="1-6-官方资料"><a href="#1-6-官方资料" class="headerlink" title="1.6 官方资料"></a>1.6 官方资料</h2><ul>
+<li>HDFS HA 指南：<a target="_blank" rel="noopener" href="https://hadoop.apache.org/docs/stable/hadoop-project-dist/hadoop-hdfs/HDFSHighAvailabilityWithQJM.html">https://hadoop.apache.org/docs/stable/hadoop-project-dist/hadoop-hdfs/HDFSHighAvailabilityWithQJM.html</a></li>
+<li>命令参考：<a target="_blank" rel="noopener" href="https://hadoop.apache.org/docs/stable/hadoop-project-dist/hadoop-hdfs/HDFSCommands.html">https://hadoop.apache.org/docs/stable/hadoop-project-dist/hadoop-hdfs/HDFSCommands.html</a></li>
+<li>YARN HA 配置：<a target="_blank" rel="noopener" href="https://hadoop.apache.org/docs/stable/hadoop-yarn/hadoop-yarn-site/ResourceManagerHA.html">https://hadoop.apache.org/docs/stable/hadoop-yarn/hadoop-yarn-site/ResourceManagerHA.html</a></li>
+<li>集群安装指南：<a target="_blank" rel="noopener" href="https://hadoop.apache.org/docs/stable/hadoop-project-dist/hadoop-common/SingleCluster.html">https://hadoop.apache.org/docs/stable/hadoop-project-dist/hadoop-common/SingleCluster.html</a></li>
+</ul>
+<h2 id="1-7-清单"><a href="#1-7-清单" class="headerlink" title="1.7 清单"></a>1.7 清单</h2><ol>
+<li>规划先列角色：双 NameNode、奇数 JournalNode、奇数 ZooKeeper、若干 DataNode&#x2F;NM</li>
+<li><code>core-site.xml</code> 定入口与临时目录，<code>hdfs-site.xml</code> 定副本块与 HA 通道，<code>yarn-site.xml</code> 定调度器</li>
+<li>QJM 靠多数派写共享 editlog，ZKFC 靠 ZK 锁做健康检查与自动切换</li>
+<li>启动顺序：ZK → JournalNode → 格式化并同步 NN → NN 与 ZKFC → DN 与 NM</li>
+<li>3.x Web UI 端口：NameNode <code>9870</code>，DataNode <code>9864</code>；块默认 128MB、副本 3</li>
+<li>HA 不等于免备份，元数据日常备份与恢复演练仍要纳入运维</li>
+</ol>
+</div>
+
+  <div class="mb-foot">
+    <a href="/phone/">返回手机首页</a>
+    <a href="/phone/tags/">星迹索引</a>
+  </div>
+</div>
+
+
+<script>
+  /* 作用：懒加载本地 mermaid 库；无 mermaid 代码块时不加载 */
+  function loadLocalMermaid(){
+    return new Promise(function(resolve, reject){
+      if(window.mermaid) return resolve(window.mermaid);
+      var s = document.createElement('script');
+      s.src = '/js/third-party/mermaid/mermaid.min.js?v=10';
+      s.onload = function(){ resolve(window.mermaid); };
+      s.onerror = function(){ reject(new Error('mermaid local load failed')); };
+      document.head.appendChild(s);
+    });
+  }
+
+  /* 作用：把 ```mermaid 代码块替换成 SVG 图（手机端字号略小、图可横向滚动） */
+  async function renderMermaidDiagram(){
+    var blocks = document.querySelectorAll('pre[class*="language-mermaid"]');
+    if(!blocks.length) return;
+    var mermaid;
+    try { mermaid = await loadLocalMermaid(); }
+    catch(e){ console.warn('[mermaid] 本地库加载失败：', e); return; }
+
+    mermaid.initialize({
+      startOnLoad: false,
+      theme: 'base',
+      themeVariables: {
+        darkMode: true,
+        background: 'transparent',
+        fontFamily: '"Microsoft YaHei", "PingFang SC", "Segoe UI", sans-serif',
+        fontSize: '12px',
+        primaryColor: '#062f3d',
+        primaryTextColor: '#d6f6ff',
+        primaryBorderColor: '#00eeff',
+        secondaryColor: '#04222d',
+        tertiaryColor: '#04222d',
+        mainBkg: '#062f3d',
+        nodeBorder: '#00eeff',
+        clusterBkg: '#02161f',
+        clusterBorder: '#00eeff55',
+        lineColor: '#00eeff',
+        textColor: '#c0e8ff',
+        edgeLabelBackground: '#02161f'
+      },
+      flowchart: { curve: 'basis', useMaxWidth: false, htmlLabels: false, nodeSpacing: 30, rankSpacing: 40, padding: 10 }
+    });
+
+    var targets = [];
+    blocks.forEach(function(el){
+      var codeEl = el.querySelector('code');
+      if(!codeEl) return;
+      var div = document.createElement('div');
+      div.className = 'mermaid';
+      div.textContent = codeEl.textContent;
+      el.parentNode.replaceChild(div, el);
+      targets.push(div);
+    });
+    if(!targets.length) return;
+    try { await mermaid.run({ nodes: targets }); }
+    catch(e){ console.warn('[mermaid] 渲染失败：', e); }
+  }
+  /* 作用：多次触发兜底（延迟重试 + DOM 变化），防止某次时机没跑到导致图表留在代码块 */
+  var mmBusy = false;
+  function scheduleMermaid(){
+    if(mmBusy) return;
+    mmBusy = true;
+    renderMermaidDiagram().then(function(){ mmBusy = false; }, function(){ mmBusy = false; });
+  }
+  scheduleMermaid();
+  window.addEventListener('load', scheduleMermaid);
+  [1000, 3000, 8000].forEach(function(ms){ setTimeout(scheduleMermaid, ms); });
+  if(document.readyState !== 'loading') scheduleMermaid();
+  if(window.MutationObserver){
+    var mmTimer = null;
+    var mmObserver = new MutationObserver(function(){
+      clearTimeout(mmTimer);
+      mmTimer = setTimeout(scheduleMermaid, 400);
+    });
+    mmObserver.observe(document.querySelector('.mb-article') || document.body, { childList: true, subtree: true });
+  }
+</script>
+</body>
+</html>

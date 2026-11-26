@@ -1,0 +1,352 @@
+<!--
+  ============================================
+  手机端 · 文章原文页
+  文件：phone/post.njk
+  适用终端：手机端（路由 /phone/p/<slug>/，由 scripts/phone-routes.js 生成）
+  作用：手机阅读单篇文章；单列布局、无侧栏无雷达，替代电脑端 post.njk
+        数据由生成期算好：page.item = { title, dateStr, content, cats, tags }
+  样式依赖：source/css/theme/phone/common.css、source/css/theme/phone/list.css
+  组件依赖：phone/_components/Particles.njk
+  最后修改：2026-11-11
+  ============================================
+-->
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="color-scheme" content="dark">
+  <meta name="theme-color" content="#020817">
+  <!-- 首帧兜底：浏览器默认画布是白的，样式未解析前会闪一下白。这条规则先锁死深空底色 -->
+  <style>html{background-color:#020817}</style>
+  <title>Java 泛型（六）泛型与数组、反射 - 时空秘境</title>
+  <!-- 手机端样式：基础 + 列表/正文，外链引入（源文件 source/css/theme/phone/） -->
+  <link rel="stylesheet" href="/css/theme/phone/common.css">
+  <link rel="stylesheet" href="/css/theme/phone/list.css">
+<meta name="generator" content="Hexo 8.1.2"></head>
+<body>
+<div class="mb-shell">
+  <!--
+  ============================================
+  手机端星空粒子组件
+  文件：Particles.njk
+  适用终端：手机端
+  作用：Particles.njk 的手机端副本（nunjucks 子目录 include 取不到上级）
+        参数与电脑端 _components/Particles.njk 保持一致：
+        粒子 95 / 连线 118px / opacity 0.32，外加星座层与零星闪烁层
+  最后修改：2026-11-12
+  ============================================
+--><!-- z-index 必须是 0：负层级会被 body 不透明背景盖住，粒子在跑却看不见 -->
+<div id="particles" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 0; pointer-events: none;"></div>
+<!-- 星座层（与首页同一套：随机零星散布星座图形 + 偶尔闪烁的小星） -->
+<div id="constellations" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 1; pointer-events: none;" aria-hidden="true"></div>
+<script src="/js/particles.min.js"></script>
+<script>
+particlesJS("particles", {
+  particles: {
+    number: {
+      value: 95,
+      density: {
+        enable: true,
+        value_area: 800
+      }
+    },
+    color: {
+      value: "#00eeff"
+    },
+    shape: {
+      type: "circle",
+      stroke: {
+        width: 0,
+        color: "#000000"
+      }
+    },
+    opacity: {
+      value: 0.6,
+      random: true,
+      anim: {
+        enable: true,
+        speed: 0.5,
+        opacity_min: 0.1,
+        sync: false
+      }
+    },
+    size: {
+      value: 3,
+      random: true,
+      anim: {
+        enable: true,
+        speed: 2,
+        size_min: 0.1,
+        sync: false
+      }
+    },
+    line_linked: {
+      enable: true,
+      distance: 118,
+      color: "#00eeff",
+      opacity: 0.32,
+      width: 1
+    },
+    move: {
+      enable: true,
+      speed: 0.8,
+      direction: "none",
+      random: true,
+      straight: false,
+      out_mode: "out",
+      bounce: false,
+      attract: {
+        enable: true,
+        rotateX: 600,
+        rotateY: 1200
+      }
+    }
+  },
+  interactivity: {
+    detect_on: "canvas",
+    events: {
+      onhover: {
+        enable: true,
+        mode: "grab"       // 手指按住时粒子聚集
+      },
+      onclick: {
+        enable: true,
+        mode: "push"       // 点击时产生新粒子
+      },
+      resize: true
+    },
+    modes: {
+      grab: {
+        distance: 200,
+        line_linked: {
+          opacity: 1
+        }
+      },
+      push: {
+        particles_nb: 6
+      }
+    }
+  },
+  retina_detect: true
+});
+</script>
+<!-- 星座 + 零星闪烁层：与电脑端共用同一份绘制脚本 -->
+<script src="/js/theme/home/starfield.js"></script>
+
+
+  <div class="mb-top">
+    <a class="mb-back" href="/phone/">← 返回手机首页</a>
+    <span class="mb-sub" style="margin:0">2022-03-13</span>
+  </div>
+
+  <h1 class="mb-title">Java 泛型（六）泛型与数组、反射</h1>
+  <div class="mb-sub">
+    分类：java · core
+     ｜ 标签：Java
+  </div>
+
+  <div class="mb-article"><div class="essay-banner essay-java"></div>
+
+<h1 id="泛型的边界：数组与反射"><a href="#泛型的边界：数组与反射" class="headerlink" title="泛型的边界：数组与反射"></a><strong>泛型的边界：数组与反射</strong></h1><p>数组是协变的、运行期要检查元素类型；泛型是不变的、运行期没有类型。两者硬碰就产生”不能创建泛型数组”。反过来，反射能读到 <code>Signature</code> 里的泛型声明，所以”泛型 + 反射”又是框架做类型推断的唯一出路。</p>
+<p><img src="https://wu4yong.github.io/starry-images/assets/img/java/generics/java-generics-06-array-reflection.webp" alt="数组要运行期类型，泛型没有运行期类型——两者交界处就是&quot;不能创建泛型数组&quot;"></p>
+<p><em>数组要运行期类型，泛型没有运行期类型——两者交界处就是”不能创建泛型数组”</em></p>
+<h2 id="1-1-为什么不能-new-T"><a href="#1-1-为什么不能-new-T" class="headerlink" title="1.1 为什么不能 new T[]"></a>1.1 为什么不能 <code>new T[]</code></h2><pre class="line-numbers language-java" data-language="java"><code class="language-java"><span class="token keyword">class</span> <span class="token class-name">Box</span><span class="token generics"><span class="token punctuation">&lt;</span><span class="token class-name">T</span><span class="token punctuation">></span></span> <span class="token punctuation">&#123;</span>
+    <span class="token comment">// T[] arr = new T[10];          // 编译错误：generic array creation</span>
+    <span class="token comment">// List&lt;String>[] l = new List&lt;String>[10];   // 同样错误</span>
+    <span class="token class-name">List</span><span class="token generics"><span class="token punctuation">&lt;</span><span class="token class-name">String</span><span class="token punctuation">></span></span><span class="token punctuation">[</span><span class="token punctuation">]</span> raw <span class="token operator">=</span> <span class="token keyword">new</span> <span class="token class-name">List</span><span class="token punctuation">[</span><span class="token number">10</span><span class="token punctuation">]</span><span class="token punctuation">;</span>            <span class="token comment">// 只能造裸数组（unchecked 警告）</span>
+<span class="token punctuation">&#125;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<p>原因拆成两句话：</p>
+<ol>
+<li><strong>数组在运行期知道自己的元素类型</strong>，创建时必须确定（<code>new String[3]</code> 的类就是 <code>String[]</code>）</li>
+<li><strong>泛型在运行期没有类型</strong>，<code>T</code> 已被擦除，编译器无法生成”元素类型是 <code>T</code> 的数组”</li>
+</ol>
+<p>再叠加数组的协变性，就会出现类型漏洞：</p>
+<pre class="line-numbers language-java" data-language="java"><code class="language-java"><span class="token class-name">Object</span><span class="token punctuation">[</span><span class="token punctuation">]</span> objs <span class="token operator">=</span> <span class="token keyword">new</span> <span class="token class-name">String</span><span class="token punctuation">[</span><span class="token number">3</span><span class="token punctuation">]</span><span class="token punctuation">;</span>         <span class="token comment">// 数组协变，允许</span>
+objs<span class="token punctuation">[</span><span class="token number">0</span><span class="token punctuation">]</span> <span class="token operator">=</span> <span class="token number">123</span><span class="token punctuation">;</span>                         <span class="token comment">// 运行期抛 ArrayStoreException</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span></span></code></pre>
+
+<p>如果允许 <code>List&lt;String&gt;[] arr = new List&lt;String&gt;[3]</code>，那么：</p>
+<pre class="line-numbers language-java" data-language="java"><code class="language-java"><span class="token class-name">Object</span><span class="token punctuation">[</span><span class="token punctuation">]</span> o <span class="token operator">=</span> arr<span class="token punctuation">;</span>                      <span class="token comment">// 协变 → 合法</span>
+o<span class="token punctuation">[</span><span class="token number">0</span><span class="token punctuation">]</span> <span class="token operator">=</span> <span class="token keyword">new</span> <span class="token class-name">ArrayList</span><span class="token generics"><span class="token punctuation">&lt;</span><span class="token class-name">Integer</span><span class="token punctuation">></span></span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>       <span class="token comment">// 数组检查只看"List"，放进去了</span>
+<span class="token class-name">List</span><span class="token generics"><span class="token punctuation">&lt;</span><span class="token class-name">String</span><span class="token punctuation">></span></span> x <span class="token operator">=</span> arr<span class="token punctuation">[</span><span class="token number">0</span><span class="token punctuation">]</span><span class="token punctuation">;</span>               <span class="token comment">// 从"字符串列表"里拿出整数 → ClassCastException</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span></span></code></pre>
+
+<p>也就是说，允许创建泛型数组会破坏类型安全，而且检查点在数组层（<code>List</code>）而不是元素层（<code>String</code>）。编译器选择直接禁止。</p>
+<h2 id="1-2-合法的”泛型数组”写法"><a href="#1-2-合法的”泛型数组”写法" class="headerlink" title="1.2 合法的”泛型数组”写法"></a>1.2 合法的”泛型数组”写法</h2><div class="data-grid data-grid-link-table"><div class="grid-header"><div class="grid-cell">写法</div><div class="grid-cell">是否合法</div><div class="grid-cell">说明</div></div><div class="grid-row"><div class="grid-cell"><code>new T[10]</code></div><div class="grid-cell">否</div><div class="grid-cell">编译错误</div></div><div class="grid-row"><div class="grid-cell"><code>new List&lt;String&gt;[10]</code></div><div class="grid-cell">否</div><div class="grid-cell">编译错误</div></div><div class="grid-row"><div class="grid-cell"><code>new List[10]</code></div><div class="grid-cell">是（unchecked）</div><div class="grid-cell">裸数组，元素类型退化为 <code>List</code></div></div><div class="grid-row"><div class="grid-cell"><code>(T[]) new Object[10]</code></div><div class="grid-cell">是（unchecked）</div><div class="grid-cell">常见兜底，运行时若被当具体类型用仍有风险</div></div><div class="grid-row"><div class="grid-cell"><code>Array.newInstance(type, n)</code></div><div class="grid-cell">是</div><div class="grid-cell">反射创建，运行期类型正确</div></div><div class="grid-row"><div class="grid-cell"><code>List&lt;T&gt;</code> 代替 <code>T[]</code></div><div class="grid-cell">是</div><div class="grid-cell">最推荐</div></div></div>
+
+<pre class="line-numbers language-java" data-language="java"><code class="language-java"><span class="token comment">// 反射创建真正的泛型数组</span>
+<span class="token annotation punctuation">@SuppressWarnings</span><span class="token punctuation">(</span><span class="token string">"unchecked"</span><span class="token punctuation">)</span>
+<span class="token keyword">static</span> <span class="token generics"><span class="token punctuation">&lt;</span><span class="token class-name">T</span><span class="token punctuation">></span></span> <span class="token class-name">T</span><span class="token punctuation">[</span><span class="token punctuation">]</span> <span class="token function">newArray</span><span class="token punctuation">(</span><span class="token class-name">Class</span><span class="token generics"><span class="token punctuation">&lt;</span><span class="token class-name">T</span><span class="token punctuation">></span></span> type<span class="token punctuation">,</span> <span class="token keyword">int</span> n<span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+    <span class="token keyword">return</span> <span class="token punctuation">(</span><span class="token class-name">T</span><span class="token punctuation">[</span><span class="token punctuation">]</span><span class="token punctuation">)</span> <span class="token class-name">Array</span><span class="token punctuation">.</span><span class="token function">newInstance</span><span class="token punctuation">(</span>type<span class="token punctuation">,</span> n<span class="token punctuation">)</span><span class="token punctuation">;</span>        <span class="token comment">// 运行期类型是 type[]</span>
+<span class="token punctuation">&#125;</span>
+
+<span class="token class-name">String</span><span class="token punctuation">[</span><span class="token punctuation">]</span> arr <span class="token operator">=</span> <span class="token function">newArray</span><span class="token punctuation">(</span><span class="token class-name">String</span><span class="token punctuation">.</span><span class="token keyword">class</span><span class="token punctuation">,</span> <span class="token number">5</span><span class="token punctuation">)</span><span class="token punctuation">;</span>           <span class="token comment">// 得到真正的 String[]</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<p>这是 <code>ArrayList.toArray</code> 的实现思路（<code>Arrays.copyOf</code> 内部同样按运行期类型建数组）。</p>
+<h2 id="1-3-可变参数就是泛型数组"><a href="#1-3-可变参数就是泛型数组" class="headerlink" title="1.3 可变参数就是泛型数组"></a>1.3 可变参数就是泛型数组</h2><pre class="line-numbers language-java" data-language="java"><code class="language-java"><span class="token keyword">static</span> <span class="token generics"><span class="token punctuation">&lt;</span><span class="token class-name">T</span><span class="token punctuation">></span></span> <span class="token keyword">void</span> <span class="token function">print</span><span class="token punctuation">(</span><span class="token class-name">T</span><span class="token punctuation">.</span><span class="token punctuation">.</span><span class="token punctuation">.</span> items<span class="token punctuation">)</span> <span class="token punctuation">&#123;</span> <span class="token punctuation">&#125;</span>      <span class="token comment">// items 实际是 T[]</span><span aria-hidden="true" class="line-numbers-rows"><span></span></span></code></pre>
+
+<p>所以泛型可变参数天然带 unchecked 警告，<code>@SafeVarargs</code> 只应标在”方法体不把数组暴露出去”的情况下：</p>
+<pre class="line-numbers language-java" data-language="java"><code class="language-java"><span class="token annotation punctuation">@SafeVarargs</span>
+<span class="token keyword">static</span> <span class="token generics"><span class="token punctuation">&lt;</span><span class="token class-name">T</span><span class="token punctuation">></span></span> <span class="token class-name">List</span><span class="token generics"><span class="token punctuation">&lt;</span><span class="token class-name">T</span><span class="token punctuation">></span></span> <span class="token function">listOf</span><span class="token punctuation">(</span><span class="token class-name">T</span><span class="token punctuation">.</span><span class="token punctuation">.</span><span class="token punctuation">.</span> items<span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+    <span class="token class-name">List</span><span class="token generics"><span class="token punctuation">&lt;</span><span class="token class-name">T</span><span class="token punctuation">></span></span> r <span class="token operator">=</span> <span class="token keyword">new</span> <span class="token class-name">ArrayList</span><span class="token generics"><span class="token punctuation">&lt;</span><span class="token punctuation">></span></span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token class-name">Collections</span><span class="token punctuation">.</span><span class="token function">addAll</span><span class="token punctuation">(</span>r<span class="token punctuation">,</span> items<span class="token punctuation">)</span><span class="token punctuation">;</span>           <span class="token comment">// 只读数组，安全</span>
+    <span class="token keyword">return</span> r<span class="token punctuation">;</span>
+<span class="token punctuation">&#125;</span>
+
+<span class="token comment">// 危险：返回数组本身</span>
+<span class="token keyword">static</span> <span class="token generics"><span class="token punctuation">&lt;</span><span class="token class-name">T</span><span class="token punctuation">></span></span> <span class="token class-name">T</span><span class="token punctuation">[</span><span class="token punctuation">]</span> <span class="token function">leak</span><span class="token punctuation">(</span><span class="token class-name">T</span><span class="token punctuation">.</span><span class="token punctuation">.</span><span class="token punctuation">.</span> items<span class="token punctuation">)</span> <span class="token punctuation">&#123;</span> <span class="token keyword">return</span> items<span class="token punctuation">;</span> <span class="token punctuation">&#125;</span>
+<span class="token comment">// 调用方可能把 Integer 塞进"String[]"里 → 后续 ArrayStoreException</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<h2 id="1-4-反射里的泛型：Type-体系"><a href="#1-4-反射里的泛型：Type-体系" class="headerlink" title="1.4 反射里的泛型：Type 体系"></a>1.4 反射里的泛型：<code>Type</code> 体系</h2><p>反射能读到 <code>Signature</code> 属性（上一篇讲过），对应的类型是 <code>java.lang.reflect.Type</code>，它有四个常用子接口：</p>
+<div class="data-grid data-grid-link-table"><div class="grid-header"><div class="grid-cell">类型</div><div class="grid-cell">代表</div><div class="grid-cell">典型用途</div></div><div class="grid-row"><div class="grid-cell"><code>Class&lt;T&gt;</code></div><div class="grid-cell">普通类</div><div class="grid-cell"><code>String.class</code></div></div><div class="grid-row"><div class="grid-cell"><code>ParameterizedType</code></div><div class="grid-cell">带泛型实参</div><div class="grid-cell"><code>List&lt;String&gt;</code></div></div><div class="grid-row"><div class="grid-cell"><code>GenericArrayType</code></div><div class="grid-cell">泛型数组</div><div class="grid-cell"><code>T[]</code>、<code>List&lt;String&gt;[]</code></div></div><div class="grid-row"><div class="grid-cell"><code>TypeVariable</code></div><div class="grid-cell">类型变量</div><div class="grid-cell"><code>T</code>、<code>E</code></div></div><div class="grid-row"><div class="grid-cell"><code>WildcardType</code></div><div class="grid-cell">通配符</div><div class="grid-cell"><code>? extends Number</code></div></div></div>
+
+<pre class="line-numbers language-java" data-language="java"><code class="language-java"><span class="token comment">// 读字段的泛型类型</span>
+<span class="token class-name">Field</span> f <span class="token operator">=</span> <span class="token class-name">Repo</span><span class="token punctuation">.</span><span class="token keyword">class</span><span class="token punctuation">.</span><span class="token function">getDeclaredField</span><span class="token punctuation">(</span><span class="token string">"items"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token class-name">ParameterizedType</span> pt <span class="token operator">=</span> <span class="token punctuation">(</span><span class="token class-name">ParameterizedType</span><span class="token punctuation">)</span> f<span class="token punctuation">.</span><span class="token function">getGenericType</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token class-name">System</span><span class="token punctuation">.</span>out<span class="token punctuation">.</span><span class="token function">println</span><span class="token punctuation">(</span>pt<span class="token punctuation">.</span><span class="token function">getRawType</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>                    <span class="token comment">// interface java.util.List</span>
+<span class="token class-name">System</span><span class="token punctuation">.</span>out<span class="token punctuation">.</span><span class="token function">println</span><span class="token punctuation">(</span>pt<span class="token punctuation">.</span><span class="token function">getActualTypeArguments</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">[</span><span class="token number">0</span><span class="token punctuation">]</span><span class="token punctuation">)</span><span class="token punctuation">;</span>     <span class="token comment">// class java.lang.String</span>
+
+<span class="token comment">// 读父类的泛型实参（框架最常用）</span>
+<span class="token class-name">ParameterizedType</span> sup <span class="token operator">=</span> <span class="token punctuation">(</span><span class="token class-name">ParameterizedType</span><span class="token punctuation">)</span> <span class="token class-name">Repo</span><span class="token punctuation">.</span><span class="token keyword">class</span><span class="token punctuation">.</span><span class="token function">getGenericSuperclass</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token class-name">Class</span><span class="token generics"><span class="token punctuation">&lt;</span><span class="token operator">?</span><span class="token punctuation">></span></span> entity <span class="token operator">=</span> <span class="token punctuation">(</span><span class="token class-name">Class</span><span class="token generics"><span class="token punctuation">&lt;</span><span class="token operator">?</span><span class="token punctuation">></span></span><span class="token punctuation">)</span> sup<span class="token punctuation">.</span><span class="token function">getActualTypeArguments</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">[</span><span class="token number">0</span><span class="token punctuation">]</span><span class="token punctuation">;</span>
+
+<span class="token comment">// 读方法返回值</span>
+<span class="token class-name">Method</span> m <span class="token operator">=</span> <span class="token class-name">Repo</span><span class="token punctuation">.</span><span class="token keyword">class</span><span class="token punctuation">.</span><span class="token function">getMethod</span><span class="token punctuation">(</span><span class="token string">"findAll"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token class-name">Type</span> ret <span class="token operator">=</span> m<span class="token punctuation">.</span><span class="token function">getGenericReturnType</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>                    <span class="token comment">// List&lt;Order></span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<h2 id="1-5-框架怎么用：TypeToken-与-ResolvableType"><a href="#1-5-框架怎么用：TypeToken-与-ResolvableType" class="headerlink" title="1.5 框架怎么用：TypeToken 与 ResolvableType"></a>1.5 框架怎么用：TypeToken 与 ResolvableType</h2><p><strong>手写一个 TypeToken</strong>（Gson 的思路）：把泛型信息藏在匿名子类的父类签名里，因为类签名不会被擦除。</p>
+<pre class="line-numbers language-java" data-language="java"><code class="language-java"><span class="token keyword">public</span> <span class="token keyword">abstract</span> <span class="token keyword">class</span> <span class="token class-name">TypeRef</span><span class="token generics"><span class="token punctuation">&lt;</span><span class="token class-name">T</span><span class="token punctuation">></span></span> <span class="token punctuation">&#123;</span>
+    <span class="token keyword">private</span> <span class="token keyword">final</span> <span class="token class-name">Type</span> type<span class="token punctuation">;</span>
+
+    <span class="token keyword">protected</span> <span class="token class-name">TypeRef</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+        <span class="token class-name">ParameterizedType</span> sup <span class="token operator">=</span> <span class="token punctuation">(</span><span class="token class-name">ParameterizedType</span><span class="token punctuation">)</span> <span class="token function">getClass</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token function">getGenericSuperclass</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+        <span class="token keyword">this</span><span class="token punctuation">.</span>type <span class="token operator">=</span> sup<span class="token punctuation">.</span><span class="token function">getActualTypeArguments</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">[</span><span class="token number">0</span><span class="token punctuation">]</span><span class="token punctuation">;</span>
+    <span class="token punctuation">&#125;</span>
+    <span class="token keyword">public</span> <span class="token class-name">Type</span> <span class="token function">getType</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">&#123;</span> <span class="token keyword">return</span> type<span class="token punctuation">;</span> <span class="token punctuation">&#125;</span>
+<span class="token punctuation">&#125;</span>
+
+<span class="token comment">// 用法：必须写成匿名子类，才能保留 &lt;List&lt;String>> 这段签名</span>
+<span class="token class-name">Type</span> t <span class="token operator">=</span> <span class="token keyword">new</span> <span class="token class-name">TypeRef</span><span class="token generics"><span class="token punctuation">&lt;</span><span class="token class-name">List</span><span class="token punctuation">&lt;</span><span class="token class-name">String</span><span class="token punctuation">></span><span class="token punctuation">></span></span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">&#123;</span> <span class="token punctuation">&#125;</span><span class="token punctuation">.</span><span class="token function">getType</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token class-name">System</span><span class="token punctuation">.</span>out<span class="token punctuation">.</span><span class="token function">println</span><span class="token punctuation">(</span>t<span class="token punctuation">)</span><span class="token punctuation">;</span>      <span class="token comment">// java.util.List&lt;java.lang.String></span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<p><strong>Jackson</strong> 对应 <code>new TypeReference&lt;List&lt;Order&gt;&gt;() &#123;&#125;</code>，原理完全一致。</p>
+<p><strong>Spring</strong> 用 <code>ResolvableType</code> 把这套逻辑封装成可链式查询：</p>
+<pre class="line-numbers language-java" data-language="java"><code class="language-java"><span class="token class-name">ResolvableType</span> rt <span class="token operator">=</span> <span class="token class-name">ResolvableType</span><span class="token punctuation">.</span><span class="token function">forClass</span><span class="token punctuation">(</span><span class="token class-name">Repo</span><span class="token punctuation">.</span><span class="token keyword">class</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token function">as</span><span class="token punctuation">(</span><span class="token class-name">Collection</span><span class="token punctuation">.</span><span class="token keyword">class</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token class-name">Class</span><span class="token generics"><span class="token punctuation">&lt;</span><span class="token operator">?</span><span class="token punctuation">></span></span> generic <span class="token operator">=</span> rt<span class="token punctuation">.</span><span class="token function">getGeneric</span><span class="token punctuation">(</span><span class="token number">0</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token function">resolve</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>      <span class="token comment">// Order</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span></span></code></pre>
+
+<div class="data-grid data-grid-link-table"><div class="grid-header"><div class="grid-cell">工具</div><div class="grid-cell">入口</div><div class="grid-cell">场景</div></div><div class="grid-row"><div class="grid-cell">Gson</div><div class="grid-cell"><code>TypeToken&lt;T&gt;</code></div><div class="grid-cell">JSON 反序列化到泛型</div></div><div class="grid-row"><div class="grid-cell">Jackson</div><div class="grid-cell"><code>TypeReference&lt;T&gt;</code></div><div class="grid-cell">同上</div></div><div class="grid-row"><div class="grid-cell">Spring</div><div class="grid-cell"><code>ResolvableType</code></div><div class="grid-cell">依赖注入、泛型 Bean 解析</div></div><div class="grid-row"><div class="grid-cell">MyBatis</div><div class="grid-cell"><code>TypeHandler&lt;T&gt;</code> + <code>getRawType</code></div><div class="grid-cell">字段与 Java 类型映射</div></div><div class="grid-row"><div class="grid-cell">JPA&#x2F;Hibernate</div><div class="grid-cell"><code>ParameterizedType</code></div><div class="grid-cell">实体泛型解析</div></div></div>
+
+<h2 id="1-6-instanceof-的替代方案"><a href="#1-6-instanceof-的替代方案" class="headerlink" title="1.6 instanceof 的替代方案"></a>1.6 <code>instanceof</code> 的替代方案</h2><p>擦除让 <code>instanceof T</code> 不可用，标准替代是把 <code>Class&lt;T&gt;</code> 传进来：</p>
+<pre class="line-numbers language-java" data-language="java"><code class="language-java"><span class="token keyword">class</span> <span class="token class-name">Box</span><span class="token generics"><span class="token punctuation">&lt;</span><span class="token class-name">T</span><span class="token punctuation">></span></span> <span class="token punctuation">&#123;</span>
+    <span class="token keyword">private</span> <span class="token keyword">final</span> <span class="token class-name">Class</span><span class="token generics"><span class="token punctuation">&lt;</span><span class="token class-name">T</span><span class="token punctuation">></span></span> type<span class="token punctuation">;</span>
+    <span class="token keyword">public</span> <span class="token class-name">Box</span><span class="token punctuation">(</span><span class="token class-name">Class</span><span class="token generics"><span class="token punctuation">&lt;</span><span class="token class-name">T</span><span class="token punctuation">></span></span> type<span class="token punctuation">)</span> <span class="token punctuation">&#123;</span> <span class="token keyword">this</span><span class="token punctuation">.</span>type <span class="token operator">=</span> type<span class="token punctuation">;</span> <span class="token punctuation">&#125;</span>
+
+    <span class="token keyword">public</span> <span class="token keyword">boolean</span> <span class="token function">accept</span><span class="token punctuation">(</span><span class="token class-name">Object</span> o<span class="token punctuation">)</span> <span class="token punctuation">&#123;</span> <span class="token keyword">return</span> type<span class="token punctuation">.</span><span class="token function">isInstance</span><span class="token punctuation">(</span>o<span class="token punctuation">)</span><span class="token punctuation">;</span> <span class="token punctuation">&#125;</span>
+
+    <span class="token annotation punctuation">@SuppressWarnings</span><span class="token punctuation">(</span><span class="token string">"unchecked"</span><span class="token punctuation">)</span>
+    <span class="token keyword">public</span> <span class="token class-name">T</span> <span class="token function">cast</span><span class="token punctuation">(</span><span class="token class-name">Object</span> o<span class="token punctuation">)</span> <span class="token punctuation">&#123;</span> <span class="token keyword">return</span> type<span class="token punctuation">.</span><span class="token function">cast</span><span class="token punctuation">(</span>o<span class="token punctuation">)</span><span class="token punctuation">;</span> <span class="token punctuation">&#125;</span>     <span class="token comment">// 类型不对直接抛 CCE</span>
+<span class="token punctuation">&#125;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<p>这也是 <code>Class.cast</code> 存在的意义：<strong>把”运行期类型检查”这件事显式交给你</strong>，而不是让编译器猜。</p>
+<h2 id="1-7-实践建议"><a href="#1-7-实践建议" class="headerlink" title="1.7 实践建议"></a>1.7 实践建议</h2><div class="data-grid data-grid-link-table"><div class="grid-header"><div class="grid-cell">需求</div><div class="grid-cell">推荐做法</div></div><div class="grid-row"><div class="grid-cell">需要一组 T</div><div class="grid-cell">用 <code>List&lt;T&gt;</code>，别碰 <code>T[]</code></div></div><div class="grid-row"><div class="grid-cell">确实要数组</div><div class="grid-cell">传 <code>Class&lt;T&gt;</code> + <code>Array.newInstance</code></div></div><div class="grid-row"><div class="grid-cell">泛型可变参数</div><div class="grid-cell">只读就 <code>@SafeVarargs</code>，要外传就改成集合</div></div><div class="grid-row"><div class="grid-cell">需要判断具体类型</div><div class="grid-cell">传 <code>Class&lt;T&gt;</code>，用 <code>isInstance/cast</code></div></div><div class="grid-row"><div class="grid-cell">反序列化泛型</div><div class="grid-cell"><code>TypeRef</code>&#x2F;<code>TypeReference</code>（匿名子类保签名）</div></div><div class="grid-row"><div class="grid-cell">框架里解析泛型</div><div class="grid-cell">优先用现成的 <code>ResolvableType</code>，别手撸 <code>getGenericSuperclass</code></div></div></div>
+
+<h2 id="1-8-清单"><a href="#1-8-清单" class="headerlink" title="1.8 清单"></a>1.8 清单</h2><ol>
+<li><code>new T[]</code> 与 <code>new List&lt;String&gt;[]</code> 都编译不过，因为数组要运行期类型、泛型没有</li>
+<li>数组协变 + 数组元素检查只看原始类型，是”禁止泛型数组”的真正理由</li>
+<li>合法兜底三种：裸数组 <code>new List[10]</code>、<code>(T[]) new Object[10]</code>、<code>Array.newInstance</code></li>
+<li>泛型可变参数就是泛型数组，<code>@SafeVarargs</code> 只在”不外泄数组”时可用</li>
+<li>反射能读到声明层泛型：<code>ParameterizedType</code>、<code>TypeVariable</code>、<code>WildcardType</code></li>
+<li><code>TypeRef</code>&#x2F;<code>TypeReference</code> 靠匿名子类的父类签名保住泛型实参</li>
+<li><code>instanceof T</code> 的替代是 <code>Class&lt;T&gt;.isInstance</code> 与 <code>cast</code></li>
+<li>能用集合就别用数组，数组只在性能敏感或 API 约定需要时上</li>
+</ol>
+</div>
+
+  <div class="mb-foot">
+    <a href="/phone/">返回手机首页</a>
+    <a href="/phone/tags/">星迹索引</a>
+  </div>
+</div>
+
+
+<script>
+  /* 作用：懒加载本地 mermaid 库；无 mermaid 代码块时不加载 */
+  function loadLocalMermaid(){
+    return new Promise(function(resolve, reject){
+      if(window.mermaid) return resolve(window.mermaid);
+      var s = document.createElement('script');
+      s.src = '/js/third-party/mermaid/mermaid.min.js?v=10';
+      s.onload = function(){ resolve(window.mermaid); };
+      s.onerror = function(){ reject(new Error('mermaid local load failed')); };
+      document.head.appendChild(s);
+    });
+  }
+
+  /* 作用：把 ```mermaid 代码块替换成 SVG 图（手机端字号略小、图可横向滚动） */
+  async function renderMermaidDiagram(){
+    var blocks = document.querySelectorAll('pre[class*="language-mermaid"]');
+    if(!blocks.length) return;
+    var mermaid;
+    try { mermaid = await loadLocalMermaid(); }
+    catch(e){ console.warn('[mermaid] 本地库加载失败：', e); return; }
+
+    mermaid.initialize({
+      startOnLoad: false,
+      theme: 'base',
+      themeVariables: {
+        darkMode: true,
+        background: 'transparent',
+        fontFamily: '"Microsoft YaHei", "PingFang SC", "Segoe UI", sans-serif',
+        fontSize: '12px',
+        primaryColor: '#062f3d',
+        primaryTextColor: '#d6f6ff',
+        primaryBorderColor: '#00eeff',
+        secondaryColor: '#04222d',
+        tertiaryColor: '#04222d',
+        mainBkg: '#062f3d',
+        nodeBorder: '#00eeff',
+        clusterBkg: '#02161f',
+        clusterBorder: '#00eeff55',
+        lineColor: '#00eeff',
+        textColor: '#c0e8ff',
+        edgeLabelBackground: '#02161f'
+      },
+      flowchart: { curve: 'basis', useMaxWidth: false, htmlLabels: false, nodeSpacing: 30, rankSpacing: 40, padding: 10 }
+    });
+
+    var targets = [];
+    blocks.forEach(function(el){
+      var codeEl = el.querySelector('code');
+      if(!codeEl) return;
+      var div = document.createElement('div');
+      div.className = 'mermaid';
+      div.textContent = codeEl.textContent;
+      el.parentNode.replaceChild(div, el);
+      targets.push(div);
+    });
+    if(!targets.length) return;
+    try { await mermaid.run({ nodes: targets }); }
+    catch(e){ console.warn('[mermaid] 渲染失败：', e); }
+  }
+  /* 作用：多次触发兜底（延迟重试 + DOM 变化），防止某次时机没跑到导致图表留在代码块 */
+  var mmBusy = false;
+  function scheduleMermaid(){
+    if(mmBusy) return;
+    mmBusy = true;
+    renderMermaidDiagram().then(function(){ mmBusy = false; }, function(){ mmBusy = false; });
+  }
+  scheduleMermaid();
+  window.addEventListener('load', scheduleMermaid);
+  [1000, 3000, 8000].forEach(function(ms){ setTimeout(scheduleMermaid, ms); });
+  if(document.readyState !== 'loading') scheduleMermaid();
+  if(window.MutationObserver){
+    var mmTimer = null;
+    var mmObserver = new MutationObserver(function(){
+      clearTimeout(mmTimer);
+      mmTimer = setTimeout(scheduleMermaid, 400);
+    });
+    mmObserver.observe(document.querySelector('.mb-article') || document.body, { childList: true, subtree: true });
+  }
+</script>
+</body>
+</html>

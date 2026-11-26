@@ -1,0 +1,305 @@
+<!--
+  ============================================
+  手机端 · 文章原文页
+  文件：phone/post.njk
+  适用终端：手机端（路由 /phone/p/<slug>/，由 scripts/phone-routes.js 生成）
+  作用：手机阅读单篇文章；单列布局、无侧栏无雷达，替代电脑端 post.njk
+        数据由生成期算好：page.item = { title, dateStr, content, cats, tags }
+  样式依赖：source/css/theme/phone/common.css、source/css/theme/phone/list.css
+  组件依赖：phone/_components/Particles.njk
+  最后修改：2026-11-11
+  ============================================
+-->
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="color-scheme" content="dark">
+  <meta name="theme-color" content="#020817">
+  <!-- 首帧兜底：浏览器默认画布是白的，样式未解析前会闪一下白。这条规则先锁死深空底色 -->
+  <style>html{background-color:#020817}</style>
+  <title>Spark（五）Structured Streaming - 时空秘境</title>
+  <!-- 手机端样式：基础 + 列表/正文，外链引入（源文件 source/css/theme/phone/） -->
+  <link rel="stylesheet" href="/css/theme/phone/common.css">
+  <link rel="stylesheet" href="/css/theme/phone/list.css">
+<meta name="generator" content="Hexo 8.1.2"></head>
+<body>
+<div class="mb-shell">
+  <!--
+  ============================================
+  手机端星空粒子组件
+  文件：Particles.njk
+  适用终端：手机端
+  作用：Particles.njk 的手机端副本（nunjucks 子目录 include 取不到上级）
+        参数与电脑端 _components/Particles.njk 保持一致：
+        粒子 95 / 连线 118px / opacity 0.32，外加星座层与零星闪烁层
+  最后修改：2026-11-12
+  ============================================
+--><!-- z-index 必须是 0：负层级会被 body 不透明背景盖住，粒子在跑却看不见 -->
+<div id="particles" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 0; pointer-events: none;"></div>
+<!-- 星座层（与首页同一套：随机零星散布星座图形 + 偶尔闪烁的小星） -->
+<div id="constellations" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 1; pointer-events: none;" aria-hidden="true"></div>
+<script src="/js/particles.min.js"></script>
+<script>
+particlesJS("particles", {
+  particles: {
+    number: {
+      value: 95,
+      density: {
+        enable: true,
+        value_area: 800
+      }
+    },
+    color: {
+      value: "#00eeff"
+    },
+    shape: {
+      type: "circle",
+      stroke: {
+        width: 0,
+        color: "#000000"
+      }
+    },
+    opacity: {
+      value: 0.6,
+      random: true,
+      anim: {
+        enable: true,
+        speed: 0.5,
+        opacity_min: 0.1,
+        sync: false
+      }
+    },
+    size: {
+      value: 3,
+      random: true,
+      anim: {
+        enable: true,
+        speed: 2,
+        size_min: 0.1,
+        sync: false
+      }
+    },
+    line_linked: {
+      enable: true,
+      distance: 118,
+      color: "#00eeff",
+      opacity: 0.32,
+      width: 1
+    },
+    move: {
+      enable: true,
+      speed: 0.8,
+      direction: "none",
+      random: true,
+      straight: false,
+      out_mode: "out",
+      bounce: false,
+      attract: {
+        enable: true,
+        rotateX: 600,
+        rotateY: 1200
+      }
+    }
+  },
+  interactivity: {
+    detect_on: "canvas",
+    events: {
+      onhover: {
+        enable: true,
+        mode: "grab"       // 手指按住时粒子聚集
+      },
+      onclick: {
+        enable: true,
+        mode: "push"       // 点击时产生新粒子
+      },
+      resize: true
+    },
+    modes: {
+      grab: {
+        distance: 200,
+        line_linked: {
+          opacity: 1
+        }
+      },
+      push: {
+        particles_nb: 6
+      }
+    }
+  },
+  retina_detect: true
+});
+</script>
+<!-- 星座 + 零星闪烁层：与电脑端共用同一份绘制脚本 -->
+<script src="/js/theme/home/starfield.js"></script>
+
+
+  <div class="mb-top">
+    <a class="mb-back" href="/phone/">← 返回手机首页</a>
+    <span class="mb-sub" style="margin:0">2023-06-17</span>
+  </div>
+
+  <h1 class="mb-title">Spark（五）Structured Streaming</h1>
+  <div class="mb-sub">
+    分类：bigdata · spark
+     ｜ 标签：Spark
+  </div>
+
+  <div class="mb-article"><div class="essay-banner essay-spark"></div>
+
+<h1 id="Structured-Streaming"><a href="#Structured-Streaming" class="headerlink" title="Structured Streaming"></a><strong>Structured Streaming</strong></h1><p>流计算最绕的地方是”数据没有边界”：查询跑着跑着新数据就来了，结果要持续更新，挂了还要能接着算。Structured Streaming 把流当成一张不断增长的无限表（unbounded table），用和批处理一样的 DataFrame&#x2F;SQL 接口表达逻辑，引擎负责按微批不断增量计算。这一篇讲清它的模型、watermark、checkpoint，以及 exactly-once 语义靠什么保证。</p>
+<p><img src="https://wu4yong.github.io/starry-images/assets/img/spark/spark-05-streaming.webp" alt="无限增长的数据表被切成一个个微批，状态随批次累积，水位线向前推进清理过期数据"></p>
+<p><em>无限增长的数据表被切成一个个微批，状态随批次累积，水位线向前推进清理过期数据</em></p>
+<h2 id="1-1-核心模型：流是一张不断长大的表"><a href="#1-1-核心模型：流是一张不断长大的表" class="headerlink" title="1.1 核心模型：流是一张不断长大的表"></a>1.1 核心模型：流是一张不断长大的表</h2><div class="data-grid data-grid-link-table"><div class="grid-header"><div class="grid-cell">概念</div><div class="grid-cell">类比</div><div class="grid-cell">说明</div></div><div class="grid-row"><div class="grid-cell">无限表（unbounded table）</div><div class="grid-cell">一张只追加、不停止写入的表</div><div class="grid-cell">每行到达流的数据都是表的一行</div></div><div class="grid-row"><div class="grid-cell">增量查询（incremental query）</div><div class="grid-cell">对这张表持续跑聚合</div><div class="grid-cell">新数据到达后只算新增部分</div></div><div class="grid-row"><div class="grid-cell">结果表（result table）</div><div class="grid-cell">当前聚合结果的快照</div><div class="grid-cell">每个触发间隔更新一次，再按输出模式写出</div></div></div>
+
+<p>因为接口和批处理同源，同一段聚合代码改成流只需要把 <code>read</code> 换成 <code>readStream</code>、<code>write</code> 换成 <code>writeStream</code>。这也是 Structured Streaming 相对早期 DStream（离散流）的主要优势：不再把流切成 RDD 批次去手动管理。</p>
+<p>要注意：流查询启动后会持续占用资源，<code>spark-submit</code> 提交的长作业需要由调度平台或守护进程管理；开发调试时常用 <code>AvailableNow</code> 跑完存量数据自动停止，避免本地进程一直挂着。</p>
+<h2 id="1-2-处理模型：微批为主，连续模式为辅"><a href="#1-2-处理模型：微批为主，连续模式为辅" class="headerlink" title="1.2 处理模型：微批为主，连续模式为辅"></a>1.2 处理模型：微批为主，连续模式为辅</h2><div class="data-grid data-grid-link-table"><div class="grid-header"><div class="grid-cell">模式</div><div class="grid-cell">行为</div><div class="grid-cell">适用</div></div><div class="grid-row"><div class="grid-cell">微批（micro-batch）</div><div class="grid-cell">按触发间隔把到来的数据攒成小批次计算</div><div class="grid-cell">默认模式，吞吐高，延迟秒级</div></div><div class="grid-row"><div class="grid-cell">连续处理（continuous）</div><div class="grid-cell">持续扫描数据、低延迟处理</div><div class="grid-cell">延迟要求到毫秒级，支持的算子有限</div></div></div>
+
+<p>生产上绝大多数作业走微批：<code>Trigger.ProcessingTime</code> 控制批次间隔，<code>Trigger.AvailableNow</code> 用于把存量数据追完后停止。连续模式只在明确需要更低延迟、且算子在支持名单内时才考虑。</p>
+<h2 id="1-3-状态与-watermark"><a href="#1-3-状态与-watermark" class="headerlink" title="1.3 状态与 watermark"></a>1.3 状态与 watermark</h2><p>做窗口聚合、会话分析这类需求，引擎要记住每组当前的聚合值，这部分内存就是<strong>状态（state）</strong>。数据迟到不可避免：上游抖动、网络重传都会让晚到的记录落在窗口之外。<strong>watermark（水位线）</strong> 按事件时间推进，划定”最晚还愿意等多久”，超过水位线的旧状态被清理。</p>
+<pre class="line-numbers language-scala" data-language="scala"><code class="language-scala"><span class="token keyword">import</span> <span class="token namespace">org<span class="token punctuation">.</span>apache<span class="token punctuation">.</span>spark<span class="token punctuation">.</span>sql<span class="token punctuation">.</span>functions<span class="token punctuation">.</span></span>_
+
+<span class="token keyword">val</span> events <span class="token operator">=</span> spark<span class="token punctuation">.</span>readStream
+  <span class="token punctuation">.</span>format<span class="token punctuation">(</span><span class="token string">"kafka"</span><span class="token punctuation">)</span>
+  <span class="token punctuation">.</span>option<span class="token punctuation">(</span><span class="token string">"kafka.bootstrap.servers"</span><span class="token punctuation">,</span> <span class="token string">"host:9092"</span><span class="token punctuation">)</span>
+  <span class="token punctuation">.</span>option<span class="token punctuation">(</span><span class="token string">"subscribe"</span><span class="token punctuation">,</span> <span class="token string">"order_topic"</span><span class="token punctuation">)</span>
+  <span class="token punctuation">.</span>load<span class="token punctuation">(</span><span class="token punctuation">)</span>
+  <span class="token punctuation">.</span>select<span class="token punctuation">(</span>from_json<span class="token punctuation">(</span>col<span class="token punctuation">(</span><span class="token string">"value"</span><span class="token punctuation">)</span><span class="token punctuation">.</span>cast<span class="token punctuation">(</span><span class="token string">"string"</span><span class="token punctuation">)</span><span class="token punctuation">,</span> schema<span class="token punctuation">)</span><span class="token punctuation">.</span>as<span class="token punctuation">(</span><span class="token string">"evt"</span><span class="token punctuation">)</span><span class="token punctuation">)</span>
+  <span class="token punctuation">.</span>select<span class="token punctuation">(</span><span class="token string">"evt.*"</span><span class="token punctuation">)</span>
+
+<span class="token keyword">val</span> windowed <span class="token operator">=</span> events
+  <span class="token punctuation">.</span>withWatermark<span class="token punctuation">(</span><span class="token string">"event_time"</span><span class="token punctuation">,</span> <span class="token string">"10 minutes"</span><span class="token punctuation">)</span>   <span class="token comment">// 容忍 10 分钟迟到，超期状态清理</span>
+  <span class="token punctuation">.</span>groupBy<span class="token punctuation">(</span>window<span class="token punctuation">(</span>col<span class="token punctuation">(</span><span class="token string">"event_time"</span><span class="token punctuation">)</span><span class="token punctuation">,</span> <span class="token string">"10 minutes"</span><span class="token punctuation">)</span><span class="token punctuation">,</span> <span class="token string">"city"</span><span class="token punctuation">)</span>
+  <span class="token punctuation">.</span>count<span class="token punctuation">(</span><span class="token punctuation">)</span>
+
+<span class="token keyword">val</span> query <span class="token operator">=</span> windowed<span class="token punctuation">.</span>writeStream
+  <span class="token punctuation">.</span>outputMode<span class="token punctuation">(</span><span class="token string">"append"</span><span class="token punctuation">)</span>
+  <span class="token punctuation">.</span>format<span class="token punctuation">(</span><span class="token string">"parquet"</span><span class="token punctuation">)</span>
+  <span class="token punctuation">.</span>option<span class="token punctuation">(</span><span class="token string">"checkpointLocation"</span><span class="token punctuation">,</span> <span class="token string">"hdfs:///checkpoint/order-window"</span><span class="token punctuation">)</span>
+  <span class="token punctuation">.</span>start<span class="token punctuation">(</span><span class="token string">"hdfs:///data/order-window/"</span><span class="token punctuation">)</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<p><code>withWatermark</code> 两个要点：时间列必须是事件时间，不能用处理时间；容忍时长按业务能接受的迟到上限给，给得过大状态积压，给得过小晚到数据被丢弃。</p>
+<h2 id="1-4-checkpoint：进度与状态的持久化"><a href="#1-4-checkpoint：进度与状态的持久化" class="headerlink" title="1.4 checkpoint：进度与状态的持久化"></a>1.4 checkpoint：进度与状态的持久化</h2><p>checkpoint 目录同时记两类东西：<strong>消费进度</strong>（从哪个偏移量开始读）和<strong>状态快照</strong>（各分组当前聚合值）。作业崩溃或重启后，引擎从 checkpoint 恢复，接着上次的位置继续算，不重复也不漏。</p>
+<div class="data-grid data-grid-link-table"><div class="grid-header"><div class="grid-cell">配置项</div><div class="grid-cell">作用</div><div class="grid-cell">注意</div></div><div class="grid-row"><div class="grid-cell"><code>checkpointLocation</code></div><div class="grid-cell">状态与进度落盘目录</div><div class="grid-cell">输出到 Kafka&#x2F;文件&#x2F;表都应配置，目录不能与结果输出混用</div></div><div class="grid-row"><div class="grid-cell">删除 checkpoint</div><div class="grid-cell">等于丢掉全部状态</div><div class="grid-cell">改逻辑、改 Schema 时常需要重建，重建前先备份</div></div><div class="grid-row"><div class="grid-cell">多流复用</div><div class="grid-cell">每个独立查询一个目录</div><div class="grid-cell">两个查询共用同一 checkpoint 会损坏元数据</div></div></div>
+
+<h2 id="1-5-exactly-once-怎么凑齐"><a href="#1-5-exactly-once-怎么凑齐" class="headerlink" title="1.5 exactly-once 怎么凑齐"></a>1.5 exactly-once 怎么凑齐</h2><p>端到端恰好一次不是引擎单方面承诺的，需要三段都到位：</p>
+<div class="data-grid data-grid-link-table"><div class="grid-header"><div class="grid-cell">环节</div><div class="grid-cell">要求</div><div class="grid-cell">落地方式</div></div><div class="grid-row"><div class="grid-cell">数据源</div><div class="grid-cell">偏移量可重放、可回溯</div><div class="grid-cell">Kafka 按 offset 重读，进度记入 checkpoint</div></div><div class="grid-row"><div class="grid-cell">计算</div><div class="grid-cell">状态可恢复、结果可重算</div><div class="grid-cell">状态快照落 checkpoint，重启后恢复聚合值</div></div><div class="grid-row"><div class="grid-cell">结果写出</div><div class="grid-cell">重复写入不产生重复结果</div><div class="grid-cell">文件&#x2F;表支持幂等或事务提交，Kafka 按 offset 幂等生产</div></div></div>
+
+<p>三段缺一段都会漏或重：数据源只能保留短期日志、写出端不支持幂等，单靠流引擎都做不到 exactly-once。理解这一点，比背”Structured Streaming 保证 exactly-once”这句话有用得多。</p>
+<h2 id="1-6-输出模式"><a href="#1-6-输出模式" class="headerlink" title="1.6 输出模式"></a>1.6 输出模式</h2><div class="data-grid data-grid-link-table"><div class="grid-header"><div class="grid-cell">模式</div><div class="grid-cell">写出内容</div><div class="grid-cell">适用</div></div><div class="grid-row"><div class="grid-cell">Append</div><div class="grid-cell">只写本批次新增、且不会被更新的结果</div><div class="grid-cell">水位线保护下的窗口聚合</div></div><div class="grid-row"><div class="grid-cell">Complete</div><div class="grid-cell">每次写出整张结果表</div><div class="grid-cell">全量聚合，状态量可控时用</div></div><div class="grid-row"><div class="grid-cell">Update</div><div class="grid-cell">只写本批次发生变化的行</div><div class="grid-cell">流式维表、持续更新指标</div></div></div>
+
+<p>聚合查询能用哪种输出模式受语义约束：<code>Complete</code> 不能配合 watermark 清理无限增长的状态；选错模式引擎会直接报错，这是保护不是刁难。</p>
+<p>另外要区分事件时间与处理时间：事件时间是数据本身携带的业务发生时间，处理时间是引擎收到数据的时间。watermark 必须挂在事件时间列上，上游积压时处理时间会持续领先事件时间，用错列会导致状态该清不清。</p>
+<h2 id="1-7-容易踩的坑"><a href="#1-7-容易踩的坑" class="headerlink" title="1.7 容易踩的坑"></a>1.7 容易踩的坑</h2><ul>
+<li>用处理时间列做 watermark，上游一积压状态就持续膨胀</li>
+<li>不配 checkpoint 直接上生产，重启后从最早偏移量重读，结果重复</li>
+<li>checkpoint 目录被手动清空后继续跑，状态丢失，聚合结果对不上</li>
+<li>把批处理 DataFrame 直接 <code>start()</code>，忘记流查询需要独立的停止与监控管理</li>
+<li>会话窗口给的迟到容忍过小，正常跨会话晚到的数据被直接丢弃</li>
+</ul>
+<h2 id="1-8-官方资料"><a href="#1-8-官方资料" class="headerlink" title="1.8 官方资料"></a>1.8 官方资料</h2><ul>
+<li>Structured Streaming 编程指南：<a target="_blank" rel="noopener" href="https://spark.apache.org/docs/latest/structured-streaming-programming-guide.html">https://spark.apache.org/docs/latest/structured-streaming-programming-guide.html</a></li>
+<li>流式数据源与 Sink 参考：<a target="_blank" rel="noopener" href="https://spark.apache.org/docs/latest/structured-streaming-programming-guide.html#input-sources">https://spark.apache.org/docs/latest/structured-streaming-programming-guide.html#input-sources</a></li>
+<li>事件时间与 watermark：<a target="_blank" rel="noopener" href="https://spark.apache.org/docs/latest/structured-streaming-programming-guide.html#event-time">https://spark.apache.org/docs/latest/structured-streaming-programming-guide.html#event-time</a></li>
+<li>Spark 配置（流式相关参数）：<a target="_blank" rel="noopener" href="https://spark.apache.org/docs/latest/configuration.html">https://spark.apache.org/docs/latest/configuration.html</a></li>
+</ul>
+<h2 id="1-9-清单"><a href="#1-9-清单" class="headerlink" title="1.9 清单"></a>1.9 清单</h2><ol>
+<li>Structured Streaming 把流建模成无限增长的表，查询接口与批处理同源</li>
+<li>默认微批处理，吞吐高、延迟秒级；连续模式算子受限，只在低延迟刚需时用</li>
+<li>watermark 按事件时间推进，清理超期状态；容忍时长按业务迟到上限给</li>
+<li>checkpoint 同时存消费进度与状态快照，是故障恢复和 exactly-once 的前提</li>
+<li>端到端恰好一次 &#x3D; 数据源可重放 + 状态可恢复 + 写出幂等&#x2F;事务，三段缺一不可</li>
+<li>输出模式受聚合语义约束，Append&#x2F;Complete&#x2F;Update 不能随意互换</li>
+</ol>
+</div>
+
+  <div class="mb-foot">
+    <a href="/phone/">返回手机首页</a>
+    <a href="/phone/tags/">星迹索引</a>
+  </div>
+</div>
+
+
+<script>
+  /* 作用：懒加载本地 mermaid 库；无 mermaid 代码块时不加载 */
+  function loadLocalMermaid(){
+    return new Promise(function(resolve, reject){
+      if(window.mermaid) return resolve(window.mermaid);
+      var s = document.createElement('script');
+      s.src = '/js/third-party/mermaid/mermaid.min.js?v=10';
+      s.onload = function(){ resolve(window.mermaid); };
+      s.onerror = function(){ reject(new Error('mermaid local load failed')); };
+      document.head.appendChild(s);
+    });
+  }
+
+  /* 作用：把 ```mermaid 代码块替换成 SVG 图（手机端字号略小、图可横向滚动） */
+  async function renderMermaidDiagram(){
+    var blocks = document.querySelectorAll('pre[class*="language-mermaid"]');
+    if(!blocks.length) return;
+    var mermaid;
+    try { mermaid = await loadLocalMermaid(); }
+    catch(e){ console.warn('[mermaid] 本地库加载失败：', e); return; }
+
+    mermaid.initialize({
+      startOnLoad: false,
+      theme: 'base',
+      themeVariables: {
+        darkMode: true,
+        background: 'transparent',
+        fontFamily: '"Microsoft YaHei", "PingFang SC", "Segoe UI", sans-serif',
+        fontSize: '12px',
+        primaryColor: '#062f3d',
+        primaryTextColor: '#d6f6ff',
+        primaryBorderColor: '#00eeff',
+        secondaryColor: '#04222d',
+        tertiaryColor: '#04222d',
+        mainBkg: '#062f3d',
+        nodeBorder: '#00eeff',
+        clusterBkg: '#02161f',
+        clusterBorder: '#00eeff55',
+        lineColor: '#00eeff',
+        textColor: '#c0e8ff',
+        edgeLabelBackground: '#02161f'
+      },
+      flowchart: { curve: 'basis', useMaxWidth: false, htmlLabels: false, nodeSpacing: 30, rankSpacing: 40, padding: 10 }
+    });
+
+    var targets = [];
+    blocks.forEach(function(el){
+      var codeEl = el.querySelector('code');
+      if(!codeEl) return;
+      var div = document.createElement('div');
+      div.className = 'mermaid';
+      div.textContent = codeEl.textContent;
+      el.parentNode.replaceChild(div, el);
+      targets.push(div);
+    });
+    if(!targets.length) return;
+    try { await mermaid.run({ nodes: targets }); }
+    catch(e){ console.warn('[mermaid] 渲染失败：', e); }
+  }
+  /* 作用：多次触发兜底（延迟重试 + DOM 变化），防止某次时机没跑到导致图表留在代码块 */
+  var mmBusy = false;
+  function scheduleMermaid(){
+    if(mmBusy) return;
+    mmBusy = true;
+    renderMermaidDiagram().then(function(){ mmBusy = false; }, function(){ mmBusy = false; });
+  }
+  scheduleMermaid();
+  window.addEventListener('load', scheduleMermaid);
+  [1000, 3000, 8000].forEach(function(ms){ setTimeout(scheduleMermaid, ms); });
+  if(document.readyState !== 'loading') scheduleMermaid();
+  if(window.MutationObserver){
+    var mmTimer = null;
+    var mmObserver = new MutationObserver(function(){
+      clearTimeout(mmTimer);
+      mmTimer = setTimeout(scheduleMermaid, 400);
+    });
+    mmObserver.observe(document.querySelector('.mb-article') || document.body, { childList: true, subtree: true });
+  }
+</script>
+</body>
+</html>

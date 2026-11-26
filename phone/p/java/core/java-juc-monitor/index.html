@@ -1,0 +1,714 @@
+<!--
+  ============================================
+  手机端 · 文章原文页
+  文件：phone/post.njk
+  适用终端：手机端（路由 /phone/p/<slug>/，由 scripts/phone-routes.js 生成）
+  作用：手机阅读单篇文章；单列布局、无侧栏无雷达，替代电脑端 post.njk
+        数据由生成期算好：page.item = { title, dateStr, content, cats, tags }
+  样式依赖：source/css/theme/phone/common.css、source/css/theme/phone/list.css
+  组件依赖：phone/_components/Particles.njk
+  最后修改：2026-11-11
+  ============================================
+-->
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="color-scheme" content="dark">
+  <meta name="theme-color" content="#020817">
+  <!-- 首帧兜底：浏览器默认画布是白的，样式未解析前会闪一下白。这条规则先锁死深空底色 -->
+  <style>html{background-color:#020817}</style>
+  <title>Java JUC Monitor - 时空秘境</title>
+  <!-- 手机端样式：基础 + 列表/正文，外链引入（源文件 source/css/theme/phone/） -->
+  <link rel="stylesheet" href="/css/theme/phone/common.css">
+  <link rel="stylesheet" href="/css/theme/phone/list.css">
+<meta name="generator" content="Hexo 8.1.2"></head>
+<body>
+<div class="mb-shell">
+  <!--
+  ============================================
+  手机端星空粒子组件
+  文件：Particles.njk
+  适用终端：手机端
+  作用：Particles.njk 的手机端副本（nunjucks 子目录 include 取不到上级）
+        参数与电脑端 _components/Particles.njk 保持一致：
+        粒子 95 / 连线 118px / opacity 0.32，外加星座层与零星闪烁层
+  最后修改：2026-11-12
+  ============================================
+--><!-- z-index 必须是 0：负层级会被 body 不透明背景盖住，粒子在跑却看不见 -->
+<div id="particles" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 0; pointer-events: none;"></div>
+<!-- 星座层（与首页同一套：随机零星散布星座图形 + 偶尔闪烁的小星） -->
+<div id="constellations" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 1; pointer-events: none;" aria-hidden="true"></div>
+<script src="/js/particles.min.js"></script>
+<script>
+particlesJS("particles", {
+  particles: {
+    number: {
+      value: 95,
+      density: {
+        enable: true,
+        value_area: 800
+      }
+    },
+    color: {
+      value: "#00eeff"
+    },
+    shape: {
+      type: "circle",
+      stroke: {
+        width: 0,
+        color: "#000000"
+      }
+    },
+    opacity: {
+      value: 0.6,
+      random: true,
+      anim: {
+        enable: true,
+        speed: 0.5,
+        opacity_min: 0.1,
+        sync: false
+      }
+    },
+    size: {
+      value: 3,
+      random: true,
+      anim: {
+        enable: true,
+        speed: 2,
+        size_min: 0.1,
+        sync: false
+      }
+    },
+    line_linked: {
+      enable: true,
+      distance: 118,
+      color: "#00eeff",
+      opacity: 0.32,
+      width: 1
+    },
+    move: {
+      enable: true,
+      speed: 0.8,
+      direction: "none",
+      random: true,
+      straight: false,
+      out_mode: "out",
+      bounce: false,
+      attract: {
+        enable: true,
+        rotateX: 600,
+        rotateY: 1200
+      }
+    }
+  },
+  interactivity: {
+    detect_on: "canvas",
+    events: {
+      onhover: {
+        enable: true,
+        mode: "grab"       // 手指按住时粒子聚集
+      },
+      onclick: {
+        enable: true,
+        mode: "push"       // 点击时产生新粒子
+      },
+      resize: true
+    },
+    modes: {
+      grab: {
+        distance: 200,
+        line_linked: {
+          opacity: 1
+        }
+      },
+      push: {
+        particles_nb: 6
+      }
+    }
+  },
+  retina_detect: true
+});
+</script>
+<!-- 星座 + 零星闪烁层：与电脑端共用同一份绘制脚本 -->
+<script src="/js/theme/home/starfield.js"></script>
+
+
+  <div class="mb-top">
+    <a class="mb-back" href="/phone/">← 返回手机首页</a>
+    <span class="mb-sub" style="margin:0">2021-12-28</span>
+  </div>
+
+  <h1 class="mb-title">Java JUC Monitor</h1>
+  <div class="mb-sub">
+    分类：java · core
+     ｜ 标签：Java
+  </div>
+
+  <div class="mb-article"><div class="essay-banner essay-java"></div>
+
+<h1 id="Monitor与锁升级深度原理"><a href="#Monitor与锁升级深度原理" class="headerlink" title="Monitor与锁升级深度原理"></a><strong>Monitor与锁升级深度原理</strong></h1><h2 id="4-1-Java-对象头结构"><a href="#4-1-Java-对象头结构" class="headerlink" title="4.1 Java 对象头结构"></a>4.1 Java 对象头结构</h2><p>Java 锁的核心原理依托于<strong>对象头</strong>实现，以32位虚拟机为基础，普通对象、数组对象的对象头结构不同，核心包含 Mark Word、Klass Word 两部分。</p>
+<h3 id="4-1-1-普通对象头结构（32位JVM）"><a href="#4-1-1-普通对象头结构（32位JVM）" class="headerlink" title="4.1.1 普通对象头结构（32位JVM）"></a>4.1.1 普通对象头结构（32位JVM）</h3><p>普通对象头占用8字节（64bit），由两部分组成：<br>    <strong>Mark Word（4字节）</strong>：存储对象运行时核心数据，包含哈希码、GC分代年龄、锁状态、偏向线程ID等，是锁实现的核心载体。<br>    <strong>Klass Word（4字节）</strong>：类型指针，指向对象对应的Class模板对象。<br><img src="https://wu4yong.github.io/starry-images/assets/img/java/concurrent/monitor1.webp" alt="monitor示意图"></p>
+<h3 id="4-1-2-数组对象头结构（32位JVM）"><a href="#4-1-2-数组对象头结构（32位JVM）" class="headerlink" title="4.1.2 数组对象头结构（32位JVM）"></a>4.1.2 数组对象头结构（32位JVM）</h3><p>数组对象相较于普通对象，额外新增<strong>数组长度</strong>（4字节）字段，用于记录数组元素个数，整体对象头占用12字节。<br><img src="https://wu4yong.github.io/starry-images/assets/img/java/concurrent/monitor2.webp" alt="monitor示意图"></p>
+<h3 id="4-1-3-Mark-Word-核心结构"><a href="#4-1-3-Mark-Word-核心结构" class="headerlink" title="4.1.3 Mark Word 核心结构"></a>4.1.3 Mark Word 核心结构</h3><blockquote>
+<p>Mark Word 是动态可变结构，会根据对象<strong>锁状态、生命周期</strong>切换存储内容，32位与64位虚拟机结构略有差异，<br>核心存储信息包含：哈希值、GC年龄、偏向线程ID、时间戳、锁状态标记位。<br>对象的无锁、偏向锁、轻量级锁、重量级锁状态，全部通过 Mark Word 的标记位区分，JVM 通过识别该字段完成锁的判定与升级。</p>
+</blockquote>
+<p>32位虚拟机 Mark Word：</p>
+<p><img src="https://wu4yong.github.io/starry-images/assets/img/java/concurrent/monitor3.webp" alt="monitor示意图"></p>
+<p>64位虚拟机 Mark Word：</p>
+<p><img src="https://wu4yong.github.io/starry-images/assets/img/java/concurrent/monitor4.webp" alt="monitor示意图"></p>
+<p>参考资料:<br><a target="_blank" rel="noopener" href="https://stackoverflow.com/questions/26357186/what-is-in-java-object-header">https://stackoverflow.com/questions/26357186/what-is-in-java-object-header</a></p>
+<h2 id="4-2-Monitor之原理"><a href="#4-2-Monitor之原理" class="headerlink" title="4.2 Monitor之原理"></a>4.2 Monitor之原理</h2><blockquote>
+<p>Monitor 翻译为<strong>监视器&#x2F;管程</strong>，是 synchronized 重量级锁的底层实现，<br><strong>每个Java对象都可关联一个Monitor对象</strong>。当对象被synchronized加重量级锁时，对象头的Mark Word会存储指向Monitor的指针.</p>
+</blockquote>
+<h3 id="4-2-1-Monitor-核心结构与工作机制"><a href="#4-2-1-Monitor-核心结构与工作机制" class="headerlink" title="4.2.1 Monitor 核心结构与工作机制"></a>4.2.1 Monitor 核心结构与工作机制</h3><p>Monitor 核心结构: 包含 Owner、EntryList、WaitSet 三大核心模块，工作流程如下：<br><strong>Owner（持有者）</strong>：初始为null，同一时刻仅允许一个线程成为Owner，持有锁执行临界区代码。<br><strong>EntryList（阻塞队列）</strong>：未获取到锁的线程进入该队列，状态为BLOCKED，等待锁释放后竞争资源。<br><strong>WaitSet（等待队列）</strong>：持有锁后因条件不满足，调用wait()的线程进入该队列，状态为WAITING，需被notify&#x2F;notifyAll唤醒后重新进入锁竞争。<br><img src="https://wu4yong.github.io/starry-images/assets/img/java/concurrent/monitor5.webp" alt="线程状态示意图"></p>
+<blockquote>
+<p>注意：synchronized 必须是进入同一个对象的 monitor 才有上述的效果 ,不加 synchronized 的对象不会关联监视器，不遵从以上规则</p>
+</blockquote>
+<h3 id="4-2-2-核心执行流程"><a href="#4-2-2-核心执行流程" class="headerlink" title="4.2.2 核心执行流程"></a>4.2.2 核心执行流程</h3><blockquote>
+<p>线程执行 synchronized(obj)，若obj无锁，将Monitor的Owner设为当前线程;<br>其他线程竞争同一锁，全部进入EntryList阻塞;<br>持有锁的线程执行完临界区代码，释放锁（Owner置空），唤醒EntryList中线程竞争锁（默认非公平）;<br>持有锁的线程调用wait()，释放锁并进入WaitSet等待，等待唤醒后重新参与锁竞争。<br><strong>核心注意点</strong>：只有获取<strong>同一个对象的Monitor</strong>才能实现互斥效果，未加synchronized的对象不会关联Monitor，无互斥特性.</p>
+</blockquote>
+<h3 id="4-2-3-synchronized-字节码原理"><a href="#4-2-3-synchronized-字节码原理" class="headerlink" title="4.2.3 synchronized 字节码原理"></a>4.2.3 synchronized 字节码原理</h3><p><strong>示例：</strong></p>
+<pre class="line-numbers language-java" data-language="java"><code class="language-java"><span class="token keyword">static</span> <span class="token keyword">final</span> <span class="token class-name">Object</span> lock <span class="token operator">=</span> <span class="token keyword">new</span> <span class="token class-name">Object</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token keyword">static</span> <span class="token keyword">int</span> counter <span class="token operator">=</span> <span class="token number">0</span><span class="token punctuation">;</span>
+<span class="token keyword">public</span> <span class="token keyword">static</span> <span class="token keyword">void</span> <span class="token function">main</span><span class="token punctuation">(</span><span class="token class-name">String</span><span class="token punctuation">[</span><span class="token punctuation">]</span> args<span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+    <span class="token keyword">synchronized</span> <span class="token punctuation">(</span>lock<span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+        counter<span class="token operator">++</span><span class="token punctuation">;</span>
+    <span class="token punctuation">&#125;</span>
+<span class="token punctuation">&#125;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+
+<p><strong>对应的字节码为：</strong><br><img src="https://wu4yong.github.io/starry-images/assets/img/java/concurrent/synchronized1.webp" alt="synchronized示意图"></p>
+<p><img src="https://wu4yong.github.io/starry-images/assets/img/java/concurrent/synchronized2.webp" alt="synchronized示意图"></p>
+<p>代码块级别的 synchronized 会在编译后生成专属字节码指令，方法级别的 synchronized 无显式字节码标记，由JVM底层判定。</p>
+<h3 id="同步代码块字节码核心指令"><a href="#同步代码块字节码核心指令" class="headerlink" title="同步代码块字节码核心指令"></a>同步代码块字节码核心指令</h3><p>核心依赖两条指令实现锁逻辑：</p>
+<p><strong>monitorenter</strong>：进入同步代码块，尝试获取对象Monitor锁；</p>
+<p><strong>monitorexit</strong>：退出同步代码块，释放Monitor锁。</p>
+<p>为保证异常场景下锁一定释放，编译器会生成<strong>两个monitorexit指令</strong>：正常执行结束释放、异常终止执行释放。</p>
+<h3 id="方法锁字节码特性"><a href="#方法锁字节码特性" class="headerlink" title="方法锁字节码特性"></a>方法锁字节码特性</h3><p>方法级别 synchronized 不会生成 monitorenter&#x2F;monitorexit 字节码，JVM 通过方法访问标记位判定是否为同步方法，自动完成加锁解锁逻辑。</p>
+<h3 id="锁升级之通俗故事"><a href="#锁升级之通俗故事" class="headerlink" title="锁升级之通俗故事"></a>锁升级之通俗故事</h3><p>故事角色 </p>
+<blockquote>
+<ul>
+<li>老王 - JVM </li>
+<li>小南 - 线程 </li>
+<li>小女 - 线程 </li>
+<li>房间 - 对象 </li>
+<li>房间门上 - 防盗锁 - Monitor </li>
+<li>房间门上 - 小南书包 - 轻量级锁 </li>
+<li>房间门上 - 刻上小南大名 - 偏向锁 </li>
+<li>批量重刻名 - 一个类的偏向锁撤销到达 20 阈值 </li>
+<li>不能刻名字 - 批量撤销该类对象的偏向锁，设置该类不可偏向</li>
+</ul>
+</blockquote>
+<blockquote>
+<p>小南要使用房间保证计算不被其它人干扰（原子性），最初，他用的是<strong>防盗锁</strong>，当上下文切换时，锁住门。这样即使他离开了，别人也进不了门，他的工作就是安全的。 </p>
+<p>但是，很多情况下没人跟他来竞争房间的使用权。小女是要用房间，但使用的时间上是错开的，小南白天用，小女晚上用。每次上锁太麻烦了，有没有更简单的办法呢？ </p>
+<p>小南和小女商量了一下，约定不锁门了，而是谁用房间，谁把自己的书包挂在门口，但他们的书包样式都一样，因此每次进门前得翻翻书包，看课本是谁的，如果是自己的，那么就可以进门，&gt;这样省的上锁解锁了。万一书包不是自己的，那么就在门外等，并通知对方下次用锁门的方式。 </p>
+<p>后来，小女回老家了，很长一段时间都不会用这个房间。小南每次还是挂书包，翻书包，虽然比锁门省事了，但仍然觉得麻烦。<br>于是，小南干脆在门上刻上了自己的名字：【小南专属房间，其它人勿用】，下次来用房间时，只要名字还在，那么说明没人打扰，还是可以安全地使用房间。如果这期间有其它人要用这个房&gt;间，那么由使用者将小南刻的名字擦掉，升级为挂书包的方式。 </p>
+<p>同学们都放假回老家了，小南就膨胀了，在 20 个房间刻上了自己的名字，想进哪个进哪个。后来他自己放假回老家了，这时小女回来了（她也要用这些房间），结果就是得一个个地擦掉小&gt;南刻的名字，升级为挂书包的方式。老王觉得这成本有点高，提出了一种批量重刻名的方法，他让小女不用挂书包了，可以直接在门上刻上自己的名字<br>后来，刻名的现象越来越频繁，老王受不了了：算了，这些房间都不能刻名了，只能挂书包</p>
+</blockquote>
+<p>为方便理解锁的四种状态：<strong>（无锁→偏向锁→轻量级锁→重量级锁）</strong>，通过生活化场景类比：<br>JVM&#x3D;老王，线程&#x3D;小南&#x2F;小女，Java对象&#x3D;房间<br><strong>轻量级锁</strong>&#x3D;门口挂书包，无竞争时简化加锁流程；<br><strong>偏向锁</strong>&#x3D;门上刻专属名字，单线程无竞争时无需重复加锁校验<br><strong>Monitor</strong>&#x3D;防盗锁（重量级锁）；<br>批量重刻名&#x3D;批量重偏向，批量擦除名字&#x3D;批量撤销偏向锁。<br>核心逻辑：JVM 会根据<strong>竞争激烈程度</strong>自动升级锁，从最轻量的偏向锁逐步升级为重量级锁，兼顾无竞争性能与有竞争安全性。</p>
+<h2 id="4-3-锁升级完整流程详解"><a href="#4-3-锁升级完整流程详解" class="headerlink" title="4.3 锁升级完整流程详解"></a>4.3 锁升级完整流程详解</h2><p>synchronized 锁共有四种状态，优先级：<strong>无锁 &gt; 偏向锁 &gt; 轻量级锁 &gt; 重量级锁</strong>，锁只能升级、不能降级，是JVM的自适应优化机制。</p>
+<h3 id="4-3-1-不涉及Monitor的-轻量级锁"><a href="#4-3-1-不涉及Monitor的-轻量级锁" class="headerlink" title="4.3.1  (不涉及Monitor的)轻量级锁"></a>4.3.1  (不涉及Monitor的)轻量级锁</h3><p>轻量级锁的<strong>使用场景</strong>：如果一个对象虽然有多线程要加锁，但加锁的时间是错开的（也就是没有竞争），那么可以使用轻量级锁来优化. <strong>（低竞争、错开竞争场景）</strong><br>轻量级锁：<strong>对使用者是透明的</strong>，即语法仍然是 synchronized </p>
+<p><strong>核心原理</strong>：<br>1、线程栈帧创建<strong>锁记录（Lock Record）</strong>，存储对象原始Mark Word；<br>2、 通过CAS将对象Mark Word替换为锁记录地址，标记锁状态为00（轻量级锁）；<br>3、 锁重入时，新增空锁记录计数，无需重复CAS；<br>4、 解锁时，CAS将原始Mark Word恢复到对象头，解锁成功.</p>
+<p><strong>示例：</strong> 假设有两个方法同步块，利用同一个对象加锁</p>
+<pre class="line-numbers language-java" data-language="java"><code class="language-java"><span class="token keyword">static</span> <span class="token keyword">final</span> <span class="token class-name">Object</span> obj <span class="token operator">=</span> <span class="token keyword">new</span> <span class="token class-name">Object</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token keyword">public</span> <span class="token keyword">static</span> <span class="token keyword">void</span> <span class="token function">method1</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+    <span class="token keyword">synchronized</span><span class="token punctuation">(</span> obj <span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+        <span class="token comment">// 同步块 A</span>
+        <span class="token function">method2</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token punctuation">&#125;</span>
+<span class="token punctuation">&#125;</span>
+<span class="token keyword">public</span> <span class="token keyword">static</span> <span class="token keyword">void</span> <span class="token function">method2</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+    <span class="token keyword">synchronized</span><span class="token punctuation">(</span> obj <span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+        <span class="token comment">// 同步块 B</span>
+    <span class="token punctuation">&#125;</span>
+<span class="token punctuation">&#125;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+
+<ul>
+<li><p>创建 <strong>锁记录（Lock Record）对象</strong>，每个线程的栈帧都会包含一个锁记录的结构，内部可以存储锁定对象的Mark Word.<br><img src="https://wu4yong.github.io/starry-images/assets/img/java/concurrent/synchronized3.webp" alt="synchronized3示意图"></p>
+</li>
+<li><p>让锁记录中 Object reference 指向锁对象，并尝试用 cas 替换 Object 的 Mark Word，将 Mark Word 的值存入锁记录.</p>
+</li>
+</ul>
+<p><img src="https://wu4yong.github.io/starry-images/assets/img/java/concurrent/synchronized3.webp" alt="synchronized4示意图"></p>
+<ul>
+<li><p>如果 cas 替换成功，对象头中存储了 <strong>锁记录地址和状态 00</strong>，表示由该线程给对象加锁，这时图示如下.<br><img src="https://wu4yong.github.io/starry-images/assets/img/java/concurrent/synchronized5.webp" alt="synchronized5示意图"></p>
+</li>
+<li><p>如果 cas 失败，有<strong>两种情况</strong>:<br>  1、如果是其它线程已经持有了该 Object 的轻量级锁，这时表明有竞争，进入锁膨胀过程.<br>  2、如果是自己执行了 synchronized 锁重入，那么再添加一条 Lock Record 作为重入的计数.</p>
+</li>
+</ul>
+<p><img src="https://wu4yong.github.io/starry-images/assets/img/java/concurrent/synchronized6.webp" alt="synchronized6示意图"></p>
+<ul>
+<li>当退出 synchronized 代码块（解锁时）如果有取值为 null 的锁记录，表示有重入，这时重置锁记录，表示重入计数减一	.<br><img src="https://wu4yong.github.io/starry-images/assets/img/java/concurrent/synchronized7.webp" alt="synchronized7示意图"></li>
+<li>当退出 synchronized 代码块（解锁时）锁记录的值不为 null，这时使用 cas 将 Mark Word 的值恢复给对象头<br>1、成功，则解锁成功<br>2、失败，说明轻量级锁进行了锁膨胀或已经升级为重量级锁，进入重量级锁解锁流程</li>
+</ul>
+<h3 id="4-3-2-锁膨胀（轻量级→重量级）"><a href="#4-3-2-锁膨胀（轻量级→重量级）" class="headerlink" title="4.3.2 锁膨胀（轻量级→重量级）"></a>4.3.2 锁膨胀（轻量级→重量级）</h3><p><strong>定义：</strong> 如果在尝试加轻量级锁的过程中，CAS 操作无法成功，这时一种情况就是有其它线程为此对象加上了轻量级锁（有竞争），这时需要进行锁膨胀，将轻量级锁变为重量级锁。</p>
+<p><strong>触发条件</strong>：CAS加轻量级锁失败，存在<strong>同一时刻多线程并发竞争</strong>。</p>
+<p><strong>膨胀流程</strong>：</p>
+<ol>
+<li><p>JVM为对象申请Monitor重量级锁；</p>
+</li>
+<li><p>对象Mark Word指向Monitor地址，锁状态标记为10（重量级锁）；</p>
+</li>
+<li><p>竞争失败的线程进入Monitor的EntryList阻塞；</p>
+</li>
+<li><p>持有轻量级锁的线程解锁时，CAS恢复Mark Word失败，切换为重量级锁解锁逻辑，唤醒阻塞线程。</p>
+</li>
+</ol>
+<p><strong>示例：</strong></p>
+<pre class="line-numbers language-java" data-language="java"><code class="language-java"><span class="token keyword">static</span> <span class="token class-name">Object</span> obj <span class="token operator">=</span> <span class="token keyword">new</span> <span class="token class-name">Object</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token keyword">public</span> <span class="token keyword">static</span> <span class="token keyword">void</span> <span class="token function">method1</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+    <span class="token keyword">synchronized</span><span class="token punctuation">(</span> obj <span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+        <span class="token comment">// 同步块</span>
+    <span class="token punctuation">&#125;</span>
+<span class="token punctuation">&#125;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+
+<ul>
+<li><p>当 Thread-1 进行轻量级加锁时，Thread-0 已经对该对象加了轻量级锁.<br><img src="https://wu4yong.github.io/starry-images/assets/img/java/concurrent/%E8%BD%BB%E9%87%8F%E7%BA%A7%E9%94%810.webp" alt="轻量级锁0示意图"></p>
+</li>
+<li><p>这时 Thread-1 加轻量级锁失败，进入锁膨胀流程<br>○ 即为 Object 对象申请 Monitor 锁，让 Object 指向重量级锁地址<br>○ 然后自己进入 Monitor 的 EntryList BLOCKED<br><img src="https://wu4yong.github.io/starry-images/assets/img/java/concurrent/%E8%BD%BB%E9%87%8F%E7%BA%A7%E9%94%811.webp" alt="轻量级锁1示意图"></p>
+</li>
+<li><p>当 Thread-0 退出同步块解锁时，使用 cas 将 Mark Word 的值恢复给对象头，失败。这时会进入重量级解锁流程，即按照 Monitor 地址找到 Monitor 对象，设置 Owner 为 null，唤醒 EntryList 中 BLOCKED 线程</p>
+</li>
+</ul>
+<h3 id="4-3-3-自旋优化（重量级锁辅助优化）"><a href="#4-3-3-自旋优化（重量级锁辅助优化）" class="headerlink" title="4.3.3 自旋优化（重量级锁辅助优化）"></a>4.3.3 自旋优化（重量级锁辅助优化）</h3><ul>
+<li>重量级锁竞争的时候，还可以使用自旋(循环尝试获取重量级锁)来进行优化，如果当前线程自旋成功（即这时候持锁线程已经退出了同步块，释放了锁），这时当前线程就可以避免阻塞。 (进入阻塞再恢复,会发生上下文切换,比较耗费性能).</li>
+</ul>
+<br/>
+
+<p><strong>1、自旋重试成功的情况</strong><br><img src="https://wu4yong.github.io/starry-images/assets/img/java/concurrent/%E8%87%AA%E6%97%8B%E4%BC%98%E5%8C%961.webp" alt="自旋优化1示意图"></p>
+<p><strong>2、自旋重试失败的情况</strong><br><img src="https://wu4yong.github.io/starry-images/assets/img/java/concurrent/%E8%87%AA%E6%97%8B%E4%BC%98%E5%8C%962.webp" alt="自旋优化2示意图"></p>
+<p><strong>小结：</strong><br><strong>自旋成功</strong>：持锁线程快速释放锁，自旋线程直接获取锁，无需阻塞；<br><strong>自旋失败</strong>：自旋次数耗尽仍未获取锁，进入阻塞状态；<br><strong>特性</strong>：多核CPU生效，单核CPU自旋无意义；Java7后自旋功能不可手动关闭。<br>Java6+ 自适应自旋，针对重量级锁竞争场景：线程获取锁失败时，不立即阻塞，<strong>循环自旋尝试获取锁</strong>，避免上下文切换开销。</p>
+<h3 id="4-3-4-偏向锁（最轻量级，无竞争场景）"><a href="#4-3-4-偏向锁（最轻量级，无竞争场景）" class="headerlink" title="4.3.4 偏向锁（最轻量级，无竞争场景）"></a>4.3.4 偏向锁（最轻量级，无竞争场景）</h3><p><strong>适用场景</strong>：单个线程反复获取同一锁，无其他线程竞争，规避轻量级锁每次重入的CAS开销。</p>
+<p><strong>核心原理</strong>：对象首次加锁时，通过CAS将当前线程ID写入对象Mark Word，后续该线程再次加锁，只需比对线程ID，无需CAS操作，零开销重入。</p>
+<p><strong>默认特性</strong>：Java6+默认开启，存在<strong>4秒延迟生效</strong>，可通过VM参数 <code>-XX:BiasedLockingStartupDelay=0</code> 关闭延迟。</p>
+<p>例如： </p>
+<pre class="line-numbers language-java" data-language="java"><code class="language-java"><span class="token keyword">static</span> <span class="token keyword">final</span> <span class="token class-name">Object</span> obj <span class="token operator">=</span> <span class="token keyword">new</span> <span class="token class-name">Object</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token keyword">public</span> <span class="token keyword">static</span> <span class="token keyword">void</span> <span class="token function">m1</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+    <span class="token keyword">synchronized</span><span class="token punctuation">(</span> obj <span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+        <span class="token comment">// 同步块 A</span>
+        <span class="token function">m2</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token punctuation">&#125;</span>
+<span class="token punctuation">&#125;</span>
+<span class="token keyword">public</span> <span class="token keyword">static</span> <span class="token keyword">void</span> <span class="token function">m2</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+    <span class="token keyword">synchronized</span><span class="token punctuation">(</span> obj <span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+        <span class="token comment">// 同步块 B</span>
+        <span class="token function">m3</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token punctuation">&#125;</span>
+<span class="token punctuation">&#125;</span>
+<span class="token keyword">public</span> <span class="token keyword">static</span> <span class="token keyword">void</span> <span class="token function">m3</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+    <span class="token keyword">synchronized</span><span class="token punctuation">(</span> obj <span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+        <span class="token comment">// 同步块 C</span>
+    <span class="token punctuation">&#125;</span>
+<span class="token punctuation">&#125;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+
+<br/>
+
+<p><strong>轻量级锁示意图:</strong><br><img src="https://wu4yong.github.io/starry-images/assets/img/java/concurrent/%E8%BD%BB%E9%87%8F%E7%BA%A7%E9%94%81.webp" alt="轻量级锁示意图"></p>
+<p><strong>偏向锁示意图:</strong><br><img src="https://wu4yong.github.io/starry-images/assets/img/java/concurrent/%E5%81%8F%E5%90%91%E9%94%81.webp" alt="偏向锁1示意图"></p>
+<p><strong>偏向状态</strong> 回忆一下对象头格式<br><img src="https://wu4yong.github.io/starry-images/assets/img/java/concurrent/%E5%AF%B9%E8%B1%A1%E5%A4%B4%E6%A0%BC%E5%BC%8F.webp" alt="对象头格式示意图"></p>
+<br/>
+
+<p>一个对象创建时：<br>    1、 如果开启了偏向锁（默认开启），那么对象创建后，markword 值为 0x05 即最后 3 位为 101，这时它的 thread、epoch、age 都为 0<br>    2、 偏向锁是默认是延迟的，不会在程序启动时立即生效，如果想避免延迟，可以加 VM 参数 -XX:BiasedLockingStartupDelay&#x3D;0 来禁用延迟<br>    3、如果没有开启偏向锁，那么对象创建后，markword 值为 0x01 即最后 3 位为 001，这时它的 hashcode、age 都为 0，第一次用到 hashcode 时才会赋值</p>
+<br/>
+
+<h3 id="4-3-4-1-测试延迟特性"><a href="#4-3-4-1-测试延迟特性" class="headerlink" title="4.3.4.1 测试延迟特性"></a>4.3.4.1 测试延迟特性</h3><p>偏向锁是默认是延迟的，不会在程序启动时立即生效，如果想避免延迟，可以加 VM 参数 -XX:BiasedLockingStartupDelay&#x3D;0 来禁用延迟 </p>
+<br/>
+
+<h3 id="4-3-4-2-测试偏向锁"><a href="#4-3-4-2-测试偏向锁" class="headerlink" title="4.3.4.2 测试偏向锁"></a>4.3.4.2 测试偏向锁</h3><p>class Dog {}<br>利用 jol 第三方工具来查看对象头信息（注意这里up主扩展了 jol 让它输出更为简洁）这里视频里引入的依赖貌似是他自己做的jar包,</p>
+<pre class="line-numbers language-java" data-language="java"><code class="language-java">示例代码：
+
+<span class="token keyword">public</span> <span class="token keyword">static</span> <span class="token keyword">void</span> <span class="token function">main</span><span class="token punctuation">(</span><span class="token class-name">String</span><span class="token punctuation">[</span><span class="token punctuation">]</span> args<span class="token punctuation">)</span> <span class="token keyword">throws</span> <span class="token class-name">IOException</span> <span class="token punctuation">&#123;</span>
+    <span class="token class-name">Dog</span> d <span class="token operator">=</span> <span class="token keyword">new</span> <span class="token class-name">Dog</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token class-name">ClassLayout</span> classLayout <span class="token operator">=</span> <span class="token class-name">ClassLayout</span><span class="token punctuation">.</span><span class="token function">parseInstance</span><span class="token punctuation">(</span>d<span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+    <span class="token keyword">new</span> <span class="token class-name">Thread</span><span class="token punctuation">(</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token operator">-></span> <span class="token punctuation">&#123;</span>
+        log<span class="token punctuation">.</span><span class="token function">debug</span><span class="token punctuation">(</span><span class="token string">"synchronized 前"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+        <span class="token class-name">System</span><span class="token punctuation">.</span>out<span class="token punctuation">.</span><span class="token function">println</span><span class="token punctuation">(</span>classLayout<span class="token punctuation">.</span><span class="token function">toPrintableSimple</span><span class="token punctuation">(</span><span class="token boolean">true</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+        <span class="token keyword">synchronized</span> <span class="token punctuation">(</span>d<span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+            log<span class="token punctuation">.</span><span class="token function">debug</span><span class="token punctuation">(</span><span class="token string">"synchronized 中"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+            <span class="token class-name">System</span><span class="token punctuation">.</span>out<span class="token punctuation">.</span><span class="token function">println</span><span class="token punctuation">(</span>classLayout<span class="token punctuation">.</span><span class="token function">toPrintableSimple</span><span class="token punctuation">(</span><span class="token boolean">true</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+        <span class="token punctuation">&#125;</span>
+        log<span class="token punctuation">.</span><span class="token function">debug</span><span class="token punctuation">(</span><span class="token string">"synchronized 后"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+        <span class="token class-name">System</span><span class="token punctuation">.</span>out<span class="token punctuation">.</span><span class="token function">println</span><span class="token punctuation">(</span>classLayout<span class="token punctuation">.</span><span class="token function">toPrintableSimple</span><span class="token punctuation">(</span><span class="token boolean">true</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token punctuation">&#125;</span><span class="token punctuation">,</span> <span class="token string">"t1"</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token function">start</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">&#125;</span>
+
+输出
+<span class="token number">11</span><span class="token operator">:</span><span class="token number">08</span><span class="token operator">:</span><span class="token number">58.117</span> <span class="token class-name"><span class="token namespace">c<span class="token punctuation">.</span></span>TestBiased</span> <span class="token punctuation">[</span>t1<span class="token punctuation">]</span> <span class="token operator">-</span> <span class="token keyword">synchronized</span> 前
+<span class="token number">00000000</span> <span class="token number">00000000</span> <span class="token number">00000000</span> <span class="token number">00000000</span> <span class="token number">00000000</span> <span class="token number">00000000</span> <span class="token number">00000000</span> <span class="token number">00000101</span>
+<span class="token number">11</span><span class="token operator">:</span><span class="token number">08</span><span class="token operator">:</span><span class="token number">58.121</span> <span class="token class-name"><span class="token namespace">c<span class="token punctuation">.</span></span>TestBiased</span> <span class="token punctuation">[</span>t1<span class="token punctuation">]</span> <span class="token operator">-</span> <span class="token keyword">synchronized</span> 中
+<span class="token number">00000000</span> <span class="token number">00000000</span> <span class="token number">00000000</span> <span class="token number">00000000</span> <span class="token number">00011111</span> <span class="token number">11101011</span> <span class="token number">11010000</span> <span class="token number">00000101</span>
+<span class="token number">11</span><span class="token operator">:</span><span class="token number">08</span><span class="token operator">:</span><span class="token number">58.121</span> <span class="token class-name"><span class="token namespace">c<span class="token punctuation">.</span></span>TestBiased</span> <span class="token punctuation">[</span>t1<span class="token punctuation">]</span> <span class="token operator">-</span> <span class="token keyword">synchronized</span> 后
+<span class="token number">00000000</span> <span class="token number">00000000</span> <span class="token number">00000000</span> <span class="token number">00000000</span> <span class="token number">00011111</span> <span class="token number">11101011</span> <span class="token number">11010000</span> <span class="token number">00000101</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+
+
+<blockquote>
+<p>注意 :<strong>处于偏向锁的对象解锁后，线程 id 仍存储于对象头中</strong></p>
+</blockquote>
+<br/>
+
+<h3 id="4-3-4-3-测试禁用偏向锁"><a href="#4-3-4-3-测试禁用偏向锁" class="headerlink" title="4.3.4.3 测试禁用偏向锁"></a>4.3.4.3 测试禁用偏向锁</h3><p>在上面测试代码运行时在添加 VM <strong>参数 -XX:-UseBiasedLocking 禁用偏向锁</strong> </p>
+<pre class="line-numbers language-text" data-language="text"><code class="language-text">输出：
+    11:13:10.018 c.TestBiased [t1] - synchronized 前
+    00000000 00000000 00000000 00000000 00000000 00000000 00000000 00000001
+    11:13:10.021 c.TestBiased [t1] - synchronized 中
+    00000000 00000000 00000000 00000000 00100000 00010100 11110011 10001000
+    11:13:10.021 c.TestBiased [t1] - synchronized 后
+    00000000 00000000 00000000 00000000 00000000 00000000 00000000 00000001<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+
+<br/>
+
+<h3 id="4-3-4-4-测试-hashCode"><a href="#4-3-4-4-测试-hashCode" class="headerlink" title="4.3.4.4 测试 hashCode"></a>4.3.4.4 测试 hashCode</h3><p>在Dog d &#x3D; new Dog();后加上一句 d.hashCode();</p>
+<ul>
+<li>正常状态对象一开始是没有 hashCode 的，第一次调用才生成</li>
+<li>调用了 hashCode() 后会撤销该对象的偏向锁</li>
+</ul>
+<h3 id="4-3-4-5-撤销（偏向）：调用对象-hashCode"><a href="#4-3-4-5-撤销（偏向）：调用对象-hashCode" class="headerlink" title="4.3.4.5 撤销（偏向）：调用对象 hashCode"></a>4.3.4.5 撤销（偏向）：调用对象 hashCode</h3><p>调用了对象的 hashCode，但偏向锁的对象 MarkWord 中存储的是线程 id，如果调用 hashCode 会导致偏向锁被撤销 </p>
+<ul>
+<li>轻量级锁会在锁记录中记录 hashCode </li>
+<li>重量级锁会在 Monitor 中记录 hashCode</li>
+</ul>
+<p>记得去掉 -XX:-UseBiasedLocking,在调用 hashCode 后使用偏向锁，输出:	</p>
+<pre class="line-numbers language-text" data-language="text"><code class="language-text">11:22:10.386 c.TestBiased [main] - 调用 hashCode:1778535015
+11:22:10.391 c.TestBiased [t1] - synchronized 前
+00000000 00000000 00000000 01101010 00000010 01001010 01100111 00000001
+11:22:10.393 c.TestBiased [t1] - synchronized 中
+00000000 00000000 00000000 00000000 00100000 11000011 11110011 01101000
+11:22:10.393 c.TestBiased [t1] - synchronized 后
+00000000 00000000 00000000 01101010 00000010 01001010 01100111 00000001<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+
+<h3 id="4-3-4-6-撤销（偏向）：其它线程错开使用对象"><a href="#4-3-4-6-撤销（偏向）：其它线程错开使用对象" class="headerlink" title="4.3.4.6 撤销（偏向）：其它线程错开使用对象"></a>4.3.4.6 撤销（偏向）：其它线程错开使用对象</h3><p>当有其它线程使用偏向锁对象时，会将偏向锁升级为轻量级锁</p>
+<pre class="line-numbers language-java" data-language="java"><code class="language-java"><span class="token keyword">private</span> <span class="token keyword">static</span> <span class="token keyword">void</span> <span class="token function">test2</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token keyword">throws</span> <span class="token class-name">InterruptedException</span> <span class="token punctuation">&#123;</span>
+
+    <span class="token class-name">Dog</span> d <span class="token operator">=</span> <span class="token keyword">new</span> <span class="token class-name">Dog</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+    <span class="token class-name">Thread</span> t1 <span class="token operator">=</span> <span class="token keyword">new</span> <span class="token class-name">Thread</span><span class="token punctuation">(</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token operator">-></span> <span class="token punctuation">&#123;</span>
+
+        log<span class="token punctuation">.</span><span class="token function">debug</span><span class="token punctuation">(</span><span class="token class-name">ClassLayout</span><span class="token punctuation">.</span><span class="token function">parseInstance</span><span class="token punctuation">(</span>d<span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token function">toPrintableSimple</span><span class="token punctuation">(</span><span class="token boolean">true</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+        <span class="token keyword">synchronized</span> <span class="token punctuation">(</span>d<span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+            log<span class="token punctuation">.</span><span class="token function">debug</span><span class="token punctuation">(</span><span class="token class-name">ClassLayout</span><span class="token punctuation">.</span><span class="token function">parseInstance</span><span class="token punctuation">(</span>d<span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token function">toPrintableSimple</span><span class="token punctuation">(</span><span class="token boolean">true</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+        <span class="token punctuation">&#125;</span>
+        log<span class="token punctuation">.</span><span class="token function">debug</span><span class="token punctuation">(</span><span class="token class-name">ClassLayout</span><span class="token punctuation">.</span><span class="token function">parseInstance</span><span class="token punctuation">(</span>d<span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token function">toPrintableSimple</span><span class="token punctuation">(</span><span class="token boolean">true</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+        <span class="token keyword">synchronized</span> <span class="token punctuation">(</span><span class="token class-name">TestBiased</span><span class="token punctuation">.</span><span class="token keyword">class</span><span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+            <span class="token class-name">TestBiased</span><span class="token punctuation">.</span><span class="token keyword">class</span><span class="token punctuation">.</span><span class="token function">notify</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+        <span class="token punctuation">&#125;</span>
+        <span class="token comment">// 如果不用 wait/notify 使用 join 必须打开下面的注释</span>
+        <span class="token comment">// 因为：t1 线程不能结束，否则底层线程可能被 jvm 重用作为 t2 线程，底层线程 id 是一样的</span>
+        <span class="token comment">/*try &#123;
+            System.in.read();
+        &#125; catch (IOException e) &#123;
+            e.printStackTrace();
+        &#125;*/</span>
+    <span class="token punctuation">&#125;</span><span class="token punctuation">,</span> <span class="token string">"t1"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    t1<span class="token punctuation">.</span><span class="token function">start</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+    <span class="token class-name">Thread</span> t2 <span class="token operator">=</span> <span class="token keyword">new</span> <span class="token class-name">Thread</span><span class="token punctuation">(</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token operator">-></span> <span class="token punctuation">&#123;</span>
+        <span class="token keyword">synchronized</span> <span class="token punctuation">(</span><span class="token class-name">TestBiased</span><span class="token punctuation">.</span><span class="token keyword">class</span><span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+            <span class="token keyword">try</span> <span class="token punctuation">&#123;</span>
+                <span class="token class-name">TestBiased</span><span class="token punctuation">.</span><span class="token keyword">class</span><span class="token punctuation">.</span><span class="token function">wait</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+            <span class="token punctuation">&#125;</span> <span class="token keyword">catch</span> <span class="token punctuation">(</span><span class="token class-name">InterruptedException</span> e<span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+                e<span class="token punctuation">.</span><span class="token function">printStackTrace</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+            <span class="token punctuation">&#125;</span>
+        <span class="token punctuation">&#125;</span>
+
+        log<span class="token punctuation">.</span><span class="token function">debug</span><span class="token punctuation">(</span><span class="token class-name">ClassLayout</span><span class="token punctuation">.</span><span class="token function">parseInstance</span><span class="token punctuation">(</span>d<span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token function">toPrintableSimple</span><span class="token punctuation">(</span><span class="token boolean">true</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+        <span class="token keyword">synchronized</span> <span class="token punctuation">(</span>d<span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+            log<span class="token punctuation">.</span><span class="token function">debug</span><span class="token punctuation">(</span><span class="token class-name">ClassLayout</span><span class="token punctuation">.</span><span class="token function">parseInstance</span><span class="token punctuation">(</span>d<span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token function">toPrintableSimple</span><span class="token punctuation">(</span><span class="token boolean">true</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+        <span class="token punctuation">&#125;</span>
+        log<span class="token punctuation">.</span><span class="token function">debug</span><span class="token punctuation">(</span><span class="token class-name">ClassLayout</span><span class="token punctuation">.</span><span class="token function">parseInstance</span><span class="token punctuation">(</span>d<span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token function">toPrintableSimple</span><span class="token punctuation">(</span><span class="token boolean">true</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+    <span class="token punctuation">&#125;</span><span class="token punctuation">,</span> <span class="token string">"t2"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    t2<span class="token punctuation">.</span><span class="token function">start</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">&#125;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+
+<p>输出:<br><img src="https://wu4yong.github.io/starry-images/assets/img/java/concurrent/%E6%B5%8B%E8%AF%951.webp" alt="测试1示意图"></p>
+<br/>
+
+<h3 id="4-3-4-7-撤销（偏向）：调用-wait-notify"><a href="#4-3-4-7-撤销（偏向）：调用-wait-notify" class="headerlink" title="4.3.4.7 撤销（偏向）：调用 wait&#x2F;notify"></a>4.3.4.7 撤销（偏向）：调用 wait&#x2F;notify</h3><p>重量级锁才支持 wait&#x2F;notify</p>
+<pre class="line-numbers language-java" data-language="java"><code class="language-java"><span class="token keyword">public</span> <span class="token keyword">static</span> <span class="token keyword">void</span> <span class="token function">main</span><span class="token punctuation">(</span><span class="token class-name">String</span><span class="token punctuation">[</span><span class="token punctuation">]</span> args<span class="token punctuation">)</span> <span class="token keyword">throws</span> <span class="token class-name">InterruptedException</span> <span class="token punctuation">&#123;</span>
+    <span class="token class-name">Dog</span> d <span class="token operator">=</span> <span class="token keyword">new</span> <span class="token class-name">Dog</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+    <span class="token class-name">Thread</span> t1 <span class="token operator">=</span> <span class="token keyword">new</span> <span class="token class-name">Thread</span><span class="token punctuation">(</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token operator">-></span> <span class="token punctuation">&#123;</span>
+        log<span class="token punctuation">.</span><span class="token function">debug</span><span class="token punctuation">(</span><span class="token class-name">ClassLayout</span><span class="token punctuation">.</span><span class="token function">parseInstance</span><span class="token punctuation">(</span>d<span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token function">toPrintableSimple</span><span class="token punctuation">(</span><span class="token boolean">true</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+        <span class="token keyword">synchronized</span> <span class="token punctuation">(</span>d<span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+            log<span class="token punctuation">.</span><span class="token function">debug</span><span class="token punctuation">(</span><span class="token class-name">ClassLayout</span><span class="token punctuation">.</span><span class="token function">parseInstance</span><span class="token punctuation">(</span>d<span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token function">toPrintableSimple</span><span class="token punctuation">(</span><span class="token boolean">true</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+            <span class="token keyword">try</span> <span class="token punctuation">&#123;</span>
+                d<span class="token punctuation">.</span><span class="token function">wait</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+            <span class="token punctuation">&#125;</span> <span class="token keyword">catch</span> <span class="token punctuation">(</span><span class="token class-name">InterruptedException</span> e<span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+                e<span class="token punctuation">.</span><span class="token function">printStackTrace</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+            <span class="token punctuation">&#125;</span>
+            log<span class="token punctuation">.</span><span class="token function">debug</span><span class="token punctuation">(</span><span class="token class-name">ClassLayout</span><span class="token punctuation">.</span><span class="token function">parseInstance</span><span class="token punctuation">(</span>d<span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token function">toPrintableSimple</span><span class="token punctuation">(</span><span class="token boolean">true</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+        <span class="token punctuation">&#125;</span>
+    <span class="token punctuation">&#125;</span><span class="token punctuation">,</span> <span class="token string">"t1"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    t1<span class="token punctuation">.</span><span class="token function">start</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+    <span class="token keyword">new</span> <span class="token class-name">Thread</span><span class="token punctuation">(</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token operator">-></span> <span class="token punctuation">&#123;</span>
+        <span class="token keyword">try</span> <span class="token punctuation">&#123;</span>
+            <span class="token class-name">Thread</span><span class="token punctuation">.</span><span class="token function">sleep</span><span class="token punctuation">(</span><span class="token number">6000</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+        <span class="token punctuation">&#125;</span> <span class="token keyword">catch</span> <span class="token punctuation">(</span><span class="token class-name">InterruptedException</span> e<span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+            e<span class="token punctuation">.</span><span class="token function">printStackTrace</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+        <span class="token punctuation">&#125;</span>
+        <span class="token keyword">synchronized</span> <span class="token punctuation">(</span>d<span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+            log<span class="token punctuation">.</span><span class="token function">debug</span><span class="token punctuation">(</span><span class="token string">"notify"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+            d<span class="token punctuation">.</span><span class="token function">notify</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+        <span class="token punctuation">&#125;</span>
+    <span class="token punctuation">&#125;</span><span class="token punctuation">,</span> <span class="token string">"t2"</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token function">start</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">&#125;</span>
+
+<span class="token operator">!</span><span class="token punctuation">[</span>测试<span class="token number">1</span>示意图<span class="token punctuation">]</span><span class="token punctuation">(</span>@<span class="token annotation punctuation">@CDN</span>@@<span class="token operator">/</span>assets<span class="token operator">/</span>img<span class="token operator">/</span>java<span class="token operator">/</span>concurrent<span class="token operator">/</span>测试<span class="token number">1.</span>webp<span class="token punctuation">)</span>
+
+输出<span class="token operator">:</span>
+<span class="token punctuation">[</span>t1<span class="token punctuation">]</span> <span class="token operator">-</span> <span class="token number">00000000</span> <span class="token number">00000000</span> <span class="token number">00000000</span> <span class="token number">00000000</span> <span class="token number">00000000</span> <span class="token number">00000000</span> <span class="token number">00000000</span> <span class="token number">00000101</span>
+<span class="token punctuation">[</span>t1<span class="token punctuation">]</span> <span class="token operator">-</span> <span class="token number">00000000</span> <span class="token number">00000000</span> <span class="token number">00000000</span> <span class="token number">00000000</span> <span class="token number">00011111</span> <span class="token number">10110011</span> <span class="token number">11111000</span> <span class="token number">00000101</span>
+<span class="token punctuation">[</span>t2<span class="token punctuation">]</span> <span class="token operator">-</span> notify
+<span class="token punctuation">[</span>t1<span class="token punctuation">]</span> <span class="token operator">-</span> <span class="token number">00000000</span> <span class="token number">00000000</span> <span class="token number">00000000</span> <span class="token number">00000000</span> <span class="token number">00011100</span> <span class="token number">11010100</span> <span class="token number">00001101</span> <span class="token number">11001010</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+
+<h3 id="4-3-4-8-批量重偏向"><a href="#4-3-4-8-批量重偏向" class="headerlink" title="4.3.4.8 批量重偏向"></a>4.3.4.8 批量重偏向</h3><p>如果对象虽然被多个线程访问，但没有竞争，这时偏向了线程 T1 的对象仍有机会重新偏向 T2，重偏向会重置对象的 Thread ID </p>
+<p>当(某类型对象)撤销偏向锁阈值超过 20 次后，jvm 会这样觉得，我是不是偏向错了呢，于是会在给(所有这种类型的状态为偏向锁的)对象加锁时重新偏向至新的加锁线程</p>
+<p>这里略有些不好用文字说明,看例子吧(注意t2-19处的变化: 发生了批量重偏向)</p>
+<pre class="line-numbers language-java" data-language="java"><code class="language-java"><span class="token keyword">private</span> <span class="token keyword">static</span> <span class="token keyword">void</span> <span class="token function">test3</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token keyword">throws</span> <span class="token class-name">InterruptedException</span> <span class="token punctuation">&#123;</span>
+
+    <span class="token class-name">Vector</span><span class="token generics"><span class="token punctuation">&lt;</span><span class="token class-name">Dog</span><span class="token punctuation">></span></span> list <span class="token operator">=</span> <span class="token keyword">new</span> <span class="token class-name">Vector</span><span class="token generics"><span class="token punctuation">&lt;</span><span class="token punctuation">></span></span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+    <span class="token class-name">Thread</span> t1 <span class="token operator">=</span> <span class="token keyword">new</span> <span class="token class-name">Thread</span><span class="token punctuation">(</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token operator">-></span> <span class="token punctuation">&#123;</span>
+        <span class="token keyword">for</span> <span class="token punctuation">(</span><span class="token keyword">int</span> i <span class="token operator">=</span> <span class="token number">0</span><span class="token punctuation">;</span> i <span class="token operator">&lt;</span> <span class="token number">30</span><span class="token punctuation">;</span> i<span class="token operator">++</span><span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+            <span class="token class-name">Dog</span> d <span class="token operator">=</span> <span class="token keyword">new</span> <span class="token class-name">Dog</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+            list<span class="token punctuation">.</span><span class="token function">add</span><span class="token punctuation">(</span>d<span class="token punctuation">)</span><span class="token punctuation">;</span>
+            <span class="token keyword">synchronized</span> <span class="token punctuation">(</span>d<span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+                log<span class="token punctuation">.</span><span class="token function">debug</span><span class="token punctuation">(</span>i <span class="token operator">+</span> <span class="token string">"\t"</span> <span class="token operator">+</span> <span class="token class-name">ClassLayout</span><span class="token punctuation">.</span><span class="token function">parseInstance</span><span class="token punctuation">(</span>d<span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token function">toPrintableSimple</span><span class="token punctuation">(</span><span class="token boolean">true</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+            <span class="token punctuation">&#125;</span>
+        <span class="token punctuation">&#125;</span>
+        <span class="token keyword">synchronized</span> <span class="token punctuation">(</span>list<span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+            list<span class="token punctuation">.</span><span class="token function">notify</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+        <span class="token punctuation">&#125;</span>
+    <span class="token punctuation">&#125;</span><span class="token punctuation">,</span> <span class="token string">"t1"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    t1<span class="token punctuation">.</span><span class="token function">start</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+    <span class="token class-name">Thread</span> t2 <span class="token operator">=</span> <span class="token keyword">new</span> <span class="token class-name">Thread</span><span class="token punctuation">(</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token operator">-></span> <span class="token punctuation">&#123;</span>
+        <span class="token keyword">synchronized</span> <span class="token punctuation">(</span>list<span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+            <span class="token keyword">try</span> <span class="token punctuation">&#123;</span>
+                list<span class="token punctuation">.</span><span class="token function">wait</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+            <span class="token punctuation">&#125;</span> <span class="token keyword">catch</span> <span class="token punctuation">(</span><span class="token class-name">InterruptedException</span> e<span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+                e<span class="token punctuation">.</span><span class="token function">printStackTrace</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+            <span class="token punctuation">&#125;</span>
+        <span class="token punctuation">&#125;</span>
+        log<span class="token punctuation">.</span><span class="token function">debug</span><span class="token punctuation">(</span><span class="token string">"===============> "</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+        <span class="token keyword">for</span> <span class="token punctuation">(</span><span class="token keyword">int</span> i <span class="token operator">=</span> <span class="token number">0</span><span class="token punctuation">;</span> i <span class="token operator">&lt;</span> <span class="token number">30</span><span class="token punctuation">;</span> i<span class="token operator">++</span><span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+            <span class="token class-name">Dog</span> d <span class="token operator">=</span> list<span class="token punctuation">.</span><span class="token function">get</span><span class="token punctuation">(</span>i<span class="token punctuation">)</span><span class="token punctuation">;</span>
+            log<span class="token punctuation">.</span><span class="token function">debug</span><span class="token punctuation">(</span>i <span class="token operator">+</span> <span class="token string">"\t"</span> <span class="token operator">+</span> <span class="token class-name">ClassLayout</span><span class="token punctuation">.</span><span class="token function">parseInstance</span><span class="token punctuation">(</span>d<span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token function">toPrintableSimple</span><span class="token punctuation">(</span><span class="token boolean">true</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+            <span class="token keyword">synchronized</span> <span class="token punctuation">(</span>d<span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+                log<span class="token punctuation">.</span><span class="token function">debug</span><span class="token punctuation">(</span>i <span class="token operator">+</span> <span class="token string">"\t"</span> <span class="token operator">+</span> <span class="token class-name">ClassLayout</span><span class="token punctuation">.</span><span class="token function">parseInstance</span><span class="token punctuation">(</span>d<span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token function">toPrintableSimple</span><span class="token punctuation">(</span><span class="token boolean">true</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+            <span class="token punctuation">&#125;</span>
+            log<span class="token punctuation">.</span><span class="token function">debug</span><span class="token punctuation">(</span>i <span class="token operator">+</span> <span class="token string">"\t"</span> <span class="token operator">+</span> <span class="token class-name">ClassLayout</span><span class="token punctuation">.</span><span class="token function">parseInstance</span><span class="token punctuation">(</span>d<span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token function">toPrintableSimple</span><span class="token punctuation">(</span><span class="token boolean">true</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+        <span class="token punctuation">&#125;</span>
+    <span class="token punctuation">&#125;</span><span class="token punctuation">,</span> <span class="token string">"t2"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    t2<span class="token punctuation">.</span><span class="token function">start</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">&#125;</span>
+
+输出<span class="token operator">:</span>
+<span class="token punctuation">[</span>t1<span class="token punctuation">]</span> <span class="token operator">-</span> <span class="token number">0</span> <span class="token number">00000000</span> <span class="token number">00000000</span> <span class="token number">00000000</span> <span class="token number">00000000</span> <span class="token number">00011111</span> <span class="token number">11110011</span> <span class="token number">11100000</span> <span class="token number">00000101</span>
+<span class="token punctuation">[</span>t1<span class="token punctuation">]</span> <span class="token operator">-</span> <span class="token number">1</span> <span class="token number">00000000</span> <span class="token number">00000000</span> <span class="token number">00000000</span> <span class="token number">00000000</span> <span class="token number">00011111</span> <span class="token number">11110011</span> <span class="token number">11100000</span> <span class="token number">00000101</span>
+<span class="token punctuation">[</span>t1<span class="token punctuation">]</span> <span class="token operator">-</span> <span class="token number">2</span> <span class="token number">00000000</span> <span class="token number">00000000</span> <span class="token number">00000000</span> <span class="token number">00000000</span> <span class="token number">00011111</span> <span class="token number">11110011</span> <span class="token number">11100000</span> <span class="token number">00000101</span>
+<span class="token punctuation">[</span>t1<span class="token punctuation">]</span> <span class="token operator">-</span> <span class="token number">3</span> <span class="token number">00000000</span> <span class="token number">00000000</span> <span class="token number">00000000</span> <span class="token number">00000000</span> <span class="token number">00011111</span> <span class="token number">11110011</span> <span class="token number">11100000</span> <span class="token number">00000101</span>
+<span class="token punctuation">[</span>t2<span class="token punctuation">]</span> <span class="token operator">-</span> <span class="token operator">==</span><span class="token operator">==</span><span class="token operator">==</span><span class="token operator">==</span><span class="token operator">==</span><span class="token operator">==</span><span class="token operator">==</span><span class="token operator">=</span><span class="token operator">></span>
+<span class="token punctuation">[</span>t2<span class="token punctuation">]</span> <span class="token operator">-</span> <span class="token number">0</span> <span class="token number">00000000</span> <span class="token number">00000000</span> <span class="token number">00000000</span> <span class="token number">00000000</span> <span class="token number">00011111</span> <span class="token number">11110011</span> <span class="token number">11100000</span> <span class="token number">00000101</span>
+<span class="token punctuation">[</span>t2<span class="token punctuation">]</span> <span class="token operator">-</span> <span class="token number">0</span> <span class="token number">00000000</span> <span class="token number">00000000</span> <span class="token number">00000000</span> <span class="token number">00000000</span> <span class="token number">00100000</span> <span class="token number">01011000</span> <span class="token number">11110111</span> <span class="token number">00000000</span>
+<span class="token punctuation">[</span>t2<span class="token punctuation">]</span> <span class="token operator">-</span> <span class="token number">0</span> <span class="token number">00000000</span> <span class="token number">00000000</span> <span class="token number">00000000</span> <span class="token number">00000000</span> <span class="token number">00000000</span> <span class="token number">00000000</span> <span class="token number">00000000</span> <span class="token number">00000001</span>
+<span class="token punctuation">[</span>t2<span class="token punctuation">]</span> <span class="token operator">-</span> <span class="token number">1</span> <span class="token number">00000000</span> <span class="token number">00000000</span> <span class="token number">00000000</span> <span class="token number">00000000</span> <span class="token number">00011111</span> <span class="token number">11110011</span> <span class="token number">11100000</span> <span class="token number">00000101</span>
+<span class="token punctuation">[</span>t2<span class="token punctuation">]</span> <span class="token operator">-</span> <span class="token number">1</span> <span class="token number">00000000</span> <span class="token number">00000000</span> <span class="token number">00000000</span> <span class="token number">00000000</span> <span class="token number">00100000</span> <span class="token number">01011000</span> <span class="token number">11110111</span> <span class="token number">00000000</span>
+<span class="token punctuation">[</span>t2<span class="token punctuation">]</span> <span class="token operator">-</span> <span class="token number">1</span> <span class="token number">00000000</span> <span class="token number">00000000</span> <span class="token number">00000000</span> <span class="token number">00000000</span> <span class="token number">00000000</span> <span class="token number">00000000</span> <span class="token number">00000000</span> <span class="token number">00000001</span>
+此次省略<span class="token number">1</span>万字<span class="token punctuation">.</span><span class="token punctuation">.</span><span class="token punctuation">.</span><span class="token punctuation">.</span><span class="token punctuation">.</span><span class="token punctuation">.</span><span class="token punctuation">.</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+
+
+<h3 id="4-3-4-9-批量撤销（偏向）"><a href="#4-3-4-9-批量撤销（偏向）" class="headerlink" title="4.3.4.9 批量撤销（偏向）"></a>4.3.4.9 批量撤销（偏向）</h3><p>当撤销偏向锁阈值超过 40 次后，jvm 会这样觉得，自己确实偏向错了，根本就不该偏向。于是整个类的所有对象都会变为不可偏向的，新建的该类型对象也是不可偏向的 </p>
+<pre class="line-numbers language-java" data-language="java"><code class="language-java"><span class="token keyword">static</span> <span class="token class-name">Thread</span> t1<span class="token punctuation">,</span>t2<span class="token punctuation">,</span>t3<span class="token punctuation">;</span>
+<span class="token keyword">private</span> <span class="token keyword">static</span> <span class="token keyword">void</span> <span class="token function">test4</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token keyword">throws</span> <span class="token class-name">InterruptedException</span> <span class="token punctuation">&#123;</span>
+    <span class="token class-name">Vector</span><span class="token generics"><span class="token punctuation">&lt;</span><span class="token class-name">Dog</span><span class="token punctuation">></span></span> list <span class="token operator">=</span> <span class="token keyword">new</span> <span class="token class-name">Vector</span><span class="token generics"><span class="token punctuation">&lt;</span><span class="token punctuation">></span></span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+    <span class="token keyword">int</span> loopNumber <span class="token operator">=</span> <span class="token number">39</span><span class="token punctuation">;</span>
+    t1 <span class="token operator">=</span> <span class="token keyword">new</span> <span class="token class-name">Thread</span><span class="token punctuation">(</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token operator">-></span> <span class="token punctuation">&#123;</span>
+        <span class="token keyword">for</span> <span class="token punctuation">(</span><span class="token keyword">int</span> i <span class="token operator">=</span> <span class="token number">0</span><span class="token punctuation">;</span> i <span class="token operator">&lt;</span> loopNumber<span class="token punctuation">;</span> i<span class="token operator">++</span><span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+            <span class="token class-name">Dog</span> d <span class="token operator">=</span> <span class="token keyword">new</span> <span class="token class-name">Dog</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+            list<span class="token punctuation">.</span><span class="token function">add</span><span class="token punctuation">(</span>d<span class="token punctuation">)</span><span class="token punctuation">;</span>
+            <span class="token keyword">synchronized</span> <span class="token punctuation">(</span>d<span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+                log<span class="token punctuation">.</span><span class="token function">debug</span><span class="token punctuation">(</span>i <span class="token operator">+</span> <span class="token string">"\t"</span> <span class="token operator">+</span> <span class="token class-name">ClassLayout</span><span class="token punctuation">.</span><span class="token function">parseInstance</span><span class="token punctuation">(</span>d<span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token function">toPrintableSimple</span><span class="token punctuation">(</span><span class="token boolean">true</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+            <span class="token punctuation">&#125;</span>
+        <span class="token punctuation">&#125;</span>
+        <span class="token class-name">LockSupport</span><span class="token punctuation">.</span><span class="token function">unpark</span><span class="token punctuation">(</span>t2<span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token punctuation">&#125;</span><span class="token punctuation">,</span> <span class="token string">"t1"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    t1<span class="token punctuation">.</span><span class="token function">start</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+    t2 <span class="token operator">=</span> <span class="token keyword">new</span> <span class="token class-name">Thread</span><span class="token punctuation">(</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token operator">-></span> <span class="token punctuation">&#123;</span>
+        <span class="token class-name">LockSupport</span><span class="token punctuation">.</span><span class="token function">park</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+        log<span class="token punctuation">.</span><span class="token function">debug</span><span class="token punctuation">(</span><span class="token string">"===============> "</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+        <span class="token keyword">for</span> <span class="token punctuation">(</span><span class="token keyword">int</span> i <span class="token operator">=</span> <span class="token number">0</span><span class="token punctuation">;</span> i <span class="token operator">&lt;</span> loopNumber<span class="token punctuation">;</span> i<span class="token operator">++</span><span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+            <span class="token class-name">Dog</span> d <span class="token operator">=</span> list<span class="token punctuation">.</span><span class="token function">get</span><span class="token punctuation">(</span>i<span class="token punctuation">)</span><span class="token punctuation">;</span>
+            log<span class="token punctuation">.</span><span class="token function">debug</span><span class="token punctuation">(</span>i <span class="token operator">+</span> <span class="token string">"\t"</span> <span class="token operator">+</span> <span class="token class-name">ClassLayout</span><span class="token punctuation">.</span><span class="token function">parseInstance</span><span class="token punctuation">(</span>d<span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token function">toPrintableSimple</span><span class="token punctuation">(</span><span class="token boolean">true</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+            <span class="token keyword">synchronized</span> <span class="token punctuation">(</span>d<span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+                log<span class="token punctuation">.</span><span class="token function">debug</span><span class="token punctuation">(</span>i <span class="token operator">+</span> <span class="token string">"\t"</span> <span class="token operator">+</span> <span class="token class-name">ClassLayout</span><span class="token punctuation">.</span><span class="token function">parseInstance</span><span class="token punctuation">(</span>d<span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token function">toPrintableSimple</span><span class="token punctuation">(</span><span class="token boolean">true</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+            <span class="token punctuation">&#125;</span>
+            log<span class="token punctuation">.</span><span class="token function">debug</span><span class="token punctuation">(</span>i <span class="token operator">+</span> <span class="token string">"\t"</span> <span class="token operator">+</span> <span class="token class-name">ClassLayout</span><span class="token punctuation">.</span><span class="token function">parseInstance</span><span class="token punctuation">(</span>d<span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token function">toPrintableSimple</span><span class="token punctuation">(</span><span class="token boolean">true</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+        <span class="token punctuation">&#125;</span>
+        <span class="token class-name">LockSupport</span><span class="token punctuation">.</span><span class="token function">unpark</span><span class="token punctuation">(</span>t3<span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token punctuation">&#125;</span><span class="token punctuation">,</span> <span class="token string">"t2"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    t2<span class="token punctuation">.</span><span class="token function">start</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+    t3 <span class="token operator">=</span> <span class="token keyword">new</span> <span class="token class-name">Thread</span><span class="token punctuation">(</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token operator">-></span> <span class="token punctuation">&#123;</span>
+        <span class="token class-name">LockSupport</span><span class="token punctuation">.</span><span class="token function">park</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+        log<span class="token punctuation">.</span><span class="token function">debug</span><span class="token punctuation">(</span><span class="token string">"===============> "</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+        <span class="token keyword">for</span> <span class="token punctuation">(</span><span class="token keyword">int</span> i <span class="token operator">=</span> <span class="token number">0</span><span class="token punctuation">;</span> i <span class="token operator">&lt;</span> loopNumber<span class="token punctuation">;</span> i<span class="token operator">++</span><span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+            <span class="token class-name">Dog</span> d <span class="token operator">=</span> list<span class="token punctuation">.</span><span class="token function">get</span><span class="token punctuation">(</span>i<span class="token punctuation">)</span><span class="token punctuation">;</span>
+            log<span class="token punctuation">.</span><span class="token function">debug</span><span class="token punctuation">(</span>i <span class="token operator">+</span> <span class="token string">"\t"</span> <span class="token operator">+</span> <span class="token class-name">ClassLayout</span><span class="token punctuation">.</span><span class="token function">parseInstance</span><span class="token punctuation">(</span>d<span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token function">toPrintableSimple</span><span class="token punctuation">(</span><span class="token boolean">true</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+            <span class="token keyword">synchronized</span> <span class="token punctuation">(</span>d<span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+                log<span class="token punctuation">.</span><span class="token function">debug</span><span class="token punctuation">(</span>i <span class="token operator">+</span> <span class="token string">"\t"</span> <span class="token operator">+</span> <span class="token class-name">ClassLayout</span><span class="token punctuation">.</span><span class="token function">parseInstance</span><span class="token punctuation">(</span>d<span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token function">toPrintableSimple</span><span class="token punctuation">(</span><span class="token boolean">true</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+            <span class="token punctuation">&#125;</span>
+            log<span class="token punctuation">.</span><span class="token function">debug</span><span class="token punctuation">(</span>i <span class="token operator">+</span> <span class="token string">"\t"</span> <span class="token operator">+</span> <span class="token class-name">ClassLayout</span><span class="token punctuation">.</span><span class="token function">parseInstance</span><span class="token punctuation">(</span>d<span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token function">toPrintableSimple</span><span class="token punctuation">(</span><span class="token boolean">true</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+        <span class="token punctuation">&#125;</span>
+    <span class="token punctuation">&#125;</span><span class="token punctuation">,</span> <span class="token string">"t3"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    t3<span class="token punctuation">.</span><span class="token function">start</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+    t3<span class="token punctuation">.</span><span class="token function">join</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    log<span class="token punctuation">.</span><span class="token function">debug</span><span class="token punctuation">(</span><span class="token class-name">ClassLayout</span><span class="token punctuation">.</span><span class="token function">parseInstance</span><span class="token punctuation">(</span><span class="token keyword">new</span> <span class="token class-name">Dog</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token function">toPrintableSimple</span><span class="token punctuation">(</span><span class="token boolean">true</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">&#125;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+
+<p>参考资料<br><a target="_blank" rel="noopener" href="https://github.com/farmerjohngit/myblog/issues/12">https://github.com/farmerjohngit/myblog/issues/12</a></p>
+<p><a target="_blank" rel="noopener" href="https://www.cnblogs.com/LemonFive/p/11246086.html">https://www.cnblogs.com/LemonFive/p/11246086.html</a></p>
+<p><a target="_blank" rel="noopener" href="https://www.cnblogs.com/LemonFive/p/11248248.html">https://www.cnblogs.com/LemonFive/p/11248248.html</a></p>
+<p>偏向锁论文:  <a target="_blank" rel="noopener" href="https://www.oracle.com/technetwork/java/biasedlocking-oopsla2006-wp-149958.pdf">https://www.oracle.com/technetwork/java/biasedlocking-oopsla2006-wp-149958.pdf</a></p>
+<h2 id="4-4-锁消除"><a href="#4-4-锁消除" class="headerlink" title="4.4 锁消除"></a>4.4 锁消除</h2><h3 id="4-4-1-JIT-锁优化：锁消除与锁粗化"><a href="#4-4-1-JIT-锁优化：锁消除与锁粗化" class="headerlink" title="4.4.1 JIT 锁优化：锁消除与锁粗化"></a>4.4.1 JIT 锁优化：锁消除与锁粗化</h3><p>JIT即时编译器的热点代码优化机制：若检测到锁对象为<strong>局部私有对象、无共享可能</strong>，直接消除锁逻辑，规避无意义的加锁解锁开销。</p>
+<p>可通过VM参数 <code>-XX:-EliminateLocks</code> 手动禁用锁消除，对比性能差异。</p>
+<p><strong>示例：</strong></p>
+<pre class="line-numbers language-java" data-language="java"><code class="language-java"><span class="token annotation punctuation">@Fork</span><span class="token punctuation">(</span><span class="token number">1</span><span class="token punctuation">)</span>
+<span class="token annotation punctuation">@BenchmarkMode</span><span class="token punctuation">(</span><span class="token class-name">Mode<span class="token punctuation">.</span>AverageTime</span><span class="token punctuation">)</span>
+<span class="token annotation punctuation">@Warmup</span><span class="token punctuation">(</span>iterations<span class="token operator">=</span><span class="token number">3</span><span class="token punctuation">)</span>
+<span class="token annotation punctuation">@Measurement</span><span class="token punctuation">(</span>iterations<span class="token operator">=</span><span class="token number">5</span><span class="token punctuation">)</span>
+<span class="token annotation punctuation">@OutputTimeUnit</span><span class="token punctuation">(</span><span class="token class-name">TimeUnit</span><span class="token punctuation">.</span><span class="token constant">NANOSECONDS</span><span class="token punctuation">)</span>
+<span class="token keyword">public</span> <span class="token keyword">class</span> <span class="token class-name">MyBenchmark</span> <span class="token punctuation">&#123;</span>
+    <span class="token keyword">static</span> <span class="token keyword">int</span> x <span class="token operator">=</span> <span class="token number">0</span><span class="token punctuation">;</span>
+    <span class="token annotation punctuation">@Benchmark</span>
+    <span class="token keyword">public</span> <span class="token keyword">void</span> <span class="token function">a</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token keyword">throws</span> <span class="token class-name">Exception</span> <span class="token punctuation">&#123;</span>
+        x<span class="token operator">++</span><span class="token punctuation">;</span>
+    <span class="token punctuation">&#125;</span>
+    <span class="token annotation punctuation">@Benchmark</span>
+    <span class="token keyword">public</span> <span class="token keyword">void</span> <span class="token function">b</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token keyword">throws</span> <span class="token class-name">Exception</span> <span class="token punctuation">&#123;</span>
+        <span class="token comment">//这里的o是局部变量,不会被共享,JIT做热点代码优化时会做锁消除</span>
+        <span class="token class-name">Object</span> o <span class="token operator">=</span> <span class="token keyword">new</span> <span class="token class-name">Object</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+        <span class="token keyword">synchronized</span> <span class="token punctuation">(</span>o<span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+            x<span class="token operator">++</span><span class="token punctuation">;</span>
+        <span class="token punctuation">&#125;</span>
+    <span class="token punctuation">&#125;</span>
+<span class="token punctuation">&#125;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+
+<p><strong>运行脚本：</strong> java -jar benchmarks.jar,发现两部分的差别并不大,甚至b加了锁比a没加锁还快</p>
+<p><img src="https://wu4yong.github.io/starry-images/assets/img/java/concurrent/benchmarks1.webp" alt="benchmarks1示意图"><br><strong>XX:-EliminateLocks</strong>: 是否使用锁消除<br>java -XX:-EliminateLocks -jar benchmarks.jar</p>
+<p><strong>结论：</strong> 使用 -XX:-EliminateLocks禁用锁消除后就会发现 b性能比a差劲多了</p>
+<p><img src="https://wu4yong.github.io/starry-images/assets/img/java/concurrent/benchmarks2.webp" alt="benchmarks2示意图"></p>
+<h3 id="4-4-2-锁粗化"><a href="#4-4-2-锁粗化" class="headerlink" title="4.4.2 锁粗化"></a>4.4.2 锁粗化</h3><p>若代码中对<strong>同一对象频繁多次加锁解锁</strong>，JIT会将多次细粒度锁合并为一次全局锁，减少锁竞争次数，提升执行效率，与锁粒度细化优化互补。</p>
+<h2 id="4-5-常见坑"><a href="#4-5-常见坑" class="headerlink" title="4.5 常见坑"></a>4.5 常见坑</h2><blockquote>
+<p>● <strong>期待偏向锁一定生效</strong>：JDK 15 起偏向锁默认关闭、后续版本已移除，测试要显式开 <code>-XX:+UseBiasedLocking</code> 并把延迟设为 0；<br>● <strong>把锁升级当可逆过程</strong>：偏向 → 轻量 → 重量是单向的，升到重量级就不会退回去；<br>● <strong>把锁消除、锁粗化当必然</strong>：两者都是 JIT 在 C1&#x2F;C2 编译阶段做的优化，是否发生取决于代码形态与编译阈值；<br>● <strong>拿对象头当业务标记</strong>：Mark Word 会被 GC 与锁状态复用，依赖它做业务判断不可靠；<br>● <strong>把 Monitor 当性能借口</strong>：自旋、偏向、锁消除已经削掉大部分开销，盲目换 CAS 反而可能更慢。</p>
+</blockquote>
+</div>
+
+  <div class="mb-foot">
+    <a href="/phone/">返回手机首页</a>
+    <a href="/phone/tags/">星迹索引</a>
+  </div>
+</div>
+
+
+<script>
+  /* 作用：懒加载本地 mermaid 库；无 mermaid 代码块时不加载 */
+  function loadLocalMermaid(){
+    return new Promise(function(resolve, reject){
+      if(window.mermaid) return resolve(window.mermaid);
+      var s = document.createElement('script');
+      s.src = '/js/third-party/mermaid/mermaid.min.js?v=10';
+      s.onload = function(){ resolve(window.mermaid); };
+      s.onerror = function(){ reject(new Error('mermaid local load failed')); };
+      document.head.appendChild(s);
+    });
+  }
+
+  /* 作用：把 ```mermaid 代码块替换成 SVG 图（手机端字号略小、图可横向滚动） */
+  async function renderMermaidDiagram(){
+    var blocks = document.querySelectorAll('pre[class*="language-mermaid"]');
+    if(!blocks.length) return;
+    var mermaid;
+    try { mermaid = await loadLocalMermaid(); }
+    catch(e){ console.warn('[mermaid] 本地库加载失败：', e); return; }
+
+    mermaid.initialize({
+      startOnLoad: false,
+      theme: 'base',
+      themeVariables: {
+        darkMode: true,
+        background: 'transparent',
+        fontFamily: '"Microsoft YaHei", "PingFang SC", "Segoe UI", sans-serif',
+        fontSize: '12px',
+        primaryColor: '#062f3d',
+        primaryTextColor: '#d6f6ff',
+        primaryBorderColor: '#00eeff',
+        secondaryColor: '#04222d',
+        tertiaryColor: '#04222d',
+        mainBkg: '#062f3d',
+        nodeBorder: '#00eeff',
+        clusterBkg: '#02161f',
+        clusterBorder: '#00eeff55',
+        lineColor: '#00eeff',
+        textColor: '#c0e8ff',
+        edgeLabelBackground: '#02161f'
+      },
+      flowchart: { curve: 'basis', useMaxWidth: false, htmlLabels: false, nodeSpacing: 30, rankSpacing: 40, padding: 10 }
+    });
+
+    var targets = [];
+    blocks.forEach(function(el){
+      var codeEl = el.querySelector('code');
+      if(!codeEl) return;
+      var div = document.createElement('div');
+      div.className = 'mermaid';
+      div.textContent = codeEl.textContent;
+      el.parentNode.replaceChild(div, el);
+      targets.push(div);
+    });
+    if(!targets.length) return;
+    try { await mermaid.run({ nodes: targets }); }
+    catch(e){ console.warn('[mermaid] 渲染失败：', e); }
+  }
+  /* 作用：多次触发兜底（延迟重试 + DOM 变化），防止某次时机没跑到导致图表留在代码块 */
+  var mmBusy = false;
+  function scheduleMermaid(){
+    if(mmBusy) return;
+    mmBusy = true;
+    renderMermaidDiagram().then(function(){ mmBusy = false; }, function(){ mmBusy = false; });
+  }
+  scheduleMermaid();
+  window.addEventListener('load', scheduleMermaid);
+  [1000, 3000, 8000].forEach(function(ms){ setTimeout(scheduleMermaid, ms); });
+  if(document.readyState !== 'loading') scheduleMermaid();
+  if(window.MutationObserver){
+    var mmTimer = null;
+    var mmObserver = new MutationObserver(function(){
+      clearTimeout(mmTimer);
+      mmTimer = setTimeout(scheduleMermaid, 400);
+    });
+    mmObserver.observe(document.querySelector('.mb-article') || document.body, { childList: true, subtree: true });
+  }
+</script>
+</body>
+</html>

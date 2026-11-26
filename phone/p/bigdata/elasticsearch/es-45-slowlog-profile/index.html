@@ -1,0 +1,311 @@
+<!--
+  ============================================
+  手机端 · 文章原文页
+  文件：phone/post.njk
+  适用终端：手机端（路由 /phone/p/<slug>/，由 scripts/phone-routes.js 生成）
+  作用：手机阅读单篇文章；单列布局、无侧栏无雷达，替代电脑端 post.njk
+        数据由生成期算好：page.item = { title, dateStr, content, cats, tags }
+  样式依赖：source/css/theme/phone/common.css、source/css/theme/phone/list.css
+  组件依赖：phone/_components/Particles.njk
+  最后修改：2026-11-11
+  ============================================
+-->
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="color-scheme" content="dark">
+  <meta name="theme-color" content="#020817">
+  <!-- 首帧兜底：浏览器默认画布是白的，样式未解析前会闪一下白。这条规则先锁死深空底色 -->
+  <style>html{background-color:#020817}</style>
+  <title>ES45-慢日志与 profile - 时空秘境</title>
+  <!-- 手机端样式：基础 + 列表/正文，外链引入（源文件 source/css/theme/phone/） -->
+  <link rel="stylesheet" href="/css/theme/phone/common.css">
+  <link rel="stylesheet" href="/css/theme/phone/list.css">
+<meta name="generator" content="Hexo 8.1.2"></head>
+<body>
+<div class="mb-shell">
+  <!--
+  ============================================
+  手机端星空粒子组件
+  文件：Particles.njk
+  适用终端：手机端
+  作用：Particles.njk 的手机端副本（nunjucks 子目录 include 取不到上级）
+        参数与电脑端 _components/Particles.njk 保持一致：
+        粒子 95 / 连线 118px / opacity 0.32，外加星座层与零星闪烁层
+  最后修改：2026-11-12
+  ============================================
+--><!-- z-index 必须是 0：负层级会被 body 不透明背景盖住，粒子在跑却看不见 -->
+<div id="particles" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 0; pointer-events: none;"></div>
+<!-- 星座层（与首页同一套：随机零星散布星座图形 + 偶尔闪烁的小星） -->
+<div id="constellations" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 1; pointer-events: none;" aria-hidden="true"></div>
+<script src="/js/particles.min.js"></script>
+<script>
+particlesJS("particles", {
+  particles: {
+    number: {
+      value: 95,
+      density: {
+        enable: true,
+        value_area: 800
+      }
+    },
+    color: {
+      value: "#00eeff"
+    },
+    shape: {
+      type: "circle",
+      stroke: {
+        width: 0,
+        color: "#000000"
+      }
+    },
+    opacity: {
+      value: 0.6,
+      random: true,
+      anim: {
+        enable: true,
+        speed: 0.5,
+        opacity_min: 0.1,
+        sync: false
+      }
+    },
+    size: {
+      value: 3,
+      random: true,
+      anim: {
+        enable: true,
+        speed: 2,
+        size_min: 0.1,
+        sync: false
+      }
+    },
+    line_linked: {
+      enable: true,
+      distance: 118,
+      color: "#00eeff",
+      opacity: 0.32,
+      width: 1
+    },
+    move: {
+      enable: true,
+      speed: 0.8,
+      direction: "none",
+      random: true,
+      straight: false,
+      out_mode: "out",
+      bounce: false,
+      attract: {
+        enable: true,
+        rotateX: 600,
+        rotateY: 1200
+      }
+    }
+  },
+  interactivity: {
+    detect_on: "canvas",
+    events: {
+      onhover: {
+        enable: true,
+        mode: "grab"       // 手指按住时粒子聚集
+      },
+      onclick: {
+        enable: true,
+        mode: "push"       // 点击时产生新粒子
+      },
+      resize: true
+    },
+    modes: {
+      grab: {
+        distance: 200,
+        line_linked: {
+          opacity: 1
+        }
+      },
+      push: {
+        particles_nb: 6
+      }
+    }
+  },
+  retina_detect: true
+});
+</script>
+<!-- 星座 + 零星闪烁层：与电脑端共用同一份绘制脚本 -->
+<script src="/js/theme/home/starfield.js"></script>
+
+
+  <div class="mb-top">
+    <a class="mb-back" href="/phone/">← 返回手机首页</a>
+    <span class="mb-sub" style="margin:0">2024-02-05</span>
+  </div>
+
+  <h1 class="mb-title">ES45-慢日志与 profile</h1>
+  <div class="mb-sub">
+    分类：bigdata · elasticsearch
+     ｜ 标签：Elasticsearch · 系统课
+  </div>
+
+  <div class="mb-article"><div class="essay-banner essay-elasticsearch"></div>
+
+<h1 id="慢日志、profile-与-hot-threads：慢在哪一步"><a href="#慢日志、profile-与-hot-threads：慢在哪一步" class="headerlink" title="慢日志、profile 与 hot_threads：慢在哪一步"></a>慢日志、profile 与 hot_threads：慢在哪一步</h1><p>「查询慢」有三种完全不同的慢：<strong>查询阶段慢</strong>（算匹配与排序）、<strong>取回阶段慢</strong>（拉 <code>_source</code>）、<strong>集群层面慢</strong>（CPU&#x2F;IO 打满）。</p>
+<p>对应的观测工具也是三套：慢日志、profile API、hot_threads。</p>
+<!-- 配图 45-1：待生成，放到图床同名路径后启用下面一行 -->
+<blockquote>
+<p><strong>配图 45-1｜提示词</strong>：横向三段式仪表盘：左段「慢日志」一张日志卡片，标注 <code>search.slowlog.threshold.query.warn</code> 与 <code>fetch</code> 两个阈值刻度；中段「profile API」一棵耗时树，根为 <code>query</code>、子节点 <code>bool</code>&#x2F;<code>term</code>&#x2F;<code>fetch</code>，每个节点带毫秒条；右段「hot_threads」一个线程栈火焰图，高亮 <code>search</code> 线程占 CPU 的条带。深色星空背景，青蓝与琥珀。</p>
+</blockquote>
+<h2 id="一、学习目标"><a href="#一、学习目标" class="headerlink" title="一、学习目标"></a>一、学习目标</h2><ol>
+<li>会用 <code>index.search.slowlog.threshold.*</code> 开启慢查询日志；</li>
+<li>会用 <code>profile: true</code> 区分 query&#x2F;fetch 耗时构成；</li>
+<li>会用 <code>_nodes/hot_threads</code> 看是哪个线程在吃 CPU；</li>
+<li>建立「先定位层次，再谈优化」的排查顺序。</li>
+</ol>
+<h2 id="二、前置知识"><a href="#二、前置知识" class="headerlink" title="二、前置知识"></a>二、前置知识</h2><div class="data-grid data-grid-link-table"><div class="grid-header"><div class="grid-cell">需要掌握</div><div class="grid-cell">到什么程度</div><div class="grid-cell">出处</div></div><div class="grid-row"><div class="grid-cell">query&#x2F;fetch 两阶段</div><div class="grid-cell">知道各有开销</div><div class="grid-cell">M4-9</div></div><div class="grid-row"><div class="grid-cell">线程池</div><div class="grid-cell">知道 search&#x2F;write 池</div><div class="grid-cell">M7-3</div></div></div>
+
+<h2 id="三、理论讲解"><a href="#三、理论讲解" class="headerlink" title="三、理论讲解"></a>三、理论讲解</h2><div class="data-grid data-grid-link-table"><div class="grid-header"><div class="grid-cell">工具</div><div class="grid-cell">开启方式</div><div class="grid-cell">看什么</div><div class="grid-cell">开销</div></div><div class="grid-row"><div class="grid-cell">搜索慢日志</div><div class="grid-cell"><code>index.search.slowlog.threshold.query.warn: 10s</code>（默认 -1 关闭）</div><div class="grid-cell">超过阈值的查询语句与耗时</div><div class="grid-cell">低</div></div><div class="grid-row"><div class="grid-cell">取回慢日志</div><div class="grid-cell"><code>index.search.slowlog.threshold.fetch.warn</code></div><div class="grid-cell">fetch 阶段耗时</div><div class="grid-cell">低</div></div><div class="grid-row"><div class="grid-cell">写入慢日志</div><div class="grid-cell"><code>index.indexing.slowlog.threshold.index.warn</code></div><div class="grid-cell">单条索引耗时</div><div class="grid-cell">低</div></div><div class="grid-row"><div class="grid-cell">profile API</div><div class="grid-cell">请求体 <code>&quot;profile&quot;: true</code></div><div class="grid-cell">每个查询子句、每个 collector 的耗时</div><div class="grid-cell">高（仅排查时用）</div></div><div class="grid-row"><div class="grid-cell">hot_threads</div><div class="grid-cell"><code>GET _nodes/hot_threads</code></div><div class="grid-cell">占用 CPU 最高的线程栈</div><div class="grid-cell">瞬时快照</div></div><div class="grid-row"><div class="grid-cell"><code>_tasks</code></div><div class="grid-cell"><code>GET _tasks?actions=*search*</code></div><div class="grid-cell">长任务列表</div><div class="grid-cell">低</div></div></div>
+
+<h2 id="四、原理拆解：profile-的数字怎么读"><a href="#四、原理拆解：profile-的数字怎么读" class="headerlink" title="四、原理拆解：profile 的数字怎么读"></a>四、原理拆解：profile 的数字怎么读</h2><p>profile 返回一棵树：<code>query</code> 节点下是各子查询的耗时，<code>collector</code> 节点下是聚合&#x2F;排序的耗时，最后还有 <code>rewrite_time</code>、<code>build_scorer</code> 这类准备开销。读法固定：</p>
+<ul>
+<li><strong>query 子节点占比大</strong> → 匹配本身贵（常见：wildcard 前置、regexp、超大 bool）；</li>
+<li><strong>collector 占比大</strong> → 聚合或排序贵（桶太多、排序字段无 doc_values）；</li>
+<li><strong>build_scorer 大</strong> → 查询被反复构造（常见于 script 查询、复杂 bool 嵌套）；</li>
+<li><strong>fetch 大但 query 小</strong> → 取回阶段问题（<code>_source</code> 太大），对应 M4-9 的裁剪。</li>
+</ul>
+<p>hot_threads 是另一维度：如果 query 阶段并不慢，但节点 CPU 长期 90%，就该看「是不是别的线程池在抢」——比如 merge 线程、写入线程，或者 <code>search</code> 池里卡着大聚合。</p>
+<h2 id="五、场景说明"><a href="#五、场景说明" class="headerlink" title="五、场景说明"></a>五、场景说明</h2><div class="data-grid data-grid-link-table"><div class="grid-header"><div class="grid-cell">症状</div><div class="grid-cell">先看</div><div class="grid-cell">可能结论</div></div><div class="grid-row"><div class="grid-cell">个别查询偶发慢</div><div class="grid-cell">慢查询日志</div><div class="grid-cell">找出具体语句，再 profile</div></div><div class="grid-row"><div class="grid-cell">全部查询都慢</div><div class="grid-cell">hot_threads + <code>_cat/thread_pool</code></div><div class="grid-cell">资源瓶颈或线程池挤占</div></div><div class="grid-row"><div class="grid-cell">翻页越深越慢</div><div class="grid-cell">慢日志 + 请求参数</div><div class="grid-cell">深分页（M4-7）</div></div><div class="grid-row"><div class="grid-cell">聚合超时</div><div class="grid-cell">profile 的 collector</div><div class="grid-cell">桶数过多（M5-4）</div></div><div class="grid-row"><div class="grid-cell">写入慢</div><div class="grid-cell">写入慢日志</div><div class="grid-cell">单文档过大、refresh 过频</div></div></div>
+
+<h2 id="六、实操"><a href="#六、实操" class="headerlink" title="六、实操"></a>六、实操</h2><pre class="line-numbers language-bash" data-language="bash"><code class="language-bash"><span class="token comment"># 1) 开慢日志（按索引设置）</span>
+<span class="token function">curl</span> <span class="token parameter variable">-s</span> <span class="token parameter variable">-X</span> PUT <span class="token string">"http://localhost:9200/goods/_settings"</span> <span class="token parameter variable">-H</span> <span class="token string">'Content-Type: application/json'</span> <span class="token parameter variable">-d</span> <span class="token string">'
+&#123; "index.search.slowlog.threshold.query.warn": "5s",
+  "index.search.slowlog.threshold.query.info": "2s",
+  "index.search.slowlog.threshold.fetch.warn": "1s" &#125;'</span>
+
+<span class="token comment"># 2) profile 单个查询</span>
+<span class="token function">curl</span> <span class="token parameter variable">-s</span> <span class="token parameter variable">-X</span> GET <span class="token string">"http://localhost:9200/goods/_search"</span> <span class="token parameter variable">-H</span> <span class="token string">'Content-Type: application/json'</span> <span class="token parameter variable">-d</span> <span class="token string">'
+&#123; "profile": true, "query": &#123; "bool": &#123; "must": [ &#123; "match": &#123; "title": "跑鞋" &#125; &#125; ],
+  "filter": [ &#123; "term": &#123; "on_sale": true &#125; &#125; ] &#125; &#125; &#125;'</span>
+
+<span class="token comment"># 3) 热点线程</span>
+<span class="token function">curl</span> <span class="token parameter variable">-s</span> <span class="token string">"http://localhost:9200/_nodes/hot_threads?threads=3"</span>
+
+<span class="token comment"># 4) 正在跑的长任务</span>
+<span class="token function">curl</span> <span class="token parameter variable">-s</span> <span class="token string">"http://localhost:9200/_tasks?actions=*search*&amp;detailed=true"</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<p>慢日志写在节点日志文件里（<code>logs/&lt;cluster&gt;.log</code>），不是通过 API 返回。</p>
+<h2 id="七、常见坑"><a href="#七、常见坑" class="headerlink" title="七、常见坑"></a>七、常见坑</h2><ol>
+<li><strong>慢日志阈值设 0ms</strong>：等于全量记录，日志爆炸、磁盘写满。</li>
+<li><strong><code>profile: true</code> 上生产高频开</strong>：本身有明显开销。</li>
+<li><strong>只看总耗时不分阶段</strong>：把 fetch 慢误判成 query 慢。</li>
+<li><strong>hot_threads 当长期监控</strong>：它是瞬时快照，抓不到周期性尖峰。</li>
+<li><strong>慢日志开了不看</strong>：最常见的浪费——开了阈值却没人读日志。</li>
+<li><strong>忽略 <code>rewrite_time</code></strong>：查询重写开销大时，profile 树里 query 子节点会「莫名很快」。</li>
+</ol>
+<h2 id="八、课后小结"><a href="#八、课后小结" class="headerlink" title="八、课后小结"></a>八、课后小结</h2><ol>
+<li>三种慢：query 慢、fetch 慢、资源慢，对应三套工具。</li>
+<li>慢日志按阶段设阈值，默认关闭。</li>
+<li>profile 读法：query 子节点、collector、build_scorer、fetch 四块分开看。</li>
+<li>hot_threads 抓瞬时热点，<code>_tasks</code> 抓长任务。</li>
+<li>定位层次比调参数重要——先证明慢在哪。</li>
+</ol>
+<h2 id="九、思考题"><a href="#九、思考题" class="headerlink" title="九、思考题"></a>九、思考题</h2><ol>
+<li>profile 显示 <code>query</code> 很快但总耗时很高，问题可能在哪？</li>
+<li>慢日志显示大量 <code>fetch</code> 超阈值，你会先改什么？</li>
+<li>为什么 <code>rewrite_time</code> 高会让 profile 看起来「query 很快」？</li>
+</ol>
+<h2 id="十、官方资料"><a href="#十、官方资料" class="headerlink" title="十、官方资料"></a>十、官方资料</h2><ul>
+<li>Slow log：<a target="_blank" rel="noopener" href="https://www.elastic.co/guide/en/elasticsearch/reference/current/index-modules-slowlog.html">https://www.elastic.co/guide/en/elasticsearch/reference/current/index-modules-slowlog.html</a></li>
+<li>Profile API：<a target="_blank" rel="noopener" href="https://www.elastic.co/guide/en/elasticsearch/reference/current/search-profile.html">https://www.elastic.co/guide/en/elasticsearch/reference/current/search-profile.html</a></li>
+<li>Nodes hot threads：<a target="_blank" rel="noopener" href="https://www.elastic.co/guide/en/elasticsearch/reference/current/cluster-nodes-hot-threads.html">https://www.elastic.co/guide/en/elasticsearch/reference/current/cluster-nodes-hot-threads.html</a></li>
+<li>Tasks API：<a target="_blank" rel="noopener" href="https://www.elastic.co/guide/en/elasticsearch/reference/current/tasks.html">https://www.elastic.co/guide/en/elasticsearch/reference/current/tasks.html</a></li>
+</ul>
+<p>上一篇：<a href="/2024/02/02/bigdata/elasticsearch/es-44-breakers-caches-threadpools/">M7-3 熔断器、缓存与线程池</a> ｜ 下一篇：<a href="/2024/02/08/bigdata/elasticsearch/es-46-tuning-checklist/">M7-5 优化清单</a> ｜ <a href="/2023/09/22/bigdata/elasticsearch/es-00-series-index/">总目录</a></p>
+</div>
+
+  <div class="mb-foot">
+    <a href="/phone/">返回手机首页</a>
+    <a href="/phone/tags/">星迹索引</a>
+  </div>
+</div>
+
+
+<script>
+  /* 作用：懒加载本地 mermaid 库；无 mermaid 代码块时不加载 */
+  function loadLocalMermaid(){
+    return new Promise(function(resolve, reject){
+      if(window.mermaid) return resolve(window.mermaid);
+      var s = document.createElement('script');
+      s.src = '/js/third-party/mermaid/mermaid.min.js?v=10';
+      s.onload = function(){ resolve(window.mermaid); };
+      s.onerror = function(){ reject(new Error('mermaid local load failed')); };
+      document.head.appendChild(s);
+    });
+  }
+
+  /* 作用：把 ```mermaid 代码块替换成 SVG 图（手机端字号略小、图可横向滚动） */
+  async function renderMermaidDiagram(){
+    var blocks = document.querySelectorAll('pre[class*="language-mermaid"]');
+    if(!blocks.length) return;
+    var mermaid;
+    try { mermaid = await loadLocalMermaid(); }
+    catch(e){ console.warn('[mermaid] 本地库加载失败：', e); return; }
+
+    mermaid.initialize({
+      startOnLoad: false,
+      theme: 'base',
+      themeVariables: {
+        darkMode: true,
+        background: 'transparent',
+        fontFamily: '"Microsoft YaHei", "PingFang SC", "Segoe UI", sans-serif',
+        fontSize: '12px',
+        primaryColor: '#062f3d',
+        primaryTextColor: '#d6f6ff',
+        primaryBorderColor: '#00eeff',
+        secondaryColor: '#04222d',
+        tertiaryColor: '#04222d',
+        mainBkg: '#062f3d',
+        nodeBorder: '#00eeff',
+        clusterBkg: '#02161f',
+        clusterBorder: '#00eeff55',
+        lineColor: '#00eeff',
+        textColor: '#c0e8ff',
+        edgeLabelBackground: '#02161f'
+      },
+      flowchart: { curve: 'basis', useMaxWidth: false, htmlLabels: false, nodeSpacing: 30, rankSpacing: 40, padding: 10 }
+    });
+
+    var targets = [];
+    blocks.forEach(function(el){
+      var codeEl = el.querySelector('code');
+      if(!codeEl) return;
+      var div = document.createElement('div');
+      div.className = 'mermaid';
+      div.textContent = codeEl.textContent;
+      el.parentNode.replaceChild(div, el);
+      targets.push(div);
+    });
+    if(!targets.length) return;
+    try { await mermaid.run({ nodes: targets }); }
+    catch(e){ console.warn('[mermaid] 渲染失败：', e); }
+  }
+  /* 作用：多次触发兜底（延迟重试 + DOM 变化），防止某次时机没跑到导致图表留在代码块 */
+  var mmBusy = false;
+  function scheduleMermaid(){
+    if(mmBusy) return;
+    mmBusy = true;
+    renderMermaidDiagram().then(function(){ mmBusy = false; }, function(){ mmBusy = false; });
+  }
+  scheduleMermaid();
+  window.addEventListener('load', scheduleMermaid);
+  [1000, 3000, 8000].forEach(function(ms){ setTimeout(scheduleMermaid, ms); });
+  if(document.readyState !== 'loading') scheduleMermaid();
+  if(window.MutationObserver){
+    var mmTimer = null;
+    var mmObserver = new MutationObserver(function(){
+      clearTimeout(mmTimer);
+      mmTimer = setTimeout(scheduleMermaid, 400);
+    });
+    mmObserver.observe(document.querySelector('.mb-article') || document.body, { childList: true, subtree: true });
+  }
+</script>
+</body>
+</html>

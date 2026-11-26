@@ -1,0 +1,353 @@
+<!--
+  ============================================
+  手机端 · 文章原文页
+  文件：phone/post.njk
+  适用终端：手机端（路由 /phone/p/<slug>/，由 scripts/phone-routes.js 生成）
+  作用：手机阅读单篇文章；单列布局、无侧栏无雷达，替代电脑端 post.njk
+        数据由生成期算好：page.item = { title, dateStr, content, cats, tags }
+  样式依赖：source/css/theme/phone/common.css、source/css/theme/phone/list.css
+  组件依赖：phone/_components/Particles.njk
+  最后修改：2026-11-11
+  ============================================
+-->
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="color-scheme" content="dark">
+  <meta name="theme-color" content="#020817">
+  <!-- 首帧兜底：浏览器默认画布是白的，样式未解析前会闪一下白。这条规则先锁死深空底色 -->
+  <style>html{background-color:#020817}</style>
+  <title>Spring Data（二）JPA 实体映射与关联 - 时空秘境</title>
+  <!-- 手机端样式：基础 + 列表/正文，外链引入（源文件 source/css/theme/phone/） -->
+  <link rel="stylesheet" href="/css/theme/phone/common.css">
+  <link rel="stylesheet" href="/css/theme/phone/list.css">
+<meta name="generator" content="Hexo 8.1.2"></head>
+<body>
+<div class="mb-shell">
+  <!--
+  ============================================
+  手机端星空粒子组件
+  文件：Particles.njk
+  适用终端：手机端
+  作用：Particles.njk 的手机端副本（nunjucks 子目录 include 取不到上级）
+        参数与电脑端 _components/Particles.njk 保持一致：
+        粒子 95 / 连线 118px / opacity 0.32，外加星座层与零星闪烁层
+  最后修改：2026-11-12
+  ============================================
+--><!-- z-index 必须是 0：负层级会被 body 不透明背景盖住，粒子在跑却看不见 -->
+<div id="particles" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 0; pointer-events: none;"></div>
+<!-- 星座层（与首页同一套：随机零星散布星座图形 + 偶尔闪烁的小星） -->
+<div id="constellations" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 1; pointer-events: none;" aria-hidden="true"></div>
+<script src="/js/particles.min.js"></script>
+<script>
+particlesJS("particles", {
+  particles: {
+    number: {
+      value: 95,
+      density: {
+        enable: true,
+        value_area: 800
+      }
+    },
+    color: {
+      value: "#00eeff"
+    },
+    shape: {
+      type: "circle",
+      stroke: {
+        width: 0,
+        color: "#000000"
+      }
+    },
+    opacity: {
+      value: 0.6,
+      random: true,
+      anim: {
+        enable: true,
+        speed: 0.5,
+        opacity_min: 0.1,
+        sync: false
+      }
+    },
+    size: {
+      value: 3,
+      random: true,
+      anim: {
+        enable: true,
+        speed: 2,
+        size_min: 0.1,
+        sync: false
+      }
+    },
+    line_linked: {
+      enable: true,
+      distance: 118,
+      color: "#00eeff",
+      opacity: 0.32,
+      width: 1
+    },
+    move: {
+      enable: true,
+      speed: 0.8,
+      direction: "none",
+      random: true,
+      straight: false,
+      out_mode: "out",
+      bounce: false,
+      attract: {
+        enable: true,
+        rotateX: 600,
+        rotateY: 1200
+      }
+    }
+  },
+  interactivity: {
+    detect_on: "canvas",
+    events: {
+      onhover: {
+        enable: true,
+        mode: "grab"       // 手指按住时粒子聚集
+      },
+      onclick: {
+        enable: true,
+        mode: "push"       // 点击时产生新粒子
+      },
+      resize: true
+    },
+    modes: {
+      grab: {
+        distance: 200,
+        line_linked: {
+          opacity: 1
+        }
+      },
+      push: {
+        particles_nb: 6
+      }
+    }
+  },
+  retina_detect: true
+});
+</script>
+<!-- 星座 + 零星闪烁层：与电脑端共用同一份绘制脚本 -->
+<script src="/js/theme/home/starfield.js"></script>
+
+
+  <div class="mb-top">
+    <a class="mb-back" href="/phone/">← 返回手机首页</a>
+    <span class="mb-sub" style="margin:0">2022-08-27</span>
+  </div>
+
+  <h1 class="mb-title">Spring Data（二）JPA 实体映射与关联</h1>
+  <div class="mb-sub">
+    分类：java · springdata
+     ｜ 标签：SpringData
+  </div>
+
+  <div class="mb-article"><div class="essay-banner essay-springdata"></div>
+
+<h1 id="JPA-实体映射与关联关系"><a href="#JPA-实体映射与关联关系" class="headerlink" title="JPA 实体映射与关联关系"></a><strong>JPA 实体映射与关联关系</strong></h1><p>实体映射是 JPA 里最容易”看起来跑通了、实际有坑”的部分：主键策略选错导致批量插入慢、<code>ManyToOne</code> 默认 EAGER 导致 N+1、双向关联忘了 <code>mappedBy</code> 导致多出一张中间表。这一篇把常用映射与坑位过一遍。</p>
+<p><img src="https://wu4yong.github.io/starry-images/assets/img/springdata/springdata-02-jpa-entity.webp" alt="实体字段映射到表结构，关联关系用外键连起来"></p>
+<p><em>实体字段映射到表结构，关联关系用外键连起来</em></p>
+<h2 id="1-1-基础注解"><a href="#1-1-基础注解" class="headerlink" title="1.1 基础注解"></a>1.1 基础注解</h2><pre class="line-numbers language-java" data-language="java"><code class="language-java"><span class="token annotation punctuation">@Entity</span>
+<span class="token annotation punctuation">@Table</span><span class="token punctuation">(</span>name <span class="token operator">=</span> <span class="token string">"tb_user"</span><span class="token punctuation">,</span> indexes <span class="token operator">=</span> <span class="token annotation punctuation">@Index</span><span class="token punctuation">(</span>name <span class="token operator">=</span> <span class="token string">"idx_username"</span><span class="token punctuation">,</span> columnList <span class="token operator">=</span> <span class="token string">"username"</span><span class="token punctuation">)</span><span class="token punctuation">)</span>
+<span class="token keyword">public</span> <span class="token keyword">class</span> <span class="token class-name">User</span> <span class="token punctuation">&#123;</span>
+    <span class="token annotation punctuation">@Id</span>
+    <span class="token annotation punctuation">@GeneratedValue</span><span class="token punctuation">(</span>strategy <span class="token operator">=</span> <span class="token class-name">GenerationType</span><span class="token punctuation">.</span><span class="token constant">IDENTITY</span><span class="token punctuation">)</span>
+    <span class="token keyword">private</span> <span class="token class-name">Long</span> id<span class="token punctuation">;</span>
+
+    <span class="token annotation punctuation">@Column</span><span class="token punctuation">(</span>name <span class="token operator">=</span> <span class="token string">"user_name"</span><span class="token punctuation">,</span> length <span class="token operator">=</span> <span class="token number">32</span><span class="token punctuation">,</span> nullable <span class="token operator">=</span> <span class="token boolean">false</span><span class="token punctuation">,</span> unique <span class="token operator">=</span> <span class="token boolean">true</span><span class="token punctuation">)</span>
+    <span class="token keyword">private</span> <span class="token class-name">String</span> username<span class="token punctuation">;</span>
+
+    <span class="token annotation punctuation">@Transient</span>                       <span class="token comment">// 不映射到表</span>
+    <span class="token keyword">private</span> <span class="token class-name">String</span> tempToken<span class="token punctuation">;</span>
+
+    <span class="token annotation punctuation">@Enumerated</span><span class="token punctuation">(</span><span class="token class-name">EnumType</span><span class="token punctuation">.</span><span class="token constant">STRING</span><span class="token punctuation">)</span>     <span class="token comment">// 存字符串，别用 ORDINAL</span>
+    <span class="token keyword">private</span> <span class="token class-name">UserStatus</span> status<span class="token punctuation">;</span>
+
+    <span class="token annotation punctuation">@Version</span>                         <span class="token comment">// 乐观锁</span>
+    <span class="token keyword">private</span> <span class="token class-name">Integer</span> version<span class="token punctuation">;</span>
+<span class="token punctuation">&#125;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<div class="data-grid data-grid-link-table"><div class="grid-header"><div class="grid-cell">注解</div><div class="grid-cell">作用</div><div class="grid-cell">注意</div></div><div class="grid-row"><div class="grid-cell"><code>@Entity</code></div><div class="grid-cell">声明为实体</div><div class="grid-cell">必须有无参构造</div></div><div class="grid-row"><div class="grid-cell"><code>@Table</code></div><div class="grid-cell">表名&#x2F;索引</div><div class="grid-cell">不写则用类名（驼峰转下划线）</div></div><div class="grid-row"><div class="grid-cell"><code>@Id</code></div><div class="grid-cell">主键</div><div class="grid-cell">必须有</div></div><div class="grid-row"><div class="grid-cell"><code>@GeneratedValue</code></div><div class="grid-cell">主键生成策略</div><div class="grid-cell">见 1.2</div></div><div class="grid-row"><div class="grid-cell"><code>@Column</code></div><div class="grid-cell">列名&#x2F;长度&#x2F;唯一</div><div class="grid-cell"><code>nullable=false</code> 只在 DDL 生效</div></div><div class="grid-row"><div class="grid-cell"><code>@Transient</code></div><div class="grid-cell">不持久化</div><div class="grid-cell">常用于 DTO 混合字段</div></div><div class="grid-row"><div class="grid-cell"><code>@Enumerated</code></div><div class="grid-cell">枚举存储方式</div><div class="grid-cell">一律 <code>STRING</code></div></div><div class="grid-row"><div class="grid-cell"><code>@Version</code></div><div class="grid-cell">乐观锁字段</div><div class="grid-cell">见第四篇</div></div></div>
+
+<h2 id="1-2-主键策略"><a href="#1-2-主键策略" class="headerlink" title="1.2 主键策略"></a>1.2 主键策略</h2><div class="data-grid data-grid-link-table"><div class="grid-header"><div class="grid-cell">策略</div><div class="grid-cell">生成方式</div><div class="grid-cell">性能</div><div class="grid-cell">适用</div></div><div class="grid-row"><div class="grid-cell"><code>IDENTITY</code></div><div class="grid-cell">数据库自增</div><div class="grid-cell">批量插入慢（每次要回查）</div><div class="grid-cell">MySQL 单库，简单</div></div><div class="grid-row"><div class="grid-cell"><code>SEQUENCE</code></div><div class="grid-cell">序列（Oracle&#x2F;PG）</div><div class="grid-cell">批量友好</div><div class="grid-cell">支持序列的库</div></div><div class="grid-row"><div class="grid-cell"><code>TABLE</code></div><div class="grid-cell">单独一张表发号</div><div class="grid-cell">慢</div><div class="grid-cell">兼容性场景</div></div><div class="grid-row"><div class="grid-cell"><code>AUTO</code></div><div class="grid-cell">由方言决定</div><div class="grid-cell">不透明</div><div class="grid-cell">不推荐</div></div><div class="grid-row"><div class="grid-cell">UUID &#x2F; 自定义</div><div class="grid-cell"><code>@GenericGenerator</code> 或 <code>@PrePersist</code></div><div class="grid-cell">无库依赖</div><div class="grid-cell">分库分表</div></div></div>
+
+<pre class="line-numbers language-java" data-language="java"><code class="language-java"><span class="token annotation punctuation">@Id</span>
+<span class="token annotation punctuation">@GeneratedValue</span><span class="token punctuation">(</span>strategy <span class="token operator">=</span> <span class="token class-name">GenerationType</span><span class="token punctuation">.</span><span class="token constant">SEQUENCE</span><span class="token punctuation">,</span> generator <span class="token operator">=</span> <span class="token string">"user_seq"</span><span class="token punctuation">)</span>
+<span class="token annotation punctuation">@SequenceGenerator</span><span class="token punctuation">(</span>name <span class="token operator">=</span> <span class="token string">"user_seq"</span><span class="token punctuation">,</span> sequenceName <span class="token operator">=</span> <span class="token string">"user_seq"</span><span class="token punctuation">,</span> allocationSize <span class="token operator">=</span> <span class="token number">50</span><span class="token punctuation">)</span>
+<span class="token keyword">private</span> <span class="token class-name">Long</span> id<span class="token punctuation">;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span></span></code></pre>
+
+<p>MySQL 用 <code>IDENTITY</code> 时，Hibernate 无法批量插入（每条 insert 都要拿回主键）。需要批量导入的场景，<code>allocationSize</code> + <code>SEQUENCE</code> 或雪花 ID 更合适。</p>
+<h2 id="1-3-四种关联"><a href="#1-3-四种关联" class="headerlink" title="1.3 四种关联"></a>1.3 四种关联</h2><pre class="line-numbers language-java" data-language="java"><code class="language-java"><span class="token comment">// 多对一：订单 → 用户（最常用）</span>
+<span class="token annotation punctuation">@ManyToOne</span><span class="token punctuation">(</span>fetch <span class="token operator">=</span> <span class="token class-name">FetchType</span><span class="token punctuation">.</span><span class="token constant">LAZY</span><span class="token punctuation">)</span>
+<span class="token annotation punctuation">@JoinColumn</span><span class="token punctuation">(</span>name <span class="token operator">=</span> <span class="token string">"user_id"</span><span class="token punctuation">)</span>
+<span class="token keyword">private</span> <span class="token class-name">User</span> user<span class="token punctuation">;</span>
+
+<span class="token comment">// 一对多：用户 → 订单（必须写 mappedBy，否则多一张中间表）</span>
+<span class="token annotation punctuation">@OneToMany</span><span class="token punctuation">(</span>mappedBy <span class="token operator">=</span> <span class="token string">"user"</span><span class="token punctuation">,</span> cascade <span class="token operator">=</span> <span class="token class-name">CascadeType</span><span class="token punctuation">.</span><span class="token constant">PERSIST</span><span class="token punctuation">,</span> fetch <span class="token operator">=</span> <span class="token class-name">FetchType</span><span class="token punctuation">.</span><span class="token constant">LAZY</span><span class="token punctuation">)</span>
+<span class="token keyword">private</span> <span class="token class-name">List</span><span class="token generics"><span class="token punctuation">&lt;</span><span class="token class-name">Order</span><span class="token punctuation">></span></span> orders <span class="token operator">=</span> <span class="token keyword">new</span> <span class="token class-name">ArrayList</span><span class="token generics"><span class="token punctuation">&lt;</span><span class="token punctuation">></span></span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+<span class="token comment">// 一对一：用户 → 身份证</span>
+<span class="token annotation punctuation">@OneToOne</span><span class="token punctuation">(</span>fetch <span class="token operator">=</span> <span class="token class-name">FetchType</span><span class="token punctuation">.</span><span class="token constant">LAZY</span><span class="token punctuation">)</span>
+<span class="token annotation punctuation">@JoinColumn</span><span class="token punctuation">(</span>name <span class="token operator">=</span> <span class="token string">"card_id"</span><span class="token punctuation">)</span>
+<span class="token keyword">private</span> <span class="token class-name">IdCard</span> card<span class="token punctuation">;</span>
+
+<span class="token comment">// 多对多：订单 ↔ 商品（一定要有中间表）</span>
+<span class="token annotation punctuation">@ManyToMany</span>
+<span class="token annotation punctuation">@JoinTable</span><span class="token punctuation">(</span>name <span class="token operator">=</span> <span class="token string">"tb_order_item"</span><span class="token punctuation">,</span>
+        joinColumns <span class="token operator">=</span> <span class="token annotation punctuation">@JoinColumn</span><span class="token punctuation">(</span>name <span class="token operator">=</span> <span class="token string">"order_id"</span><span class="token punctuation">)</span><span class="token punctuation">,</span>
+        inverseJoinColumns <span class="token operator">=</span> <span class="token annotation punctuation">@JoinColumn</span><span class="token punctuation">(</span>name <span class="token operator">=</span> <span class="token string">"item_id"</span><span class="token punctuation">)</span><span class="token punctuation">)</span>
+<span class="token keyword">private</span> <span class="token class-name">List</span><span class="token generics"><span class="token punctuation">&lt;</span><span class="token class-name">Item</span><span class="token punctuation">></span></span> items <span class="token operator">=</span> <span class="token keyword">new</span> <span class="token class-name">ArrayList</span><span class="token generics"><span class="token punctuation">&lt;</span><span class="token punctuation">></span></span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<div class="data-grid data-grid-link-table"><div class="grid-header"><div class="grid-cell">关联</div><div class="grid-cell">默认 fetch</div><div class="grid-cell">建议</div></div><div class="grid-row"><div class="grid-cell"><code>@ManyToOne</code></div><div class="grid-cell">EAGER</div><div class="grid-cell">一律改 LAZY</div></div><div class="grid-row"><div class="grid-cell"><code>@OneToOne</code></div><div class="grid-cell">EAGER</div><div class="grid-cell">改 LAZY</div></div><div class="grid-row"><div class="grid-cell"><code>@OneToMany</code></div><div class="grid-cell">LAZY</div><div class="grid-cell">保持 LAZY</div></div><div class="grid-row"><div class="grid-cell"><code>@ManyToMany</code></div><div class="grid-cell">LAZY</div><div class="grid-cell">保持，且慎用</div></div></div>
+
+<p><strong><code>@ManyToOne</code> 默认 EAGER 是 N+1 的头号来源</strong>：查 100 条订单会顺带发 100 条用户查询。</p>
+<h2 id="1-4-双向关联的三条铁律"><a href="#1-4-双向关联的三条铁律" class="headerlink" title="1.4 双向关联的三条铁律"></a>1.4 双向关联的三条铁律</h2><ol>
+<li><code>@OneToMany</code> 一侧必须写 <code>mappedBy</code>，值是对应字段名</li>
+<li>维护关系的永远是”多”的一方（有 <code>@JoinColumn</code> 的那边）</li>
+<li>保存时先存”多”的一方，或在一方加 <code>cascade</code></li>
+</ol>
+<pre class="line-numbers language-java" data-language="java"><code class="language-java"><span class="token comment">// 正确：由多的一方维护外键</span>
+<span class="token class-name">Order</span> order <span class="token operator">=</span> <span class="token keyword">new</span> <span class="token class-name">Order</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+order<span class="token punctuation">.</span><span class="token function">setUser</span><span class="token punctuation">(</span>user<span class="token punctuation">)</span><span class="token punctuation">;</span>          <span class="token comment">// 只设 user，不要同时 user.getOrders().add(order) 后再手动维护</span>
+orderRepository<span class="token punctuation">.</span><span class="token function">save</span><span class="token punctuation">(</span>order<span class="token punctuation">)</span><span class="token punctuation">;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span></span></code></pre>
+
+<p>漏写 <code>mappedBy</code> 的后果：Hibernate 认为这是两个独立关联，额外建一张 <code>tb_user_orders</code> 中间表，数据双份。</p>
+<h2 id="1-5-级联"><a href="#1-5-级联" class="headerlink" title="1.5 级联"></a>1.5 级联</h2><pre class="line-numbers language-java" data-language="java"><code class="language-java"><span class="token annotation punctuation">@OneToMany</span><span class="token punctuation">(</span>mappedBy <span class="token operator">=</span> <span class="token string">"user"</span><span class="token punctuation">,</span> cascade <span class="token operator">=</span> <span class="token punctuation">&#123;</span><span class="token class-name">CascadeType</span><span class="token punctuation">.</span><span class="token constant">PERSIST</span><span class="token punctuation">,</span> <span class="token class-name">CascadeType</span><span class="token punctuation">.</span><span class="token constant">MERGE</span><span class="token punctuation">&#125;</span><span class="token punctuation">)</span>
+<span class="token keyword">private</span> <span class="token class-name">List</span><span class="token generics"><span class="token punctuation">&lt;</span><span class="token class-name">Order</span><span class="token punctuation">></span></span> orders<span class="token punctuation">;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span></span></code></pre>
+
+<div class="data-grid data-grid-link-table"><div class="grid-header"><div class="grid-cell">级联类型</div><div class="grid-cell">含义</div><div class="grid-cell">风险</div></div><div class="grid-row"><div class="grid-cell"><code>PERSIST</code></div><div class="grid-cell">保存父时一并保存子</div><div class="grid-cell">低</div></div><div class="grid-row"><div class="grid-cell"><code>MERGE</code></div><div class="grid-cell">合并父时一并合并子</div><div class="grid-cell">低</div></div><div class="grid-row"><div class="grid-cell"><code>REMOVE</code></div><div class="grid-cell">删父时删子</div><div class="grid-cell">高，容易误删</div></div><div class="grid-row"><div class="grid-cell"><code>ALL</code></div><div class="grid-cell">上面全包</div><div class="grid-cell">极高</div></div></div>
+
+<p><code>CascadeType.REMOVE</code> 在 <code>@ManyToMany</code> 上等于”删一个订单把所有商品删掉”，非常危险。</p>
+<h2 id="1-6-懒加载与-N-1"><a href="#1-6-懒加载与-N-1" class="headerlink" title="1.6 懒加载与 N+1"></a>1.6 懒加载与 N+1</h2><pre class="line-numbers language-java" data-language="java"><code class="language-java"><span class="token comment">// 方案一：JPQL fetch join（推荐，单条 SQL）</span>
+<span class="token annotation punctuation">@Query</span><span class="token punctuation">(</span><span class="token string">"select o from Order o join fetch o.user where o.status = :status"</span><span class="token punctuation">)</span>
+<span class="token class-name">List</span><span class="token generics"><span class="token punctuation">&lt;</span><span class="token class-name">Order</span><span class="token punctuation">></span></span> <span class="token function">findWithUser</span><span class="token punctuation">(</span><span class="token annotation punctuation">@Param</span><span class="token punctuation">(</span><span class="token string">"status"</span><span class="token punctuation">)</span> <span class="token class-name">String</span> status<span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+<span class="token comment">// 方案二：EntityGraph（不改 SQL 的写法）</span>
+<span class="token annotation punctuation">@EntityGraph</span><span class="token punctuation">(</span>attributePaths <span class="token operator">=</span> <span class="token punctuation">&#123;</span><span class="token string">"user"</span><span class="token punctuation">,</span> <span class="token string">"items"</span><span class="token punctuation">&#125;</span><span class="token punctuation">)</span>
+<span class="token class-name">List</span><span class="token generics"><span class="token punctuation">&lt;</span><span class="token class-name">Order</span><span class="token punctuation">></span></span> <span class="token function">findByStatus</span><span class="token punctuation">(</span><span class="token class-name">String</span> status<span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+<span class="token comment">// 方案三：批量抓取（全局配置）</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<pre class="line-numbers language-yaml" data-language="yaml"><code class="language-yaml"><span class="token key atrule">spring</span><span class="token punctuation">:</span>
+  <span class="token key atrule">jpa</span><span class="token punctuation">:</span>
+    <span class="token key atrule">properties</span><span class="token punctuation">:</span>
+      <span class="token key atrule">hibernate</span><span class="token punctuation">:</span>
+        <span class="token key atrule">default_batch_fetch_size</span><span class="token punctuation">:</span> <span class="token number">50</span>      <span class="token comment"># 把 N 次查询合并成 N/50 次</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<p>懒加载还有个大坑：<strong>在事务外访问懒加载属性会抛 <code>LazyInitializationException</code></strong>。要么在事务内组装好 DTO 返回，要么用 <code>fetch join</code> 一次取齐。</p>
+<h2 id="1-7-命名策略"><a href="#1-7-命名策略" class="headerlink" title="1.7 命名策略"></a>1.7 命名策略</h2><pre class="line-numbers language-yaml" data-language="yaml"><code class="language-yaml"><span class="token key atrule">spring</span><span class="token punctuation">:</span>
+  <span class="token key atrule">jpa</span><span class="token punctuation">:</span>
+    <span class="token key atrule">hibernate</span><span class="token punctuation">:</span>
+      <span class="token key atrule">naming</span><span class="token punctuation">:</span>
+        <span class="token key atrule">physical-strategy</span><span class="token punctuation">:</span> org.hibernate.boot.model.naming.PhysicalNamingStrategyStandardImpl<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<div class="data-grid data-grid-link-table"><div class="grid-header"><div class="grid-cell">默认策略</div><div class="grid-cell">效果</div><div class="grid-cell">何时改</div></div><div class="grid-row"><div class="grid-cell"><code>CamelCaseToUnderscoresNamingStrategy</code></div><div class="grid-cell"><code>userName</code> → <code>user_name</code></div><div class="grid-cell">默认，一般不改</div></div><div class="grid-row"><div class="grid-cell"><code>PhysicalNamingStrategyStandardImpl</code></div><div class="grid-cell">保持原样</div><div class="grid-cell">表字段已是驼峰（老库）</div></div><div class="grid-row"><div class="grid-cell">自定义</div><div class="grid-cell">加前缀&#x2F;后缀</div><div class="grid-cell">多租户、分表</div></div></div>
+
+<h2 id="1-8-官方资料"><a href="#1-8-官方资料" class="headerlink" title="1.8 官方资料"></a>1.8 官方资料</h2><ul>
+<li>实体映射：<a target="_blank" rel="noopener" href="https://docs.spring.io/spring-data/jpa/docs/2.5.x/reference/html/#jpa.entities">https://docs.spring.io/spring-data/jpa/docs/2.5.x/reference/html/#jpa.entities</a></li>
+<li>关联映射：<a target="_blank" rel="noopener" href="https://docs.spring.io/spring-data/jpa/docs/2.5.x/reference/html/#jpa.repositories">https://docs.spring.io/spring-data/jpa/docs/2.5.x/reference/html/#jpa.repositories</a></li>
+<li>Hibernate 用户指南：<a target="_blank" rel="noopener" href="https://docs.jboss.org/hibernate/orm/5.6/userguide/html_single/Hibernate_User_Guide.html">https://docs.jboss.org/hibernate/orm/5.6/userguide/html_single/Hibernate_User_Guide.html</a></li>
+</ul>
+<h2 id="1-9-清单"><a href="#1-9-清单" class="headerlink" title="1.9 清单"></a>1.9 清单</h2><ol>
+<li><code>@ManyToOne</code> &#x2F; <code>@OneToOne</code> 默认 EAGER，一律显式改 LAZY</li>
+<li><code>@OneToMany</code> 必须写 <code>mappedBy</code>，否则多一张中间表 + 双份数据</li>
+<li>关系由”多”的一方维护，别两边都 <code>set</code></li>
+<li>枚举一律 <code>EnumType.STRING</code>，<code>ORDINAL</code> 改枚举顺序就全乱</li>
+<li>MySQL 下 <code>IDENTITY</code> 无法批量插入，批量场景换 <code>SEQUENCE</code> 或雪花 ID</li>
+<li>N+1 用 <code>fetch join</code> 或 <code>@EntityGraph</code> 解决，兜底配 <code>default_batch_fetch_size</code></li>
+<li>懒加载属性必须在事务内取完，否则 <code>LazyInitializationException</code></li>
+</ol>
+</div>
+
+  <div class="mb-foot">
+    <a href="/phone/">返回手机首页</a>
+    <a href="/phone/tags/">星迹索引</a>
+  </div>
+</div>
+
+
+<script>
+  /* 作用：懒加载本地 mermaid 库；无 mermaid 代码块时不加载 */
+  function loadLocalMermaid(){
+    return new Promise(function(resolve, reject){
+      if(window.mermaid) return resolve(window.mermaid);
+      var s = document.createElement('script');
+      s.src = '/js/third-party/mermaid/mermaid.min.js?v=10';
+      s.onload = function(){ resolve(window.mermaid); };
+      s.onerror = function(){ reject(new Error('mermaid local load failed')); };
+      document.head.appendChild(s);
+    });
+  }
+
+  /* 作用：把 ```mermaid 代码块替换成 SVG 图（手机端字号略小、图可横向滚动） */
+  async function renderMermaidDiagram(){
+    var blocks = document.querySelectorAll('pre[class*="language-mermaid"]');
+    if(!blocks.length) return;
+    var mermaid;
+    try { mermaid = await loadLocalMermaid(); }
+    catch(e){ console.warn('[mermaid] 本地库加载失败：', e); return; }
+
+    mermaid.initialize({
+      startOnLoad: false,
+      theme: 'base',
+      themeVariables: {
+        darkMode: true,
+        background: 'transparent',
+        fontFamily: '"Microsoft YaHei", "PingFang SC", "Segoe UI", sans-serif',
+        fontSize: '12px',
+        primaryColor: '#062f3d',
+        primaryTextColor: '#d6f6ff',
+        primaryBorderColor: '#00eeff',
+        secondaryColor: '#04222d',
+        tertiaryColor: '#04222d',
+        mainBkg: '#062f3d',
+        nodeBorder: '#00eeff',
+        clusterBkg: '#02161f',
+        clusterBorder: '#00eeff55',
+        lineColor: '#00eeff',
+        textColor: '#c0e8ff',
+        edgeLabelBackground: '#02161f'
+      },
+      flowchart: { curve: 'basis', useMaxWidth: false, htmlLabels: false, nodeSpacing: 30, rankSpacing: 40, padding: 10 }
+    });
+
+    var targets = [];
+    blocks.forEach(function(el){
+      var codeEl = el.querySelector('code');
+      if(!codeEl) return;
+      var div = document.createElement('div');
+      div.className = 'mermaid';
+      div.textContent = codeEl.textContent;
+      el.parentNode.replaceChild(div, el);
+      targets.push(div);
+    });
+    if(!targets.length) return;
+    try { await mermaid.run({ nodes: targets }); }
+    catch(e){ console.warn('[mermaid] 渲染失败：', e); }
+  }
+  /* 作用：多次触发兜底（延迟重试 + DOM 变化），防止某次时机没跑到导致图表留在代码块 */
+  var mmBusy = false;
+  function scheduleMermaid(){
+    if(mmBusy) return;
+    mmBusy = true;
+    renderMermaidDiagram().then(function(){ mmBusy = false; }, function(){ mmBusy = false; });
+  }
+  scheduleMermaid();
+  window.addEventListener('load', scheduleMermaid);
+  [1000, 3000, 8000].forEach(function(ms){ setTimeout(scheduleMermaid, ms); });
+  if(document.readyState !== 'loading') scheduleMermaid();
+  if(window.MutationObserver){
+    var mmTimer = null;
+    var mmObserver = new MutationObserver(function(){
+      clearTimeout(mmTimer);
+      mmTimer = setTimeout(scheduleMermaid, 400);
+    });
+    mmObserver.observe(document.querySelector('.mb-article') || document.body, { childList: true, subtree: true });
+  }
+</script>
+</body>
+</html>

@@ -1,0 +1,304 @@
+<!--
+  ============================================
+  手机端 · 文章原文页
+  文件：phone/post.njk
+  适用终端：手机端（路由 /phone/p/<slug>/，由 scripts/phone-routes.js 生成）
+  作用：手机阅读单篇文章；单列布局、无侧栏无雷达，替代电脑端 post.njk
+        数据由生成期算好：page.item = { title, dateStr, content, cats, tags }
+  样式依赖：source/css/theme/phone/common.css、source/css/theme/phone/list.css
+  组件依赖：phone/_components/Particles.njk
+  最后修改：2026-11-11
+  ============================================
+-->
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="color-scheme" content="dark">
+  <meta name="theme-color" content="#020817">
+  <!-- 首帧兜底：浏览器默认画布是白的，样式未解析前会闪一下白。这条规则先锁死深空底色 -->
+  <style>html{background-color:#020817}</style>
+  <title>Spark（一）生态与运行原理 - 时空秘境</title>
+  <!-- 手机端样式：基础 + 列表/正文，外链引入（源文件 source/css/theme/phone/） -->
+  <link rel="stylesheet" href="/css/theme/phone/common.css">
+  <link rel="stylesheet" href="/css/theme/phone/list.css">
+<meta name="generator" content="Hexo 8.1.2"></head>
+<body>
+<div class="mb-shell">
+  <!--
+  ============================================
+  手机端星空粒子组件
+  文件：Particles.njk
+  适用终端：手机端
+  作用：Particles.njk 的手机端副本（nunjucks 子目录 include 取不到上级）
+        参数与电脑端 _components/Particles.njk 保持一致：
+        粒子 95 / 连线 118px / opacity 0.32，外加星座层与零星闪烁层
+  最后修改：2026-11-12
+  ============================================
+--><!-- z-index 必须是 0：负层级会被 body 不透明背景盖住，粒子在跑却看不见 -->
+<div id="particles" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 0; pointer-events: none;"></div>
+<!-- 星座层（与首页同一套：随机零星散布星座图形 + 偶尔闪烁的小星） -->
+<div id="constellations" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 1; pointer-events: none;" aria-hidden="true"></div>
+<script src="/js/particles.min.js"></script>
+<script>
+particlesJS("particles", {
+  particles: {
+    number: {
+      value: 95,
+      density: {
+        enable: true,
+        value_area: 800
+      }
+    },
+    color: {
+      value: "#00eeff"
+    },
+    shape: {
+      type: "circle",
+      stroke: {
+        width: 0,
+        color: "#000000"
+      }
+    },
+    opacity: {
+      value: 0.6,
+      random: true,
+      anim: {
+        enable: true,
+        speed: 0.5,
+        opacity_min: 0.1,
+        sync: false
+      }
+    },
+    size: {
+      value: 3,
+      random: true,
+      anim: {
+        enable: true,
+        speed: 2,
+        size_min: 0.1,
+        sync: false
+      }
+    },
+    line_linked: {
+      enable: true,
+      distance: 118,
+      color: "#00eeff",
+      opacity: 0.32,
+      width: 1
+    },
+    move: {
+      enable: true,
+      speed: 0.8,
+      direction: "none",
+      random: true,
+      straight: false,
+      out_mode: "out",
+      bounce: false,
+      attract: {
+        enable: true,
+        rotateX: 600,
+        rotateY: 1200
+      }
+    }
+  },
+  interactivity: {
+    detect_on: "canvas",
+    events: {
+      onhover: {
+        enable: true,
+        mode: "grab"       // 手指按住时粒子聚集
+      },
+      onclick: {
+        enable: true,
+        mode: "push"       // 点击时产生新粒子
+      },
+      resize: true
+    },
+    modes: {
+      grab: {
+        distance: 200,
+        line_linked: {
+          opacity: 1
+        }
+      },
+      push: {
+        particles_nb: 6
+      }
+    }
+  },
+  retina_detect: true
+});
+</script>
+<!-- 星座 + 零星闪烁层：与电脑端共用同一份绘制脚本 -->
+<script src="/js/theme/home/starfield.js"></script>
+
+
+  <div class="mb-top">
+    <a class="mb-back" href="/phone/">← 返回手机首页</a>
+    <span class="mb-sub" style="margin:0">2023-05-25</span>
+  </div>
+
+  <h1 class="mb-title">Spark（一）生态与运行原理</h1>
+  <div class="mb-sub">
+    分类：bigdata · spark
+     ｜ 标签：Spark
+  </div>
+
+  <div class="mb-article"><div class="essay-banner essay-spark"></div>
+
+<h1 id="生态与运行原理"><a href="#生态与运行原理" class="headerlink" title="生态与运行原理"></a><strong>生态与运行原理</strong></h1><p>MapReduce 把每一步中间结果都写回磁盘，一批迭代型作业跑一整夜是常态。Spark 把中间结果尽量留在内存，把多个算子串成一个 DAG 在一次调度里跑完，在同样的集群上把机器学习、图计算这类反复迭代的任务提速一两个数量级。这一篇先讲清楚 Spark 由哪几块组成，以及一个作业从提交到跑完经历了哪几个阶段。</p>
+<p><img src="https://wu4yong.github.io/starry-images/assets/img/spark/spark-01-overview.webp" alt="主控节点向多个工作节点下发计算任务，任务沿有向无环图逐层汇聚"></p>
+<p><em>主控节点向多个工作节点下发计算任务，任务沿有向无环图逐层汇聚</em></p>
+<h2 id="1-1-生态由哪几块组成"><a href="#1-1-生态由哪几块组成" class="headerlink" title="1.1 生态由哪几块组成"></a>1.1 生态由哪几块组成</h2><p>很多人把 Spark 当成”一个计算引擎”，其实它是一组围绕核心 RDD 抽象长出来的子项目，各模块可单独使用：</p>
+<div class="data-grid data-grid-link-table"><div class="grid-header"><div class="grid-cell">模块</div><div class="grid-cell">解决什么</div><div class="grid-cell">类比</div></div><div class="grid-row"><div class="grid-cell">Spark Core</div><div class="grid-cell">RDD 抽象、任务调度、内存与存储管理</div><div class="grid-cell">发动机</div></div><div class="grid-row"><div class="grid-cell">Spark SQL</div><div class="grid-cell">在结构化数据上跑 SQL，提供 DataFrame&#x2F;DataSet</div><div class="grid-cell">发动机上的变速箱</div></div><div class="grid-row"><div class="grid-cell">Structured Streaming</div><div class="grid-cell">把流当成不断增长的表来计算</div><div class="grid-cell">换挡成持续运转</div></div><div class="grid-row"><div class="grid-cell">MLlib</div><div class="grid-cell">机器学习算法库</div><div class="grid-cell">车上的辅助驾驶套件</div></div><div class="grid-row"><div class="grid-cell">GraphX</div><div class="grid-cell">图计算模型与算子</div><div class="grid-cell">专门跑网络图的套件</div></div></div>
+
+<p>对外统一的入口是 <code>SparkSession</code>：2.0 之后它把旧版的 <code>SparkContext</code>、<code>SQLContext</code>、<code>HiveContext</code> 收编到一个对象里，建上下文只拿它就够。</p>
+<h2 id="1-2-运行时角色：Driver-与-Executor"><a href="#1-2-运行时角色：Driver-与-Executor" class="headerlink" title="1.2 运行时角色：Driver 与 Executor"></a>1.2 运行时角色：Driver 与 Executor</h2><p>一个 Spark 应用（Application）跑起来后，进程分两类角色：</p>
+<div class="data-grid data-grid-link-table"><div class="grid-header"><div class="grid-cell">角色</div><div class="grid-cell">职责</div><div class="grid-cell">生命周期</div></div><div class="grid-row"><div class="grid-cell">Driver</div><div class="grid-cell">持有 <code>SparkSession</code>，解析代码、生成 DAG、向集群申请资源、调度任务</div><div class="grid-cell">整个应用一个，应用结束即退出</div></div><div class="grid-row"><div class="grid-cell">Executor</div><div class="grid-cell">被分配到工作节点上的进程，执行 Driver 派下来的 Task，缓存数据也存在这里</div><div class="grid-cell">随应用启动，随应用释放</div></div></div>
+
+<p>关键点：<strong>Driver 是”大脑”，Executor 是”双手”</strong>。业务代码里写的 transformation 不会立刻执行，Driver 只是把它们记进 DAG；真正算的时候，数据分片和任务被打包送到各个 Executor 上并发跑。Driver 挂了，整个应用就失败，所以生产上 Driver 内存和稳定性不能当成配角。</p>
+<p>Executor 之间互不通信，每个 Executor 由若干线程槽位并行跑 Task；一个 Executor 进程内既算数据也存缓存块，任务调度器尽量把 Task 派到持有对应缓存的节点上，这就是所谓的数据局部性（data locality）。</p>
+<h2 id="1-3-作业层级：Application-→-Job-→-Stage-→-Task"><a href="#1-3-作业层级：Application-→-Job-→-Stage-→-Task" class="headerlink" title="1.3 作业层级：Application → Job → Stage → Task"></a>1.3 作业层级：Application → Job → Stage → Task</h2><p>从代码到集群上跑的线程，层级要背下来：</p>
+<div class="data-grid data-grid-link-table"><div class="grid-header"><div class="grid-cell">层级</div><div class="grid-cell">由什么触发</div><div class="grid-cell">粒度</div></div><div class="grid-row"><div class="grid-cell">Application</div><div class="grid-cell">一个 <code>SparkSession</code> 起的整套程序</div><div class="grid-cell">一次提交</div></div><div class="grid-row"><div class="grid-cell">Job</div><div class="grid-cell">碰到一个 action 算子就生成一个 Job</div><div class="grid-cell">一次动作</div></div><div class="grid-row"><div class="grid-cell">Stage</div><div class="grid-cell">宽依赖（shuffle）边界把 Job 切成若干 Stage</div><div class="grid-cell">一组可流水线执行的算子</div></div><div class="grid-row"><div class="grid-cell">Task</div><div class="grid-cell">Stage 按数据分片切出的最小执行单元</div><div class="grid-cell">一个分片上的一段计算</div></div></div>
+
+<p>一个 action 对应一个 Job，一个 Job 按 shuffle 边界拆成多个 Stage，一个 Stage 内的算子可以流水线串起来跑，Stage 之间必须等上一阶段 shuffle 落盘、拉取完成。Task 的数量通常等于 RDD 分区数，是集群真正并发度的来源。</p>
+<h2 id="1-4-DAG-是怎么被切分的"><a href="#1-4-DAG-是怎么被切分的" class="headerlink" title="1.4 DAG 是怎么被切分的"></a>1.4 DAG 是怎么被切分的</h2><p>Driver 拿到代码后做三件事：把算子链转成 RDD 依赖图（DAG），沿依赖关系找出宽依赖位置作为 Stage 边界，再把每个 Stage 编译成可以序列化分发的 Task 集合。</p>
+<p>这里先给结论，细节留到下一篇：</p>
+<ul>
+<li>窄依赖：一个子分区只依赖父 RDD 的一个分区，可以在同一轮计算里流水线执行</li>
+<li>宽依赖：子分区依赖父 RDD 的多个分区，中间必须发生 shuffle，天然成为 Stage 边界</li>
+<li>DAG 调度器（DAGScheduler）负责切 Stage，底层调度器（TaskScheduler）负责任务分发到 Executor</li>
+</ul>
+<h2 id="1-5-和-MapReduce-到底差在哪"><a href="#1-5-和-MapReduce-到底差在哪" class="headerlink" title="1.5 和 MapReduce 到底差在哪"></a>1.5 和 MapReduce 到底差在哪</h2><div class="data-grid data-grid-link-table"><div class="grid-header"><div class="grid-cell">对比项</div><div class="grid-cell">MapReduce</div><div class="grid-cell">Spark</div></div><div class="grid-row"><div class="grid-cell">中间结果</div><div class="grid-cell">每步落磁盘</div><div class="grid-cell">优先内存，不够再溢写磁盘</div></div><div class="grid-row"><div class="grid-cell">编程模型</div><div class="grid-cell">只有 map &#x2F; reduce 两层</div><div class="grid-cell">DAG 多算子串联</div></div><div class="grid-row"><div class="grid-cell">迭代成本</div><div class="grid-cell">每轮读写磁盘</div><div class="grid-cell">复用缓存数据，迭代快</div></div><div class="grid-row"><div class="grid-cell">磁盘溢写</div><div class="grid-cell">全程依赖磁盘</div><div class="grid-cell">内存不足才溢写，路径更短</div></div><div class="grid-row"><div class="grid-cell">适用场景</div><div class="grid-cell">简单批处理</div><div class="grid-cell">批处理、SQL、流、机器学习、图计算</div></div></div>
+
+<p>要注意一个常见误解：Spark 不是”全内存计算”。内存装不下时它照样溢写磁盘，只是把磁盘 IO 推迟到真正需要的时刻，并且把多步计算合并到一次调度里，减少反复读写的次数。</p>
+<h2 id="1-6-一个最小可跑的程序"><a href="#1-6-一个最小可跑的程序" class="headerlink" title="1.6 一个最小可跑的程序"></a>1.6 一个最小可跑的程序</h2><p>下面这段 Scala 代码读完文件，按空白分词，统计单词出现次数，再打印前 10：</p>
+<pre class="line-numbers language-scala" data-language="scala"><code class="language-scala"><span class="token keyword">import</span> <span class="token namespace">org<span class="token punctuation">.</span>apache<span class="token punctuation">.</span>spark<span class="token punctuation">.</span>sql<span class="token punctuation">.</span></span>SparkSession
+
+<span class="token keyword">val</span> spark <span class="token operator">=</span> SparkSession<span class="token punctuation">.</span>builder<span class="token punctuation">(</span><span class="token punctuation">)</span>
+  <span class="token punctuation">.</span>appName<span class="token punctuation">(</span><span class="token string">"word-count"</span><span class="token punctuation">)</span>
+  <span class="token punctuation">.</span>master<span class="token punctuation">(</span><span class="token string">"local[*]"</span><span class="token punctuation">)</span>      <span class="token comment">// 本地调试用，提交到集群时去掉，由集群决定核数</span>
+  <span class="token punctuation">.</span>getOrCreate<span class="token punctuation">(</span><span class="token punctuation">)</span>
+
+<span class="token keyword">val</span> lines <span class="token operator">=</span> spark<span class="token punctuation">.</span>read<span class="token punctuation">.</span>textFile<span class="token punctuation">(</span><span class="token string">"hdfs:///data/words.txt"</span><span class="token punctuation">)</span>
+
+<span class="token keyword">val</span> counts <span class="token operator">=</span> lines<span class="token punctuation">.</span>flatMap<span class="token punctuation">(</span>_<span class="token punctuation">.</span>split<span class="token punctuation">(</span><span class="token string">"\\s+"</span><span class="token punctuation">)</span><span class="token punctuation">)</span>
+  <span class="token punctuation">.</span>groupBy<span class="token punctuation">(</span><span class="token string">"value"</span><span class="token punctuation">)</span>
+  <span class="token punctuation">.</span>count<span class="token punctuation">(</span><span class="token punctuation">)</span>
+
+counts<span class="token punctuation">.</span>sort<span class="token punctuation">(</span>counts<span class="token punctuation">(</span><span class="token string">"count"</span><span class="token punctuation">)</span><span class="token punctuation">.</span>desc<span class="token punctuation">)</span><span class="token punctuation">.</span>limit<span class="token punctuation">(</span><span class="token number">10</span><span class="token punctuation">)</span><span class="token punctuation">.</span>show<span class="token punctuation">(</span><span class="token punctuation">)</span>
+spark<span class="token punctuation">.</span>stop<span class="token punctuation">(</span><span class="token punctuation">)</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<p><code>show()</code> 是一个 action，碰到它 Driver 才会把前面的聚合计划提交成 Job；在这之前所有算子都只是 DAG 上的节点。</p>
+<h2 id="1-7-容易踩的坑"><a href="#1-7-容易踩的坑" class="headerlink" title="1.7 容易踩的坑"></a>1.7 容易踩的坑</h2><ul>
+<li>把 <code>master(&quot;local[*]&quot;)</code> 留在提交脚本里上生产，会直接压死集群调度，参数必须由部署侧覆盖</li>
+<li>在 Driver 端 <code>collect()</code> 大结果集，数据全部拉回驱动进程，很容易把 Driver 内存撑爆</li>
+<li>以为 Spark 不会碰磁盘，堆内存给得太保守，结果频繁溢写，作业比 MapReduce 还慢</li>
+<li>混淆 Job 与 Stage：调一个 action 出一个 Job，shuffle 边界才切 Stage，UI 上数不对通常是这层概念没分清</li>
+</ul>
+<h2 id="1-8-官方资料"><a href="#1-8-官方资料" class="headerlink" title="1.8 官方资料"></a>1.8 官方资料</h2><ul>
+<li>Apache Spark 官网：<a target="_blank" rel="noopener" href="https://spark.apache.org/">https://spark.apache.org/</a></li>
+<li>Spark 官方文档首页：<a target="_blank" rel="noopener" href="https://spark.apache.org/docs/latest/">https://spark.apache.org/docs/latest/</a></li>
+<li>集群概览（Cluster Mode Overview）：<a target="_blank" rel="noopener" href="https://spark.apache.org/docs/latest/cluster-overview.html">https://spark.apache.org/docs/latest/cluster-overview.html</a></li>
+<li>RDD 编程指南：<a target="_blank" rel="noopener" href="https://spark.apache.org/docs/latest/rdd-programming-guide.html">https://spark.apache.org/docs/latest/rdd-programming-guide.html</a></li>
+</ul>
+<h2 id="1-9-清单"><a href="#1-9-清单" class="headerlink" title="1.9 清单"></a>1.9 清单</h2><ol>
+<li>Spark 生态 &#x3D; Core + SQL + Structured Streaming + MLlib + GraphX，统一入口是 <code>SparkSession</code></li>
+<li>Driver 持上下文、生成 DAG、调度任务；Executor 跑 Task、缓存数据</li>
+<li>层级链路：Application → Job（action 触发）→ Stage（宽依赖切分）→ Task（分区数）</li>
+<li>Stage 边界由宽依赖划出，窄依赖内部可以流水线执行</li>
+<li>Spark 的快来自内存复用与 DAG 合并，不是”完全不落盘”</li>
+<li>本地 <code>master</code> 配置和 Driver 端 <code>collect</code> 是新人最常带进生产的两个坑</li>
+</ol>
+</div>
+
+  <div class="mb-foot">
+    <a href="/phone/">返回手机首页</a>
+    <a href="/phone/tags/">星迹索引</a>
+  </div>
+</div>
+
+
+<script>
+  /* 作用：懒加载本地 mermaid 库；无 mermaid 代码块时不加载 */
+  function loadLocalMermaid(){
+    return new Promise(function(resolve, reject){
+      if(window.mermaid) return resolve(window.mermaid);
+      var s = document.createElement('script');
+      s.src = '/js/third-party/mermaid/mermaid.min.js?v=10';
+      s.onload = function(){ resolve(window.mermaid); };
+      s.onerror = function(){ reject(new Error('mermaid local load failed')); };
+      document.head.appendChild(s);
+    });
+  }
+
+  /* 作用：把 ```mermaid 代码块替换成 SVG 图（手机端字号略小、图可横向滚动） */
+  async function renderMermaidDiagram(){
+    var blocks = document.querySelectorAll('pre[class*="language-mermaid"]');
+    if(!blocks.length) return;
+    var mermaid;
+    try { mermaid = await loadLocalMermaid(); }
+    catch(e){ console.warn('[mermaid] 本地库加载失败：', e); return; }
+
+    mermaid.initialize({
+      startOnLoad: false,
+      theme: 'base',
+      themeVariables: {
+        darkMode: true,
+        background: 'transparent',
+        fontFamily: '"Microsoft YaHei", "PingFang SC", "Segoe UI", sans-serif',
+        fontSize: '12px',
+        primaryColor: '#062f3d',
+        primaryTextColor: '#d6f6ff',
+        primaryBorderColor: '#00eeff',
+        secondaryColor: '#04222d',
+        tertiaryColor: '#04222d',
+        mainBkg: '#062f3d',
+        nodeBorder: '#00eeff',
+        clusterBkg: '#02161f',
+        clusterBorder: '#00eeff55',
+        lineColor: '#00eeff',
+        textColor: '#c0e8ff',
+        edgeLabelBackground: '#02161f'
+      },
+      flowchart: { curve: 'basis', useMaxWidth: false, htmlLabels: false, nodeSpacing: 30, rankSpacing: 40, padding: 10 }
+    });
+
+    var targets = [];
+    blocks.forEach(function(el){
+      var codeEl = el.querySelector('code');
+      if(!codeEl) return;
+      var div = document.createElement('div');
+      div.className = 'mermaid';
+      div.textContent = codeEl.textContent;
+      el.parentNode.replaceChild(div, el);
+      targets.push(div);
+    });
+    if(!targets.length) return;
+    try { await mermaid.run({ nodes: targets }); }
+    catch(e){ console.warn('[mermaid] 渲染失败：', e); }
+  }
+  /* 作用：多次触发兜底（延迟重试 + DOM 变化），防止某次时机没跑到导致图表留在代码块 */
+  var mmBusy = false;
+  function scheduleMermaid(){
+    if(mmBusy) return;
+    mmBusy = true;
+    renderMermaidDiagram().then(function(){ mmBusy = false; }, function(){ mmBusy = false; });
+  }
+  scheduleMermaid();
+  window.addEventListener('load', scheduleMermaid);
+  [1000, 3000, 8000].forEach(function(ms){ setTimeout(scheduleMermaid, ms); });
+  if(document.readyState !== 'loading') scheduleMermaid();
+  if(window.MutationObserver){
+    var mmTimer = null;
+    var mmObserver = new MutationObserver(function(){
+      clearTimeout(mmTimer);
+      mmTimer = setTimeout(scheduleMermaid, 400);
+    });
+    mmObserver.observe(document.querySelector('.mb-article') || document.body, { childList: true, subtree: true });
+  }
+</script>
+</body>
+</html>

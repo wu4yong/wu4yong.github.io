@@ -1,0 +1,304 @@
+<!--
+  ============================================
+  手机端 · 文章原文页
+  文件：phone/post.njk
+  适用终端：手机端（路由 /phone/p/<slug>/，由 scripts/phone-routes.js 生成）
+  作用：手机阅读单篇文章；单列布局、无侧栏无雷达，替代电脑端 post.njk
+        数据由生成期算好：page.item = { title, dateStr, content, cats, tags }
+  样式依赖：source/css/theme/phone/common.css、source/css/theme/phone/list.css
+  组件依赖：phone/_components/Particles.njk
+  最后修改：2026-11-11
+  ============================================
+-->
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="color-scheme" content="dark">
+  <meta name="theme-color" content="#020817">
+  <!-- 首帧兜底：浏览器默认画布是白的，样式未解析前会闪一下白。这条规则先锁死深空底色 -->
+  <style>html{background-color:#020817}</style>
+  <title>Spark（四）内存模型与调优 - 时空秘境</title>
+  <!-- 手机端样式：基础 + 列表/正文，外链引入（源文件 source/css/theme/phone/） -->
+  <link rel="stylesheet" href="/css/theme/phone/common.css">
+  <link rel="stylesheet" href="/css/theme/phone/list.css">
+<meta name="generator" content="Hexo 8.1.2"></head>
+<body>
+<div class="mb-shell">
+  <!--
+  ============================================
+  手机端星空粒子组件
+  文件：Particles.njk
+  适用终端：手机端
+  作用：Particles.njk 的手机端副本（nunjucks 子目录 include 取不到上级）
+        参数与电脑端 _components/Particles.njk 保持一致：
+        粒子 95 / 连线 118px / opacity 0.32，外加星座层与零星闪烁层
+  最后修改：2026-11-12
+  ============================================
+--><!-- z-index 必须是 0：负层级会被 body 不透明背景盖住，粒子在跑却看不见 -->
+<div id="particles" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 0; pointer-events: none;"></div>
+<!-- 星座层（与首页同一套：随机零星散布星座图形 + 偶尔闪烁的小星） -->
+<div id="constellations" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 1; pointer-events: none;" aria-hidden="true"></div>
+<script src="/js/particles.min.js"></script>
+<script>
+particlesJS("particles", {
+  particles: {
+    number: {
+      value: 95,
+      density: {
+        enable: true,
+        value_area: 800
+      }
+    },
+    color: {
+      value: "#00eeff"
+    },
+    shape: {
+      type: "circle",
+      stroke: {
+        width: 0,
+        color: "#000000"
+      }
+    },
+    opacity: {
+      value: 0.6,
+      random: true,
+      anim: {
+        enable: true,
+        speed: 0.5,
+        opacity_min: 0.1,
+        sync: false
+      }
+    },
+    size: {
+      value: 3,
+      random: true,
+      anim: {
+        enable: true,
+        speed: 2,
+        size_min: 0.1,
+        sync: false
+      }
+    },
+    line_linked: {
+      enable: true,
+      distance: 118,
+      color: "#00eeff",
+      opacity: 0.32,
+      width: 1
+    },
+    move: {
+      enable: true,
+      speed: 0.8,
+      direction: "none",
+      random: true,
+      straight: false,
+      out_mode: "out",
+      bounce: false,
+      attract: {
+        enable: true,
+        rotateX: 600,
+        rotateY: 1200
+      }
+    }
+  },
+  interactivity: {
+    detect_on: "canvas",
+    events: {
+      onhover: {
+        enable: true,
+        mode: "grab"       // 手指按住时粒子聚集
+      },
+      onclick: {
+        enable: true,
+        mode: "push"       // 点击时产生新粒子
+      },
+      resize: true
+    },
+    modes: {
+      grab: {
+        distance: 200,
+        line_linked: {
+          opacity: 1
+        }
+      },
+      push: {
+        particles_nb: 6
+      }
+    }
+  },
+  retina_detect: true
+});
+</script>
+<!-- 星座 + 零星闪烁层：与电脑端共用同一份绘制脚本 -->
+<script src="/js/theme/home/starfield.js"></script>
+
+
+  <div class="mb-top">
+    <a class="mb-back" href="/phone/">← 返回手机首页</a>
+    <span class="mb-sub" style="margin:0">2023-06-12</span>
+  </div>
+
+  <h1 class="mb-title">Spark（四）内存模型与调优</h1>
+  <div class="mb-sub">
+    分类：bigdata · spark
+     ｜ 标签：Spark
+  </div>
+
+  <div class="mb-article"><div class="essay-banner essay-spark"></div>
+
+<h1 id="内存模型与调优"><a href="#内存模型与调优" class="headerlink" title="内存模型与调优"></a><strong>内存模型与调优</strong></h1><p>Spark 作业慢、OOM、GC 卡顿，九成问题出在内存分配和数据倾斜上。这一篇讲清 Executor 内存怎么分（UnifiedMemoryManager，1.6 起成为默认），序列化怎么选，广播变量在什么场景下省网络，以及数据倾斜的典型现象和处置思路。参数只给生产上真会动的几个，不堆砌配置表。</p>
+<p><img src="https://wu4yong.github.io/starry-images/assets/img/spark/spark-04-tuning.webp" alt="执行内存与缓存内存共享一块堆内存，内存不足时向磁盘溢写，热点数据被广播到各节点"></p>
+<p><em>执行内存与缓存内存共享一块堆内存，内存不足时向磁盘溢写，热点数据被广播到各节点</em></p>
+<h2 id="1-1-Executor-内存怎么划分"><a href="#1-1-Executor-内存怎么划分" class="headerlink" title="1.1 Executor 内存怎么划分"></a>1.1 Executor 内存怎么划分</h2><p>Spark 1.6 之前，执行内存（shuffle、聚合、排序用到的工作区）和存储内存（缓存 RDD&#x2F; DataFrame 块）是两块固定配额，互相抢占不到对方地盘，容易出现”一边闲着一边溢写”。<strong>UnifiedMemoryManager（统一内存管理）</strong> 把两块收进同一个池子里，按需借用，这也是 1.6 之后的默认实现。</p>
+<div class="data-grid data-grid-link-table"><div class="grid-header"><div class="grid-cell">区域</div><div class="grid-cell">用途</div><div class="grid-cell">回收方式</div></div><div class="grid-row"><div class="grid-cell">执行内存（Execution）</div><div class="grid-cell">shuffle 缓存、排序、聚合、join 工作区</div><div class="grid-cell">任务结束即可释放</div></div><div class="grid-row"><div class="grid-cell">存储内存（Storage）</div><div class="grid-cell">缓存块、广播变量副本</div><div class="grid-cell">被内存压力驱逐时回源重算或溢写磁盘</div></div><div class="grid-row"><div class="grid-cell">预留内存（Reserved）</div><div class="grid-cell">Spark 内部对象、用户数据结构</div><div class="grid-cell">不参与任务配额分配</div></div></div>
+
+<p>借用规则：存储内存可以借执行内存的空闲空间；反过来执行内存需要空间时，会把存储侧借走的部分驱逐回收。两块边界由 <code>spark.memory.fraction</code>（占堆内比例，默认 0.6）和 <code>spark.memory.storageFraction</code>（存储保底比例，默认 0.5）控制，日常调优先动 Executor 堆大小和分区数，再碰这两个比例。</p>
+<p>判断内存够不够，先看 Spark UI 的 Executor 页：已用执行内存、已用存储内存、溢写磁盘字节数都在上面。同一批数据反复缓存的作业，存储占用高是正常的；纯批处理作业存储几乎为零，溢写磁盘却很大，说明分片过大或分区数过少。</p>
+<h2 id="1-2-序列化：省空间的第一手段"><a href="#1-2-序列化：省空间的第一手段" class="headerlink" title="1.2 序列化：省空间的第一手段"></a>1.2 序列化：省空间的第一手段</h2><p>未序列化的 JVM 对象有对象头、指针、哈希表引用等额外开销，一条记录实际占的内存常常是字段裸值的好几倍。序列化把对象压成字节数组存储，代价是读写时多一层编解码。</p>
+<div class="data-grid data-grid-link-table"><div class="grid-header"><div class="grid-cell">序列化器</div><div class="grid-cell">特点</div><div class="grid-cell">适用</div></div><div class="grid-row"><div class="grid-cell">Java 序列化</div><div class="grid-cell">默认，兼容所有可序列化类，体积大、慢</div><div class="grid-cell">兜底方案</div></div><div class="grid-row"><div class="grid-cell">Kryo 序列化</div><div class="grid-cell">体积小、速度快，需注册类</div><div class="grid-cell">大数据量、迭代型作业首选</div></div></div>
+
+<p>启用 Kryo 并注册用到的类，避免运行时反射探测：</p>
+<pre class="line-numbers language-properties" data-language="properties"><code class="language-properties"><span class="token comment"># spark-defaults.conf 或提交参数</span>
+<span class="token key attr-name">spark.serializer</span> <span class="token value attr-value">org.apache.spark.serializer.KryoSerializer</span>
+<span class="token key attr-name">spark.kryo.registrationRequired</span> <span class="token value attr-value">true</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span></span></code></pre>
+
+<pre class="line-numbers language-scala" data-language="scala"><code class="language-scala"><span class="token keyword">val</span> conf <span class="token operator">=</span> <span class="token keyword">new</span> org<span class="token punctuation">.</span>apache<span class="token punctuation">.</span>spark<span class="token punctuation">.</span>SparkConf<span class="token punctuation">(</span><span class="token punctuation">)</span>
+  <span class="token punctuation">.</span>registerKryoClasses<span class="token punctuation">(</span>Array<span class="token punctuation">(</span>classOf<span class="token punctuation">[</span>OrderRecord<span class="token punctuation">]</span><span class="token punctuation">,</span> classOf<span class="token punctuation">[</span>UserProfile<span class="token punctuation">]</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span></span></code></pre>
+
+<p>注册开关打开后，未注册的类直接报错而不是悄悄降级，这是有意为之：防止上线后才发现序列化体积失控。</p>
+<h2 id="1-3-广播变量：小表-join-省网络"><a href="#1-3-广播变量：小表-join-省网络" class="headerlink" title="1.3 广播变量：小表 join 省网络"></a>1.3 广播变量：小表 join 省网络</h2><p>大表关联小表时，如果小表在每个 Task 上都 shuffle 一份，网络和内存都浪费。广播变量把小数据集发到每个 Executor 本地一份，Task 直接查本地副本，省掉小表的 shuffle。</p>
+<pre class="line-numbers language-scala" data-language="scala"><code class="language-scala"><span class="token keyword">val</span> dim <span class="token operator">=</span> spark<span class="token punctuation">.</span>read<span class="token punctuation">.</span>parquet<span class="token punctuation">(</span><span class="token string">"hdfs:///data/dim_city.parquet"</span><span class="token punctuation">)</span>
+<span class="token keyword">val</span> dimBroadcast <span class="token operator">=</span> org<span class="token punctuation">.</span>apache<span class="token punctuation">.</span>spark<span class="token punctuation">.</span>sql<span class="token punctuation">.</span>functions<span class="token punctuation">.</span>broadcast<span class="token punctuation">(</span>dim<span class="token punctuation">)</span>
+
+<span class="token keyword">val</span> fact <span class="token operator">=</span> spark<span class="token punctuation">.</span>read<span class="token punctuation">.</span>parquet<span class="token punctuation">(</span><span class="token string">"hdfs:///data/fact_order.parquet"</span><span class="token punctuation">)</span>
+<span class="token keyword">val</span> joined <span class="token operator">=</span> fact<span class="token punctuation">.</span>join<span class="token punctuation">(</span>dimBroadcast<span class="token punctuation">,</span> <span class="token string">"city_id"</span><span class="token punctuation">)</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<p>判断能不能广播：小表体量要明显小于 Executor 可用存储内存，且 join 键上分布均匀。默认广播阈值由 <code>spark.sql.autoBroadcastJoinThreshold</code>（默认 10MB 左右）控制，超过这个大小引擎不会自动广播，手动 <code>broadcast()</code> 也要先算清内存账。</p>
+<p>广播变量在 Executor 端只存一份副本，多个 Task 共享；它不走 shuffle 链路，序列化一次后随任务分发。需要注意广播内容不能带 Driver 端的连接对象、不可序列化句柄，否则分发阶段就报错。</p>
+<h2 id="1-4-数据倾斜：现象与处置"><a href="#1-4-数据倾斜：现象与处置" class="headerlink" title="1.4 数据倾斜：现象与处置"></a>1.4 数据倾斜：现象与处置</h2><p>数据倾斜指少数 key 分到的数据量远大于其他 key，对应到任务上就是个别 Task 跑很久、堆内存爆掉，其余 Task 早已结束。典型现象：</p>
+<ul>
+<li>Spark UI 上同一个 Stage 的 Task 耗时和输入量方差极大</li>
+<li>日志反复出现 <code>OutOfMemoryError: Java heap space</code> 或 shuffle 溢写磁盘</li>
+<li>join 之后结果行数异常膨胀，个别 key 占绝大多数</li>
+</ul>
+<div class="data-grid data-grid-link-table"><div class="grid-header"><div class="grid-cell">思路</div><div class="grid-cell">做法</div><div class="grid-cell">适用</div></div><div class="grid-row"><div class="grid-cell">增加拆分粒度</div><div class="grid-cell">提高 shuffle 分区数，让热点 key 分散到更多分区</div><div class="grid-cell">分区过少导致的倾斜</div></div><div class="grid-row"><div class="grid-cell">加盐（salt）</div><div class="grid-cell">给热点 key 拼接随机前缀分两轮聚合</div><div class="grid-cell">聚合类倾斜，单 key 体量极大</div></div><div class="grid-row"><div class="grid-cell">广播小表</div><div class="grid-cell">走广播 join，绕开大表 shuffle</div><div class="grid-cell">大小表关联</div></div><div class="grid-row"><div class="grid-cell">过滤脏数据</div><div class="grid-cell">剔除空 key、异常 key</div><div class="grid-cell">倾斜来自缺失值或脏数据</div></div></div>
+
+<p>加盐的基本套路：第一轮给热点 key 加随机前缀分组聚合，第二轮去掉前缀再汇总；热点不提前识别，盲目加盐会把普通 key 的 shuffle 量也放大。</p>
+<p>定位热点 key 可以在聚合前对 join 键做一次计数排序，把出现次数 Top N 的 key 单独拎出来看；空字符串、<code>null</code>、默认占位值往往是倾斜主力，先在过滤段剔除再关联。</p>
+<h2 id="1-5-生产上常动的几个参数"><a href="#1-5-生产上常动的几个参数" class="headerlink" title="1.5 生产上常动的几个参数"></a>1.5 生产上常动的几个参数</h2><div class="data-grid data-grid-link-table"><div class="grid-header"><div class="grid-cell">参数</div><div class="grid-cell">作用</div><div class="grid-cell">调优方向</div></div><div class="grid-row"><div class="grid-cell"><code>spark.executor.memory</code></div><div class="grid-cell">单个 Executor 堆内存</div><div class="grid-cell">按数据分片大小给，不是越大越好</div></div><div class="grid-row"><div class="grid-cell"><code>spark.executor.cores</code></div><div class="grid-cell">单 Executor 并行线程数</div><div class="grid-cell">核数过多会争抢内存，一般 4–8</div></div><div class="grid-row"><div class="grid-cell"><code>spark.sql.shuffle.partitions</code></div><div class="grid-cell">shuffle 后分区数</div><div class="grid-cell">按 shuffle 数据量调，默认 200 常偏大或偏小</div></div><div class="grid-row"><div class="grid-cell"><code>spark.memory.fraction</code></div><div class="grid-cell">任务内存占堆内比例</div><div class="grid-cell">缓存很重时适当上调，纯计算保持默认</div></div><div class="grid-row"><div class="grid-cell"><code>spark.serializer</code></div><div class="grid-cell">序列化器</div><div class="grid-cell">大数据量换 Kryo</div></div></div>
+
+<h2 id="1-6-容易踩的坑"><a href="#1-6-容易踩的坑" class="headerlink" title="1.6 容易踩的坑"></a>1.6 容易踩的坑</h2><ul>
+<li>只加 Executor 内存不改分区数，大分片还是挤在少数 Task 上，OOM 照旧</li>
+<li>广播一张超过阈值的大表，Executor 缓存被撑满，反而拖垮整个作业</li>
+<li>序列化选 Kryo 却不注册类，反射探测消耗 CPU，体积优势打折</li>
+<li>在 Driver 端做全局聚合再分发，Driver 成为单点瓶颈</li>
+<li>把存储内存保底比例调得过高，执行内存被挤占，shuffle 频繁溢写</li>
+<li>序列化与缓存级别不匹配：未序列化对象堆内放得下，换成 <code>MEMORY_ONLY_SER</code> 后反序列化 CPU 开销被忽略，作业变慢却看不出原因</li>
+</ul>
+<h2 id="1-7-官方资料"><a href="#1-7-官方资料" class="headerlink" title="1.7 官方资料"></a>1.7 官方资料</h2><ul>
+<li>内存管理说明：<a target="_blank" rel="noopener" href="https://spark.apache.org/docs/latest/configuration.html#memory-management">https://spark.apache.org/docs/latest/configuration.html#memory-management</a></li>
+<li>性能调优指南：<a target="_blank" rel="noopener" href="https://spark.apache.org/docs/latest/tuning.html">https://spark.apache.org/docs/latest/tuning.html</a></li>
+<li>广播变量文档：<a target="_blank" rel="noopener" href="https://spark.apache.org/docs/latest/rdd-programming-guide.html#broadcast-variables">https://spark.apache.org/docs/latest/rdd-programming-guide.html#broadcast-variables</a></li>
+<li>数据倾斜与 AQE：<a target="_blank" rel="noopener" href="https://spark.apache.org/docs/latest/sql-performance-tuning.html">https://spark.apache.org/docs/latest/sql-performance-tuning.html</a></li>
+</ul>
+<h2 id="1-8-清单"><a href="#1-8-清单" class="headerlink" title="1.8 清单"></a>1.8 清单</h2><ol>
+<li>UnifiedMemoryManager 自 1.6 起默认，执行与存储共享池、按需借用，告别两块固定配额</li>
+<li>Kryo 序列化体积小速度快，生产上配合注册类使用，注册严格模式避免静默降级</li>
+<li>广播变量解决大小表 join 的小表 shuffle，前提是小表装得下 Executor 存储内存</li>
+<li>倾斜先看 UI 上 Task 耗时与输入量方差，再选拆分、加盐、广播、过滤的路子</li>
+<li>调优顺序：分区数 → Executor 内存与核数 → 序列化 → 内存比例，不要一上来改比例</li>
+<li>常见误判：OOM 就加内存，往往分区或倾斜问题才是根因</li>
+<li>内存调优先看 UI 上的溢写字节与分区方差，再决定动内存还是动分区数</li>
+</ol>
+</div>
+
+  <div class="mb-foot">
+    <a href="/phone/">返回手机首页</a>
+    <a href="/phone/tags/">星迹索引</a>
+  </div>
+</div>
+
+
+<script>
+  /* 作用：懒加载本地 mermaid 库；无 mermaid 代码块时不加载 */
+  function loadLocalMermaid(){
+    return new Promise(function(resolve, reject){
+      if(window.mermaid) return resolve(window.mermaid);
+      var s = document.createElement('script');
+      s.src = '/js/third-party/mermaid/mermaid.min.js?v=10';
+      s.onload = function(){ resolve(window.mermaid); };
+      s.onerror = function(){ reject(new Error('mermaid local load failed')); };
+      document.head.appendChild(s);
+    });
+  }
+
+  /* 作用：把 ```mermaid 代码块替换成 SVG 图（手机端字号略小、图可横向滚动） */
+  async function renderMermaidDiagram(){
+    var blocks = document.querySelectorAll('pre[class*="language-mermaid"]');
+    if(!blocks.length) return;
+    var mermaid;
+    try { mermaid = await loadLocalMermaid(); }
+    catch(e){ console.warn('[mermaid] 本地库加载失败：', e); return; }
+
+    mermaid.initialize({
+      startOnLoad: false,
+      theme: 'base',
+      themeVariables: {
+        darkMode: true,
+        background: 'transparent',
+        fontFamily: '"Microsoft YaHei", "PingFang SC", "Segoe UI", sans-serif',
+        fontSize: '12px',
+        primaryColor: '#062f3d',
+        primaryTextColor: '#d6f6ff',
+        primaryBorderColor: '#00eeff',
+        secondaryColor: '#04222d',
+        tertiaryColor: '#04222d',
+        mainBkg: '#062f3d',
+        nodeBorder: '#00eeff',
+        clusterBkg: '#02161f',
+        clusterBorder: '#00eeff55',
+        lineColor: '#00eeff',
+        textColor: '#c0e8ff',
+        edgeLabelBackground: '#02161f'
+      },
+      flowchart: { curve: 'basis', useMaxWidth: false, htmlLabels: false, nodeSpacing: 30, rankSpacing: 40, padding: 10 }
+    });
+
+    var targets = [];
+    blocks.forEach(function(el){
+      var codeEl = el.querySelector('code');
+      if(!codeEl) return;
+      var div = document.createElement('div');
+      div.className = 'mermaid';
+      div.textContent = codeEl.textContent;
+      el.parentNode.replaceChild(div, el);
+      targets.push(div);
+    });
+    if(!targets.length) return;
+    try { await mermaid.run({ nodes: targets }); }
+    catch(e){ console.warn('[mermaid] 渲染失败：', e); }
+  }
+  /* 作用：多次触发兜底（延迟重试 + DOM 变化），防止某次时机没跑到导致图表留在代码块 */
+  var mmBusy = false;
+  function scheduleMermaid(){
+    if(mmBusy) return;
+    mmBusy = true;
+    renderMermaidDiagram().then(function(){ mmBusy = false; }, function(){ mmBusy = false; });
+  }
+  scheduleMermaid();
+  window.addEventListener('load', scheduleMermaid);
+  [1000, 3000, 8000].forEach(function(ms){ setTimeout(scheduleMermaid, ms); });
+  if(document.readyState !== 'loading') scheduleMermaid();
+  if(window.MutationObserver){
+    var mmTimer = null;
+    var mmObserver = new MutationObserver(function(){
+      clearTimeout(mmTimer);
+      mmTimer = setTimeout(scheduleMermaid, 400);
+    });
+    mmObserver.observe(document.querySelector('.mb-article') || document.body, { childList: true, subtree: true });
+  }
+</script>
+</body>
+</html>

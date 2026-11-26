@@ -1,0 +1,342 @@
+<!--
+  ============================================
+  手机端 · 文章原文页
+  文件：phone/post.njk
+  适用终端：手机端（路由 /phone/p/<slug>/，由 scripts/phone-routes.js 生成）
+  作用：手机阅读单篇文章；单列布局、无侧栏无雷达，替代电脑端 post.njk
+        数据由生成期算好：page.item = { title, dateStr, content, cats, tags }
+  样式依赖：source/css/theme/phone/common.css、source/css/theme/phone/list.css
+  组件依赖：phone/_components/Particles.njk
+  最后修改：2026-11-11
+  ============================================
+-->
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="color-scheme" content="dark">
+  <meta name="theme-color" content="#020817">
+  <!-- 首帧兜底：浏览器默认画布是白的，样式未解析前会闪一下白。这条规则先锁死深空底色 -->
+  <style>html{background-color:#020817}</style>
+  <title>Flink（二）DataStream API - 时空秘境</title>
+  <!-- 手机端样式：基础 + 列表/正文，外链引入（源文件 source/css/theme/phone/） -->
+  <link rel="stylesheet" href="/css/theme/phone/common.css">
+  <link rel="stylesheet" href="/css/theme/phone/list.css">
+<meta name="generator" content="Hexo 8.1.2"></head>
+<body>
+<div class="mb-shell">
+  <!--
+  ============================================
+  手机端星空粒子组件
+  文件：Particles.njk
+  适用终端：手机端
+  作用：Particles.njk 的手机端副本（nunjucks 子目录 include 取不到上级）
+        参数与电脑端 _components/Particles.njk 保持一致：
+        粒子 95 / 连线 118px / opacity 0.32，外加星座层与零星闪烁层
+  最后修改：2026-11-12
+  ============================================
+--><!-- z-index 必须是 0：负层级会被 body 不透明背景盖住，粒子在跑却看不见 -->
+<div id="particles" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 0; pointer-events: none;"></div>
+<!-- 星座层（与首页同一套：随机零星散布星座图形 + 偶尔闪烁的小星） -->
+<div id="constellations" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 1; pointer-events: none;" aria-hidden="true"></div>
+<script src="/js/particles.min.js"></script>
+<script>
+particlesJS("particles", {
+  particles: {
+    number: {
+      value: 95,
+      density: {
+        enable: true,
+        value_area: 800
+      }
+    },
+    color: {
+      value: "#00eeff"
+    },
+    shape: {
+      type: "circle",
+      stroke: {
+        width: 0,
+        color: "#000000"
+      }
+    },
+    opacity: {
+      value: 0.6,
+      random: true,
+      anim: {
+        enable: true,
+        speed: 0.5,
+        opacity_min: 0.1,
+        sync: false
+      }
+    },
+    size: {
+      value: 3,
+      random: true,
+      anim: {
+        enable: true,
+        speed: 2,
+        size_min: 0.1,
+        sync: false
+      }
+    },
+    line_linked: {
+      enable: true,
+      distance: 118,
+      color: "#00eeff",
+      opacity: 0.32,
+      width: 1
+    },
+    move: {
+      enable: true,
+      speed: 0.8,
+      direction: "none",
+      random: true,
+      straight: false,
+      out_mode: "out",
+      bounce: false,
+      attract: {
+        enable: true,
+        rotateX: 600,
+        rotateY: 1200
+      }
+    }
+  },
+  interactivity: {
+    detect_on: "canvas",
+    events: {
+      onhover: {
+        enable: true,
+        mode: "grab"       // 手指按住时粒子聚集
+      },
+      onclick: {
+        enable: true,
+        mode: "push"       // 点击时产生新粒子
+      },
+      resize: true
+    },
+    modes: {
+      grab: {
+        distance: 200,
+        line_linked: {
+          opacity: 1
+        }
+      },
+      push: {
+        particles_nb: 6
+      }
+    }
+  },
+  retina_detect: true
+});
+</script>
+<!-- 星座 + 零星闪烁层：与电脑端共用同一份绘制脚本 -->
+<script src="/js/theme/home/starfield.js"></script>
+
+
+  <div class="mb-top">
+    <a class="mb-back" href="/phone/">← 返回手机首页</a>
+    <span class="mb-sub" style="margin:0">2023-07-16</span>
+  </div>
+
+  <h1 class="mb-title">Flink（二）DataStream API</h1>
+  <div class="mb-sub">
+    分类：bigdata · flink
+     ｜ 标签：Flink
+  </div>
+
+  <div class="mb-article"><div class="essay-banner essay-flink"></div>
+
+<h1 id="DataStream-API"><a href="#DataStream-API" class="headerlink" title="DataStream API"></a><strong>DataStream API</strong></h1><p>跑通一个 Flink 作业，代码层面就是一条流水线：从 Source 读数据，经过一连串 Transform 变换，最后交给 Sink 写出去。DataStream API 是这条流水线的编程入口，这一篇把三段式结构、常用算子、算子链和富函数讲清楚，写业务逻辑时能直接对上号。</p>
+<p><img src="https://wu4yong.github.io/starry-images/assets/img/flink/flink-02-datastream.webp" alt="数据 ribbon 从左侧源头流出，中段串起紧密相连的算子块，右侧汇入存储立方体"></p>
+<p><em>数据 ribbon 从左侧源头流出，中段串起紧密相连的算子块，右侧汇入存储立方体</em></p>
+<h2 id="1-1-三段式结构：Source、Transform、Sink"><a href="#1-1-三段式结构：Source、Transform、Sink" class="headerlink" title="1.1 三段式结构：Source、Transform、Sink"></a>1.1 三段式结构：Source、Transform、Sink</h2><p>任何流作业都能拆成三段，职责边界很清晰：</p>
+<div class="data-grid data-grid-link-table"><div class="grid-header"><div class="grid-cell">阶段</div><div class="grid-cell">职责</div><div class="grid-cell">典型实现</div></div><div class="grid-row"><div class="grid-cell">Source</div><div class="grid-cell">构造数据流，分配时间戳与水位线</div><div class="grid-cell">KafkaSource、FileSource、自定义 Source</div></div><div class="grid-row"><div class="grid-cell">Transform</div><div class="grid-cell">逐条或按 key 分组后变换、聚合、关联</div><div class="grid-cell">map、flatMap、filter、keyBy、process</div></div><div class="grid-row"><div class="grid-cell">Sink</div><div class="grid-cell">把结果写到外部系统</div><div class="grid-cell">KafkaSink、JDBC、文件、自定义 Sink</div></div></div>
+
+<p>一段完整骨架：</p>
+<pre class="line-numbers language-java" data-language="java"><code class="language-java"><span class="token class-name">StreamExecutionEnvironment</span> env <span class="token operator">=</span> <span class="token class-name">StreamExecutionEnvironment</span><span class="token punctuation">.</span><span class="token function">getExecutionEnvironment</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+<span class="token class-name">DataStream</span><span class="token generics"><span class="token punctuation">&lt;</span><span class="token class-name">Order</span><span class="token punctuation">></span></span> orders <span class="token operator">=</span> env
+        <span class="token punctuation">.</span><span class="token function">fromSource</span><span class="token punctuation">(</span>orderSource<span class="token punctuation">,</span> <span class="token class-name">WatermarkStrategy</span><span class="token punctuation">.</span><span class="token function">noWatermarks</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">,</span> <span class="token string">"order-source"</span><span class="token punctuation">)</span>
+        <span class="token punctuation">.</span><span class="token function">filter</span><span class="token punctuation">(</span>o <span class="token operator">-></span> o<span class="token punctuation">.</span><span class="token function">getAmount</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token function">compareTo</span><span class="token punctuation">(</span><span class="token class-name">BigDecimal</span><span class="token punctuation">.</span><span class="token constant">ZERO</span><span class="token punctuation">)</span> <span class="token operator">></span> <span class="token number">0</span><span class="token punctuation">)</span>
+        <span class="token punctuation">.</span><span class="token function">keyBy</span><span class="token punctuation">(</span><span class="token class-name">Order</span><span class="token operator">::</span><span class="token function">getUserId</span><span class="token punctuation">)</span>
+        <span class="token punctuation">.</span><span class="token function">process</span><span class="token punctuation">(</span><span class="token keyword">new</span> <span class="token class-name">UserOrderProcessFunction</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+orders<span class="token punctuation">.</span><span class="token function">addSink</span><span class="token punctuation">(</span><span class="token keyword">new</span> <span class="token class-name">OrderReportSink</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+env<span class="token punctuation">.</span><span class="token function">execute</span><span class="token punctuation">(</span><span class="token string">"order-pipeline"</span><span class="token punctuation">)</span><span class="token punctuation">;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<p>注意 <code>execute</code> 才真正提交作业：前面的链式调用只是在构建执行图，不触发任何数据读写。这一点和 Spark 的 lazy 求值思路一致。</p>
+<h2 id="1-2-入口环境与新旧-API-区分"><a href="#1-2-入口环境与新旧-API-区分" class="headerlink" title="1.2 入口环境与新旧 API 区分"></a>1.2 入口环境与新旧 API 区分</h2><p>流作业入口是 <code>StreamExecutionEnvironment</code>；批处理在老版本里用的是 <code>ExecutionEnvironment</code>，属于历史 API。新项目按 1.13 主线统一走 <code>StreamExecutionEnvironment</code>，有界流直接复用它，不要在教程里把两个入口混着抄。</p>
+<div class="data-grid data-grid-link-table"><div class="grid-header"><div class="grid-cell">入口</div><div class="grid-cell">用途</div><div class="grid-cell">说明</div></div><div class="grid-row"><div class="grid-cell">StreamExecutionEnvironment</div><div class="grid-cell">流处理与流批统一作业</div><div class="grid-cell">新项目唯一需要写的入口</div></div><div class="grid-row"><div class="grid-cell">ExecutionEnvironment</div><div class="grid-cell">早期批处理环境</div><div class="grid-cell">旧教程残留，勿用于新代码</div></div><div class="grid-row"><div class="grid-cell">StreamTableEnvironment</div><div class="grid-cell">Table API &#x2F; SQL 入口</div><div class="grid-cell">与 DataStream 可互相转换</div></div></div>
+
+<p>环境上的常用全局配置包括并行度、检查点间隔、重启策略，这些在提交参数或配置文件里也能覆盖，代码里写的默认值只是兜底。</p>
+<h2 id="1-3-常用转换算子"><a href="#1-3-常用转换算子" class="headerlink" title="1.3 常用转换算子"></a>1.3 常用转换算子</h2><p>Transform 算子按”是否需要分组”分两类。不分组的逐条算子处理每条记录：</p>
+<pre class="line-numbers language-java" data-language="java"><code class="language-java"><span class="token class-name">DataStream</span><span class="token generics"><span class="token punctuation">&lt;</span><span class="token class-name">String</span><span class="token punctuation">></span></span> lines <span class="token operator">=</span> env<span class="token punctuation">.</span><span class="token function">fromSource</span><span class="token punctuation">(</span>textSource<span class="token punctuation">,</span> <span class="token class-name">WatermarkStrategy</span><span class="token punctuation">.</span><span class="token function">noWatermarks</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">,</span> <span class="token string">"text"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+<span class="token comment">// map：一条进一条出，做类型或字段转换</span>
+<span class="token class-name">DataStream</span><span class="token generics"><span class="token punctuation">&lt;</span><span class="token class-name">Order</span><span class="token punctuation">></span></span> parsed <span class="token operator">=</span> lines<span class="token punctuation">.</span><span class="token function">map</span><span class="token punctuation">(</span><span class="token class-name">Order</span><span class="token operator">::</span><span class="token function">fromJson</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+<span class="token comment">// flatMap：一条进多条出，适合拆分、展开</span>
+<span class="token class-name">DataStream</span><span class="token generics"><span class="token punctuation">&lt;</span><span class="token class-name">Item</span><span class="token punctuation">></span></span> items <span class="token operator">=</span> parsed<span class="token punctuation">.</span><span class="token function">flatMap</span><span class="token punctuation">(</span><span class="token punctuation">(</span><span class="token class-name">Order</span> o<span class="token punctuation">,</span> <span class="token class-name">Collector</span><span class="token generics"><span class="token punctuation">&lt;</span><span class="token class-name">Item</span><span class="token punctuation">></span></span> out<span class="token punctuation">)</span> <span class="token operator">-></span> <span class="token punctuation">&#123;</span>
+    o<span class="token punctuation">.</span><span class="token function">getItems</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token function">forEach</span><span class="token punctuation">(</span>out<span class="token operator">::</span><span class="token function">collect</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">&#125;</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+<span class="token comment">// filter：保留满足条件的记录</span>
+<span class="token class-name">DataStream</span><span class="token generics"><span class="token punctuation">&lt;</span><span class="token class-name">Item</span><span class="token punctuation">></span></span> valid <span class="token operator">=</span> items<span class="token punctuation">.</span><span class="token function">filter</span><span class="token punctuation">(</span>i <span class="token operator">-></span> i<span class="token punctuation">.</span><span class="token function">getQty</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token operator">></span> <span class="token number">0</span><span class="token punctuation">)</span><span class="token punctuation">;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<p>需要分组聚合时先 <code>keyBy</code>，把相同 key 的记录送到同一并行子任务，再做 <code>reduce</code> 或 <code>process</code>：</p>
+<div class="data-grid data-grid-link-table"><div class="grid-header"><div class="grid-cell">算子</div><div class="grid-cell">输入输出</div><div class="grid-cell">典型用途</div></div><div class="grid-row"><div class="grid-cell">map</div><div class="grid-cell">一条 → 一条</div><div class="grid-cell">字段映射、类型转换</div></div><div class="grid-row"><div class="grid-cell">flatMap</div><div class="grid-cell">一条 → 多条</div><div class="grid-cell">列表展开、拆分明细</div></div><div class="grid-row"><div class="grid-cell">filter</div><div class="grid-cell">一条 → 一条（过滤）</div><div class="grid-cell">清洗脏数据</div></div><div class="grid-row"><div class="grid-cell">keyBy</div><div class="grid-cell">按 key 重新分区</div><div class="grid-cell">分组聚合的前置步骤</div></div><div class="grid-row"><div class="grid-cell">reduce</div><div class="grid-cell">同 key 逐条折叠</div><div class="grid-cell">累计求和、最值</div></div><div class="grid-row"><div class="grid-cell">union &#x2F; connect</div><div class="grid-cell">多路合并</div><div class="grid-cell">同类型流 union，异构流 connect</div></div></div>
+
+<p><code>union</code> 要求两路数据类型一致；<code>connect</code> 允许两路类型不同，在 <code>CoProcessFunction</code> 里分别处理，常用于双流关联。</p>
+<h2 id="1-4-keyBy-与数据分区"><a href="#1-4-keyBy-与数据分区" class="headerlink" title="1.4 keyBy 与数据分区"></a>1.4 keyBy 与数据分区</h2><p><code>keyBy</code> 不是排序，而是按 key 的哈希把记录分配到对应并行子任务。同一个 key 永远落在同一个 SubTask，这是 Keyed State 能成立的前提。</p>
+<p>分区规则由 key 的 <code>hashCode</code> 决定，热点 key 会让某个 SubTask 长期处于高负载，其他 SubTask 空闲。发现倾斜时先看 key 分布，再考虑加随机前缀、拆分子任务，而不是盲目调大并行度。</p>
+<h2 id="1-5-算子链（Operator-Chain）"><a href="#1-5-算子链（Operator-Chain）" class="headerlink" title="1.5 算子链（Operator Chain）"></a>1.5 算子链（Operator Chain）</h2><p>Flink 默认把上下游算子串成一条链，在同一个线程里依次调用，省去线程切换和序列化开销。这条链就是算子链：</p>
+<div class="data-grid data-grid-link-table"><div class="grid-header"><div class="grid-cell">机制</div><div class="grid-cell">行为</div><div class="grid-cell">控制方式</div></div><div class="grid-row"><div class="grid-cell">默认链式</div><div class="grid-cell">上下游一对一、数据分区不变时自动串链</div><div class="grid-cell">无需配置</div></div><div class="grid-row"><div class="grid-cell">startNewChain()</div><div class="grid-cell">从当前算子起另起一条链</div><div class="grid-cell">单个算子隔离</div></div><div class="grid-row"><div class="grid-cell">disableChaining()</div><div class="grid-cell">关闭当前算子的链式合并</div><div class="grid-cell">排查线程模型时用</div></div><div class="grid-row"><div class="grid-cell">slotSharingGroup</div><div class="grid-cell">划分槽位共享组</div><div class="grid-cell">重资源算子单独成组</div></div></div>
+
+<pre class="line-numbers language-java" data-language="java"><code class="language-java">valid<span class="token punctuation">.</span><span class="token function">keyBy</span><span class="token punctuation">(</span><span class="token class-name">Item</span><span class="token operator">::</span><span class="token function">getSku</span><span class="token punctuation">)</span>
+     <span class="token punctuation">.</span><span class="token function">process</span><span class="token punctuation">(</span><span class="token keyword">new</span> <span class="token class-name">SkuAggFunction</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span>
+     <span class="token punctuation">.</span><span class="token function">disableChaining</span><span class="token punctuation">(</span><span class="token punctuation">)</span>              <span class="token comment">// 与上下游拆开，便于单独观察</span>
+     <span class="token punctuation">.</span><span class="token function">slotSharingGroup</span><span class="token punctuation">(</span><span class="token string">"heavy"</span><span class="token punctuation">)</span>      <span class="token comment">// 状态大的算子独占槽位</span>
+     <span class="token punctuation">.</span><span class="token function">addSink</span><span class="token punctuation">(</span><span class="token keyword">new</span> <span class="token class-name">ItemSink</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<p>什么时候需要拆链：某算子状态特别大，想和轻量算子在槽位上隔离；或者上下游吞吐差异悬殊，串在一条线程里会互相拖慢。默认链式是性能最优解，不要为了”看起来清晰”到处拆。</p>
+<h2 id="1-6-富函数（RichFunction）"><a href="#1-6-富函数（RichFunction）" class="headerlink" title="1.6 富函数（RichFunction）"></a>1.6 富函数（RichFunction）</h2><p>普通函数只做数据变换，拿不到运行时上下文。需要访问状态、注册定时器、读广播状态时，要用对应的富函数版本，例如 <code>RichMapFunction</code>、<code>RichKeyProcessFunction</code>。</p>
+<p>富函数的生命周期方法：</p>
+<pre class="line-numbers language-java" data-language="java"><code class="language-java"><span class="token keyword">public</span> <span class="token keyword">class</span> <span class="token class-name">CountUserFunction</span> <span class="token keyword">extends</span> <span class="token class-name">KeyedProcessFunction</span><span class="token generics"><span class="token punctuation">&lt;</span><span class="token class-name">String</span><span class="token punctuation">,</span> <span class="token class-name">Order</span><span class="token punctuation">,</span> <span class="token class-name">Long</span><span class="token punctuation">></span></span> <span class="token punctuation">&#123;</span>
+
+    <span class="token keyword">private</span> <span class="token keyword">transient</span> <span class="token class-name">ValueState</span><span class="token generics"><span class="token punctuation">&lt;</span><span class="token class-name">Long</span><span class="token punctuation">></span></span> countState<span class="token punctuation">;</span>
+
+    <span class="token annotation punctuation">@Override</span>
+    <span class="token keyword">public</span> <span class="token keyword">void</span> <span class="token keyword">open</span><span class="token punctuation">(</span><span class="token class-name">Configuration</span> parameters<span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+        <span class="token comment">// 每个并行子任务初始化一次：取状态句柄、加载缓存</span>
+        <span class="token class-name">ValueStateDescriptor</span><span class="token generics"><span class="token punctuation">&lt;</span><span class="token class-name">Long</span><span class="token punctuation">></span></span> desc <span class="token operator">=</span>
+                <span class="token keyword">new</span> <span class="token class-name">ValueStateDescriptor</span><span class="token generics"><span class="token punctuation">&lt;</span><span class="token punctuation">></span></span><span class="token punctuation">(</span><span class="token string">"count"</span><span class="token punctuation">,</span> <span class="token class-name">Long</span><span class="token punctuation">.</span><span class="token keyword">class</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+        countState <span class="token operator">=</span> <span class="token function">getRuntimeContext</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token function">getState</span><span class="token punctuation">(</span>desc<span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token punctuation">&#125;</span>
+
+    <span class="token annotation punctuation">@Override</span>
+    <span class="token keyword">public</span> <span class="token keyword">void</span> <span class="token function">processElement</span><span class="token punctuation">(</span><span class="token class-name">Order</span> order<span class="token punctuation">,</span> <span class="token class-name">Context</span> ctx<span class="token punctuation">,</span> <span class="token class-name">Collector</span><span class="token generics"><span class="token punctuation">&lt;</span><span class="token class-name">Long</span><span class="token punctuation">></span></span> out<span class="token punctuation">)</span> <span class="token keyword">throws</span> <span class="token class-name">Exception</span> <span class="token punctuation">&#123;</span>
+        <span class="token keyword">long</span> count <span class="token operator">=</span> <span class="token punctuation">(</span>countState<span class="token punctuation">.</span><span class="token function">value</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token operator">==</span> <span class="token keyword">null</span> <span class="token operator">?</span> <span class="token number">0L</span> <span class="token operator">:</span> countState<span class="token punctuation">.</span><span class="token function">value</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span> <span class="token operator">+</span> <span class="token number">1</span><span class="token punctuation">;</span>
+        countState<span class="token punctuation">.</span><span class="token function">update</span><span class="token punctuation">(</span>count<span class="token punctuation">)</span><span class="token punctuation">;</span>
+        out<span class="token punctuation">.</span><span class="token function">collect</span><span class="token punctuation">(</span>count<span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token punctuation">&#125;</span>
+
+    <span class="token annotation punctuation">@Override</span>
+    <span class="token keyword">public</span> <span class="token keyword">void</span> <span class="token function">close</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+        <span class="token comment">// 子任务结束时释放外部资源，连接、缓存在这里关</span>
+    <span class="token punctuation">&#125;</span>
+<span class="token punctuation">&#125;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<p>要点：<code>open</code> 每个 SubTask 调一次，不是每条数据一次；状态句柄通过 <code>getRuntimeContext()</code> 获取；<code>close</code> 里务必释放外部连接，否则重启后会泄漏。</p>
+<h2 id="1-7-常见易错点"><a href="#1-7-常见易错点" class="headerlink" title="1.7 常见易错点"></a>1.7 常见易错点</h2><ul>
+<li>把链式调用当成已经在跑：不调 <code>execute</code>，作业不会提交。</li>
+<li>在 <code>map</code> &#x2F; <code>flatMap</code> 里直接新建大对象或打开连接，富函数的 <code>open</code> 才是初始化位置。</li>
+<li><code>keyBy</code> 用对象整体做 key，而对象没重写 <code>hashCode</code>，导致分区不可控。</li>
+<li>以为 <code>union</code> 能合并异构流：类型不同要走 <code>connect</code>。</li>
+<li>照搬旧教程里的批处理入口，混入流作业代码，部署行为和预期不一致。</li>
+</ul>
+<h2 id="1-8-官方资料"><a href="#1-8-官方资料" class="headerlink" title="1.8 官方资料"></a>1.8 官方资料</h2><ul>
+<li>DataStream API 文档：<a target="_blank" rel="noopener" href="https://nightlies.apache.org/flink/flink-docs-release-1.13/docs/dev/datastream/overview/">https://nightlies.apache.org/flink/flink-docs-release-1.13/docs/dev/datastream/overview/</a></li>
+<li>转换算子参考：<a target="_blank" rel="noopener" href="https://nightlies.apache.org/flink/flink-docs-release-1.13/docs/dev/datastream/operators/overview/">https://nightlies.apache.org/flink/flink-docs-release-1.13/docs/dev/datastream/operators/overview/</a></li>
+<li>状态与富函数：<a target="_blank" rel="noopener" href="https://nightlies.apache.org/flink/flink-docs-release-1.13/docs/dev/datastream/fault-tolerance/state/">https://nightlies.apache.org/flink/flink-docs-release-1.13/docs/dev/datastream/fault-tolerance/state/</a></li>
+<li>数据源与连接器：<a target="_blank" rel="noopener" href="https://nightlies.apache.org/flink/flink-docs-release-1.13/docs/connectors/datastream/overview/">https://nightlies.apache.org/flink/flink-docs-release-1.13/docs/connectors/datastream/overview/</a></li>
+</ul>
+<h2 id="1-9-清单"><a href="#1-9-清单" class="headerlink" title="1.9 清单"></a>1.9 清单</h2><ol>
+<li>流作业三段式：Source 读入、Transform 变换、Sink 写出，<code>execute</code> 才真正提交</li>
+<li>新项目统一用 <code>StreamExecutionEnvironment</code>，旧的批处理入口不要抄进流作业</li>
+<li>逐条算子 map &#x2F; flatMap &#x2F; filter 不分组；聚合先 <code>keyBy</code> 保证同 key 同子任务</li>
+<li><code>union</code> 要求类型一致，异构流用 <code>connect</code> 加 <code>CoProcessFunction</code></li>
+<li>默认算子链在同线程内依次调用，重资源算子可用 <code>disableChaining</code> 与 <code>slotSharingGroup</code> 隔离</li>
+<li>富函数在 <code>open</code> 初始化状态与资源、<code>close</code> 释放连接，生命周期按 SubTask 走，不按数据走</li>
+</ol>
+</div>
+
+  <div class="mb-foot">
+    <a href="/phone/">返回手机首页</a>
+    <a href="/phone/tags/">星迹索引</a>
+  </div>
+</div>
+
+
+<script>
+  /* 作用：懒加载本地 mermaid 库；无 mermaid 代码块时不加载 */
+  function loadLocalMermaid(){
+    return new Promise(function(resolve, reject){
+      if(window.mermaid) return resolve(window.mermaid);
+      var s = document.createElement('script');
+      s.src = '/js/third-party/mermaid/mermaid.min.js?v=10';
+      s.onload = function(){ resolve(window.mermaid); };
+      s.onerror = function(){ reject(new Error('mermaid local load failed')); };
+      document.head.appendChild(s);
+    });
+  }
+
+  /* 作用：把 ```mermaid 代码块替换成 SVG 图（手机端字号略小、图可横向滚动） */
+  async function renderMermaidDiagram(){
+    var blocks = document.querySelectorAll('pre[class*="language-mermaid"]');
+    if(!blocks.length) return;
+    var mermaid;
+    try { mermaid = await loadLocalMermaid(); }
+    catch(e){ console.warn('[mermaid] 本地库加载失败：', e); return; }
+
+    mermaid.initialize({
+      startOnLoad: false,
+      theme: 'base',
+      themeVariables: {
+        darkMode: true,
+        background: 'transparent',
+        fontFamily: '"Microsoft YaHei", "PingFang SC", "Segoe UI", sans-serif',
+        fontSize: '12px',
+        primaryColor: '#062f3d',
+        primaryTextColor: '#d6f6ff',
+        primaryBorderColor: '#00eeff',
+        secondaryColor: '#04222d',
+        tertiaryColor: '#04222d',
+        mainBkg: '#062f3d',
+        nodeBorder: '#00eeff',
+        clusterBkg: '#02161f',
+        clusterBorder: '#00eeff55',
+        lineColor: '#00eeff',
+        textColor: '#c0e8ff',
+        edgeLabelBackground: '#02161f'
+      },
+      flowchart: { curve: 'basis', useMaxWidth: false, htmlLabels: false, nodeSpacing: 30, rankSpacing: 40, padding: 10 }
+    });
+
+    var targets = [];
+    blocks.forEach(function(el){
+      var codeEl = el.querySelector('code');
+      if(!codeEl) return;
+      var div = document.createElement('div');
+      div.className = 'mermaid';
+      div.textContent = codeEl.textContent;
+      el.parentNode.replaceChild(div, el);
+      targets.push(div);
+    });
+    if(!targets.length) return;
+    try { await mermaid.run({ nodes: targets }); }
+    catch(e){ console.warn('[mermaid] 渲染失败：', e); }
+  }
+  /* 作用：多次触发兜底（延迟重试 + DOM 变化），防止某次时机没跑到导致图表留在代码块 */
+  var mmBusy = false;
+  function scheduleMermaid(){
+    if(mmBusy) return;
+    mmBusy = true;
+    renderMermaidDiagram().then(function(){ mmBusy = false; }, function(){ mmBusy = false; });
+  }
+  scheduleMermaid();
+  window.addEventListener('load', scheduleMermaid);
+  [1000, 3000, 8000].forEach(function(ms){ setTimeout(scheduleMermaid, ms); });
+  if(document.readyState !== 'loading') scheduleMermaid();
+  if(window.MutationObserver){
+    var mmTimer = null;
+    var mmObserver = new MutationObserver(function(){
+      clearTimeout(mmTimer);
+      mmTimer = setTimeout(scheduleMermaid, 400);
+    });
+    mmObserver.observe(document.querySelector('.mb-article') || document.body, { childList: true, subtree: true });
+  }
+</script>
+</body>
+</html>

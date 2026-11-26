@@ -1,0 +1,304 @@
+<!--
+  ============================================
+  手机端 · 文章原文页
+  文件：phone/post.njk
+  适用终端：手机端（路由 /phone/p/<slug>/，由 scripts/phone-routes.js 生成）
+  作用：手机阅读单篇文章；单列布局、无侧栏无雷达，替代电脑端 post.njk
+        数据由生成期算好：page.item = { title, dateStr, content, cats, tags }
+  样式依赖：source/css/theme/phone/common.css、source/css/theme/phone/list.css
+  组件依赖：phone/_components/Particles.njk
+  最后修改：2026-11-11
+  ============================================
+-->
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="color-scheme" content="dark">
+  <meta name="theme-color" content="#020817">
+  <!-- 首帧兜底：浏览器默认画布是白的，样式未解析前会闪一下白。这条规则先锁死深空底色 -->
+  <style>html{background-color:#020817}</style>
+  <title>ES14-一次写入的五个步骤 - 时空秘境</title>
+  <!-- 手机端样式：基础 + 列表/正文，外链引入（源文件 source/css/theme/phone/） -->
+  <link rel="stylesheet" href="/css/theme/phone/common.css">
+  <link rel="stylesheet" href="/css/theme/phone/list.css">
+<meta name="generator" content="Hexo 8.1.2"></head>
+<body>
+<div class="mb-shell">
+  <!--
+  ============================================
+  手机端星空粒子组件
+  文件：Particles.njk
+  适用终端：手机端
+  作用：Particles.njk 的手机端副本（nunjucks 子目录 include 取不到上级）
+        参数与电脑端 _components/Particles.njk 保持一致：
+        粒子 95 / 连线 118px / opacity 0.32，外加星座层与零星闪烁层
+  最后修改：2026-11-12
+  ============================================
+--><!-- z-index 必须是 0：负层级会被 body 不透明背景盖住，粒子在跑却看不见 -->
+<div id="particles" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 0; pointer-events: none;"></div>
+<!-- 星座层（与首页同一套：随机零星散布星座图形 + 偶尔闪烁的小星） -->
+<div id="constellations" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 1; pointer-events: none;" aria-hidden="true"></div>
+<script src="/js/particles.min.js"></script>
+<script>
+particlesJS("particles", {
+  particles: {
+    number: {
+      value: 95,
+      density: {
+        enable: true,
+        value_area: 800
+      }
+    },
+    color: {
+      value: "#00eeff"
+    },
+    shape: {
+      type: "circle",
+      stroke: {
+        width: 0,
+        color: "#000000"
+      }
+    },
+    opacity: {
+      value: 0.6,
+      random: true,
+      anim: {
+        enable: true,
+        speed: 0.5,
+        opacity_min: 0.1,
+        sync: false
+      }
+    },
+    size: {
+      value: 3,
+      random: true,
+      anim: {
+        enable: true,
+        speed: 2,
+        size_min: 0.1,
+        sync: false
+      }
+    },
+    line_linked: {
+      enable: true,
+      distance: 118,
+      color: "#00eeff",
+      opacity: 0.32,
+      width: 1
+    },
+    move: {
+      enable: true,
+      speed: 0.8,
+      direction: "none",
+      random: true,
+      straight: false,
+      out_mode: "out",
+      bounce: false,
+      attract: {
+        enable: true,
+        rotateX: 600,
+        rotateY: 1200
+      }
+    }
+  },
+  interactivity: {
+    detect_on: "canvas",
+    events: {
+      onhover: {
+        enable: true,
+        mode: "grab"       // 手指按住时粒子聚集
+      },
+      onclick: {
+        enable: true,
+        mode: "push"       // 点击时产生新粒子
+      },
+      resize: true
+    },
+    modes: {
+      grab: {
+        distance: 200,
+        line_linked: {
+          opacity: 1
+        }
+      },
+      push: {
+        particles_nb: 6
+      }
+    }
+  },
+  retina_detect: true
+});
+</script>
+<!-- 星座 + 零星闪烁层：与电脑端共用同一份绘制脚本 -->
+<script src="/js/theme/home/starfield.js"></script>
+
+
+  <div class="mb-top">
+    <a class="mb-back" href="/phone/">← 返回手机首页</a>
+    <span class="mb-sub" style="margin:0">2023-11-04</span>
+  </div>
+
+  <h1 class="mb-title">ES14-一次写入的五个步骤</h1>
+  <div class="mb-sub">
+    分类：bigdata · elasticsearch
+     ｜ 标签：Elasticsearch · 系统课
+  </div>
+
+  <div class="mb-article"><div class="essay-banner essay-elasticsearch"></div>
+
+<h1 id="一次写入的五个步骤：buffer、translog、segment、fsync、merge"><a href="#一次写入的五个步骤：buffer、translog、segment、fsync、merge" class="headerlink" title="一次写入的五个步骤：buffer、translog、segment、fsync、merge"></a>一次写入的五个步骤：buffer、translog、segment、fsync、merge</h1><p>M1-3 给了骨架，这一讲把骨架上每根钉子拧紧：一条 <code>PUT</code> 到底在内存和磁盘上留下了什么、哪一步决定「会不会丢数据」、哪一步决定「能不能被搜到」。</p>
+<p>搞清这五步，后面 <code>_bulk</code> 调优、背压、段合并全都有据可依。</p>
+<p><img src="https://wu4yong.github.io/starry-images/assets/img/elasticsearch/es-14-write-path.svg" alt="一次写入在内存与磁盘上留下什么：五层存储栈与三个时间点"></p>
+<p><em>写入 201 &#x2F; refresh &#x2F; flush 三个时刻分别落下什么｜依据 Elasticsearch 官方文档 8.17 自绘</em></p>
+<h2 id="一、学习目标"><a href="#一、学习目标" class="headerlink" title="一、学习目标"></a>一、学习目标</h2><ol>
+<li>按顺序说出写入的五步，并指出哪一步之后「客户端拿到 201」；</li>
+<li>分清 buffer、translog、segment 三者的职责与生命周期；</li>
+<li>说清官方默认的 translog 持久化策略（<code>request</code>）与代价；</li>
+<li>知道「写成功」与「已持久化」「可搜索」是三件不同的事。</li>
+</ol>
+<h2 id="二、前置知识"><a href="#二、前置知识" class="headerlink" title="二、前置知识"></a>二、前置知识</h2><div class="data-grid data-grid-link-table"><div class="grid-header"><div class="grid-cell">需要掌握</div><div class="grid-cell">到什么程度</div><div class="grid-cell">出处</div></div><div class="grid-row"><div class="grid-cell">分片与副本</div><div class="grid-cell">知道写入只落主分片</div><div class="grid-cell">M1-3、M6-2</div></div><div class="grid-row"><div class="grid-cell">refresh</div><div class="grid-cell">默认 1s</div><div class="grid-cell">M1-3</div></div><div class="grid-row"><div class="grid-cell"><code>_bulk</code></div><div class="grid-cell">知道批量走同一套链路</div><div class="grid-cell">M1-5</div></div></div>
+
+<h2 id="三、理论讲解：五步"><a href="#三、理论讲解：五步" class="headerlink" title="三、理论讲解：五步"></a>三、理论讲解：五步</h2><div class="data-grid data-grid-link-table"><div class="grid-header"><div class="grid-cell">步骤</div><div class="grid-cell">动作</div><div class="grid-cell">结果</div></div><div class="grid-row"><div class="grid-cell">1 校验与解析</div><div class="grid-cell">解析 JSON、按 mapping 转换类型、算路由</div><div class="grid-cell">不合法直接 400</div></div><div class="grid-row"><div class="grid-cell">2 写入内存 buffer</div><div class="grid-cell">文档进入 Lucene 的 IndexWriter 缓冲</div><div class="grid-cell">尚未落盘，未可搜</div></div><div class="grid-row"><div class="grid-cell">3 追加 translog</div><div class="grid-cell">操作写入事务日志</div><div class="grid-cell">断电可重放</div></div><div class="grid-row"><div class="grid-cell">4 复制到副本</div><div class="grid-cell">主分片同步转发给副本并等确认</div><div class="grid-cell">副本与主一致</div></div><div class="grid-row"><div class="grid-cell">5 返回响应</div><div class="grid-cell">满足 <code>wait_for_active_shards</code> 后返回 201</div><div class="grid-cell">客户端认为成功</div></div></div>
+
+<p>之后的三个异步动作，才是磁盘与可搜索性的关键：</p>
+<ul>
+<li><strong>refresh</strong>：buffer → 新 segment，可被搜索（默认 1s）；</li>
+<li><strong>flush</strong>：Lucene commit + 清空&#x2F;换代 translog（持久化归档点）；</li>
+<li><strong>merge</strong>：多个 segment 合并成更少更大段（回收删除标记）。</li>
+</ul>
+<h2 id="四、原理拆解：丢不丢数据看-translog-策略"><a href="#四、原理拆解：丢不丢数据看-translog-策略" class="headerlink" title="四、原理拆解：丢不丢数据看 translog 策略"></a>四、原理拆解：丢不丢数据看 translog 策略</h2><p>官方给 translog 一个索引级设置，默认值决定了「返回 201 之后断电会不会丢」：</p>
+<div class="data-grid data-grid-link-table"><div class="grid-header"><div class="grid-cell">设置</div><div class="grid-cell">默认</div><div class="grid-cell">行为</div><div class="grid-cell">代价</div></div><div class="grid-row"><div class="grid-cell"><code>index.translog.durability</code></div><div class="grid-cell"><code>request</code></div><div class="grid-cell">每次请求都 fsync translog</div><div class="grid-cell">每次写一次磁盘同步，吞吐受限但最安全</div></div><div class="grid-row"><div class="grid-cell"><code>index.translog.durability</code></div><div class="grid-cell"><code>async</code></div><div class="grid-cell">按 <code>sync_interval</code>（默认 5s）批量 fsync</div><div class="grid-cell">吞吐高，最坏丢 5s 数据</div></div><div class="grid-row"><div class="grid-cell"><code>index.translog.flush_threshold_size</code></div><div class="grid-cell">512mb</div><div class="grid-cell">translog 超过阈值触发 flush</div><div class="grid-cell">阈值越大，恢复重放越久</div></div></div>
+
+<p>所以「返回 201」&#x3D; 主分片 buffer 有、translog 已 fsync、副本已确认；<strong>不等于</strong>新 segment 已生成，也不等于可被搜索。</p>
+<h2 id="五、场景说明"><a href="#五、场景说明" class="headerlink" title="五、场景说明"></a>五、场景说明</h2><div class="data-grid data-grid-link-table"><div class="grid-header"><div class="grid-cell">场景</div><div class="grid-cell">调整</div><div class="grid-cell">理由</div></div><div class="grid-row"><div class="grid-cell">财务&#x2F;订单类，不能丢</div><div class="grid-cell">保持 <code>durability: request</code></div><div class="grid-cell">官方默认就是最安全档</div></div><div class="grid-row"><div class="grid-cell">日志类，可容忍秒级丢失</div><div class="grid-cell"><code>durability: async</code></div><div class="grid-cell">换吞吐</div></div><div class="grid-row"><div class="grid-cell">批量导入</div><div class="grid-cell"><code>refresh_interval: -1</code> 导入期关闭</div><div class="grid-cell">减少段生成（M2-1）</div></div><div class="grid-row"><div class="grid-cell">大量删除后</div><div class="grid-cell">择机 <code>_forcemerge</code></div><div class="grid-cell">回收空间（M3-2）</div></div></div>
+
+<h2 id="六、实操"><a href="#六、实操" class="headerlink" title="六、实操"></a>六、实操</h2><pre class="line-numbers language-bash" data-language="bash"><code class="language-bash"><span class="token comment"># 写入并观察返回里的 _seq_no / _primary_term / result</span>
+<span class="token function">curl</span> <span class="token parameter variable">-X</span> PUT <span class="token string">"http://localhost:9200/ledger/_doc/1?refresh=false"</span> <span class="token parameter variable">-H</span> <span class="token string">'Content-Type: application/json'</span> <span class="token parameter variable">-d</span> <span class="token string">'
+&#123; "amount": 100, "ts": "2023-11-04T09:00:00Z" &#125;'</span>
+
+<span class="token comment"># 看 translog 与段的数量</span>
+<span class="token function">curl</span> <span class="token parameter variable">-s</span> <span class="token string">"http://localhost:9200/ledger/_stats/translog,segments?human"</span>
+<span class="token function">curl</span> <span class="token parameter variable">-s</span> <span class="token string">"http://localhost:9200/_cat/segments/ledger?v"</span>
+
+<span class="token comment"># 触发一次 flush（注意：flush 会顺带 refresh）</span>
+<span class="token function">curl</span> <span class="token parameter variable">-s</span> <span class="token parameter variable">-X</span> POST <span class="token string">"http://localhost:9200/ledger/_flush"</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<p><code>_stats</code> 返回里 <code>translog.operations</code> 在增长、<code>segments.count</code> 在 refresh 后才增加——这就是五步与三个异步动作的现场证据。</p>
+<h2 id="七、常见坑"><a href="#七、常见坑" class="headerlink" title="七、常见坑"></a>七、常见坑</h2><ol>
+<li><strong>把 201 当「已可搜索」</strong>：可搜索要等 refresh，默认 1s。</li>
+<li><strong>把 201 当「已落 segment」</strong>：segment 是异步生成的，落盘靠 translog + flush。</li>
+<li><strong>为吞吐改 <code>durability: async</code> 却要求零丢失</strong>：两者互斥，官方设置层面就写明代价。</li>
+<li><strong><code>wait_for_active_shards</code> 设成 <code>all</code></strong>：任一副本未就绪就写不进去，可用性会下降。</li>
+<li><strong>以为副本也承担写分摊</strong>：写只到主分片，副本是同步复制（M6-2）。</li>
+</ol>
+<h2 id="八、课后小结"><a href="#八、课后小结" class="headerlink" title="八、课后小结"></a>八、课后小结</h2><ol>
+<li>五步：校验 → buffer → translog → 副本确认 → 返回。</li>
+<li>translog 决定持久性，segment 决定可搜索性，两者异步。</li>
+<li>官方默认 <code>translog.durability: request</code>，最安全也最慢。</li>
+<li>flush 是持久化归档点，不是「让文档可搜」的动作。</li>
+<li>201 只代表「主分片与副本都收下了」，不代表可搜、也不代表已合并。</li>
+</ol>
+<h2 id="九、思考题"><a href="#九、思考题" class="headerlink" title="九、思考题"></a>九、思考题</h2><ol>
+<li>一条写入返回 201 后立刻 <code>kill -9</code> 节点，数据还在吗？分 <code>request</code> 与 <code>async</code> 两种配置回答。</li>
+<li>为什么官方要把 translog 与 segment 分成两套机制，而不是写完直接生成 segment？</li>
+<li>批量导入时把 <code>refresh_interval</code> 设为 <code>-1</code>，同时保持 <code>durability: request</code>，这套组合的收益与风险各是什么？</li>
+</ol>
+<h2 id="十、官方资料"><a href="#十、官方资料" class="headerlink" title="十、官方资料"></a>十、官方资料</h2><ul>
+<li>Index API：<a target="_blank" rel="noopener" href="https://www.elastic.co/guide/en/elasticsearch/reference/current/docs-index_.html">https://www.elastic.co/guide/en/elasticsearch/reference/current/docs-index_.html</a></li>
+<li>Translog 设置：<a target="_blank" rel="noopener" href="https://www.elastic.co/guide/en/elasticsearch/reference/current/index-modules-translog.html">https://www.elastic.co/guide/en/elasticsearch/reference/current/index-modules-translog.html</a></li>
+<li>Flush API：<a target="_blank" rel="noopener" href="https://www.elastic.co/guide/en/elasticsearch/reference/current/indices-flush.html">https://www.elastic.co/guide/en/elasticsearch/reference/current/indices-flush.html</a></li>
+<li>Segments 统计：<a target="_blank" rel="noopener" href="https://www.elastic.co/guide/en/elasticsearch/reference/current/indices-segments.html">https://www.elastic.co/guide/en/elasticsearch/reference/current/indices-segments.html</a></li>
+</ul>
+<p>上一篇：<a href="/2023/11/01/bigdata/elasticsearch/es-13-aliases-data-streams/">M2-8 别名与 data stream</a> ｜ 下一篇：<a href="/2023/11/07/bigdata/elasticsearch/es-15-refresh-flush-merge/">M3-2 四个「刷」的区别</a> ｜ <a href="/2023/09/22/bigdata/elasticsearch/es-00-series-index/">总目录</a></p>
+</div>
+
+  <div class="mb-foot">
+    <a href="/phone/">返回手机首页</a>
+    <a href="/phone/tags/">星迹索引</a>
+  </div>
+</div>
+
+
+<script>
+  /* 作用：懒加载本地 mermaid 库；无 mermaid 代码块时不加载 */
+  function loadLocalMermaid(){
+    return new Promise(function(resolve, reject){
+      if(window.mermaid) return resolve(window.mermaid);
+      var s = document.createElement('script');
+      s.src = '/js/third-party/mermaid/mermaid.min.js?v=10';
+      s.onload = function(){ resolve(window.mermaid); };
+      s.onerror = function(){ reject(new Error('mermaid local load failed')); };
+      document.head.appendChild(s);
+    });
+  }
+
+  /* 作用：把 ```mermaid 代码块替换成 SVG 图（手机端字号略小、图可横向滚动） */
+  async function renderMermaidDiagram(){
+    var blocks = document.querySelectorAll('pre[class*="language-mermaid"]');
+    if(!blocks.length) return;
+    var mermaid;
+    try { mermaid = await loadLocalMermaid(); }
+    catch(e){ console.warn('[mermaid] 本地库加载失败：', e); return; }
+
+    mermaid.initialize({
+      startOnLoad: false,
+      theme: 'base',
+      themeVariables: {
+        darkMode: true,
+        background: 'transparent',
+        fontFamily: '"Microsoft YaHei", "PingFang SC", "Segoe UI", sans-serif',
+        fontSize: '12px',
+        primaryColor: '#062f3d',
+        primaryTextColor: '#d6f6ff',
+        primaryBorderColor: '#00eeff',
+        secondaryColor: '#04222d',
+        tertiaryColor: '#04222d',
+        mainBkg: '#062f3d',
+        nodeBorder: '#00eeff',
+        clusterBkg: '#02161f',
+        clusterBorder: '#00eeff55',
+        lineColor: '#00eeff',
+        textColor: '#c0e8ff',
+        edgeLabelBackground: '#02161f'
+      },
+      flowchart: { curve: 'basis', useMaxWidth: false, htmlLabels: false, nodeSpacing: 30, rankSpacing: 40, padding: 10 }
+    });
+
+    var targets = [];
+    blocks.forEach(function(el){
+      var codeEl = el.querySelector('code');
+      if(!codeEl) return;
+      var div = document.createElement('div');
+      div.className = 'mermaid';
+      div.textContent = codeEl.textContent;
+      el.parentNode.replaceChild(div, el);
+      targets.push(div);
+    });
+    if(!targets.length) return;
+    try { await mermaid.run({ nodes: targets }); }
+    catch(e){ console.warn('[mermaid] 渲染失败：', e); }
+  }
+  /* 作用：多次触发兜底（延迟重试 + DOM 变化），防止某次时机没跑到导致图表留在代码块 */
+  var mmBusy = false;
+  function scheduleMermaid(){
+    if(mmBusy) return;
+    mmBusy = true;
+    renderMermaidDiagram().then(function(){ mmBusy = false; }, function(){ mmBusy = false; });
+  }
+  scheduleMermaid();
+  window.addEventListener('load', scheduleMermaid);
+  [1000, 3000, 8000].forEach(function(ms){ setTimeout(scheduleMermaid, ms); });
+  if(document.readyState !== 'loading') scheduleMermaid();
+  if(window.MutationObserver){
+    var mmTimer = null;
+    var mmObserver = new MutationObserver(function(){
+      clearTimeout(mmTimer);
+      mmTimer = setTimeout(scheduleMermaid, 400);
+    });
+    mmObserver.observe(document.querySelector('.mb-article') || document.body, { childList: true, subtree: true });
+  }
+</script>
+</body>
+</html>

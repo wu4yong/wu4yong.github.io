@@ -1,0 +1,310 @@
+<!--
+  ============================================
+  手机端 · 文章原文页
+  文件：phone/post.njk
+  适用终端：手机端（路由 /phone/p/<slug>/，由 scripts/phone-routes.js 生成）
+  作用：手机阅读单篇文章；单列布局、无侧栏无雷达，替代电脑端 post.njk
+        数据由生成期算好：page.item = { title, dateStr, content, cats, tags }
+  样式依赖：source/css/theme/phone/common.css、source/css/theme/phone/list.css
+  组件依赖：phone/_components/Particles.njk
+  最后修改：2026-11-11
+  ============================================
+-->
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="color-scheme" content="dark">
+  <meta name="theme-color" content="#020817">
+  <!-- 首帧兜底：浏览器默认画布是白的，样式未解析前会闪一下白。这条规则先锁死深空底色 -->
+  <style>html{background-color:#020817}</style>
+  <title>ES20-写入背压与 429 - 时空秘境</title>
+  <!-- 手机端样式：基础 + 列表/正文，外链引入（源文件 source/css/theme/phone/） -->
+  <link rel="stylesheet" href="/css/theme/phone/common.css">
+  <link rel="stylesheet" href="/css/theme/phone/list.css">
+<meta name="generator" content="Hexo 8.1.2"></head>
+<body>
+<div class="mb-shell">
+  <!--
+  ============================================
+  手机端星空粒子组件
+  文件：Particles.njk
+  适用终端：手机端
+  作用：Particles.njk 的手机端副本（nunjucks 子目录 include 取不到上级）
+        参数与电脑端 _components/Particles.njk 保持一致：
+        粒子 95 / 连线 118px / opacity 0.32，外加星座层与零星闪烁层
+  最后修改：2026-11-12
+  ============================================
+--><!-- z-index 必须是 0：负层级会被 body 不透明背景盖住，粒子在跑却看不见 -->
+<div id="particles" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 0; pointer-events: none;"></div>
+<!-- 星座层（与首页同一套：随机零星散布星座图形 + 偶尔闪烁的小星） -->
+<div id="constellations" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 1; pointer-events: none;" aria-hidden="true"></div>
+<script src="/js/particles.min.js"></script>
+<script>
+particlesJS("particles", {
+  particles: {
+    number: {
+      value: 95,
+      density: {
+        enable: true,
+        value_area: 800
+      }
+    },
+    color: {
+      value: "#00eeff"
+    },
+    shape: {
+      type: "circle",
+      stroke: {
+        width: 0,
+        color: "#000000"
+      }
+    },
+    opacity: {
+      value: 0.6,
+      random: true,
+      anim: {
+        enable: true,
+        speed: 0.5,
+        opacity_min: 0.1,
+        sync: false
+      }
+    },
+    size: {
+      value: 3,
+      random: true,
+      anim: {
+        enable: true,
+        speed: 2,
+        size_min: 0.1,
+        sync: false
+      }
+    },
+    line_linked: {
+      enable: true,
+      distance: 118,
+      color: "#00eeff",
+      opacity: 0.32,
+      width: 1
+    },
+    move: {
+      enable: true,
+      speed: 0.8,
+      direction: "none",
+      random: true,
+      straight: false,
+      out_mode: "out",
+      bounce: false,
+      attract: {
+        enable: true,
+        rotateX: 600,
+        rotateY: 1200
+      }
+    }
+  },
+  interactivity: {
+    detect_on: "canvas",
+    events: {
+      onhover: {
+        enable: true,
+        mode: "grab"       // 手指按住时粒子聚集
+      },
+      onclick: {
+        enable: true,
+        mode: "push"       // 点击时产生新粒子
+      },
+      resize: true
+    },
+    modes: {
+      grab: {
+        distance: 200,
+        line_linked: {
+          opacity: 1
+        }
+      },
+      push: {
+        particles_nb: 6
+      }
+    }
+  },
+  retina_detect: true
+});
+</script>
+<!-- 星座 + 零星闪烁层：与电脑端共用同一份绘制脚本 -->
+<script src="/js/theme/home/starfield.js"></script>
+
+
+  <div class="mb-top">
+    <a class="mb-back" href="/phone/">← 返回手机首页</a>
+    <span class="mb-sub" style="margin:0">2023-11-22</span>
+  </div>
+
+  <h1 class="mb-title">ES20-写入背压与 429</h1>
+  <div class="mb-sub">
+    分类：bigdata · elasticsearch
+     ｜ 标签：Elasticsearch · 系统课
+  </div>
+
+  <div class="mb-article"><div class="essay-banner essay-elasticsearch"></div>
+
+<h1 id="写入背压：bulk-队列、内存限流与-429-的正确处理"><a href="#写入背压：bulk-队列、内存限流与-429-的正确处理" class="headerlink" title="写入背压：bulk 队列、内存限流与 429 的正确处理"></a>写入背压：bulk 队列、内存限流与 429 的正确处理</h1><p>M3 最后一讲。写入侧的所有问题最终都收敛成一个信号：<code>429 Too Many Requests</code>（<code>es_rejected_execution_exception</code>）。</p>
+<p>它是<strong>保护机制</strong>，不是故障；正确处理是「降速 + 退避」，错误处理是「无脑重试」，后者会把集群拖死。</p>
+<p><img src="https://wu4yong.github.io/starry-images/assets/img/elasticsearch/es-20-backpressure.svg" alt="写入背压：队列与 indexing_pressure 两道闸门，满了返回 429"></p>
+<p><em>从批量到 429 的拒绝路径与指数退避｜依据 Elasticsearch 官方文档 8.17 自绘</em></p>
+<h2 id="一、学习目标"><a href="#一、学习目标" class="headerlink" title="一、学习目标"></a>一、学习目标</h2><ol>
+<li>说清 429 在什么条件下产生（两道闸门）；</li>
+<li>知道 <code>indexing_pressure</code> 内存限流的官方默认比例；</li>
+<li>会写出「指数退避 + 只重试失败批次」的重试逻辑；</li>
+<li>列出三种降低写入压力的手段及其代价。</li>
+</ol>
+<h2 id="二、前置知识"><a href="#二、前置知识" class="headerlink" title="二、前置知识"></a>二、前置知识</h2><div class="data-grid data-grid-link-table"><div class="grid-header"><div class="grid-cell">需要掌握</div><div class="grid-cell">到什么程度</div><div class="grid-cell">出处</div></div><div class="grid-row"><div class="grid-cell">写入五步</div><div class="grid-cell">知道写到哪一步会被挡</div><div class="grid-cell">M3-1</div></div><div class="grid-row"><div class="grid-cell"><code>_bulk</code></div><div class="grid-cell">知道批量大小的影响</div><div class="grid-cell">M3-3</div></div></div>
+
+<h2 id="三、理论讲解：两道闸门"><a href="#三、理论讲解：两道闸门" class="headerlink" title="三、理论讲解：两道闸门"></a>三、理论讲解：两道闸门</h2><div class="data-grid data-grid-link-table"><div class="grid-header"><div class="grid-cell">闸门</div><div class="grid-cell">机制</div><div class="grid-cell">触发后的表现</div></div><div class="grid-row"><div class="grid-cell">线程池队列</div><div class="grid-cell"><code>write</code> 线程池队列满（官方可调 <code>thread_pool.write.queue_size</code>）</div><div class="grid-cell"><code>es_rejected_execution_exception</code>，429</div></div><div class="grid-row"><div class="grid-cell">内存限流</div><div class="grid-cell">官方 <code>indexing_pressure</code> 内存限制（默认堆的 10%）</div><div class="grid-cell">同样拒绝，避免 OOM</div></div><div class="grid-row"><div class="grid-cell"><code>wait_for_active_shards</code></div><div class="grid-cell">要求的最小活跃副本数未达到</div><div class="grid-cell">写入等待或失败</div></div></div>
+
+<p>设计的意图很明确：宁可让客户端收到 429 稍后重试，也不能让节点因为堆积请求而 OOM 或雪崩。</p>
+<h2 id="四、原理拆解：为什么不能「立刻重试」"><a href="#四、原理拆解：为什么不能「立刻重试」" class="headerlink" title="四、原理拆解：为什么不能「立刻重试」"></a>四、原理拆解：为什么不能「立刻重试」</h2><p>被拒绝说明「队列已满」，此刻集群正在处理更早的批次。立刻重试只会让队列更满，形成正反馈，最后所有请求都超时。正确策略是：</p>
+<ol>
+<li><strong>只重试失败的部分</strong>（<code>items</code> 里 <code>status == 429</code>）；</li>
+<li><strong>指数退避 + 抖动</strong>（如 100ms → 200ms → 400ms，带随机抖动）；</li>
+<li><strong>限制在途并发</strong>（客户端侧并发数固定，而非无限提交）；</li>
+<li>连续多次 429 就<strong>降低批量大小</strong>，而不是继续加并发。</li>
+</ol>
+<h2 id="五、场景说明"><a href="#五、场景说明" class="headerlink" title="五、场景说明"></a>五、场景说明</h2><div class="data-grid data-grid-link-table"><div class="grid-header"><div class="grid-cell">症状</div><div class="grid-cell">先查</div><div class="grid-cell">处理</div></div><div class="grid-row"><div class="grid-cell">大量 429，CPU 与磁盘不高</div><div class="grid-cell">客户端并发过多、批量过大</div><div class="grid-cell">降并发、降批量</div></div><div class="grid-row"><div class="grid-cell">429 + 节点堆高位</div><div class="grid-cell"><code>indexing_pressure</code> 触发</div><div class="grid-cell">减小批量、扩容或降速</div></div><div class="grid-row"><div class="grid-cell">写入慢但无 429</div><div class="grid-cell">merge 压力大、段过多</div><div class="grid-cell">调整 <code>refresh_interval</code>（M3-2）</div></div><div class="grid-row"><div class="grid-cell">周期性尖峰</div><div class="grid-cell">定时任务撞车</div><div class="grid-cell">错峰 + 限流</div></div></div>
+
+<h2 id="六、实操"><a href="#六、实操" class="headerlink" title="六、实操"></a>六、实操</h2><pre class="line-numbers language-bash" data-language="bash"><code class="language-bash"><span class="token comment"># 观察拒绝次数与队列压力</span>
+<span class="token function">curl</span> <span class="token parameter variable">-s</span> <span class="token string">"http://localhost:9200/_nodes/stats/thread_pool,indexing_pressure?human"</span> <span class="token operator">|</span> jq <span class="token string">'.nodes[] | &#123;
+  write: .thread_pool.write, pressure: .indexing_pressure &#125;'</span>
+
+<span class="token comment"># 单条写入被拒时，响应形如：</span>
+<span class="token comment"># &#123;"error":&#123;"type":"es_rejected_execution_exception", ...&#125;, "status":429&#125;</span>
+
+<span class="token comment"># 触发条件观察：批量导流时看队列与拒绝计数是否同步上涨</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<p>客户端侧的退避逻辑（伪代码，语言无关）：</p>
+<pre class="line-numbers language-text" data-language="text"><code class="language-text">for attempt in 0..maxRetry:
+    resp = bulk(failedBatch)
+    ok   = items with status &lt; 400
+    retryable = items with status == 429 or 5xx
+    if retryable empty: break
+    sleep(backoff(attempt) + jitter)
+    failedBatch = retryable items<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<p>关键点：<code>failedBatch</code> 只保留可重试项，4xx（如 <code>mapper_parsing_exception</code>）不该重试，应进死信队列。</p>
+<h2 id="七、常见坑"><a href="#七、常见坑" class="headerlink" title="七、常见坑"></a>七、常见坑</h2><ol>
+<li><strong>无脑立即重试</strong>：把背压变成雪崩。</li>
+<li><strong>把 4xx 也重试</strong>：类型冲突重试一万次也不会成功。</li>
+<li><strong>只看整体状态码</strong>：批量里部分 429、部分成功，必须按 <code>items</code> 拆分。</li>
+<li><strong>客户端并发无限</strong>：写入吞吐由服务端决定，客户端加并发只会增加 429。</li>
+<li><strong>靠调大队列解决问题</strong>：队列更长只意味着更长的排队延迟与更大的内存风险。</li>
+<li><strong>忽视 <code>indexing_pressure</code></strong>：堆紧张时先被限流的是写入，不是检索。</li>
+</ol>
+<h2 id="八、课后小结"><a href="#八、课后小结" class="headerlink" title="八、课后小结"></a>八、课后小结</h2><ol>
+<li>429 &#x3D; 两道闸门之一触发（线程池队列、内存限流），是保护不是故障。</li>
+<li><code>indexing_pressure</code> 官方默认占堆 10%。</li>
+<li>正确策略：只重试失败项 + 指数退避 + 限并发 + 必要时降批量。</li>
+<li>4xx 不该重试，应进死信。</li>
+<li>提高写入吞吐要靠调结构（refresh、副本、段合并），不是靠堆并发。</li>
+</ol>
+<h2 id="九、思考题"><a href="#九、思考题" class="headerlink" title="九、思考题"></a>九、思考题</h2><ol>
+<li>集群 CPU 只有 30%，但写入大量 429，最可能的原因是什么？给出排查顺序。</li>
+<li>为什么官方选择「拒绝」而不是「无限排队」？从内存与延迟两个角度说明。</li>
+<li>设计一个客户端限流器：给出并发数与批量大小的初始取值，以及根据 429 率自适应的规则。</li>
+</ol>
+<h2 id="十、官方资料"><a href="#十、官方资料" class="headerlink" title="十、官方资料"></a>十、官方资料</h2><ul>
+<li>Thread pools：<a target="_blank" rel="noopener" href="https://www.elastic.co/guide/en/elasticsearch/reference/current/modules-threadpool.html">https://www.elastic.co/guide/en/elasticsearch/reference/current/modules-threadpool.html</a></li>
+<li>Indexing pressure：<a target="_blank" rel="noopener" href="https://www.elastic.co/guide/en/elasticsearch/reference/current/index-modules-indexing-pressure.html">https://www.elastic.co/guide/en/elasticsearch/reference/current/index-modules-indexing-pressure.html</a></li>
+<li>Bulk API 错误处理：<a target="_blank" rel="noopener" href="https://www.elastic.co/guide/en/elasticsearch/reference/current/docs-bulk.html">https://www.elastic.co/guide/en/elasticsearch/reference/current/docs-bulk.html</a></li>
+<li>Tune for indexing speed：<a target="_blank" rel="noopener" href="https://www.elastic.co/guide/en/elasticsearch/reference/current/tune-for-indexing-speed.html">https://www.elastic.co/guide/en/elasticsearch/reference/current/tune-for-indexing-speed.html</a></li>
+</ul>
+<p>上一篇：<a href="/2023/11/19/bigdata/elasticsearch/es-19-reindex-update-by-query/">M3-6 reindex 与在线迁移</a> ｜ 下一篇：<a href="/2023/11/25/bigdata/elasticsearch/es-21-query-filter-context/">M4-1 query 上下文与 filter 上下文</a> ｜ <a href="/2023/09/22/bigdata/elasticsearch/es-00-series-index/">总目录</a></p>
+</div>
+
+  <div class="mb-foot">
+    <a href="/phone/">返回手机首页</a>
+    <a href="/phone/tags/">星迹索引</a>
+  </div>
+</div>
+
+
+<script>
+  /* 作用：懒加载本地 mermaid 库；无 mermaid 代码块时不加载 */
+  function loadLocalMermaid(){
+    return new Promise(function(resolve, reject){
+      if(window.mermaid) return resolve(window.mermaid);
+      var s = document.createElement('script');
+      s.src = '/js/third-party/mermaid/mermaid.min.js?v=10';
+      s.onload = function(){ resolve(window.mermaid); };
+      s.onerror = function(){ reject(new Error('mermaid local load failed')); };
+      document.head.appendChild(s);
+    });
+  }
+
+  /* 作用：把 ```mermaid 代码块替换成 SVG 图（手机端字号略小、图可横向滚动） */
+  async function renderMermaidDiagram(){
+    var blocks = document.querySelectorAll('pre[class*="language-mermaid"]');
+    if(!blocks.length) return;
+    var mermaid;
+    try { mermaid = await loadLocalMermaid(); }
+    catch(e){ console.warn('[mermaid] 本地库加载失败：', e); return; }
+
+    mermaid.initialize({
+      startOnLoad: false,
+      theme: 'base',
+      themeVariables: {
+        darkMode: true,
+        background: 'transparent',
+        fontFamily: '"Microsoft YaHei", "PingFang SC", "Segoe UI", sans-serif',
+        fontSize: '12px',
+        primaryColor: '#062f3d',
+        primaryTextColor: '#d6f6ff',
+        primaryBorderColor: '#00eeff',
+        secondaryColor: '#04222d',
+        tertiaryColor: '#04222d',
+        mainBkg: '#062f3d',
+        nodeBorder: '#00eeff',
+        clusterBkg: '#02161f',
+        clusterBorder: '#00eeff55',
+        lineColor: '#00eeff',
+        textColor: '#c0e8ff',
+        edgeLabelBackground: '#02161f'
+      },
+      flowchart: { curve: 'basis', useMaxWidth: false, htmlLabels: false, nodeSpacing: 30, rankSpacing: 40, padding: 10 }
+    });
+
+    var targets = [];
+    blocks.forEach(function(el){
+      var codeEl = el.querySelector('code');
+      if(!codeEl) return;
+      var div = document.createElement('div');
+      div.className = 'mermaid';
+      div.textContent = codeEl.textContent;
+      el.parentNode.replaceChild(div, el);
+      targets.push(div);
+    });
+    if(!targets.length) return;
+    try { await mermaid.run({ nodes: targets }); }
+    catch(e){ console.warn('[mermaid] 渲染失败：', e); }
+  }
+  /* 作用：多次触发兜底（延迟重试 + DOM 变化），防止某次时机没跑到导致图表留在代码块 */
+  var mmBusy = false;
+  function scheduleMermaid(){
+    if(mmBusy) return;
+    mmBusy = true;
+    renderMermaidDiagram().then(function(){ mmBusy = false; }, function(){ mmBusy = false; });
+  }
+  scheduleMermaid();
+  window.addEventListener('load', scheduleMermaid);
+  [1000, 3000, 8000].forEach(function(ms){ setTimeout(scheduleMermaid, ms); });
+  if(document.readyState !== 'loading') scheduleMermaid();
+  if(window.MutationObserver){
+    var mmTimer = null;
+    var mmObserver = new MutationObserver(function(){
+      clearTimeout(mmTimer);
+      mmTimer = setTimeout(scheduleMermaid, 400);
+    });
+    mmObserver.observe(document.querySelector('.mb-article') || document.body, { childList: true, subtree: true });
+  }
+</script>
+</body>
+</html>

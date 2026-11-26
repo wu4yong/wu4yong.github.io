@@ -1,0 +1,318 @@
+<!--
+  ============================================
+  手机端 · 文章原文页
+  文件：phone/post.njk
+  适用终端：手机端（路由 /phone/p/<slug>/，由 scripts/phone-routes.js 生成）
+  作用：手机阅读单篇文章；单列布局、无侧栏无雷达，替代电脑端 post.njk
+        数据由生成期算好：page.item = { title, dateStr, content, cats, tags }
+  样式依赖：source/css/theme/phone/common.css、source/css/theme/phone/list.css
+  组件依赖：phone/_components/Particles.njk
+  最后修改：2026-11-11
+  ============================================
+-->
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="color-scheme" content="dark">
+  <meta name="theme-color" content="#020817">
+  <!-- 首帧兜底：浏览器默认画布是白的，样式未解析前会闪一下白。这条规则先锁死深空底色 -->
+  <style>html{background-color:#020817}</style>
+  <title>Hadoop（二）HDFS 架构与读写流程 - 时空秘境</title>
+  <!-- 手机端样式：基础 + 列表/正文，外链引入（源文件 source/css/theme/phone/） -->
+  <link rel="stylesheet" href="/css/theme/phone/common.css">
+  <link rel="stylesheet" href="/css/theme/phone/list.css">
+<meta name="generator" content="Hexo 8.1.2"></head>
+<body>
+<div class="mb-shell">
+  <!--
+  ============================================
+  手机端星空粒子组件
+  文件：Particles.njk
+  适用终端：手机端
+  作用：Particles.njk 的手机端副本（nunjucks 子目录 include 取不到上级）
+        参数与电脑端 _components/Particles.njk 保持一致：
+        粒子 95 / 连线 118px / opacity 0.32，外加星座层与零星闪烁层
+  最后修改：2026-11-12
+  ============================================
+--><!-- z-index 必须是 0：负层级会被 body 不透明背景盖住，粒子在跑却看不见 -->
+<div id="particles" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 0; pointer-events: none;"></div>
+<!-- 星座层（与首页同一套：随机零星散布星座图形 + 偶尔闪烁的小星） -->
+<div id="constellations" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 1; pointer-events: none;" aria-hidden="true"></div>
+<script src="/js/particles.min.js"></script>
+<script>
+particlesJS("particles", {
+  particles: {
+    number: {
+      value: 95,
+      density: {
+        enable: true,
+        value_area: 800
+      }
+    },
+    color: {
+      value: "#00eeff"
+    },
+    shape: {
+      type: "circle",
+      stroke: {
+        width: 0,
+        color: "#000000"
+      }
+    },
+    opacity: {
+      value: 0.6,
+      random: true,
+      anim: {
+        enable: true,
+        speed: 0.5,
+        opacity_min: 0.1,
+        sync: false
+      }
+    },
+    size: {
+      value: 3,
+      random: true,
+      anim: {
+        enable: true,
+        speed: 2,
+        size_min: 0.1,
+        sync: false
+      }
+    },
+    line_linked: {
+      enable: true,
+      distance: 118,
+      color: "#00eeff",
+      opacity: 0.32,
+      width: 1
+    },
+    move: {
+      enable: true,
+      speed: 0.8,
+      direction: "none",
+      random: true,
+      straight: false,
+      out_mode: "out",
+      bounce: false,
+      attract: {
+        enable: true,
+        rotateX: 600,
+        rotateY: 1200
+      }
+    }
+  },
+  interactivity: {
+    detect_on: "canvas",
+    events: {
+      onhover: {
+        enable: true,
+        mode: "grab"       // 手指按住时粒子聚集
+      },
+      onclick: {
+        enable: true,
+        mode: "push"       // 点击时产生新粒子
+      },
+      resize: true
+    },
+    modes: {
+      grab: {
+        distance: 200,
+        line_linked: {
+          opacity: 1
+        }
+      },
+      push: {
+        particles_nb: 6
+      }
+    }
+  },
+  retina_detect: true
+});
+</script>
+<!-- 星座 + 零星闪烁层：与电脑端共用同一份绘制脚本 -->
+<script src="/js/theme/home/starfield.js"></script>
+
+
+  <div class="mb-top">
+    <a class="mb-back" href="/phone/">← 返回手机首页</a>
+    <span class="mb-sub" style="margin:0">2023-02-11</span>
+  </div>
+
+  <h1 class="mb-title">Hadoop（二）HDFS 架构与读写流程</h1>
+  <div class="mb-sub">
+    分类：bigdata · hadoop
+     ｜ 标签：Hadoop
+  </div>
+
+  <div class="mb-article"><div class="essay-banner essay-hadoop"></div>
+
+<h1 id="HDFS-架构与读写流程"><a href="#HDFS-架构与读写流程" class="headerlink" title="HDFS 架构与读写流程"></a><strong>HDFS 架构与读写流程</strong></h1><p>上一篇把 Hadoop 的三大模块摆上了台面，这一篇先钻进存储这一层。理解 HDFS 的关键不是背组件名，而是看清两件事：元数据由谁管、数据由谁搬；文件写入和读取分别走哪条链路、在哪一步做副本容错。</p>
+<p><img src="https://wu4yong.github.io/starry-images/assets/img/hadoop/hadoop-02-hdfs.webp" alt="元数据集中在中央网关，数据流沿三节点管道并行落盘"></p>
+<p><em>元数据集中在中央网关，数据流沿三节点管道并行落盘</em></p>
+<h2 id="1-1-整体架构：两类节点各管一段"><a href="#1-1-整体架构：两类节点各管一段" class="headerlink" title="1.1 整体架构：两类节点各管一段"></a>1.1 整体架构：两类节点各管一段</h2><p>HDFS 在部署形态上只有两类常驻进程，分工严格按”元数据”和”数据”切开：</p>
+<div class="data-grid data-grid-link-table"><div class="grid-header"><div class="grid-cell">角色</div><div class="grid-cell">管什么</div><div class="grid-cell">部署位置</div><div class="grid-cell">挂掉的影响</div></div><div class="grid-row"><div class="grid-cell">NameNode</div><div class="grid-cell">目录树、文件与块的映射、副本放置策略</div><div class="grid-cell">主节点（HA 下为 Active&#x2F;Standby）</div><div class="grid-cell">元数据不可查，但已写入的数据不会丢</div></div><div class="grid-row"><div class="grid-cell">DataNode</div><div class="grid-cell">实际存储块、校验和、心跳与块上报</div><div class="grid-cell">每台工作节点一个</div><div class="grid-cell">单节点故障由其他副本补齐</div></div><div class="grid-row"><div class="grid-cell">Client</div><div class="grid-cell">切分文件、与两类节点通信、组装结果</div><div class="grid-cell">作业进程内的库</div><div class="grid-cell">不影响集群本身</div></div></div>
+
+<p>记住一条主线：<strong>NameNode 不碰实际数据</strong>。它只在内存里维护映射，所有块数据由客户端直接连 DataNode 读写。这样 NameNode 可以专心记账，不会被海量数据流拖垮，也是 HDFS 高并发读的根本原因。</p>
+<p>DataNode 每隔固定时间向 NameNode 发心跳，同时上报本机存了哪些块。心跳超时未收到，NameNode 就把该节点标记为失效，上面的块由其他副本重新补齐。这个周期性上报也决定了集群规模上限：节点越多、块越多，心跳与块汇报的开销越大。</p>
+<h2 id="1-2-Block、副本与放置策略"><a href="#1-2-Block、副本与放置策略" class="headerlink" title="1.2 Block、副本与放置策略"></a>1.2 Block、副本与放置策略</h2><p>文件不会被原样存成一整个，而是切成固定大小的块（Block）：</p>
+<div class="data-grid data-grid-link-table"><div class="grid-header"><div class="grid-cell">概念</div><div class="grid-cell">默认值</div><div class="grid-cell">说明</div></div><div class="grid-row"><div class="grid-cell">Block Size</div><div class="grid-cell">128MB</div><div class="grid-cell">块大是为了降低寻址与心跳开销，不是为了压缩空间</div></div><div class="grid-row"><div class="grid-cell">Replication Factor</div><div class="grid-cell">3</div><div class="grid-cell">副本数在 <code>dfs.replication</code> 配置，也可按目录单独设置</div></div><div class="grid-row"><div class="grid-cell">Corruption Check</div><div class="grid-cell">校验和</div><div class="grid-cell">读时比对 checksum，损坏块自动从其他副本补</div></div></div>
+
+<p>三份副本不是随机撒在三台机器上。默认机架感知策略是：第一份在客户端同机架（写客户端所在节点优先），第二份放到另一机架，第三份与第二份同机架的不同节点。这样既挡住单机故障，又挡住整机架断电，跨机架网络流量只多一倍。</p>
+<p>副本放置可以用一句话验证：同一机架内不堆多份，跨机架至少留一份。如果集群 Web UI 里三块副本挤在同一台机器，通常是机架感知脚本没配好，退回了单机默认策略。</p>
+<h2 id="1-3-写入流程：pipeline-逐层确认"><a href="#1-3-写入流程：pipeline-逐层确认" class="headerlink" title="1.3 写入流程：pipeline 逐层确认"></a>1.3 写入流程：pipeline 逐层确认</h2><p>写文件是 HDFS 最容易被面试追问的链路，按顺序拆成五步：</p>
+<ol>
+<li>客户端调用 <code>create()</code>，NameNode 校验目录与权限，在命名空间里新建文件记录</li>
+<li>客户端把文件切成 packet，向 NameNode 申请第一批块对应的 DataNode 列表</li>
+<li>列表按顺序组成 pipeline：DN1 ← DN2 ← DN3，客户端先把 packet 发给 DN1</li>
+<li>DN1 写本地后转发给 DN2，DN2 再转发给 DN3；每份都返回 ack，逐级回传到客户端</li>
+<li>块写满且三份副本都 ack 成功，NameNode 才把该块标记为完整；继续写下一块</li>
+</ol>
+<p>pipeline 中途某台 DataNode 掉线的处理值得记：客户端把坏节点从管道剔除，剩余副本继续写，NameNode 随后按目标副本因子补齐缺失的那份。<strong>写入时不是三份同时写，而是串行流转、并行落盘</strong>，网络带宽只占一条上游链路。</p>
+<p>与写入相关的几个常见配置：</p>
+<pre class="line-numbers language-properties" data-language="properties"><code class="language-properties"><span class="token comment"># 单块大小，新文件默认继承该值，已写入文件不受影响</span>
+<span class="token key attr-name">dfs.blocksize</span><span class="token punctuation">=</span><span class="token value attr-value">134217728</span>
+<span class="token comment"># 副本因子，测试环境机器不足时可先降到 1</span>
+<span class="token key attr-name">dfs.replication</span><span class="token punctuation">=</span><span class="token value attr-value">3</span>
+<span class="token comment"># 写入 pipeline 上单个节点失败后允许的重试次数</span>
+<span class="token key attr-name">dfs.client.block.write.retries</span><span class="token punctuation">=</span><span class="token value attr-value">3</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<h2 id="1-4-读取流程与短路本地读"><a href="#1-4-读取流程与短路本地读" class="headerlink" title="1.4 读取流程与短路本地读"></a>1.4 读取流程与短路本地读</h2><p>读文件的链路比写简单，但有两个优化容易被忽略：</p>
+<ol>
+<li>客户端向 NameNode 问每个块所在的 DataNode 列表，NameNode 按距离排序返回</li>
+<li>客户端直接连最近的 DataNode 拉块，边拉边校验 checksum</li>
+<li>读坏了就换下一个副本节点重试，对上层透明</li>
+</ol>
+<p>距离排序遵循”同节点 &gt; 同机架 &gt; 跨机架”的顺序，这就是数据局部性（data locality）：计算任务尽量调度到块所在的机器上。YARN 调度器在分配 Container 时会优先选块所在节点，其次同机架节点，最后才跨机架。</p>
+<p><strong>Short-Circuit Local Read</strong>（短路本地读）是第二个优化：当读取进程与 DataNode 在同一台机器上时，绕过 DataNode 的 TCP 接口，直接打开本地磁盘上的块文件。配置上需要 <code>dfs.client.read.shortcircuit=true</code>，并通过本地 Unix domain socket 与 DataNode 交换文件描述符。它省掉了本机回环网络的拷贝，HBase、本地 MapReduce 这类同机读取场景收益明显。</p>
+<pre class="line-numbers language-properties" data-language="properties"><code class="language-properties"><span class="token comment"># 开启短路本地读，读取进程与 DataNode 同机时生效</span>
+<span class="token key attr-name">dfs.client.read.shortcircuit</span><span class="token punctuation">=</span><span class="token value attr-value">true</span>
+<span class="token comment"># 本地交换 socket 路径，目录权限需对读取用户开放</span>
+<span class="token key attr-name">dfs.domain.socket.path</span><span class="token punctuation">=</span><span class="token value attr-value">/var/run/hadoop-hdfs/dn_socket</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span></span></code></pre>
+
+<h2 id="1-5-元数据怎么持久化：fsimage-与-editlog"><a href="#1-5-元数据怎么持久化：fsimage-与-editlog" class="headerlink" title="1.5 元数据怎么持久化：fsimage 与 editlog"></a>1.5 元数据怎么持久化：fsimage 与 editlog</h2><p>NameNode 的映射全在内存，但不能只靠内存重启。元数据由两份文件配合保存：</p>
+<div class="data-grid data-grid-link-table"><div class="grid-header"><div class="grid-cell">文件</div><div class="grid-cell">记录什么</div><div class="grid-cell">更新方式</div></div><div class="grid-row"><div class="grid-cell">fsimage</div><div class="grid-cell">某一时刻完整的命名空间快照</div><div class="grid-cell">定期合并，不是每次写都刷盘</div></div><div class="grid-row"><div class="grid-cell">editlog</div><div class="grid-cell">快照之后的增删改操作流水</div><div class="grid-cell">每次写事务先写流水</div></div></div>
+
+<p>重启时 NameNode 先加载 fsimage，再回放 editlog，把元数据重建到内存。Secondary NameNode（或 HA 里的 Standby）周期性地把 fsimage 与 editlog 合并，避免流水无限膨胀。注意 Secondary NameNode <strong>不是热备</strong>，它只做 checkpoint，HA 场景下不能拿它顶替 Active。</p>
+<p>checkpoint 触发有两个条件：流水写满到阈值，或距上次合并超过时间间隔。合并动作由辅助节点拉取快照与流水、生成新镜像再推回 NameNode，整个过程 NameNode 不停止服务，但合并窗口内事务仍然先记在流水里。</p>
+<h2 id="1-6-几个容易踩的坑"><a href="#1-6-几个容易踩的坑" class="headerlink" title="1.6 几个容易踩的坑"></a>1.6 几个容易踩的坑</h2><ul>
+<li>测试集群只有两台机器，副本因子仍设默认 3，块会长期处于”副本不足”状态，Web UI 里副本数达不到目标——不是故障，是机器不够</li>
+<li>块大小调得过大，小文件场景下寻址省了，但单块重试代价变高；调得过小，NameNode 元数据和网络握手都会暴涨</li>
+<li>以为 NameNode 存了文件内容，实际它只存映射；内存装不下的是文件与块的数量，不是文件体积</li>
+<li>跨机架带宽规划不足时，写三份副本会把机架间链路打满，业务高峰期读写都变慢</li>
+<li>短路本地读需要目录权限与 socket 路径配置正确，只开参数不装本地库会回退到普通读，且没有报错提示</li>
+<li>用 Secondary NameNode 当备份节点，机器一坏才发现它手里没有可切换的最新状态，HA 必须走 JournalNode 加 ZKFC 那套方案</li>
+<li>读文件时忽略距离排序，把计算任务固定调度到远端节点，网络传输吃掉本该用于聚合的时间</li>
+</ul>
+<h2 id="1-7-官方资料"><a href="#1-7-官方资料" class="headerlink" title="1.7 官方资料"></a>1.7 官方资料</h2><ul>
+<li><p>HDFS 架构设计：<a target="_blank" rel="noopener" href="https://hadoop.apache.org/docs/stable/hadoop-project-dist/hadoop-hdfs/HdfsDesign.html">https://hadoop.apache.org/docs/stable/hadoop-project-dist/hadoop-hdfs/HdfsDesign.html</a></p>
+</li>
+<li><p>HDFS 用户指南：<a target="_blank" rel="noopener" href="https://hadoop.apache.org/docs/stable/hadoop-project-dist/hadoop-hdfs/HdfsUserGuide.html">https://hadoop.apache.org/docs/stable/hadoop-project-dist/hadoop-hdfs/HdfsUserGuide.html</a></p>
+</li>
+<li><p>Short-Circuit Local Read：<a target="_blank" rel="noopener" href="https://hadoop.apache.org/docs/stable/hadoop-project-dist/hadoop-hdfs/ShortCircuitLocalReads.html">https://hadoop.apache.org/docs/stable/hadoop-project-dist/hadoop-hdfs/ShortCircuitLocalReads.html</a></p>
+</li>
+<li><p>HDFS 命令行：<a target="_blank" rel="noopener" href="https://hadoop.apache.org/docs/stable/hadoop-project-dist/hadoop-hdfs/HDFSCommands.html">https://hadoop.apache.org/docs/stable/hadoop-project-dist/hadoop-hdfs/HDFSCommands.html</a></p>
+</li>
+<li><p>早年的 HDFS 理论长文（原理铺陈更密，可对照细读）：<a href="/2021/09/24/hadoop/hadoop-00-theory/">Hadoop（零）HDFS 架构与读写全景</a></p>
+</li>
+</ul>
+<h2 id="1-8-清单"><a href="#1-8-清单" class="headerlink" title="1.8 清单"></a>1.8 清单</h2><ol>
+<li>HDFS 只有 NameNode 与 DataNode 两类节点，元数据与数据严格分离</li>
+<li>块默认 128MB、副本默认 3 份，副本按机架感知策略放置</li>
+<li>写入走 pipeline 串行转发、逐级 ack，节点掉线后由 NameNode 补副本</li>
+<li>读取直连 DataNode 并按距离排序，同机场景可用短路本地读绕开网络层</li>
+<li>元数据由 fsimage 快照加 editlog 流水构成，重启先加载快照再回放流水</li>
+<li>Secondary NameNode 只做 checkpoint，不是 HA 热备</li>
+<li>副本不足、小文件撑爆元数据、跨机架带宽是三个最常见的运维痛点</li>
+</ol>
+</div>
+
+  <div class="mb-foot">
+    <a href="/phone/">返回手机首页</a>
+    <a href="/phone/tags/">星迹索引</a>
+  </div>
+</div>
+
+
+<script>
+  /* 作用：懒加载本地 mermaid 库；无 mermaid 代码块时不加载 */
+  function loadLocalMermaid(){
+    return new Promise(function(resolve, reject){
+      if(window.mermaid) return resolve(window.mermaid);
+      var s = document.createElement('script');
+      s.src = '/js/third-party/mermaid/mermaid.min.js?v=10';
+      s.onload = function(){ resolve(window.mermaid); };
+      s.onerror = function(){ reject(new Error('mermaid local load failed')); };
+      document.head.appendChild(s);
+    });
+  }
+
+  /* 作用：把 ```mermaid 代码块替换成 SVG 图（手机端字号略小、图可横向滚动） */
+  async function renderMermaidDiagram(){
+    var blocks = document.querySelectorAll('pre[class*="language-mermaid"]');
+    if(!blocks.length) return;
+    var mermaid;
+    try { mermaid = await loadLocalMermaid(); }
+    catch(e){ console.warn('[mermaid] 本地库加载失败：', e); return; }
+
+    mermaid.initialize({
+      startOnLoad: false,
+      theme: 'base',
+      themeVariables: {
+        darkMode: true,
+        background: 'transparent',
+        fontFamily: '"Microsoft YaHei", "PingFang SC", "Segoe UI", sans-serif',
+        fontSize: '12px',
+        primaryColor: '#062f3d',
+        primaryTextColor: '#d6f6ff',
+        primaryBorderColor: '#00eeff',
+        secondaryColor: '#04222d',
+        tertiaryColor: '#04222d',
+        mainBkg: '#062f3d',
+        nodeBorder: '#00eeff',
+        clusterBkg: '#02161f',
+        clusterBorder: '#00eeff55',
+        lineColor: '#00eeff',
+        textColor: '#c0e8ff',
+        edgeLabelBackground: '#02161f'
+      },
+      flowchart: { curve: 'basis', useMaxWidth: false, htmlLabels: false, nodeSpacing: 30, rankSpacing: 40, padding: 10 }
+    });
+
+    var targets = [];
+    blocks.forEach(function(el){
+      var codeEl = el.querySelector('code');
+      if(!codeEl) return;
+      var div = document.createElement('div');
+      div.className = 'mermaid';
+      div.textContent = codeEl.textContent;
+      el.parentNode.replaceChild(div, el);
+      targets.push(div);
+    });
+    if(!targets.length) return;
+    try { await mermaid.run({ nodes: targets }); }
+    catch(e){ console.warn('[mermaid] 渲染失败：', e); }
+  }
+  /* 作用：多次触发兜底（延迟重试 + DOM 变化），防止某次时机没跑到导致图表留在代码块 */
+  var mmBusy = false;
+  function scheduleMermaid(){
+    if(mmBusy) return;
+    mmBusy = true;
+    renderMermaidDiagram().then(function(){ mmBusy = false; }, function(){ mmBusy = false; });
+  }
+  scheduleMermaid();
+  window.addEventListener('load', scheduleMermaid);
+  [1000, 3000, 8000].forEach(function(ms){ setTimeout(scheduleMermaid, ms); });
+  if(document.readyState !== 'loading') scheduleMermaid();
+  if(window.MutationObserver){
+    var mmTimer = null;
+    var mmObserver = new MutationObserver(function(){
+      clearTimeout(mmTimer);
+      mmTimer = setTimeout(scheduleMermaid, 400);
+    });
+    mmObserver.observe(document.querySelector('.mb-article') || document.body, { childList: true, subtree: true });
+  }
+</script>
+</body>
+</html>

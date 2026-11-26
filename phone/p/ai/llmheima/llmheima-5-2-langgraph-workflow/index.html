@@ -1,0 +1,1251 @@
+<!--
+  ============================================
+  手机端 · 文章原文页
+  文件：phone/post.njk
+  适用终端：手机端（路由 /phone/p/<slug>/，由 scripts/phone-routes.js 生成）
+  作用：手机阅读单篇文章；单列布局、无侧栏无雷达，替代电脑端 post.njk
+        数据由生成期算好：page.item = { title, dateStr, content, cats, tags }
+  样式依赖：source/css/theme/phone/common.css、source/css/theme/phone/list.css
+  组件依赖：phone/_components/Particles.njk
+  最后修改：2026-11-11
+  ============================================
+-->
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="color-scheme" content="dark">
+  <meta name="theme-color" content="#020817">
+  <!-- 首帧兜底：浏览器默认画布是白的，样式未解析前会闪一下白。这条规则先锁死深空底色 -->
+  <style>html{background-color:#020817}</style>
+  <title>黑马大模型 常见 Workflow - 时空秘境</title>
+  <!-- 手机端样式：基础 + 列表/正文，外链引入（源文件 source/css/theme/phone/） -->
+  <link rel="stylesheet" href="/css/theme/phone/common.css">
+  <link rel="stylesheet" href="/css/theme/phone/list.css">
+<meta name="generator" content="Hexo 8.1.2"></head>
+<body>
+<div class="mb-shell">
+  <!--
+  ============================================
+  手机端星空粒子组件
+  文件：Particles.njk
+  适用终端：手机端
+  作用：Particles.njk 的手机端副本（nunjucks 子目录 include 取不到上级）
+        参数与电脑端 _components/Particles.njk 保持一致：
+        粒子 95 / 连线 118px / opacity 0.32，外加星座层与零星闪烁层
+  最后修改：2026-11-12
+  ============================================
+--><!-- z-index 必须是 0：负层级会被 body 不透明背景盖住，粒子在跑却看不见 -->
+<div id="particles" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 0; pointer-events: none;"></div>
+<!-- 星座层（与首页同一套：随机零星散布星座图形 + 偶尔闪烁的小星） -->
+<div id="constellations" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 1; pointer-events: none;" aria-hidden="true"></div>
+<script src="/js/particles.min.js"></script>
+<script>
+particlesJS("particles", {
+  particles: {
+    number: {
+      value: 95,
+      density: {
+        enable: true,
+        value_area: 800
+      }
+    },
+    color: {
+      value: "#00eeff"
+    },
+    shape: {
+      type: "circle",
+      stroke: {
+        width: 0,
+        color: "#000000"
+      }
+    },
+    opacity: {
+      value: 0.6,
+      random: true,
+      anim: {
+        enable: true,
+        speed: 0.5,
+        opacity_min: 0.1,
+        sync: false
+      }
+    },
+    size: {
+      value: 3,
+      random: true,
+      anim: {
+        enable: true,
+        speed: 2,
+        size_min: 0.1,
+        sync: false
+      }
+    },
+    line_linked: {
+      enable: true,
+      distance: 118,
+      color: "#00eeff",
+      opacity: 0.32,
+      width: 1
+    },
+    move: {
+      enable: true,
+      speed: 0.8,
+      direction: "none",
+      random: true,
+      straight: false,
+      out_mode: "out",
+      bounce: false,
+      attract: {
+        enable: true,
+        rotateX: 600,
+        rotateY: 1200
+      }
+    }
+  },
+  interactivity: {
+    detect_on: "canvas",
+    events: {
+      onhover: {
+        enable: true,
+        mode: "grab"       // 手指按住时粒子聚集
+      },
+      onclick: {
+        enable: true,
+        mode: "push"       // 点击时产生新粒子
+      },
+      resize: true
+    },
+    modes: {
+      grab: {
+        distance: 200,
+        line_linked: {
+          opacity: 1
+        }
+      },
+      push: {
+        particles_nb: 6
+      }
+    }
+  },
+  retina_detect: true
+});
+</script>
+<!-- 星座 + 零星闪烁层：与电脑端共用同一份绘制脚本 -->
+<script src="/js/theme/home/starfield.js"></script>
+
+
+  <div class="mb-top">
+    <a class="mb-back" href="/phone/">← 返回手机首页</a>
+    <span class="mb-sub" style="margin:0">2025-10-18</span>
+  </div>
+
+  <h1 class="mb-title">黑马大模型 常见 Workflow</h1>
+  <div class="mb-sub">
+    分类：ai · llmheima
+     ｜ 标签：llmheima
+  </div>
+
+  <div class="mb-article"><div class="essay-banner essay-llm"></div>
+
+<h1 id="第2节-常见WorkFlow"><a href="#第2节-常见WorkFlow" class="headerlink" title="第2节. 常见WorkFlow"></a>第2节. 常见WorkFlow</h1><p>上一节学习了LangGraph的Node、Edge、State三要素，知道了如何构建Agent，但LangGraph的能力并不在于构建简单的Agent，而是用图的方式灵活编排任意复杂的工作流。</p>
+<p>本节深入学习各种常见的<strong>流程编排模式。</strong></p>
+<p>本节将学习七种核心编排模式：</p>
+<p><img src="https://wu4yong.github.io/starry-images/assets/img/llmheima/5-2/langgraph-workflow-01.webp" alt="langgraph-workflow-01.webp"></p>
+<p>左侧的两个：LLM嵌入到了预定义的工作流当中，用于你明确知道工作流程的场景。</p>
+<p>右侧的三个：由LLM来控制工作流，更智能化。</p>
+<p>本章会用到的依赖和工具：</p>
+<pre class="line-numbers language-python" data-language="python"><code class="language-python"><span class="token keyword">from</span> typing <span class="token keyword">import</span> Annotated<span class="token punctuation">,</span> TypedDict<span class="token punctuation">,</span> Literal<span class="token punctuation">,</span> List
+<span class="token keyword">from</span> langgraph<span class="token punctuation">.</span>graph <span class="token keyword">import</span> StateGraph<span class="token punctuation">,</span> START<span class="token punctuation">,</span> END
+<span class="token keyword">from</span> langgraph<span class="token punctuation">.</span>graph<span class="token punctuation">.</span>message <span class="token keyword">import</span> add_messages<span class="token punctuation">,</span> MessagesState
+<span class="token keyword">from</span> langgraph<span class="token punctuation">.</span>checkpoint<span class="token punctuation">.</span>memory <span class="token keyword">import</span> InMemorySaver
+<span class="token keyword">from</span> langgraph<span class="token punctuation">.</span>types <span class="token keyword">import</span> Command<span class="token punctuation">,</span> CachePolicy<span class="token punctuation">,</span> interrupt<span class="token punctuation">,</span> Send
+<span class="token keyword">from</span> langgraph<span class="token punctuation">.</span>runtime <span class="token keyword">import</span> Runtime
+<span class="token keyword">from</span> langgraph<span class="token punctuation">.</span>types <span class="token keyword">import</span> RetryPolicy<span class="token punctuation">,</span> TimeoutPolicy
+<span class="token keyword">from</span> langgraph<span class="token punctuation">.</span>errors <span class="token keyword">import</span> NodeError
+<span class="token keyword">from</span> langchain_core<span class="token punctuation">.</span>messages <span class="token keyword">import</span> <span class="token punctuation">(</span>
+    BaseMessage<span class="token punctuation">,</span> SystemMessage<span class="token punctuation">,</span> HumanMessage<span class="token punctuation">,</span> ToolMessage
+<span class="token punctuation">)</span>
+<span class="token keyword">from</span> langchain<span class="token punctuation">.</span>chat_models <span class="token keyword">import</span> init_chat_model
+<span class="token keyword">from</span> langchain<span class="token punctuation">.</span>tools <span class="token keyword">import</span> tool
+<span class="token keyword">from</span> IPython<span class="token punctuation">.</span>display <span class="token keyword">import</span> Image<span class="token punctuation">,</span> display
+<span class="token keyword">from</span> operator <span class="token keyword">import</span> add
+<span class="token keyword">from</span> dotenv <span class="token keyword">import</span> load_dotenv
+<span class="token keyword">from</span> pydantic<span class="token punctuation">.</span>dataclasses <span class="token keyword">import</span> dataclass
+<span class="token keyword">from</span> pydantic <span class="token keyword">import</span> BaseModel<span class="token punctuation">,</span> Field
+
+load_dotenv<span class="token punctuation">(</span><span class="token punctuation">)</span>
+
+<span class="token keyword">def</span> <span class="token function">display_graph</span><span class="token punctuation">(</span>graph<span class="token punctuation">,</span> xray<span class="token operator">=</span><span class="token boolean">False</span><span class="token punctuation">)</span><span class="token punctuation">:</span>
+    <span class="token triple-quoted-string string">"""显示图结构，xray=True 可展开子图内部结构"""</span>
+    display<span class="token punctuation">(</span>Image<span class="token punctuation">(</span>graph<span class="token punctuation">.</span>get_graph<span class="token punctuation">(</span>xray<span class="token operator">=</span>xray<span class="token punctuation">)</span><span class="token punctuation">.</span>draw_mermaid_png<span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">)</span>
+
+llm <span class="token operator">=</span> init_chat_model<span class="token punctuation">(</span><span class="token string">"deepseek-chat"</span><span class="token punctuation">)</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<h2 id="顺序执行（Prompt-Chaining）"><a href="#顺序执行（Prompt-Chaining）" class="headerlink" title="顺序执行（Prompt Chaining）"></a>顺序执行（Prompt Chaining）</h2><p>Prompt Chaining 是最基础的编排模式：<strong>前一个LLM的输出作为后一个LLM的输入</strong>，像流水线一样串联起来。</p>
+<p><strong>典型场景</strong>: 写作流程（大纲→初稿→润色）、翻译+校对、分步推理。</p>
+<p><strong>与直接 LLM 调用的区别</strong>: 顺序链可以在步骤之间加入<strong>验证门控（Gate）</strong>——如果某步质量不达标就退回重做，而不是一路到底。</p>
+<p>比如，一个写笑话的工作流。</p>
+<p>示意图：</p>
+<p><img src="https://wu4yong.github.io/starry-images/assets/img/llmheima/5-2/langgraph-workflow-02.webp" alt="langgraph-workflow-02.webp"></p>
+<p>代码示例：</p>
+<pre class="line-numbers language-python" data-language="python"><code class="language-python"><span class="token comment"># Prompt Chaining: 生成笑话 → 检查质量 → 润色 → 加梗</span>
+<span class="token keyword">from</span> typing <span class="token keyword">import</span> TypedDict
+<span class="token keyword">from</span> langgraph<span class="token punctuation">.</span>graph <span class="token keyword">import</span> StateGraph<span class="token punctuation">,</span> START<span class="token punctuation">,</span> END
+<span class="token keyword">from</span> pydantic <span class="token keyword">import</span> BaseModel<span class="token punctuation">,</span> Field
+
+<span class="token keyword">class</span> <span class="token class-name">JokeState</span><span class="token punctuation">(</span>TypedDict<span class="token punctuation">)</span><span class="token punctuation">:</span>
+    topic<span class="token punctuation">:</span> <span class="token builtin">str</span>
+    joke<span class="token punctuation">:</span> <span class="token builtin">str</span>
+    improved_joke<span class="token punctuation">:</span> <span class="token builtin">str</span>
+    final_joke<span class="token punctuation">:</span> <span class="token builtin">str</span>
+
+<span class="token keyword">def</span> <span class="token function">generate_joke</span><span class="token punctuation">(</span>state<span class="token punctuation">:</span> JokeState<span class="token punctuation">)</span><span class="token punctuation">:</span>
+    <span class="token triple-quoted-string string">"""步骤1: 生成初稿"""</span>
+    msg <span class="token operator">=</span> llm<span class="token punctuation">.</span>invoke<span class="token punctuation">(</span><span class="token string-interpolation"><span class="token string">f"Write a short joke about </span><span class="token interpolation"><span class="token punctuation">&#123;</span>state<span class="token punctuation">[</span><span class="token string">'topic'</span><span class="token punctuation">]</span><span class="token punctuation">&#125;</span></span><span class="token string">"</span></span><span class="token punctuation">)</span>
+    <span class="token keyword">return</span> <span class="token punctuation">&#123;</span><span class="token string">"joke"</span><span class="token punctuation">:</span> msg<span class="token punctuation">.</span>content<span class="token punctuation">,</span> <span class="token string">"final_joke"</span><span class="token punctuation">:</span> msg<span class="token punctuation">.</span>content<span class="token punctuation">&#125;</span>
+
+<span class="token keyword">def</span> <span class="token function">check_punchline</span><span class="token punctuation">(</span>state<span class="token punctuation">:</span> JokeState<span class="token punctuation">)</span><span class="token punctuation">:</span>
+    <span class="token triple-quoted-string string">"""门控函数：检查笑话是否有笑点"""</span>
+    msg <span class="token operator">=</span> llm<span class="token punctuation">.</span>invoke<span class="token punctuation">(</span><span class="token string-interpolation"><span class="token string">f"Check if the joke has punchline and wordplay, return 'Pass' or 'Fail' for the joke: ```</span><span class="token interpolation"><span class="token punctuation">&#123;</span>state<span class="token punctuation">[</span><span class="token string">'joke'</span><span class="token punctuation">]</span><span class="token punctuation">&#125;</span></span><span class="token string">```"</span></span><span class="token punctuation">)</span>
+
+    result <span class="token operator">=</span> msg<span class="token punctuation">.</span>content
+    <span class="token keyword">if</span> <span class="token string">"Pass"</span> <span class="token operator">==</span> result<span class="token punctuation">:</span>
+        <span class="token keyword">print</span><span class="token punctuation">(</span><span class="token string-interpolation"><span class="token string">f"  [检查] 通过 ✓"</span></span><span class="token punctuation">)</span>
+        <span class="token keyword">return</span> <span class="token string">"Pass"</span>
+    <span class="token keyword">print</span><span class="token punctuation">(</span><span class="token string-interpolation"><span class="token string">f"  [检查] 不通过 ✗"</span></span><span class="token punctuation">)</span>
+    <span class="token keyword">return</span> <span class="token string">"Fail"</span>
+
+<span class="token keyword">def</span> <span class="token function">improve_joke</span><span class="token punctuation">(</span>state<span class="token punctuation">:</span> JokeState<span class="token punctuation">)</span><span class="token punctuation">:</span>
+    <span class="token triple-quoted-string string">"""步骤2: 改进——增加双关语"""</span>
+    <span class="token keyword">print</span><span class="token punctuation">(</span><span class="token string-interpolation"><span class="token string">f"  [润色] 添加双关语..."</span></span><span class="token punctuation">)</span>
+    msg <span class="token operator">=</span> llm<span class="token punctuation">.</span>invoke<span class="token punctuation">(</span><span class="token string-interpolation"><span class="token string">f"Make this joke funnier by adding wordplay: </span><span class="token interpolation"><span class="token punctuation">&#123;</span>state<span class="token punctuation">[</span><span class="token string">'joke'</span><span class="token punctuation">]</span><span class="token punctuation">&#125;</span></span><span class="token string">"</span></span><span class="token punctuation">)</span>
+    <span class="token keyword">return</span> <span class="token punctuation">&#123;</span><span class="token string">"improved_joke"</span><span class="token punctuation">:</span> msg<span class="token punctuation">.</span>content<span class="token punctuation">&#125;</span>
+
+<span class="token keyword">def</span> <span class="token function">polish_joke</span><span class="token punctuation">(</span>state<span class="token punctuation">:</span> JokeState<span class="token punctuation">)</span><span class="token punctuation">:</span>
+    <span class="token triple-quoted-string string">"""步骤3: 润色——加一个反转"""</span>
+    <span class="token keyword">print</span><span class="token punctuation">(</span><span class="token string-interpolation"><span class="token string">f"  [润色] 添加反转..."</span></span><span class="token punctuation">)</span>
+    msg <span class="token operator">=</span> llm<span class="token punctuation">.</span>invoke<span class="token punctuation">(</span><span class="token string-interpolation"><span class="token string">f"Add a surprising twist to this joke: </span><span class="token interpolation"><span class="token punctuation">&#123;</span>state<span class="token punctuation">[</span><span class="token string">'improved_joke'</span><span class="token punctuation">]</span><span class="token punctuation">&#125;</span></span><span class="token string">"</span></span><span class="token punctuation">)</span>
+    <span class="token keyword">return</span> <span class="token punctuation">&#123;</span><span class="token string">"final_joke"</span><span class="token punctuation">:</span> msg<span class="token punctuation">.</span>content<span class="token punctuation">&#125;</span>
+
+<span class="token comment"># 构建图</span>
+chaining_graph <span class="token operator">=</span> <span class="token punctuation">(</span>
+    StateGraph<span class="token punctuation">(</span>JokeState<span class="token punctuation">)</span>
+    <span class="token punctuation">.</span>add_node<span class="token punctuation">(</span><span class="token string">"generate_joke"</span><span class="token punctuation">,</span> generate_joke<span class="token punctuation">)</span>
+    <span class="token punctuation">.</span>add_node<span class="token punctuation">(</span><span class="token string">"improve_joke"</span><span class="token punctuation">,</span> improve_joke<span class="token punctuation">)</span>
+    <span class="token punctuation">.</span>add_node<span class="token punctuation">(</span><span class="token string">"polish_joke"</span><span class="token punctuation">,</span> polish_joke<span class="token punctuation">)</span>
+    <span class="token punctuation">.</span>add_edge<span class="token punctuation">(</span>START<span class="token punctuation">,</span> <span class="token string">"generate_joke"</span><span class="token punctuation">)</span>
+    <span class="token comment"># 条件边：通过则直接结束，不通过则进入改进流程</span>
+    <span class="token punctuation">.</span>add_conditional_edges<span class="token punctuation">(</span>
+        <span class="token string">"generate_joke"</span><span class="token punctuation">,</span>
+        check_punchline<span class="token punctuation">,</span>
+        <span class="token punctuation">&#123;</span><span class="token string">"Pass"</span><span class="token punctuation">:</span> END<span class="token punctuation">,</span> <span class="token string">"Fail"</span><span class="token punctuation">:</span> <span class="token string">"improve_joke"</span><span class="token punctuation">&#125;</span>
+    <span class="token punctuation">)</span>
+    <span class="token punctuation">.</span>add_edge<span class="token punctuation">(</span><span class="token string">"improve_joke"</span><span class="token punctuation">,</span> <span class="token string">"polish_joke"</span><span class="token punctuation">)</span>
+    <span class="token punctuation">.</span>add_edge<span class="token punctuation">(</span><span class="token string">"polish_joke"</span><span class="token punctuation">,</span> END<span class="token punctuation">)</span>
+    <span class="token punctuation">.</span><span class="token builtin">compile</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+<span class="token punctuation">)</span>
+
+<span class="token keyword">print</span><span class="token punctuation">(</span><span class="token string">"=== 测试1: 话题「大树」 ===\n"</span><span class="token punctuation">)</span>
+r <span class="token operator">=</span> chaining_graph<span class="token punctuation">.</span>invoke<span class="token punctuation">(</span><span class="token punctuation">&#123;</span><span class="token string">"topic"</span><span class="token punctuation">:</span> <span class="token string">"大树"</span><span class="token punctuation">,</span> <span class="token string">"joke"</span><span class="token punctuation">:</span> <span class="token string">""</span><span class="token punctuation">,</span> <span class="token string">"improved_joke"</span><span class="token punctuation">:</span> <span class="token string">""</span><span class="token punctuation">,</span> <span class="token string">"final_joke"</span><span class="token punctuation">:</span> <span class="token string">""</span><span class="token punctuation">&#125;</span><span class="token punctuation">)</span>
+<span class="token keyword">print</span><span class="token punctuation">(</span><span class="token string-interpolation"><span class="token string">f"\n最终笑话:\n</span><span class="token interpolation"><span class="token punctuation">&#123;</span>r<span class="token punctuation">[</span><span class="token string">'final_joke'</span><span class="token punctuation">]</span><span class="token punctuation">&#125;</span></span><span class="token string">"</span></span><span class="token punctuation">)</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<p>效果：</p>
+<pre class="line-numbers language-python" data-language="python"><code class="language-python"><span class="token operator">==</span><span class="token operator">=</span> 测试<span class="token number">1</span><span class="token punctuation">:</span> 话题「大树」 <span class="token operator">==</span><span class="token operator">=</span>
+
+  <span class="token punctuation">[</span>检查<span class="token punctuation">]</span> 不通过 ✗
+  <span class="token punctuation">[</span>润色<span class="token punctuation">]</span> 添加双关语<span class="token punctuation">.</span><span class="token punctuation">.</span><span class="token punctuation">.</span>
+  <span class="token punctuation">[</span>润色<span class="token punctuation">]</span> 添加反转<span class="token punctuation">.</span><span class="token punctuation">.</span><span class="token punctuation">.</span>
+
+最终笑话<span class="token punctuation">:</span>
+小树问大树：“你怎么越长越粗？根都扎这么深了。”  
+大树低头看了看自己，又叹了口气：“因为……我其实是一棵萝卜，一直以为自己是树，怕露馅，才拼命往下长。”<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<h2 id="并行执行（Parallelization）"><a href="#并行执行（Parallelization）" class="headerlink" title="并行执行（Parallelization）"></a>并行执行（Parallelization）</h2><p>通过并行化，可以让多个LLM同时处理一个任务，有两种不同的实现方式和作用：</p>
+<ul>
+<li>提高效率: 将任务拆分为子任务，让多个LLM同时运行独立的子任务来完成，再汇总结果</li>
+<li>提高准确度: 多个LLM运行相同的任务产生不同的输出，再合并优化结果</li>
+</ul>
+<p><img src="https://wu4yong.github.io/starry-images/assets/img/llmheima/5-2/langgraph-workflow-03.webp" alt="langgraph-workflow-03.webp"></p>
+<p>比如，我需要同时基于某个话题写三种题材：</p>
+<ul>
+<li>笑话</li>
+<li>故事</li>
+<li>诗歌</li>
+</ul>
+<p>并行执行的话效率会更高，示例代码：</p>
+<pre class="line-numbers language-python" data-language="python"><code class="language-python"><span class="token comment"># Graph state</span>
+<span class="token keyword">class</span> <span class="token class-name">State</span><span class="token punctuation">(</span>TypedDict<span class="token punctuation">)</span><span class="token punctuation">:</span>
+    topic<span class="token punctuation">:</span> <span class="token builtin">str</span>
+    joke<span class="token punctuation">:</span> <span class="token builtin">str</span>
+    story<span class="token punctuation">:</span> <span class="token builtin">str</span>
+    poem<span class="token punctuation">:</span> <span class="token builtin">str</span>
+    combined_output<span class="token punctuation">:</span> <span class="token builtin">str</span>
+
+<span class="token comment"># Nodes</span>
+<span class="token keyword">def</span> <span class="token function">joke_node</span><span class="token punctuation">(</span>state<span class="token punctuation">:</span> State<span class="token punctuation">)</span><span class="token punctuation">:</span>
+    <span class="token triple-quoted-string string">"""First LLM call to generate initial joke"""</span>
+
+    msg <span class="token operator">=</span> llm<span class="token punctuation">.</span>invoke<span class="token punctuation">(</span><span class="token string-interpolation"><span class="token string">f"Write a joke about </span><span class="token interpolation"><span class="token punctuation">&#123;</span>state<span class="token punctuation">[</span><span class="token string">'topic'</span><span class="token punctuation">]</span><span class="token punctuation">&#125;</span></span><span class="token string">"</span></span><span class="token punctuation">)</span>
+    <span class="token keyword">return</span> <span class="token punctuation">&#123;</span><span class="token string">"joke"</span><span class="token punctuation">:</span> msg<span class="token punctuation">.</span>content<span class="token punctuation">&#125;</span>
+
+<span class="token keyword">def</span> <span class="token function">story_node</span><span class="token punctuation">(</span>state<span class="token punctuation">:</span> State<span class="token punctuation">)</span><span class="token punctuation">:</span>
+    <span class="token triple-quoted-string string">"""Second LLM call to generate story"""</span>
+
+    msg <span class="token operator">=</span> llm<span class="token punctuation">.</span>invoke<span class="token punctuation">(</span><span class="token string-interpolation"><span class="token string">f"Write a short story about </span><span class="token interpolation"><span class="token punctuation">&#123;</span>state<span class="token punctuation">[</span><span class="token string">'topic'</span><span class="token punctuation">]</span><span class="token punctuation">&#125;</span></span><span class="token string">"</span></span><span class="token punctuation">)</span>
+    <span class="token keyword">return</span> <span class="token punctuation">&#123;</span><span class="token string">"story"</span><span class="token punctuation">:</span> msg<span class="token punctuation">.</span>content<span class="token punctuation">&#125;</span>
+
+<span class="token keyword">def</span> <span class="token function">poem_node</span><span class="token punctuation">(</span>state<span class="token punctuation">:</span> State<span class="token punctuation">)</span><span class="token punctuation">:</span>
+    <span class="token triple-quoted-string string">"""Third LLM call to generate poem"""</span>
+
+    msg <span class="token operator">=</span> llm<span class="token punctuation">.</span>invoke<span class="token punctuation">(</span><span class="token string-interpolation"><span class="token string">f"Write a short poem about </span><span class="token interpolation"><span class="token punctuation">&#123;</span>state<span class="token punctuation">[</span><span class="token string">'topic'</span><span class="token punctuation">]</span><span class="token punctuation">&#125;</span></span><span class="token string">"</span></span><span class="token punctuation">)</span>
+    <span class="token keyword">return</span> <span class="token punctuation">&#123;</span><span class="token string">"poem"</span><span class="token punctuation">:</span> msg<span class="token punctuation">.</span>content<span class="token punctuation">&#125;</span>
+
+<span class="token keyword">def</span> <span class="token function">aggregator</span><span class="token punctuation">(</span>state<span class="token punctuation">:</span> State<span class="token punctuation">)</span><span class="token punctuation">:</span>
+    <span class="token triple-quoted-string string">"""Combine the joke, story and poem into a single output"""</span>
+
+    combined <span class="token operator">=</span> <span class="token string-interpolation"><span class="token string">f"Here's a story, joke, and poem about </span><span class="token interpolation"><span class="token punctuation">&#123;</span>state<span class="token punctuation">[</span><span class="token string">'topic'</span><span class="token punctuation">]</span><span class="token punctuation">&#125;</span></span><span class="token string">!\n\n"</span></span>
+    combined <span class="token operator">+=</span> <span class="token string-interpolation"><span class="token string">f"STORY:\n</span><span class="token interpolation"><span class="token punctuation">&#123;</span>state<span class="token punctuation">[</span><span class="token string">'story'</span><span class="token punctuation">]</span><span class="token punctuation">&#125;</span></span><span class="token string">\n\n"</span></span>
+    combined <span class="token operator">+=</span> <span class="token string-interpolation"><span class="token string">f"JOKE:\n</span><span class="token interpolation"><span class="token punctuation">&#123;</span>state<span class="token punctuation">[</span><span class="token string">'joke'</span><span class="token punctuation">]</span><span class="token punctuation">&#125;</span></span><span class="token string">\n\n"</span></span>
+    combined <span class="token operator">+=</span> <span class="token string-interpolation"><span class="token string">f"POEM:\n</span><span class="token interpolation"><span class="token punctuation">&#123;</span>state<span class="token punctuation">[</span><span class="token string">'poem'</span><span class="token punctuation">]</span><span class="token punctuation">&#125;</span></span><span class="token string">"</span></span>
+    <span class="token keyword">return</span> <span class="token punctuation">&#123;</span><span class="token string">"combined_output"</span><span class="token punctuation">:</span> combined<span class="token punctuation">&#125;</span>
+
+<span class="token comment"># Build workflow</span>
+parallel_builder <span class="token operator">=</span> StateGraph<span class="token punctuation">(</span>State<span class="token punctuation">)</span>
+
+<span class="token comment"># Add nodes</span>
+parallel_builder<span class="token punctuation">.</span>add_node<span class="token punctuation">(</span><span class="token string">"joke"</span><span class="token punctuation">,</span> joke_node<span class="token punctuation">)</span>
+parallel_builder<span class="token punctuation">.</span>add_node<span class="token punctuation">(</span><span class="token string">"story"</span><span class="token punctuation">,</span> story_node<span class="token punctuation">)</span>
+parallel_builder<span class="token punctuation">.</span>add_node<span class="token punctuation">(</span><span class="token string">"poem"</span><span class="token punctuation">,</span> poem_node<span class="token punctuation">)</span>
+parallel_builder<span class="token punctuation">.</span>add_node<span class="token punctuation">(</span><span class="token string">"aggregator"</span><span class="token punctuation">,</span> aggregator<span class="token punctuation">)</span>
+
+<span class="token comment"># Add edges to connect nodes</span>
+parallel_builder<span class="token punctuation">.</span>add_edge<span class="token punctuation">(</span>START<span class="token punctuation">,</span> <span class="token string">"joke"</span><span class="token punctuation">)</span>
+parallel_builder<span class="token punctuation">.</span>add_edge<span class="token punctuation">(</span>START<span class="token punctuation">,</span> <span class="token string">"story"</span><span class="token punctuation">)</span>
+parallel_builder<span class="token punctuation">.</span>add_edge<span class="token punctuation">(</span>START<span class="token punctuation">,</span> <span class="token string">"poem"</span><span class="token punctuation">)</span>
+parallel_builder<span class="token punctuation">.</span>add_edge<span class="token punctuation">(</span><span class="token string">"joke"</span><span class="token punctuation">,</span> <span class="token string">"aggregator"</span><span class="token punctuation">)</span>
+parallel_builder<span class="token punctuation">.</span>add_edge<span class="token punctuation">(</span><span class="token string">"story"</span><span class="token punctuation">,</span> <span class="token string">"aggregator"</span><span class="token punctuation">)</span>
+parallel_builder<span class="token punctuation">.</span>add_edge<span class="token punctuation">(</span><span class="token string">"poem"</span><span class="token punctuation">,</span> <span class="token string">"aggregator"</span><span class="token punctuation">)</span>
+parallel_builder<span class="token punctuation">.</span>add_edge<span class="token punctuation">(</span><span class="token string">"aggregator"</span><span class="token punctuation">,</span> END<span class="token punctuation">)</span>
+parallel_workflow <span class="token operator">=</span> parallel_builder<span class="token punctuation">.</span><span class="token builtin">compile</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+
+<span class="token comment"># Show workflow</span>
+display_graph<span class="token punctuation">(</span>parallel_workflow<span class="token punctuation">)</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<p>结构图：</p>
+<p><img src="https://wu4yong.github.io/starry-images/assets/img/llmheima/5-2/langgraph-workflow-04.webp" alt="langgraph-workflow-04.webp"></p>
+<p>测试：</p>
+<pre class="line-numbers language-python" data-language="python"><code class="language-python"><span class="token comment"># Invoke</span>
+state <span class="token operator">=</span> parallel_workflow<span class="token punctuation">.</span>invoke<span class="token punctuation">(</span><span class="token punctuation">&#123;</span><span class="token string">"topic"</span><span class="token punctuation">:</span> <span class="token string">"程序员"</span><span class="token punctuation">&#125;</span><span class="token punctuation">)</span>
+<span class="token keyword">print</span><span class="token punctuation">(</span>state<span class="token punctuation">[</span><span class="token string">"combined_output"</span><span class="token punctuation">]</span><span class="token punctuation">)</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span></span></code></pre>
+
+<p>结果：</p>
+<pre class="line-numbers language-sql" data-language="sql"><code class="language-sql">Here's a story<span class="token punctuation">,</span> joke<span class="token punctuation">,</span> <span class="token operator">and</span> poem about 程序员<span class="token operator">!</span>
+
+STORY:
+三小时前煮的最后一杯咖啡早已凉透，陈未却浑然不觉。显示器在昏暗的房间里亮着，冷白的光映在他那张两天没见太阳的脸上。
+
+“再修一个就好。”他喃喃自语，指尖划过无尽头的Python代码。凌晨三点，一个老旧的支付模块抛出了空指针异常，生产服务器正在尖啸。
+
+手机震动。又是经理。他没理会。
+
+代码沉默地回望着他。几十万行——有些出自早已离职的同事，有些来自初出茅庐的实习生，还有一些是年轻时的自己写的，那时的他认为写注释是弱者的行为。
+
+他找到了。第<span class="token number">3847</span>行。一个忘记写的<span class="token identifier"><span class="token punctuation">`</span>elif<span class="token punctuation">`</span></span>子句，永远没有返回值。
+
+“漂亮。”他低声说，手指在键盘上飞快敲击。打补丁、提交、推送。Slack上瞬间冒出一片绿色对勾。错误停止了。
+
+陈未靠向椅背，廉价办公椅发出吱呀的呻吟。窗外，天幕从漆黑褪成灰白。鸟儿开始啁啾。又是新的一天。这样的场景他经历过无数次——在所有人沉睡时，一个分号一个分号地拯救世界。
+
+他想起了女友。她一个月前离开了。“你嫁给你的代码了。”她说。他当时反驳过，可现在，在空荡荡的办公室里，在死寂之中，他无言以对。
+
+手机又震了。这次不是经理。是母亲。
+
+“吃了吗？”消息写着。发送时间——凌晨两点。
+
+他瞥了一眼桌上的方便面。吃了一碗，还有两碗没动。他打字回复：“吃了，妈。马上睡。”
+
+他并非每句话都在说谎。
+
+晨光渐渐漫进办公室，陈未又一次打开了IDE。这次不是为了修bug。他打开了一个个人项目——一个他断断续续写了好几年的小诗生成器。没有用户，没有截止日期，没有经理。只有文字和代码，彼此共舞。
+
+他写下一行注释：
+
+<span class="token identifier"><span class="token punctuation">`</span># 给那些忘了抬头看屏幕之外的日子。<span class="token punctuation">`</span></span>
+
+然后合上电脑，回了家。
+
+JOKE:
+一个程序员去面试，面试官问：“你最大的缺点是什么？”  
+程序员答：“我有时候会太沉迷于代码，连女朋友都忘了。”  
+面试官点头：“这倒是个诚实的回答。那你的优点呢？”  
+程序员答：“我会写完美无缺的代码，没有bug。”  
+面试官皱眉：“这不可能，代码总会有bug。”  
+程序员淡定地说：“所以我的缺点是撒谎。”
+
+POEM:
+键盘敲落满天星，代码织成不夜城。  
+逻辑为骨梦为魂，一屏光耀万重门。  
+纵有千行皆过客，指针轻点破迷阵。  
+夜深人静谁独坐？明月清风是故人。<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<h2 id="路由（Routing"><a href="#路由（Routing" class="headerlink" title="路由（Routing)"></a>路由（Routing)</h2><p>Routing工作流处理用户输入，然后将它们引导到上下文相关的任务Node。这允许您为复杂的任务定义专门的流。例如：</p>
+<ul>
+<li>智能电商客服，首先识别问题的类型，然后将请求路由到 售前咨询、退款、退货等对应的Node。</li>
+<li>知识问答机器人，首先识别问题知识领域，然后将请求路由到不同领域对应的专业Node上。</li>
+</ul>
+<p>所以路由本质上也是条件分支，让Graph根据问题动态选择下一节点。这是Agent智能决策的核心机制。</p>
+<p><img src="https://wu4yong.github.io/starry-images/assets/img/llmheima/5-2/langgraph-workflow-05.webp" alt="langgraph-workflow-05.webp"></p>
+<p>例如，我们写三个<strong>工作节点</strong>：</p>
+<ul>
+<li>天气节点：可以查询天气</li>
+<li>新闻节点：可以查询新闻</li>
+<li>翻译节点：可以翻译</li>
+</ul>
+<p><img src="https://wu4yong.github.io/starry-images/assets/img/llmheima/5-2/langgraph-workflow-06.webp" alt="langgraph-workflow-06.webp"></p>
+<p>然后写一个<strong>意图识别节点</strong>，根据用户意图路由到对应的工作节点，执行对应任务：</p>
+<pre class="line-numbers language-python" data-language="python"><code class="language-python"><span class="token keyword">from</span> typing <span class="token keyword">import</span> Literal<span class="token punctuation">,</span> TypedDict
+
+<span class="token keyword">from</span> langchain<span class="token punctuation">.</span>chat_models <span class="token keyword">import</span> init_chat_model
+<span class="token keyword">from</span> langchain_core<span class="token punctuation">.</span>messages <span class="token keyword">import</span> HumanMessage<span class="token punctuation">,</span> AIMessage
+<span class="token keyword">from</span> langgraph<span class="token punctuation">.</span>graph <span class="token keyword">import</span> StateGraph<span class="token punctuation">,</span> START<span class="token punctuation">,</span> END<span class="token punctuation">,</span> MessagesState
+<span class="token keyword">from</span> pydantic <span class="token keyword">import</span> BaseModel<span class="token punctuation">,</span> Field
+
+<span class="token comment"># ===============Step 1: 初始化chat模型===============</span>
+llm <span class="token operator">=</span> init_chat_model<span class="token punctuation">(</span>
+    <span class="token string">'deepseek-flash'</span><span class="token punctuation">,</span>
+    extra_body<span class="token operator">=</span><span class="token punctuation">&#123;</span><span class="token string">'thinking'</span><span class="token punctuation">:</span> <span class="token punctuation">&#123;</span><span class="token string">'type'</span><span class="token punctuation">:</span> <span class="token string">'disabled'</span><span class="token punctuation">&#125;</span><span class="token punctuation">&#125;</span>
+<span class="token punctuation">)</span>
+
+<span class="token comment"># ===============Step 2: 定义State，记录用户输入、最终结果===============</span>
+<span class="token keyword">class</span> <span class="token class-name">IntentState</span><span class="token punctuation">(</span>MessagesState<span class="token punctuation">)</span><span class="token punctuation">:</span>
+    intent<span class="token punctuation">:</span> <span class="token builtin">str</span>
+
+<span class="token comment"># ===============Step 4: 定义Node===============</span>
+<span class="token keyword">def</span> <span class="token function">intent_node</span><span class="token punctuation">(</span>state<span class="token punctuation">:</span> IntentState<span class="token punctuation">)</span><span class="token punctuation">:</span>
+    intent <span class="token operator">=</span> llm<span class="token punctuation">.</span>invoke<span class="token punctuation">(</span><span class="token string-interpolation"><span class="token string">f'''
+    根据用户的请求判断用户意图，可选意图：weather、translate或chat。
+    user_query: </span><span class="token interpolation"><span class="token punctuation">&#123;</span>state<span class="token punctuation">[</span><span class="token string">'messages'</span><span class="token punctuation">]</span><span class="token punctuation">[</span><span class="token operator">-</span><span class="token number">1</span><span class="token punctuation">]</span><span class="token punctuation">.</span>content<span class="token punctuation">&#125;</span></span><span class="token string">
+    '''</span></span><span class="token punctuation">)</span>
+    <span class="token keyword">return</span> <span class="token punctuation">&#123;</span><span class="token string">'intent'</span><span class="token punctuation">:</span> intent<span class="token punctuation">.</span>text<span class="token punctuation">&#125;</span>
+
+<span class="token keyword">def</span> <span class="token function">weather_node</span><span class="token punctuation">(</span>state<span class="token punctuation">:</span> IntentState<span class="token punctuation">)</span><span class="token punctuation">:</span>
+    <span class="token keyword">return</span> <span class="token punctuation">&#123;</span><span class="token string">'messages'</span><span class="token punctuation">:</span> <span class="token punctuation">[</span>AIMessage<span class="token punctuation">(</span>content<span class="token operator">=</span><span class="token string">'晴 25度'</span><span class="token punctuation">)</span><span class="token punctuation">]</span><span class="token punctuation">&#125;</span>
+
+<span class="token keyword">def</span> <span class="token function">translate_node</span><span class="token punctuation">(</span>state<span class="token punctuation">:</span> IntentState<span class="token punctuation">)</span><span class="token punctuation">:</span>
+    result <span class="token operator">=</span> llm<span class="token punctuation">.</span>invoke<span class="token punctuation">(</span><span class="token string-interpolation"><span class="token string">f'''
+    按照用户要求翻译，只输出翻译结果，不要任何解释。
+    user_query:</span><span class="token interpolation"><span class="token punctuation">&#123;</span>state<span class="token punctuation">[</span><span class="token string">'messages'</span><span class="token punctuation">]</span><span class="token punctuation">[</span><span class="token operator">-</span><span class="token number">1</span><span class="token punctuation">]</span><span class="token punctuation">.</span>content<span class="token punctuation">&#125;</span></span><span class="token string">
+    '''</span></span><span class="token punctuation">)</span>
+    <span class="token keyword">return</span> <span class="token punctuation">&#123;</span><span class="token string">'messages'</span><span class="token punctuation">:</span> <span class="token punctuation">[</span>result<span class="token punctuation">]</span><span class="token punctuation">&#125;</span>
+
+<span class="token keyword">def</span> <span class="token function">chat_node</span><span class="token punctuation">(</span>state<span class="token punctuation">:</span> IntentState<span class="token punctuation">)</span><span class="token punctuation">:</span>
+    result <span class="token operator">=</span> llm<span class="token punctuation">.</span>invoke<span class="token punctuation">(</span>state<span class="token punctuation">[</span><span class="token string">'messages'</span><span class="token punctuation">]</span><span class="token punctuation">)</span>
+    <span class="token keyword">return</span> <span class="token punctuation">&#123;</span><span class="token string">'messages'</span><span class="token punctuation">:</span> <span class="token punctuation">[</span>result<span class="token punctuation">]</span><span class="token punctuation">&#125;</span>
+
+<span class="token keyword">def</span> <span class="token function">intent_router</span><span class="token punctuation">(</span>state<span class="token punctuation">:</span> IntentState<span class="token punctuation">)</span> <span class="token operator">-</span><span class="token operator">></span> Literal<span class="token punctuation">[</span><span class="token string">'weather'</span><span class="token punctuation">,</span> <span class="token string">'translate'</span><span class="token punctuation">,</span> <span class="token string">'chat'</span><span class="token punctuation">]</span><span class="token punctuation">:</span>
+    <span class="token triple-quoted-string string">'''根据意图路由到不同处理器'''</span>
+    <span class="token keyword">return</span> state<span class="token punctuation">[</span><span class="token string">'intent'</span><span class="token punctuation">]</span>
+
+<span class="token comment"># ===============Step 5: 创建Graph===============</span>
+builder <span class="token operator">=</span> StateGraph<span class="token punctuation">(</span>IntentState<span class="token punctuation">)</span>
+builder<span class="token punctuation">.</span>add_node<span class="token punctuation">(</span><span class="token string">'intent'</span><span class="token punctuation">,</span> intent_node<span class="token punctuation">)</span>
+builder<span class="token punctuation">.</span>add_node<span class="token punctuation">(</span><span class="token string">'weather'</span><span class="token punctuation">,</span> weather_node<span class="token punctuation">)</span>
+builder<span class="token punctuation">.</span>add_node<span class="token punctuation">(</span><span class="token string">'chat'</span><span class="token punctuation">,</span> chat_node<span class="token punctuation">)</span>
+builder<span class="token punctuation">.</span>add_node<span class="token punctuation">(</span><span class="token string">'translate'</span><span class="token punctuation">,</span> translate_node<span class="token punctuation">)</span>
+
+builder<span class="token punctuation">.</span>add_edge<span class="token punctuation">(</span>START<span class="token punctuation">,</span> <span class="token string">'intent'</span><span class="token punctuation">)</span>
+builder<span class="token punctuation">.</span>add_conditional_edges<span class="token punctuation">(</span><span class="token string">'intent'</span><span class="token punctuation">,</span> intent_router<span class="token punctuation">)</span>
+builder<span class="token punctuation">.</span>add_edge<span class="token punctuation">(</span><span class="token string">'weather'</span><span class="token punctuation">,</span> END<span class="token punctuation">)</span>
+builder<span class="token punctuation">.</span>add_edge<span class="token punctuation">(</span><span class="token string">'chat'</span><span class="token punctuation">,</span> END<span class="token punctuation">)</span>
+builder<span class="token punctuation">.</span>add_edge<span class="token punctuation">(</span><span class="token string">'translate'</span><span class="token punctuation">,</span> END<span class="token punctuation">)</span>
+
+routing_graph<span class="token operator">=</span> builder<span class="token punctuation">.</span><span class="token builtin">compile</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+
+<span class="token keyword">for</span> q <span class="token keyword">in</span> <span class="token punctuation">[</span><span class="token string">'今天北京天气如何？'</span><span class="token punctuation">,</span> <span class="token string">'倍儿爽用英文怎么说'</span><span class="token punctuation">,</span> <span class="token string">'你好'</span><span class="token punctuation">]</span><span class="token punctuation">:</span>
+    r <span class="token operator">=</span> routing_graph<span class="token punctuation">.</span>invoke<span class="token punctuation">(</span><span class="token punctuation">&#123;</span><span class="token string">'messages'</span><span class="token punctuation">:</span> <span class="token punctuation">[</span>HumanMessage<span class="token punctuation">(</span>content<span class="token operator">=</span>q<span class="token punctuation">)</span><span class="token punctuation">]</span><span class="token punctuation">&#125;</span><span class="token punctuation">)</span>
+    <span class="token keyword">print</span><span class="token punctuation">(</span><span class="token string-interpolation"><span class="token string">f"'</span><span class="token interpolation"><span class="token punctuation">&#123;</span>q<span class="token punctuation">&#125;</span></span><span class="token string">' -> intent=</span><span class="token interpolation"><span class="token punctuation">&#123;</span>r<span class="token punctuation">[</span><span class="token string">'intent'</span><span class="token punctuation">]</span><span class="token punctuation">&#125;</span></span><span class="token string"> -> </span><span class="token interpolation"><span class="token punctuation">&#123;</span>r<span class="token punctuation">[</span><span class="token string">'messages'</span><span class="token punctuation">]</span><span class="token punctuation">[</span><span class="token operator">-</span><span class="token number">1</span><span class="token punctuation">]</span><span class="token punctuation">.</span>content<span class="token punctuation">&#125;</span></span><span class="token string">"</span></span><span class="token punctuation">)</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<p>结构图：</p>
+<p><img src="https://wu4yong.github.io/starry-images/assets/img/llmheima/5-2/langgraph-workflow-07.webp" alt="langgraph-workflow-07.webp"></p>
+<p>测试：</p>
+<pre class="line-numbers language-python" data-language="python"><code class="language-python"><span class="token keyword">for</span> q <span class="token keyword">in</span> <span class="token punctuation">[</span><span class="token string">'今天北京天气如何？'</span><span class="token punctuation">,</span> <span class="token string">'倍儿爽用英文怎么说'</span><span class="token punctuation">,</span> <span class="token string">'你好'</span><span class="token punctuation">]</span><span class="token punctuation">:</span>
+    r <span class="token operator">=</span> routing_graph<span class="token punctuation">.</span>invoke<span class="token punctuation">(</span><span class="token punctuation">&#123;</span><span class="token string">'messages'</span><span class="token punctuation">:</span> <span class="token punctuation">[</span>HumanMessage<span class="token punctuation">(</span>content<span class="token operator">=</span>q<span class="token punctuation">)</span><span class="token punctuation">]</span><span class="token punctuation">&#125;</span><span class="token punctuation">)</span>
+    <span class="token keyword">print</span><span class="token punctuation">(</span><span class="token string-interpolation"><span class="token string">f"'</span><span class="token interpolation"><span class="token punctuation">&#123;</span>q<span class="token punctuation">&#125;</span></span><span class="token string">' -> intent=</span><span class="token interpolation"><span class="token punctuation">&#123;</span>r<span class="token punctuation">[</span><span class="token string">'intent'</span><span class="token punctuation">]</span><span class="token punctuation">&#125;</span></span><span class="token string"> -> </span><span class="token interpolation"><span class="token punctuation">&#123;</span>r<span class="token punctuation">[</span><span class="token string">'messages'</span><span class="token punctuation">]</span><span class="token punctuation">[</span><span class="token operator">-</span><span class="token number">1</span><span class="token punctuation">]</span><span class="token punctuation">.</span>content<span class="token punctuation">&#125;</span></span><span class="token string">"</span></span><span class="token punctuation">)</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span></span></code></pre>
+
+<p>运行结果：</p>
+<pre class="line-numbers language-python" data-language="python"><code class="language-python"><span class="token string">'今天北京天气如何？'</span> <span class="token operator">-</span><span class="token operator">></span> intent<span class="token operator">=</span>weather <span class="token operator">-</span><span class="token operator">></span> 晴 <span class="token number">25</span>度
+<span class="token string">'倍儿爽用英文怎么说'</span> <span class="token operator">-</span><span class="token operator">></span> intent<span class="token operator">=</span>translate <span class="token operator">-</span><span class="token operator">></span> <span class="token string">"Double thrill"</span> <span class="token keyword">or</span> <span class="token string">"Super enjoyable"</span>
+<span class="token string">'你好'</span> <span class="token operator">-</span><span class="token operator">></span> intent<span class="token operator">=</span>chat <span class="token operator">-</span><span class="token operator">></span> 你好！很高兴见到你！有什么可以帮你的吗？<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span></span></code></pre>
+
+<h2 id="Orchestrator-Worker-Send-API"><a href="#Orchestrator-Worker-Send-API" class="headerlink" title="Orchestrator-Worker + Send API"></a>Orchestrator-Worker + Send API</h2><p><strong>Orchestrator-Worker</strong>，顾名思义，<strong>编排器—工作者</strong>模型。分为三个步骤：</p>
+<ul>
+<li><strong>编排器（Orchestrator）</strong>：将任务分解为子任务，将子任务分配给worker</li>
+<li><strong>工作节点（Worker）</strong>：并行执行任务</li>
+<li><strong>合成器（Synthesizer）</strong>：将worker的输出汇总为最终结果</li>
+</ul>
+<p><img src="https://wu4yong.github.io/starry-images/assets/img/llmheima/5-2/langgraph-workflow-08.webp" alt="langgraph-workflow-08.webp"></p>
+<p>这听起来似乎与之前讲的并行模式很像，没错这确实也属于并行模式。但不同之处在于：</p>
+<ul>
+<li>普通并行工作流：任务是需要手动拆分的，且子任务数量是固定的</li>
+<li>Orchestrator-Worker：是用模型<strong>动态的将复杂任务拆分为多个并行子任务</strong>，子任务数量不确定</li>
+</ul>
+<h3 id="Send-API"><a href="#Send-API" class="headerlink" title="Send API"></a>Send API</h3><p>Orchestrator-Worker模式提供了更高的灵活性，通常用于无法像并行化那样预先定义子任务的场景。例如：AI编程助手、深度研究助手</p>
+<p>我们以深度研究助手（DeepResearcher）为例，它可以根据你指定的话题写出专业报告：</p>
+<ul>
+<li>首先，需要根据话题生成报告大纲，细分出多个章节，定好每个章节主题</li>
+<li>然后，把每个章节作为一个子任务，交给多个工作进程并行执行</li>
+<li>最后，汇总所有子任务生成的章节，得到完整的研究报告</li>
+</ul>
+<p>但是，这里有一个很严重的问题：</p>
+<blockquote>
+<p>子任务的数量是不确定的，因此Node没办法提前定义好，那该如何设计Graph？</p>
+</blockquote>
+<p>不用担心，LangGraph 对此提供了内置支持。通过 <strong>Send</strong> API，你可以动态创建工作节点并向它们发送特定的输入。每个工作节点都有自己的State，而且所有工作节点的输出都会被写入一个共享的State 字段中，编排器图可以访问该字段。这使得编排器能够获取所有工作节点的输出，并将其整合成最终输出。</p>
+<p>在深度研究助手案例中，我们可以遍历计划好的章节列表，并使用 Send API 将每个章节发送给对应的工作节点。</p>
+<h3 id="DeepResearcher示例"><a href="#DeepResearcher示例" class="headerlink" title="DeepResearcher示例"></a>DeepResearcher示例</h3><p>接下来就开发一个用于生成报告的深度研究助手：DeepResearcher</p>
+<h4 id="结构化输出模型"><a href="#结构化输出模型" class="headerlink" title="结构化输出模型"></a>结构化输出模型</h4><p><strong>首先</strong>，我们定义模型类，作为结构化输出的约束，让LLM按照固定格式生成拆分的章节列表：</p>
+<pre class="line-numbers language-python" data-language="python"><code class="language-python"><span class="token keyword">from</span> typing <span class="token keyword">import</span> Annotated<span class="token punctuation">,</span> List
+<span class="token keyword">import</span> operator
+
+<span class="token comment"># 用于记录子任务信息的 结构化输出模型</span>
+<span class="token keyword">class</span> <span class="token class-name">Section</span><span class="token punctuation">(</span>BaseModel<span class="token punctuation">)</span><span class="token punctuation">:</span>
+    name<span class="token punctuation">:</span> <span class="token builtin">str</span> <span class="token operator">=</span> Field<span class="token punctuation">(</span>
+        description<span class="token operator">=</span><span class="token string">"Name for this section of the report."</span><span class="token punctuation">,</span>
+    <span class="token punctuation">)</span>
+    description<span class="token punctuation">:</span> <span class="token builtin">str</span> <span class="token operator">=</span> Field<span class="token punctuation">(</span>
+        description<span class="token operator">=</span><span class="token string">"Brief overview of the main topics and concepts to be covered in this section."</span><span class="token punctuation">,</span>
+    <span class="token punctuation">)</span>
+
+<span class="token keyword">class</span> <span class="token class-name">Sections</span><span class="token punctuation">(</span>BaseModel<span class="token punctuation">)</span><span class="token punctuation">:</span>
+    sections<span class="token punctuation">:</span> List<span class="token punctuation">[</span>Section<span class="token punctuation">]</span> <span class="token operator">=</span> Field<span class="token punctuation">(</span>
+        description<span class="token operator">=</span><span class="token string">"Sections of the report."</span><span class="token punctuation">,</span>
+    <span class="token punctuation">)</span>
+
+<span class="token comment"># 将模型与structured output模型绑定，这个模型就用来拆分任务</span>
+planner <span class="token operator">=</span> llm<span class="token punctuation">.</span>with_structured_output<span class="token punctuation">(</span>Sections<span class="token punctuation">)</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<h4 id="State"><a href="#State" class="headerlink" title="State"></a>State</h4><p>接着，是State，工作过程中产生的章节信息和报告信息：</p>
+<pre class="line-numbers language-python" data-language="python"><code class="language-python"><span class="token comment"># 编排者的 State ，记录完整信息</span>
+<span class="token keyword">class</span> <span class="token class-name">State</span><span class="token punctuation">(</span>TypedDict<span class="token punctuation">)</span><span class="token punctuation">:</span>
+    topic<span class="token punctuation">:</span> <span class="token builtin">str</span>  <span class="token comment"># 报告主题</span>
+    sections<span class="token punctuation">:</span> <span class="token builtin">list</span><span class="token punctuation">[</span>Section<span class="token punctuation">]</span>  <span class="token comment"># 报告的章节列表</span>
+    completed_sections<span class="token punctuation">:</span> Annotated<span class="token punctuation">[</span>
+        <span class="token builtin">list</span><span class="token punctuation">,</span> operator<span class="token punctuation">.</span>add
+    <span class="token punctuation">]</span>  <span class="token comment"># 所有工作线程并行地把报告写入这个字段</span>
+    final_report<span class="token punctuation">:</span> <span class="token builtin">str</span>  <span class="token comment"># 最终报告</span>
+
+<span class="token comment"># Worker的State，记录自己的任务进度</span>
+<span class="token keyword">class</span> <span class="token class-name">WorkerState</span><span class="token punctuation">(</span>TypedDict<span class="token punctuation">)</span><span class="token punctuation">:</span>
+    section<span class="token punctuation">:</span> Section
+    completed_sections<span class="token punctuation">:</span> Annotated<span class="token punctuation">[</span><span class="token builtin">list</span><span class="token punctuation">,</span> operator<span class="token punctuation">.</span>add<span class="token punctuation">]</span>
+<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<h4 id="Normal-Node"><a href="#Normal-Node" class="headerlink" title="Normal Node"></a>Normal Node</h4><p>然后，是Node，包括</p>
+<ul>
+<li>编排者节点：Orchestrator</li>
+<li>工作节点：Worker</li>
+<li>合成器节点：Synthesizer</li>
+</ul>
+<pre class="line-numbers language-python" data-language="python"><code class="language-python"><span class="token comment"># 编排者节点</span>
+<span class="token keyword">def</span> <span class="token function">orchestrator</span><span class="token punctuation">(</span>state<span class="token punctuation">:</span> State<span class="token punctuation">)</span><span class="token punctuation">:</span>
+    <span class="token triple-quoted-string string">"""Orchestrator that generates a plan for the report"""</span>
+
+    <span class="token comment"># 通过SystemPrompt设定和结构化输出绑定，让LLM作为orchestrator</span>
+    report_sections <span class="token operator">=</span> planner<span class="token punctuation">.</span>invoke<span class="token punctuation">(</span>
+        <span class="token punctuation">[</span>
+            SystemMessage<span class="token punctuation">(</span>content<span class="token operator">=</span><span class="token string">"Generate a plan for the report."</span><span class="token punctuation">)</span><span class="token punctuation">,</span>
+            HumanMessage<span class="token punctuation">(</span>content<span class="token operator">=</span><span class="token string-interpolation"><span class="token string">f"Here is the report topic: </span><span class="token interpolation"><span class="token punctuation">&#123;</span>state<span class="token punctuation">[</span><span class="token string">'topic'</span><span class="token punctuation">]</span><span class="token punctuation">&#125;</span></span><span class="token string">"</span></span><span class="token punctuation">)</span><span class="token punctuation">,</span>
+        <span class="token punctuation">]</span>
+    <span class="token punctuation">)</span>
+
+    <span class="token keyword">return</span> <span class="token punctuation">&#123;</span><span class="token string">"sections"</span><span class="token punctuation">:</span> report_sections<span class="token punctuation">.</span>sections<span class="token punctuation">&#125;</span>
+
+<span class="token comment"># 工作节点，工作节点只能有1个，原因如下：</span>
+<span class="token comment">#  1.工作的代码逻辑是一样的，只是子任务不同</span>
+<span class="token comment">#  2.子任务数量不确定，无法提前给每个子任务写一个Node</span>
+<span class="token comment"># 我们会利用Send API来分发子任务给这个节点，让它产生“分身”效果，可以并行处理多个任务</span>
+<span class="token keyword">def</span> <span class="token function">worker</span><span class="token punctuation">(</span>state<span class="token punctuation">:</span> WorkerState<span class="token punctuation">)</span><span class="token punctuation">:</span>
+    <span class="token triple-quoted-string string">"""Worker writes a section of the report"""</span>
+
+    <span class="token comment"># 通过Prompt的设定，让llm根据子任务编写报告的部分章节</span>
+    section <span class="token operator">=</span> llm<span class="token punctuation">.</span>invoke<span class="token punctuation">(</span>
+        <span class="token punctuation">[</span>
+            SystemMessage<span class="token punctuation">(</span>
+                content<span class="token operator">=</span><span class="token string">"Write a report section following the provided name and description. Include no preamble for each section. Use markdown formatting."</span>
+            <span class="token punctuation">)</span><span class="token punctuation">,</span>
+            HumanMessage<span class="token punctuation">(</span>
+                content<span class="token operator">=</span><span class="token string-interpolation"><span class="token string">f"Here is the section name: </span><span class="token interpolation"><span class="token punctuation">&#123;</span>state<span class="token punctuation">[</span><span class="token string">'section'</span><span class="token punctuation">]</span><span class="token punctuation">.</span>name<span class="token punctuation">&#125;</span></span><span class="token string"> and description: </span><span class="token interpolation"><span class="token punctuation">&#123;</span>state<span class="token punctuation">[</span><span class="token string">'section'</span><span class="token punctuation">]</span><span class="token punctuation">.</span>description<span class="token punctuation">&#125;</span></span><span class="token string">"</span></span>
+            <span class="token punctuation">)</span><span class="token punctuation">,</span>
+        <span class="token punctuation">]</span>
+    <span class="token punctuation">)</span>
+
+    <span class="token comment"># Write the updated section to completed sections</span>
+    <span class="token keyword">return</span> <span class="token punctuation">&#123;</span><span class="token string">"completed_sections"</span><span class="token punctuation">:</span> <span class="token punctuation">[</span>section<span class="token punctuation">.</span>content<span class="token punctuation">]</span><span class="token punctuation">&#125;</span>
+
+<span class="token comment"># 合成器节点，用于合并最终结果</span>
+<span class="token keyword">def</span> <span class="token function">synthesizer</span><span class="token punctuation">(</span>state<span class="token punctuation">:</span> State<span class="token punctuation">)</span><span class="token punctuation">:</span>
+    <span class="token triple-quoted-string string">"""Synthesize full report from sections"""</span>
+
+    <span class="token comment"># 拿到Worker返回的结果</span>
+    completed_sections <span class="token operator">=</span> state<span class="token punctuation">[</span><span class="token string">"completed_sections"</span><span class="token punctuation">]</span>
+
+    <span class="token comment"># 将完成的部分格式化为str，用作最后部分的上下文</span>
+    completed_report_sections <span class="token operator">=</span> <span class="token string">"\n\n---\n\n"</span><span class="token punctuation">.</span>join<span class="token punctuation">(</span>completed_sections<span class="token punctuation">)</span>
+
+    <span class="token keyword">return</span> <span class="token punctuation">&#123;</span><span class="token string">"final_report"</span><span class="token punctuation">:</span> completed_report_sections<span class="token punctuation">&#125;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<h4 id="派发任务的Node"><a href="#派发任务的Node" class="headerlink" title="派发任务的Node"></a>派发任务的Node</h4><p>接下来是关键的<strong>任务派发</strong>节点，我们需要遍历由Orchestrator计划好的章节列表，并使用 Send API 将每个章节发送给对应的工作节点。</p>
+<pre class="line-numbers language-python" data-language="python"><code class="language-python"><span class="token keyword">from</span> langgraph<span class="token punctuation">.</span>types <span class="token keyword">import</span> Send
+
+<span class="token comment"># Conditional edge Node，根据编排者安排的子任务创建llm_call工作者，每个工作者编写报告的一个部分</span>
+<span class="token keyword">def</span> <span class="token function">assign_workers</span><span class="token punctuation">(</span>state<span class="token punctuation">:</span> State<span class="token punctuation">)</span><span class="token punctuation">:</span>
+    <span class="token triple-quoted-string string">"""Assign a worker to each section in the plan"""</span>
+
+    <span class="token comment"># 通过Send() API分发任务给Worker，让Worker并行写报告的不同章节</span>
+    <span class="token keyword">return</span> <span class="token punctuation">[</span>Send<span class="token punctuation">(</span><span class="token string">"worker"</span><span class="token punctuation">,</span> <span class="token punctuation">&#123;</span><span class="token string">"section"</span><span class="token punctuation">:</span> s<span class="token punctuation">&#125;</span><span class="token punctuation">)</span> <span class="token keyword">for</span> s <span class="token keyword">in</span> state<span class="token punctuation">[</span><span class="token string">"sections"</span><span class="token punctuation">]</span><span class="token punctuation">]</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<p>注意Send接收的两个参数：</p>
+<ul>
+<li><code>worker</code>：工作节点的名字</li>
+<li><code>&#123;&quot;section&quot;: s&#125;</code>: 是传入的State，这里是章节信息</li>
+</ul>
+<h4 id="创建Graph"><a href="#创建Graph" class="headerlink" title="创建Graph"></a>创建Graph</h4><p>最后，就是组织Graph了：</p>
+<pre class="line-numbers language-python" data-language="python"><code class="language-python"><span class="token comment"># Build workflow</span>
+orchestrator_worker_builder <span class="token operator">=</span> StateGraph<span class="token punctuation">(</span>State<span class="token punctuation">)</span>
+
+<span class="token comment"># Add the nodes</span>
+orchestrator_worker_builder<span class="token punctuation">.</span>add_node<span class="token punctuation">(</span><span class="token string">"orchestrator"</span><span class="token punctuation">,</span> orchestrator<span class="token punctuation">)</span>
+orchestrator_worker_builder<span class="token punctuation">.</span>add_node<span class="token punctuation">(</span><span class="token string">"worker"</span><span class="token punctuation">,</span> worker<span class="token punctuation">)</span>
+orchestrator_worker_builder<span class="token punctuation">.</span>add_node<span class="token punctuation">(</span><span class="token string">"synthesizer"</span><span class="token punctuation">,</span> synthesizer<span class="token punctuation">)</span>
+
+<span class="token comment"># Add edges to connect nodes</span>
+orchestrator_worker_builder<span class="token punctuation">.</span>add_edge<span class="token punctuation">(</span>START<span class="token punctuation">,</span> <span class="token string">"orchestrator"</span><span class="token punctuation">)</span>
+orchestrator_worker_builder<span class="token punctuation">.</span>add_conditional_edges<span class="token punctuation">(</span>
+    <span class="token string">"orchestrator"</span><span class="token punctuation">,</span> assign_workers<span class="token punctuation">,</span> <span class="token punctuation">[</span><span class="token string">"worker"</span><span class="token punctuation">]</span>
+<span class="token punctuation">)</span>
+orchestrator_worker_builder<span class="token punctuation">.</span>add_edge<span class="token punctuation">(</span><span class="token string">"worker"</span><span class="token punctuation">,</span> <span class="token string">"synthesizer"</span><span class="token punctuation">)</span>
+orchestrator_worker_builder<span class="token punctuation">.</span>add_edge<span class="token punctuation">(</span><span class="token string">"synthesizer"</span><span class="token punctuation">,</span> END<span class="token punctuation">)</span>
+
+<span class="token comment"># Compile the workflow</span>
+orchestrator_worker_graph <span class="token operator">=</span> orchestrator_worker_builder<span class="token punctuation">.</span><span class="token builtin">compile</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+
+<span class="token comment"># Show the workflow</span>
+display_graph<span class="token punctuation">(</span>orchestrator_worker_graph<span class="token punctuation">)</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<p>结构图：</p>
+<p><img src="https://wu4yong.github.io/starry-images/assets/img/llmheima/5-2/langgraph-workflow-09.webp" alt="langgraph-workflow-09.webp"></p>
+<p>这个结构图看起来很奇怪，只有一个worker，但其实worker的数量是动态的，由报告规划的章节数量决定。</p>
+<h4 id="测试"><a href="#测试" class="headerlink" title="测试"></a>测试</h4><pre class="line-numbers language-python" data-language="python"><code class="language-python"><span class="token comment"># Invoke</span>
+state <span class="token operator">=</span> orchestrator_worker_graph<span class="token punctuation">.</span>invoke<span class="token punctuation">(</span><span class="token punctuation">&#123;</span><span class="token string">"topic"</span><span class="token punctuation">:</span> <span class="token string">"创建一份关于LLM scaling laws的报告"</span><span class="token punctuation">&#125;</span><span class="token punctuation">)</span>
+
+<span class="token keyword">from</span> IPython<span class="token punctuation">.</span>display <span class="token keyword">import</span> Markdown
+Markdown<span class="token punctuation">(</span>state<span class="token punctuation">[</span><span class="token string">"final_report"</span><span class="token punctuation">]</span><span class="token punctuation">)</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<p>最后的结果：</p>
+<pre class="line-numbers language-markdown" data-language="markdown"><code class="language-markdown"><span class="token title important"><span class="token punctuation">#</span> 引言</span>
+在人工智能的快速发展浪潮中，大型语言模型（LLM）已成为最具变革性的技术之一。从早期的统计语言模型到基于深度神经网络的预训练模型，LLM通过在海量文本数据上的自监督学习，掌握了丰富的语言知识和推理能力。支撑这一进步的核心原则之一便是缩放定律（Scaling Laws）。该定律揭示了模型性能与模型规模（参数数量）、数据规模（训练令牌数）以及计算资源之间的幂律关系，表明在合理范围内，增加模型大小和数据量能够带来可预见的性能提升。
+
+理解缩放定律对于开发和优化LLM至关重要。首先，它为资源分配提供了理论指导——研究者可以根据计算预算预测模型的最佳规模与训练数据量，避免资源浪费。其次，缩放定律揭示了模型能力的涌现现象，解释为何某些能力（如复杂推理）仅在模型达到一定阈值后才出现。最后，它为评估模型发展趋势提供了基准，帮助领域在“越大越好”与效率约束之间找到平衡。
+
+<span class="token title important">本报告旨在系统性地阐述LLM缩放定律的理论基础、实证发现及应用前景。结构如下：第二章将回顾缩放定律的核心概念与关键公式；第三章分析其背后的机制，包括数据、模型和计算三个维度；第四章探讨缩放定律在实践中的影响，如模型设计、训练策略和性能预测；第五章总结当前挑战和未来方向。通过本报告，读者将深入理解缩放定律如何塑造现代LLM的开发范式。
+<span class="token punctuation">---</span></span>
+
+<span class="token title important"><span class="token punctuation">#</span> 缩放定律的基本概念</span>
+
+<span class="token title important"><span class="token punctuation">##</span> 核心思想</span>
+缩放定律（Scaling Laws）揭示了深度学习模型性能与三个关键资源维度之间的幂律关系：模型性能随模型参数数量、训练数据量和计算资源的增加而系统性地提升。这一规律最早由OpenAI等研究机构在2020年左右通过大规模实验验证，其核心发现是：在合理范围内，增加这些资源能可预测地降低模型损失（loss），且三者之间遵循特定的权衡关系。缩放定律为模型设计和资源分配提供了理论基础，使得研究者能够在不进行完整训练的情况下预测模型性能。
+
+<span class="token title important"><span class="token punctuation">##</span> 三种主要缩放维度</span>
+<span class="token list punctuation">1.</span> 模型大小（参数数量）
+模型大小指神经网络中可训练参数的总数（通常以亿或十亿计）。实验表明，当训练数据量和计算资源固定时，模型性能（以交叉熵损失衡量）与参数数量呈幂律衰减关系——参数越多，损失越低，但边际收益递减。例如，在固定数据量下，过度增加参数会导致过拟合，因此参数数量需与其他维度协同增长。
+
+<span class="token list punctuation">2.</span> 数据量（训练数据规模）
+数据量指训练过程中使用的独立样本总数（如Token或图像数量）。缩放定律显示，模型性能与数据量也呈幂律关系：数据越多，模型泛化能力越强。关键发现是，同时等比例增大模型大小和数据量（即保持参数与数据比例恒定）时，损失下降最为高效。例如，对于语言模型，常用规则是“每增加1倍参数，应增加约1.8倍训练数据”以维持最优性能。
+
+<span class="token list punctuation">3.</span> 计算量（计算资源预算）
+计算量通常以浮点运算次数（FLOPs）衡量，表示训练过程中消耗的总计算资源。缩放定律揭示，最优性能提升路径是同时增加模型大小、数据量和计算量，且三者之间存在近似线性关系：总计算预算C、模型参数N、训练数据D满足C ≈ 6ND（对于标准Transformer）。在此约束下，给定固定计算预算，存在最佳参数-数据分配比例，使得损失最小化。
+
+<span class="token title important"><span class="token punctuation">##</span> 关键启示</span>
+缩放定律的普适性已被多个模态（语言、视觉、多模态）验证，其核心工程意义在于：性能提升主要依赖扩展资源总量，而非单一维度。例如，若计算资源翻倍，最优策略是将模型大小和数据量均增加约1.26倍（而非仅增加某一项）。这一规律驱动了当前大模型领域“越大越好”的实践趋势，但也揭示了单纯扩大规模的物理极限——当三个维度均达到当前数据或计算瓶颈时，需依赖算法改进来突破现有缩放边界。
+
+<span class="token hr punctuation">---</span>
+
+<span class="token title important"><span class="token punctuation">#</span> OpenAI的Scaling Laws研究</span>
+2020年，OpenAI发表了具有里程碑意义的论文《Scaling Laws for Neural Language Models》，系统性地揭示了神经语言模型性能与模型规模、数据量及计算资源之间的幂律关系。该研究基于大量实验，通过控制变量法训练不同规模的自回归语言模型，得出了以下几点关键发现：
+
+<span class="token list punctuation">-</span> 模型性能与模型大小呈幂律关系：在固定数据量和计算量下，模型性能（以交叉熵损失衡量）随着参数量（从小规模到数十亿参数）的增加而持续提升，且改进幅度遵循幂律衰减，即性能提升不会因模型增大而迅速饱和。
+<span class="token list punctuation">-</span> 性能与数据量呈幂律关系：在固定模型大小和计算资源下，增加训练数据量同样能带来性能的幂律提升。这意味着模型对更多数据的有效利用存在上限，但提升趋势稳定，与模型大小独立。
+<span class="token list punctuation">-</span> 性能与计算量呈幂律关系：模型性能与用于训练的总计算量（以FLOPs计）也遵循幂律分布。计算量的增加（通过扩大模型大小或数据量）会带来性能的稳定改进，但存在最优分配策略。
+<span class="token list punctuation">-</span> 计算最优分配原则：研究发现，在有限计算预算下，模型大小和数据量应以特定比例同步扩展才能最大化性能。这一比例表明，传统上倾向于仅扩大模型大小而忽视数据量缩放的做法，在计算效率上是次优的。
+<span class="token list punctuation">-</span> 过参数化现象：即使模型参数远超数据量，继续扩大模型仍能提升性能（尽管边际效应递减），这与经典统计学习理论中的“欠拟合”假设相反。
+
+这些发现为后续大语言模型的发展提供了关键指导：通过合理缩放模型、数据和计算资源，可以预测性地提升语言模型性能，从而催生了GPT-3、GPT-4等超大规模模型的成功。
+
+<span class="token hr punctuation">----</span>
+
+<span class="token title important"><span class="token punctuation">#</span> Chinchilla缩放定律</span>
+Chinchilla缩放定律由DeepMind在2022年提出，旨在重新定义大规模语言模型训练中的资源分配策略。传统缩放定律认为，模型性能主要依赖于模型参数量，但Chinchilla研究通过大量实验发现，数据量和模型参数之间需要达到平衡才能实现最优的计算效率。具体而言，当模型参数量增加时，所需训练数据量也应成比例增加；反之，若数据量不足，模型会陷入“欠训练”状态，无法充分发挥参数容量的优势。DeepMind提出一个关键结论：对于给定的计算预算，同时增大模型规模和训练数据量比仅关注单方面扩展更有效。
+
+<span class="token title important"><span class="token punctuation">##</span> Chinchilla最优训练策略</span>
+基于Chinchilla定律，最优训练策略要求模型参数量与训练数据量（Token数）保持近似线性关系。例如，训练一个70亿参数的模型，所需数据量应约为当前常用规模的数倍（如1.4万亿Tokens），而非仅匹配参数扩展的常规做法。这一策略的核心是：
+
+<span class="token list punctuation">-</span> 数据优先原则：在固定计算预算下，优先保证数据量充足，而非盲目堆叠参数。
+<span class="token list punctuation">-</span> 计算效率最大化：通过平衡模型大小和数据量，使得梯度更新次数与参数复杂度匹配，避免冗余计算。
+
+<span class="token title important"><span class="token punctuation">##</span> 对计算效率的影响</span>
+Chinchilla定律对计算效率的改进体现在：
+
+<span class="token list punctuation">1.</span> 消除资源浪费：传统模型（如GPT-3）在参数过大而数据不足时，投入的计算资源（FLOPs）无法转化为同等的性能提升。Chinchilla策略通过优化参数-数据比例，使相同计算量下模型性能显著提升。
+<span class="token list punctuation">2.</span> 模型压缩与扩展：在有限算力场景中，可训练更小但数据更充足的模型（如Chinchilla 70B），其表现优于更大但欠训练的模型（如GPT-3 175B）。
+<span class="token list punctuation">3.</span> 降低训练成本：按照Chinchilla建议，DeepMind在训练模型中节省了高达70%的计算资源，同时保持或提升下游任务表现。这一发现促使业界重新调整模型设计，推动“小模型+大数据”范式的兴起。
+
+总之，Chinchilla缩放定律强调了数据与参数的协同优化，为高效利用计算资源提供了理论依据，并深刻影响了后续大规模模型的训练策略（如Llama、Falcon等模型的数据规模设计）。
+
+<span class="token hr punctuation">---</span>
+
+<span class="token title important"><span class="token punctuation">#</span> 缩放定律的实际应用与影响</span>
+缩放定律揭示了模型性能与模型参数量、数据量、计算量之间的幂律关系，为大规模语言模型的训练提供了定量指导。其核心结论是：在资源有限的情况下，模型性能的提升存在“近似最优”的缩放分配策略，即模型参数和数据量应按照特定比例同步增长。
+
+<span class="token title important"><span class="token punctuation">##</span> 指导模型设计与资源分配</span>
+缩放定律最先应用于模型规模的决策。例如，OpenAI 在训练 GPT-3 时，依据缩放定律推断出在固定计算预算下，增大模型参数比单纯增加训练步数更有效，最终选择了 175B 参数量的巨大模型，并辅以 300B tokens 的训练数据。而后续的 Chinchilla 研究发现，早期缩放定律对数据量的要求被低估，提出“对于给定的计算预算，模型参数与训练数据量应大致等比例缩放”的修正结论。这一发现直接指导了 LLaMA 系列的设计：LLaMA 系列并未追求极大参数量，而是选择在相对较小的模型（如 7B、13B、65B）上使用远超常规比例的 tokens（如 1.0T~1.4T），从而在相同计算预算下获得更优的性能曲线。
+
+<span class="token title important"><span class="token punctuation">##</span> 性能预测与训练规划</span>
+缩放定律使团队能在训练全规模模型之前，通过小规模实验（例如 1B、3B 参数的模型）拟合出性能损失函数与计算量的关系曲线，从而预测大模型在更大规模下的损失值。这种“外推能力”被广泛用于选择训练终止点、决定是否继续预训练或提前停止。例如，Meta 在训练 LLaMA 时，就通过小参数量模型拟合的缩放曲线确定了最终数据量需求，避免了对更大模型进行无意义的长周期训练。同时，在资源分配方面，缩放定律指导了数据并行、模型并行以及流水线并行等策略，使得不同规模集群能最大化利用 GPU 计算时间。
+
+<span class="token title important"><span class="token punctuation">##</span> 对 GPT 系列的影响</span>
+GPT-3 验证了缩放定律的有效性并展示了涌现能力——某些复杂任务（如翻译、代码生成）在模型超过一定规模后性能出现跳跃式提升。但后续研究也发现，过度追求参数量可能导致训练效率下降，尤其在数据质量薄弱时，缩放定律的拟合度会降低。GPT-4 则更强调数据清洗和质量控制，实质上是在缩放定律的框架下引入了数据质量的维度。
+
+<span class="token title important"><span class="token punctuation">##</span> 对 LLaMA 系列的影响</span>
+LLaMA 系列反向验证了 Chinchilla 缩放定律的正确性，即更小模型配上更多数据可以超越更大模型在相同计算预算下的表现。LLaMA 2 和 LLaMA 3 进一步扩展了这一策略，将数据量提升至 2T 甚至更多，并调整了学习率和批次大小的缩放关系。这推动了行业从“盲目增大模型”向“数据-模型协同缩放”的转变，同时也降低了硬件门槛——中等规模的组织可以用更少的 GPU 训练出具有竞争力的模型。
+
+<span class="token title important"><span class="token punctuation">##</span> 总结</span>
+缩放定律从经验科学走向工程实践，为大规模语言模型的训练提供了可量化的决策依据。它指导了模型架构的设计（如深度/宽度比例）、数据需求量的预估、最优训练步长的选择，以及计算集群的资源配置。然而，缩放定律假设数据质量、架构类型等因素不变，实际应用中需结合数据质量提升、多任务调整等手段，才能避免“单纯堆料”导致的边际效益递减。未来，缩放定律将更多与多模态、长上下文等新维度结合，持续塑造语言模型的发展方向。
+
+<span class="token hr punctuation">----</span>
+
+<span class="token title important"><span class="token punctuation">#</span> 缩放定律的局限性与挑战</span>
+随着模型规模的持续增长，缩放定律（Scaling Laws）的边界条件逐渐显现，其普适性面临多重挑战。以下从数据瓶颈、训练稳定性、收益递减及学术争议四个维度展开分析。
+
+<span class="token title important"><span class="token punctuation">##</span> 数据瓶颈：高质量数据的稀缺性</span>
+缩放定律假设模型性能随数据量增加而持续提升，但现实中高质量、多样化的训练数据并非无限供给。当前互联网文本、图像等数据中噪声比例高、长尾分布明显，当模型规模突破千亿参数后，原始数据的边际收益显著下降。例如，GPT-4等模型已消耗近乎公开的英文语料库，数据重复与信息冗余导致模型在能力扩展上出现“天花板”。此外，领域特定数据（如罕见语言、专业文献）的获取成本高昂，进一步制约了缩放定律的下限。
+
+<span class="token title important"><span class="token punctuation">##</span> 训练稳定性：极端规模下的系统性风险</span>
+在参数量超过百亿、训练步数达百万量级时，模型容易遭遇梯度爆炸、损失震荡甚至训练崩溃。尽管采用混合精度训练、梯度裁剪等技术，但极端规模下的优化不稳定性仍可能使缩放曲线偏离理论预期。例如，某些超大模型在训练后期出现“损失尖峰”（loss spikes），需频繁重启或调整学习率，这导致实际算力消耗远超缩放公式的预测。此外，分布式训练中的通信延迟、显存限制等工程问题，也使纯理论缩放率难以复现。
+
+<span class="token title important"><span class="token punctuation">##</span> 收益递减：计算资源的边际效率下降</span>
+缩放定律中“性能随计算量指数提升”的假设，在超大规模场景下出现明显的收益递减现象。研究表明，当模型参数量超过语言建模能力的关键阈值（如GPT-3的1750亿参数），继续扩大规模带来的性能增益逐渐趋近于零，尤其在常识推理、数学解题等复杂任务上，参数翻倍对应的准确率提升可能不足1%。这种非线性衰减使“暴力缩放”策略的经济效益存疑，转而需要更高效的架构设计（如MoE、稀疏注意力）或训练策略（如课程学习、动态数据配比）。
+
+<span class="token title important"><span class="token punctuation">##</span> 学术争议：缩放定律的适用边界</span>
+当前研究对缩放定律的普适性存在根本性质疑。部分学者指出，缩放定律仅对自回归语言模型在预训练阶段有效，而在微调、对齐（如RLHF）、跨模态任务或非Transformer架构（如状态空间模型Mamba）中可能不成立。例如，DeepMind的Chinchilla缩放律强调“数据量应与模型参数同比例增长”，但该结论在计算最优场景下仍依赖任务类型。此外，涌现能力（emergent abilities）的研究表明，某些能力（如多步推理、代码生成）仅在模型达到特定规模后突然出现，而非平滑遵循缩放曲线，这暗示缩放定律可能忽略了性能跃迁的临界点。
+
+综上，缩放定律并非放之四海而皆准的万能法则。未来的研究需在数据高效利用、训练稳定性保障以及任务特异化缩放机制上寻找突破，以弥合其与真实场景之间的鸿沟。
+
+<span class="token hr punctuation">---</span>
+
+<span class="token title important"><span class="token punctuation">#</span> 未来方向与新兴研究</span>
+缩放定律领域正从单一的语言模型预训练范式，向更复杂、多元的方向演进，催生出若干前沿研究热点与未来趋势。
+
+<span class="token list punctuation">1.</span> 多模态缩放定律
+传统缩放定律主要基于文本数据，而新一代研究正在探索视觉、语音、视频等多模态联合训练中的规模效应。初步发现表明，多模态数据的混合比例、不同模态的编码器容量、以及跨模态对齐的损失权重，都会影响缩放曲线的形态。关键问题在于：是否存在统一的多模态缩放定律？当模型规模、数据量和计算预算同步增长时，不同模态的性能提升是否存在“木桶效应”（即短板模态限制整体表现）？未来研究需要构建多模态性能预测模型，以指导海量多模态训练的资源分配。
+
+<span class="token list punctuation">2.</span> 推理时缩放定律：思考链与o1模型
+以OpenAI o1为代表的模型引入了“推理时缩放”——即通过增加推理阶段的思考链长度来提升复杂问题（如数学、编程、科学推理）的准确率。这构成了与传统“训练时缩放”平行的新维度：
+
+<span class="token list punctuation">-</span> 思考链长度 vs. 准确率：初步现象显示，随着推理步骤的增加，准确率呈S型增长曲线，最终趋于饱和。这一规律提示存在最优推理预算。
+<span class="token list punctuation">-</span> 计算效率权衡：推理时缩放为小模型通过“慢思考”达到大模型水平提供了可能，但需平衡延迟与性能。未来方向包括：动态推理预算分配（自适应选择思考深度）、知识蒸馏与思考链压缩（将长链推理浓缩为高效一步推理）。
+<span class="token list punctuation">3.</span> 高效缩放方法的探索
+为突破算力与数据瓶颈，研究者正从多个角度优化缩放效率：
+
+<span class="token list punctuation">-</span> 数据质量驱动的缩放：不再简单增加数据量，而是通过数据筛选、课程学习、合成数据生成来提升“有效数据”。实验表明，高质量数据可显著改善缩放曲线的斜率，使小规模数据获得接近大规模随机数据的性能。
+<span class="token list punctuation">-</span> 混合专家模型与稀疏化：通过条件计算（如MoE架构）实现“参数量大但激活量小”，改变传统缩放定律中参数量与计算量的线性关系。这促使研究者重新定义“有效参数”和“计算预算”的度量方式。
+<span class="token list punctuation">-</span> 算法与硬件协同设计：针对缩放定律的计算瓶颈，探索低精度训练、切分并行策略优化、以及专用硬件（如存算一体芯片）对缩放效率的增益。
+
+这些新兴方向共同指向一个核心展望：未来的缩放定律将不再仅仅是“更大模型、更多数据、更长训练”的单调故事，而是涉及多模态、推理时动态、以及资源效率优化的复合科学。
+
+<span class="token hr punctuation">---</span>
+
+<span class="token title important"><span class="token punctuation">#</span> 结论</span>
+缩放定律揭示了模型性能与模型参数量、数据量、计算量之间存在的幂律关系，其核心见解在于：在模型规模、数据规模与计算预算三者之间，存在系统性的权衡与协同。这一发现表明，单纯扩大模型参数而不相应增加高质量训练数据，会导致收益递减；反之，充足的训练数据配合合理的模型容量，才能在有限算力下实现最优性能。缩放定律还提示，模型能力并非由单一因素决定，而是三者协同作用的结果，为LLM的发展奠定了可预测、可量化的扩展路径。
+
+对LLM未来的深远影响主要体现在三个层面：一是推动了“规模化”策略成为行业共识，促使业界竞相训练千亿乃至万亿参数模型；二是引发了数据质量与规模并重的思考，高质量、多样化、低冗余的数据集成为关键瓶颈；三是促使计算效率优化成为研究热点，如知识蒸馏、模型剪枝、混合专家模型（MoE）等，旨在突破算力天花板，实现“更少资源、更强能力”。
+
+未来研究方向应聚焦于以下方面：
+
+<span class="token list punctuation">1.</span> 数据效率与数据合成：探索在数据受限条件下，如何通过合成数据、自生成数据、课程学习等方法，持续提升模型性能，打破对自然标注数据的依赖。
+<span class="token list punctuation">2.</span> 超越幂律的架构创新：研究稀疏化、动态路由、记忆增强等新架构，期望在一定规模下实现性能的“超线性”提升，或找到更优的缩放因子。
+<span class="token list punctuation">3.</span> 多模态与具身智能的缩放：将缩放定律推广至视觉、语音、物理世界交互等多模态场景，探索不同模态间的协同缩放规律。
+<span class="token list punctuation">4.</span> 对齐与可控性：规模增大带来的涌现能力虽强，但同时也可能放大偏见、幻觉与安全风险，需发展可扩展的对齐方法（如基于反馈的微调、可逆可解释模型），使模型能力始终服务于人类意图。
+
+对LLM开发者和研究者的建议：
+
+<span class="token list punctuation">-</span> 理性务实：不盲目追求参数量，而是基于具体任务、可用数据与算力，依据缩放定律做出最优资源分配决策。优先确保数据规模与质量，再考虑模型扩大。
+<span class="token list punctuation">-</span> 重视数据工程：投入与模型训练同等的精力建设数据处理、清洗、去重、标注管线，并探索数据自生、主动学习等低成本数据获取策略。
+<span class="token list punctuation">-</span> 拥抱开源协作：在预训练等资源密集环节，通过开源共享基础模型、评测基准与训练日志，降低重复投入，加速集体探索。
+<span class="token list punctuation">-</span> 坚持伦理先行：在追求能力极限的同时，保持对可解释性、公平性、安全性的持续关注，将对齐研究嵌入模型开发全流程，确保技术向善。<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<h2 id="Evaluator-Optimizer（评估-优化循环）"><a href="#Evaluator-Optimizer（评估-优化循环）" class="headerlink" title="Evaluator-Optimizer（评估-优化循环）"></a>Evaluator-Optimizer（评估-优化循环）</h2><p>Evaluator-Optimizer 是提升Agent响应质量的重要模式</p>
+<p><img src="https://wu4yong.github.io/starry-images/assets/img/llmheima/5-2/langgraph-workflow-10.webp" alt="langgraph-workflow-10.webp"></p>
+<p>两个核心组件：</p>
+<ul>
+<li><strong>生成器（Generator）</strong>：产出内容 </li>
+<li><strong>评估器（Evaluator）</strong>：打分&#x2F;给出反馈 –&gt; 如果不达标就带着反馈重新生成</li>
+</ul>
+<p>形成一个质量提升的闭环。</p>
+<p>与普通循环的区别：循环自带”质量门”，只在质量不达标时才重复，避免了无谓的循环。</p>
+<p><strong>典型场景</strong>: 文案优化（生成→评分→改写）、代码审查（生成→检查→修复）、翻译质量提升。</p>
+<p>示例，我们写一个生成广告语的工作流：</p>
+<pre class="line-numbers language-python" data-language="python"><code class="language-python"><span class="token comment"># Evaluator-Optimizer: 生成广告语 → 评估 → 不达标则带着反馈重写</span>
+<span class="token keyword">from</span> typing <span class="token keyword">import</span> Literal
+
+<span class="token keyword">class</span> <span class="token class-name">AdState</span><span class="token punctuation">(</span>TypedDict<span class="token punctuation">)</span><span class="token punctuation">:</span>
+    product<span class="token punctuation">:</span> <span class="token builtin">str</span>        <span class="token comment"># 产品名称</span>
+    slogan<span class="token punctuation">:</span> <span class="token builtin">str</span>         <span class="token comment"># 当前广告语</span>
+    feedback<span class="token punctuation">:</span> <span class="token builtin">str</span>       <span class="token comment"># 评估反馈</span>
+    grade<span class="token punctuation">:</span> <span class="token builtin">str</span>          <span class="token comment"># 评分: "good" 或 "bad"</span>
+    iteration<span class="token punctuation">:</span> <span class="token builtin">int</span>      <span class="token comment"># 当前迭代次数</span>
+
+<span class="token comment"># 模拟评估器（实际使用时用 llm.with_structured_output）</span>
+<span class="token keyword">def</span> <span class="token function">evaluator_node</span><span class="token punctuation">(</span>state<span class="token punctuation">:</span> AdState<span class="token punctuation">)</span><span class="token punctuation">:</span>
+    <span class="token triple-quoted-string string">"""评估广告语质量"""</span>
+    slogan <span class="token operator">=</span> state<span class="token punctuation">[</span><span class="token string">"slogan"</span><span class="token punctuation">]</span>
+    iteration <span class="token operator">=</span> state<span class="token punctuation">.</span>get<span class="token punctuation">(</span><span class="token string">"iteration"</span><span class="token punctuation">,</span> <span class="token number">0</span><span class="token punctuation">)</span>
+
+    <span class="token comment"># 模拟评估逻辑：检查是否包含关键要素</span>
+    checks <span class="token operator">=</span> <span class="token punctuation">[</span><span class="token punctuation">]</span>
+    <span class="token keyword">if</span> <span class="token builtin">len</span><span class="token punctuation">(</span>slogan<span class="token punctuation">)</span> <span class="token operator">&lt;</span> <span class="token number">10</span><span class="token punctuation">:</span>
+        checks<span class="token punctuation">.</span>append<span class="token punctuation">(</span><span class="token string">"太短了，不够吸引人"</span><span class="token punctuation">)</span>
+    <span class="token keyword">if</span> state<span class="token punctuation">[</span><span class="token string">"product"</span><span class="token punctuation">]</span> <span class="token keyword">not</span> <span class="token keyword">in</span> slogan<span class="token punctuation">:</span>
+        checks<span class="token punctuation">.</span>append<span class="token punctuation">(</span><span class="token string-interpolation"><span class="token string">f"没有提到产品名'</span><span class="token interpolation"><span class="token punctuation">&#123;</span>state<span class="token punctuation">[</span><span class="token string">'product'</span><span class="token punctuation">]</span><span class="token punctuation">&#125;</span></span><span class="token string">'"</span></span><span class="token punctuation">)</span>
+    <span class="token keyword">if</span> <span class="token string">"！"</span> <span class="token keyword">not</span> <span class="token keyword">in</span> slogan <span class="token keyword">and</span> <span class="token string">"!"</span> <span class="token keyword">not</span> <span class="token keyword">in</span> slogan <span class="token keyword">and</span> <span class="token string">"？"</span> <span class="token keyword">not</span> <span class="token keyword">in</span> slogan<span class="token punctuation">:</span>
+        checks<span class="token punctuation">.</span>append<span class="token punctuation">(</span><span class="token string">"缺少情感标点，不够有感染力"</span><span class="token punctuation">)</span>
+
+    <span class="token keyword">if</span> <span class="token keyword">not</span> checks<span class="token punctuation">:</span>
+        <span class="token keyword">return</span> <span class="token punctuation">&#123;</span><span class="token string">"grade"</span><span class="token punctuation">:</span> <span class="token string">"good"</span><span class="token punctuation">,</span> <span class="token string">"feedback"</span><span class="token punctuation">:</span> <span class="token string">""</span><span class="token punctuation">&#125;</span>
+    <span class="token keyword">return</span> <span class="token punctuation">&#123;</span><span class="token string">"grade"</span><span class="token punctuation">:</span> <span class="token string">"bad"</span><span class="token punctuation">,</span> <span class="token string">"feedback"</span><span class="token punctuation">:</span> <span class="token string">"；"</span><span class="token punctuation">.</span>join<span class="token punctuation">(</span>checks<span class="token punctuation">)</span><span class="token punctuation">&#125;</span>
+
+<span class="token keyword">def</span> <span class="token function">generate_slogan</span><span class="token punctuation">(</span>state<span class="token punctuation">:</span> AdState<span class="token punctuation">)</span><span class="token punctuation">:</span>
+    <span class="token triple-quoted-string string">"""生成/改进广告语"""</span>
+    feedback <span class="token operator">=</span> state<span class="token punctuation">.</span>get<span class="token punctuation">(</span><span class="token string">"feedback"</span><span class="token punctuation">,</span> <span class="token string">""</span><span class="token punctuation">)</span>
+    iteration <span class="token operator">=</span> state<span class="token punctuation">.</span>get<span class="token punctuation">(</span><span class="token string">"iteration"</span><span class="token punctuation">,</span> <span class="token number">0</span><span class="token punctuation">)</span> <span class="token operator">+</span> <span class="token number">1</span>
+
+    <span class="token keyword">if</span> feedback<span class="token punctuation">:</span>
+        <span class="token keyword">print</span><span class="token punctuation">(</span><span class="token string-interpolation"><span class="token string">f"  [第</span><span class="token interpolation"><span class="token punctuation">&#123;</span>iteration<span class="token punctuation">&#125;</span></span><span class="token string">轮] 根据反馈改进: </span><span class="token interpolation"><span class="token punctuation">&#123;</span>feedback<span class="token punctuation">&#125;</span></span><span class="token string">"</span></span><span class="token punctuation">)</span>
+        <span class="token comment"># 模拟改进：根据反馈加长、加产品名、加感叹号</span>
+        new_slogan <span class="token operator">=</span> <span class="token string-interpolation"><span class="token string">f"🔥 </span><span class="token interpolation"><span class="token punctuation">&#123;</span>state<span class="token punctuation">[</span><span class="token string">'product'</span><span class="token punctuation">]</span><span class="token punctuation">&#125;</span></span><span class="token string"> 好啊！真滴棒！</span><span class="token interpolation"><span class="token punctuation">&#123;</span>state<span class="token punctuation">[</span><span class="token string">'product'</span><span class="token punctuation">]</span><span class="token punctuation">&#125;</span></span><span class="token string"> 好啊！顶呱呱！"</span></span>
+    <span class="token keyword">else</span><span class="token punctuation">:</span>
+        new_slogan <span class="token operator">=</span> <span class="token string-interpolation"><span class="token string">f"</span><span class="token interpolation"><span class="token punctuation">&#123;</span>state<span class="token punctuation">[</span><span class="token string">'product'</span><span class="token punctuation">]</span><span class="token punctuation">&#125;</span></span><span class="token string">真好"</span></span>  <span class="token comment"># 故意生成一个不合格的</span>
+        <span class="token keyword">print</span><span class="token punctuation">(</span><span class="token string-interpolation"><span class="token string">f"  [第</span><span class="token interpolation"><span class="token punctuation">&#123;</span>iteration<span class="token punctuation">&#125;</span></span><span class="token string">轮] 初版生成: </span><span class="token interpolation"><span class="token punctuation">&#123;</span>new_slogan<span class="token punctuation">&#125;</span></span><span class="token string">"</span></span><span class="token punctuation">)</span>
+
+    <span class="token keyword">return</span> <span class="token punctuation">&#123;</span><span class="token string">"slogan"</span><span class="token punctuation">:</span> new_slogan<span class="token punctuation">,</span> <span class="token string">"iteration"</span><span class="token punctuation">:</span> iteration<span class="token punctuation">&#125;</span>
+
+<span class="token keyword">def</span> <span class="token function">route_after_eval</span><span class="token punctuation">(</span>state<span class="token punctuation">:</span> AdState<span class="token punctuation">)</span> <span class="token operator">-</span><span class="token operator">></span> Literal<span class="token punctuation">[</span><span class="token string">"generate"</span><span class="token punctuation">,</span> <span class="token string">"__end__"</span><span class="token punctuation">]</span><span class="token punctuation">:</span>
+    <span class="token triple-quoted-string string">"""评估后路由：good→结束，bad→重新生成，超过3轮强制终止"""</span>
+    <span class="token keyword">if</span> state<span class="token punctuation">[</span><span class="token string">"grade"</span><span class="token punctuation">]</span> <span class="token operator">==</span> <span class="token string">"good"</span><span class="token punctuation">:</span>
+        <span class="token keyword">print</span><span class="token punctuation">(</span><span class="token string-interpolation"><span class="token string">f"  ✓ 评估通过！最终版本: </span><span class="token interpolation"><span class="token punctuation">&#123;</span>state<span class="token punctuation">[</span><span class="token string">'slogan'</span><span class="token punctuation">]</span><span class="token punctuation">&#125;</span></span><span class="token string">"</span></span><span class="token punctuation">)</span>
+        <span class="token keyword">return</span> END
+    <span class="token keyword">if</span> state<span class="token punctuation">.</span>get<span class="token punctuation">(</span><span class="token string">"iteration"</span><span class="token punctuation">,</span> <span class="token number">0</span><span class="token punctuation">)</span> <span class="token operator">>=</span> <span class="token number">3</span><span class="token punctuation">:</span>
+        <span class="token keyword">print</span><span class="token punctuation">(</span><span class="token string-interpolation"><span class="token string">f"  ⚠ 达到最大迭代次数，强制终止"</span></span><span class="token punctuation">)</span>
+        <span class="token keyword">return</span> END
+    <span class="token keyword">return</span> <span class="token string">"generate"</span>
+
+eval_opt_graph <span class="token operator">=</span> <span class="token punctuation">(</span>
+    StateGraph<span class="token punctuation">(</span>AdState<span class="token punctuation">)</span>
+    <span class="token punctuation">.</span>add_node<span class="token punctuation">(</span><span class="token string">"generate"</span><span class="token punctuation">,</span> generate_slogan<span class="token punctuation">)</span>
+    <span class="token punctuation">.</span>add_node<span class="token punctuation">(</span><span class="token string">"evaluate"</span><span class="token punctuation">,</span> evaluator_node<span class="token punctuation">)</span>
+    <span class="token punctuation">.</span>add_edge<span class="token punctuation">(</span>START<span class="token punctuation">,</span> <span class="token string">"generate"</span><span class="token punctuation">)</span>
+    <span class="token punctuation">.</span>add_edge<span class="token punctuation">(</span><span class="token string">"generate"</span><span class="token punctuation">,</span> <span class="token string">"evaluate"</span><span class="token punctuation">)</span>
+    <span class="token punctuation">.</span>add_conditional_edges<span class="token punctuation">(</span><span class="token string">"evaluate"</span><span class="token punctuation">,</span> route_after_eval<span class="token punctuation">,</span> <span class="token punctuation">&#123;</span>
+        <span class="token string">"generate"</span><span class="token punctuation">:</span> <span class="token string">"generate"</span><span class="token punctuation">,</span>  <span class="token comment"># 不达标→回generate重写</span>
+        END<span class="token punctuation">:</span> END
+    <span class="token punctuation">&#125;</span><span class="token punctuation">)</span>
+    <span class="token punctuation">.</span><span class="token builtin">compile</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+<span class="token punctuation">)</span>
+
+display_graph<span class="token punctuation">(</span>eval_opt_graph<span class="token punctuation">)</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<p>结构图：</p>
+<p><img src="https://wu4yong.github.io/starry-images/assets/img/llmheima/5-2/langgraph-workflow-11.webp" alt="langgraph-workflow-11.webp"></p>
+<p>测试：</p>
+<pre class="line-numbers language-python" data-language="python"><code class="language-python"><span class="token keyword">print</span><span class="token punctuation">(</span><span class="token string">"=== Evaluator-Optimizer: 广告语生成 ===\n"</span><span class="token punctuation">)</span>
+r <span class="token operator">=</span> eval_opt_graph<span class="token punctuation">.</span>invoke<span class="token punctuation">(</span><span class="token punctuation">&#123;</span>
+    <span class="token string">"product"</span><span class="token punctuation">:</span> <span class="token string">"黑马程序员"</span><span class="token punctuation">,</span> <span class="token string">"slogan"</span><span class="token punctuation">:</span> <span class="token string">""</span><span class="token punctuation">,</span> <span class="token string">"feedback"</span><span class="token punctuation">:</span> <span class="token string">""</span><span class="token punctuation">,</span> <span class="token string">"grade"</span><span class="token punctuation">:</span> <span class="token string">""</span><span class="token punctuation">,</span> <span class="token string">"iteration"</span><span class="token punctuation">:</span> <span class="token number">0</span>
+<span class="token punctuation">&#125;</span><span class="token punctuation">)</span>
+<span class="token keyword">print</span><span class="token punctuation">(</span><span class="token string-interpolation"><span class="token string">f"\n最终广告语: </span><span class="token interpolation"><span class="token punctuation">&#123;</span>r<span class="token punctuation">[</span><span class="token string">'slogan'</span><span class="token punctuation">]</span><span class="token punctuation">&#125;</span></span><span class="token string">"</span></span><span class="token punctuation">)</span>
+<span class="token keyword">print</span><span class="token punctuation">(</span><span class="token string-interpolation"><span class="token string">f"总共迭代: </span><span class="token interpolation"><span class="token punctuation">&#123;</span>r<span class="token punctuation">[</span><span class="token string">'iteration'</span><span class="token punctuation">]</span><span class="token punctuation">&#125;</span></span><span class="token string"> 轮"</span></span><span class="token punctuation">)</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<p>运行结果：</p>
+<pre class="line-numbers language-markdown" data-language="markdown"><code class="language-markdown">=== Evaluator-Optimizer: 广告语生成 ===
+
+  [第1轮] 初版生成: 黑马程序员真好
+  [第2轮] 根据反馈改进: 太短了，不够吸引人；缺少情感标点，不够有感染力
+  ✓ 评估通过！最终版本: 🔥 黑马程序员 好啊！真滴棒！黑马程序员 好啊！顶呱呱！
+
+最终广告语: 🔥 黑马程序员 好啊！真滴棒！黑马程序员 好啊！顶呱呱！
+总共迭代: 2 轮<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<h2 id="子图嵌套（Subgraphs）"><a href="#子图嵌套（Subgraphs）" class="headerlink" title="子图嵌套（Subgraphs）"></a>子图嵌套（Subgraphs）</h2><p>复杂的工作流太过庞大不利于维护，此时可以拆分为多层子图。LangGraph 支持将 <strong>已编译的子图作为父图的一个Node</strong> 直接使用。</p>
+<p>包括两种使用方式：</p>
+<div class="data-grid data-grid-link-table"><div class="grid-header"><div class="grid-cell">方式</div><div class="grid-cell">API</div><div class="grid-cell">特点</div></div><div class="grid-row"><div class="grid-cell"><strong>直接嵌入</strong></div><div class="grid-cell"><code>add_node(&quot;name&quot;, compiled_subgraph)</code></div><div class="grid-cell">子图作为图节点，checkpoint与父图集成，interrupt自动向上冒泡</div></div><div class="grid-row"><div class="grid-cell"><strong>包装调用</strong></div><div class="grid-cell">在普通node函数内 <code>subgraph.invoke()</code></div><div class="grid-cell">灵活的状态映射，需手动传递数据</div></div></div>
+
+<p>若采用嵌入模式，且父图的State与子图的State共享某些key时：</p>
+<ul>
+<li><strong>父→子</strong>: 父图自动将共享key的值传给子图state（input projection）</li>
+<li><strong>子→父</strong>: 子图更新了state的key如果父图也有，则按<strong>父图的reducer</strong>写入父state</li>
+</ul>
+<p>如果父子图State完全不同，需要用包装调用方式手动映射。</p>
+<h4 id="直接嵌入"><a href="#直接嵌入" class="headerlink" title="直接嵌入"></a>直接嵌入</h4><p>我们基于刚才的路由WorkFlow：</p>
+<ul>
+<li>父图：意图识别，路由到不同Node</li>
+<li>子图：处理天气查询</li>
+</ul>
+<p>为了便于演示不同代码间关系，本节以Notebook编写，以下是示例代码：</p>
+<p>首先是完整依赖：</p>
+<pre class="line-numbers language-python" data-language="python"><code class="language-python"><span class="token keyword">from</span> typing <span class="token keyword">import</span> Literal<span class="token punctuation">,</span> TypedDict
+<span class="token keyword">from</span> langchain<span class="token punctuation">.</span>chat_models <span class="token keyword">import</span> init_chat_model
+<span class="token keyword">from</span> langchain_core<span class="token punctuation">.</span>messages <span class="token keyword">import</span> HumanMessage<span class="token punctuation">,</span> AIMessage
+<span class="token keyword">from</span> langgraph<span class="token punctuation">.</span>graph <span class="token keyword">import</span> StateGraph<span class="token punctuation">,</span> START<span class="token punctuation">,</span> END<span class="token punctuation">,</span> MessagesState
+<span class="token keyword">from</span> pydantic <span class="token keyword">import</span> BaseModel<span class="token punctuation">,</span> Field
+<span class="token keyword">from</span> dotenv <span class="token keyword">import</span> load_dotenv
+<span class="token keyword">from</span> langchain<span class="token punctuation">.</span>tools <span class="token keyword">import</span> tool
+<span class="token keyword">from</span> IPython<span class="token punctuation">.</span>display <span class="token keyword">import</span> Image<span class="token punctuation">,</span> display
+<span class="token keyword">from</span> langgraph<span class="token punctuation">.</span>prebuilt <span class="token keyword">import</span> ToolNode<span class="token punctuation">,</span> tools_condition
+load_dotenv<span class="token punctuation">(</span><span class="token punctuation">)</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<p>然后是代码。</p>
+<p>首先是父子的State，为了演示，我们故意让父子State有相同字段，也有不同字段：</p>
+<ul>
+<li><strong>相同的</strong>：父子都继承了MessageState，所以都有<strong>messages</strong>字段，记录历史消息</li>
+<li><strong>不同的</strong>：父有<strong>intent</strong>字段，子有<strong>foo</strong>字段（无实际意义）</li>
+</ul>
+<pre class="line-numbers language-python" data-language="python"><code class="language-python"><span class="token comment"># 父 State</span>
+<span class="token keyword">class</span> <span class="token class-name">IntentState</span><span class="token punctuation">(</span>MessagesState<span class="token punctuation">)</span><span class="token punctuation">:</span>
+    intent<span class="token punctuation">:</span> <span class="token builtin">str</span>
+
+<span class="token comment"># 子 State</span>
+<span class="token keyword">class</span> <span class="token class-name">WeatherState</span><span class="token punctuation">(</span>MessagesState<span class="token punctuation">)</span><span class="token punctuation">:</span>
+    foo<span class="token punctuation">:</span> <span class="token builtin">str</span> <span class="token comment"># 故意展示与父不同的字段</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<p>然后是定义子图（Subgraph），就是之前查询天气的Agent，直接复制，改一下State即可：</p>
+<pre class="line-numbers language-python" data-language="python"><code class="language-python"><span class="token comment"># ====== Step 1: 准备工具 ======</span>
+<span class="token comment"># 工具</span>
+<span class="token decorator annotation punctuation">@tool</span>
+<span class="token keyword">def</span> <span class="token function">get_weather</span><span class="token punctuation">(</span>city<span class="token punctuation">:</span> <span class="token builtin">str</span><span class="token punctuation">)</span> <span class="token operator">-</span><span class="token operator">></span> <span class="token builtin">str</span><span class="token punctuation">:</span>
+    <span class="token triple-quoted-string string">"""获取城市天气"""</span>
+    weather_data <span class="token operator">=</span> <span class="token punctuation">&#123;</span>
+        <span class="token string">"北京"</span><span class="token punctuation">:</span> <span class="token string">"晴天 25度"</span><span class="token punctuation">,</span>
+        <span class="token string">"上海"</span><span class="token punctuation">:</span> <span class="token string">"多云 28度"</span><span class="token punctuation">,</span>
+        <span class="token string">"杭州"</span><span class="token punctuation">:</span> <span class="token string">"小雨 22度"</span><span class="token punctuation">,</span>
+    <span class="token punctuation">&#125;</span>
+    <span class="token keyword">return</span> weather_data<span class="token punctuation">.</span>get<span class="token punctuation">(</span>city<span class="token punctuation">,</span> <span class="token string-interpolation"><span class="token string">f"未找到</span><span class="token interpolation"><span class="token punctuation">&#123;</span>city<span class="token punctuation">&#125;</span></span><span class="token string">的天气信息"</span></span><span class="token punctuation">)</span>
+
+<span class="token comment"># 组成工具数组</span>
+tools <span class="token operator">=</span> <span class="token punctuation">[</span>get_weather<span class="token punctuation">]</span>
+
+<span class="token comment"># ====== Step 2: 准备模型 ======</span>
+<span class="token comment"># 定义模型</span>
+model <span class="token operator">=</span> init_chat_model<span class="token punctuation">(</span>
+    <span class="token string">'deepseek-flash'</span><span class="token punctuation">,</span>
+    extra_body <span class="token operator">=</span> <span class="token punctuation">&#123;</span><span class="token string">'thinking'</span><span class="token punctuation">:</span> <span class="token punctuation">&#123;</span><span class="token string">'type'</span><span class="token punctuation">:</span> <span class="token string">'disabled'</span><span class="token punctuation">&#125;</span><span class="token punctuation">&#125;</span>
+<span class="token punctuation">)</span>
+
+<span class="token comment"># ====== Step 3: 定义Agent ======</span>
+weather_agent <span class="token operator">=</span> create_agent<span class="token punctuation">(</span>model<span class="token punctuation">,</span> tools<span class="token punctuation">)</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<p>接着是父图：</p>
+<pre class="line-numbers language-python" data-language="python"><code class="language-python"><span class="token keyword">from</span> typing <span class="token keyword">import</span> Literal
+
+<span class="token keyword">from</span> langchain<span class="token punctuation">.</span>chat_models <span class="token keyword">import</span> init_chat_model
+<span class="token keyword">from</span> langchain_core<span class="token punctuation">.</span>messages <span class="token keyword">import</span> HumanMessage<span class="token punctuation">,</span> AIMessage
+<span class="token keyword">from</span> langgraph<span class="token punctuation">.</span>graph <span class="token keyword">import</span> StateGraph<span class="token punctuation">,</span> START<span class="token punctuation">,</span> END<span class="token punctuation">,</span> MessagesState
+
+<span class="token comment"># ===============Step 1: 初始化chat模型===============</span>
+llm <span class="token operator">=</span> init_chat_model<span class="token punctuation">(</span>
+    <span class="token string">'deepseek-v4-flash'</span><span class="token punctuation">,</span>
+    extra_body<span class="token operator">=</span><span class="token punctuation">&#123;</span><span class="token string">'thinking'</span><span class="token punctuation">:</span> <span class="token punctuation">&#123;</span><span class="token string">'type'</span><span class="token punctuation">:</span> <span class="token string">'disabled'</span><span class="token punctuation">&#125;</span><span class="token punctuation">&#125;</span>
+<span class="token punctuation">)</span>
+
+<span class="token comment"># ===============Step 2: 定义Node===============</span>
+<span class="token keyword">def</span> <span class="token function">intent_node</span><span class="token punctuation">(</span>state<span class="token punctuation">:</span> IntentState<span class="token punctuation">)</span><span class="token punctuation">:</span>
+    intent <span class="token operator">=</span> llm<span class="token punctuation">.</span>invoke<span class="token punctuation">(</span><span class="token string-interpolation"><span class="token string">f'''
+    根据用户的请求判断用户意图，可选意图：weather、translate或chat。
+    user_query: </span><span class="token interpolation"><span class="token punctuation">&#123;</span>state<span class="token punctuation">[</span><span class="token string">'messages'</span><span class="token punctuation">]</span><span class="token punctuation">[</span><span class="token operator">-</span><span class="token number">1</span><span class="token punctuation">]</span><span class="token punctuation">.</span>content<span class="token punctuation">&#125;</span></span><span class="token string">
+    '''</span></span><span class="token punctuation">)</span>
+    <span class="token keyword">return</span> <span class="token punctuation">&#123;</span><span class="token string">'intent'</span><span class="token punctuation">:</span> intent<span class="token punctuation">.</span>text<span class="token punctuation">&#125;</span>
+
+<span class="token comment"># 不需要手动调用了，所以把handle_weather节点注释掉</span>
+<span class="token comment"># def handle_weather(state: IntentState):</span>
+<span class="token comment">#     return &#123;'messages': [AIMessage(content='晴 25度')]&#125;</span>
+
+<span class="token keyword">def</span> <span class="token function">translate_node</span><span class="token punctuation">(</span>state<span class="token punctuation">:</span> IntentState<span class="token punctuation">)</span><span class="token punctuation">:</span>
+    result <span class="token operator">=</span> llm<span class="token punctuation">.</span>invoke<span class="token punctuation">(</span><span class="token string-interpolation"><span class="token string">f'''
+    按照用户要求翻译，只输出翻译结果，不要任何解释。
+    user_query:</span><span class="token interpolation"><span class="token punctuation">&#123;</span>state<span class="token punctuation">[</span><span class="token string">'messages'</span><span class="token punctuation">]</span><span class="token punctuation">[</span><span class="token operator">-</span><span class="token number">1</span><span class="token punctuation">]</span><span class="token punctuation">.</span>content<span class="token punctuation">&#125;</span></span><span class="token string">
+    '''</span></span><span class="token punctuation">)</span>
+    <span class="token keyword">return</span> <span class="token punctuation">&#123;</span><span class="token string">'messages'</span><span class="token punctuation">:</span> <span class="token punctuation">[</span>result<span class="token punctuation">]</span><span class="token punctuation">&#125;</span>
+
+<span class="token keyword">def</span> <span class="token function">chat_node</span><span class="token punctuation">(</span>state<span class="token punctuation">:</span> IntentState<span class="token punctuation">)</span><span class="token punctuation">:</span>
+    result <span class="token operator">=</span> llm<span class="token punctuation">.</span>invoke<span class="token punctuation">(</span>state<span class="token punctuation">[</span><span class="token string">'messages'</span><span class="token punctuation">]</span><span class="token punctuation">)</span>
+    <span class="token keyword">return</span> <span class="token punctuation">&#123;</span><span class="token string">'messages'</span><span class="token punctuation">:</span> <span class="token punctuation">[</span>result<span class="token punctuation">]</span><span class="token punctuation">&#125;</span>
+
+<span class="token keyword">def</span> <span class="token function">intent_router</span><span class="token punctuation">(</span>state<span class="token punctuation">:</span> IntentState<span class="token punctuation">)</span> <span class="token operator">-</span><span class="token operator">></span> Literal<span class="token punctuation">[</span><span class="token string">'weather'</span><span class="token punctuation">,</span> <span class="token string">'translate'</span><span class="token punctuation">,</span> <span class="token string">'chat'</span><span class="token punctuation">]</span><span class="token punctuation">:</span>
+    <span class="token triple-quoted-string string">'''根据意图路由到不同处理器'''</span>
+    <span class="token keyword">return</span> state<span class="token punctuation">[</span><span class="token string">'intent'</span><span class="token punctuation">]</span>
+
+<span class="token comment"># ===============Step 5: 创建Graph===============</span>
+builder <span class="token operator">=</span> StateGraph<span class="token punctuation">(</span>IntentState<span class="token punctuation">)</span>
+builder<span class="token punctuation">.</span>add_node<span class="token punctuation">(</span><span class="token string">'intent'</span><span class="token punctuation">,</span> intent_node<span class="token punctuation">)</span>
+builder<span class="token punctuation">.</span>add_node<span class="token punctuation">(</span><span class="token string">'weather'</span><span class="token punctuation">,</span> weather_agent<span class="token punctuation">)</span>
+builder<span class="token punctuation">.</span>add_node<span class="token punctuation">(</span><span class="token string">'chat'</span><span class="token punctuation">,</span> chat_node<span class="token punctuation">)</span>
+builder<span class="token punctuation">.</span>add_node<span class="token punctuation">(</span><span class="token string">'translate'</span><span class="token punctuation">,</span> translate_node<span class="token punctuation">)</span>
+
+builder<span class="token punctuation">.</span>add_edge<span class="token punctuation">(</span>START<span class="token punctuation">,</span> <span class="token string">'intent'</span><span class="token punctuation">)</span>
+builder<span class="token punctuation">.</span>add_conditional_edges<span class="token punctuation">(</span><span class="token string">'intent'</span><span class="token punctuation">,</span> intent_router<span class="token punctuation">)</span>
+builder<span class="token punctuation">.</span>add_edge<span class="token punctuation">(</span><span class="token string">'weather'</span><span class="token punctuation">,</span> END<span class="token punctuation">)</span>
+builder<span class="token punctuation">.</span>add_edge<span class="token punctuation">(</span><span class="token string">'chat'</span><span class="token punctuation">,</span> END<span class="token punctuation">)</span>
+builder<span class="token punctuation">.</span>add_edge<span class="token punctuation">(</span><span class="token string">'translate'</span><span class="token punctuation">,</span> END<span class="token punctuation">)</span>
+
+graph<span class="token operator">=</span> builder<span class="token punctuation">.</span><span class="token builtin">compile</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+<span class="token comment"># 用 xray 模式可以看到子图内部结构</span>
+<span class="token keyword">print</span><span class="token punctuation">(</span><span class="token string">"\n=== xray=True模式（展开子图内部）==="</span><span class="token punctuation">)</span>
+display<span class="token punctuation">(</span>Image<span class="token punctuation">(</span>graph<span class="token punctuation">.</span>get_graph<span class="token punctuation">(</span>xray<span class="token operator">=</span><span class="token boolean">True</span><span class="token punctuation">)</span><span class="token punctuation">.</span>draw_mermaid_png<span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<p>结构：</p>
+<p><img src="https://wu4yong.github.io/starry-images/assets/img/llmheima/5-2/langgraph-workflow-12.webp" alt="langgraph-workflow-12.webp"></p>
+<p>可以看到，子图的名字是：<code>weather</code>，子图成为了父的一个节点。</p>
+<p>测试：</p>
+<pre class="line-numbers language-python" data-language="python"><code class="language-python">query <span class="token operator">=</span> <span class="token string">'杭州今天天气如何？'</span>
+result <span class="token operator">=</span> graph<span class="token punctuation">.</span>invoke<span class="token punctuation">(</span><span class="token punctuation">&#123;</span><span class="token string">'messages'</span><span class="token punctuation">:</span> <span class="token punctuation">[</span>HumanMessage<span class="token punctuation">(</span>content<span class="token operator">=</span>query<span class="token punctuation">)</span><span class="token punctuation">]</span><span class="token punctuation">&#125;</span><span class="token punctuation">)</span>
+
+<span class="token keyword">for</span> message <span class="token keyword">in</span> result<span class="token punctuation">[</span><span class="token string">'messages'</span><span class="token punctuation">]</span><span class="token punctuation">:</span>
+    message<span class="token punctuation">.</span>pretty_print<span class="token punctuation">(</span><span class="token punctuation">)</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<p>输出：</p>
+<pre class="line-numbers language-markdown" data-language="markdown"><code class="language-markdown">================================ Human Message =================================
+
+杭州今天天气如何？
+================================== Ai Message ==================================
+
+好的，我来查询杭州今天的天气情况。
+Tool Calls:
+  get_weather (call_00_Npai4On10bxHW4hQgqCB7677)
+ Call ID: call_00_Npai4On10bxHW4hQgqCB7677
+  Args:
+    city: 杭州
+================================= Tool Message =================================
+Name: get_weather
+
+小雨 22度
+================================== Ai Message ==================================
+
+杭州今天是小雨天气，气温约为 <span class="token bold"><span class="token punctuation">**</span><span class="token content">22℃</span><span class="token punctuation">**</span></span>。出门记得带伞哦！🌂<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<p>可以看到，由于共享了messages属性，所以子图消息也会进入历史消息列表。</p>
+<h4 id="包装调用-了解"><a href="#包装调用-了解" class="headerlink" title="包装调用(了解)"></a>包装调用(了解)</h4><p>还是刚才的案例，但我们采用包装调用的方式，这样一来，<strong>不管State字段是否一样</strong>，父子图之间就<strong>无法共享数据</strong>，必须<strong>手动调用</strong>，<strong>手动传递</strong>。</p>
+<p>子图保持不变，此处略。</p>
+<p>接着是父图：</p>
+<pre class="line-numbers language-python" data-language="python"><code class="language-python"><span class="token comment"># ===============Step 1: 初始化chat模型===============</span>
+llm <span class="token operator">=</span> init_chat_model<span class="token punctuation">(</span>
+    <span class="token string">'deepseek-v4-flash'</span><span class="token punctuation">,</span>
+    extra_body<span class="token operator">=</span><span class="token punctuation">&#123;</span><span class="token string">'thinking'</span><span class="token punctuation">:</span> <span class="token punctuation">&#123;</span><span class="token string">'type'</span><span class="token punctuation">:</span> <span class="token string">'disabled'</span><span class="token punctuation">&#125;</span><span class="token punctuation">&#125;</span>
+<span class="token punctuation">)</span>
+
+<span class="token comment"># ===============Step 2: 定义结构化输出模型===============</span>
+<span class="token comment"># 2.1.定义BaseModel，作为AI意图识别的结构化输出</span>
+<span class="token keyword">class</span> <span class="token class-name">Route</span><span class="token punctuation">(</span>BaseModel<span class="token punctuation">)</span><span class="token punctuation">:</span>
+    step<span class="token punctuation">:</span> Literal<span class="token punctuation">[</span><span class="token string">'translate'</span><span class="token punctuation">,</span> <span class="token string">'chat'</span><span class="token punctuation">,</span> <span class="token string">'weather'</span><span class="token punctuation">]</span> <span class="token operator">=</span> Field<span class="token punctuation">(</span>
+        <span class="token boolean">None</span><span class="token punctuation">,</span> description<span class="token operator">=</span><span class="token string">'下一步应该执行的动作'</span>
+    <span class="token punctuation">)</span>
+
+<span class="token comment"># 2.2.把路由结构化输出绑定到模型，形成一个用于路由的llm</span>
+router <span class="token operator">=</span> llm<span class="token punctuation">.</span>with_structured_output<span class="token punctuation">(</span>Route<span class="token punctuation">)</span>
+
+<span class="token comment"># ===============Step 3: 定义State，记录用户输入、最终结果===============</span>
+<span class="token keyword">class</span> <span class="token class-name">IntentState</span><span class="token punctuation">(</span>MessagesState<span class="token punctuation">)</span><span class="token punctuation">:</span>
+    intent<span class="token punctuation">:</span> <span class="token builtin">str</span>
+
+<span class="token comment"># ===============Step 4: 定义Node===============</span>
+<span class="token keyword">def</span> <span class="token function">classify_intent</span><span class="token punctuation">(</span>state<span class="token punctuation">:</span> IntentState<span class="token punctuation">)</span><span class="token punctuation">:</span>
+    intent <span class="token operator">=</span> router<span class="token punctuation">.</span>invoke<span class="token punctuation">(</span><span class="token string-interpolation"><span class="token string">f'''
+    根据用户的请求判断用户意图，可选意图：weather、translate或chat。
+    user_query: </span><span class="token interpolation"><span class="token punctuation">&#123;</span>state<span class="token punctuation">[</span><span class="token string">'messages'</span><span class="token punctuation">]</span><span class="token punctuation">[</span><span class="token operator">-</span><span class="token number">1</span><span class="token punctuation">]</span><span class="token punctuation">.</span>content<span class="token punctuation">&#125;</span></span><span class="token string">
+    '''</span></span><span class="token punctuation">)</span>
+    <span class="token keyword">return</span> <span class="token punctuation">&#123;</span><span class="token string">'intent'</span><span class="token punctuation">:</span> intent<span class="token punctuation">.</span>step<span class="token punctuation">&#125;</span>
+
+<span class="token comment"># 这一次，需要手动调用子图，手动获取消息，传递消息</span>
+<span class="token keyword">def</span> <span class="token function">handle_weather</span><span class="token punctuation">(</span>state<span class="token punctuation">:</span> IntentState<span class="token punctuation">)</span><span class="token punctuation">:</span>
+    <span class="token comment"># 拿到用户消息</span>
+    human_message <span class="token operator">=</span> state<span class="token punctuation">[</span><span class="token string">'messages'</span><span class="token punctuation">]</span><span class="token punctuation">[</span><span class="token operator">-</span><span class="token number">1</span><span class="token punctuation">]</span>
+    <span class="token comment"># 在节点内部手动调用子节点,拿到结果</span>
+    result <span class="token operator">=</span> weather_agent<span class="token punctuation">.</span>invoke<span class="token punctuation">(</span><span class="token punctuation">&#123;</span><span class="token string">'messages'</span><span class="token punctuation">:</span> <span class="token punctuation">[</span>human_message<span class="token punctuation">]</span><span class="token punctuation">&#125;</span><span class="token punctuation">)</span>
+    <span class="token keyword">print</span><span class="token punctuation">(</span><span class="token string-interpolation"><span class="token string">f'sub_graph 执行， foo : &#123;result['</span></span>foo<span class="token string">']&#125;'</span><span class="token punctuation">)</span>
+    <span class="token comment"># 只取最后一条AI结果，不与子共享会话历史</span>
+    ai_message <span class="token operator">=</span> result<span class="token punctuation">[</span><span class="token string">'messages'</span><span class="token punctuation">]</span><span class="token punctuation">[</span><span class="token operator">-</span><span class="token number">1</span><span class="token punctuation">]</span>
+    <span class="token keyword">return</span> <span class="token punctuation">&#123;</span><span class="token string">'messages'</span><span class="token punctuation">:</span> <span class="token punctuation">[</span>ai_message<span class="token punctuation">]</span><span class="token punctuation">&#125;</span>
+
+<span class="token keyword">def</span> <span class="token function">handle_translate</span><span class="token punctuation">(</span>state<span class="token punctuation">:</span> IntentState<span class="token punctuation">)</span><span class="token punctuation">:</span>
+    result <span class="token operator">=</span> llm<span class="token punctuation">.</span>invoke<span class="token punctuation">(</span><span class="token string-interpolation"><span class="token string">f'''
+    按照用户要求翻译，只输出翻译结果，不要任何解释。
+    user_query:</span><span class="token interpolation"><span class="token punctuation">&#123;</span>state<span class="token punctuation">[</span><span class="token string">'messages'</span><span class="token punctuation">]</span><span class="token punctuation">[</span><span class="token number">0</span><span class="token punctuation">]</span><span class="token punctuation">.</span>content<span class="token punctuation">&#125;</span></span><span class="token string">
+    '''</span></span><span class="token punctuation">)</span>
+    <span class="token keyword">return</span> <span class="token punctuation">&#123;</span><span class="token string">'messages'</span><span class="token punctuation">:</span> <span class="token punctuation">[</span>result<span class="token punctuation">]</span><span class="token punctuation">&#125;</span>
+
+<span class="token keyword">def</span> <span class="token function">handle_chat</span><span class="token punctuation">(</span>state<span class="token punctuation">:</span> IntentState<span class="token punctuation">)</span><span class="token punctuation">:</span>
+    result <span class="token operator">=</span> llm<span class="token punctuation">.</span>invoke<span class="token punctuation">(</span>state<span class="token punctuation">[</span><span class="token string">'messages'</span><span class="token punctuation">]</span><span class="token punctuation">)</span>
+    <span class="token keyword">return</span> <span class="token punctuation">&#123;</span><span class="token string">'messages'</span><span class="token punctuation">:</span> <span class="token punctuation">[</span>result<span class="token punctuation">]</span><span class="token punctuation">&#125;</span>
+
+<span class="token keyword">def</span> <span class="token function">intent_router</span><span class="token punctuation">(</span>state<span class="token punctuation">:</span> IntentState<span class="token punctuation">)</span> <span class="token operator">-</span><span class="token operator">></span> Literal<span class="token punctuation">[</span><span class="token string">'weather'</span><span class="token punctuation">,</span> <span class="token string">'translate'</span><span class="token punctuation">,</span> <span class="token string">'chat'</span><span class="token punctuation">]</span><span class="token punctuation">:</span>
+    <span class="token triple-quoted-string string">'''根据意图路由到不同处理器'''</span>
+    <span class="token keyword">return</span> state<span class="token punctuation">[</span><span class="token string">'intent'</span><span class="token punctuation">]</span>
+
+<span class="token comment"># ===============Step 5: 创建Graph===============</span>
+graph <span class="token operator">=</span> <span class="token punctuation">(</span>
+    StateGraph<span class="token punctuation">(</span>IntentState<span class="token punctuation">)</span>
+    <span class="token punctuation">.</span>add_node<span class="token punctuation">(</span><span class="token string">'classify'</span><span class="token punctuation">,</span> classify_intent<span class="token punctuation">)</span>
+    <span class="token punctuation">.</span>add_node<span class="token punctuation">(</span><span class="token string">'weather'</span><span class="token punctuation">,</span> handle_weather<span class="token punctuation">)</span>
+    <span class="token punctuation">.</span>add_node<span class="token punctuation">(</span><span class="token string">'translate'</span><span class="token punctuation">,</span> handle_translate<span class="token punctuation">)</span>
+    <span class="token punctuation">.</span>add_node<span class="token punctuation">(</span><span class="token string">'chat'</span><span class="token punctuation">,</span> handle_chat<span class="token punctuation">)</span>
+    <span class="token punctuation">.</span>add_edge<span class="token punctuation">(</span>START<span class="token punctuation">,</span> <span class="token string">'classify'</span><span class="token punctuation">)</span>
+    <span class="token punctuation">.</span>add_conditional_edges<span class="token punctuation">(</span><span class="token string">'classify'</span><span class="token punctuation">,</span> intent_router<span class="token punctuation">)</span>
+    <span class="token punctuation">.</span>add_edge<span class="token punctuation">(</span><span class="token string">'weather'</span><span class="token punctuation">,</span> END<span class="token punctuation">)</span>
+    <span class="token punctuation">.</span>add_edge<span class="token punctuation">(</span><span class="token string">'translate'</span><span class="token punctuation">,</span> END<span class="token punctuation">)</span>
+    <span class="token punctuation">.</span>add_edge<span class="token punctuation">(</span><span class="token string">'chat'</span><span class="token punctuation">,</span> END<span class="token punctuation">)</span>
+    <span class="token punctuation">.</span><span class="token builtin">compile</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+<span class="token punctuation">)</span>
+
+<span class="token comment"># 用 xray 模式可以看到子图内部结构</span>
+<span class="token keyword">print</span><span class="token punctuation">(</span><span class="token string">"\n=== xray=True模式（展开子图内部）==="</span><span class="token punctuation">)</span>
+display<span class="token punctuation">(</span>Image<span class="token punctuation">(</span>graph<span class="token punctuation">.</span>get_graph<span class="token punctuation">(</span>xray<span class="token operator">=</span><span class="token boolean">True</span><span class="token punctuation">)</span><span class="token punctuation">.</span>draw_mermaid_png<span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<p>结构：</p>
+<p><img src="https://wu4yong.github.io/starry-images/assets/img/llmheima/5-2/langgraph-workflow-13.webp" alt="langgraph-workflow-13.webp"></p>
+<p>可以看到，结构与之前并无差别。</p>
+<p>测试：</p>
+<pre class="line-numbers language-python" data-language="python"><code class="language-python">query <span class="token operator">=</span> <span class="token string">'今天北京天气如何？'</span>
+result <span class="token operator">=</span> graph<span class="token punctuation">.</span>invoke<span class="token punctuation">(</span><span class="token punctuation">&#123;</span><span class="token string">'messages'</span><span class="token punctuation">:</span> <span class="token punctuation">[</span>HumanMessage<span class="token punctuation">(</span>content<span class="token operator">=</span>query<span class="token punctuation">)</span><span class="token punctuation">]</span><span class="token punctuation">&#125;</span><span class="token punctuation">)</span>
+
+<span class="token keyword">for</span> message <span class="token keyword">in</span> result<span class="token punctuation">[</span><span class="token string">'messages'</span><span class="token punctuation">]</span><span class="token punctuation">:</span>
+    message<span class="token punctuation">.</span>pretty_print<span class="token punctuation">(</span><span class="token punctuation">)</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<p>输出：</p>
+<pre class="line-numbers language-markdown" data-language="markdown"><code class="language-markdown">================================ Human Message =================================
+
+今天北京天气如何？
+================================== Ai Message ==================================
+
+今天北京的天气情况如下：
+
+🌤 <span class="token bold"><span class="token punctuation">**</span><span class="token content">天气状况：</span><span class="token punctuation">**</span></span> 晴天
+🌡 <span class="token bold"><span class="token punctuation">**</span><span class="token content">温度：</span><span class="token punctuation">**</span></span> 25°C
+
+是个天气不错的日子，气温也很舒适，适合外出活动。不过具体的气温和状况可能会随时间变化，建议出门前再留意一下实时天气预报哦。<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<p>可以看到，在历史消息中并不包含子图的消息。</p>
+<h2 id="总结"><a href="#总结" class="headerlink" title="总结"></a>总结</h2><h4 id="六种编排模式速查"><a href="#六种编排模式速查" class="headerlink" title="六种编排模式速查"></a>六种编排模式速查</h4><div class="data-grid data-grid-link-table"><div class="grid-header"><div class="grid-cell">模式</div><div class="grid-cell">API</div><div class="grid-cell">原理</div><div class="grid-cell">典型场景</div></div><div class="grid-row"><div class="grid-cell"><strong>Prompt Chaining</strong></div><div class="grid-cell"><code>add_edge</code> 串联 + <code>add_conditional_edges</code> 做门控</div><div class="grid-cell">每个LLM输出作下一个LLM输入，中间可插入质检</div><div class="grid-cell">写作流程、翻译+校对、分步推理</div></div><div class="grid-row"><div class="grid-cell"><strong>Routing</strong></div><div class="grid-cell"><code>add_conditional_edges(node, router, mapping)</code></div><div class="grid-cell">router函数返回节点名，mapping映射到实际节点</div><div class="grid-cell">意图路由、权限分流、LLM工具调用判断</div></div><div class="grid-row"><div class="grid-cell"><strong>Parallelization</strong></div><div class="grid-cell">多条<code>add_edge</code>指向不同目标</div><div class="grid-cell">节点间无依赖即可并行，需要reducer合并结果</div><div class="grid-cell">同时查多个数据源、并行LLM调用</div></div><div class="grid-row"><div class="grid-cell"><strong>Orchestrator-Worker</strong></div><div class="grid-cell"><code>add_conditional_edges</code> + <code>Send</code> API</div><div class="grid-cell">动态生成Send列表，并行分发到同一节点不同State</div><div class="grid-cell">批量处理、子问题分解、分布式搜索</div></div><div class="grid-row"><div class="grid-cell"><strong>Evaluator-Optimizer</strong></div><div class="grid-cell">条件边回环 + 评估器门控</div><div class="grid-cell">生成→评估→不达标带反馈重写，达标则退出</div><div class="grid-cell">文案优化、代码审查、翻译质量提升</div></div><div class="grid-row"><div class="grid-cell"><strong>子图嵌套</strong></div><div class="grid-cell"><code>add_node(&quot;name&quot;, compiled_subgraph)</code> 或包装调用</div><div class="grid-cell">子图独立管理内部State和控制流，父图复用完整流程</div><div class="grid-cell">复杂流程分层、可复用流程组件</div></div></div>
+
+<h4 id="核心要点"><a href="#核心要点" class="headerlink" title="核心要点"></a>核心要点</h4><ol>
+<li><strong>Prompt Chaining 是最简单的编排</strong> — 串联LLM调用，中间加入门控检查，形成可验证的流水线</li>
+<li><strong>路由是智能的基础</strong> — Agent通过<code>add_conditional_edges</code>根据State动态选择路径</li>
+<li><strong>并行提升性能</strong> — 无依赖的节点可并行执行，用<code>operator.add</code>等reducer合并结果</li>
+<li><strong>Orchestrator-Worker</strong> — 动态任务拆分与并行执行，是智能与效率的结合，需要Send API</li>
+<li><strong>Evaluator-Optimizer保障质量</strong> — 生成→评估→反馈→重写循环，直到达标</li>
+<li><strong>子图实现分层设计</strong> — 复杂流程拆为独立子图，<code>add_node(graph)</code>直接嵌入，共享State自动映射</li>
+</ol>
+<h4 id="模式选择指南"><a href="#模式选择指南" class="headerlink" title="模式选择指南"></a>模式选择指南</h4><ul>
+<li>确定步骤顺序 → Prompt Chaining</li>
+<li>存在不同领域的Node → 智能路由(Routing)</li>
+<li>多个独立任务加速 → 并行执行(Parallelization)</li>
+<li>复杂任务动态拆分和性能提升 → Orchestrator-Worker(Send)</li>
+<li>需要迭代优化质量 → Evaluator-Optimizer</li>
+<li>流程太长需要拆解 → 子图嵌套</li>
+</ul>
+</div>
+
+  <div class="mb-foot">
+    <a href="/phone/">返回手机首页</a>
+    <a href="/phone/tags/">星迹索引</a>
+  </div>
+</div>
+
+
+<script>
+  /* 作用：懒加载本地 mermaid 库；无 mermaid 代码块时不加载 */
+  function loadLocalMermaid(){
+    return new Promise(function(resolve, reject){
+      if(window.mermaid) return resolve(window.mermaid);
+      var s = document.createElement('script');
+      s.src = '/js/third-party/mermaid/mermaid.min.js?v=10';
+      s.onload = function(){ resolve(window.mermaid); };
+      s.onerror = function(){ reject(new Error('mermaid local load failed')); };
+      document.head.appendChild(s);
+    });
+  }
+
+  /* 作用：把 ```mermaid 代码块替换成 SVG 图（手机端字号略小、图可横向滚动） */
+  async function renderMermaidDiagram(){
+    var blocks = document.querySelectorAll('pre[class*="language-mermaid"]');
+    if(!blocks.length) return;
+    var mermaid;
+    try { mermaid = await loadLocalMermaid(); }
+    catch(e){ console.warn('[mermaid] 本地库加载失败：', e); return; }
+
+    mermaid.initialize({
+      startOnLoad: false,
+      theme: 'base',
+      themeVariables: {
+        darkMode: true,
+        background: 'transparent',
+        fontFamily: '"Microsoft YaHei", "PingFang SC", "Segoe UI", sans-serif',
+        fontSize: '12px',
+        primaryColor: '#062f3d',
+        primaryTextColor: '#d6f6ff',
+        primaryBorderColor: '#00eeff',
+        secondaryColor: '#04222d',
+        tertiaryColor: '#04222d',
+        mainBkg: '#062f3d',
+        nodeBorder: '#00eeff',
+        clusterBkg: '#02161f',
+        clusterBorder: '#00eeff55',
+        lineColor: '#00eeff',
+        textColor: '#c0e8ff',
+        edgeLabelBackground: '#02161f'
+      },
+      flowchart: { curve: 'basis', useMaxWidth: false, htmlLabels: false, nodeSpacing: 30, rankSpacing: 40, padding: 10 }
+    });
+
+    var targets = [];
+    blocks.forEach(function(el){
+      var codeEl = el.querySelector('code');
+      if(!codeEl) return;
+      var div = document.createElement('div');
+      div.className = 'mermaid';
+      div.textContent = codeEl.textContent;
+      el.parentNode.replaceChild(div, el);
+      targets.push(div);
+    });
+    if(!targets.length) return;
+    try { await mermaid.run({ nodes: targets }); }
+    catch(e){ console.warn('[mermaid] 渲染失败：', e); }
+  }
+  /* 作用：多次触发兜底（延迟重试 + DOM 变化），防止某次时机没跑到导致图表留在代码块 */
+  var mmBusy = false;
+  function scheduleMermaid(){
+    if(mmBusy) return;
+    mmBusy = true;
+    renderMermaidDiagram().then(function(){ mmBusy = false; }, function(){ mmBusy = false; });
+  }
+  scheduleMermaid();
+  window.addEventListener('load', scheduleMermaid);
+  [1000, 3000, 8000].forEach(function(ms){ setTimeout(scheduleMermaid, ms); });
+  if(document.readyState !== 'loading') scheduleMermaid();
+  if(window.MutationObserver){
+    var mmTimer = null;
+    var mmObserver = new MutationObserver(function(){
+      clearTimeout(mmTimer);
+      mmTimer = setTimeout(scheduleMermaid, 400);
+    });
+    mmObserver.observe(document.querySelector('.mb-article') || document.body, { childList: true, subtree: true });
+  }
+</script>
+</body>
+</html>

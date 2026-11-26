@@ -1,0 +1,323 @@
+<!--
+  ============================================
+  手机端 · 文章原文页
+  文件：phone/post.njk
+  适用终端：手机端（路由 /phone/p/<slug>/，由 scripts/phone-routes.js 生成）
+  作用：手机阅读单篇文章；单列布局、无侧栏无雷达，替代电脑端 post.njk
+        数据由生成期算好：page.item = { title, dateStr, content, cats, tags }
+  样式依赖：source/css/theme/phone/common.css、source/css/theme/phone/list.css
+  组件依赖：phone/_components/Particles.njk
+  最后修改：2026-11-11
+  ============================================
+-->
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="color-scheme" content="dark">
+  <meta name="theme-color" content="#020817">
+  <!-- 首帧兜底：浏览器默认画布是白的，样式未解析前会闪一下白。这条规则先锁死深空底色 -->
+  <style>html{background-color:#020817}</style>
+  <title>Kafka（三）消费者组与位移 - 时空秘境</title>
+  <!-- 手机端样式：基础 + 列表/正文，外链引入（源文件 source/css/theme/phone/） -->
+  <link rel="stylesheet" href="/css/theme/phone/common.css">
+  <link rel="stylesheet" href="/css/theme/phone/list.css">
+<meta name="generator" content="Hexo 8.1.2"></head>
+<body>
+<div class="mb-shell">
+  <!--
+  ============================================
+  手机端星空粒子组件
+  文件：Particles.njk
+  适用终端：手机端
+  作用：Particles.njk 的手机端副本（nunjucks 子目录 include 取不到上级）
+        参数与电脑端 _components/Particles.njk 保持一致：
+        粒子 95 / 连线 118px / opacity 0.32，外加星座层与零星闪烁层
+  最后修改：2026-11-12
+  ============================================
+--><!-- z-index 必须是 0：负层级会被 body 不透明背景盖住，粒子在跑却看不见 -->
+<div id="particles" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 0; pointer-events: none;"></div>
+<!-- 星座层（与首页同一套：随机零星散布星座图形 + 偶尔闪烁的小星） -->
+<div id="constellations" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 1; pointer-events: none;" aria-hidden="true"></div>
+<script src="/js/particles.min.js"></script>
+<script>
+particlesJS("particles", {
+  particles: {
+    number: {
+      value: 95,
+      density: {
+        enable: true,
+        value_area: 800
+      }
+    },
+    color: {
+      value: "#00eeff"
+    },
+    shape: {
+      type: "circle",
+      stroke: {
+        width: 0,
+        color: "#000000"
+      }
+    },
+    opacity: {
+      value: 0.6,
+      random: true,
+      anim: {
+        enable: true,
+        speed: 0.5,
+        opacity_min: 0.1,
+        sync: false
+      }
+    },
+    size: {
+      value: 3,
+      random: true,
+      anim: {
+        enable: true,
+        speed: 2,
+        size_min: 0.1,
+        sync: false
+      }
+    },
+    line_linked: {
+      enable: true,
+      distance: 118,
+      color: "#00eeff",
+      opacity: 0.32,
+      width: 1
+    },
+    move: {
+      enable: true,
+      speed: 0.8,
+      direction: "none",
+      random: true,
+      straight: false,
+      out_mode: "out",
+      bounce: false,
+      attract: {
+        enable: true,
+        rotateX: 600,
+        rotateY: 1200
+      }
+    }
+  },
+  interactivity: {
+    detect_on: "canvas",
+    events: {
+      onhover: {
+        enable: true,
+        mode: "grab"       // 手指按住时粒子聚集
+      },
+      onclick: {
+        enable: true,
+        mode: "push"       // 点击时产生新粒子
+      },
+      resize: true
+    },
+    modes: {
+      grab: {
+        distance: 200,
+        line_linked: {
+          opacity: 1
+        }
+      },
+      push: {
+        particles_nb: 6
+      }
+    }
+  },
+  retina_detect: true
+});
+</script>
+<!-- 星座 + 零星闪烁层：与电脑端共用同一份绘制脚本 -->
+<script src="/js/theme/home/starfield.js"></script>
+
+
+  <div class="mb-top">
+    <a class="mb-back" href="/phone/">← 返回手机首页</a>
+    <span class="mb-sub" style="margin:0">2023-09-06</span>
+  </div>
+
+  <h1 class="mb-title">Kafka（三）消费者组与位移</h1>
+  <div class="mb-sub">
+    分类：bigdata · kafka
+     ｜ 标签：Kafka
+  </div>
+
+  <div class="mb-article"><div class="essay-banner essay-kafka"></div>
+
+<h1 id="消费者组与位移"><a href="#消费者组与位移" class="headerlink" title="消费者组与位移"></a><strong>消费者组与位移</strong></h1><p>消费端的两个核心对象：<strong>消费者组</strong>决定谁来读哪些分区，<strong>位移</strong>（offset）决定从哪接着读。理解了这两件事，rebalance、重复消费、积压排查才有落点。</p>
+<p><img src="https://wu4yong.github.io/starry-images/assets/img/kafka/kafka-03-consumer.webp" alt="三只机械臂伸向不同分区，右侧是位移账本"></p>
+<p><em>一个分区在同一时刻只能被组内一个消费者读取，这是并发的硬边界</em></p>
+<h2 id="3-1-消费者组的分配规则"><a href="#3-1-消费者组的分配规则" class="headerlink" title="3.1 消费者组的分配规则"></a>3.1 消费者组的分配规则</h2><p>同一 group 内的消费者共同瓜分 Topic 的所有分区：分区数 6、消费者 3，则每人 2 个；消费者多于分区，多出来的实例空转等 rebalance。</p>
+<div class="data-grid data-grid-link-table"><div class="grid-header"><div class="grid-cell">关系</div><div class="grid-cell">结果</div><div class="grid-cell">说明</div></div><div class="grid-row"><div class="grid-cell">消费者 &#x3D; 分区</div><div class="grid-cell">一对一，最均衡</div><div class="grid-cell">推荐按此规划并发度</div></div><div class="grid-row"><div class="grid-cell">消费者 &lt; 分区</div><div class="grid-cell">一人多分区，串行处理</div><div class="grid-cell">单实例吞吐成为瓶颈点</div></div><div class="grid-row"><div class="grid-cell">消费者 &gt; 分区</div><div class="grid-cell">有实例分不到分区</div><div class="grid-cell">白占资源，应避免</div></div></div>
+
+<h2 id="3-2-位移存在哪"><a href="#3-2-位移存在哪" class="headerlink" title="3.2 位移存在哪"></a>3.2 位移存在哪</h2><p>老版本把位移存 ZooKeeper，新版本存在 Kafka 内部的 <code>__consumer_offsets</code> 主题（默认 50 个分区）。三个配置决定行为：</p>
+<pre class="line-numbers language-properties" data-language="properties"><code class="language-properties"><span class="token key attr-name">enable.auto.commit</span><span class="token punctuation">=</span><span class="token value attr-value">true          # 自动提交，简单但不可控</span>
+<span class="token key attr-name">auto.commit.interval.ms</span><span class="token punctuation">=</span><span class="token value attr-value">5000     # 自动提交间隔</span>
+<span class="token key attr-name">auto.offset.reset</span><span class="token punctuation">=</span><span class="token value attr-value">latest         # 无位移时 earliest / latest / none</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span></span></code></pre>
+
+<p><code>auto.commit.interval.ms</code> 的语义容易被误解：它提交的是”上次 poll 返回的最后位移”，不是”处理完成的位置”。所以自动提交 + 业务处理失败 &#x3D; 消息丢失。需要精确控制时改成手动提交：</p>
+<pre class="line-numbers language-java" data-language="java"><code class="language-java">props<span class="token punctuation">.</span><span class="token function">put</span><span class="token punctuation">(</span><span class="token class-name">ConsumerConfig</span><span class="token punctuation">.</span><span class="token constant">ENABLE_AUTO_COMMIT_CONFIG</span><span class="token punctuation">,</span> <span class="token boolean">false</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token keyword">while</span> <span class="token punctuation">(</span><span class="token boolean">true</span><span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+    <span class="token class-name">ConsumerRecords</span><span class="token generics"><span class="token punctuation">&lt;</span><span class="token class-name">String</span><span class="token punctuation">,</span> <span class="token class-name">String</span><span class="token punctuation">></span></span> records <span class="token operator">=</span> consumer<span class="token punctuation">.</span><span class="token function">poll</span><span class="token punctuation">(</span><span class="token class-name">Duration</span><span class="token punctuation">.</span><span class="token function">ofMillis</span><span class="token punctuation">(</span><span class="token number">500</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token function">process</span><span class="token punctuation">(</span>records<span class="token punctuation">)</span><span class="token punctuation">;</span>                                    <span class="token comment">// 业务处理完成</span>
+    consumer<span class="token punctuation">.</span><span class="token function">commitSync</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>                               <span class="token comment">// 再提交位移</span>
+<span class="token punctuation">&#125;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<p><code>commitSync</code> 阻塞到成功，<code>commitAsync</code> 不阻塞但失败不重试——常见做法是循环里 async、退出时 sync 兜底。</p>
+<h2 id="3-3-rebalance-的代价"><a href="#3-3-rebalance-的代价" class="headerlink" title="3.3 rebalance 的代价"></a>3.3 rebalance 的代价</h2><p>触发条件：消费者加入或离开、订阅的 Topic 分区数变化、心跳超时。过程中分区归属重新分配，<strong>期间消费整体暂停</strong>。</p>
+<div class="data-grid data-grid-link-table"><div class="grid-header"><div class="grid-cell">阶段</div><div class="grid-cell">做什么</div><div class="grid-cell">影响</div></div><div class="grid-row"><div class="grid-cell">Revoke</div><div class="grid-cell">消费者放弃已分配分区并提交位移</div><div class="grid-cell">处理中的批次要么写完要么回滚</div></div><div class="grid-row"><div class="grid-cell">Rebalance</div><div class="grid-cell">协调者重新计算分配方案</div><div class="grid-cell">全组暂停消费</div></div><div class="grid-row"><div class="grid-cell">Assign</div><div class="grid-cell">consumer 拉取新分区与位移</div><div class="grid-cell">可能从别的位点续读</div></div></div>
+
+<p>降低影响的手段：<code>session.timeout.ms</code> 别设太小（默认 45s 左右，太敏感会误判断线）、<code>max.poll.interval.ms</code> 要大于单批处理最坏耗时（默认 5 分钟，处理慢就报 <code>CommitFailedException</code>）、用增量协作式再均衡（<code>partition.assignment.strategy=CooperativeStickyAssignor</code>）减少全量 revoke。</p>
+<h2 id="3-4-从指定位移消费"><a href="#3-4-从指定位移消费" class="headerlink" title="3.4 从指定位移消费"></a>3.4 从指定位移消费</h2><pre class="line-numbers language-bash" data-language="bash"><code class="language-bash"><span class="token comment"># 看组的积压</span>
+bin/kafka-consumer-groups.sh <span class="token parameter variable">--describe</span> <span class="token parameter variable">--group</span> order-consumer <span class="token punctuation">\</span>
+  --bootstrap-server localhost:9092
+
+<span class="token comment"># 重置位移到最早（必须先停组内所有消费者）</span>
+bin/kafka-consumer-groups.sh --reset-offsets --to-earliest <span class="token punctuation">\</span>
+  <span class="token parameter variable">--group</span> order-consumer <span class="token parameter variable">--topic</span> order-events <span class="token parameter variable">--execute</span> <span class="token punctuation">\</span>
+  --bootstrap-server localhost:9092<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<p>重置位移是有副作用的动作：只能在与组断开时执行，<code>--execute</code> 前先用不带该参数的命令预览。这说明”重放”能力很强，但不是随时可用，业务层面最好自带幂等，而不是依赖回滚位移。</p>
+<h2 id="3-5-重复消费从哪来"><a href="#3-5-重复消费从哪来" class="headerlink" title="3.5 重复消费从哪来"></a>3.5 重复消费从哪来</h2><ul>
+<li>处理完成但位移未提交就崩溃 → 重启后重读那段</li>
+<li>位移已提交但下游写入失败 → 需要补偿，本质是跨系统事务问题</li>
+<li>rebalance 时未及时提交 → 新持有者从头续读</li>
+</ul>
+<p>结论：<strong>至少一次是默认语义</strong>，正好一次要靠”消费幂等 + 位移与业务同事务”自己凑。常见落地是把位移随业务结果一起写进数据库，下次启动时从数据库读位移，而不是依赖 Kafka 内部存储。</p>
+<h2 id="3-6-容易踩的坑"><a href="#3-6-容易踩的坑" class="headerlink" title="3.6 容易踩的坑"></a>3.6 容易踩的坑</h2><ul>
+<li><strong><code>max.poll.records</code> 太大</strong>：单次拉太多，处理时间超过 <code>max.poll.interval.ms</code> 被判失联，反复 rebalance。</li>
+<li><strong>多线程处理同一分区</strong>：分区内顺序会被打乱，需要顺序时按 key 分派到固定线程。</li>
+<li><strong><code>auto.offset.reset=earliest</code> 用在已有组上</strong>：该配置只在无位移时生效，改它不能回溯历史，回溯要重置位移。</li>
+<li><strong>消费者组名带环境混用</strong>：测试环境与生产共用组名，会互相抢分区，位移错乱。</li>
+</ul>
+<h2 id="3-6-批量与异步提交的组合"><a href="#3-6-批量与异步提交的组合" class="headerlink" title="3.6 批量与异步提交的组合"></a>3.6 批量与异步提交的组合</h2><p>生产上更常见的是”批量处理 + 异步提交 + 退出时同步”的组合：</p>
+<pre class="line-numbers language-java" data-language="java"><code class="language-java"><span class="token keyword">while</span> <span class="token punctuation">(</span>running<span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+    <span class="token class-name">ConsumerRecords</span><span class="token generics"><span class="token punctuation">&lt;</span><span class="token class-name">String</span><span class="token punctuation">,</span> <span class="token class-name">String</span><span class="token punctuation">></span></span> records <span class="token operator">=</span> consumer<span class="token punctuation">.</span><span class="token function">poll</span><span class="token punctuation">(</span><span class="token class-name">Duration</span><span class="token punctuation">.</span><span class="token function">ofMillis</span><span class="token punctuation">(</span><span class="token number">300</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token keyword">if</span> <span class="token punctuation">(</span>records<span class="token punctuation">.</span><span class="token function">isEmpty</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span> <span class="token keyword">continue</span><span class="token punctuation">;</span>
+
+    <span class="token keyword">for</span> <span class="token punctuation">(</span><span class="token class-name">ConsumerRecord</span><span class="token generics"><span class="token punctuation">&lt;</span><span class="token class-name">String</span><span class="token punctuation">,</span> <span class="token class-name">String</span><span class="token punctuation">></span></span> r <span class="token operator">:</span> records<span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+        <span class="token function">handle</span><span class="token punctuation">(</span>r<span class="token punctuation">)</span><span class="token punctuation">;</span>                       <span class="token comment">// 幂等处理，失败写死信</span>
+    <span class="token punctuation">&#125;</span>
+    consumer<span class="token punctuation">.</span><span class="token function">commitAsync</span><span class="token punctuation">(</span><span class="token punctuation">(</span>offsets<span class="token punctuation">,</span> e<span class="token punctuation">)</span> <span class="token operator">-></span> <span class="token punctuation">&#123;</span>
+        <span class="token keyword">if</span> <span class="token punctuation">(</span>e <span class="token operator">!=</span> <span class="token keyword">null</span><span class="token punctuation">)</span> log<span class="token punctuation">.</span><span class="token function">warn</span><span class="token punctuation">(</span><span class="token string">"async commit failed, rely on next poll"</span><span class="token punctuation">,</span> e<span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token punctuation">&#125;</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">&#125;</span>
+
+<span class="token keyword">try</span> <span class="token punctuation">&#123;</span>
+    consumer<span class="token punctuation">.</span><span class="token function">commitSync</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>               <span class="token comment">// 退出前再同步一次，兜住最后一次</span>
+<span class="token punctuation">&#125;</span> <span class="token keyword">finally</span> <span class="token punctuation">&#123;</span>
+    consumer<span class="token punctuation">.</span><span class="token function">close</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">&#125;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<p><code>commitAsync</code> 回调里的异常不要重试——下一次 poll 或后续提交会覆盖它，强重试反而可能提交更旧的位移。</p>
+<p>Runnable 里若用多线程处理，位移提交必须串行且按”最小的已完成位移”提交：并发处理时如果前面的批次没完成却提交了后面位移，崩溃就会丢数据。</p>
+<h2 id="3-8-官方资料"><a href="#3-8-官方资料" class="headerlink" title="3.8 官方资料"></a>3.8 官方资料</h2><ul>
+<li>Consumer 配置全表：<a target="_blank" rel="noopener" href="https://kafka.apache.org/documentation/#consumerconfigs">https://kafka.apache.org/documentation/#consumerconfigs</a></li>
+<li>消费者组与位移管理：<a target="_blank" rel="noopener" href="https://kafka.apache.org/documentation/#impl_consumerrebalance">https://kafka.apache.org/documentation/#impl_consumerrebalance</a></li>
+<li>运维工具（含 reset-offsets）：<a target="_blank" rel="noopener" href="https://kafka.apache.org/documentation/#basic_ops_consumergroup">https://kafka.apache.org/documentation/#basic_ops_consumergroup</a></li>
+</ul>
+<h2 id="3-9-清单"><a href="#3-9-清单" class="headerlink" title="3.9 清单"></a>3.9 清单</h2><ol>
+<li>分区是并发上限，消费者数不宜超过分区数</li>
+<li>位移存 <code>__consumer_offsets</code>，自动提交提交的是 poll 位点，不是处理位点</li>
+<li>要”处理完再提交”就必须关自动提交、手动 <code>commitSync</code></li>
+<li>rebalance 期间全组停摆，参数要给慢处理留足 <code>max.poll.interval.ms</code></li>
+<li>重置位移只能在组离线时做，且先预览再 <code>--execute</code></li>
+<li>默认语义是至少一次，重复消费要靠业务幂等消化</li>
+<li>需要顺序时限制 <code>max.poll.records</code> 并按 key 固定线程</li>
+<li>生产推荐”批处理 + async 提交 + 退出 sync”，异步失败不要重试</li>
+<li>多线程处理时位移按最小已完成位移提交，否则崩溃会丢数据</li>
+</ol>
+</div>
+
+  <div class="mb-foot">
+    <a href="/phone/">返回手机首页</a>
+    <a href="/phone/tags/">星迹索引</a>
+  </div>
+</div>
+
+
+<script>
+  /* 作用：懒加载本地 mermaid 库；无 mermaid 代码块时不加载 */
+  function loadLocalMermaid(){
+    return new Promise(function(resolve, reject){
+      if(window.mermaid) return resolve(window.mermaid);
+      var s = document.createElement('script');
+      s.src = '/js/third-party/mermaid/mermaid.min.js?v=10';
+      s.onload = function(){ resolve(window.mermaid); };
+      s.onerror = function(){ reject(new Error('mermaid local load failed')); };
+      document.head.appendChild(s);
+    });
+  }
+
+  /* 作用：把 ```mermaid 代码块替换成 SVG 图（手机端字号略小、图可横向滚动） */
+  async function renderMermaidDiagram(){
+    var blocks = document.querySelectorAll('pre[class*="language-mermaid"]');
+    if(!blocks.length) return;
+    var mermaid;
+    try { mermaid = await loadLocalMermaid(); }
+    catch(e){ console.warn('[mermaid] 本地库加载失败：', e); return; }
+
+    mermaid.initialize({
+      startOnLoad: false,
+      theme: 'base',
+      themeVariables: {
+        darkMode: true,
+        background: 'transparent',
+        fontFamily: '"Microsoft YaHei", "PingFang SC", "Segoe UI", sans-serif',
+        fontSize: '12px',
+        primaryColor: '#062f3d',
+        primaryTextColor: '#d6f6ff',
+        primaryBorderColor: '#00eeff',
+        secondaryColor: '#04222d',
+        tertiaryColor: '#04222d',
+        mainBkg: '#062f3d',
+        nodeBorder: '#00eeff',
+        clusterBkg: '#02161f',
+        clusterBorder: '#00eeff55',
+        lineColor: '#00eeff',
+        textColor: '#c0e8ff',
+        edgeLabelBackground: '#02161f'
+      },
+      flowchart: { curve: 'basis', useMaxWidth: false, htmlLabels: false, nodeSpacing: 30, rankSpacing: 40, padding: 10 }
+    });
+
+    var targets = [];
+    blocks.forEach(function(el){
+      var codeEl = el.querySelector('code');
+      if(!codeEl) return;
+      var div = document.createElement('div');
+      div.className = 'mermaid';
+      div.textContent = codeEl.textContent;
+      el.parentNode.replaceChild(div, el);
+      targets.push(div);
+    });
+    if(!targets.length) return;
+    try { await mermaid.run({ nodes: targets }); }
+    catch(e){ console.warn('[mermaid] 渲染失败：', e); }
+  }
+  /* 作用：多次触发兜底（延迟重试 + DOM 变化），防止某次时机没跑到导致图表留在代码块 */
+  var mmBusy = false;
+  function scheduleMermaid(){
+    if(mmBusy) return;
+    mmBusy = true;
+    renderMermaidDiagram().then(function(){ mmBusy = false; }, function(){ mmBusy = false; });
+  }
+  scheduleMermaid();
+  window.addEventListener('load', scheduleMermaid);
+  [1000, 3000, 8000].forEach(function(ms){ setTimeout(scheduleMermaid, ms); });
+  if(document.readyState !== 'loading') scheduleMermaid();
+  if(window.MutationObserver){
+    var mmTimer = null;
+    var mmObserver = new MutationObserver(function(){
+      clearTimeout(mmTimer);
+      mmTimer = setTimeout(scheduleMermaid, 400);
+    });
+    mmObserver.observe(document.querySelector('.mb-article') || document.body, { childList: true, subtree: true });
+  }
+</script>
+</body>
+</html>

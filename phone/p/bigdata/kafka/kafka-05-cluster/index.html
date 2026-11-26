@@ -1,0 +1,324 @@
+<!--
+  ============================================
+  手机端 · 文章原文页
+  文件：phone/post.njk
+  适用终端：手机端（路由 /phone/p/<slug>/，由 scripts/phone-routes.js 生成）
+  作用：手机阅读单篇文章；单列布局、无侧栏无雷达，替代电脑端 post.njk
+        数据由生成期算好：page.item = { title, dateStr, content, cats, tags }
+  样式依赖：source/css/theme/phone/common.css、source/css/theme/phone/list.css
+  组件依赖：phone/_components/Particles.njk
+  最后修改：2026-11-11
+  ============================================
+-->
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="color-scheme" content="dark">
+  <meta name="theme-color" content="#020817">
+  <!-- 首帧兜底：浏览器默认画布是白的，样式未解析前会闪一下白。这条规则先锁死深空底色 -->
+  <style>html{background-color:#020817}</style>
+  <title>Kafka（五）集群搭建与扩缩容 - 时空秘境</title>
+  <!-- 手机端样式：基础 + 列表/正文，外链引入（源文件 source/css/theme/phone/） -->
+  <link rel="stylesheet" href="/css/theme/phone/common.css">
+  <link rel="stylesheet" href="/css/theme/phone/list.css">
+<meta name="generator" content="Hexo 8.1.2"></head>
+<body>
+<div class="mb-shell">
+  <!--
+  ============================================
+  手机端星空粒子组件
+  文件：Particles.njk
+  适用终端：手机端
+  作用：Particles.njk 的手机端副本（nunjucks 子目录 include 取不到上级）
+        参数与电脑端 _components/Particles.njk 保持一致：
+        粒子 95 / 连线 118px / opacity 0.32，外加星座层与零星闪烁层
+  最后修改：2026-11-12
+  ============================================
+--><!-- z-index 必须是 0：负层级会被 body 不透明背景盖住，粒子在跑却看不见 -->
+<div id="particles" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 0; pointer-events: none;"></div>
+<!-- 星座层（与首页同一套：随机零星散布星座图形 + 偶尔闪烁的小星） -->
+<div id="constellations" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 1; pointer-events: none;" aria-hidden="true"></div>
+<script src="/js/particles.min.js"></script>
+<script>
+particlesJS("particles", {
+  particles: {
+    number: {
+      value: 95,
+      density: {
+        enable: true,
+        value_area: 800
+      }
+    },
+    color: {
+      value: "#00eeff"
+    },
+    shape: {
+      type: "circle",
+      stroke: {
+        width: 0,
+        color: "#000000"
+      }
+    },
+    opacity: {
+      value: 0.6,
+      random: true,
+      anim: {
+        enable: true,
+        speed: 0.5,
+        opacity_min: 0.1,
+        sync: false
+      }
+    },
+    size: {
+      value: 3,
+      random: true,
+      anim: {
+        enable: true,
+        speed: 2,
+        size_min: 0.1,
+        sync: false
+      }
+    },
+    line_linked: {
+      enable: true,
+      distance: 118,
+      color: "#00eeff",
+      opacity: 0.32,
+      width: 1
+    },
+    move: {
+      enable: true,
+      speed: 0.8,
+      direction: "none",
+      random: true,
+      straight: false,
+      out_mode: "out",
+      bounce: false,
+      attract: {
+        enable: true,
+        rotateX: 600,
+        rotateY: 1200
+      }
+    }
+  },
+  interactivity: {
+    detect_on: "canvas",
+    events: {
+      onhover: {
+        enable: true,
+        mode: "grab"       // 手指按住时粒子聚集
+      },
+      onclick: {
+        enable: true,
+        mode: "push"       // 点击时产生新粒子
+      },
+      resize: true
+    },
+    modes: {
+      grab: {
+        distance: 200,
+        line_linked: {
+          opacity: 1
+        }
+      },
+      push: {
+        particles_nb: 6
+      }
+    }
+  },
+  retina_detect: true
+});
+</script>
+<!-- 星座 + 零星闪烁层：与电脑端共用同一份绘制脚本 -->
+<script src="/js/theme/home/starfield.js"></script>
+
+
+  <div class="mb-top">
+    <a class="mb-back" href="/phone/">← 返回手机首页</a>
+    <span class="mb-sub" style="margin:0">2023-09-18</span>
+  </div>
+
+  <h1 class="mb-title">Kafka（五）集群搭建与扩缩容</h1>
+  <div class="mb-sub">
+    分类：bigdata · kafka
+     ｜ 标签：Kafka
+  </div>
+
+  <div class="mb-article"><div class="essay-banner essay-kafka"></div>
+
+<h1 id="集群搭建与扩缩容"><a href="#集群搭建与扩缩容" class="headerlink" title="集群搭建与扩缩容"></a><strong>集群搭建与扩缩容</strong></h1><p>单机跑通和线上稳定是两件事。集群要考虑的是：元数据由谁管（ZooKeeper 还是 KRaft）、副本怎么摆、扩容时分区的迁移路径，以及缩容时不能一把停。</p>
+<p><img src="https://wu4yong.github.io/starry-images/assets/img/kafka/kafka-05-cluster.webp" alt="控制器节点、集群与副本迁移光路"></p>
+<p><em>副本迁移是扩容的核心动作，带宽和限流参数决定它会不会拖垮线上</em></p>
+<h2 id="5-1-两种元数据架构"><a href="#5-1-两种元数据架构" class="headerlink" title="5.1 两种元数据架构"></a>5.1 两种元数据架构</h2><div class="data-grid data-grid-link-table"><div class="grid-header"><div class="grid-cell">形态</div><div class="grid-cell">元数据存放</div><div class="grid-cell">现状</div></div><div class="grid-row"><div class="grid-cell">ZooKeeper 模式</div><div class="grid-cell">外部 ZK 集群存 controller 选举与元数据</div><div class="grid-cell">长期可用，运维多一套组件</div></div><div class="grid-row"><div class="grid-cell">KRaft 模式</div><div class="grid-cell">集群内部 controller quorum（Raft）</div><div class="grid-cell">2.8 预览，3.3 起推荐，无需 ZK</div></div></div>
+
+<p>KRaft 的关键是 controller quorum 的奇数节点数（3 或 5），它承担原 ZK 的角色。迁移路径官方提供 <code>kafka-storage.sh</code> 与双写过渡方案，但生产迁移要按官方文档逐步走，不建议脚本一把梭。</p>
+<h2 id="5-2-一个可用的三节点配置"><a href="#5-2-一个可用的三节点配置" class="headerlink" title="5.2 一个可用的三节点配置"></a>5.2 一个可用的三节点配置</h2><pre class="line-numbers language-properties" data-language="properties"><code class="language-properties"><span class="token comment"># server.properties 关键片段（broker.id 各节点不同）</span>
+<span class="token key attr-name">broker.id</span><span class="token punctuation">=</span><span class="token value attr-value">1</span>
+<span class="token key attr-name">listeners</span><span class="token punctuation">=</span><span class="token value attr-value">PLAINTEXT://:9092,CONTROLLER://:9093</span>
+<span class="token key attr-name">advertised.listeners</span><span class="token punctuation">=</span><span class="token value attr-value">PLAINTEXT://kafka-1.example.com:9092</span>
+<span class="token key attr-name">log.dirs</span><span class="token punctuation">=</span><span class="token value attr-value">/data/kafka-logs</span>
+<span class="token key attr-name">num.partitions</span><span class="token punctuation">=</span><span class="token value attr-value">6</span>
+<span class="token key attr-name">default.replication.factor</span><span class="token punctuation">=</span><span class="token value attr-value">3</span>
+<span class="token key attr-name">min.insync.replicas</span><span class="token punctuation">=</span><span class="token value attr-value">2</span>
+<span class="token key attr-name">offsets.topic.replication.factor</span><span class="token punctuation">=</span><span class="token value attr-value">3</span>
+<span class="token key attr-name">transaction.state.log.replication.factor</span><span class="token punctuation">=</span><span class="token value attr-value">3</span>
+<span class="token key attr-name">transaction.state.log.min.isr</span><span class="token punctuation">=</span><span class="token value attr-value">2</span>
+<span class="token key attr-name">auto.create.topics.enable</span><span class="token punctuation">=</span><span class="token value attr-value">false</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<p><code>advertised.listeners</code> 是最容易配错的一项：客户端拿到的是这个地址，配了内网 IP 而客户端在外网，就会连接超时。<code>auto.create.topics.enable=false</code> 建议关掉，避免拼错 Topic 名时悄悄建出默认 1 副本的主题。</p>
+<h2 id="5-3-副本分布与机架感知"><a href="#5-3-副本分布与机架感知" class="headerlink" title="5.3 副本分布与机架感知"></a>5.3 副本分布与机架感知</h2><p>Kafka 默认按 broker 轮转分配副本，不感知机架。跨机架部署时要给 broker 配 <code>broker.rack=rack-a</code>，分配器才会尽量把副本摊到不同机架。三副本的典型期望是”两个同机架 + 一个跨机架”，全靠这个参数。</p>
+<p>同机架两副本能扛单机故障，跨机架那份抗机架级故障（交换机、供电）。如果所有副本都在同一机架，等于把风险叠在一处。</p>
+<h2 id="5-4-扩分区与扩-broker"><a href="#5-4-扩分区与扩-broker" class="headerlink" title="5.4 扩分区与扩 broker"></a>5.4 扩分区与扩 broker</h2><p>两件事要分开做，顺序也有讲究：</p>
+<ol>
+<li><strong>先加 broker</strong>：新节点启动后只是空目录，不会自动接管分区。</li>
+<li><strong>再迁移分区</strong>：用 <code>kafka-reassign-partitions.sh</code> 生成迁移方案，先 <code>--generate</code> 再 <code>--execute</code>，最后 <code>--verify</code>。</li>
+</ol>
+<pre class="line-numbers language-bash" data-language="bash"><code class="language-bash"><span class="token comment"># 1) 生成方案（topics-to-move.json 里写要迁移的 topic 列表）</span>
+bin/kafka-reassign-partitions.sh --bootstrap-server localhost:9092 <span class="token punctuation">\</span>
+  --topics-to-move-json-file topics-to-move.json <span class="token punctuation">\</span>
+  --broker-list <span class="token string">"1,2,3,4"</span> <span class="token parameter variable">--generate</span>
+
+<span class="token comment"># 2) 执行（加限流，避免打满网络）</span>
+bin/kafka-reassign-partitions.sh --bootstrap-server localhost:9092 <span class="token punctuation">\</span>
+  --reassignment-json-file plan.json <span class="token parameter variable">--execute</span> <span class="token punctuation">\</span>
+  <span class="token parameter variable">--throttle</span> <span class="token number">10485760</span>
+
+<span class="token comment"># 3) 校验</span>
+bin/kafka-reassign-partitions.sh --bootstrap-server localhost:9092 <span class="token punctuation">\</span>
+  --reassignment-json-file plan.json <span class="token parameter variable">--verify</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<p><code>--throttle</code> 是字节&#x2F;秒的迁移限流，不给限流就把跨机柜带宽吃满，线上消费延迟会立刻抬起来。</p>
+<h2 id="5-5-缩容的正确姿势"><a href="#5-5-缩容的正确姿势" class="headerlink" title="5.5 缩容的正确姿势"></a>5.5 缩容的正确姿势</h2><p>先迁移再停机，顺序不能反：</p>
+<ol>
+<li>把待下线 broker 上的分区迁走（同上，<code>--broker-list</code> 只写保留节点）</li>
+<li>确认 <code>--verify</code> 完成、该节点上无 leader</li>
+<li>停 broker，观察 <code>UnderReplicatedPartitions</code> 回到 0</li>
+<li>清理其 <code>log.dirs</code> 后再复用机器</li>
+</ol>
+<p>直接停机会触发副本重建，而不是迁移；重建走的是全量拉取，比计划迁移更贵。</p>
+<h2 id="5-6-容易踩的坑"><a href="#5-6-容易踩的坑" class="headerlink" title="5.6 容易踩的坑"></a>5.6 容易踩的坑</h2><ul>
+<li><strong><code>offsets.topic.replication.factor</code> 用 1</strong>：集群扩容后 <code>__consumer_offsets</code> 仍是单副本，位移可能丢，导致重复消费。</li>
+<li><strong>迁移时同时做滚动重启</strong>：迁移本身在复制数据，再叠加重启，ISR 频繁抖动，可用性下降。</li>
+<li><strong><code>min.insync.replicas</code> 大于可用副本数</strong>：写入直接失败（<code>NOT_ENOUGH_REPLICAS</code>），这是保护机制，恢复副本后再调。</li>
+<li><strong>跨机房部署不设 rack</strong>：副本集中在一个机房，机房级故障全丢。</li>
+</ul>
+<h2 id="5-7-上线前的集群巡检"><a href="#5-7-上线前的集群巡检" class="headerlink" title="5.7 上线前的集群巡检"></a>5.7 上线前的集群巡检</h2><p>按顺序过一遍，能挡掉大部分部署事故：</p>
+<pre class="line-numbers language-bash" data-language="bash"><code class="language-bash"><span class="token comment"># 1) 副本是否全部同步</span>
+bin/kafka-topics.sh <span class="token parameter variable">--describe</span> --under-replicated-partitions <span class="token punctuation">\</span>
+  --bootstrap-server localhost:9092
+
+<span class="token comment"># 2) 分区分布在哪些 broker 上</span>
+bin/kafka-topics.sh <span class="token parameter variable">--describe</span> <span class="token parameter variable">--topic</span> order-events --bootstrap-server localhost:9092
+
+<span class="token comment"># 3) 集群总体状态</span>
+bin/kafka-broker-api-versions.sh --bootstrap-server localhost:9092 <span class="token operator">|</span> <span class="token function">head</span> <span class="token parameter variable">-20</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<p>巡检的判定标准：<code>--describe</code> 输出里每个分区的 <code>Isr</code> 长度应等于 <code>Replicas</code> 长度；<code>Leader</code> 与 <code>Replicas</code> 的首项应一致（Kafka 会把 leader 挪到副本列表第一位）。任何分区 <code>Isr</code> 短于副本数，都说明有节点在拖后腿，此时不该做扩容或迁移。</p>
+<h2 id="5-8-官方资料"><a href="#5-8-官方资料" class="headerlink" title="5.8 官方资料"></a>5.8 官方资料</h2><ul>
+<li>集群与多节点部署：<a target="_blank" rel="noopener" href="https://kafka.apache.org/documentation/#basic_ops_cluster_expansion">https://kafka.apache.org/documentation/#basic_ops_cluster_expansion</a></li>
+<li>分区重分配工具：<a target="_blank" rel="noopener" href="https://kafka.apache.org/documentation/#basic_ops_partitionassignment">https://kafka.apache.org/documentation/#basic_ops_partitionassignment</a></li>
+<li>KRaft 配置：<a target="_blank" rel="noopener" href="https://kafka.apache.org/documentation/#kraft_config">https://kafka.apache.org/documentation/#kraft_config</a></li>
+</ul>
+<h2 id="5-9-清单"><a href="#5-9-清单" class="headerlink" title="5.9 清单"></a>5.9 清单</h2><ol>
+<li>元数据要么交给 ZK，要么走 KRaft controller quorum（奇数节点）</li>
+<li><code>advertised.listeners</code> 必须是客户端可达地址，否则连接超时</li>
+<li>关掉 <code>auto.create.topics.enable</code>，Topic 显式建，副本数显式给</li>
+<li>跨机架必须配 <code>broker.rack</code>，否则副本全挤在一处</li>
+<li>扩容顺序：加 broker → 迁分区 → verify，迁移一定加 <code>--throttle</code></li>
+<li>缩容顺序：迁走分区 → 验证 → 停机，直接停会触发全量副本重建</li>
+<li><code>min.insync.replicas</code> 与副本数要匹配，否则写入直接被拒</li>
+<li>扩容与迁移前先跑巡检，<code>Isr</code> 长度不等于副本数时不要动手</li>
+<li><code>--describe</code> 里 Leader 应等于 Replicas 首项，不一致且长期存在要查 controller</li>
+</ol>
+</div>
+
+  <div class="mb-foot">
+    <a href="/phone/">返回手机首页</a>
+    <a href="/phone/tags/">星迹索引</a>
+  </div>
+</div>
+
+
+<script>
+  /* 作用：懒加载本地 mermaid 库；无 mermaid 代码块时不加载 */
+  function loadLocalMermaid(){
+    return new Promise(function(resolve, reject){
+      if(window.mermaid) return resolve(window.mermaid);
+      var s = document.createElement('script');
+      s.src = '/js/third-party/mermaid/mermaid.min.js?v=10';
+      s.onload = function(){ resolve(window.mermaid); };
+      s.onerror = function(){ reject(new Error('mermaid local load failed')); };
+      document.head.appendChild(s);
+    });
+  }
+
+  /* 作用：把 ```mermaid 代码块替换成 SVG 图（手机端字号略小、图可横向滚动） */
+  async function renderMermaidDiagram(){
+    var blocks = document.querySelectorAll('pre[class*="language-mermaid"]');
+    if(!blocks.length) return;
+    var mermaid;
+    try { mermaid = await loadLocalMermaid(); }
+    catch(e){ console.warn('[mermaid] 本地库加载失败：', e); return; }
+
+    mermaid.initialize({
+      startOnLoad: false,
+      theme: 'base',
+      themeVariables: {
+        darkMode: true,
+        background: 'transparent',
+        fontFamily: '"Microsoft YaHei", "PingFang SC", "Segoe UI", sans-serif',
+        fontSize: '12px',
+        primaryColor: '#062f3d',
+        primaryTextColor: '#d6f6ff',
+        primaryBorderColor: '#00eeff',
+        secondaryColor: '#04222d',
+        tertiaryColor: '#04222d',
+        mainBkg: '#062f3d',
+        nodeBorder: '#00eeff',
+        clusterBkg: '#02161f',
+        clusterBorder: '#00eeff55',
+        lineColor: '#00eeff',
+        textColor: '#c0e8ff',
+        edgeLabelBackground: '#02161f'
+      },
+      flowchart: { curve: 'basis', useMaxWidth: false, htmlLabels: false, nodeSpacing: 30, rankSpacing: 40, padding: 10 }
+    });
+
+    var targets = [];
+    blocks.forEach(function(el){
+      var codeEl = el.querySelector('code');
+      if(!codeEl) return;
+      var div = document.createElement('div');
+      div.className = 'mermaid';
+      div.textContent = codeEl.textContent;
+      el.parentNode.replaceChild(div, el);
+      targets.push(div);
+    });
+    if(!targets.length) return;
+    try { await mermaid.run({ nodes: targets }); }
+    catch(e){ console.warn('[mermaid] 渲染失败：', e); }
+  }
+  /* 作用：多次触发兜底（延迟重试 + DOM 变化），防止某次时机没跑到导致图表留在代码块 */
+  var mmBusy = false;
+  function scheduleMermaid(){
+    if(mmBusy) return;
+    mmBusy = true;
+    renderMermaidDiagram().then(function(){ mmBusy = false; }, function(){ mmBusy = false; });
+  }
+  scheduleMermaid();
+  window.addEventListener('load', scheduleMermaid);
+  [1000, 3000, 8000].forEach(function(ms){ setTimeout(scheduleMermaid, ms); });
+  if(document.readyState !== 'loading') scheduleMermaid();
+  if(window.MutationObserver){
+    var mmTimer = null;
+    var mmObserver = new MutationObserver(function(){
+      clearTimeout(mmTimer);
+      mmTimer = setTimeout(scheduleMermaid, 400);
+    });
+    mmObserver.observe(document.querySelector('.mb-article') || document.body, { childList: true, subtree: true });
+  }
+</script>
+</body>
+</html>

@@ -1,0 +1,376 @@
+<!--
+  ============================================
+  手机端 · 文章原文页
+  文件：phone/post.njk
+  适用终端：手机端（路由 /phone/p/<slug>/，由 scripts/phone-routes.js 生成）
+  作用：手机阅读单篇文章；单列布局、无侧栏无雷达，替代电脑端 post.njk
+        数据由生成期算好：page.item = { title, dateStr, content, cats, tags }
+  样式依赖：source/css/theme/phone/common.css、source/css/theme/phone/list.css
+  组件依赖：phone/_components/Particles.njk
+  最后修改：2026-11-11
+  ============================================
+-->
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="color-scheme" content="dark">
+  <meta name="theme-color" content="#020817">
+  <!-- 首帧兜底：浏览器默认画布是白的，样式未解析前会闪一下白。这条规则先锁死深空底色 -->
+  <style>html{background-color:#020817}</style>
+  <title>Spring Cloud（十）容器化打包与整体部署 - 时空秘境</title>
+  <!-- 手机端样式：基础 + 列表/正文，外链引入（源文件 source/css/theme/phone/） -->
+  <link rel="stylesheet" href="/css/theme/phone/common.css">
+  <link rel="stylesheet" href="/css/theme/phone/list.css">
+<meta name="generator" content="Hexo 8.1.2"></head>
+<body>
+<div class="mb-shell">
+  <!--
+  ============================================
+  手机端星空粒子组件
+  文件：Particles.njk
+  适用终端：手机端
+  作用：Particles.njk 的手机端副本（nunjucks 子目录 include 取不到上级）
+        参数与电脑端 _components/Particles.njk 保持一致：
+        粒子 95 / 连线 118px / opacity 0.32，外加星座层与零星闪烁层
+  最后修改：2026-11-12
+  ============================================
+--><!-- z-index 必须是 0：负层级会被 body 不透明背景盖住，粒子在跑却看不见 -->
+<div id="particles" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 0; pointer-events: none;"></div>
+<!-- 星座层（与首页同一套：随机零星散布星座图形 + 偶尔闪烁的小星） -->
+<div id="constellations" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 1; pointer-events: none;" aria-hidden="true"></div>
+<script src="/js/particles.min.js"></script>
+<script>
+particlesJS("particles", {
+  particles: {
+    number: {
+      value: 95,
+      density: {
+        enable: true,
+        value_area: 800
+      }
+    },
+    color: {
+      value: "#00eeff"
+    },
+    shape: {
+      type: "circle",
+      stroke: {
+        width: 0,
+        color: "#000000"
+      }
+    },
+    opacity: {
+      value: 0.6,
+      random: true,
+      anim: {
+        enable: true,
+        speed: 0.5,
+        opacity_min: 0.1,
+        sync: false
+      }
+    },
+    size: {
+      value: 3,
+      random: true,
+      anim: {
+        enable: true,
+        speed: 2,
+        size_min: 0.1,
+        sync: false
+      }
+    },
+    line_linked: {
+      enable: true,
+      distance: 118,
+      color: "#00eeff",
+      opacity: 0.32,
+      width: 1
+    },
+    move: {
+      enable: true,
+      speed: 0.8,
+      direction: "none",
+      random: true,
+      straight: false,
+      out_mode: "out",
+      bounce: false,
+      attract: {
+        enable: true,
+        rotateX: 600,
+        rotateY: 1200
+      }
+    }
+  },
+  interactivity: {
+    detect_on: "canvas",
+    events: {
+      onhover: {
+        enable: true,
+        mode: "grab"       // 手指按住时粒子聚集
+      },
+      onclick: {
+        enable: true,
+        mode: "push"       // 点击时产生新粒子
+      },
+      resize: true
+    },
+    modes: {
+      grab: {
+        distance: 200,
+        line_linked: {
+          opacity: 1
+        }
+      },
+      push: {
+        particles_nb: 6
+      }
+    }
+  },
+  retina_detect: true
+});
+</script>
+<!-- 星座 + 零星闪烁层：与电脑端共用同一份绘制脚本 -->
+<script src="/js/theme/home/starfield.js"></script>
+
+
+  <div class="mb-top">
+    <a class="mb-back" href="/phone/">← 返回手机首页</a>
+    <span class="mb-sub" style="margin:0">2022-07-01</span>
+  </div>
+
+  <h1 class="mb-title">Spring Cloud（十）容器化打包与整体部署</h1>
+  <div class="mb-sub">
+    分类：java · springcloud
+     ｜ 标签：SpringCloud
+  </div>
+
+  <div class="mb-article"><div class="essay-banner essay-springcloud"></div>
+
+<h1 id="容器化打包与整体部署"><a href="#容器化打包与整体部署" class="headerlink" title="容器化打包与整体部署"></a><strong>容器化打包与整体部署</strong></h1><p>一个微服务项目要上线，需要按序起 Nacos、MySQL、Seata、Redis、七八个服务、网关。手写一堆启动脚本很快就乱，标准做法是每个服务一个镜像 + 一份 compose 编排。</p>
+<p><img src="https://wu4yong.github.io/starry-images/assets/img/springcloud/springcloud-10-deploy.webp" alt="容器化后按依赖顺序编排整组服务"></p>
+<p><em>容器化后按依赖顺序编排整组服务</em></p>
+<h2 id="1-1-多阶段-Dockerfile"><a href="#1-1-多阶段-Dockerfile" class="headerlink" title="1.1 多阶段 Dockerfile"></a>1.1 多阶段 Dockerfile</h2><pre class="line-numbers language-docker" data-language="docker"><code class="language-docker"><span class="token comment"># 阶段一：构建</span>
+<span class="token instruction"><span class="token keyword">FROM</span> maven:3.8-openjdk-11 <span class="token keyword">AS</span> build</span>
+<span class="token instruction"><span class="token keyword">WORKDIR</span> /build</span>
+<span class="token instruction"><span class="token keyword">COPY</span> pom.xml .</span>
+<span class="token instruction"><span class="token keyword">RUN</span> mvn -B dependency:go-offline</span>
+<span class="token instruction"><span class="token keyword">COPY</span> src ./src</span>
+<span class="token instruction"><span class="token keyword">RUN</span> mvn -B clean package -DskipTests</span>
+
+<span class="token comment"># 阶段二：运行</span>
+<span class="token instruction"><span class="token keyword">FROM</span> openjdk:11-jre-slim</span>
+<span class="token instruction"><span class="token keyword">WORKDIR</span> /app</span>
+<span class="token instruction"><span class="token keyword">COPY</span> <span class="token options"><span class="token property">--from</span><span class="token punctuation">=</span><span class="token string">build</span></span> /build/target/*.jar app.jar</span>
+<span class="token instruction"><span class="token keyword">ENV</span> TZ=Asia/Shanghai JAVA_OPTS=<span class="token string">"-Xms256m -Xmx512m"</span></span>
+<span class="token instruction"><span class="token keyword">EXPOSE</span> 8081</span>
+<span class="token instruction"><span class="token keyword">ENTRYPOINT</span> [<span class="token string">"sh"</span>,<span class="token string">"-c"</span>,<span class="token string">"java $JAVA_OPTS -jar app.jar"</span>]</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<div class="data-grid data-grid-link-table"><div class="grid-header"><div class="grid-cell">要点</div><div class="grid-cell">原因</div></div><div class="grid-row"><div class="grid-cell">先 COPY pom 再 COPY src</div><div class="grid-cell">依赖层可复用，改代码不重拉依赖</div></div><div class="grid-row"><div class="grid-cell">分两个 FROM</div><div class="grid-cell">运行镜像不含 Maven 与源码，体积小一半</div></div><div class="grid-row"><div class="grid-cell"><code>-DskipTests</code></div><div class="grid-cell">测试在 CI 阶段跑，镜像构建别重复</div></div><div class="grid-row"><div class="grid-cell">固定 TZ</div><div class="grid-cell">容器默认 UTC，日志时间会差 8 小时</div></div></div>
+
+<h2 id="1-2-镜像分层与体积"><a href="#1-2-镜像分层与体积" class="headerlink" title="1.2 镜像分层与体积"></a>1.2 镜像分层与体积</h2><pre class="line-numbers language-bash" data-language="bash"><code class="language-bash"><span class="token function">docker</span> build <span class="token parameter variable">-t</span> user-service:1.0 <span class="token builtin class-name">.</span>
+<span class="token function">docker</span> images <span class="token operator">|</span> <span class="token function">grep</span> user-service<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span></span></code></pre>
+
+<div class="data-grid data-grid-link-table"><div class="grid-header"><div class="grid-cell">基础镜像</div><div class="grid-cell">体积</div><div class="grid-cell">说明</div></div><div class="grid-row"><div class="grid-cell"><code>openjdk:11</code></div><div class="grid-cell">~640MB</div><div class="grid-cell">完整 JDK，臃肿</div></div><div class="grid-row"><div class="grid-cell"><code>openjdk:11-jre-slim</code></div><div class="grid-cell">~200MB</div><div class="grid-cell">只带 JRE，推荐</div></div><div class="grid-row"><div class="grid-cell"><code>eclipse-temurin:11-jre-alpine</code></div><div class="grid-cell">~120MB</div><div class="grid-cell">更小，注意 glibc 兼容</div></div><div class="grid-row"><div class="grid-cell"><code>distroless/java</code></div><div class="grid-cell">~100MB</div><div class="grid-cell">无 shell，安全但排障难</div></div></div>
+
+<h2 id="1-3-compose-编排"><a href="#1-3-compose-编排" class="headerlink" title="1.3 compose 编排"></a>1.3 compose 编排</h2><pre class="line-numbers language-yaml" data-language="yaml"><code class="language-yaml"><span class="token key atrule">version</span><span class="token punctuation">:</span> <span class="token string">"3.8"</span>
+<span class="token key atrule">services</span><span class="token punctuation">:</span>
+  <span class="token key atrule">mysql</span><span class="token punctuation">:</span>
+    <span class="token key atrule">image</span><span class="token punctuation">:</span> mysql<span class="token punctuation">:</span><span class="token number">5.7</span>
+    <span class="token key atrule">environment</span><span class="token punctuation">:</span>
+      <span class="token key atrule">MYSQL_ROOT_PASSWORD</span><span class="token punctuation">:</span> root
+      <span class="token key atrule">TZ</span><span class="token punctuation">:</span> Asia/Shanghai
+    <span class="token key atrule">volumes</span><span class="token punctuation">:</span>
+      <span class="token punctuation">-</span> ./sql<span class="token punctuation">:</span>/docker<span class="token punctuation">-</span>entrypoint<span class="token punctuation">-</span>initdb.d
+    <span class="token key atrule">ports</span><span class="token punctuation">:</span> <span class="token punctuation">[</span><span class="token string">"3306:3306"</span><span class="token punctuation">]</span>
+
+  <span class="token key atrule">nacos</span><span class="token punctuation">:</span>
+    <span class="token key atrule">image</span><span class="token punctuation">:</span> nacos/nacos<span class="token punctuation">-</span>server<span class="token punctuation">:</span>1.4.2
+    <span class="token key atrule">environment</span><span class="token punctuation">:</span>
+      <span class="token key atrule">MODE</span><span class="token punctuation">:</span> standalone
+      <span class="token key atrule">SPRING_DATASOURCE_PLATFORM</span><span class="token punctuation">:</span> mysql
+      <span class="token key atrule">MYSQL_SERVICE_HOST</span><span class="token punctuation">:</span> mysql
+      <span class="token key atrule">MYSQL_SERVICE_DB_NAME</span><span class="token punctuation">:</span> nacos_config
+      <span class="token key atrule">MYSQL_SERVICE_USER</span><span class="token punctuation">:</span> root
+      <span class="token key atrule">MYSQL_SERVICE_PASSWORD</span><span class="token punctuation">:</span> root
+    <span class="token key atrule">depends_on</span><span class="token punctuation">:</span> <span class="token punctuation">[</span>mysql<span class="token punctuation">]</span>
+    <span class="token key atrule">ports</span><span class="token punctuation">:</span> <span class="token punctuation">[</span><span class="token string">"8848:8848"</span><span class="token punctuation">]</span>
+
+  <span class="token key atrule">seata</span><span class="token punctuation">:</span>
+    <span class="token key atrule">image</span><span class="token punctuation">:</span> seataio/seata<span class="token punctuation">-</span>server<span class="token punctuation">:</span>1.4.2
+    <span class="token key atrule">environment</span><span class="token punctuation">:</span>
+      <span class="token key atrule">SEATA_IP</span><span class="token punctuation">:</span> seata
+    <span class="token key atrule">depends_on</span><span class="token punctuation">:</span> <span class="token punctuation">[</span>nacos<span class="token punctuation">]</span>
+    <span class="token key atrule">ports</span><span class="token punctuation">:</span> <span class="token punctuation">[</span><span class="token string">"8091:8091"</span><span class="token punctuation">]</span>
+
+  <span class="token key atrule">user-service</span><span class="token punctuation">:</span>
+    <span class="token key atrule">image</span><span class="token punctuation">:</span> user<span class="token punctuation">-</span>service<span class="token punctuation">:</span><span class="token number">1.0</span>
+    <span class="token key atrule">environment</span><span class="token punctuation">:</span>
+      <span class="token key atrule">SPRING_PROFILES_ACTIVE</span><span class="token punctuation">:</span> dev
+      <span class="token key atrule">NACOS_ADDR</span><span class="token punctuation">:</span> nacos<span class="token punctuation">:</span><span class="token number">8848</span>
+    <span class="token key atrule">depends_on</span><span class="token punctuation">:</span> <span class="token punctuation">[</span>nacos<span class="token punctuation">]</span>
+    <span class="token key atrule">ports</span><span class="token punctuation">:</span> <span class="token punctuation">[</span><span class="token string">"8081:8081"</span><span class="token punctuation">]</span>
+
+  <span class="token key atrule">gateway</span><span class="token punctuation">:</span>
+    <span class="token key atrule">image</span><span class="token punctuation">:</span> gateway<span class="token punctuation">:</span><span class="token number">1.0</span>
+    <span class="token key atrule">environment</span><span class="token punctuation">:</span>
+      <span class="token key atrule">NACOS_ADDR</span><span class="token punctuation">:</span> nacos<span class="token punctuation">:</span><span class="token number">8848</span>
+    <span class="token key atrule">depends_on</span><span class="token punctuation">:</span> <span class="token punctuation">[</span>user<span class="token punctuation">-</span>service<span class="token punctuation">]</span>
+    <span class="token key atrule">ports</span><span class="token punctuation">:</span> <span class="token punctuation">[</span><span class="token string">"10010:10010"</span><span class="token punctuation">]</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<p><code>depends_on</code> 只保证<strong>启动顺序</strong>，不保证”服务已就绪”，所以必须配健康检查。</p>
+<h2 id="1-4-健康检查"><a href="#1-4-健康检查" class="headerlink" title="1.4 健康检查"></a>1.4 健康检查</h2><pre class="line-numbers language-yaml" data-language="yaml"><code class="language-yaml"><span class="token key atrule">user-service</span><span class="token punctuation">:</span>
+  <span class="token key atrule">image</span><span class="token punctuation">:</span> user<span class="token punctuation">-</span>service<span class="token punctuation">:</span><span class="token number">1.0</span>
+  <span class="token key atrule">healthcheck</span><span class="token punctuation">:</span>
+    <span class="token key atrule">test</span><span class="token punctuation">:</span> <span class="token punctuation">[</span><span class="token string">"CMD"</span><span class="token punctuation">,</span> <span class="token string">"curl"</span><span class="token punctuation">,</span> <span class="token string">"-f"</span><span class="token punctuation">,</span> <span class="token string">"http://localhost:8081/actuator/health"</span><span class="token punctuation">]</span>
+    <span class="token key atrule">interval</span><span class="token punctuation">:</span> 10s
+    <span class="token key atrule">timeout</span><span class="token punctuation">:</span> 3s
+    <span class="token key atrule">retries</span><span class="token punctuation">:</span> <span class="token number">5</span>
+    <span class="token key atrule">start_period</span><span class="token punctuation">:</span> 30s<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<pre class="line-numbers language-markup" data-language="markup"><code class="language-markup"><span class="token tag"><span class="token tag"><span class="token punctuation">&lt;</span>dependency</span><span class="token punctuation">></span></span>
+    <span class="token tag"><span class="token tag"><span class="token punctuation">&lt;</span>groupId</span><span class="token punctuation">></span></span>org.springframework.boot<span class="token tag"><span class="token tag"><span class="token punctuation">&lt;/</span>groupId</span><span class="token punctuation">></span></span>
+    <span class="token tag"><span class="token tag"><span class="token punctuation">&lt;</span>artifactId</span><span class="token punctuation">></span></span>spring-boot-starter-actuator<span class="token tag"><span class="token tag"><span class="token punctuation">&lt;/</span>artifactId</span><span class="token punctuation">></span></span>
+<span class="token tag"><span class="token tag"><span class="token punctuation">&lt;/</span>dependency</span><span class="token punctuation">></span></span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span></span></code></pre>
+
+<pre class="line-numbers language-yaml" data-language="yaml"><code class="language-yaml"><span class="token key atrule">management</span><span class="token punctuation">:</span>
+  <span class="token key atrule">endpoints</span><span class="token punctuation">:</span>
+    <span class="token key atrule">web</span><span class="token punctuation">:</span>
+      <span class="token key atrule">exposure</span><span class="token punctuation">:</span>
+        <span class="token key atrule">include</span><span class="token punctuation">:</span> health<span class="token punctuation">,</span>info<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<p>没有健康检查时，网关会在服务还没起来时就开始转发，导致一串 502。</p>
+<h2 id="1-5-配置外置"><a href="#1-5-配置外置" class="headerlink" title="1.5 配置外置"></a>1.5 配置外置</h2><p>镜像里不要打包生产配置，靠环境变量注入：</p>
+<pre class="line-numbers language-yaml" data-language="yaml"><code class="language-yaml"><span class="token key atrule">spring</span><span class="token punctuation">:</span>
+  <span class="token key atrule">cloud</span><span class="token punctuation">:</span>
+    <span class="token key atrule">nacos</span><span class="token punctuation">:</span>
+      <span class="token key atrule">discovery</span><span class="token punctuation">:</span>
+        <span class="token key atrule">server-addr</span><span class="token punctuation">:</span> $<span class="token punctuation">&#123;</span>NACOS_ADDR<span class="token punctuation">:</span>127.0.0.1<span class="token punctuation">:</span><span class="token number">8848</span><span class="token punctuation">&#125;</span>
+      <span class="token key atrule">config</span><span class="token punctuation">:</span>
+        <span class="token key atrule">server-addr</span><span class="token punctuation">:</span> $<span class="token punctuation">&#123;</span>NACOS_ADDR<span class="token punctuation">:</span>127.0.0.1<span class="token punctuation">:</span><span class="token number">8848</span><span class="token punctuation">&#125;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<pre class="line-numbers language-yaml" data-language="yaml"><code class="language-yaml"><span class="token key atrule">user-service</span><span class="token punctuation">:</span>
+  <span class="token key atrule">environment</span><span class="token punctuation">:</span>
+    <span class="token key atrule">NACOS_ADDR</span><span class="token punctuation">:</span> nacos<span class="token punctuation">:</span><span class="token number">8848</span>
+    <span class="token key atrule">JAVA_OPTS</span><span class="token punctuation">:</span> <span class="token string">"-Xms512m -Xmx512m"</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span></span></code></pre>
+
+<p>同一个镜像可以进 dev &#x2F; test &#x2F; prod，只换环境变量。</p>
+<h2 id="1-6-上线顺序"><a href="#1-6-上线顺序" class="headerlink" title="1.6 上线顺序"></a>1.6 上线顺序</h2><pre class="line-numbers language-text" data-language="text"><code class="language-text">1. mysql / redis        （有状态，最后停、最先起）
+2. nacos                （注册与配置中心）
+3. seata                （依赖 nacos 取配置）
+4. 业务服务（user → item → order）
+5. gateway              （最后开，避免把流量引到半启动集群）<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<p>下线顺序反过来：先摘网关流量，再停业务，最后停基础设施。</p>
+<h2 id="1-7-常见坑"><a href="#1-7-常见坑" class="headerlink" title="1.7 常见坑"></a>1.7 常见坑</h2><ol>
+<li>容器里注册到 Nacos 的是内网 IP（<code>172.x</code>），外部调不通 → 用 host 网络或显式配 <code>discovery.ip</code></li>
+<li>容器时区 UTC 导致日志差 8 小时 → <code>ENV TZ</code> + <code>-Duser.timezone</code></li>
+<li>把 <code>depends_on</code> 当成”等就绪” → 加 <code>healthcheck</code> + <code>condition: service_healthy</code></li>
+<li>镜像里带生产密码 → 一律环境变量注入</li>
+<li>每次构建都重拉全部依赖 → 分层写错，先 COPY pom</li>
+</ol>
+<h2 id="1-8-官方资料"><a href="#1-8-官方资料" class="headerlink" title="1.8 官方资料"></a>1.8 官方资料</h2><ul>
+<li>Docker 官方文档：<a target="_blank" rel="noopener" href="https://docs.docker.com/">https://docs.docker.com/</a></li>
+<li>Spring Boot 容器化：<a target="_blank" rel="noopener" href="https://spring.io/guides/gs/spring-boot-docker/">https://spring.io/guides/gs/spring-boot-docker/</a></li>
+<li>Nacos Docker 部署：<a target="_blank" rel="noopener" href="https://nacos.io/zh-cn/docs/quick-start-docker.html">https://nacos.io/zh-cn/docs/quick-start-docker.html</a></li>
+</ul>
+<h2 id="1-9-清单"><a href="#1-9-清单" class="headerlink" title="1.9 清单"></a>1.9 清单</h2><ol>
+<li>多阶段构建：构建镜像带 Maven，运行镜像只带 JRE</li>
+<li>先 COPY pom 再 COPY src，依赖层可复用</li>
+<li><code>depends_on</code> 只管顺序，就绪靠 <code>healthcheck</code></li>
+<li>生产配置一律环境变量注入，镜像要能跨环境复用</li>
+<li>注册地址在多网卡&#x2F;容器里必须显式指定，否则注册内网 IP</li>
+<li>上线按”基础设施 → 业务 → 网关”，下线反过来</li>
+<li>容器时区固定 Asia&#x2F;Shanghai，否则日志时间全错</li>
+</ol>
+</div>
+
+  <div class="mb-foot">
+    <a href="/phone/">返回手机首页</a>
+    <a href="/phone/tags/">星迹索引</a>
+  </div>
+</div>
+
+
+<script>
+  /* 作用：懒加载本地 mermaid 库；无 mermaid 代码块时不加载 */
+  function loadLocalMermaid(){
+    return new Promise(function(resolve, reject){
+      if(window.mermaid) return resolve(window.mermaid);
+      var s = document.createElement('script');
+      s.src = '/js/third-party/mermaid/mermaid.min.js?v=10';
+      s.onload = function(){ resolve(window.mermaid); };
+      s.onerror = function(){ reject(new Error('mermaid local load failed')); };
+      document.head.appendChild(s);
+    });
+  }
+
+  /* 作用：把 ```mermaid 代码块替换成 SVG 图（手机端字号略小、图可横向滚动） */
+  async function renderMermaidDiagram(){
+    var blocks = document.querySelectorAll('pre[class*="language-mermaid"]');
+    if(!blocks.length) return;
+    var mermaid;
+    try { mermaid = await loadLocalMermaid(); }
+    catch(e){ console.warn('[mermaid] 本地库加载失败：', e); return; }
+
+    mermaid.initialize({
+      startOnLoad: false,
+      theme: 'base',
+      themeVariables: {
+        darkMode: true,
+        background: 'transparent',
+        fontFamily: '"Microsoft YaHei", "PingFang SC", "Segoe UI", sans-serif',
+        fontSize: '12px',
+        primaryColor: '#062f3d',
+        primaryTextColor: '#d6f6ff',
+        primaryBorderColor: '#00eeff',
+        secondaryColor: '#04222d',
+        tertiaryColor: '#04222d',
+        mainBkg: '#062f3d',
+        nodeBorder: '#00eeff',
+        clusterBkg: '#02161f',
+        clusterBorder: '#00eeff55',
+        lineColor: '#00eeff',
+        textColor: '#c0e8ff',
+        edgeLabelBackground: '#02161f'
+      },
+      flowchart: { curve: 'basis', useMaxWidth: false, htmlLabels: false, nodeSpacing: 30, rankSpacing: 40, padding: 10 }
+    });
+
+    var targets = [];
+    blocks.forEach(function(el){
+      var codeEl = el.querySelector('code');
+      if(!codeEl) return;
+      var div = document.createElement('div');
+      div.className = 'mermaid';
+      div.textContent = codeEl.textContent;
+      el.parentNode.replaceChild(div, el);
+      targets.push(div);
+    });
+    if(!targets.length) return;
+    try { await mermaid.run({ nodes: targets }); }
+    catch(e){ console.warn('[mermaid] 渲染失败：', e); }
+  }
+  /* 作用：多次触发兜底（延迟重试 + DOM 变化），防止某次时机没跑到导致图表留在代码块 */
+  var mmBusy = false;
+  function scheduleMermaid(){
+    if(mmBusy) return;
+    mmBusy = true;
+    renderMermaidDiagram().then(function(){ mmBusy = false; }, function(){ mmBusy = false; });
+  }
+  scheduleMermaid();
+  window.addEventListener('load', scheduleMermaid);
+  [1000, 3000, 8000].forEach(function(ms){ setTimeout(scheduleMermaid, ms); });
+  if(document.readyState !== 'loading') scheduleMermaid();
+  if(window.MutationObserver){
+    var mmTimer = null;
+    var mmObserver = new MutationObserver(function(){
+      clearTimeout(mmTimer);
+      mmTimer = setTimeout(scheduleMermaid, 400);
+    });
+    mmObserver.observe(document.querySelector('.mb-article') || document.body, { childList: true, subtree: true });
+  }
+</script>
+</body>
+</html>

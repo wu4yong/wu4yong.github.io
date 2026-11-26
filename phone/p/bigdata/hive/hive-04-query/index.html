@@ -1,0 +1,363 @@
+<!--
+  ============================================
+  手机端 · 文章原文页
+  文件：phone/post.njk
+  适用终端：手机端（路由 /phone/p/<slug>/，由 scripts/phone-routes.js 生成）
+  作用：手机阅读单篇文章；单列布局、无侧栏无雷达，替代电脑端 post.njk
+        数据由生成期算好：page.item = { title, dateStr, content, cats, tags }
+  样式依赖：source/css/theme/phone/common.css、source/css/theme/phone/list.css
+  组件依赖：phone/_components/Particles.njk
+  最后修改：2026-11-11
+  ============================================
+-->
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="color-scheme" content="dark">
+  <meta name="theme-color" content="#020817">
+  <!-- 首帧兜底：浏览器默认画布是白的，样式未解析前会闪一下白。这条规则先锁死深空底色 -->
+  <style>html{background-color:#020817}</style>
+  <title>Hive（四）HQL 查询与窗口函数 - 时空秘境</title>
+  <!-- 手机端样式：基础 + 列表/正文，外链引入（源文件 source/css/theme/phone/） -->
+  <link rel="stylesheet" href="/css/theme/phone/common.css">
+  <link rel="stylesheet" href="/css/theme/phone/list.css">
+<meta name="generator" content="Hexo 8.1.2"></head>
+<body>
+<div class="mb-shell">
+  <!--
+  ============================================
+  手机端星空粒子组件
+  文件：Particles.njk
+  适用终端：手机端
+  作用：Particles.njk 的手机端副本（nunjucks 子目录 include 取不到上级）
+        参数与电脑端 _components/Particles.njk 保持一致：
+        粒子 95 / 连线 118px / opacity 0.32，外加星座层与零星闪烁层
+  最后修改：2026-11-12
+  ============================================
+--><!-- z-index 必须是 0：负层级会被 body 不透明背景盖住，粒子在跑却看不见 -->
+<div id="particles" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 0; pointer-events: none;"></div>
+<!-- 星座层（与首页同一套：随机零星散布星座图形 + 偶尔闪烁的小星） -->
+<div id="constellations" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 1; pointer-events: none;" aria-hidden="true"></div>
+<script src="/js/particles.min.js"></script>
+<script>
+particlesJS("particles", {
+  particles: {
+    number: {
+      value: 95,
+      density: {
+        enable: true,
+        value_area: 800
+      }
+    },
+    color: {
+      value: "#00eeff"
+    },
+    shape: {
+      type: "circle",
+      stroke: {
+        width: 0,
+        color: "#000000"
+      }
+    },
+    opacity: {
+      value: 0.6,
+      random: true,
+      anim: {
+        enable: true,
+        speed: 0.5,
+        opacity_min: 0.1,
+        sync: false
+      }
+    },
+    size: {
+      value: 3,
+      random: true,
+      anim: {
+        enable: true,
+        speed: 2,
+        size_min: 0.1,
+        sync: false
+      }
+    },
+    line_linked: {
+      enable: true,
+      distance: 118,
+      color: "#00eeff",
+      opacity: 0.32,
+      width: 1
+    },
+    move: {
+      enable: true,
+      speed: 0.8,
+      direction: "none",
+      random: true,
+      straight: false,
+      out_mode: "out",
+      bounce: false,
+      attract: {
+        enable: true,
+        rotateX: 600,
+        rotateY: 1200
+      }
+    }
+  },
+  interactivity: {
+    detect_on: "canvas",
+    events: {
+      onhover: {
+        enable: true,
+        mode: "grab"       // 手指按住时粒子聚集
+      },
+      onclick: {
+        enable: true,
+        mode: "push"       // 点击时产生新粒子
+      },
+      resize: true
+    },
+    modes: {
+      grab: {
+        distance: 200,
+        line_linked: {
+          opacity: 1
+        }
+      },
+      push: {
+        particles_nb: 6
+      }
+    }
+  },
+  retina_detect: true
+});
+</script>
+<!-- 星座 + 零星闪烁层：与电脑端共用同一份绘制脚本 -->
+<script src="/js/theme/home/starfield.js"></script>
+
+
+  <div class="mb-top">
+    <a class="mb-back" href="/phone/">← 返回手机首页</a>
+    <span class="mb-sub" style="margin:0">2023-05-08</span>
+  </div>
+
+  <h1 class="mb-title">Hive（四）HQL 查询与窗口函数</h1>
+  <div class="mb-sub">
+    分类：bigdata · hive
+     ｜ 标签：Hive
+  </div>
+
+  <div class="mb-article"><div class="essay-banner essay-hive"></div>
+
+<h1 id="HQL-查询与窗口函数"><a href="#HQL-查询与窗口函数" class="headerlink" title="HQL 查询与窗口函数"></a><strong>HQL 查询与窗口函数</strong></h1><p>日常取数绝大多数时间花在 SELECT 上：表怎么连、分组怎么聚合、排名和累计指标怎么算。HQL 语法对齐标准 SQL，但底层是分布式作业，Join 方式、分组限制和窗口帧的语义都和单机数据库有差别。这一篇把查询骨架、Map Join、分组聚合、窗口函数与 <code>lateral view</code> 讲清楚。</p>
+<p><img src="https://wu4yong.github.io/starry-images/assets/img/hive/hive-04-query.webp" alt="算子链条沿光带依次展开，多路数据在连接节点汇合，窗口按分区切片后做排名与累计聚合"></p>
+<p><em>算子链条沿光带依次展开，多路数据在连接节点汇合，窗口按分区切片后做排名与累计聚合</em></p>
+<h2 id="1-1-查询骨架与执行顺序"><a href="#1-1-查询骨架与执行顺序" class="headerlink" title="1.1 查询骨架与执行顺序"></a>1.1 查询骨架与执行顺序</h2><p>一条典型 HQL 的书写顺序如下，理解时要按底层执行顺序倒过来读：</p>
+<pre class="line-numbers language-sql" data-language="sql"><code class="language-sql"><span class="token keyword">SELECT</span> user_id<span class="token punctuation">,</span> dt<span class="token punctuation">,</span> <span class="token function">COUNT</span><span class="token punctuation">(</span><span class="token operator">*</span><span class="token punctuation">)</span> <span class="token keyword">AS</span> pv<span class="token punctuation">,</span> <span class="token function">SUM</span><span class="token punctuation">(</span>amount<span class="token punctuation">)</span> <span class="token keyword">AS</span> gmv
+<span class="token keyword">FROM</span> dwd<span class="token punctuation">.</span>order_daily
+<span class="token keyword">WHERE</span> dt <span class="token operator">>=</span> <span class="token string">'2022-01-13'</span>
+<span class="token keyword">GROUP</span> <span class="token keyword">BY</span> user_id<span class="token punctuation">,</span> dt
+<span class="token keyword">HAVING</span> <span class="token function">COUNT</span><span class="token punctuation">(</span><span class="token operator">*</span><span class="token punctuation">)</span> <span class="token operator">></span> <span class="token number">10</span>
+<span class="token keyword">ORDER</span> <span class="token keyword">BY</span> gmv <span class="token keyword">DESC</span>
+<span class="token keyword">LIMIT</span> <span class="token number">100</span><span class="token punctuation">;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<div class="data-grid data-grid-link-table"><div class="grid-header"><div class="grid-cell">子句</div><div class="grid-cell">作用</div><div class="grid-cell">执行先后</div></div><div class="grid-row"><div class="grid-cell">FROM &#x2F; JOIN</div><div class="grid-cell">确定输入表与连接关系</div><div class="grid-cell">最先</div></div><div class="grid-row"><div class="grid-cell">WHERE</div><div class="grid-cell">行级过滤，不参与聚合</div><div class="grid-cell">连接之后</div></div><div class="grid-row"><div class="grid-cell">GROUP BY</div><div class="grid-cell">按分组列聚合</div><div class="grid-cell">过滤之后</div></div><div class="grid-row"><div class="grid-cell">HAVING</div><div class="grid-cell">聚合结果再过滤</div><div class="grid-cell">分组之后</div></div><div class="grid-row"><div class="grid-cell">SELECT</div><div class="grid-cell">输出列与表达式</div><div class="grid-cell">聚合之后</div></div><div class="grid-row"><div class="grid-cell">ORDER BY &#x2F; LIMIT</div><div class="grid-cell">排序与截断</div><div class="grid-cell">最后</div></div></div>
+
+<p>一个硬性限制：<code>SELECT</code> 里出现的非聚合列，<strong>必须全部出现在 <code>GROUP BY</code> 中</strong>。这和部分宽松数据库允许随便选列不同，Hive 会直接报解析错误。</p>
+<h2 id="1-2-Join-的几种类型"><a href="#1-2-Join-的几种类型" class="headerlink" title="1.2 Join 的几种类型"></a>1.2 Join 的几种类型</h2><p>Hive 支持标准的内连接与外连接：</p>
+<pre class="line-numbers language-sql" data-language="sql"><code class="language-sql"><span class="token comment">-- 内连接：只保留两表都匹配的行</span>
+<span class="token keyword">SELECT</span> o<span class="token punctuation">.</span>order_id<span class="token punctuation">,</span> u<span class="token punctuation">.</span>user_name
+<span class="token keyword">FROM</span> dwd<span class="token punctuation">.</span><span class="token identifier"><span class="token punctuation">`</span>order<span class="token punctuation">`</span></span> o
+<span class="token keyword">JOIN</span> dim_user u <span class="token keyword">ON</span> o<span class="token punctuation">.</span>user_id <span class="token operator">=</span> u<span class="token punctuation">.</span>user_id<span class="token punctuation">;</span>
+
+<span class="token comment">-- 左外连接：左表全保留，右表不匹配补 NULL</span>
+<span class="token keyword">SELECT</span> o<span class="token punctuation">.</span>order_id<span class="token punctuation">,</span> u<span class="token punctuation">.</span>user_name
+<span class="token keyword">FROM</span> dwd<span class="token punctuation">.</span><span class="token identifier"><span class="token punctuation">`</span>order<span class="token punctuation">`</span></span> o
+<span class="token keyword">LEFT</span> <span class="token keyword">JOIN</span> dim_user u <span class="token keyword">ON</span> o<span class="token punctuation">.</span>user_id <span class="token operator">=</span> u<span class="token punctuation">.</span>user_id<span class="token punctuation">;</span>
+
+<span class="token comment">-- 全外连接：两表全保留，不匹配侧补 NULL</span>
+<span class="token keyword">SELECT</span> o<span class="token punctuation">.</span>order_id<span class="token punctuation">,</span> u<span class="token punctuation">.</span>user_name
+<span class="token keyword">FROM</span> dwd<span class="token punctuation">.</span><span class="token identifier"><span class="token punctuation">`</span>order<span class="token punctuation">`</span></span> o
+<span class="token keyword">FULL</span> <span class="token keyword">OUTER</span> <span class="token keyword">JOIN</span> dim_user u <span class="token keyword">ON</span> o<span class="token punctuation">.</span>user_id <span class="token operator">=</span> u<span class="token punctuation">.</span>user_id<span class="token punctuation">;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<div class="data-grid data-grid-link-table"><div class="grid-header"><div class="grid-cell">连接类型</div><div class="grid-cell">保留行</div><div class="grid-cell">空值处理</div></div><div class="grid-row"><div class="grid-cell">INNER JOIN</div><div class="grid-cell">两侧匹配行</div><div class="grid-cell">不匹配直接丢弃</div></div><div class="grid-row"><div class="grid-cell">LEFT JOIN</div><div class="grid-cell">左表全部，右表补 NULL</div><div class="grid-cell">左表为主表</div></div><div class="grid-row"><div class="grid-cell">RIGHT JOIN</div><div class="grid-cell">右表全部，左表补 NULL</div><div class="grid-cell">右表为主表</div></div><div class="grid-row"><div class="grid-cell">FULL OUTER JOIN</div><div class="grid-cell">两表全部，缺失侧补 NULL</div><div class="grid-cell">两侧都保</div></div></div>
+
+<h2 id="1-3-Map-Join：小表广播，避免-shuffle"><a href="#1-3-Map-Join：小表广播，避免-shuffle" class="headerlink" title="1.3 Map Join：小表广播，避免 shuffle"></a>1.3 Map Join：小表广播，避免 shuffle</h2><p>普通 Join 要按连接键做 shuffle，两侧数据都拉到 reducer 上分组连接。如果其中一张是维表、体量很小，可以把小表广播到每个计算节点，本地直接和大表关联，省掉 shuffle，这就是 Map Join（也叫 Broadcast Join）。</p>
+<p>开启方式有两种：自动转换与语句级提示：</p>
+<pre class="line-numbers language-properties" data-language="properties"><code class="language-properties"><span class="token comment"># 自动 Map Join：小表体积低于阈值时自动广播</span>
+<span class="token key attr-name">hive.auto.convert.join</span><span class="token punctuation">=</span><span class="token value attr-value">true</span>
+<span class="token comment"># 广播表的最大体积，单位字节，示例为 25MB</span>
+<span class="token key attr-name">hive.mapjoin.smalltable.filesize</span><span class="token punctuation">=</span><span class="token value attr-value">25000000</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span></span></code></pre>
+
+<pre class="line-numbers language-sql" data-language="sql"><code class="language-sql"><span class="token comment">-- 语句级提示：指定 dim_user 作为被广播的小表</span>
+<span class="token keyword">SELECT</span> <span class="token comment">/*+ MAPJOIN(u) */</span> o<span class="token punctuation">.</span>order_id<span class="token punctuation">,</span> u<span class="token punctuation">.</span>user_name
+<span class="token keyword">FROM</span> dwd<span class="token punctuation">.</span><span class="token identifier"><span class="token punctuation">`</span>order<span class="token punctuation">`</span></span> o
+<span class="token keyword">JOIN</span> dim_user u <span class="token keyword">ON</span> o<span class="token punctuation">.</span>user_id <span class="token operator">=</span> u<span class="token punctuation">.</span>user_id<span class="token punctuation">;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span></span></code></pre>
+
+<p>判断原则：<strong>小表适合广播，大表广播会把内存撑爆甚至拖垮任务</strong>。两张都是大表时，老老实实地走 shuffle Join，靠分桶、列裁剪和压缩控制成本。</p>
+<h2 id="1-4-分组与聚合"><a href="#1-4-分组与聚合" class="headerlink" title="1.4 分组与聚合"></a>1.4 分组与聚合</h2><p>常用聚合函数与标准 SQL 一致：<code>COUNT</code>、<code>SUM</code>、<code>AVG</code>、<code>MAX</code>、<code>MIN</code>，配合 <code>GROUP BY</code> 使用。</p>
+<pre class="line-numbers language-sql" data-language="sql"><code class="language-sql"><span class="token keyword">SELECT</span> channel<span class="token punctuation">,</span>
+       <span class="token function">COUNT</span><span class="token punctuation">(</span><span class="token operator">*</span><span class="token punctuation">)</span>              <span class="token keyword">AS</span> pv<span class="token punctuation">,</span>
+       <span class="token function">COUNT</span><span class="token punctuation">(</span><span class="token keyword">DISTINCT</span> uid<span class="token punctuation">)</span>   <span class="token keyword">AS</span> uv<span class="token punctuation">,</span>
+       <span class="token function">SUM</span><span class="token punctuation">(</span>amount<span class="token punctuation">)</span>           <span class="token keyword">AS</span> gmv<span class="token punctuation">,</span>
+       <span class="token function">AVG</span><span class="token punctuation">(</span>amount<span class="token punctuation">)</span>           <span class="token keyword">AS</span> avg_order
+<span class="token keyword">FROM</span> dwd<span class="token punctuation">.</span>order_daily
+<span class="token keyword">WHERE</span> dt <span class="token operator">=</span> <span class="token string">'2022-01-13'</span>
+<span class="token keyword">GROUP</span> <span class="token keyword">BY</span> channel<span class="token punctuation">;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<p>几个分布式场景下的注意点：</p>
+<ul>
+<li><code>COUNT(DISTINCT col)</code> 去重需要把同值行聚到一起，高基列上成本很高；必要时先按列去重再 <code>COUNT</code>。</li>
+<li><code>GROUP BY</code> 的列尽量低基，分组数过多会造成 reducer 倾斜，这一点在调优篇展开。</li>
+<li><code>HAVING</code> 只能过滤聚合结果，行级条件写 <code>WHERE</code>，别把下推过滤提到 Having 里。</li>
+</ul>
+<h2 id="1-5-窗口函数：分组内排名与累计"><a href="#1-5-窗口函数：分组内排名与累计" class="headerlink" title="1.5 窗口函数：分组内排名与累计"></a>1.5 窗口函数：分组内排名与累计</h2><p>窗口函数在不折叠行的前提下，给每行挂上分组内的聚合或排名结果，是取数里最常用也最容易写错的部分。基本结构：</p>
+<pre class="line-numbers language-sql" data-language="sql"><code class="language-sql">函数名<span class="token punctuation">(</span>参数<span class="token punctuation">)</span> <span class="token keyword">OVER</span> <span class="token punctuation">(</span>
+  <span class="token punctuation">[</span><span class="token keyword">PARTITION</span> <span class="token keyword">BY</span> 分组列<span class="token punctuation">]</span>
+  <span class="token punctuation">[</span><span class="token keyword">ORDER</span> <span class="token keyword">BY</span> 排序列<span class="token punctuation">]</span>
+  <span class="token punctuation">[</span>窗口帧 <span class="token keyword">ROWS</span> <span class="token operator">BETWEEN</span> <span class="token punctuation">.</span><span class="token punctuation">.</span><span class="token punctuation">.</span><span class="token punctuation">]</span>
+<span class="token punctuation">)</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<div class="data-grid data-grid-link-table"><div class="grid-header"><div class="grid-cell">函数</div><div class="grid-cell">作用</div><div class="grid-cell">典型场景</div></div><div class="grid-row"><div class="grid-cell">ROW_NUMBER()</div><div class="grid-cell">连续编号，不并列</div><div class="grid-cell">取每个用户最新一笔订单</div></div><div class="grid-row"><div class="grid-cell">RANK()</div><div class="grid-cell">并列占名次，后续跳号</div><div class="grid-cell">比赛排名</div></div><div class="grid-row"><div class="grid-cell">DENSE_RANK()</div><div class="grid-cell">并列占名次，后续不跳号</div><div class="grid-cell">分数档位统计</div></div><div class="grid-row"><div class="grid-cell">SUM &#x2F; AVG &#x2F; COUNT</div><div class="grid-cell">窗口内累计聚合</div><div class="grid-cell">累计 GMV、滚动均值</div></div><div class="grid-row"><div class="grid-cell">LAG &#x2F; LEAD</div><div class="grid-cell">取上一行 &#x2F; 下一行的值</div><div class="grid-cell">环比、留存对比</div></div></div>
+
+<p>示例：每个渠道按金额排名，并计算累计 GMV：</p>
+<pre class="line-numbers language-sql" data-language="sql"><code class="language-sql"><span class="token keyword">SELECT</span> channel<span class="token punctuation">,</span>
+       order_id<span class="token punctuation">,</span>
+       amount<span class="token punctuation">,</span>
+       ROW_NUMBER<span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token keyword">OVER</span> <span class="token punctuation">(</span><span class="token keyword">PARTITION</span> <span class="token keyword">BY</span> channel <span class="token keyword">ORDER</span> <span class="token keyword">BY</span> amount <span class="token keyword">DESC</span><span class="token punctuation">)</span> <span class="token keyword">AS</span> rn<span class="token punctuation">,</span>
+       <span class="token function">SUM</span><span class="token punctuation">(</span>amount<span class="token punctuation">)</span> <span class="token keyword">OVER</span> <span class="token punctuation">(</span>
+         <span class="token keyword">PARTITION</span> <span class="token keyword">BY</span> channel
+         <span class="token keyword">ORDER</span> <span class="token keyword">BY</span> amount <span class="token keyword">DESC</span>
+         <span class="token keyword">ROWS</span> <span class="token operator">BETWEEN</span> <span class="token keyword">UNBOUNDED</span> <span class="token keyword">PRECEDING</span> <span class="token operator">AND</span> <span class="token keyword">CURRENT</span> <span class="token keyword">ROW</span>
+       <span class="token punctuation">)</span> <span class="token keyword">AS</span> cum_gmv
+<span class="token keyword">FROM</span> dwd<span class="token punctuation">.</span>order_daily
+<span class="token keyword">WHERE</span> dt <span class="token operator">=</span> <span class="token string">'2022-01-13'</span><span class="token punctuation">;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<p>窗口帧（Window Frame）决定累计范围：<code>UNBOUNDED PRECEDING</code> 表示从分区第一行开始，<code>CURRENT ROW</code> 表示到当前行；不写 <code>ORDER BY</code> 时，默认帧覆盖整个分区。</p>
+<p>取每个用户最新一笔订单的经典写法：</p>
+<pre class="line-numbers language-sql" data-language="sql"><code class="language-sql"><span class="token keyword">SELECT</span> user_id<span class="token punctuation">,</span> order_id<span class="token punctuation">,</span> amount<span class="token punctuation">,</span> login_ts
+<span class="token keyword">FROM</span> <span class="token punctuation">(</span>
+  <span class="token keyword">SELECT</span> user_id<span class="token punctuation">,</span> order_id<span class="token punctuation">,</span> amount<span class="token punctuation">,</span> login_ts<span class="token punctuation">,</span>
+         ROW_NUMBER<span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token keyword">OVER</span> <span class="token punctuation">(</span><span class="token keyword">PARTITION</span> <span class="token keyword">BY</span> user_id <span class="token keyword">ORDER</span> <span class="token keyword">BY</span> login_ts <span class="token keyword">DESC</span><span class="token punctuation">)</span> <span class="token keyword">AS</span> rn
+  <span class="token keyword">FROM</span> dwd<span class="token punctuation">.</span>order_login
+<span class="token punctuation">)</span> t
+<span class="token keyword">WHERE</span> rn <span class="token operator">=</span> <span class="token number">1</span><span class="token punctuation">;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<h2 id="1-6-lateral-view：把数组和列拆开"><a href="#1-6-lateral-view：把数组和列拆开" class="headerlink" title="1.6 lateral view：把数组和列拆开"></a>1.6 lateral view：把数组和列拆开</h2><p>表里常见数组、Map 类型字段，一行要拆成多行时用 <code>LATERAL VIEW</code> 配合 <code>EXPLODE</code>：</p>
+<pre class="line-numbers language-sql" data-language="sql"><code class="language-sql"><span class="token comment">-- tags 是数组字段，炸开后每行一个标签</span>
+<span class="token keyword">SELECT</span> user_id<span class="token punctuation">,</span> tag
+<span class="token keyword">FROM</span> dwd<span class="token punctuation">.</span>user_profile
+LATERAL <span class="token keyword">VIEW</span> EXPLODE<span class="token punctuation">(</span>tags<span class="token punctuation">)</span> t <span class="token keyword">AS</span> tag<span class="token punctuation">;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span></span></code></pre>
+
+<div class="data-grid data-grid-link-table"><div class="grid-header"><div class="grid-cell">写法</div><div class="grid-cell">输入</div><div class="grid-cell">输出</div></div><div class="grid-row"><div class="grid-cell">EXPLODE(数组)</div><div class="grid-cell">一行多元素数组</div><div class="grid-cell">每个元素一行</div></div><div class="grid-row"><div class="grid-cell">EXPLODE(Map)</div><div class="grid-cell">一行键值对 Map</div><div class="grid-cell">每个键值一行</div></div><div class="grid-row"><div class="grid-cell">LATERAL VIEW</div><div class="grid-cell">原表 + 炸裂结果</div><div class="grid-cell">列对应展开后的行</div></div></div>
+
+<p>一个表可以挂多个 <code>LATERAL VIEW</code>，分别拆开不同字段；字段为 NULL 或空数组时该行不会出现在结果里，下游统计要注意口径。</p>
+<h2 id="1-7-容易踩的坑"><a href="#1-7-容易踩的坑" class="headerlink" title="1.7 容易踩的坑"></a>1.7 容易踩的坑</h2><ul>
+<li><strong>SELECT 列没进 GROUP BY</strong>：非聚合列必须出现在分组列里，否则解析报错，这是 Hive 与宽松数据库最常见的差异。</li>
+<li><strong>大表被广播成 Map Join</strong>：广播表体积超过阈值会撑爆节点内存，自动转换要配合小表阈值使用。</li>
+<li><strong><code>ORDER BY</code> 全局排序走单 reducer</strong>：大结果集全局排序会集中到一个节点，慢任务优先用 <code>SORT BY</code> 做节点内排序，或分区后再排。</li>
+<li><strong><code>lateral view</code> 丢空行</strong>：NULL 或空数组被炸裂后不产出行，涉及留存、覆盖类指标时要核对口径。</li>
+</ul>
+<h2 id="1-8-官方资料"><a href="#1-8-官方资料" class="headerlink" title="1.8 官方资料"></a>1.8 官方资料</h2><ul>
+<li>LanguageManual Select：<a target="_blank" rel="noopener" href="https://cwiki.apache.org/confluence/display/Hive/LanguageManual+Select">https://cwiki.apache.org/confluence/display/Hive/LanguageManual+Select</a></li>
+<li>Join 优化说明：<a target="_blank" rel="noopener" href="https://cwiki.apache.org/confluence/display/Hive/LanguageManual+JoinOptimization">https://cwiki.apache.org/confluence/display/Hive/LanguageManual+JoinOptimization</a></li>
+<li>窗口函数与 UDF：<a target="_blank" rel="noopener" href="https://cwiki.apache.org/confluence/display/Hive/LanguageManual+UDF">https://cwiki.apache.org/confluence/display/Hive/LanguageManual+UDF</a></li>
+<li>Lateral View 语法：<a target="_blank" rel="noopener" href="https://cwiki.apache.org/confluence/display/Hive/LanguageManual+Select#LanguageManualSelect-QuerySyntax">https://cwiki.apache.org/confluence/display/Hive/LanguageManual+Select#LanguageManualSelect-QuerySyntax</a></li>
+</ul>
+<h2 id="1-9-清单"><a href="#1-9-清单" class="headerlink" title="1.9 清单"></a>1.9 清单</h2><ol>
+<li>HQL 书写顺序是 SELECT→FROM→WHERE→GROUP BY→HAVING→ORDER BY，底层执行按 FROM 起倒序</li>
+<li>非聚合列必须全部进 <code>GROUP BY</code>；行级条件走 WHERE，聚合结果过滤走 HAVING</li>
+<li>Map Join 广播小表省 shuffle，大表不能广播；自动转换受 <code>hive.mapjoin.smalltable.filesize</code> 阈值控制</li>
+<li>窗口函数 <code>PARTITION BY</code> 分组、<code>ORDER BY</code> 排序、窗口帧限定累计范围；排名用 ROW_NUMBER&#x2F;RANK&#x2F;DENSE_RANK</li>
+<li><code>LATERAL VIEW EXPLODE</code> 把数组、Map 拆成多行，空值与空数组不产出行，统计口径要核对</li>
+<li>全局 <code>ORDER BY</code> 收敛到单 reducer，大结果集先节点内排序；高基去重先拆出去重步骤</li>
+</ol>
+</div>
+
+  <div class="mb-foot">
+    <a href="/phone/">返回手机首页</a>
+    <a href="/phone/tags/">星迹索引</a>
+  </div>
+</div>
+
+
+<script>
+  /* 作用：懒加载本地 mermaid 库；无 mermaid 代码块时不加载 */
+  function loadLocalMermaid(){
+    return new Promise(function(resolve, reject){
+      if(window.mermaid) return resolve(window.mermaid);
+      var s = document.createElement('script');
+      s.src = '/js/third-party/mermaid/mermaid.min.js?v=10';
+      s.onload = function(){ resolve(window.mermaid); };
+      s.onerror = function(){ reject(new Error('mermaid local load failed')); };
+      document.head.appendChild(s);
+    });
+  }
+
+  /* 作用：把 ```mermaid 代码块替换成 SVG 图（手机端字号略小、图可横向滚动） */
+  async function renderMermaidDiagram(){
+    var blocks = document.querySelectorAll('pre[class*="language-mermaid"]');
+    if(!blocks.length) return;
+    var mermaid;
+    try { mermaid = await loadLocalMermaid(); }
+    catch(e){ console.warn('[mermaid] 本地库加载失败：', e); return; }
+
+    mermaid.initialize({
+      startOnLoad: false,
+      theme: 'base',
+      themeVariables: {
+        darkMode: true,
+        background: 'transparent',
+        fontFamily: '"Microsoft YaHei", "PingFang SC", "Segoe UI", sans-serif',
+        fontSize: '12px',
+        primaryColor: '#062f3d',
+        primaryTextColor: '#d6f6ff',
+        primaryBorderColor: '#00eeff',
+        secondaryColor: '#04222d',
+        tertiaryColor: '#04222d',
+        mainBkg: '#062f3d',
+        nodeBorder: '#00eeff',
+        clusterBkg: '#02161f',
+        clusterBorder: '#00eeff55',
+        lineColor: '#00eeff',
+        textColor: '#c0e8ff',
+        edgeLabelBackground: '#02161f'
+      },
+      flowchart: { curve: 'basis', useMaxWidth: false, htmlLabels: false, nodeSpacing: 30, rankSpacing: 40, padding: 10 }
+    });
+
+    var targets = [];
+    blocks.forEach(function(el){
+      var codeEl = el.querySelector('code');
+      if(!codeEl) return;
+      var div = document.createElement('div');
+      div.className = 'mermaid';
+      div.textContent = codeEl.textContent;
+      el.parentNode.replaceChild(div, el);
+      targets.push(div);
+    });
+    if(!targets.length) return;
+    try { await mermaid.run({ nodes: targets }); }
+    catch(e){ console.warn('[mermaid] 渲染失败：', e); }
+  }
+  /* 作用：多次触发兜底（延迟重试 + DOM 变化），防止某次时机没跑到导致图表留在代码块 */
+  var mmBusy = false;
+  function scheduleMermaid(){
+    if(mmBusy) return;
+    mmBusy = true;
+    renderMermaidDiagram().then(function(){ mmBusy = false; }, function(){ mmBusy = false; });
+  }
+  scheduleMermaid();
+  window.addEventListener('load', scheduleMermaid);
+  [1000, 3000, 8000].forEach(function(ms){ setTimeout(scheduleMermaid, ms); });
+  if(document.readyState !== 'loading') scheduleMermaid();
+  if(window.MutationObserver){
+    var mmTimer = null;
+    var mmObserver = new MutationObserver(function(){
+      clearTimeout(mmTimer);
+      mmTimer = setTimeout(scheduleMermaid, 400);
+    });
+    mmObserver.observe(document.querySelector('.mb-article') || document.body, { childList: true, subtree: true });
+  }
+</script>
+</body>
+</html>

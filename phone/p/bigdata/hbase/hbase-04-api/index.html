@@ -1,0 +1,371 @@
+<!--
+  ============================================
+  手机端 · 文章原文页
+  文件：phone/post.njk
+  适用终端：手机端（路由 /phone/p/<slug>/，由 scripts/phone-routes.js 生成）
+  作用：手机阅读单篇文章；单列布局、无侧栏无雷达，替代电脑端 post.njk
+        数据由生成期算好：page.item = { title, dateStr, content, cats, tags }
+  样式依赖：source/css/theme/phone/common.css、source/css/theme/phone/list.css
+  组件依赖：phone/_components/Particles.njk
+  最后修改：2026-11-11
+  ============================================
+-->
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="color-scheme" content="dark">
+  <meta name="theme-color" content="#020817">
+  <!-- 首帧兜底：浏览器默认画布是白的，样式未解析前会闪一下白。这条规则先锁死深空底色 -->
+  <style>html{background-color:#020817}</style>
+  <title>HBase（四）Java API 与过滤器 - 时空秘境</title>
+  <!-- 手机端样式：基础 + 列表/正文，外链引入（源文件 source/css/theme/phone/） -->
+  <link rel="stylesheet" href="/css/theme/phone/common.css">
+  <link rel="stylesheet" href="/css/theme/phone/list.css">
+<meta name="generator" content="Hexo 8.1.2"></head>
+<body>
+<div class="mb-shell">
+  <!--
+  ============================================
+  手机端星空粒子组件
+  文件：Particles.njk
+  适用终端：手机端
+  作用：Particles.njk 的手机端副本（nunjucks 子目录 include 取不到上级）
+        参数与电脑端 _components/Particles.njk 保持一致：
+        粒子 95 / 连线 118px / opacity 0.32，外加星座层与零星闪烁层
+  最后修改：2026-11-12
+  ============================================
+--><!-- z-index 必须是 0：负层级会被 body 不透明背景盖住，粒子在跑却看不见 -->
+<div id="particles" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 0; pointer-events: none;"></div>
+<!-- 星座层（与首页同一套：随机零星散布星座图形 + 偶尔闪烁的小星） -->
+<div id="constellations" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 1; pointer-events: none;" aria-hidden="true"></div>
+<script src="/js/particles.min.js"></script>
+<script>
+particlesJS("particles", {
+  particles: {
+    number: {
+      value: 95,
+      density: {
+        enable: true,
+        value_area: 800
+      }
+    },
+    color: {
+      value: "#00eeff"
+    },
+    shape: {
+      type: "circle",
+      stroke: {
+        width: 0,
+        color: "#000000"
+      }
+    },
+    opacity: {
+      value: 0.6,
+      random: true,
+      anim: {
+        enable: true,
+        speed: 0.5,
+        opacity_min: 0.1,
+        sync: false
+      }
+    },
+    size: {
+      value: 3,
+      random: true,
+      anim: {
+        enable: true,
+        speed: 2,
+        size_min: 0.1,
+        sync: false
+      }
+    },
+    line_linked: {
+      enable: true,
+      distance: 118,
+      color: "#00eeff",
+      opacity: 0.32,
+      width: 1
+    },
+    move: {
+      enable: true,
+      speed: 0.8,
+      direction: "none",
+      random: true,
+      straight: false,
+      out_mode: "out",
+      bounce: false,
+      attract: {
+        enable: true,
+        rotateX: 600,
+        rotateY: 1200
+      }
+    }
+  },
+  interactivity: {
+    detect_on: "canvas",
+    events: {
+      onhover: {
+        enable: true,
+        mode: "grab"       // 手指按住时粒子聚集
+      },
+      onclick: {
+        enable: true,
+        mode: "push"       // 点击时产生新粒子
+      },
+      resize: true
+    },
+    modes: {
+      grab: {
+        distance: 200,
+        line_linked: {
+          opacity: 1
+        }
+      },
+      push: {
+        particles_nb: 6
+      }
+    }
+  },
+  retina_detect: true
+});
+</script>
+<!-- 星座 + 零星闪烁层：与电脑端共用同一份绘制脚本 -->
+<script src="/js/theme/home/starfield.js"></script>
+
+
+  <div class="mb-top">
+    <a class="mb-back" href="/phone/">← 返回手机首页</a>
+    <span class="mb-sub" style="margin:0">2023-04-03</span>
+  </div>
+
+  <h1 class="mb-title">HBase（四）Java API 与过滤器</h1>
+  <div class="mb-sub">
+    分类：bigdata · hbase
+     ｜ 标签：HBase
+  </div>
+
+  <div class="mb-article"><div class="essay-banner essay-hbase"></div>
+
+<h1 id="Java-API-与过滤器"><a href="#Java-API-与过滤器" class="headerlink" title="Java API 与过滤器"></a><strong>Java API 与过滤器</strong></h1><p>这一篇进入开发视角，把 HBase 官方 Java 客户端的核心用法串一遍：怎么拿 Connection 和 Table，怎么写 Put、做 Get 和 Scan，怎么用 FilterList 组合条件，以及批量操作和协处理器各自解决什么问题。代码按 HBase 1.x &#x2F; 2.x 通用的客户端模型写，类名和生命周期是重点，参数细节以对应版本 API 文档为准。</p>
+<p><img src="https://wu4yong.github.io/starry-images/assets/img/hbase/hbase-04-api.webp" alt="客户端通过统一连接通道与数据表句柄交互，条件筛选器在数据返回前逐层收拢结果"></p>
+<p><em>客户端通过统一连接通道与数据表句柄交互，条件筛选器在数据返回前逐层收拢结果</em></p>
+<h2 id="1-1-客户端-API-总览"><a href="#1-1-客户端-API-总览" class="headerlink" title="1.1 客户端 API 总览"></a>1.1 客户端 API 总览</h2><p>HBase 客户端的核心对象分两层：<strong>Connection</strong> 是重量级的集群连接，<strong>Table</strong> 是某张表的轻量级句柄。先把生命周期分清楚，否则容易在连接复用和资源关闭上出问题：</p>
+<div class="data-grid data-grid-link-table"><div class="grid-header"><div class="grid-cell">对象</div><div class="grid-cell">作用</div><div class="grid-cell">生命周期</div></div><div class="grid-row"><div class="grid-cell">Connection</div><div class="grid-cell">持有集群元数据、RegionServer 连接池</div><div class="grid-cell">重量级，一个应用共享一个，用完关闭</div></div><div class="grid-row"><div class="grid-cell">Table</div><div class="grid-cell">对应一张表的操作句柄</div><div class="grid-cell">轻量级，用完即关，不要长期缓存</div></div><div class="grid-row"><div class="grid-cell">Put &#x2F; Get &#x2F; Scan</div><div class="grid-cell">一次读写操作的参数载体</div><div class="grid-cell">单次请求内构造使用</div></div><div class="grid-row"><div class="grid-cell">Result &#x2F; ResultScanner</div><div class="grid-cell">单行结果 &#x2F; 扫描迭代器</div><div class="grid-cell">用完关闭，释放服务端扫描资源</div></div></div>
+
+<h2 id="1-2-建立-Connection-与获取-Table"><a href="#1-2-建立-Connection-与获取-Table" class="headerlink" title="1.2 建立 Connection 与获取 Table"></a>1.2 建立 Connection 与获取 Table</h2><p>Connection 由 <code>ConnectionFactory</code> 创建，配置从 <code>hbase-site.xml</code> 读取；Table 从 Connection 获取。注意 Connection 线程安全、可复用，Table 实例不建议多线程共享：</p>
+<pre class="line-numbers language-java" data-language="java"><code class="language-java"><span class="token keyword">import</span> <span class="token import"><span class="token namespace">org<span class="token punctuation">.</span>apache<span class="token punctuation">.</span>hadoop<span class="token punctuation">.</span>conf<span class="token punctuation">.</span></span><span class="token class-name">Configuration</span></span><span class="token punctuation">;</span>
+<span class="token keyword">import</span> <span class="token import"><span class="token namespace">org<span class="token punctuation">.</span>apache<span class="token punctuation">.</span>hadoop<span class="token punctuation">.</span>hbase<span class="token punctuation">.</span></span><span class="token class-name">HBaseConfiguration</span></span><span class="token punctuation">;</span>
+<span class="token keyword">import</span> <span class="token import"><span class="token namespace">org<span class="token punctuation">.</span>apache<span class="token punctuation">.</span>hadoop<span class="token punctuation">.</span>hbase<span class="token punctuation">.</span>client<span class="token punctuation">.</span></span><span class="token class-name">Connection</span></span><span class="token punctuation">;</span>
+<span class="token keyword">import</span> <span class="token import"><span class="token namespace">org<span class="token punctuation">.</span>apache<span class="token punctuation">.</span>hadoop<span class="token punctuation">.</span>hbase<span class="token punctuation">.</span>client<span class="token punctuation">.</span></span><span class="token class-name">ConnectionFactory</span></span><span class="token punctuation">;</span>
+<span class="token keyword">import</span> <span class="token import"><span class="token namespace">org<span class="token punctuation">.</span>apache<span class="token punctuation">.</span>hadoop<span class="token punctuation">.</span>hbase<span class="token punctuation">.</span>client<span class="token punctuation">.</span></span><span class="token class-name">Table</span></span><span class="token punctuation">;</span>
+
+<span class="token class-name">Configuration</span> conf <span class="token operator">=</span> <span class="token class-name">HBaseConfiguration</span><span class="token punctuation">.</span><span class="token function">create</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token comment">// 集群地址通常由 hbase-site.xml 提供，这里不显式硬编码</span>
+<span class="token class-name">Connection</span> connection <span class="token operator">=</span> <span class="token class-name">ConnectionFactory</span><span class="token punctuation">.</span><span class="token function">createConnection</span><span class="token punctuation">(</span>conf<span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token class-name">Table</span> table <span class="token operator">=</span> connection<span class="token punctuation">.</span><span class="token function">getTable</span><span class="token punctuation">(</span><span class="token class-name">TableName</span><span class="token punctuation">.</span><span class="token function">valueOf</span><span class="token punctuation">(</span><span class="token string">"user_table"</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token comment">// 使用完毕：先关 Table，再在应用退出时关 Connection</span>
+table<span class="token punctuation">.</span><span class="token function">close</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+connection<span class="token punctuation">.</span><span class="token function">close</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<p>一个常见错误是把 Table 当单例缓存起来长期复用，句柄背后的资源不会及时释放；正确做法是每次操作从 Connection 取 Table，用完关闭。</p>
+<h2 id="1-3-写入：Put"><a href="#1-3-写入：Put" class="headerlink" title="1.3 写入：Put"></a>1.3 写入：Put</h2><p>Put 按 RowKey 定位，再往指定列族、列限定符下写值。Cell 内容是字节数组，序列化由客户端自己负责：</p>
+<pre class="line-numbers language-java" data-language="java"><code class="language-java"><span class="token keyword">import</span> <span class="token import"><span class="token namespace">org<span class="token punctuation">.</span>apache<span class="token punctuation">.</span>hadoop<span class="token punctuation">.</span>hbase<span class="token punctuation">.</span>client<span class="token punctuation">.</span></span><span class="token class-name">Put</span></span><span class="token punctuation">;</span>
+<span class="token keyword">import</span> <span class="token import"><span class="token namespace">org<span class="token punctuation">.</span>apache<span class="token punctuation">.</span>hadoop<span class="token punctuation">.</span>hbase<span class="token punctuation">.</span>util<span class="token punctuation">.</span></span><span class="token class-name">Bytes</span></span><span class="token punctuation">;</span>
+
+<span class="token keyword">byte</span><span class="token punctuation">[</span><span class="token punctuation">]</span> rowKey <span class="token operator">=</span> <span class="token class-name">Bytes</span><span class="token punctuation">.</span><span class="token function">toBytes</span><span class="token punctuation">(</span><span class="token string">"user001"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token class-name">Put</span> put <span class="token operator">=</span> <span class="token keyword">new</span> <span class="token class-name">Put</span><span class="token punctuation">(</span>rowKey<span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token comment">// 列族 info，列名 name，写入最新版本</span>
+put<span class="token punctuation">.</span><span class="token function">addColumn</span><span class="token punctuation">(</span><span class="token class-name">Bytes</span><span class="token punctuation">.</span><span class="token function">toBytes</span><span class="token punctuation">(</span><span class="token string">"info"</span><span class="token punctuation">)</span><span class="token punctuation">,</span> <span class="token class-name">Bytes</span><span class="token punctuation">.</span><span class="token function">toBytes</span><span class="token punctuation">(</span><span class="token string">"name"</span><span class="token punctuation">)</span><span class="token punctuation">,</span> <span class="token class-name">Bytes</span><span class="token punctuation">.</span><span class="token function">toBytes</span><span class="token punctuation">(</span><span class="token string">"Alice"</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token comment">// 显式指定时间戳，覆盖默认的当前时间</span>
+put<span class="token punctuation">.</span><span class="token function">addColumn</span><span class="token punctuation">(</span><span class="token class-name">Bytes</span><span class="token punctuation">.</span><span class="token function">toBytes</span><span class="token punctuation">(</span><span class="token string">"info"</span><span class="token punctuation">)</span><span class="token punctuation">,</span> <span class="token class-name">Bytes</span><span class="token punctuation">.</span><span class="token function">toBytes</span><span class="token punctuation">(</span><span class="token string">"age"</span><span class="token punctuation">)</span><span class="token punctuation">,</span> <span class="token number">1637904000000L</span><span class="token punctuation">,</span> <span class="token class-name">Bytes</span><span class="token punctuation">.</span><span class="token function">toBytes</span><span class="token punctuation">(</span><span class="token string">"28"</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+table<span class="token punctuation">.</span><span class="token function">put</span><span class="token punctuation">(</span>put<span class="token punctuation">)</span><span class="token punctuation">;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<p>几个要点：</p>
+<ul>
+<li>列族必须在建表时定义，列限定符可以动态新增</li>
+<li>不显式传时间戳时，服务端取写入时刻作为版本号</li>
+<li>同一个 Put 里写多个列，服务端作为一次 Region 写入处理</li>
+</ul>
+<h2 id="1-4-读取：Get-与-Scan"><a href="#1-4-读取：Get-与-Scan" class="headerlink" title="1.4 读取：Get 与 Scan"></a>1.4 读取：Get 与 Scan</h2><p><strong>Get</strong> 按单行主键定点取，<strong>Scan</strong> 按 RowKey 区间顺序扫。两者都可以裁剪返回的列族、列和版本数，减少网络与磁盘开销：</p>
+<pre class="line-numbers language-java" data-language="java"><code class="language-java"><span class="token keyword">import</span> <span class="token import"><span class="token namespace">org<span class="token punctuation">.</span>apache<span class="token punctuation">.</span>hadoop<span class="token punctuation">.</span>hbase<span class="token punctuation">.</span>client<span class="token punctuation">.</span></span><span class="token class-name">Get</span></span><span class="token punctuation">;</span>
+<span class="token keyword">import</span> <span class="token import"><span class="token namespace">org<span class="token punctuation">.</span>apache<span class="token punctuation">.</span>hadoop<span class="token punctuation">.</span>hbase<span class="token punctuation">.</span>client<span class="token punctuation">.</span></span><span class="token class-name">Result</span></span><span class="token punctuation">;</span>
+<span class="token keyword">import</span> <span class="token import"><span class="token namespace">org<span class="token punctuation">.</span>apache<span class="token punctuation">.</span>hadoop<span class="token punctuation">.</span>hbase<span class="token punctuation">.</span>client<span class="token punctuation">.</span></span><span class="token class-name">Scan</span></span><span class="token punctuation">;</span>
+<span class="token keyword">import</span> <span class="token import"><span class="token namespace">org<span class="token punctuation">.</span>apache<span class="token punctuation">.</span>hadoop<span class="token punctuation">.</span>hbase<span class="token punctuation">.</span>client<span class="token punctuation">.</span></span><span class="token class-name">ResultScanner</span></span><span class="token punctuation">;</span>
+
+<span class="token comment">// 单行读取：只取 info:name 一列</span>
+<span class="token class-name">Get</span> get <span class="token operator">=</span> <span class="token keyword">new</span> <span class="token class-name">Get</span><span class="token punctuation">(</span><span class="token class-name">Bytes</span><span class="token punctuation">.</span><span class="token function">toBytes</span><span class="token punctuation">(</span><span class="token string">"user001"</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+get<span class="token punctuation">.</span><span class="token function">addColumn</span><span class="token punctuation">(</span><span class="token class-name">Bytes</span><span class="token punctuation">.</span><span class="token function">toBytes</span><span class="token punctuation">(</span><span class="token string">"info"</span><span class="token punctuation">)</span><span class="token punctuation">,</span> <span class="token class-name">Bytes</span><span class="token punctuation">.</span><span class="token function">toBytes</span><span class="token punctuation">(</span><span class="token string">"name"</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token class-name">Result</span> result <span class="token operator">=</span> table<span class="token punctuation">.</span><span class="token function">get</span><span class="token punctuation">(</span>get<span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+<span class="token comment">// 范围扫描：从 user001 到 user099，限制返回版本数</span>
+<span class="token class-name">Scan</span> scan <span class="token operator">=</span> <span class="token keyword">new</span> <span class="token class-name">Scan</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+scan<span class="token punctuation">.</span><span class="token function">withStartRow</span><span class="token punctuation">(</span><span class="token class-name">Bytes</span><span class="token punctuation">.</span><span class="token function">toBytes</span><span class="token punctuation">(</span><span class="token string">"user001"</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+scan<span class="token punctuation">.</span><span class="token function">withStopRow</span><span class="token punctuation">(</span><span class="token class-name">Bytes</span><span class="token punctuation">.</span><span class="token function">toBytes</span><span class="token punctuation">(</span><span class="token string">"user099"</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+scan<span class="token punctuation">.</span><span class="token function">addFamily</span><span class="token punctuation">(</span><span class="token class-name">Bytes</span><span class="token punctuation">.</span><span class="token function">toBytes</span><span class="token punctuation">(</span><span class="token string">"info"</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+scan<span class="token punctuation">.</span><span class="token function">setMaxVersions</span><span class="token punctuation">(</span><span class="token number">1</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+<span class="token keyword">try</span> <span class="token punctuation">(</span><span class="token class-name">ResultScanner</span> scanner <span class="token operator">=</span> table<span class="token punctuation">.</span><span class="token function">getScanner</span><span class="token punctuation">(</span>scan<span class="token punctuation">)</span><span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+    <span class="token keyword">for</span> <span class="token punctuation">(</span><span class="token class-name">Result</span> r <span class="token operator">:</span> scanner<span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+        <span class="token comment">// 逐行处理 r</span>
+    <span class="token punctuation">&#125;</span>
+<span class="token punctuation">&#125;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<p>Scan 的 <code>ResultScanner</code> 持有服务端扫描上下文，必须关闭释放资源；大区间扫描建议分批设置缓存行数，避免一次性拉回过多数据。</p>
+<h2 id="1-5-过滤器与-FilterList"><a href="#1-5-过滤器与-FilterList" class="headerlink" title="1.5 过滤器与 FilterList"></a>1.5 过滤器与 FilterList</h2><p>过滤器在服务端按条件收拢结果，减少回传数据。单条件用具体 Filter，多条件用 <strong>FilterList</strong> 组合，逻辑分全通过（MUST_PASS_ALL）或任一通过（MUST_PASS_ONE）：</p>
+<pre class="line-numbers language-java" data-language="java"><code class="language-java"><span class="token keyword">import</span> <span class="token import"><span class="token namespace">org<span class="token punctuation">.</span>apache<span class="token punctuation">.</span>hadoop<span class="token punctuation">.</span>hbase<span class="token punctuation">.</span>filter<span class="token punctuation">.</span></span><span class="token class-name">FilterList</span></span><span class="token punctuation">;</span>
+<span class="token keyword">import</span> <span class="token import"><span class="token namespace">org<span class="token punctuation">.</span>apache<span class="token punctuation">.</span>hadoop<span class="token punctuation">.</span>hbase<span class="token punctuation">.</span>filter<span class="token punctuation">.</span></span><span class="token class-name">SingleColumnValueFilter</span></span><span class="token punctuation">;</span>
+<span class="token keyword">import</span> <span class="token import"><span class="token namespace">org<span class="token punctuation">.</span>apache<span class="token punctuation">.</span>hadoop<span class="token punctuation">.</span>hbase<span class="token punctuation">.</span>filter<span class="token punctuation">.</span></span><span class="token class-name">CompareOperator</span></span><span class="token punctuation">;</span>
+<span class="token keyword">import</span> <span class="token import"><span class="token namespace">org<span class="token punctuation">.</span>apache<span class="token punctuation">.</span>hadoop<span class="token punctuation">.</span>hbase<span class="token punctuation">.</span>filter<span class="token punctuation">.</span></span><span class="token class-name">BinaryComparator</span></span><span class="token punctuation">;</span>
+
+<span class="token class-name">FilterList</span> list <span class="token operator">=</span> <span class="token keyword">new</span> <span class="token class-name">FilterList</span><span class="token punctuation">(</span><span class="token class-name">FilterList<span class="token punctuation">.</span>Operator</span><span class="token punctuation">.</span><span class="token constant">MUST_PASS_ALL</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+<span class="token comment">// 条件一：info:age 大于等于 20</span>
+<span class="token class-name">SingleColumnValueFilter</span> ageFilter <span class="token operator">=</span> <span class="token keyword">new</span> <span class="token class-name">SingleColumnValueFilter</span><span class="token punctuation">(</span>
+        <span class="token class-name">Bytes</span><span class="token punctuation">.</span><span class="token function">toBytes</span><span class="token punctuation">(</span><span class="token string">"info"</span><span class="token punctuation">)</span><span class="token punctuation">,</span> <span class="token class-name">Bytes</span><span class="token punctuation">.</span><span class="token function">toBytes</span><span class="token punctuation">(</span><span class="token string">"age"</span><span class="token punctuation">)</span><span class="token punctuation">,</span>
+        <span class="token class-name">CompareOperator</span><span class="token punctuation">.</span><span class="token constant">GREATER_OR_EQUAL</span><span class="token punctuation">,</span> <span class="token keyword">new</span> <span class="token class-name">BinaryComparator</span><span class="token punctuation">(</span><span class="token class-name">Bytes</span><span class="token punctuation">.</span><span class="token function">toBytes</span><span class="token punctuation">(</span><span class="token string">"20"</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+list<span class="token punctuation">.</span><span class="token function">addFilter</span><span class="token punctuation">(</span>ageFilter<span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+<span class="token comment">// 条件二：info:city 等于 "cd"</span>
+<span class="token class-name">SingleColumnValueFilter</span> cityFilter <span class="token operator">=</span> <span class="token keyword">new</span> <span class="token class-name">SingleColumnValueFilter</span><span class="token punctuation">(</span>
+        <span class="token class-name">Bytes</span><span class="token punctuation">.</span><span class="token function">toBytes</span><span class="token punctuation">(</span><span class="token string">"info"</span><span class="token punctuation">)</span><span class="token punctuation">,</span> <span class="token class-name">Bytes</span><span class="token punctuation">.</span><span class="token function">toBytes</span><span class="token punctuation">(</span><span class="token string">"city"</span><span class="token punctuation">)</span><span class="token punctuation">,</span>
+        <span class="token class-name">CompareOperator</span><span class="token punctuation">.</span><span class="token constant">EQUAL</span><span class="token punctuation">,</span> <span class="token keyword">new</span> <span class="token class-name">BinaryComparator</span><span class="token punctuation">(</span><span class="token class-name">Bytes</span><span class="token punctuation">.</span><span class="token function">toBytes</span><span class="token punctuation">(</span><span class="token string">"cd"</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+list<span class="token punctuation">.</span><span class="token function">addFilter</span><span class="token punctuation">(</span>cityFilter<span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+<span class="token class-name">Scan</span> scan <span class="token operator">=</span> <span class="token keyword">new</span> <span class="token class-name">Scan</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+scan<span class="token punctuation">.</span><span class="token function">setFilter</span><span class="token punctuation">(</span>list<span class="token punctuation">)</span><span class="token punctuation">;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<p>使用过滤器要记住两条边界：</p>
+<ul>
+<li>过滤器不能替代 RowKey 设计：不带 RowKey 前缀的条件过滤仍然要大范围扫描，只是在服务端丢弃数据</li>
+<li>过滤发生在服务端，但扫描本身要遍历到对应文件；复杂过滤器会增加 RegionServer CPU 开销，重条件下要评估分页与前缀设计</li>
+</ul>
+<h2 id="1-6-批量操作"><a href="#1-6-批量操作" class="headerlink" title="1.6 批量操作"></a>1.6 批量操作</h2><p>单行逐条写、逐条读会产生大量 RPC 往返。客户端提供按列表提交的批量接口，把多个操作合并到一次网络交互里：</p>
+<pre class="line-numbers language-java" data-language="java"><code class="language-java"><span class="token keyword">import</span> <span class="token import"><span class="token namespace">java<span class="token punctuation">.</span>util<span class="token punctuation">.</span></span><span class="token class-name">ArrayList</span></span><span class="token punctuation">;</span>
+<span class="token keyword">import</span> <span class="token import"><span class="token namespace">java<span class="token punctuation">.</span>util<span class="token punctuation">.</span></span><span class="token class-name">List</span></span><span class="token punctuation">;</span>
+
+<span class="token class-name">List</span><span class="token generics"><span class="token punctuation">&lt;</span><span class="token class-name">Put</span><span class="token punctuation">></span></span> puts <span class="token operator">=</span> <span class="token keyword">new</span> <span class="token class-name">ArrayList</span><span class="token generics"><span class="token punctuation">&lt;</span><span class="token punctuation">></span></span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token keyword">for</span> <span class="token punctuation">(</span><span class="token keyword">int</span> i <span class="token operator">=</span> <span class="token number">0</span><span class="token punctuation">;</span> i <span class="token operator">&lt;</span> <span class="token number">100</span><span class="token punctuation">;</span> i<span class="token operator">++</span><span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+    <span class="token class-name">Put</span> p <span class="token operator">=</span> <span class="token keyword">new</span> <span class="token class-name">Put</span><span class="token punctuation">(</span><span class="token class-name">Bytes</span><span class="token punctuation">.</span><span class="token function">toBytes</span><span class="token punctuation">(</span><span class="token string">"user"</span> <span class="token operator">+</span> i<span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    p<span class="token punctuation">.</span><span class="token function">addColumn</span><span class="token punctuation">(</span><span class="token class-name">Bytes</span><span class="token punctuation">.</span><span class="token function">toBytes</span><span class="token punctuation">(</span><span class="token string">"info"</span><span class="token punctuation">)</span><span class="token punctuation">,</span> <span class="token class-name">Bytes</span><span class="token punctuation">.</span><span class="token function">toBytes</span><span class="token punctuation">(</span><span class="token string">"name"</span><span class="token punctuation">)</span><span class="token punctuation">,</span> <span class="token class-name">Bytes</span><span class="token punctuation">.</span><span class="token function">toBytes</span><span class="token punctuation">(</span><span class="token string">"name"</span> <span class="token operator">+</span> i<span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    puts<span class="token punctuation">.</span><span class="token function">add</span><span class="token punctuation">(</span>p<span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">&#125;</span>
+table<span class="token punctuation">.</span><span class="token function">put</span><span class="token punctuation">(</span>puts<span class="token punctuation">)</span><span class="token punctuation">;</span> <span class="token comment">// 批量写入，减少 RPC 次数</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<p>批量接口内部按 Region 分组发送，部分失败时结果按列表顺序返回，需要逐条检查状态；批量不等于事务，跨 Region 的多行操作不具备原子性。</p>
+<h2 id="1-7-协处理器概述"><a href="#1-7-协处理器概述" class="headerlink" title="1.7 协处理器概述"></a>1.7 协处理器概述</h2><p>协处理器（Coprocessor）把部分计算推到 RegionServer 侧执行，避免把全量数据拉到客户端再算。官方分两类：</p>
+<div class="data-grid data-grid-link-table"><div class="grid-header"><div class="grid-cell">类型</div><div class="grid-cell">类比</div><div class="grid-cell">典型用途</div></div><div class="grid-row"><div class="grid-cell">Observer</div><div class="grid-cell">数据库触发器</div><div class="grid-cell">在 Put &#x2F; Get &#x2F; Delete 前后挂钩子，做校验、索引维护、审计</div></div><div class="grid-row"><div class="grid-cell">Endpoint</div><div class="grid-cell">存储过程</div><div class="grid-cell">在各 Region 上并行执行聚合，再由客户端汇总结果</div></div></div>
+
+<p>协处理器的代价是把业务逻辑下沉到存储侧，调试和升级都更复杂。常规需求优先用客户端 Scan + 过滤和批量接口；只有聚合下推、跨大量行的触发逻辑这类场景才考虑协处理器。</p>
+<h2 id="1-8-容易踩的坑"><a href="#1-8-容易踩的坑" class="headerlink" title="1.8 容易踩的坑"></a>1.8 容易踩的坑</h2><ul>
+<li>Connection 用完不关、Table 反复创建：连接要共享复用，句柄随用随关</li>
+<li>全表 Scan 加过滤器当查询：没有 RowKey 前缀兜底，过滤只是服务端丢数据，扫的代价一分没少</li>
+<li>把批量写入当事务：跨 Region 多行不原子，失败要逐条处理返回结果</li>
+<li>直接在客户端缓存 Table 句柄：长生命周期句柄会累积资源占用</li>
+</ul>
+<h2 id="1-9-官方资料"><a href="#1-9-官方资料" class="headerlink" title="1.9 官方资料"></a>1.9 官方资料</h2><ul>
+<li>Apache HBase 官网：<a target="_blank" rel="noopener" href="https://hbase.apache.org/">https://hbase.apache.org/</a></li>
+<li>HBase Reference Guide — 客户端 API：<a target="_blank" rel="noopener" href="https://hbase.apache.org/book.html#client">https://hbase.apache.org/book.html#client</a></li>
+<li>HBase 过滤器文档：<a target="_blank" rel="noopener" href="https://hbase.apache.org/book.html#filters">https://hbase.apache.org/book.html#filters</a></li>
+<li>HBase Coprocessor 文档：<a target="_blank" rel="noopener" href="https://hbase.apache.org/book.html#coprocessors">https://hbase.apache.org/book.html#coprocessors</a></li>
+</ul>
+<h2 id="1-10-清单"><a href="#1-10-清单" class="headerlink" title="1.10 清单"></a>1.10 清单</h2><ol>
+<li>Connection 重量级、线程安全、全局共享；Table 轻量级、用完即关</li>
+<li>Put 按 RowKey + 列族 + 列限定符写版本，字节序列化由客户端负责</li>
+<li>Get 定点取单行，Scan 按 RowKey 区间顺序扫，ResultScanner 必须关闭</li>
+<li>FilterList 用 MUST_PASS_ALL &#x2F; MUST_PASS_ONE 组合条件，过滤在服务端执行</li>
+<li>过滤器替代不了 RowKey 设计，无前缀条件仍是大范围扫描</li>
+<li>批量接口按 Region 分组发送，减少 RPC，但跨 Region 不具备事务原子性</li>
+<li>协处理器分 Observer（钩子触发）与 Endpoint（并行聚合），把计算下沉到 RegionServer，按需使用</li>
+</ol>
+</div>
+
+  <div class="mb-foot">
+    <a href="/phone/">返回手机首页</a>
+    <a href="/phone/tags/">星迹索引</a>
+  </div>
+</div>
+
+
+<script>
+  /* 作用：懒加载本地 mermaid 库；无 mermaid 代码块时不加载 */
+  function loadLocalMermaid(){
+    return new Promise(function(resolve, reject){
+      if(window.mermaid) return resolve(window.mermaid);
+      var s = document.createElement('script');
+      s.src = '/js/third-party/mermaid/mermaid.min.js?v=10';
+      s.onload = function(){ resolve(window.mermaid); };
+      s.onerror = function(){ reject(new Error('mermaid local load failed')); };
+      document.head.appendChild(s);
+    });
+  }
+
+  /* 作用：把 ```mermaid 代码块替换成 SVG 图（手机端字号略小、图可横向滚动） */
+  async function renderMermaidDiagram(){
+    var blocks = document.querySelectorAll('pre[class*="language-mermaid"]');
+    if(!blocks.length) return;
+    var mermaid;
+    try { mermaid = await loadLocalMermaid(); }
+    catch(e){ console.warn('[mermaid] 本地库加载失败：', e); return; }
+
+    mermaid.initialize({
+      startOnLoad: false,
+      theme: 'base',
+      themeVariables: {
+        darkMode: true,
+        background: 'transparent',
+        fontFamily: '"Microsoft YaHei", "PingFang SC", "Segoe UI", sans-serif',
+        fontSize: '12px',
+        primaryColor: '#062f3d',
+        primaryTextColor: '#d6f6ff',
+        primaryBorderColor: '#00eeff',
+        secondaryColor: '#04222d',
+        tertiaryColor: '#04222d',
+        mainBkg: '#062f3d',
+        nodeBorder: '#00eeff',
+        clusterBkg: '#02161f',
+        clusterBorder: '#00eeff55',
+        lineColor: '#00eeff',
+        textColor: '#c0e8ff',
+        edgeLabelBackground: '#02161f'
+      },
+      flowchart: { curve: 'basis', useMaxWidth: false, htmlLabels: false, nodeSpacing: 30, rankSpacing: 40, padding: 10 }
+    });
+
+    var targets = [];
+    blocks.forEach(function(el){
+      var codeEl = el.querySelector('code');
+      if(!codeEl) return;
+      var div = document.createElement('div');
+      div.className = 'mermaid';
+      div.textContent = codeEl.textContent;
+      el.parentNode.replaceChild(div, el);
+      targets.push(div);
+    });
+    if(!targets.length) return;
+    try { await mermaid.run({ nodes: targets }); }
+    catch(e){ console.warn('[mermaid] 渲染失败：', e); }
+  }
+  /* 作用：多次触发兜底（延迟重试 + DOM 变化），防止某次时机没跑到导致图表留在代码块 */
+  var mmBusy = false;
+  function scheduleMermaid(){
+    if(mmBusy) return;
+    mmBusy = true;
+    renderMermaidDiagram().then(function(){ mmBusy = false; }, function(){ mmBusy = false; });
+  }
+  scheduleMermaid();
+  window.addEventListener('load', scheduleMermaid);
+  [1000, 3000, 8000].forEach(function(ms){ setTimeout(scheduleMermaid, ms); });
+  if(document.readyState !== 'loading') scheduleMermaid();
+  if(window.MutationObserver){
+    var mmTimer = null;
+    var mmObserver = new MutationObserver(function(){
+      clearTimeout(mmTimer);
+      mmTimer = setTimeout(scheduleMermaid, 400);
+    });
+    mmObserver.observe(document.querySelector('.mb-article') || document.body, { childList: true, subtree: true });
+  }
+</script>
+</body>
+</html>

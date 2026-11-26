@@ -1,0 +1,328 @@
+<!--
+  ============================================
+  手机端 · 文章原文页
+  文件：phone/post.njk
+  适用终端：手机端（路由 /phone/p/<slug>/，由 scripts/phone-routes.js 生成）
+  作用：手机阅读单篇文章；单列布局、无侧栏无雷达，替代电脑端 post.njk
+        数据由生成期算好：page.item = { title, dateStr, content, cats, tags }
+  样式依赖：source/css/theme/phone/common.css、source/css/theme/phone/list.css
+  组件依赖：phone/_components/Particles.njk
+  最后修改：2026-11-11
+  ============================================
+-->
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="color-scheme" content="dark">
+  <meta name="theme-color" content="#020817">
+  <!-- 首帧兜底：浏览器默认画布是白的，样式未解析前会闪一下白。这条规则先锁死深空底色 -->
+  <style>html{background-color:#020817}</style>
+  <title>Spark（八）生产实践与 AQE - 时空秘境</title>
+  <!-- 手机端样式：基础 + 列表/正文，外链引入（源文件 source/css/theme/phone/） -->
+  <link rel="stylesheet" href="/css/theme/phone/common.css">
+  <link rel="stylesheet" href="/css/theme/phone/list.css">
+<meta name="generator" content="Hexo 8.1.2"></head>
+<body>
+<div class="mb-shell">
+  <!--
+  ============================================
+  手机端星空粒子组件
+  文件：Particles.njk
+  适用终端：手机端
+  作用：Particles.njk 的手机端副本（nunjucks 子目录 include 取不到上级）
+        参数与电脑端 _components/Particles.njk 保持一致：
+        粒子 95 / 连线 118px / opacity 0.32，外加星座层与零星闪烁层
+  最后修改：2026-11-12
+  ============================================
+--><!-- z-index 必须是 0：负层级会被 body 不透明背景盖住，粒子在跑却看不见 -->
+<div id="particles" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 0; pointer-events: none;"></div>
+<!-- 星座层（与首页同一套：随机零星散布星座图形 + 偶尔闪烁的小星） -->
+<div id="constellations" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 1; pointer-events: none;" aria-hidden="true"></div>
+<script src="/js/particles.min.js"></script>
+<script>
+particlesJS("particles", {
+  particles: {
+    number: {
+      value: 95,
+      density: {
+        enable: true,
+        value_area: 800
+      }
+    },
+    color: {
+      value: "#00eeff"
+    },
+    shape: {
+      type: "circle",
+      stroke: {
+        width: 0,
+        color: "#000000"
+      }
+    },
+    opacity: {
+      value: 0.6,
+      random: true,
+      anim: {
+        enable: true,
+        speed: 0.5,
+        opacity_min: 0.1,
+        sync: false
+      }
+    },
+    size: {
+      value: 3,
+      random: true,
+      anim: {
+        enable: true,
+        speed: 2,
+        size_min: 0.1,
+        sync: false
+      }
+    },
+    line_linked: {
+      enable: true,
+      distance: 118,
+      color: "#00eeff",
+      opacity: 0.32,
+      width: 1
+    },
+    move: {
+      enable: true,
+      speed: 0.8,
+      direction: "none",
+      random: true,
+      straight: false,
+      out_mode: "out",
+      bounce: false,
+      attract: {
+        enable: true,
+        rotateX: 600,
+        rotateY: 1200
+      }
+    }
+  },
+  interactivity: {
+    detect_on: "canvas",
+    events: {
+      onhover: {
+        enable: true,
+        mode: "grab"       // 手指按住时粒子聚集
+      },
+      onclick: {
+        enable: true,
+        mode: "push"       // 点击时产生新粒子
+      },
+      resize: true
+    },
+    modes: {
+      grab: {
+        distance: 200,
+        line_linked: {
+          opacity: 1
+        }
+      },
+      push: {
+        particles_nb: 6
+      }
+    }
+  },
+  retina_detect: true
+});
+</script>
+<!-- 星座 + 零星闪烁层：与电脑端共用同一份绘制脚本 -->
+<script src="/js/theme/home/starfield.js"></script>
+
+
+  <div class="mb-top">
+    <a class="mb-back" href="/phone/">← 返回手机首页</a>
+    <span class="mb-sub" style="margin:0">2023-07-05</span>
+  </div>
+
+  <h1 class="mb-title">Spark（八）生产实践与 AQE</h1>
+  <div class="mb-sub">
+    分类：bigdata · spark
+     ｜ 标签：Spark
+  </div>
+
+  <div class="mb-article"><div class="essay-banner essay-spark"></div>
+
+<h1 id="生产实践与-AQE"><a href="#生产实践与-AQE" class="headerlink" title="生产实践与 AQE"></a><strong>生产实践与 AQE</strong></h1><p>作业从跑通到稳定上线，中间隔着资源配比、倾斜治理、故障定位这几道关。Spark 3.0 起 AQE（Adaptive Query Execution，自适应查询执行）默认开启，能在运行时根据实际数据量合并分区、拆分倾斜分区、调整 join 策略，很多老一套”提前拍脑袋定分区数”的调优可以交给它。这一篇把 AQE 的具体开关、shuffle 分区调法、监控入口和三类高频报错的现象与处置讲清楚。</p>
+<p><img src="https://wu4yong.github.io/starry-images/assets/img/spark/spark-08-production.webp" alt="运行时统计信息回流到优化器，小分区被合并、倾斜分区被拆分，执行计划随实际数据量自适应调整"></p>
+<p><em>运行时统计信息回流到优化器，小分区被合并、倾斜分区被拆分，执行计划随实际数据量自适应调整</em></p>
+<h2 id="1-1-AQE-是怎么工作的"><a href="#1-1-AQE-是怎么工作的" class="headerlink" title="1.1 AQE 是怎么工作的"></a>1.1 AQE 是怎么工作的</h2><p>AQE 在 shuffle 完成后读取实际统计信息（各分区大小、行数、倾斜情况），在运行时改写后续执行计划，而不是提交前一次性定死。Spark 3.0 起 <code>spark.sql.adaptive.enabled</code> 默认 <code>true</code>，三项核心能力如下：</p>
+<div class="data-grid data-grid-link-table"><div class="grid-header"><div class="grid-cell">能力</div><div class="grid-cell">解决什么</div><div class="grid-cell">对应参数</div></div><div class="grid-row"><div class="grid-cell">合并 shuffle 分区</div><div class="grid-cell">小分区过多导致 Task 数膨胀</div><div class="grid-cell"><code>spark.sql.adaptive.coalescePartitions.enabled</code>（默认 true）</div></div><div class="grid-row"><div class="grid-cell">倾斜 join 拆分</div><div class="grid-cell">个别分区过大拖慢 join</div><div class="grid-cell"><code>spark.sql.adaptive.skewJoin.enabled</code>（默认 true）</div></div><div class="grid-row"><div class="grid-cell">动态 join 策略</div><div class="grid-cell">运行时按大小切换广播&#x2F;排序 merge join</div><div class="grid-cell">由优化器依据统计信息决策</div></div></div>
+
+<p>AQE 的统计来源是上一轮 shuffle 后的实际分区数据，所以它能修正静态估算的偏差：估小了广播大表、估多了起一堆空 Task，这类问题运行时会被纠正。</p>
+<p>要注意 AQE 不是万能：它只能在已有 shuffle 边界上调整计划，单 Stage 内部的算子顺序仍由静态优化器决定；输入数据本身倾斜严重且没有 shuffle 暴露统计时，AQE 也感知不到。另外 AQE 合并分区改变了下游并发度，依赖固定分区数的写入逻辑（如按分区落文件）要单独验证结果文件数量。</p>
+<h2 id="1-2-AQE-常用参数与分区调优"><a href="#1-2-AQE-常用参数与分区调优" class="headerlink" title="1.2 AQE 常用参数与分区调优"></a>1.2 AQE 常用参数与分区调优</h2><div class="data-grid data-grid-link-table"><div class="grid-header"><div class="grid-cell">参数</div><div class="grid-cell">默认值</div><div class="grid-cell">作用与调优方向</div></div><div class="grid-row"><div class="grid-cell"><code>spark.sql.adaptive.enabled</code></div><div class="grid-cell">true（3.0+）</div><div class="grid-cell">AQE 总开关，生产保持开启</div></div><div class="grid-row"><div class="grid-cell"><code>spark.sql.adaptive.coalescePartitions.enabled</code></div><div class="grid-cell">true</div><div class="grid-cell">合并过小的 shuffle 分区，降低 Task 调度开销</div></div><div class="grid-row"><div class="grid-cell"><code>spark.sql.adaptive.coalescePartitions.minPartitionSize</code></div><div class="grid-cell">5MB</div><div class="grid-cell">合并后单分区目标最小尺寸，过大则分区数偏少</div></div><div class="grid-row"><div class="grid-cell"><code>spark.sql.adaptive.skewJoin.enabled</code></div><div class="grid-cell">true</div><div class="grid-cell">自动识别并拆分倾斜分区</div></div><div class="grid-row"><div class="grid-cell"><code>spark.sql.adaptive.skewJoin.skewedPartitionThresholdInBytes</code></div><div class="grid-cell">256MB</div><div class="grid-cell">超过该尺寸且满足因子条件即判为倾斜分区</div></div><div class="grid-row"><div class="grid-cell"><code>spark.sql.shuffle.partitions</code></div><div class="grid-cell">200</div><div class="grid-cell">shuffle 后初始分区数，AQE 合并前的基数</div></div></div>
+
+<p>调优顺序建议：先保证 AQE 与合并分区开启，再按 shuffle 数据量估初始分区数——经验值是单分区 128MB–256MB，<code>shuffle 总大小 / 单分区目标</code> 得出初始分区数，而不是照搬默认 200。分区不是越多越好：分区过多调度开销和任务启动成本上升，分区过大则单 Task 内存压力高。</p>
+<p>AQE 合并分区后，下游分区数不再等于 <code>spark.sql.shuffle.partitions</code>，看 UI 实际 Stage 分区数判断并发度，而不是拿配置值对照。如果作业写入结果文件且对文件数量有要求，需要在写出前 <code>repartition</code> 固定分区，避免 AQE 合并导致小文件过多。</p>
+<p>线上常用的一段配置，作为提交模板里的固定项：</p>
+<pre class="line-numbers language-properties" data-language="properties"><code class="language-properties"><span class="token comment"># spark-defaults.conf（或 spark-submit --conf 逐条传入）</span>
+<span class="token key attr-name">spark.sql.adaptive.enabled</span><span class="token punctuation">=</span><span class="token value attr-value">true</span>
+<span class="token key attr-name">spark.sql.adaptive.coalescePartitions.enabled</span><span class="token punctuation">=</span><span class="token value attr-value">true</span>
+<span class="token key attr-name">spark.sql.adaptive.coalescePartitions.minPartitionSize</span><span class="token punctuation">=</span><span class="token value attr-value">64MB</span>
+<span class="token key attr-name">spark.sql.adaptive.skewJoin.enabled</span><span class="token punctuation">=</span><span class="token value attr-value">true</span>
+<span class="token key attr-name">spark.sql.adaptive.skewJoin.skewedPartitionThresholdInBytes</span><span class="token punctuation">=</span><span class="token value attr-value">256MB</span>
+<span class="token key attr-name">spark.sql.shuffle.partitions</span><span class="token punctuation">=</span><span class="token value attr-value">400          # 按估算值给，交给 AQE 往下合并</span>
+<span class="token key attr-name">spark.eventLog.enabled</span><span class="token punctuation">=</span><span class="token value attr-value">true               # 保留历史 UI，便于事后复盘</span>
+<span class="token key attr-name">spark.eventLog.dir</span><span class="token punctuation">=</span><span class="token value attr-value">hdfs:///spark/eventlog</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+
+<h2 id="1-3-资源估算的基本口径"><a href="#1-3-资源估算的基本口径" class="headerlink" title="1.3 资源估算的基本口径"></a>1.3 资源估算的基本口径</h2><p>上线前给资源留余量，口径可以按数据规模倒推：单分区目标 128MB–256MB，分区数 &#x3D; shuffle&#x2F;输入数据量 ÷ 单分区目标；单 Executor 4–8 核、堆内存每核 1–2GB；Executor 总数 &#x3D; 总核数 ÷ 单 Executor 核数。Driver 内存按结果回传规模给，纯调度型 Driver 1–2GB 起步，有全局聚合或收集结果时再加。</p>
+<p>资源给得过于保守会频繁溢写和重试，给得过宽则占用队列、影响其他作业。第一版作业先按估算值提交，跑一轮后用 UI 上的实际内存占用、溢写字节和 Task 方差回调，比一次性猜准更现实。</p>
+<p>按这套口径写出来的提交命令，参数是能对应到上面每一项的：</p>
+<pre class="line-numbers language-bash" data-language="bash"><code class="language-bash">spark-submit <span class="token punctuation">\</span>
+  <span class="token parameter variable">--master</span> <span class="token function">yarn</span> <span class="token punctuation">\</span>
+  --deploy-mode cluster <span class="token punctuation">\</span>
+  <span class="token parameter variable">--queue</span> etl <span class="token punctuation">\</span>
+  --executor-cores <span class="token number">4</span> <span class="token punctuation">\</span>
+  --executor-memory 8g <span class="token punctuation">\</span>
+  --num-executors <span class="token number">20</span> <span class="token punctuation">\</span>
+  <span class="token parameter variable">--conf</span> <span class="token assign-left variable">spark.executor.memoryOverhead</span><span class="token operator">=</span>2g <span class="token punctuation">\</span>
+  <span class="token parameter variable">--conf</span> <span class="token assign-left variable">spark.sql.shuffle.partitions</span><span class="token operator">=</span><span class="token number">400</span> <span class="token punctuation">\</span>
+  <span class="token parameter variable">--conf</span> <span class="token assign-left variable">spark.sql.adaptive.enabled</span><span class="token operator">=</span>true <span class="token punctuation">\</span>
+  <span class="token parameter variable">--conf</span> <span class="token assign-left variable">spark.serializer</span><span class="token operator">=</span>org.apache.spark.serializer.KryoSerializer <span class="token punctuation">\</span>
+  <span class="token parameter variable">--class</span> com.example.etl.OrderDailyJob <span class="token punctuation">\</span>
+  order-daily.jar <span class="token parameter variable">--dt</span> <span class="token number">2022</span>-03-23<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<p><code>memoryOverhead</code> 别漏：堆外内存（序列化缓冲、Netty 直接内存）超限时容器会被 YARN 杀掉，日志表现为 <code>Container killed by YARN for exceeding memory limits ... beyond ... physical memory used</code>。</p>
+<h2 id="1-4-监控：先看-UI-再翻日志"><a href="#1-4-监控：先看-UI-再翻日志" class="headerlink" title="1.4 监控：先看 UI 再翻日志"></a>1.4 监控：先看 UI 再翻日志</h2><div class="data-grid data-grid-link-table"><div class="grid-header"><div class="grid-cell">入口</div><div class="grid-cell">看什么</div><div class="grid-cell">定位问题</div></div><div class="grid-row"><div class="grid-cell">Spark UI SQL 页</div><div class="grid-cell">各 Job&#x2F;Stage 时长、Task 输入量、shuffle 读写、溢写磁盘</div><div class="grid-cell">找慢 Stage 和倾斜 Task</div></div><div class="grid-row"><div class="grid-cell">Executor 页</div><div class="grid-cell">堆内存使用、存储缓存、GC 次数与耗时</div><div class="grid-cell">判断内存与 GC 问题</div></div><div class="grid-row"><div class="grid-cell">驱动&#x2F;Executor 日志</div><div class="grid-cell">报错栈、<code>FetchFailedException</code>、溢写记录</div><div class="grid-cell">定位失败根因</div></div><div class="grid-row"><div class="grid-cell">指标系统</div><div class="grid-cell">堆内存、GC、任务成功率、队列资源</div><div class="grid-cell">长期趋势告警</div></div></div>
+
+<p>排查顺序固定下来：先在 SQL 页找耗时最长的 Stage，对比同 Stage 内 Task 的输入量和耗时方差，再看 Executor 页内存与 GC，最后翻日志确认异常类型。跳过 UI 直接 grep 日志，容易在海量日志里绕圈子。</p>
+<p>生产环境建议打开事件日志（<code>spark.eventLog.enabled=true</code>，目录指向可靠存储），作业结束后 UI 仍可回放历史阶段；日志级别保持 INFO，异常栈会带 Stage 与 Task 编号，配合 UI 定位到具体分区。集群统一收集 Executor 标准输出与错误输出，避免节点重建后日志丢失。</p>
+<h2 id="1-5-高频报错：现象与处置"><a href="#1-5-高频报错：现象与处置" class="headerlink" title="1.5 高频报错：现象与处置"></a>1.5 高频报错：现象与处置</h2><p><strong>堆内存溢出（OOM）</strong></p>
+<p>现象：Executor 日志出现 <code>java.lang.OutOfMemoryError: Java heap space</code>，YARN 上伴随 <code>Container killed by YARN for exceeding memory limits</code>，Task 反复重试后作业失败。</p>
+<p>处置：先看是不是分区过大或倾斜——少数 Task 输入量远超其他；是倾斜就走拆分&#x2F;加盐&#x2F;广播；确属分片整体过大，再提高 <code>spark.executor.memory</code> 或增加分区数。注意堆外内存占用也会计入 Container 限额，纯加堆内内存可能仍然超限。</p>
+<p><strong>GC 频繁、停顿长</strong></p>
+<p>现象：Executor 页 Full GC 次数与耗时持续上涨，Task 执行时间被 GC 拉长，日志反复出现 <code>GC overhead limit exceeded</code>。</p>
+<p>处置：检查缓存对象是否未序列化、大对象是否堆内堆积；换 Kryo 序列化压缩缓存体积，清理不再使用的缓存；单 Executor 核数过多会共享堆内存，核数偏多时拆成更多 Executor。</p>
+<p><strong>数据倾斜与 shuffle 拉取失败</strong></p>
+<p>现象：同一 Stage 个别 Task 耗时是其他任务的几倍到几十倍，UI 上输入量严重不均；日志出现 <code>FetchFailedException: Missing output</code> 或 shuffle 文件拉取超时。</p>
+<p>处置：确认倾斜 key（空值、热点维度、脏数据），过滤或加盐；大小表关联走广播；配合 AQE 倾斜 join 拆分；外部 shuffle 服务确认正常，避免 Executor 被回收后 shuffle 输出丢失。</p>
+<p><strong>Driver 端拉取大结果</strong></p>
+<p>现象：作业大部分 Task 正常，但 Driver 日志堆内存溢出，UI 上 Driver 内存接近上限；代码里常见 <code>collect()</code>、<code>toLocalIterator()</code> 把全量结果拉回驱动进程。</p>
+<p>处置：结果只取 Top N 用 <code>limit()</code> + <code>take()</code>；需要落盘的结果直接由 Executor 写出到 HDFS&#x2F;对象存储，不要经过 Driver；必须汇总全量指标时，先在集群内聚合到小体量再回驱动端。</p>
+<p><strong>磁盘溢写过多</strong></p>
+<p>现象：UI 上 <code>spill (disk)</code> 字节数很大，作业时长主要消耗在磁盘读写，数据量并未超出集群规模。</p>
+<p>处置：检查分区数是否过少导致单分片过大，调整 <code>spark.sql.shuffle.partitions</code>；缓存级别是否把本该内存保留的数据溢写；聚合是否可以在 map 端提前 combiner。</p>
+<h2 id="1-6-上线前检查清单"><a href="#1-6-上线前检查清单" class="headerlink" title="1.6 上线前检查清单"></a>1.6 上线前检查清单</h2><ul>
+<li>AQE 总开关、分区合并、倾斜 join 保持默认开启，未被配置文件显式关掉</li>
+<li>shuffle 分区数按数据量估算，没有照搬默认 200 或拍脑袋填 1000</li>
+<li>广播阈值与小表体量核对过，大表不会被误广播撑爆 Executor 缓存</li>
+<li>checkpoint、持久化表路径在可靠存储上，目录不与输出结果混用</li>
+<li>作业失败重试次数、队列资源、Driver 内存按数据规模预留</li>
+<li>关键指标（Task 成功率、GC、溢写、队列占用）接入监控告警</li>
+<li>事件日志开启并落可靠存储，作业结束后 UI 可回放历史阶段</li>
+<li>结果写入路径与 checkpoint 目录分离，重跑不会覆盖状态</li>
+<li>作业重试与失败策略配置过，单 Task 失败不会拖垮整个应用</li>
+</ul>
+<h2 id="1-7-官方资料"><a href="#1-7-官方资料" class="headerlink" title="1.7 官方资料"></a>1.7 官方资料</h2><ul>
+<li>SQL 性能调优（含 AQE）：<a target="_blank" rel="noopener" href="https://spark.apache.org/docs/latest/sql-performance-tuning.html">https://spark.apache.org/docs/latest/sql-performance-tuning.html</a></li>
+<li>AQE 配置项：<a target="_blank" rel="noopener" href="https://spark.apache.org/docs/latest/configuration.html#adaptive-query-execution">https://spark.apache.org/docs/latest/configuration.html#adaptive-query-execution</a></li>
+<li>监控指南：<a target="_blank" rel="noopener" href="https://spark.apache.org/docs/latest/monitoring.html">https://spark.apache.org/docs/latest/monitoring.html</a></li>
+<li>调优指南：<a target="_blank" rel="noopener" href="https://spark.apache.org/docs/latest/tuning.html">https://spark.apache.org/docs/latest/tuning.html</a></li>
+</ul>
+<h2 id="1-8-清单"><a href="#1-8-清单" class="headerlink" title="1.8 清单"></a>1.8 清单</h2><ol>
+<li>AQE 自 Spark 3.0 默认开启，运行时按实际统计信息合并分区、拆分倾斜分区、调整 join 策略</li>
+<li>分区调优先开 AQE 合并，再按单分区 128MB–256MB 估初始 <code>spark.sql.shuffle.partitions</code>，不照搬默认 200</li>
+<li>排查顺序：SQL 页找慢 Stage → Task 方差找倾斜 → Executor 页看内存 GC → 日志确认异常</li>
+<li>OOM 先查分区与倾斜，再谈加内存；GC 长优先查序列化与缓存对象；shuffle 失败核对外部 shuffle 服务</li>
+<li>溢写过多往往是分区过少或缓存策略问题，不全是内存不够</li>
+<li>上线前核对 AQE 开关、分区数、广播体量、checkpoint 路径与监控告警</li>
+<li>资源按数据规模估算，首版跑完用 UI 实际占用回调，不追求一次猜准</li>
+<li>排查先慢 Stage 再倾斜，再内存 GC，最后翻日志确认异常类型</li>
+</ol>
+</div>
+
+  <div class="mb-foot">
+    <a href="/phone/">返回手机首页</a>
+    <a href="/phone/tags/">星迹索引</a>
+  </div>
+</div>
+
+
+<script>
+  /* 作用：懒加载本地 mermaid 库；无 mermaid 代码块时不加载 */
+  function loadLocalMermaid(){
+    return new Promise(function(resolve, reject){
+      if(window.mermaid) return resolve(window.mermaid);
+      var s = document.createElement('script');
+      s.src = '/js/third-party/mermaid/mermaid.min.js?v=10';
+      s.onload = function(){ resolve(window.mermaid); };
+      s.onerror = function(){ reject(new Error('mermaid local load failed')); };
+      document.head.appendChild(s);
+    });
+  }
+
+  /* 作用：把 ```mermaid 代码块替换成 SVG 图（手机端字号略小、图可横向滚动） */
+  async function renderMermaidDiagram(){
+    var blocks = document.querySelectorAll('pre[class*="language-mermaid"]');
+    if(!blocks.length) return;
+    var mermaid;
+    try { mermaid = await loadLocalMermaid(); }
+    catch(e){ console.warn('[mermaid] 本地库加载失败：', e); return; }
+
+    mermaid.initialize({
+      startOnLoad: false,
+      theme: 'base',
+      themeVariables: {
+        darkMode: true,
+        background: 'transparent',
+        fontFamily: '"Microsoft YaHei", "PingFang SC", "Segoe UI", sans-serif',
+        fontSize: '12px',
+        primaryColor: '#062f3d',
+        primaryTextColor: '#d6f6ff',
+        primaryBorderColor: '#00eeff',
+        secondaryColor: '#04222d',
+        tertiaryColor: '#04222d',
+        mainBkg: '#062f3d',
+        nodeBorder: '#00eeff',
+        clusterBkg: '#02161f',
+        clusterBorder: '#00eeff55',
+        lineColor: '#00eeff',
+        textColor: '#c0e8ff',
+        edgeLabelBackground: '#02161f'
+      },
+      flowchart: { curve: 'basis', useMaxWidth: false, htmlLabels: false, nodeSpacing: 30, rankSpacing: 40, padding: 10 }
+    });
+
+    var targets = [];
+    blocks.forEach(function(el){
+      var codeEl = el.querySelector('code');
+      if(!codeEl) return;
+      var div = document.createElement('div');
+      div.className = 'mermaid';
+      div.textContent = codeEl.textContent;
+      el.parentNode.replaceChild(div, el);
+      targets.push(div);
+    });
+    if(!targets.length) return;
+    try { await mermaid.run({ nodes: targets }); }
+    catch(e){ console.warn('[mermaid] 渲染失败：', e); }
+  }
+  /* 作用：多次触发兜底（延迟重试 + DOM 变化），防止某次时机没跑到导致图表留在代码块 */
+  var mmBusy = false;
+  function scheduleMermaid(){
+    if(mmBusy) return;
+    mmBusy = true;
+    renderMermaidDiagram().then(function(){ mmBusy = false; }, function(){ mmBusy = false; });
+  }
+  scheduleMermaid();
+  window.addEventListener('load', scheduleMermaid);
+  [1000, 3000, 8000].forEach(function(ms){ setTimeout(scheduleMermaid, ms); });
+  if(document.readyState !== 'loading') scheduleMermaid();
+  if(window.MutationObserver){
+    var mmTimer = null;
+    var mmObserver = new MutationObserver(function(){
+      clearTimeout(mmTimer);
+      mmTimer = setTimeout(scheduleMermaid, 400);
+    });
+    mmObserver.observe(document.querySelector('.mb-article') || document.body, { childList: true, subtree: true });
+  }
+</script>
+</body>
+</html>

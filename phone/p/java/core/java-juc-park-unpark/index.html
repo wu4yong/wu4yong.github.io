@@ -1,0 +1,389 @@
+<!--
+  ============================================
+  手机端 · 文章原文页
+  文件：phone/post.njk
+  适用终端：手机端（路由 /phone/p/<slug>/，由 scripts/phone-routes.js 生成）
+  作用：手机阅读单篇文章；单列布局、无侧栏无雷达，替代电脑端 post.njk
+        数据由生成期算好：page.item = { title, dateStr, content, cats, tags }
+  样式依赖：source/css/theme/phone/common.css、source/css/theme/phone/list.css
+  组件依赖：phone/_components/Particles.njk
+  最后修改：2026-11-11
+  ============================================
+-->
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="color-scheme" content="dark">
+  <meta name="theme-color" content="#020817">
+  <!-- 首帧兜底：浏览器默认画布是白的，样式未解析前会闪一下白。这条规则先锁死深空底色 -->
+  <style>html{background-color:#020817}</style>
+  <title>Java JUC Park/Unpark - 时空秘境</title>
+  <!-- 手机端样式：基础 + 列表/正文，外链引入（源文件 source/css/theme/phone/） -->
+  <link rel="stylesheet" href="/css/theme/phone/common.css">
+  <link rel="stylesheet" href="/css/theme/phone/list.css">
+<meta name="generator" content="Hexo 8.1.2"></head>
+<body>
+<div class="mb-shell">
+  <!--
+  ============================================
+  手机端星空粒子组件
+  文件：Particles.njk
+  适用终端：手机端
+  作用：Particles.njk 的手机端副本（nunjucks 子目录 include 取不到上级）
+        参数与电脑端 _components/Particles.njk 保持一致：
+        粒子 95 / 连线 118px / opacity 0.32，外加星座层与零星闪烁层
+  最后修改：2026-11-12
+  ============================================
+--><!-- z-index 必须是 0：负层级会被 body 不透明背景盖住，粒子在跑却看不见 -->
+<div id="particles" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 0; pointer-events: none;"></div>
+<!-- 星座层（与首页同一套：随机零星散布星座图形 + 偶尔闪烁的小星） -->
+<div id="constellations" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 1; pointer-events: none;" aria-hidden="true"></div>
+<script src="/js/particles.min.js"></script>
+<script>
+particlesJS("particles", {
+  particles: {
+    number: {
+      value: 95,
+      density: {
+        enable: true,
+        value_area: 800
+      }
+    },
+    color: {
+      value: "#00eeff"
+    },
+    shape: {
+      type: "circle",
+      stroke: {
+        width: 0,
+        color: "#000000"
+      }
+    },
+    opacity: {
+      value: 0.6,
+      random: true,
+      anim: {
+        enable: true,
+        speed: 0.5,
+        opacity_min: 0.1,
+        sync: false
+      }
+    },
+    size: {
+      value: 3,
+      random: true,
+      anim: {
+        enable: true,
+        speed: 2,
+        size_min: 0.1,
+        sync: false
+      }
+    },
+    line_linked: {
+      enable: true,
+      distance: 118,
+      color: "#00eeff",
+      opacity: 0.32,
+      width: 1
+    },
+    move: {
+      enable: true,
+      speed: 0.8,
+      direction: "none",
+      random: true,
+      straight: false,
+      out_mode: "out",
+      bounce: false,
+      attract: {
+        enable: true,
+        rotateX: 600,
+        rotateY: 1200
+      }
+    }
+  },
+  interactivity: {
+    detect_on: "canvas",
+    events: {
+      onhover: {
+        enable: true,
+        mode: "grab"       // 手指按住时粒子聚集
+      },
+      onclick: {
+        enable: true,
+        mode: "push"       // 点击时产生新粒子
+      },
+      resize: true
+    },
+    modes: {
+      grab: {
+        distance: 200,
+        line_linked: {
+          opacity: 1
+        }
+      },
+      push: {
+        particles_nb: 6
+      }
+    }
+  },
+  retina_detect: true
+});
+</script>
+<!-- 星座 + 零星闪烁层：与电脑端共用同一份绘制脚本 -->
+<script src="/js/theme/home/starfield.js"></script>
+
+
+  <div class="mb-top">
+    <a class="mb-back" href="/phone/">← 返回手机首页</a>
+    <span class="mb-sub" style="margin:0">2022-01-09</span>
+  </div>
+
+  <h1 class="mb-title">Java JUC Park/Unpark</h1>
+  <div class="mb-sub">
+    分类：java · core
+     ｜ 标签：Java
+  </div>
+
+  <div class="mb-article"><div class="essay-banner essay-java"></div>
+
+<h1 id="Park-Unpark-线程阻塞与唤醒"><a href="#Park-Unpark-线程阻塞与唤醒" class="headerlink" title="Park&#x2F;Unpark 线程阻塞与唤醒"></a><strong>Park&#x2F;Unpark</strong> 线程阻塞与唤醒</h1><p>Wait&#x2F;Notify 必须配合 Monitor 锁使用，而且只能”随机唤醒一个”，限制不少。JUC 提供了另一套更灵活的阻塞唤醒工具：<br><code>LockSupport.park()</code> 和 <code>LockSupport.unpark(Thread)</code>。它不依赖任何锁对象，能精确唤醒指定线程，还允许”先唤醒、后等待”。<br>ReentrantLock、Semaphore、CountDownLatch 等 AQS 组件底层的阻塞唤醒，用的都是它。</p>
+<h2 id="6-1-通俗小故事：停车场的通行证"><a href="#6-1-通俗小故事：停车场的通行证" class="headerlink" title="6.1 通俗小故事：停车场的通行证"></a>6.1 通俗小故事：停车场的通行证</h2><p>把线程比作一辆要进停车场的车，park 是”没证就在闸机前等”，unpark 是”给你发一张通行证”：</p>
+<p>● 车开到闸机前，手里没有通行证，只能停着等（调用 park，线程进入 WAITING）<br>● 管理员递上一张通行证（调用 unpark），车凭这张证抬杆通过（park 立即返回）<br>● 通行证只有”有 &#x2F; 没有”两种状态，不会累积：连发两张，过闸机时只消耗一张，多出来的那张不算数<br>● 车可以先领证、后到场：先发证，车来了不用等，直接抬杆<br>● 车在等的时候被人按喇叭催（线程被 interrupt），也会先返回，之后再自己判断还要不要继续办</p>
+<p>这张”通行证”，在底层就是 Parker 对象里的一个 <code>_counter</code> 许可位（0 或 1）。</p>
+<h2 id="6-2-核心-API-与语义"><a href="#6-2-核心-API-与语义" class="headerlink" title="6.2 核心 API 与语义"></a>6.2 核心 API 与语义</h2><p>LockSupport 是 <code>java.util.concurrent.locks</code> 包下的工具类，方法全是静态的，日常用的就这几个：</p>
+<p><strong>LockSupport.park()</strong>：阻塞当前线程，直到拿到许可或被中断。调用时若许可已经是 1，则立即消耗许可并返回，不阻塞；</p>
+<p><strong>LockSupport.park(Object blocker)</strong>：语义同上，额外记录一个”阻塞对象”，只在 jstack 诊断时标明线程卡在谁身上；</p>
+<p><strong>LockSupport.parkNanos(long nanos)</strong> &#x2F; <strong>LockSupport.parkUntil(long deadline)</strong>：限时阻塞，超时自动返回，期间也可以被 unpark 提前唤醒；</p>
+<p><strong>LockSupport.unpark(Thread thread)</strong>：给指定线程发放许可。目标线程正在 park 就被唤醒；它还没 park 时，许可先存着，等它下次 park 直接放行。</p>
+<p>和 wait&#x2F;notify 相比，最关键的三点差别：<strong>不需要持有锁</strong>、<strong>能指定唤醒哪个线程</strong>、<strong>唤醒可以先于等待发生</strong>。</p>
+<h2 id="6-3-底层原理：一个许可位-Unsafe"><a href="#6-3-底层原理：一个许可位-Unsafe" class="headerlink" title="6.3 底层原理：一个许可位 + Unsafe"></a>6.3 底层原理：一个许可位 + Unsafe</h2><p>每个 Java 线程在 JVM 里都挂着一个 <code>Parker</code> 对象，核心就是一个 <code>_counter</code> 许可位（0 或 1）加一把互斥量和条件变量。</p>
+<p><strong>park 流程</strong>：先原子读取 <code>_counter</code>，若大于 0，就 CAS 成 0 并直接返回（相当于”有证直接过闸机”）；若是 0，则把自己挂到条件变量上等待，真正让出 CPU。</p>
+<p><strong>unpark 流程</strong>：把目标线程的 <code>_counter</code> 置为 1（不累加，重复 unpark 仍然是 1）；若目标线程正挂在条件变量上，就唤醒它。</p>
+<p>最终都落到 <code>sun.misc.Unsafe.park()</code> &#x2F; <code>Unsafe.unpark()</code> 两个 native 方法，走操作系统层面的互斥量和条件变量，阻塞期间不占 CPU 时间片。</p>
+<p>理解了许可位，后面那些”看起来反直觉”的现象就都能解释：为什么先 unpark 后 park 也生效、为什么 unpark 两次只能过一次 park、为什么 park 不抛 InterruptedException 却会被打断。</p>
+<h2 id="6-4-与-wait-notify-的对比"><a href="#6-4-与-wait-notify-的对比" class="headerlink" title="6.4 与 wait&#x2F;notify 的对比"></a>6.4 与 wait&#x2F;notify 的对比</h2><p>两者解决的都是”线程等条件”，但实现路径完全不同，逐项对一下：</p>
+<p>● <strong>依赖锁</strong>：wait&#x2F;notify 必须在 synchronized 内调用，否则抛 IllegalMonitorStateException；park&#x2F;unpark 不依赖任何锁，随处可调<br>● <strong>唤醒精度</strong>：notify 只能从 WaitSet 里随机挑一个唤醒；unpark 精确指定某个线程<br>● <strong>顺序要求</strong>：wait&#x2F;notify 必须先 wait 后 notify，通知发早了就丢失；park&#x2F;unpark 可以先 unpark 后 park，许可会保留<br>● <strong>线程状态</strong>：两者都进入 WAITING &#x2F; TIMED_WAITING，区别是 wait 挂在对象的 WaitSet 上，park 挂在当前线程的 Parker 上<br>● <strong>中断表现</strong>：wait 抛 InterruptedException 必须捕获；park 直接返回、不抛异常，但中断标记保留，需要自己判断</p>
+<p>一句话总结：wait&#x2F;notify 是绑在锁上的协作机制，park&#x2F;unpark 是独立于锁的线程调度原语，AQS 系列组件全部基于后者。</p>
+<h2 id="6-5-代码实战"><a href="#6-5-代码实战" class="headerlink" title="6.5 代码实战"></a>6.5 代码实战</h2><h3 id="6-5-1-最基本的一对一唤醒"><a href="#6-5-1-最基本的一对一唤醒" class="headerlink" title="6.5.1 最基本的一对一唤醒"></a>6.5.1 最基本的一对一唤醒</h3><p>主线程睡 1 秒后唤醒子线程，验证 park 阻塞与 unpark 放行的基本配对：</p>
+<pre class="line-numbers language-java" data-language="java"><code class="language-java"><span class="token keyword">public</span> <span class="token keyword">static</span> <span class="token keyword">void</span> <span class="token function">main</span><span class="token punctuation">(</span><span class="token class-name">String</span><span class="token punctuation">[</span><span class="token punctuation">]</span> args<span class="token punctuation">)</span> <span class="token keyword">throws</span> <span class="token class-name">InterruptedException</span> <span class="token punctuation">&#123;</span>
+    <span class="token class-name">Thread</span> t1 <span class="token operator">=</span> <span class="token keyword">new</span> <span class="token class-name">Thread</span><span class="token punctuation">(</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token operator">-></span> <span class="token punctuation">&#123;</span>
+        log<span class="token punctuation">.</span><span class="token function">debug</span><span class="token punctuation">(</span><span class="token string">"t1 开始执行"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+        <span class="token class-name">LockSupport</span><span class="token punctuation">.</span><span class="token function">park</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>          <span class="token comment">// 没有许可，阻塞在这里</span>
+        log<span class="token punctuation">.</span><span class="token function">debug</span><span class="token punctuation">(</span><span class="token string">"t1 被唤醒，继续执行"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token punctuation">&#125;</span><span class="token punctuation">,</span> <span class="token string">"t1"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    t1<span class="token punctuation">.</span><span class="token function">start</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+    <span class="token class-name">Thread</span><span class="token punctuation">.</span><span class="token function">sleep</span><span class="token punctuation">(</span><span class="token number">1000</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    log<span class="token punctuation">.</span><span class="token function">debug</span><span class="token punctuation">(</span><span class="token string">"主线程调用 unpark"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token class-name">LockSupport</span><span class="token punctuation">.</span><span class="token function">unpark</span><span class="token punctuation">(</span>t1<span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">&#125;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<pre class="line-numbers language-text" data-language="text"><code class="language-text">11:02:13.508 [t1] c.TestPark - t1 开始执行
+11:02:14.512 [main] c.TestPark - 主线程调用 unpark
+11:02:14.512 [t1] c.TestPark - t1 被唤醒，继续执行<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span></span></code></pre>
+
+<h3 id="6-5-2-先-unpark-再-park：许可会保留"><a href="#6-5-2-先-unpark-再-park：许可会保留" class="headerlink" title="6.5.2 先 unpark 再 park：许可会保留"></a>6.5.2 先 unpark 再 park：许可会保留</h3><p>这是 wait&#x2F;notify 做不到的：先发证、后到场，线程 park 时直接通过，不会阻塞。</p>
+<pre class="line-numbers language-java" data-language="java"><code class="language-java"><span class="token keyword">public</span> <span class="token keyword">static</span> <span class="token keyword">void</span> <span class="token function">main</span><span class="token punctuation">(</span><span class="token class-name">String</span><span class="token punctuation">[</span><span class="token punctuation">]</span> args<span class="token punctuation">)</span> <span class="token keyword">throws</span> <span class="token class-name">InterruptedException</span> <span class="token punctuation">&#123;</span>
+    <span class="token class-name">Thread</span> t1 <span class="token operator">=</span> <span class="token keyword">new</span> <span class="token class-name">Thread</span><span class="token punctuation">(</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token operator">-></span> <span class="token punctuation">&#123;</span>
+        log<span class="token punctuation">.</span><span class="token function">debug</span><span class="token punctuation">(</span><span class="token string">"t1 准备 park，此时许可已经是 1"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+        <span class="token class-name">LockSupport</span><span class="token punctuation">.</span><span class="token function">park</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>          <span class="token comment">// 直接返回，不阻塞</span>
+        log<span class="token punctuation">.</span><span class="token function">debug</span><span class="token punctuation">(</span><span class="token string">"t1 没有阻塞，直接通过"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token punctuation">&#125;</span><span class="token punctuation">,</span> <span class="token string">"t1"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+    <span class="token class-name">LockSupport</span><span class="token punctuation">.</span><span class="token function">unpark</span><span class="token punctuation">(</span>t1<span class="token punctuation">)</span><span class="token punctuation">;</span>          <span class="token comment">// 线程还没启动就先发许可</span>
+    <span class="token class-name">Thread</span><span class="token punctuation">.</span><span class="token function">sleep</span><span class="token punctuation">(</span><span class="token number">2000</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+    t1<span class="token punctuation">.</span><span class="token function">start</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">&#125;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<pre class="line-numbers language-text" data-language="text"><code class="language-text">11:05:02.183 [t1] c.TestPark - t1 准备 park，此时许可已经是 1
+11:05:02.183 [t1] c.TestPark - t1 没有阻塞，直接通过<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span></span></code></pre>
+
+<h3 id="6-5-3-许可不累积：unpark-两次只能过一次-park"><a href="#6-5-3-许可不累积：unpark-两次只能过一次-park" class="headerlink" title="6.5.3 许可不累积：unpark 两次只能过一次 park"></a>6.5.3 许可不累积：unpark 两次只能过一次 park</h3><p>许可只是一个 0&#x2F;1 标志位，不是计数器。连续 unpark 两次，第二次 park 依然会阻塞。</p>
+<pre class="line-numbers language-java" data-language="java"><code class="language-java"><span class="token keyword">public</span> <span class="token keyword">static</span> <span class="token keyword">void</span> <span class="token function">main</span><span class="token punctuation">(</span><span class="token class-name">String</span><span class="token punctuation">[</span><span class="token punctuation">]</span> args<span class="token punctuation">)</span> <span class="token keyword">throws</span> <span class="token class-name">InterruptedException</span> <span class="token punctuation">&#123;</span>
+    <span class="token class-name">Thread</span> t1 <span class="token operator">=</span> <span class="token keyword">new</span> <span class="token class-name">Thread</span><span class="token punctuation">(</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token operator">-></span> <span class="token punctuation">&#123;</span>
+        <span class="token class-name">LockSupport</span><span class="token punctuation">.</span><span class="token function">park</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+        log<span class="token punctuation">.</span><span class="token function">debug</span><span class="token punctuation">(</span><span class="token string">"第一次 park 通过"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+        <span class="token class-name">LockSupport</span><span class="token punctuation">.</span><span class="token function">park</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>          <span class="token comment">// 许可已被上一次消耗，这里会再次阻塞</span>
+        log<span class="token punctuation">.</span><span class="token function">debug</span><span class="token punctuation">(</span><span class="token string">"第二次 park 通过"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token punctuation">&#125;</span><span class="token punctuation">,</span> <span class="token string">"t1"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    t1<span class="token punctuation">.</span><span class="token function">start</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+    <span class="token class-name">Thread</span><span class="token punctuation">.</span><span class="token function">sleep</span><span class="token punctuation">(</span><span class="token number">1000</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token class-name">LockSupport</span><span class="token punctuation">.</span><span class="token function">unpark</span><span class="token punctuation">(</span>t1<span class="token punctuation">)</span><span class="token punctuation">;</span>          <span class="token comment">// 第一次通知</span>
+    <span class="token class-name">LockSupport</span><span class="token punctuation">.</span><span class="token function">unpark</span><span class="token punctuation">(</span>t1<span class="token punctuation">)</span><span class="token punctuation">;</span>          <span class="token comment">// 第二次通知，但许可不会变成 2</span>
+<span class="token punctuation">&#125;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<pre class="line-numbers language-text" data-language="text"><code class="language-text">11:07:41.266 [t1] c.TestPark - 第一次 park 通过<span aria-hidden="true" class="line-numbers-rows"><span></span></span></code></pre>
+
+<p>输出只有一行，线程卡在第二次 park 上，正好验证许可上限为 1。</p>
+<h3 id="6-5-4-中断响应：不抛异常，但会返回"><a href="#6-5-4-中断响应：不抛异常，但会返回" class="headerlink" title="6.5.4 中断响应：不抛异常，但会返回"></a>6.5.4 中断响应：不抛异常，但会返回</h3><p>park 被 interrupt 打断时不抛 InterruptedException，而是正常返回，并且中断标记会保留，需要自己判断是否收工。</p>
+<pre class="line-numbers language-java" data-language="java"><code class="language-java"><span class="token keyword">public</span> <span class="token keyword">static</span> <span class="token keyword">void</span> <span class="token function">main</span><span class="token punctuation">(</span><span class="token class-name">String</span><span class="token punctuation">[</span><span class="token punctuation">]</span> args<span class="token punctuation">)</span> <span class="token keyword">throws</span> <span class="token class-name">InterruptedException</span> <span class="token punctuation">&#123;</span>
+    <span class="token class-name">Thread</span> t1 <span class="token operator">=</span> <span class="token keyword">new</span> <span class="token class-name">Thread</span><span class="token punctuation">(</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token operator">-></span> <span class="token punctuation">&#123;</span>
+        log<span class="token punctuation">.</span><span class="token function">debug</span><span class="token punctuation">(</span><span class="token string">"t1 开始 park"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+        <span class="token class-name">LockSupport</span><span class="token punctuation">.</span><span class="token function">park</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+        log<span class="token punctuation">.</span><span class="token function">debug</span><span class="token punctuation">(</span><span class="token string">"t1 已被打断，中断标记：&#123;&#125;"</span><span class="token punctuation">,</span> <span class="token class-name">Thread</span><span class="token punctuation">.</span><span class="token function">currentThread</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token function">isInterrupted</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token punctuation">&#125;</span><span class="token punctuation">,</span> <span class="token string">"t1"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    t1<span class="token punctuation">.</span><span class="token function">start</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+    <span class="token class-name">Thread</span><span class="token punctuation">.</span><span class="token function">sleep</span><span class="token punctuation">(</span><span class="token number">1000</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    t1<span class="token punctuation">.</span><span class="token function">interrupt</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>                  <span class="token comment">// 打断等待中的线程</span>
+<span class="token punctuation">&#125;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<pre class="line-numbers language-text" data-language="text"><code class="language-text">11:09:30.885 [t1] c.TestPark - t1 开始 park
+11:09:31.888 [t1] c.TestPark - t1 已被打断，中断标记：true<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span></span></code></pre>
+
+<p>如果希望被打断后不再往下走，要在 park 之后自己判断：</p>
+<pre class="line-numbers language-java" data-language="java"><code class="language-java"><span class="token class-name">LockSupport</span><span class="token punctuation">.</span><span class="token function">park</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token keyword">if</span> <span class="token punctuation">(</span><span class="token class-name">Thread</span><span class="token punctuation">.</span><span class="token function">currentThread</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token function">isInterrupted</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+    log<span class="token punctuation">.</span><span class="token function">debug</span><span class="token punctuation">(</span><span class="token string">"检测到中断，放弃后续任务"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token keyword">return</span><span class="token punctuation">;</span>
+<span class="token punctuation">&#125;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<h3 id="6-5-5-限时等待：parkNanos-parkUntil"><a href="#6-5-5-限时等待：parkNanos-parkUntil" class="headerlink" title="6.5.5 限时等待：parkNanos &#x2F; parkUntil"></a>6.5.5 限时等待：parkNanos &#x2F; parkUntil</h3><p>不想无限期阻塞时用带超时的版本，超时自动返回：</p>
+<pre class="line-numbers language-java" data-language="java"><code class="language-java"><span class="token keyword">public</span> <span class="token keyword">static</span> <span class="token keyword">void</span> <span class="token function">main</span><span class="token punctuation">(</span><span class="token class-name">String</span><span class="token punctuation">[</span><span class="token punctuation">]</span> args<span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+    <span class="token class-name">Thread</span> t1 <span class="token operator">=</span> <span class="token keyword">new</span> <span class="token class-name">Thread</span><span class="token punctuation">(</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token operator">-></span> <span class="token punctuation">&#123;</span>
+        <span class="token keyword">long</span> start <span class="token operator">=</span> <span class="token class-name">System</span><span class="token punctuation">.</span><span class="token function">currentTimeMillis</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+        <span class="token class-name">LockSupport</span><span class="token punctuation">.</span><span class="token function">parkNanos</span><span class="token punctuation">(</span><span class="token class-name">TimeUnit</span><span class="token punctuation">.</span><span class="token constant">SECONDS</span><span class="token punctuation">.</span><span class="token function">toNanos</span><span class="token punctuation">(</span><span class="token number">2</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>   <span class="token comment">// 最多等 2 秒</span>
+        <span class="token keyword">long</span> cost <span class="token operator">=</span> <span class="token class-name">System</span><span class="token punctuation">.</span><span class="token function">currentTimeMillis</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token operator">-</span> start<span class="token punctuation">;</span>
+        log<span class="token punctuation">.</span><span class="token function">debug</span><span class="token punctuation">(</span><span class="token string">"parkNanos 返回，等待耗时 &#123;&#125; ms"</span><span class="token punctuation">,</span> cost<span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token punctuation">&#125;</span><span class="token punctuation">,</span> <span class="token string">"t1"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    t1<span class="token punctuation">.</span><span class="token function">start</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">&#125;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<pre class="line-numbers language-text" data-language="text"><code class="language-text">11:12:05.402 [t1] c.TestPark - parkNanos 返回，等待耗时 2013 ms<span aria-hidden="true" class="line-numbers-rows"><span></span></span></code></pre>
+
+<p><code>parkUntil(long deadline)</code> 用法一致，只是把”等多久”换成”等到某个时间点”（毫秒时间戳）。</p>
+<h3 id="6-5-6-实战：park-unpark-实现三个线程交替打印"><a href="#6-5-6-实战：park-unpark-实现三个线程交替打印" class="headerlink" title="6.5.6 实战：park&#x2F;unpark 实现三个线程交替打印"></a>6.5.6 实战：park&#x2F;unpark 实现三个线程交替打印</h3><p>同样的事情用 wait&#x2F;notify 要做三把锁加循环判断，用 park&#x2F;unpark 只需按名字互发许可：</p>
+<pre class="line-numbers language-java" data-language="java"><code class="language-java"><span class="token keyword">static</span> <span class="token class-name">Thread</span> t1<span class="token punctuation">,</span> t2<span class="token punctuation">,</span> t3<span class="token punctuation">;</span>
+
+<span class="token keyword">public</span> <span class="token keyword">static</span> <span class="token keyword">void</span> <span class="token function">main</span><span class="token punctuation">(</span><span class="token class-name">String</span><span class="token punctuation">[</span><span class="token punctuation">]</span> args<span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+    t1 <span class="token operator">=</span> <span class="token keyword">new</span> <span class="token class-name">Thread</span><span class="token punctuation">(</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token operator">-></span> <span class="token punctuation">&#123;</span>
+        <span class="token class-name">LockSupport</span><span class="token punctuation">.</span><span class="token function">park</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+        <span class="token class-name">System</span><span class="token punctuation">.</span>out<span class="token punctuation">.</span><span class="token function">print</span><span class="token punctuation">(</span><span class="token string">"a"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+        <span class="token class-name">LockSupport</span><span class="token punctuation">.</span><span class="token function">unpark</span><span class="token punctuation">(</span>t2<span class="token punctuation">)</span><span class="token punctuation">;</span>
+        <span class="token class-name">LockSupport</span><span class="token punctuation">.</span><span class="token function">park</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+        <span class="token class-name">System</span><span class="token punctuation">.</span>out<span class="token punctuation">.</span><span class="token function">print</span><span class="token punctuation">(</span><span class="token string">"a"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token punctuation">&#125;</span><span class="token punctuation">,</span> <span class="token string">"t1"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+    t2 <span class="token operator">=</span> <span class="token keyword">new</span> <span class="token class-name">Thread</span><span class="token punctuation">(</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token operator">-></span> <span class="token punctuation">&#123;</span>
+        <span class="token class-name">LockSupport</span><span class="token punctuation">.</span><span class="token function">park</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+        <span class="token class-name">System</span><span class="token punctuation">.</span>out<span class="token punctuation">.</span><span class="token function">print</span><span class="token punctuation">(</span><span class="token string">"b"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+        <span class="token class-name">LockSupport</span><span class="token punctuation">.</span><span class="token function">unpark</span><span class="token punctuation">(</span>t3<span class="token punctuation">)</span><span class="token punctuation">;</span>
+        <span class="token class-name">LockSupport</span><span class="token punctuation">.</span><span class="token function">park</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+        <span class="token class-name">System</span><span class="token punctuation">.</span>out<span class="token punctuation">.</span><span class="token function">print</span><span class="token punctuation">(</span><span class="token string">"b"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token punctuation">&#125;</span><span class="token punctuation">,</span> <span class="token string">"t2"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+    t3 <span class="token operator">=</span> <span class="token keyword">new</span> <span class="token class-name">Thread</span><span class="token punctuation">(</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token operator">-></span> <span class="token punctuation">&#123;</span>
+        <span class="token class-name">LockSupport</span><span class="token punctuation">.</span><span class="token function">park</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+        <span class="token class-name">System</span><span class="token punctuation">.</span>out<span class="token punctuation">.</span><span class="token function">print</span><span class="token punctuation">(</span><span class="token string">"c"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+        <span class="token class-name">LockSupport</span><span class="token punctuation">.</span><span class="token function">unpark</span><span class="token punctuation">(</span>t1<span class="token punctuation">)</span><span class="token punctuation">;</span>
+        <span class="token class-name">LockSupport</span><span class="token punctuation">.</span><span class="token function">park</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+        <span class="token class-name">System</span><span class="token punctuation">.</span>out<span class="token punctuation">.</span><span class="token function">print</span><span class="token punctuation">(</span><span class="token string">"c"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token punctuation">&#125;</span><span class="token punctuation">,</span> <span class="token string">"t3"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+    t1<span class="token punctuation">.</span><span class="token function">start</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    t2<span class="token punctuation">.</span><span class="token function">start</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    t3<span class="token punctuation">.</span><span class="token function">start</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+    <span class="token class-name">LockSupport</span><span class="token punctuation">.</span><span class="token function">unpark</span><span class="token punctuation">(</span>t1<span class="token punctuation">)</span><span class="token punctuation">;</span>          <span class="token comment">// 先放行 t1，之后靠链式唤醒</span>
+<span class="token punctuation">&#125;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<pre class="line-numbers language-text" data-language="text"><code class="language-text">abcabc<span aria-hidden="true" class="line-numbers-rows"><span></span></span></code></pre>
+
+<h2 id="6-6-和-AQS-的关系"><a href="#6-6-和-AQS-的关系" class="headerlink" title="6.6 和 AQS 的关系"></a>6.6 和 AQS 的关系</h2><p><code>ReentrantLock.lock()</code> 抢不到锁时，最终就是调用 <code>LockSupport.park(this)</code> 把线程挂起；<code>unlock()</code> 释放锁后，AQS 从等待队列里取出后继节点，调用 <code>LockSupport.unpark(node.thread)</code> 把它唤醒。<br>Semaphore、CountDownLatch、CyclicBarrier、读写锁的阻塞唤醒链路都是同一套。所以吃透 park&#x2F;unpark，等于拿到了读懂 AQS 源码的钥匙。</p>
+<h2 id="6-7-常见坑"><a href="#6-7-常见坑" class="headerlink" title="6.7 常见坑"></a>6.7 常见坑</h2><blockquote>
+<p>● <strong>误以为许可可以累积</strong>：unpark 调 N 次也只算 1 个许可，多出来的通知直接丢弃；<br>● <strong>park 之后不检查中断标记</strong>：park 被打断只是返回，不会说明原因，要自己 <code>isInterrupted()</code> 判断；<br>● <strong>自旋等待里不给退出条件</strong>：自己实现等待循环时，务必配合超时或状态检查，否则容易永久挂住；<br>● <strong>把 blocker 参数当锁用</strong>：<code>park(Object blocker)</code> 的 blocker 只写进线程的 parkBlocker 字段供 jstack 排查，不参与任何同步语义；<br>● <strong>条件判断漏了可见性</strong>：park&#x2F;unpark 不涉及锁，共享条件变量仍然要靠 volatile 或加锁保证可见性。</p>
+</blockquote>
+</div>
+
+  <div class="mb-foot">
+    <a href="/phone/">返回手机首页</a>
+    <a href="/phone/tags/">星迹索引</a>
+  </div>
+</div>
+
+
+<script>
+  /* 作用：懒加载本地 mermaid 库；无 mermaid 代码块时不加载 */
+  function loadLocalMermaid(){
+    return new Promise(function(resolve, reject){
+      if(window.mermaid) return resolve(window.mermaid);
+      var s = document.createElement('script');
+      s.src = '/js/third-party/mermaid/mermaid.min.js?v=10';
+      s.onload = function(){ resolve(window.mermaid); };
+      s.onerror = function(){ reject(new Error('mermaid local load failed')); };
+      document.head.appendChild(s);
+    });
+  }
+
+  /* 作用：把 ```mermaid 代码块替换成 SVG 图（手机端字号略小、图可横向滚动） */
+  async function renderMermaidDiagram(){
+    var blocks = document.querySelectorAll('pre[class*="language-mermaid"]');
+    if(!blocks.length) return;
+    var mermaid;
+    try { mermaid = await loadLocalMermaid(); }
+    catch(e){ console.warn('[mermaid] 本地库加载失败：', e); return; }
+
+    mermaid.initialize({
+      startOnLoad: false,
+      theme: 'base',
+      themeVariables: {
+        darkMode: true,
+        background: 'transparent',
+        fontFamily: '"Microsoft YaHei", "PingFang SC", "Segoe UI", sans-serif',
+        fontSize: '12px',
+        primaryColor: '#062f3d',
+        primaryTextColor: '#d6f6ff',
+        primaryBorderColor: '#00eeff',
+        secondaryColor: '#04222d',
+        tertiaryColor: '#04222d',
+        mainBkg: '#062f3d',
+        nodeBorder: '#00eeff',
+        clusterBkg: '#02161f',
+        clusterBorder: '#00eeff55',
+        lineColor: '#00eeff',
+        textColor: '#c0e8ff',
+        edgeLabelBackground: '#02161f'
+      },
+      flowchart: { curve: 'basis', useMaxWidth: false, htmlLabels: false, nodeSpacing: 30, rankSpacing: 40, padding: 10 }
+    });
+
+    var targets = [];
+    blocks.forEach(function(el){
+      var codeEl = el.querySelector('code');
+      if(!codeEl) return;
+      var div = document.createElement('div');
+      div.className = 'mermaid';
+      div.textContent = codeEl.textContent;
+      el.parentNode.replaceChild(div, el);
+      targets.push(div);
+    });
+    if(!targets.length) return;
+    try { await mermaid.run({ nodes: targets }); }
+    catch(e){ console.warn('[mermaid] 渲染失败：', e); }
+  }
+  /* 作用：多次触发兜底（延迟重试 + DOM 变化），防止某次时机没跑到导致图表留在代码块 */
+  var mmBusy = false;
+  function scheduleMermaid(){
+    if(mmBusy) return;
+    mmBusy = true;
+    renderMermaidDiagram().then(function(){ mmBusy = false; }, function(){ mmBusy = false; });
+  }
+  scheduleMermaid();
+  window.addEventListener('load', scheduleMermaid);
+  [1000, 3000, 8000].forEach(function(ms){ setTimeout(scheduleMermaid, ms); });
+  if(document.readyState !== 'loading') scheduleMermaid();
+  if(window.MutationObserver){
+    var mmTimer = null;
+    var mmObserver = new MutationObserver(function(){
+      clearTimeout(mmTimer);
+      mmTimer = setTimeout(scheduleMermaid, 400);
+    });
+    mmObserver.observe(document.querySelector('.mb-article') || document.body, { childList: true, subtree: true });
+  }
+</script>
+</body>
+</html>

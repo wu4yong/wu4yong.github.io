@@ -1,0 +1,316 @@
+<!--
+  ============================================
+  手机端 · 文章原文页
+  文件：phone/post.njk
+  适用终端：手机端（路由 /phone/p/<slug>/，由 scripts/phone-routes.js 生成）
+  作用：手机阅读单篇文章；单列布局、无侧栏无雷达，替代电脑端 post.njk
+        数据由生成期算好：page.item = { title, dateStr, content, cats, tags }
+  样式依赖：source/css/theme/phone/common.css、source/css/theme/phone/list.css
+  组件依赖：phone/_components/Particles.njk
+  最后修改：2026-11-11
+  ============================================
+-->
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="color-scheme" content="dark">
+  <meta name="theme-color" content="#020817">
+  <!-- 首帧兜底：浏览器默认画布是白的，样式未解析前会闪一下白。这条规则先锁死深空底色 -->
+  <style>html{background-color:#020817}</style>
+  <title>Hadoop（三）YARN 资源调度与队列 - 时空秘境</title>
+  <!-- 手机端样式：基础 + 列表/正文，外链引入（源文件 source/css/theme/phone/） -->
+  <link rel="stylesheet" href="/css/theme/phone/common.css">
+  <link rel="stylesheet" href="/css/theme/phone/list.css">
+<meta name="generator" content="Hexo 8.1.2"></head>
+<body>
+<div class="mb-shell">
+  <!--
+  ============================================
+  手机端星空粒子组件
+  文件：Particles.njk
+  适用终端：手机端
+  作用：Particles.njk 的手机端副本（nunjucks 子目录 include 取不到上级）
+        参数与电脑端 _components/Particles.njk 保持一致：
+        粒子 95 / 连线 118px / opacity 0.32，外加星座层与零星闪烁层
+  最后修改：2026-11-12
+  ============================================
+--><!-- z-index 必须是 0：负层级会被 body 不透明背景盖住，粒子在跑却看不见 -->
+<div id="particles" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 0; pointer-events: none;"></div>
+<!-- 星座层（与首页同一套：随机零星散布星座图形 + 偶尔闪烁的小星） -->
+<div id="constellations" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 1; pointer-events: none;" aria-hidden="true"></div>
+<script src="/js/particles.min.js"></script>
+<script>
+particlesJS("particles", {
+  particles: {
+    number: {
+      value: 95,
+      density: {
+        enable: true,
+        value_area: 800
+      }
+    },
+    color: {
+      value: "#00eeff"
+    },
+    shape: {
+      type: "circle",
+      stroke: {
+        width: 0,
+        color: "#000000"
+      }
+    },
+    opacity: {
+      value: 0.6,
+      random: true,
+      anim: {
+        enable: true,
+        speed: 0.5,
+        opacity_min: 0.1,
+        sync: false
+      }
+    },
+    size: {
+      value: 3,
+      random: true,
+      anim: {
+        enable: true,
+        speed: 2,
+        size_min: 0.1,
+        sync: false
+      }
+    },
+    line_linked: {
+      enable: true,
+      distance: 118,
+      color: "#00eeff",
+      opacity: 0.32,
+      width: 1
+    },
+    move: {
+      enable: true,
+      speed: 0.8,
+      direction: "none",
+      random: true,
+      straight: false,
+      out_mode: "out",
+      bounce: false,
+      attract: {
+        enable: true,
+        rotateX: 600,
+        rotateY: 1200
+      }
+    }
+  },
+  interactivity: {
+    detect_on: "canvas",
+    events: {
+      onhover: {
+        enable: true,
+        mode: "grab"       // 手指按住时粒子聚集
+      },
+      onclick: {
+        enable: true,
+        mode: "push"       // 点击时产生新粒子
+      },
+      resize: true
+    },
+    modes: {
+      grab: {
+        distance: 200,
+        line_linked: {
+          opacity: 1
+        }
+      },
+      push: {
+        particles_nb: 6
+      }
+    }
+  },
+  retina_detect: true
+});
+</script>
+<!-- 星座 + 零星闪烁层：与电脑端共用同一份绘制脚本 -->
+<script src="/js/theme/home/starfield.js"></script>
+
+
+  <div class="mb-top">
+    <a class="mb-back" href="/phone/">← 返回手机首页</a>
+    <span class="mb-sub" style="margin:0">2023-02-16</span>
+  </div>
+
+  <h1 class="mb-title">Hadoop（三）YARN 资源调度与队列</h1>
+  <div class="mb-sub">
+    分类：bigdata · hadoop
+     ｜ 标签：Hadoop
+  </div>
+
+  <div class="mb-article"><div class="essay-banner essay-hadoop"></div>
+
+<h1 id="YARN-资源调度与队列"><a href="#YARN-资源调度与队列" class="headerlink" title="YARN 资源调度与队列"></a><strong>YARN 资源调度与队列</strong></h1><p>HDFS 解决了数据放哪，这一篇解决算力怎么分。YARN 的核心思路是把集群的 CPU、内存统一收上来做成资源池，再按作业申请逐个发放；调度器决定”先给谁、给多少、排队还是抢占”。这一篇把角色、提交流程和三种调度器讲清楚。</p>
+<p><img src="https://wu4yong.github.io/starry-images/assets/img/hadoop/hadoop-03-yarn.webp" alt="中央资源总账向各工作节点分发封装好的算力容器，队列沿层级树形排布"></p>
+<p><em>中央资源总账向各工作节点分发封装好的算力容器，队列沿层级树形排布</em></p>
+<h2 id="1-1-YARN-要解决的问题"><a href="#1-1-YARN-要解决的问题" class="headerlink" title="1.1 YARN 要解决的问题"></a>1.1 YARN 要解决的问题</h2><p>在 YARN 出现之前，MapReduce 自己管集群资源：作业框架和资源管理绑死在一起，想换一个计算框架就得再配一套机器。Hadoop 2.x 把这两层拆开，YARN 专门做资源管理，计算框架只需要按规范申请资源、在容器里跑任务。</p>
+<p>拆开之后得到两个直接好处：</p>
+<ul>
+<li>同一套集群可以混跑 MapReduce、Spark、Flink、Tez，彼此只争资源，不抢管理权</li>
+<li>资源统计、队列隔离、抢占、配额这些能力集中在调度层做一次，各框架复用</li>
+</ul>
+<p>代价是每个作业要多起一个 ApplicationMaster 进程，小作业的启动开销被放大，这也是短作业在 YARN 上体感偏慢的主要原因。</p>
+<h2 id="1-2-架构角色：四类对象各管一段"><a href="#1-2-架构角色：四类对象各管一段" class="headerlink" title="1.2 架构角色：四类对象各管一段"></a>1.2 架构角色：四类对象各管一段</h2><div class="data-grid data-grid-link-table"><div class="grid-header"><div class="grid-cell">角色</div><div class="grid-cell">职责</div><div class="grid-cell">数量</div></div><div class="grid-row"><div class="grid-cell">ResourceManager</div><div class="grid-cell">全局资源总账，接收申请、调度 Container、管理队列与权限</div><div class="grid-cell">集群一个（可 HA）</div></div><div class="grid-row"><div class="grid-cell">NodeManager</div><div class="grid-cell">单机代理，上报本机可用资源，拉起并监控 Container</div><div class="grid-cell">每台工作节点一个</div></div><div class="grid-row"><div class="grid-cell">ApplicationMaster</div><div class="grid-cell">每个作业一个，向 RM 申请资源、在 Container 内启动并跟踪任务</div><div class="grid-cell">每作业一个</div></div><div class="grid-row"><div class="grid-cell">Container</div><div class="grid-cell">资源最小单位，封装内存与 vCPU 配额</div><div class="grid-cell">随任务创建销毁</div></div></div>
+
+<p>RM 又可以拆成两个子模块：<strong>Scheduler</strong> 纯按策略分配资源，不管权限与提交；<strong>ApplicationsManager</strong> 负责接收作业提交、协商第一个 Container 来启动 AM。理解分工时记住：Scheduler 发资源，AM 管作业，NM 管单机。</p>
+<h2 id="1-3-作业提交流程"><a href="#1-3-作业提交流程" class="headerlink" title="1.3 作业提交流程"></a>1.3 作业提交流程</h2><p>一个作业从提交到跑起来，链路固定为六步：</p>
+<ol>
+<li>客户端向 RM 提交作业，上传作业 jar、配置与输入切片信息</li>
+<li>ApplicationsManager 协商出第一个 Container，在某台 NodeManager 上启动 ApplicationMaster</li>
+<li>AM 向 Scheduler 注册并按任务清单申请资源（指定节点偏好、内存、vCPU）</li>
+<li>Scheduler 在满足队列配额与资源余量的前提下分配 Container，通知对应 NM 拉起</li>
+<li>Container 内执行 map&#x2F;reduce 或其他框架任务，AM 持续跟踪进度与失败重试</li>
+<li>全部任务完成后 AM 向 RM 注销并释放资源，客户端拿到最终状态</li>
+</ol>
+<p>资源申请是 AM 主动拉取的模式：RM 不会把任务推给节点，而是 AM 反复询问”现在有没有满足条件的 Container”。这个节奏决定了作业在资源紧张时会长时间停留在 <code>ACCEPTED</code> 状态。</p>
+<h2 id="1-4-Container-的资源模型"><a href="#1-4-Container-的资源模型" class="headerlink" title="1.4 Container 的资源模型"></a>1.4 Container 的资源模型</h2><p>Container 不是一台机器，只是一份配额声明。调度时按节点可用余量匹配，资源口径以内存为主、vCPU 为辅：</p>
+<pre class="line-numbers language-properties" data-language="properties"><code class="language-properties"><span class="token comment"># 单机可分配的最大内存与虚拟核数，NM 上报时以此为上限</span>
+<span class="token key attr-name">yarn.nodemanager.resource.memory-mb</span><span class="token punctuation">=</span><span class="token value attr-value">8192</span>
+<span class="token key attr-name">yarn.nodemanager.resource.cpu-vcores</span><span class="token punctuation">=</span><span class="token value attr-value">8</span>
+<span class="token comment"># 单个 Container 允许申请的资源上下限，超出会被 RM 拒绝</span>
+<span class="token key attr-name">yarn.scheduler.minimum-allocation-mb</span><span class="token punctuation">=</span><span class="token value attr-value">1024</span>
+<span class="token key attr-name">yarn.scheduler.maximum-allocation-mb</span><span class="token punctuation">=</span><span class="token value attr-value">8192</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<p>内存超配是最常见的 kill 原因：任务堆内内存加上堆外、栈、直接内存之和超过 Container 配额，NM 直接杀掉进程并报 <code>Container killed by YARN for exceeding memory limits</code>。调优时先看物理占用，再决定是加配额还是降框架内存参数。</p>
+<h2 id="1-5-三种调度器：FIFO、Capacity、Fair"><a href="#1-5-三种调度器：FIFO、Capacity、Fair" class="headerlink" title="1.5 三种调度器：FIFO、Capacity、Fair"></a>1.5 三种调度器：FIFO、Capacity、Fair</h2><p>调度器是 YARN 里策略差异最大的部分，官方内置三种：</p>
+<div class="data-grid data-grid-link-table"><div class="grid-header"><div class="grid-cell">调度器</div><div class="grid-cell">策略</div><div class="grid-cell">适用场景</div><div class="grid-cell">短板</div></div><div class="grid-row"><div class="grid-cell">FIFO</div><div class="grid-cell">所有作业进一个队列，先提交先跑，后面排队</div><div class="grid-cell">单机测试、内部小集群</div><div class="grid-cell">大作业堵住后面所有小作业</div></div><div class="grid-row"><div class="grid-cell">Capacity</div><div class="grid-cell">队列分层，每个队列有保证容量，队列内作业共享弹性余量</div><div class="grid-cell">多团队共享集群，按部门切队列</div><div class="grid-cell">队列间默认不抢占，闲置容量可能被占用</div></div><div class="grid-row"><div class="grid-cell">Fair</div><div class="grid-cell">队列间公平共享资源，运行作业动态平分，空闲队列资源可被借用再收回</div><div class="grid-cell">多租户、作业长短混合</div><div class="grid-cell">配置项多，抢占与最小份额需要调</div></div></div>
+
+<p><strong>Capacity Scheduler</strong> 的核心概念是保证容量（guaranteed capacity）与最大容量（maximum capacity）：队列至少能拿到保证份额，空闲时可以借其他队列的余量，但不能超过自己的上限。它适合”每个团队保底多少，忙时可以蹭空闲”的组织形态。</p>
+<p><strong>Fair Scheduler</strong> 的目标是让同一时刻运行的作业在资源上尽量均分：新作业进来会从大块头作业那里逐步收回一部分容器，短作业不用长期排队。它对交互式、adhoc 查询更友好，但抢占阈值配得太激进会让长任务反复抖动。</p>
+<h2 id="1-6-队列配置与常见坑"><a href="#1-6-队列配置与常见坑" class="headerlink" title="1.6 队列配置与常见坑"></a>1.6 队列配置与常见坑</h2><p>Capacity 调度器的队列定义写在 <code>capacity-scheduler.xml</code> 里，层级队列用点号分隔：</p>
+<pre class="line-numbers language-markup" data-language="markup"><code class="language-markup"><span class="token comment">&lt;!-- 部门队列保底容量占集群 40%，上限不超过 80%，避免独占集群 --></span>
+<span class="token tag"><span class="token tag"><span class="token punctuation">&lt;</span>property</span><span class="token punctuation">></span></span>
+  <span class="token tag"><span class="token tag"><span class="token punctuation">&lt;</span>name</span><span class="token punctuation">></span></span>yarn.scheduler.capacity.root.data.capacity<span class="token tag"><span class="token tag"><span class="token punctuation">&lt;/</span>name</span><span class="token punctuation">></span></span>
+  <span class="token tag"><span class="token tag"><span class="token punctuation">&lt;</span>value</span><span class="token punctuation">></span></span>40<span class="token tag"><span class="token tag"><span class="token punctuation">&lt;/</span>value</span><span class="token punctuation">></span></span>
+<span class="token tag"><span class="token tag"><span class="token punctuation">&lt;/</span>property</span><span class="token punctuation">></span></span>
+<span class="token tag"><span class="token tag"><span class="token punctuation">&lt;</span>property</span><span class="token punctuation">></span></span>
+  <span class="token tag"><span class="token tag"><span class="token punctuation">&lt;</span>name</span><span class="token punctuation">></span></span>yarn.scheduler.capacity.root.data.maximum-capacity<span class="token tag"><span class="token tag"><span class="token punctuation">&lt;/</span>name</span><span class="token punctuation">></span></span>
+  <span class="token tag"><span class="token tag"><span class="token punctuation">&lt;</span>value</span><span class="token punctuation">></span></span>80<span class="token tag"><span class="token tag"><span class="token punctuation">&lt;/</span>value</span><span class="token punctuation">></span></span>
+<span class="token tag"><span class="token tag"><span class="token punctuation">&lt;/</span>property</span><span class="token punctuation">></span></span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<p>几个容易踩的点：</p>
+<ul>
+<li>只配了队列保底容量，没配上限制，一个团队的大作业把集群借满，其他队列长期排队</li>
+<li>Container 内存配额只算堆内，任务的堆外与直接内存被忽略，频繁超内存被 kill</li>
+<li>把 vCPU 配成与物理核 1:1，框架线程池稍大就申请不到核；vCPU 本来就是可超分的软口径</li>
+<li>作业卡在 <code>ACCEPTED</code> 状态先查队列余量与最大 Container 限制，别急着怀疑集群挂了</li>
+<li>同一集群混用两种调度器不成立：RM 启动时选定一种，换调度器需要重启 RM</li>
+<li>队列 ACL 只配了提交权限，没配管理员与查看权限，后续改配额找不到可操作的人</li>
+<li>Fair 抢占阈值配得过松，长任务跑到一半被反复收回容器，作业整体时长反而变长</li>
+</ul>
+<h2 id="1-7-两种调度器怎么选"><a href="#1-7-两种调度器怎么选" class="headerlink" title="1.7 两种调度器怎么选"></a>1.7 两种调度器怎么选</h2><p>选调度器先看组织形态，而不是看功能列表：</p>
+<div class="data-grid data-grid-link-table"><div class="grid-header"><div class="grid-cell">判断条件</div><div class="grid-cell">倾向选择</div><div class="grid-cell">理由</div></div><div class="grid-row"><div class="grid-cell">团队边界清晰、各有保底资源</div><div class="grid-cell">Capacity</div><div class="grid-cell">队列配额直观，运营成本低</div></div><div class="grid-row"><div class="grid-cell">作业长短混合、adhoc 查询多</div><div class="grid-cell">Fair</div><div class="grid-cell">短作业不必在长任务后面排长队</div></div><div class="grid-row"><div class="grid-cell">只有自己用的测试集群</div><div class="grid-cell">FIFO</div><div class="grid-cell">配置最简单，没有额外策略开销</div></div></div>
+
+<p>实际存量集群里 Capacity 占多数，它的模型和部门预算对应关系最直接；Fair 更多出现在交互式分析平台。切换调度器要连同队列定义、ACL、抢占参数一起迁移，不能只改一个开关。</p>
+<h2 id="1-8-官方资料"><a href="#1-8-官方资料" class="headerlink" title="1.8 官方资料"></a>1.8 官方资料</h2><ul>
+<li>YARN 架构概览：<a target="_blank" rel="noopener" href="https://hadoop.apache.org/docs/stable/hadoop-yarn/hadoop-yarn-site/YARN.html">https://hadoop.apache.org/docs/stable/hadoop-yarn/hadoop-yarn-site/YARN.html</a></li>
+<li>Capacity Scheduler 配置：<a target="_blank" rel="noopener" href="https://hadoop.apache.org/docs/stable/hadoop-yarn/hadoop-yarn-site/CapacityScheduler.html">https://hadoop.apache.org/docs/stable/hadoop-yarn/hadoop-yarn-site/CapacityScheduler.html</a></li>
+<li>Fair Scheduler 配置：<a target="_blank" rel="noopener" href="https://hadoop.apache.org/docs/stable/hadoop-yarn/hadoop-yarn-site/FairScheduler.html">https://hadoop.apache.org/docs/stable/hadoop-yarn/hadoop-yarn-site/FairScheduler.html</a></li>
+<li>YARN 命令行：<a target="_blank" rel="noopener" href="https://hadoop.apache.org/docs/stable/hadoop-yarn/hadoop-yarn-site/YarnCommands.html">https://hadoop.apache.org/docs/stable/hadoop-yarn/hadoop-yarn-site/YarnCommands.html</a></li>
+</ul>
+<h2 id="1-9-清单"><a href="#1-9-清单" class="headerlink" title="1.9 清单"></a>1.9 清单</h2><ol>
+<li>YARN 把资源管理与计算框架解耦，RM 发资源、AM 管作业、NM 管单机</li>
+<li>作业提交后先由 AM 申请第一个 Container，再由 AM 反复拉取后续资源</li>
+<li>Container 是内存加 vCPU 的配额声明，超内存会被 NM 直接杀掉</li>
+<li>FIFO 适合测试，Capacity 按团队保底加弹性借用，Fair 让运行作业动态均分</li>
+<li>队列必须同时设保底与上限，防止单个团队借满集群</li>
+<li>卡在 <code>ACCEPTED</code> 先查队列余量与配额，调度器类型在 RM 启动时固定</li>
+</ol>
+</div>
+
+  <div class="mb-foot">
+    <a href="/phone/">返回手机首页</a>
+    <a href="/phone/tags/">星迹索引</a>
+  </div>
+</div>
+
+
+<script>
+  /* 作用：懒加载本地 mermaid 库；无 mermaid 代码块时不加载 */
+  function loadLocalMermaid(){
+    return new Promise(function(resolve, reject){
+      if(window.mermaid) return resolve(window.mermaid);
+      var s = document.createElement('script');
+      s.src = '/js/third-party/mermaid/mermaid.min.js?v=10';
+      s.onload = function(){ resolve(window.mermaid); };
+      s.onerror = function(){ reject(new Error('mermaid local load failed')); };
+      document.head.appendChild(s);
+    });
+  }
+
+  /* 作用：把 ```mermaid 代码块替换成 SVG 图（手机端字号略小、图可横向滚动） */
+  async function renderMermaidDiagram(){
+    var blocks = document.querySelectorAll('pre[class*="language-mermaid"]');
+    if(!blocks.length) return;
+    var mermaid;
+    try { mermaid = await loadLocalMermaid(); }
+    catch(e){ console.warn('[mermaid] 本地库加载失败：', e); return; }
+
+    mermaid.initialize({
+      startOnLoad: false,
+      theme: 'base',
+      themeVariables: {
+        darkMode: true,
+        background: 'transparent',
+        fontFamily: '"Microsoft YaHei", "PingFang SC", "Segoe UI", sans-serif',
+        fontSize: '12px',
+        primaryColor: '#062f3d',
+        primaryTextColor: '#d6f6ff',
+        primaryBorderColor: '#00eeff',
+        secondaryColor: '#04222d',
+        tertiaryColor: '#04222d',
+        mainBkg: '#062f3d',
+        nodeBorder: '#00eeff',
+        clusterBkg: '#02161f',
+        clusterBorder: '#00eeff55',
+        lineColor: '#00eeff',
+        textColor: '#c0e8ff',
+        edgeLabelBackground: '#02161f'
+      },
+      flowchart: { curve: 'basis', useMaxWidth: false, htmlLabels: false, nodeSpacing: 30, rankSpacing: 40, padding: 10 }
+    });
+
+    var targets = [];
+    blocks.forEach(function(el){
+      var codeEl = el.querySelector('code');
+      if(!codeEl) return;
+      var div = document.createElement('div');
+      div.className = 'mermaid';
+      div.textContent = codeEl.textContent;
+      el.parentNode.replaceChild(div, el);
+      targets.push(div);
+    });
+    if(!targets.length) return;
+    try { await mermaid.run({ nodes: targets }); }
+    catch(e){ console.warn('[mermaid] 渲染失败：', e); }
+  }
+  /* 作用：多次触发兜底（延迟重试 + DOM 变化），防止某次时机没跑到导致图表留在代码块 */
+  var mmBusy = false;
+  function scheduleMermaid(){
+    if(mmBusy) return;
+    mmBusy = true;
+    renderMermaidDiagram().then(function(){ mmBusy = false; }, function(){ mmBusy = false; });
+  }
+  scheduleMermaid();
+  window.addEventListener('load', scheduleMermaid);
+  [1000, 3000, 8000].forEach(function(ms){ setTimeout(scheduleMermaid, ms); });
+  if(document.readyState !== 'loading') scheduleMermaid();
+  if(window.MutationObserver){
+    var mmTimer = null;
+    var mmObserver = new MutationObserver(function(){
+      clearTimeout(mmTimer);
+      mmTimer = setTimeout(scheduleMermaid, 400);
+    });
+    mmObserver.observe(document.querySelector('.mb-article') || document.body, { childList: true, subtree: true });
+  }
+</script>
+</body>
+</html>

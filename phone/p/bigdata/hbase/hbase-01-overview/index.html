@@ -1,0 +1,320 @@
+<!--
+  ============================================
+  手机端 · 文章原文页
+  文件：phone/post.njk
+  适用终端：手机端（路由 /phone/p/<slug>/，由 scripts/phone-routes.js 生成）
+  作用：手机阅读单篇文章；单列布局、无侧栏无雷达，替代电脑端 post.njk
+        数据由生成期算好：page.item = { title, dateStr, content, cats, tags }
+  样式依赖：source/css/theme/phone/common.css、source/css/theme/phone/list.css
+  组件依赖：phone/_components/Particles.njk
+  最后修改：2026-11-11
+  ============================================
+-->
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="color-scheme" content="dark">
+  <meta name="theme-color" content="#020817">
+  <!-- 首帧兜底：浏览器默认画布是白的，样式未解析前会闪一下白。这条规则先锁死深空底色 -->
+  <style>html{background-color:#020817}</style>
+  <title>HBase（一）架构与数据模型 - 时空秘境</title>
+  <!-- 手机端样式：基础 + 列表/正文，外链引入（源文件 source/css/theme/phone/） -->
+  <link rel="stylesheet" href="/css/theme/phone/common.css">
+  <link rel="stylesheet" href="/css/theme/phone/list.css">
+<meta name="generator" content="Hexo 8.1.2"></head>
+<body>
+<div class="mb-shell">
+  <!--
+  ============================================
+  手机端星空粒子组件
+  文件：Particles.njk
+  适用终端：手机端
+  作用：Particles.njk 的手机端副本（nunjucks 子目录 include 取不到上级）
+        参数与电脑端 _components/Particles.njk 保持一致：
+        粒子 95 / 连线 118px / opacity 0.32，外加星座层与零星闪烁层
+  最后修改：2026-11-12
+  ============================================
+--><!-- z-index 必须是 0：负层级会被 body 不透明背景盖住，粒子在跑却看不见 -->
+<div id="particles" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 0; pointer-events: none;"></div>
+<!-- 星座层（与首页同一套：随机零星散布星座图形 + 偶尔闪烁的小星） -->
+<div id="constellations" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 1; pointer-events: none;" aria-hidden="true"></div>
+<script src="/js/particles.min.js"></script>
+<script>
+particlesJS("particles", {
+  particles: {
+    number: {
+      value: 95,
+      density: {
+        enable: true,
+        value_area: 800
+      }
+    },
+    color: {
+      value: "#00eeff"
+    },
+    shape: {
+      type: "circle",
+      stroke: {
+        width: 0,
+        color: "#000000"
+      }
+    },
+    opacity: {
+      value: 0.6,
+      random: true,
+      anim: {
+        enable: true,
+        speed: 0.5,
+        opacity_min: 0.1,
+        sync: false
+      }
+    },
+    size: {
+      value: 3,
+      random: true,
+      anim: {
+        enable: true,
+        speed: 2,
+        size_min: 0.1,
+        sync: false
+      }
+    },
+    line_linked: {
+      enable: true,
+      distance: 118,
+      color: "#00eeff",
+      opacity: 0.32,
+      width: 1
+    },
+    move: {
+      enable: true,
+      speed: 0.8,
+      direction: "none",
+      random: true,
+      straight: false,
+      out_mode: "out",
+      bounce: false,
+      attract: {
+        enable: true,
+        rotateX: 600,
+        rotateY: 1200
+      }
+    }
+  },
+  interactivity: {
+    detect_on: "canvas",
+    events: {
+      onhover: {
+        enable: true,
+        mode: "grab"       // 手指按住时粒子聚集
+      },
+      onclick: {
+        enable: true,
+        mode: "push"       // 点击时产生新粒子
+      },
+      resize: true
+    },
+    modes: {
+      grab: {
+        distance: 200,
+        line_linked: {
+          opacity: 1
+        }
+      },
+      push: {
+        particles_nb: 6
+      }
+    }
+  },
+  retina_detect: true
+});
+</script>
+<!-- 星座 + 零星闪烁层：与电脑端共用同一份绘制脚本 -->
+<script src="/js/theme/home/starfield.js"></script>
+
+
+  <div class="mb-top">
+    <a class="mb-back" href="/phone/">← 返回手机首页</a>
+    <span class="mb-sub" style="margin:0">2023-03-17</span>
+  </div>
+
+  <h1 class="mb-title">HBase（一）架构与数据模型</h1>
+  <div class="mb-sub">
+    分类：bigdata · hbase
+     ｜ 标签：HBase
+  </div>
+
+  <div class="mb-article"><div class="essay-banner essay-hbase"></div>
+
+<h1 id="架构与数据模型"><a href="#架构与数据模型" class="headerlink" title="架构与数据模型"></a><strong>架构与数据模型</strong></h1><p>HDFS 解决了”海量数据怎么存”，但它只擅长顺序读写，不支持按主键随机查一行。业务侧真正高频的需求是：给一个主键，毫秒级取出最新值，再顺手写回一条新记录。HBase 就是跑在 HDFS 之上、面向这种海量随机读写的列式分布式数据库，这一篇先把它的集群角色和数据模型讲清楚。</p>
+<p><img src="https://wu4yong.github.io/starry-images/assets/img/hbase/hbase-01-overview.webp" alt="多台 RegionServer 围绕元数据中枢组成分布式存储集群，数据按 RowKey 有序切片"></p>
+<p><em>多台 RegionServer 围绕元数据中枢组成分布式存储集群，数据按 RowKey 有序切片</em></p>
+<h2 id="1-1-HBase-到底解决什么问题"><a href="#1-1-HBase-到底解决什么问题" class="headerlink" title="1.1 HBase 到底解决什么问题"></a>1.1 HBase 到底解决什么问题</h2><p>先把 HBase 的定位和相邻组件划清边界，避免一上来就把它当成”大号 MySQL”或”带索引的 HDFS”：</p>
+<div class="data-grid data-grid-link-table"><div class="grid-header"><div class="grid-cell">对比项</div><div class="grid-cell">HDFS</div><div class="grid-cell">HBase</div><div class="grid-cell">MySQL</div></div><div class="grid-row"><div class="grid-cell">访问方式</div><div class="grid-cell">顺序扫描大文件</div><div class="grid-cell">按 RowKey 随机读写 + 范围扫描</div><div class="grid-cell">主键 &#x2F; 索引随机读写</div></div><div class="grid-row"><div class="grid-cell">数据规模</div><div class="grid-cell">百亿级文件块</div><div class="grid-cell">百亿级行</div><div class="grid-cell">千万级行后开始吃力</div></div><div class="grid-row"><div class="grid-cell">写入模型</div><div class="grid-cell">一次写入多次读取</div><div class="grid-cell">持续追加新版本</div><div class="grid-cell">行内更新</div></div><div class="grid-row"><div class="grid-cell">一致性</div><div class="grid-cell">文件副本一致</div><div class="grid-cell">单行强一致</div><div class="grid-cell">单行强一致</div></div></div>
+
+<p>一句话：<strong>HBase 用 HDFS 当底层文件系统，把”按主键随机读写”这件事在 PB 级数据上做出来</strong>。它牺牲了跨行事务、二级索引和灵活的 Join，换来的是水平扩容和写入吞吐。</p>
+<p>理解定位时先记住三条边界：</p>
+<ul>
+<li>它不是 MySQL 的分布式替代品，复杂关联查询和跨行事务要另外找方案</li>
+<li>它也不是给全文检索用的，倒排索引和分词检索属于 Elasticsearch 这类系统</li>
+<li>它的数据默认落在 HDFS 上，副本、磁盘容错由底层文件系统承担，HBase 自身管 Region 调度</li>
+</ul>
+<h2 id="1-2-集群角色：HMaster、RegionServer、ZooKeeper"><a href="#1-2-集群角色：HMaster、RegionServer、ZooKeeper" class="headerlink" title="1.2 集群角色：HMaster、RegionServer、ZooKeeper"></a>1.2 集群角色：HMaster、RegionServer、ZooKeeper</h2><p>HBase 集群由三类进程组成，职责边界非常清楚，面试和排障时最容易混的就是 HMaster 到底碰不碰业务数据：</p>
+<div class="data-grid data-grid-link-table"><div class="grid-header"><div class="grid-cell">角色</div><div class="grid-cell">职责</div><div class="grid-cell">不做什么</div></div><div class="grid-row"><div class="grid-cell">HMaster</div><div class="grid-cell">Region 的分配与迁移、表的 DDL（建表 &#x2F; 删表 &#x2F; 改列族）、负载均衡</div><div class="grid-cell">不参与客户端的读写数据传输</div></div><div class="grid-row"><div class="grid-cell">RegionServer</div><div class="grid-cell">管理本机若干 Region，处理 Put &#x2F; Get &#x2F; Scan，读写 MemStore 与 HFile</div><div class="grid-cell">不决定 Region 该放在哪台机器</div></div><div class="grid-row"><div class="grid-cell">ZooKeeper</div><div class="grid-cell">Master 选举、集群状态、定位 <code>hbase:meta</code> 表所在 RegionServer</div><div class="grid-cell">不存业务数据，不转发读写请求</div></div></div>
+
+<p>这里有一条必须背下来的官方口径：<strong>客户端的读写都直接连 RegionServer，HMaster 只负责 Region 分配与元数据管理</strong>。所以 HMaster 短暂挂掉时，正在跑的读写不会断，受影响的只是建表、Region 迁移这类管理动作。</p>
+<h2 id="1-3-Region：表在集群里的切片方式"><a href="#1-3-Region：表在集群里的切片方式" class="headerlink" title="1.3 Region：表在集群里的切片方式"></a>1.3 Region：表在集群里的切片方式</h2><p>一张表不会整体放在一台机器上。HBase 按 RowKey 的字典序把表切成一段一段的 <strong>Region</strong>，每个 Region 负责一段连续的 RowKey 区间，由一台 RegionServer 托管：</p>
+<div class="data-grid data-grid-link-table"><div class="grid-header"><div class="grid-cell">概念</div><div class="grid-cell">含义</div><div class="grid-cell">关键点</div></div><div class="grid-row"><div class="grid-cell">Region</div><div class="grid-cell">一段连续 RowKey 区间的数据</div><div class="grid-cell">是 HBase 水平拆分与迁移的最小单位</div></div><div class="grid-row"><div class="grid-cell">RegionServer</div><div class="grid-cell">一台机器上托管多个 Region</div><div class="grid-cell">单机读写压力集中在这里</div></div><div class="grid-row"><div class="grid-cell">StartKey &#x2F; EndKey</div><div class="grid-cell">Region 的区间边界</div><div class="grid-cell">区间左闭右开，边界由分裂产生</div></div></div>
+
+<p>Region 数量会随着写入增长而自动分裂（split），HMaster 再把分裂出来的新 Region 调度到负载较低的 RegionServer 上。扩容新机器时，也是靠这种 Region 迁移把数据摊开，而不是做全量数据搬迁。</p>
+<p>几个常被问到的边界细节：</p>
+<ul>
+<li>一个 Region 在同一时刻只由一台 RegionServer 托管，避免同一区间出现双写冲突</li>
+<li>Region 分裂时，旧区间被切成两段，新段独立成为一个 Region，再由 HMaster 调度</li>
+<li>每个 Region 的起止 RowKey 与所在服务器记录在 <code>hbase:meta</code> 元数据表中，这张表本身也存放在 HBase 里</li>
+<li>RegionServer 启动时向 ZooKeeper 注册，HMaster 据此掌握集群整体布局与负载状况</li>
+</ul>
+<h2 id="1-4-数据模型：RowKey、ColumnFamily、Cell、时间戳"><a href="#1-4-数据模型：RowKey、ColumnFamily、Cell、时间戳" class="headerlink" title="1.4 数据模型：RowKey、ColumnFamily、Cell、时间戳"></a>1.4 数据模型：RowKey、ColumnFamily、Cell、时间戳</h2><p>HBase 的逻辑模型是一张稀疏的、按 RowKey 排序的多维映射表，理解它要从最外层往里剥：</p>
+<div class="data-grid data-grid-link-table"><div class="grid-header"><div class="grid-cell">概念</div><div class="grid-cell">是什么</div><div class="grid-cell">设计要点</div></div><div class="grid-row"><div class="grid-cell">RowKey</div><div class="grid-cell">每行的主键，字节数组</div><div class="grid-cell">全表按 RowKey 字典序排列，决定数据落在哪个 Region</div></div><div class="grid-row"><div class="grid-cell">ColumnFamily（列族）</div><div class="grid-cell">列的分组，建表时必须定义</div><div class="grid-cell">列族是存储与权限的单位，列族数量要少</div></div><div class="grid-row"><div class="grid-cell">Column Qualifier（列限定符）</div><div class="grid-cell">列族下的具体列名</div><div class="grid-cell">可以事后动态增加，不需要预先声明</div></div><div class="grid-row"><div class="grid-cell">Cell</div><div class="grid-cell">某个 RowKey + 列 + 时间戳对应的具体值</div><div class="grid-cell">是最小存储单元，值是未解释的字节数组</div></div><div class="grid-row"><div class="grid-cell">Timestamp</div><div class="grid-cell">Cell 的版本号，写入时默认取当前时间</div><div class="grid-cell">同一条数据可保留多个版本，按时间倒序取最新</div></div></div>
+
+<p>一条完整的定位路径是：<code>Table → RowKey → ColumnFamily → Qualifier → Timestamp → Cell</code>。和关系库最大的区别有两点：</p>
+<ul>
+<li><strong>稀疏</strong>：某一行没有的列就不占空间，不需要为不存在的值留空位</li>
+<li><strong>多版本</strong>：同一个单元格每次写入都会留下一个带时间戳的新版本，读取时默认返回最新版本，历史版本按 <code>VERSIONS</code> 配置保留</li>
+<li><strong>按字节排序</strong>：RowKey 以字节数组比较，数字、字符串的排序结果和 Java 里字符串排序一致，设计主键时要考虑字节序而不是业务直觉</li>
+<li><strong>时间戳由服务端补</strong>：写入不显式指定时间戳时，RegionServer 取写入时刻作为版本号；显式指定后，同键后写的值不一定排在前面</li>
+</ul>
+<p>补充一句一致性口径：HBase 保证单行（同一 RowKey）读写的强一致，跨行事务不在它的设计范围内，跨 Region 的多个写入之间不提供原子性。</p>
+<h2 id="1-5-一次定位是怎么完成的"><a href="#1-5-一次定位是怎么完成的" class="headerlink" title="1.5 一次定位是怎么完成的"></a>1.5 一次定位是怎么完成的</h2><p>客户端要读一行，先要知道这行落在哪个 RegionServer，这条定位链依赖元数据表：</p>
+<ol>
+<li>客户端先问 ZooKeeper，拿到 <code>hbase:meta</code> 表所在的 RegionServer</li>
+<li>查 <code>hbase:meta</code>，根据 RowKey 找到目标 Region 对应的 RegionServer</li>
+<li>客户端直接连这台 RegionServer 发起读写</li>
+</ol>
+<p>定位结果会缓存在客户端，Region 发生迁移后缓存才需要刷新。整个过程中 HMaster 不出现，这也是 1.2 节那条口径在数据面上的具体落地。</p>
+<p>关于这条定位链的补充：</p>
+<ul>
+<li>客户端缓存的是”RowKey 区间 → RegionServer”映射，Region 未迁移前不需要反复问 ZooKeeper</li>
+<li>Region 迁移后旧缓存可能指向已失效的服务器，客户端重试时会重新查 <code>hbase:meta</code> 刷新</li>
+<li><code>hbase:meta</code> 表本身的位置由 ZooKeeper 记录，避免再引入一层元数据查表</li>
+<li>这条链路只解决”去哪台机器”，真正的数据读写仍然由目标 RegionServer 完成</li>
+</ul>
+<h2 id="1-6-容易踩的坑"><a href="#1-6-容易踩的坑" class="headerlink" title="1.6 容易踩的坑"></a>1.6 容易踩的坑</h2><ul>
+<li>把 HMaster 当成”读写入口”：它不转发数据，高并发读写压力全在 RegionServer 上，扩容要加的是 RegionServer</li>
+<li>列族随便建十几个：列族是存储和压缩的单位，列族过多会让 flush、compaction 都变重，一张表通常控制在两三个列族以内</li>
+<li>以为 RowKey 只是普通主键：它同时决定排序、Region 分布和热点位置，设计 RowKey 是 HBase 建模的核心工作（第三篇专门展开）</li>
+<li>把 Cell 当成字符串：HBase 不解释字节内容，序列化和反序列化必须由客户端自己保证一致</li>
+</ul>
+<h2 id="1-7-官方资料"><a href="#1-7-官方资料" class="headerlink" title="1.7 官方资料"></a>1.7 官方资料</h2><ul>
+<li><p>Apache HBase 官网：<a target="_blank" rel="noopener" href="https://hbase.apache.org/">https://hbase.apache.org/</a></p>
+</li>
+<li><p>HBase Reference Guide：<a target="_blank" rel="noopener" href="https://hbase.apache.org/book.html">https://hbase.apache.org/book.html</a></p>
+</li>
+<li><p>HBase API 文档：<a target="_blank" rel="noopener" href="https://hbase.apache.org/apidocs/">https://hbase.apache.org/apidocs/</a></p>
+</li>
+<li><p>HBase 架构概览（Reference Guide）：<a target="_blank" rel="noopener" href="https://hbase.apache.org/book.html#arch.overview">https://hbase.apache.org/book.html#arch.overview</a></p>
+</li>
+<li><p>早年的 HBase 理论长文（含 Shell 命令、与 Hive&#x2F;HDFS 对比）：<a href="/2023/03/12/bigdata/hbase/hbase-00-theory/">HBase（零）理论全景笔记</a></p>
+</li>
+</ul>
+<h2 id="1-8-清单"><a href="#1-8-清单" class="headerlink" title="1.8 清单"></a>1.8 清单</h2><ol>
+<li>HBase 是跑在 HDFS 之上、面向海量随机读写的分布式列式数据库，牺牲跨行事务换水平扩容</li>
+<li>三类角色：HMaster 管 Region 分配与 DDL，RegionServer 管本机 Region 的读写，ZooKeeper 管选举与元数据定位</li>
+<li>客户端读写直连 RegionServer，HMaster 不参与数据传输，这是必须守住的官方口径</li>
+<li>表按 RowKey 字典序切成 Region，Region 是拆分、分裂和迁移的最小单位</li>
+<li>数据模型路径：Table → RowKey → ColumnFamily → Qualifier → Timestamp → Cell</li>
+<li>Cell 是带时间戳的多版本值，表天然稀疏，不存在的列不占空间</li>
+<li>定位链路：ZooKeeper → <code>hbase:meta</code> → 目标 RegionServer，结果客户端缓存</li>
+</ol>
+</div>
+
+  <div class="mb-foot">
+    <a href="/phone/">返回手机首页</a>
+    <a href="/phone/tags/">星迹索引</a>
+  </div>
+</div>
+
+
+<script>
+  /* 作用：懒加载本地 mermaid 库；无 mermaid 代码块时不加载 */
+  function loadLocalMermaid(){
+    return new Promise(function(resolve, reject){
+      if(window.mermaid) return resolve(window.mermaid);
+      var s = document.createElement('script');
+      s.src = '/js/third-party/mermaid/mermaid.min.js?v=10';
+      s.onload = function(){ resolve(window.mermaid); };
+      s.onerror = function(){ reject(new Error('mermaid local load failed')); };
+      document.head.appendChild(s);
+    });
+  }
+
+  /* 作用：把 ```mermaid 代码块替换成 SVG 图（手机端字号略小、图可横向滚动） */
+  async function renderMermaidDiagram(){
+    var blocks = document.querySelectorAll('pre[class*="language-mermaid"]');
+    if(!blocks.length) return;
+    var mermaid;
+    try { mermaid = await loadLocalMermaid(); }
+    catch(e){ console.warn('[mermaid] 本地库加载失败：', e); return; }
+
+    mermaid.initialize({
+      startOnLoad: false,
+      theme: 'base',
+      themeVariables: {
+        darkMode: true,
+        background: 'transparent',
+        fontFamily: '"Microsoft YaHei", "PingFang SC", "Segoe UI", sans-serif',
+        fontSize: '12px',
+        primaryColor: '#062f3d',
+        primaryTextColor: '#d6f6ff',
+        primaryBorderColor: '#00eeff',
+        secondaryColor: '#04222d',
+        tertiaryColor: '#04222d',
+        mainBkg: '#062f3d',
+        nodeBorder: '#00eeff',
+        clusterBkg: '#02161f',
+        clusterBorder: '#00eeff55',
+        lineColor: '#00eeff',
+        textColor: '#c0e8ff',
+        edgeLabelBackground: '#02161f'
+      },
+      flowchart: { curve: 'basis', useMaxWidth: false, htmlLabels: false, nodeSpacing: 30, rankSpacing: 40, padding: 10 }
+    });
+
+    var targets = [];
+    blocks.forEach(function(el){
+      var codeEl = el.querySelector('code');
+      if(!codeEl) return;
+      var div = document.createElement('div');
+      div.className = 'mermaid';
+      div.textContent = codeEl.textContent;
+      el.parentNode.replaceChild(div, el);
+      targets.push(div);
+    });
+    if(!targets.length) return;
+    try { await mermaid.run({ nodes: targets }); }
+    catch(e){ console.warn('[mermaid] 渲染失败：', e); }
+  }
+  /* 作用：多次触发兜底（延迟重试 + DOM 变化），防止某次时机没跑到导致图表留在代码块 */
+  var mmBusy = false;
+  function scheduleMermaid(){
+    if(mmBusy) return;
+    mmBusy = true;
+    renderMermaidDiagram().then(function(){ mmBusy = false; }, function(){ mmBusy = false; });
+  }
+  scheduleMermaid();
+  window.addEventListener('load', scheduleMermaid);
+  [1000, 3000, 8000].forEach(function(ms){ setTimeout(scheduleMermaid, ms); });
+  if(document.readyState !== 'loading') scheduleMermaid();
+  if(window.MutationObserver){
+    var mmTimer = null;
+    var mmObserver = new MutationObserver(function(){
+      clearTimeout(mmTimer);
+      mmTimer = setTimeout(scheduleMermaid, 400);
+    });
+    mmObserver.observe(document.querySelector('.mb-article') || document.body, { childList: true, subtree: true });
+  }
+</script>
+</body>
+</html>

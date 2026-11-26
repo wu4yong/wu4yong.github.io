@@ -1,0 +1,328 @@
+<!--
+  ============================================
+  手机端 · 文章原文页
+  文件：phone/post.njk
+  适用终端：手机端（路由 /phone/p/<slug>/，由 scripts/phone-routes.js 生成）
+  作用：手机阅读单篇文章；单列布局、无侧栏无雷达，替代电脑端 post.njk
+        数据由生成期算好：page.item = { title, dateStr, content, cats, tags }
+  样式依赖：source/css/theme/phone/common.css、source/css/theme/phone/list.css
+  组件依赖：phone/_components/Particles.njk
+  最后修改：2026-11-11
+  ============================================
+-->
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="color-scheme" content="dark">
+  <meta name="theme-color" content="#020817">
+  <!-- 首帧兜底：浏览器默认画布是白的，样式未解析前会闪一下白。这条规则先锁死深空底色 -->
+  <style>html{background-color:#020817}</style>
+  <title>Kafka（二）生产者与可靠性 - 时空秘境</title>
+  <!-- 手机端样式：基础 + 列表/正文，外链引入（源文件 source/css/theme/phone/） -->
+  <link rel="stylesheet" href="/css/theme/phone/common.css">
+  <link rel="stylesheet" href="/css/theme/phone/list.css">
+<meta name="generator" content="Hexo 8.1.2"></head>
+<body>
+<div class="mb-shell">
+  <!--
+  ============================================
+  手机端星空粒子组件
+  文件：Particles.njk
+  适用终端：手机端
+  作用：Particles.njk 的手机端副本（nunjucks 子目录 include 取不到上级）
+        参数与电脑端 _components/Particles.njk 保持一致：
+        粒子 95 / 连线 118px / opacity 0.32，外加星座层与零星闪烁层
+  最后修改：2026-11-12
+  ============================================
+--><!-- z-index 必须是 0：负层级会被 body 不透明背景盖住，粒子在跑却看不见 -->
+<div id="particles" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 0; pointer-events: none;"></div>
+<!-- 星座层（与首页同一套：随机零星散布星座图形 + 偶尔闪烁的小星） -->
+<div id="constellations" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 1; pointer-events: none;" aria-hidden="true"></div>
+<script src="/js/particles.min.js"></script>
+<script>
+particlesJS("particles", {
+  particles: {
+    number: {
+      value: 95,
+      density: {
+        enable: true,
+        value_area: 800
+      }
+    },
+    color: {
+      value: "#00eeff"
+    },
+    shape: {
+      type: "circle",
+      stroke: {
+        width: 0,
+        color: "#000000"
+      }
+    },
+    opacity: {
+      value: 0.6,
+      random: true,
+      anim: {
+        enable: true,
+        speed: 0.5,
+        opacity_min: 0.1,
+        sync: false
+      }
+    },
+    size: {
+      value: 3,
+      random: true,
+      anim: {
+        enable: true,
+        speed: 2,
+        size_min: 0.1,
+        sync: false
+      }
+    },
+    line_linked: {
+      enable: true,
+      distance: 118,
+      color: "#00eeff",
+      opacity: 0.32,
+      width: 1
+    },
+    move: {
+      enable: true,
+      speed: 0.8,
+      direction: "none",
+      random: true,
+      straight: false,
+      out_mode: "out",
+      bounce: false,
+      attract: {
+        enable: true,
+        rotateX: 600,
+        rotateY: 1200
+      }
+    }
+  },
+  interactivity: {
+    detect_on: "canvas",
+    events: {
+      onhover: {
+        enable: true,
+        mode: "grab"       // 手指按住时粒子聚集
+      },
+      onclick: {
+        enable: true,
+        mode: "push"       // 点击时产生新粒子
+      },
+      resize: true
+    },
+    modes: {
+      grab: {
+        distance: 200,
+        line_linked: {
+          opacity: 1
+        }
+      },
+      push: {
+        particles_nb: 6
+      }
+    }
+  },
+  retina_detect: true
+});
+</script>
+<!-- 星座 + 零星闪烁层：与电脑端共用同一份绘制脚本 -->
+<script src="/js/theme/home/starfield.js"></script>
+
+
+  <div class="mb-top">
+    <a class="mb-back" href="/phone/">← 返回手机首页</a>
+    <span class="mb-sub" style="margin:0">2023-08-31</span>
+  </div>
+
+  <h1 class="mb-title">Kafka（二）生产者与可靠性</h1>
+  <div class="mb-sub">
+    分类：bigdata · kafka
+     ｜ 标签：Kafka
+  </div>
+
+  <div class="mb-article"><div class="essay-banner essay-kafka"></div>
+
+<h1 id="生产者与可靠性"><a href="#生产者与可靠性" class="headerlink" title="生产者与可靠性"></a><strong>生产者与可靠性</strong></h1><p>生产者的核心问题只有一个：<strong>这条消息到底算不算写成功了</strong>。<code>acks</code> 决定等几个副本确认，<code>retries</code> 决定失败后重不重发，幂等与事务决定重发会不会写出重复——三者串起来才是完整的可靠性方案。</p>
+<p><img src="https://wu4yong.github.io/starry-images/assets/img/kafka/kafka-02-producer.webp" alt="四条橙色光带把批次送入不同分区"></p>
+<p><em>批次（batch）是发送的最小单位，也是吞吐的来源</em></p>
+<h2 id="2-1-三个必配参数"><a href="#2-1-三个必配参数" class="headerlink" title="2.1 三个必配参数"></a>2.1 三个必配参数</h2><pre class="line-numbers language-properties" data-language="properties"><code class="language-properties"><span class="token comment"># 兼顾吞吐与可靠性的一组常见配置</span>
+<span class="token key attr-name">acks</span><span class="token punctuation">=</span><span class="token value attr-value">all                      # 0/1/all，all 表示 ISR 全部确认</span>
+<span class="token key attr-name">retries</span><span class="token punctuation">=</span><span class="token value attr-value">2147483647            # 配合 delivery.timeout.ms 控制总时长</span>
+<span class="token key attr-name">enable.idempotence</span><span class="token punctuation">=</span><span class="token value attr-value">true       # 幂等生产者，避免重试产生重复</span>
+<span class="token key attr-name">max.in.flight.requests.per.connection</span><span class="token punctuation">=</span><span class="token value attr-value">5</span>
+<span class="token key attr-name">linger.ms</span><span class="token punctuation">=</span><span class="token value attr-value">10                  # 攒批时间，10–50ms 是常见折中</span>
+<span class="token key attr-name">batch.size</span><span class="token punctuation">=</span><span class="token value attr-value">32768</span>
+<span class="token key attr-name">compression.type</span><span class="token punctuation">=</span><span class="token value attr-value">lz4</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<p><code>enable.idempotence=true</code> 会强制 <code>acks=all</code> 且 <code>max.in.flight&lt;=5</code>，这不是限制而是约束：幂等需要 broker 侧按 PID + 序列号去重，乱序重发会让去重失效。</p>
+<h2 id="2-2-acks-的真实含义"><a href="#2-2-acks-的真实含义" class="headerlink" title="2.2 acks 的真实含义"></a>2.2 acks 的真实含义</h2><div class="data-grid data-grid-link-table"><div class="grid-header"><div class="grid-cell">acks</div><div class="grid-cell">等待谁确认</div><div class="grid-cell">风险</div></div><div class="grid-row"><div class="grid-cell">0</div><div class="grid-cell">不等确认，发出去就算成功</div><div class="grid-cell">网络或 broker 故障时静默丢数据</div></div><div class="grid-row"><div class="grid-cell">1</div><div class="grid-cell">只等 leader 落盘</div><div class="grid-cell">leader 挂掉且未同步时丢最近数据</div></div><div class="grid-row"><div class="grid-cell">all</div><div class="grid-cell">等 ISR 全部确认</div><div class="grid-cell">最慢，最安全；ISR 只剩 leader 时等同 acks&#x3D;1</div></div></div>
+
+<p>最后一行是关键细节：<code>acks=all</code> 的安全性依赖 ISR 大小。如果 <code>min.insync.replicas=1</code> 且副本都掉线了，集群仍会接受写入——这是很多”配了 all 还丢数据”故事的根源。<code>min.insync.replicas=2</code> + <code>replication.factor=3</code> 才是常见生产组合。</p>
+<h2 id="2-3-生产者的内部流水"><a href="#2-3-生产者的内部流水" class="headerlink" title="2.3 生产者的内部流水"></a>2.3 生产者的内部流水</h2><ol>
+<li><code>send()</code> 把消息交给拦截器与序列化器</li>
+<li>分区器选分区，消息进 <code>RecordAccumulator</code> 里对应分区的批次</li>
+<li>Sender 线程按 broker 维度取出批次，组成一次请求发出</li>
+<li>broker 返回响应，回调 <code>Callback</code> 或抛出异常触发重试</li>
+</ol>
+<p>第 2 步的攒批是吞吐的直接来源：<code>batch.size</code> 是单批次字节上限，<code>linger.ms</code> 是”最多等多久再发”。两条一起决定实际批次大小，调参要看平均批次字节，而不是只看配置值。</p>
+<h2 id="2-4-事务：跨分区原子写"><a href="#2-4-事务：跨分区原子写" class="headerlink" title="2.4 事务：跨分区原子写"></a>2.4 事务：跨分区原子写</h2><pre class="line-numbers language-java" data-language="java"><code class="language-java">props<span class="token punctuation">.</span><span class="token function">put</span><span class="token punctuation">(</span><span class="token class-name">ProducerConfig</span><span class="token punctuation">.</span><span class="token constant">TRANSACTIONAL_ID_CONFIG</span><span class="token punctuation">,</span> <span class="token string">"order-tx-01"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+producer<span class="token punctuation">.</span><span class="token function">initTransactions</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token keyword">try</span> <span class="token punctuation">&#123;</span>
+    producer<span class="token punctuation">.</span><span class="token function">beginTransaction</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    producer<span class="token punctuation">.</span><span class="token function">send</span><span class="token punctuation">(</span><span class="token keyword">new</span> <span class="token class-name">ProducerRecord</span><span class="token generics"><span class="token punctuation">&lt;</span><span class="token punctuation">></span></span><span class="token punctuation">(</span><span class="token string">"order-events"</span><span class="token punctuation">,</span> key<span class="token punctuation">,</span> payload<span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    producer<span class="token punctuation">.</span><span class="token function">send</span><span class="token punctuation">(</span><span class="token keyword">new</span> <span class="token class-name">ProducerRecord</span><span class="token generics"><span class="token punctuation">&lt;</span><span class="token punctuation">></span></span><span class="token punctuation">(</span><span class="token string">"order-audit"</span><span class="token punctuation">,</span> key<span class="token punctuation">,</span> auditJson<span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    producer<span class="token punctuation">.</span><span class="token function">commitTransaction</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">&#125;</span> <span class="token keyword">catch</span> <span class="token punctuation">(</span><span class="token class-name">Exception</span> e<span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+    producer<span class="token punctuation">.</span><span class="token function">abortTransaction</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>   <span class="token comment">// 未提交的写入对读隔离级别下不可见</span>
+    <span class="token keyword">throw</span> e<span class="token punctuation">;</span>
+<span class="token punctuation">&#125;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<p>事务的价值是”两个 Topic 要么都成功要么都不成功”，代价是吞吐下降与 <code>transactional.id</code> 的运维复杂度（同一 id 只能有一个活跃实例）。绝大多数业务用”幂等生产者 + 下游幂等消费”就够，不必上事务。</p>
+<h2 id="2-5-顺序怎么保"><a href="#2-5-顺序怎么保" class="headerlink" title="2.5 顺序怎么保"></a>2.5 顺序怎么保</h2><ul>
+<li>同 key 同分区：靠默认分区器，天然有序</li>
+<li>需要全局有序：只能单分区，吞吐受限</li>
+<li>开启重试后仍要顺序：<code>max.in.flight.requests.per.connection=1</code>，或用幂等生产者（幂等模式下最多 5 个在途请求仍保序）</li>
+<li>事务内多条消息：按发送顺序提交</li>
+</ul>
+<h2 id="2-6-容易踩的坑"><a href="#2-6-容易踩的坑" class="headerlink" title="2.6 容易踩的坑"></a>2.6 容易踩的坑</h2><ul>
+<li><strong>只调 <code>retries</code> 不调超时</strong>：总重试时长受 <code>delivery.timeout.ms</code> 限制，默认 120s，超过就抛 <code>TimeoutException</code>，此时消息可能已经写成功——调用方按失败处理反而制造重复。</li>
+<li><strong>压缩算法与消费端不匹配</strong>：broker 只透传压缩批次，消费端要支持对应算法；换算法前先确认客户端版本。</li>
+<li><strong>大消息打爆批次</strong>：单条超过 <code>max.request.size</code>（默认 1MB）直接报错；Kafka 不适合传大文件，要另存对象存储只传引用。</li>
+<li><strong><code>acks=0</code> 用在业务消息上</strong>：丢了你也不知道，只适合埋点这类可丢数据。</li>
+</ul>
+<h2 id="2-7-自定义分区器与拦截器"><a href="#2-7-自定义分区器与拦截器" class="headerlink" title="2.7 自定义分区器与拦截器"></a>2.7 自定义分区器与拦截器</h2><p>默认分区器按 key 哈希、无 key 轮询。业务上需要”按地域分片””把小客户合并到一个分区”时，就得自己实现 <code>Partitioner</code>：</p>
+<pre class="line-numbers language-java" data-language="java"><code class="language-java"><span class="token keyword">public</span> <span class="token keyword">class</span> <span class="token class-name">RegionPartitioner</span> <span class="token keyword">implements</span> <span class="token class-name">Partitioner</span> <span class="token punctuation">&#123;</span>
+    <span class="token keyword">private</span> <span class="token keyword">final</span> <span class="token class-name">Map</span><span class="token generics"><span class="token punctuation">&lt;</span><span class="token class-name">String</span><span class="token punctuation">,</span> <span class="token class-name">Integer</span><span class="token punctuation">></span></span> regionMap <span class="token operator">=</span> <span class="token keyword">new</span> <span class="token class-name">HashMap</span><span class="token generics"><span class="token punctuation">&lt;</span><span class="token punctuation">></span></span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+    <span class="token annotation punctuation">@Override</span>
+    <span class="token keyword">public</span> <span class="token keyword">int</span> <span class="token function">partition</span><span class="token punctuation">(</span><span class="token class-name">String</span> topic<span class="token punctuation">,</span> <span class="token class-name">Object</span> key<span class="token punctuation">,</span> <span class="token keyword">byte</span><span class="token punctuation">[</span><span class="token punctuation">]</span> keyBytes<span class="token punctuation">,</span>
+                         <span class="token class-name">Object</span> value<span class="token punctuation">,</span> <span class="token keyword">byte</span><span class="token punctuation">[</span><span class="token punctuation">]</span> valueBytes<span class="token punctuation">,</span> <span class="token class-name">Cluster</span> cluster<span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+        <span class="token keyword">int</span> numPartitions <span class="token operator">=</span> cluster<span class="token punctuation">.</span><span class="token function">partitionsForTopic</span><span class="token punctuation">(</span>topic<span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token function">size</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+        <span class="token class-name">String</span> region <span class="token operator">=</span> <span class="token function">regionOf</span><span class="token punctuation">(</span>key<span class="token punctuation">.</span><span class="token function">toString</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>      <span class="token comment">// 从 key 解析地域</span>
+        <span class="token keyword">return</span> <span class="token class-name">Math</span><span class="token punctuation">.</span><span class="token function">abs</span><span class="token punctuation">(</span>region<span class="token punctuation">.</span><span class="token function">hashCode</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span> <span class="token operator">%</span> numPartitions<span class="token punctuation">;</span>   <span class="token comment">// 同地域落同一分区</span>
+    <span class="token punctuation">&#125;</span>
+
+    <span class="token annotation punctuation">@Override</span>
+    <span class="token keyword">public</span> <span class="token keyword">void</span> <span class="token function">close</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">&#123;</span> <span class="token punctuation">&#125;</span>
+
+    <span class="token annotation punctuation">@Override</span>
+    <span class="token keyword">public</span> <span class="token keyword">void</span> <span class="token function">configure</span><span class="token punctuation">(</span><span class="token class-name">Map</span><span class="token generics"><span class="token punctuation">&lt;</span><span class="token class-name">String</span><span class="token punctuation">,</span> <span class="token operator">?</span><span class="token punctuation">></span></span> configs<span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+        <span class="token comment">// 可在此读取 regionMap 等外部配置</span>
+    <span class="token punctuation">&#125;</span>
+<span class="token punctuation">&#125;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<p><code>configure</code> 里不要做阻塞的远程调用，它在初始化阶段执行，卡住会拖慢所有发送线程。拦截器（<code>ProducerInterceptor</code>）适合做统一打标、埋点、脱敏，注意它在发送线程上串行执行，里面做重活等于给自己上锁。</p>
+<p><strong>分区器改了要慎用</strong>：已经发出去的历史消息还在旧分区，新分区器只影响后续消息，同 key 的消费者可能在新旧分区里各有一份。</p>
+<h2 id="2-8-官方资料"><a href="#2-8-官方资料" class="headerlink" title="2.8 官方资料"></a>2.8 官方资料</h2><ul>
+<li>Producer 配置全表：<a target="_blank" rel="noopener" href="https://kafka.apache.org/documentation/#producerconfigs">https://kafka.apache.org/documentation/#producerconfigs</a></li>
+<li>幂等与事务设计：<a target="_blank" rel="noopener" href="https://kafka.apache.org/documentation/#design_ha">https://kafka.apache.org/documentation/#design_ha</a></li>
+<li>消息交付语义：<a target="_blank" rel="noopener" href="https://kafka.apache.org/documentation/#semantics">https://kafka.apache.org/documentation/#semantics</a></li>
+</ul>
+<h2 id="2-9-清单"><a href="#2-9-清单" class="headerlink" title="2.9 清单"></a>2.9 清单</h2><ol>
+<li><code>acks</code>、<code>retries</code>、幂等三件套要一起配，单配一项没有可靠性保证</li>
+<li><code>acks=all</code> 的实际安全性取决于 <code>min.insync.replicas</code>，生产一般 2&#x2F;3 组合</li>
+<li>攒批靠 <code>batch.size</code> + <code>linger.ms</code>，看平均批次字节调，不是看默认值</li>
+<li>幂等生产者会锁死 <code>acks=all</code> 与在途请求上限，这是必要约束</li>
+<li>事务适合跨 Topic 原子写，常规业务用幂等 + 下游幂等更划算</li>
+<li>顺序只在分区内成立，重试要保序就得限制在途请求</li>
+<li>重试超时后抛异常不代表没写入，调用方务必按幂等处理</li>
+<li>自定义分区器只影响新消息，切换后同 key 可能跨新旧分区</li>
+<li>拦截器在发送线程串行执行，别在里面做远程调用或重计算</li>
+</ol>
+</div>
+
+  <div class="mb-foot">
+    <a href="/phone/">返回手机首页</a>
+    <a href="/phone/tags/">星迹索引</a>
+  </div>
+</div>
+
+
+<script>
+  /* 作用：懒加载本地 mermaid 库；无 mermaid 代码块时不加载 */
+  function loadLocalMermaid(){
+    return new Promise(function(resolve, reject){
+      if(window.mermaid) return resolve(window.mermaid);
+      var s = document.createElement('script');
+      s.src = '/js/third-party/mermaid/mermaid.min.js?v=10';
+      s.onload = function(){ resolve(window.mermaid); };
+      s.onerror = function(){ reject(new Error('mermaid local load failed')); };
+      document.head.appendChild(s);
+    });
+  }
+
+  /* 作用：把 ```mermaid 代码块替换成 SVG 图（手机端字号略小、图可横向滚动） */
+  async function renderMermaidDiagram(){
+    var blocks = document.querySelectorAll('pre[class*="language-mermaid"]');
+    if(!blocks.length) return;
+    var mermaid;
+    try { mermaid = await loadLocalMermaid(); }
+    catch(e){ console.warn('[mermaid] 本地库加载失败：', e); return; }
+
+    mermaid.initialize({
+      startOnLoad: false,
+      theme: 'base',
+      themeVariables: {
+        darkMode: true,
+        background: 'transparent',
+        fontFamily: '"Microsoft YaHei", "PingFang SC", "Segoe UI", sans-serif',
+        fontSize: '12px',
+        primaryColor: '#062f3d',
+        primaryTextColor: '#d6f6ff',
+        primaryBorderColor: '#00eeff',
+        secondaryColor: '#04222d',
+        tertiaryColor: '#04222d',
+        mainBkg: '#062f3d',
+        nodeBorder: '#00eeff',
+        clusterBkg: '#02161f',
+        clusterBorder: '#00eeff55',
+        lineColor: '#00eeff',
+        textColor: '#c0e8ff',
+        edgeLabelBackground: '#02161f'
+      },
+      flowchart: { curve: 'basis', useMaxWidth: false, htmlLabels: false, nodeSpacing: 30, rankSpacing: 40, padding: 10 }
+    });
+
+    var targets = [];
+    blocks.forEach(function(el){
+      var codeEl = el.querySelector('code');
+      if(!codeEl) return;
+      var div = document.createElement('div');
+      div.className = 'mermaid';
+      div.textContent = codeEl.textContent;
+      el.parentNode.replaceChild(div, el);
+      targets.push(div);
+    });
+    if(!targets.length) return;
+    try { await mermaid.run({ nodes: targets }); }
+    catch(e){ console.warn('[mermaid] 渲染失败：', e); }
+  }
+  /* 作用：多次触发兜底（延迟重试 + DOM 变化），防止某次时机没跑到导致图表留在代码块 */
+  var mmBusy = false;
+  function scheduleMermaid(){
+    if(mmBusy) return;
+    mmBusy = true;
+    renderMermaidDiagram().then(function(){ mmBusy = false; }, function(){ mmBusy = false; });
+  }
+  scheduleMermaid();
+  window.addEventListener('load', scheduleMermaid);
+  [1000, 3000, 8000].forEach(function(ms){ setTimeout(scheduleMermaid, ms); });
+  if(document.readyState !== 'loading') scheduleMermaid();
+  if(window.MutationObserver){
+    var mmTimer = null;
+    var mmObserver = new MutationObserver(function(){
+      clearTimeout(mmTimer);
+      mmTimer = setTimeout(scheduleMermaid, 400);
+    });
+    mmObserver.observe(document.querySelector('.mb-article') || document.body, { childList: true, subtree: true });
+  }
+</script>
+</body>
+</html>

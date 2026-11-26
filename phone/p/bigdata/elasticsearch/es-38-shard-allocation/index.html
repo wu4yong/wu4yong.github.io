@@ -1,0 +1,306 @@
+<!--
+  ============================================
+  手机端 · 文章原文页
+  文件：phone/post.njk
+  适用终端：手机端（路由 /phone/p/<slug>/，由 scripts/phone-routes.js 生成）
+  作用：手机阅读单篇文章；单列布局、无侧栏无雷达，替代电脑端 post.njk
+        数据由生成期算好：page.item = { title, dateStr, content, cats, tags }
+  样式依赖：source/css/theme/phone/common.css、source/css/theme/phone/list.css
+  组件依赖：phone/_components/Particles.njk
+  最后修改：2026-11-11
+  ============================================
+-->
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="color-scheme" content="dark">
+  <meta name="theme-color" content="#020817">
+  <!-- 首帧兜底：浏览器默认画布是白的，样式未解析前会闪一下白。这条规则先锁死深空底色 -->
+  <style>html{background-color:#020817}</style>
+  <title>ES38-分片分配与再平衡 - 时空秘境</title>
+  <!-- 手机端样式：基础 + 列表/正文，外链引入（源文件 source/css/theme/phone/） -->
+  <link rel="stylesheet" href="/css/theme/phone/common.css">
+  <link rel="stylesheet" href="/css/theme/phone/list.css">
+<meta name="generator" content="Hexo 8.1.2"></head>
+<body>
+<div class="mb-shell">
+  <!--
+  ============================================
+  手机端星空粒子组件
+  文件：Particles.njk
+  适用终端：手机端
+  作用：Particles.njk 的手机端副本（nunjucks 子目录 include 取不到上级）
+        参数与电脑端 _components/Particles.njk 保持一致：
+        粒子 95 / 连线 118px / opacity 0.32，外加星座层与零星闪烁层
+  最后修改：2026-11-12
+  ============================================
+--><!-- z-index 必须是 0：负层级会被 body 不透明背景盖住，粒子在跑却看不见 -->
+<div id="particles" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 0; pointer-events: none;"></div>
+<!-- 星座层（与首页同一套：随机零星散布星座图形 + 偶尔闪烁的小星） -->
+<div id="constellations" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 1; pointer-events: none;" aria-hidden="true"></div>
+<script src="/js/particles.min.js"></script>
+<script>
+particlesJS("particles", {
+  particles: {
+    number: {
+      value: 95,
+      density: {
+        enable: true,
+        value_area: 800
+      }
+    },
+    color: {
+      value: "#00eeff"
+    },
+    shape: {
+      type: "circle",
+      stroke: {
+        width: 0,
+        color: "#000000"
+      }
+    },
+    opacity: {
+      value: 0.6,
+      random: true,
+      anim: {
+        enable: true,
+        speed: 0.5,
+        opacity_min: 0.1,
+        sync: false
+      }
+    },
+    size: {
+      value: 3,
+      random: true,
+      anim: {
+        enable: true,
+        speed: 2,
+        size_min: 0.1,
+        sync: false
+      }
+    },
+    line_linked: {
+      enable: true,
+      distance: 118,
+      color: "#00eeff",
+      opacity: 0.32,
+      width: 1
+    },
+    move: {
+      enable: true,
+      speed: 0.8,
+      direction: "none",
+      random: true,
+      straight: false,
+      out_mode: "out",
+      bounce: false,
+      attract: {
+        enable: true,
+        rotateX: 600,
+        rotateY: 1200
+      }
+    }
+  },
+  interactivity: {
+    detect_on: "canvas",
+    events: {
+      onhover: {
+        enable: true,
+        mode: "grab"       // 手指按住时粒子聚集
+      },
+      onclick: {
+        enable: true,
+        mode: "push"       // 点击时产生新粒子
+      },
+      resize: true
+    },
+    modes: {
+      grab: {
+        distance: 200,
+        line_linked: {
+          opacity: 1
+        }
+      },
+      push: {
+        particles_nb: 6
+      }
+    }
+  },
+  retina_detect: true
+});
+</script>
+<!-- 星座 + 零星闪烁层：与电脑端共用同一份绘制脚本 -->
+<script src="/js/theme/home/starfield.js"></script>
+
+
+  <div class="mb-top">
+    <a class="mb-back" href="/phone/">← 返回手机首页</a>
+    <span class="mb-sub" style="margin:0">2024-01-15</span>
+  </div>
+
+  <h1 class="mb-title">ES38-分片分配与再平衡</h1>
+  <div class="mb-sub">
+    分类：bigdata · elasticsearch
+     ｜ 标签：Elasticsearch · 系统课
+  </div>
+
+  <div class="mb-article"><div class="essay-banner essay-elasticsearch"></div>
+
+<h1 id="分片分配与再平衡：磁盘水位、分配过滤与手工-reroute"><a href="#分片分配与再平衡：磁盘水位、分配过滤与手工-reroute" class="headerlink" title="分片分配与再平衡：磁盘水位、分配过滤与手工 reroute"></a>分片分配与再平衡：磁盘水位、分配过滤与手工 reroute</h1><p>分片去哪里，是 master 算出来的，不是你想放哪就放哪。</p>
+<p>但你可以用三组开关影响它：<strong>磁盘水位</strong>（硬约束）、<strong>分配过滤</strong>（倾向）、<strong>reroute</strong>（手工强制）。</p>
+<!-- 配图 38-1：待生成，放到图床同名路径后启用下面一行 -->
+<blockquote>
+<p><strong>配图 38-1｜提示词</strong>：三台数据节点的磁盘条并排，分别填充到 60%、88%、96%，对应三条水位线 <code>low 85%</code>（琥珀）、<code>high 90%</code>（橙）、<code>flood_stage 95%</code>（红），96% 那台旁边标注「索引转为 read_only_allow_delete」。下方一排开关：<code>index.routing.allocation.require: rack_id</code>、<code>cluster.routing.rebalance.enable</code>、<code>POST _cluster/reroute</code>。深色星空背景。</p>
+</blockquote>
+<h2 id="一、学习目标"><a href="#一、学习目标" class="headerlink" title="一、学习目标"></a>一、学习目标</h2><ol>
+<li>记住三档磁盘水位的官方默认值与触发后果；</li>
+<li>会用 <code>index.routing.allocation.*</code> 做「指定&#x2F;排除节点」；</li>
+<li>知道 <code>index.number_of_shards</code> 建索引后不可改；</li>
+<li>会用手工 <code>reroute</code> 处理卡住的分片。</li>
+</ol>
+<h2 id="二、前置知识"><a href="#二、前置知识" class="headerlink" title="二、前置知识"></a>二、前置知识</h2><div class="data-grid data-grid-link-table"><div class="grid-header"><div class="grid-cell">需要掌握</div><div class="grid-cell">到什么程度</div><div class="grid-cell">出处</div></div><div class="grid-row"><div class="grid-cell">分片&#x2F;副本</div><div class="grid-cell">知道主副分片</div><div class="grid-cell">M1-5</div></div><div class="grid-row"><div class="grid-cell">master 职责</div><div class="grid-cell">谁做分配决策</div><div class="grid-cell">M6-1</div></div></div>
+
+<h2 id="三、理论讲解"><a href="#三、理论讲解" class="headerlink" title="三、理论讲解"></a>三、理论讲解</h2><div class="data-grid data-grid-link-table"><div class="grid-header"><div class="grid-cell">设置</div><div class="grid-cell">默认</div><div class="grid-cell">作用</div></div><div class="grid-row"><div class="grid-cell"><code>cluster.routing.allocation.disk.watermark.low</code></div><div class="grid-cell">85%</div><div class="grid-cell">超过则不再往该节点分新分片</div></div><div class="grid-row"><div class="grid-cell"><code>...watermark.high</code></div><div class="grid-cell">90%</div><div class="grid-cell">超过则尝试把分片迁走</div></div><div class="grid-row"><div class="grid-cell"><code>...watermark.flood_stage</code></div><div class="grid-cell">95%</div><div class="grid-cell">超过则索引变 <code>read_only_allow_delete</code></div></div><div class="grid-row"><div class="grid-cell"><code>cluster.routing.allocation.enable</code></div><div class="grid-cell"><code>all</code></div><div class="grid-cell">全体分配开关（<code>primaries</code>&#x2F;<code>new_primaries</code>&#x2F;<code>none</code>）</div></div><div class="grid-row"><div class="grid-cell"><code>index.routing.allocation.enable</code></div><div class="grid-cell"><code>all</code></div><div class="grid-cell">单索引分配开关</div></div><div class="grid-row"><div class="grid-cell"><code>index.routing.allocation.require</code></div><div class="grid-cell">—</div><div class="grid-cell">必须满足的节点属性（如 <code>rack_id: r1</code>）</div></div><div class="grid-row"><div class="grid-cell"><code>index.routing.allocation.include</code> &#x2F; <code>exclude</code></div><div class="grid-cell">—</div><div class="grid-cell">包含&#x2F;排除节点名或属性</div></div><div class="grid-row"><div class="grid-cell"><code>index.routing.allocation.total_shards_per_node</code></div><div class="grid-cell">-1</div><div class="grid-cell">每节点该索引分片上限</div></div><div class="grid-row"><div class="grid-cell"><code>cluster.routing.rebalance.enable</code></div><div class="grid-cell"><code>all</code></div><div class="grid-cell">是否自动再平衡</div></div></div>
+
+<h2 id="四、原理拆解：为什么水位能「卡住」写入"><a href="#四、原理拆解：为什么水位能「卡住」写入" class="headerlink" title="四、原理拆解：为什么水位能「卡住」写入"></a>四、原理拆解：为什么水位能「卡住」写入</h2><p>磁盘写满会让节点崩，所以官方用三档水位做<strong>递进防御</strong>：85% 只影响「新分片落位」，90% 开始「迁走」，95% 直接把索引置为只读——这是保护性动作，不是故障。此时写入会失败并提示 <code>read_only_allow_delete</code>，正确做法是清磁盘后手工解除：</p>
+<pre class="line-numbers language-bash" data-language="bash"><code class="language-bash">PUT /goods/_settings
+<span class="token punctuation">&#123;</span> <span class="token string">"index.blocks.read_only_allow_delete"</span><span class="token builtin class-name">:</span> null <span class="token punctuation">&#125;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span></span></code></pre>
+
+<p>再平衡的逻辑是「让分片分布尽量均匀」，它会在节点增删、水位变化后自动触发。所以<strong>迁移期间不要开自动再平衡做人工干预</strong>——两件事同时做会互相打架。</p>
+<h2 id="五、场景说明"><a href="#五、场景说明" class="headerlink" title="五、场景说明"></a>五、场景说明</h2><div class="data-grid data-grid-link-table"><div class="grid-header"><div class="grid-cell">需求</div><div class="grid-cell">手段</div></div><div class="grid-row"><div class="grid-cell">把某索引固定到 SSD 节点</div><div class="grid-cell"><code>index.routing.allocation.require: {&quot;disk_type&quot;:&quot;ssd&quot;}</code></div></div><div class="grid-row"><div class="grid-cell">升级节点前先迁走分片</div><div class="grid-cell">目标节点 <code>exclude</code>，或反向用 <code>require</code></div></div><div class="grid-row"><div class="grid-cell">机房迁移</div><div class="grid-cell">用属性过滤 + 逐个索引切换</div></div><div class="grid-row"><div class="grid-cell">分片卡在 unassigned</div><div class="grid-cell"><code>_cluster/allocation/explain</code> → 再决定 reroute</div></div><div class="grid-row"><div class="grid-cell">临时冻结分配</div><div class="grid-cell"><code>index.routing.allocation.enable: none</code></div></div></div>
+
+<h2 id="六、实操"><a href="#六、实操" class="headerlink" title="六、实操"></a>六、实操</h2><pre class="line-numbers language-bash" data-language="bash"><code class="language-bash"><span class="token comment"># 1) 查磁盘水位默认值</span>
+<span class="token function">curl</span> <span class="token parameter variable">-s</span> <span class="token string">"http://localhost:9200/_cluster/settings?include_defaults=true&amp;flat_settings=true"</span> <span class="token operator">|</span> Select-String <span class="token parameter variable">-Pattern</span> <span class="token string">'disk.watermark'</span>
+
+<span class="token comment"># 2) 把索引固定在热节点</span>
+<span class="token function">curl</span> <span class="token parameter variable">-s</span> <span class="token parameter variable">-X</span> PUT <span class="token string">"http://localhost:9200/goods/_settings"</span> <span class="token parameter variable">-H</span> <span class="token string">'Content-Type: application/json'</span> <span class="token parameter variable">-d</span> <span class="token string">'
+&#123; "index.routing.allocation.require": &#123; "data_tier": "hot" &#125; &#125;'</span>
+
+<span class="token comment"># 3) 查为什么有分片没分配</span>
+<span class="token function">curl</span> <span class="token parameter variable">-s</span> <span class="token parameter variable">-X</span> GET <span class="token string">"http://localhost:9200/_cluster/allocation/explain?pretty"</span>
+
+<span class="token comment"># 4) 手工强制分配（仅在确认数据存在时）</span>
+<span class="token function">curl</span> <span class="token parameter variable">-s</span> <span class="token parameter variable">-X</span> POST <span class="token string">"http://localhost:9200/_cluster/reroute?pretty"</span> <span class="token parameter variable">-H</span> <span class="token string">'Content-Type: application/json'</span> <span class="token parameter variable">-d</span> <span class="token string">'
+&#123; "commands": [ &#123; "allocate_stale_primary": &#123;
+    "index": "goods", "shard": 0, "node": "data-hot-1", "accept_data_loss": true &#125; &#125; ] &#125;'</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<p><code>accept_data_loss: true</code> 是明确的免责声明——只有在你确认该分片数据可丢弃时才用。</p>
+<h2 id="七、常见坑"><a href="#七、常见坑" class="headerlink" title="七、常见坑"></a>七、常见坑</h2><ol>
+<li><strong>想改 <code>number_of_shards</code></strong>：建索引后不可改，只能 reindex &#x2F; shrink &#x2F; split。</li>
+<li><strong>95% 只读当成故障</strong>：是保护机制，清盘后松开 <code>read_only_allow_delete</code>。</li>
+<li><strong><code>require</code> 写成节点名</strong>：写的是 <code>node.attr.*</code> 的属性值，不是节点名（节点名用 <code>include</code>）。</li>
+<li><strong>人工 reroute 与自动再平衡同时进行</strong>：结果来回搬，白耗 IO。</li>
+<li><strong><code>total_shards_per_node</code> 设太小</strong>：副本无处安放，长期 yellow。</li>
+<li><strong>分配过滤设完忘了清理</strong>：后续扩容时新节点永远接不到分片。</li>
+</ol>
+<h2 id="八、课后小结"><a href="#八、课后小结" class="headerlink" title="八、课后小结"></a>八、课后小结</h2><ol>
+<li>水位三档：85% 不落新片、90% 迁走、95% 只读。</li>
+<li><code>enable</code> 分集群级与索引级，<code>none</code> 可临时冻结分配。</li>
+<li><code>require/include/exclude</code> 写的是属性值与节点名，别混。</li>
+<li><code>number_of_shards</code> 静态，只能 reindex&#x2F;shrink&#x2F;split。</li>
+<li>分片卡住先用 <code>explain</code> 查原因，再决定是否强制分配。</li>
+</ol>
+<h2 id="九、思考题"><a href="#九、思考题" class="headerlink" title="九、思考题"></a>九、思考题</h2><ol>
+<li>一台节点磁盘到 91%，集群会发生什么？你的处置顺序是什么？</li>
+<li><code>index.routing.allocation.require</code> 与 <code>include</code> 的语义差别在哪？何时选哪个？</li>
+<li>为什么官方把 <code>number_of_shards</code> 设计为不可改？从路由公式角度解释。</li>
+</ol>
+<h2 id="十、官方资料"><a href="#十、官方资料" class="headerlink" title="十、官方资料"></a>十、官方资料</h2><ul>
+<li>Cluster-level shard allocation：<a target="_blank" rel="noopener" href="https://www.elastic.co/guide/en/elasticsearch/reference/current/modules-cluster.html">https://www.elastic.co/guide/en/elasticsearch/reference/current/modules-cluster.html</a></li>
+<li>Index-level shard allocation filtering：<a target="_blank" rel="noopener" href="https://www.elastic.co/guide/en/elasticsearch/reference/current/shard-allocation-filtering.html">https://www.elastic.co/guide/en/elasticsearch/reference/current/shard-allocation-filtering.html</a></li>
+<li>Disk-based shard allocation：<a target="_blank" rel="noopener" href="https://www.elastic.co/guide/en/elasticsearch/reference/current/disk-allocator.html">https://www.elastic.co/guide/en/elasticsearch/reference/current/disk-allocator.html</a></li>
+<li>Cluster reroute API：<a target="_blank" rel="noopener" href="https://www.elastic.co/guide/en/elasticsearch/reference/current/cluster-reroute.html">https://www.elastic.co/guide/en/elasticsearch/reference/current/cluster-reroute.html</a></li>
+</ul>
+<p>上一篇：<a href="/2024/01/12/bigdata/elasticsearch/es-37-discovery-election/">M6-2 发现与选举</a> ｜ 下一篇：<a href="/2024/01/18/bigdata/elasticsearch/es-39-health-diagnostics/">M6-4 集群健康与诊断工具</a> ｜ <a href="/2023/09/22/bigdata/elasticsearch/es-00-series-index/">总目录</a></p>
+</div>
+
+  <div class="mb-foot">
+    <a href="/phone/">返回手机首页</a>
+    <a href="/phone/tags/">星迹索引</a>
+  </div>
+</div>
+
+
+<script>
+  /* 作用：懒加载本地 mermaid 库；无 mermaid 代码块时不加载 */
+  function loadLocalMermaid(){
+    return new Promise(function(resolve, reject){
+      if(window.mermaid) return resolve(window.mermaid);
+      var s = document.createElement('script');
+      s.src = '/js/third-party/mermaid/mermaid.min.js?v=10';
+      s.onload = function(){ resolve(window.mermaid); };
+      s.onerror = function(){ reject(new Error('mermaid local load failed')); };
+      document.head.appendChild(s);
+    });
+  }
+
+  /* 作用：把 ```mermaid 代码块替换成 SVG 图（手机端字号略小、图可横向滚动） */
+  async function renderMermaidDiagram(){
+    var blocks = document.querySelectorAll('pre[class*="language-mermaid"]');
+    if(!blocks.length) return;
+    var mermaid;
+    try { mermaid = await loadLocalMermaid(); }
+    catch(e){ console.warn('[mermaid] 本地库加载失败：', e); return; }
+
+    mermaid.initialize({
+      startOnLoad: false,
+      theme: 'base',
+      themeVariables: {
+        darkMode: true,
+        background: 'transparent',
+        fontFamily: '"Microsoft YaHei", "PingFang SC", "Segoe UI", sans-serif',
+        fontSize: '12px',
+        primaryColor: '#062f3d',
+        primaryTextColor: '#d6f6ff',
+        primaryBorderColor: '#00eeff',
+        secondaryColor: '#04222d',
+        tertiaryColor: '#04222d',
+        mainBkg: '#062f3d',
+        nodeBorder: '#00eeff',
+        clusterBkg: '#02161f',
+        clusterBorder: '#00eeff55',
+        lineColor: '#00eeff',
+        textColor: '#c0e8ff',
+        edgeLabelBackground: '#02161f'
+      },
+      flowchart: { curve: 'basis', useMaxWidth: false, htmlLabels: false, nodeSpacing: 30, rankSpacing: 40, padding: 10 }
+    });
+
+    var targets = [];
+    blocks.forEach(function(el){
+      var codeEl = el.querySelector('code');
+      if(!codeEl) return;
+      var div = document.createElement('div');
+      div.className = 'mermaid';
+      div.textContent = codeEl.textContent;
+      el.parentNode.replaceChild(div, el);
+      targets.push(div);
+    });
+    if(!targets.length) return;
+    try { await mermaid.run({ nodes: targets }); }
+    catch(e){ console.warn('[mermaid] 渲染失败：', e); }
+  }
+  /* 作用：多次触发兜底（延迟重试 + DOM 变化），防止某次时机没跑到导致图表留在代码块 */
+  var mmBusy = false;
+  function scheduleMermaid(){
+    if(mmBusy) return;
+    mmBusy = true;
+    renderMermaidDiagram().then(function(){ mmBusy = false; }, function(){ mmBusy = false; });
+  }
+  scheduleMermaid();
+  window.addEventListener('load', scheduleMermaid);
+  [1000, 3000, 8000].forEach(function(ms){ setTimeout(scheduleMermaid, ms); });
+  if(document.readyState !== 'loading') scheduleMermaid();
+  if(window.MutationObserver){
+    var mmTimer = null;
+    var mmObserver = new MutationObserver(function(){
+      clearTimeout(mmTimer);
+      mmTimer = setTimeout(scheduleMermaid, 400);
+    });
+    mmObserver.observe(document.querySelector('.mb-article') || document.body, { childList: true, subtree: true });
+  }
+</script>
+</body>
+</html>

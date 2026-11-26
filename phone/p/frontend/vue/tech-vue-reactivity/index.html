@@ -1,0 +1,412 @@
+<!--
+  ============================================
+  手机端 · 文章原文页
+  文件：phone/post.njk
+  适用终端：手机端（路由 /phone/p/<slug>/，由 scripts/phone-routes.js 生成）
+  作用：手机阅读单篇文章；单列布局、无侧栏无雷达，替代电脑端 post.njk
+        数据由生成期算好：page.item = { title, dateStr, content, cats, tags }
+  样式依赖：source/css/theme/phone/common.css、source/css/theme/phone/list.css
+  组件依赖：phone/_components/Particles.njk
+  最后修改：2026-11-11
+  ============================================
+-->
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="color-scheme" content="dark">
+  <meta name="theme-color" content="#020817">
+  <!-- 首帧兜底：浏览器默认画布是白的，样式未解析前会闪一下白。这条规则先锁死深空底色 -->
+  <style>html{background-color:#020817}</style>
+  <title>技术总结 Vue 响应式原理 - 时空秘境</title>
+  <!-- 手机端样式：基础 + 列表/正文，外链引入（源文件 source/css/theme/phone/） -->
+  <link rel="stylesheet" href="/css/theme/phone/common.css">
+  <link rel="stylesheet" href="/css/theme/phone/list.css">
+<meta name="generator" content="Hexo 8.1.2"></head>
+<body>
+<div class="mb-shell">
+  <!--
+  ============================================
+  手机端星空粒子组件
+  文件：Particles.njk
+  适用终端：手机端
+  作用：Particles.njk 的手机端副本（nunjucks 子目录 include 取不到上级）
+        参数与电脑端 _components/Particles.njk 保持一致：
+        粒子 95 / 连线 118px / opacity 0.32，外加星座层与零星闪烁层
+  最后修改：2026-11-12
+  ============================================
+--><!-- z-index 必须是 0：负层级会被 body 不透明背景盖住，粒子在跑却看不见 -->
+<div id="particles" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 0; pointer-events: none;"></div>
+<!-- 星座层（与首页同一套：随机零星散布星座图形 + 偶尔闪烁的小星） -->
+<div id="constellations" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 1; pointer-events: none;" aria-hidden="true"></div>
+<script src="/js/particles.min.js"></script>
+<script>
+particlesJS("particles", {
+  particles: {
+    number: {
+      value: 95,
+      density: {
+        enable: true,
+        value_area: 800
+      }
+    },
+    color: {
+      value: "#00eeff"
+    },
+    shape: {
+      type: "circle",
+      stroke: {
+        width: 0,
+        color: "#000000"
+      }
+    },
+    opacity: {
+      value: 0.6,
+      random: true,
+      anim: {
+        enable: true,
+        speed: 0.5,
+        opacity_min: 0.1,
+        sync: false
+      }
+    },
+    size: {
+      value: 3,
+      random: true,
+      anim: {
+        enable: true,
+        speed: 2,
+        size_min: 0.1,
+        sync: false
+      }
+    },
+    line_linked: {
+      enable: true,
+      distance: 118,
+      color: "#00eeff",
+      opacity: 0.32,
+      width: 1
+    },
+    move: {
+      enable: true,
+      speed: 0.8,
+      direction: "none",
+      random: true,
+      straight: false,
+      out_mode: "out",
+      bounce: false,
+      attract: {
+        enable: true,
+        rotateX: 600,
+        rotateY: 1200
+      }
+    }
+  },
+  interactivity: {
+    detect_on: "canvas",
+    events: {
+      onhover: {
+        enable: true,
+        mode: "grab"       // 手指按住时粒子聚集
+      },
+      onclick: {
+        enable: true,
+        mode: "push"       // 点击时产生新粒子
+      },
+      resize: true
+    },
+    modes: {
+      grab: {
+        distance: 200,
+        line_linked: {
+          opacity: 1
+        }
+      },
+      push: {
+        particles_nb: 6
+      }
+    }
+  },
+  retina_detect: true
+});
+</script>
+<!-- 星座 + 零星闪烁层：与电脑端共用同一份绘制脚本 -->
+<script src="/js/theme/home/starfield.js"></script>
+
+
+  <div class="mb-top">
+    <a class="mb-back" href="/phone/">← 返回手机首页</a>
+    <span class="mb-sub" style="margin:0">2021-01-16</span>
+  </div>
+
+  <h1 class="mb-title">技术总结 Vue 响应式原理</h1>
+  <div class="mb-sub">
+    分类：frontend · vue
+     ｜ 标签：web
+  </div>
+
+  <div class="mb-article"><div class="essay-banner essay-tech"></div>
+
+<h1 id="技术文档总结"><a href="#技术文档总结" class="headerlink" title="技术文档总结"></a>技术文档总结</h1><h2 id="搞懂-Vue-响应式：依赖收集、触发更新与跨版本实现差异"><a href="#搞懂-Vue-响应式：依赖收集、触发更新与跨版本实现差异" class="headerlink" title="搞懂 Vue 响应式：依赖收集、触发更新与跨版本实现差异"></a>搞懂 Vue 响应式：依赖收集、触发更新与跨版本实现差异</h2><h2 id="一、响应式数据"><a href="#一、响应式数据" class="headerlink" title="一、响应式数据"></a>一、响应式数据</h2><ul>
+<li>当数据发生变化时，会自动执行某些动作去更新 DOM 节点(需要明确更新 DOM 的时机，也就是说明需要拦截<code>响应式数据</code>的<code>设置</code>操作，需要明确有哪些 DOM 需要被更新，也就是说明需要拦截<code>响应式数据</code>的<code>读取</code>操作)</li>
+<li><code>Vue2</code> 使用 <code>Object.defineProperty</code> 实现数据代理，<code>Vue3</code> 使用 <code>Proxy</code> 实现数据代理</li>
+</ul>
+<h2 id="二、Vue2-的响应式原理"><a href="#二、Vue2-的响应式原理" class="headerlink" title="二、Vue2 的响应式原理"></a>二、Vue2 的响应式原理</h2><h3 id="2-1-Observer-类"><a href="#2-1-Observer-类" class="headerlink" title="2.1 Observer 类"></a>2.1 Observer 类</h3><pre class="line-numbers language-javascript" data-language="javascript"><code class="language-javascript"><span class="token keyword">function</span> <span class="token function">defineReactive</span><span class="token punctuation">(</span><span class="token parameter">obj<span class="token punctuation">,</span> key<span class="token punctuation">,</span> value</span><span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+  <span class="token comment">// 每个 key 值对应的依赖，存储在 dep 实例中</span>
+  <span class="token keyword">let</span> dep <span class="token operator">=</span> <span class="token keyword">new</span> <span class="token class-name">Dep</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  Object<span class="token punctuation">.</span><span class="token function">defineProperty</span><span class="token punctuation">(</span>obj<span class="token punctuation">,</span> key<span class="token punctuation">,</span> <span class="token punctuation">&#123;</span>
+    <span class="token literal-property property">configurable</span><span class="token operator">:</span> <span class="token boolean">true</span><span class="token punctuation">,</span>
+    <span class="token literal-property property">enumerable</span><span class="token operator">:</span> <span class="token boolean">true</span><span class="token punctuation">,</span>
+    <span class="token function">get</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+      <span class="token comment">// 收集依赖</span>
+      dep<span class="token punctuation">.</span><span class="token function">depend</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+      <span class="token keyword">return</span> value<span class="token punctuation">;</span>
+    <span class="token punctuation">&#125;</span><span class="token punctuation">,</span>
+    <span class="token function">set</span><span class="token punctuation">(</span>newValue<span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+      val <span class="token operator">=</span> newValue<span class="token punctuation">;</span>
+      <span class="token comment">// 触发依赖</span>
+      dep<span class="token punctuation">.</span><span class="token function">notify</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token punctuation">&#125;</span><span class="token punctuation">,</span>
+  <span class="token punctuation">&#125;</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">&#125;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<h3 id="2-2-Dep-类"><a href="#2-2-Dep-类" class="headerlink" title="2.2 Dep 类"></a>2.2 Dep 类</h3><ul>
+<li>可以简化看成是一个用来存储回调函数的数组</li>
+<li>Window.target 是一个全局变量，方便依赖的收集</li>
+</ul>
+<pre class="line-numbers language-javascript" data-language="javascript"><code class="language-javascript"><span class="token comment">// 定义一个 dep 类，专门用来管理依赖</span>
+<span class="token keyword">class</span> <span class="token class-name">Dep</span> <span class="token punctuation">&#123;</span>
+  <span class="token function">constructor</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+    <span class="token keyword">this</span><span class="token punctuation">.</span>subs <span class="token operator">=</span> <span class="token punctuation">[</span><span class="token punctuation">]</span><span class="token punctuation">;</span>
+  <span class="token punctuation">&#125;</span>
+  <span class="token function">addSub</span><span class="token punctuation">(</span><span class="token parameter">sub</span><span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+    <span class="token keyword">this</span><span class="token punctuation">.</span>subs<span class="token punctuation">.</span><span class="token function">push</span><span class="token punctuation">(</span>sub<span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token punctuation">&#125;</span>
+  <span class="token function">removeSub</span><span class="token punctuation">(</span><span class="token parameter">sub</span><span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+    <span class="token function">remove</span><span class="token punctuation">(</span><span class="token keyword">this</span><span class="token punctuation">.</span>subs<span class="token punctuation">,</span> sub<span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token punctuation">&#125;</span>
+  <span class="token function">depend</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+    <span class="token keyword">if</span> <span class="token punctuation">(</span>window<span class="token punctuation">.</span>target<span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+      <span class="token keyword">this</span><span class="token punctuation">.</span><span class="token function">addSub</span><span class="token punctuation">(</span>window<span class="token punctuation">.</span>target<span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token punctuation">&#125;</span>
+  <span class="token punctuation">&#125;</span>
+  <span class="token comment">// 循环触发 dep 实例中依赖的 update 方法</span>
+  <span class="token function">notify</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+    <span class="token keyword">const</span> subs <span class="token operator">=</span> <span class="token keyword">this</span><span class="token punctuation">.</span>subs<span class="token punctuation">.</span><span class="token function">slice</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token comment">// 循环的触发所有依赖</span>
+    <span class="token keyword">for</span> <span class="token punctuation">(</span><span class="token keyword">let</span> index <span class="token operator">=</span> <span class="token number">0</span><span class="token punctuation">;</span> index <span class="token operator">&lt;</span> subs<span class="token punctuation">.</span>length<span class="token punctuation">;</span> index<span class="token operator">++</span><span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+      subs<span class="token punctuation">[</span>i<span class="token punctuation">]</span><span class="token punctuation">.</span><span class="token function">update</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token punctuation">&#125;</span>
+<span class="token punctuation">&#125;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<h3 id="2-3-Watcher-类"><a href="#2-3-Watcher-类" class="headerlink" title="2.3 Watcher 类"></a>2.3 Watcher 类</h3><ul>
+<li>watcher 是一个中介的角色，数据发生变化时通知它，然后它再通知其他地方</li>
+<li>三种 watcher: 1. 组件的 render watcher 2. 计算属性 watcher 3. $watcher 对应的 watcher</li>
+</ul>
+<pre class="line-numbers language-javascript" data-language="javascript"><code class="language-javascript"><span class="token keyword">class</span> <span class="token class-name">Watcher</span> <span class="token punctuation">&#123;</span>
+  <span class="token function">constructor</span><span class="token punctuation">(</span><span class="token parameter">vm<span class="token punctuation">,</span> expOrFn<span class="token punctuation">,</span> callback</span><span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+    <span class="token keyword">this</span><span class="token punctuation">.</span>vm <span class="token operator">=</span> vm<span class="token punctuation">;</span>
+    <span class="token keyword">this</span><span class="token punctuation">.</span>callback <span class="token operator">=</span> callback<span class="token punctuation">;</span>
+
+    <span class="token comment">// 执行 this.getter() ，就可以读取某个属性的值</span>
+    <span class="token keyword">this</span><span class="token punctuation">.</span>getter <span class="token operator">=</span> <span class="token function">parsePath</span><span class="token punctuation">(</span>expOrFn<span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token comment">// 在实例化一个 watcher 实例的时候，会自动执行 get 方法</span>
+    <span class="token keyword">this</span><span class="token punctuation">.</span>value <span class="token operator">=</span> <span class="token keyword">this</span><span class="token punctuation">.</span><span class="token function">get</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token punctuation">&#125;</span>
+  <span class="token function">get</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+    window<span class="token punctuation">.</span>target <span class="token operator">=</span> <span class="token keyword">this</span><span class="token punctuation">;</span>
+    <span class="token keyword">let</span> value <span class="token operator">=</span> <span class="token keyword">this</span><span class="token punctuation">.</span><span class="token function">getter</span><span class="token punctuation">.</span><span class="token function">call</span><span class="token punctuation">(</span><span class="token keyword">this</span><span class="token punctuation">.</span>vm<span class="token punctuation">,</span> <span class="token keyword">this</span><span class="token punctuation">.</span>vm<span class="token punctuation">)</span><span class="token punctuation">;</span>
+    window<span class="token punctuation">.</span>target <span class="token operator">=</span> <span class="token keyword">undefined</span><span class="token punctuation">;</span>
+    <span class="token keyword">return</span> value<span class="token punctuation">;</span>
+  <span class="token punctuation">&#125;</span>
+  <span class="token function">update</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+    <span class="token keyword">const</span> oldValue <span class="token operator">=</span> <span class="token keyword">this</span><span class="token punctuation">.</span>value<span class="token punctuation">;</span>
+    <span class="token keyword">this</span><span class="token punctuation">.</span>value <span class="token operator">=</span> <span class="token keyword">this</span><span class="token punctuation">.</span><span class="token function">get</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token keyword">this</span><span class="token punctuation">.</span><span class="token function">callback</span><span class="token punctuation">.</span><span class="token function">call</span><span class="token punctuation">(</span><span class="token keyword">this</span><span class="token punctuation">.</span>vm<span class="token punctuation">,</span> <span class="token keyword">this</span><span class="token punctuation">.</span>value<span class="token punctuation">,</span> oldValue<span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token punctuation">&#125;</span>
+<span class="token punctuation">&#125;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<h3 id="2-4-响应式系统的整体流程"><a href="#2-4-响应式系统的整体流程" class="headerlink" title="2.4 响应式系统的整体流程"></a>2.4 响应式系统的整体流程</h3><p><img src="https://wu4yong.github.io/starry-images/assets/img/web/tech-vue-reactivity/img-01.webp" alt="响应式流程"></p>
+<ul>
+<li>(1) 页面初始化时</li>
+</ul>
+<ol>
+<li>Observer 类会附加到每一个 object 上。递归的调用 defineReactive 函数将每一个属性都通过 <code>Object.defineProperty()</code> 进行数据拦截。</li>
+<li>在<code>读取数据</code>时会<code>收集依赖</code>，在<code>修改数据</code>后会<code>触发依赖</code>。</li>
+<li>每一个属性都会拥有一个独立的 Dep 实例</li>
+</ol>
+<ul>
+<li>(2) 页面使用数据时</li>
+</ul>
+<ol>
+<li>使用响应式数据时会<code>实例化</code>一个 Watcher</li>
+<li>在 new Watcher 的过程中会<code>触发依赖收集</code>，从而将 watcher 实例放到响应式属性的 dep 中</li>
+</ol>
+<ul>
+<li>(3) 改变数据后</li>
+</ul>
+<ol>
+<li>改变数据会<code>触发依赖执行</code>，执行当前响应式属性的 dep 数组中的所有 watcher 的 update 方法</li>
+<li>watcher 的回调函数可能是执行<code>组件的 render 函数</code>，也可以是执行<code>用户自定义的回调函数</code></li>
+</ol>
+<h3 id="2-5-数组的响应式处理"><a href="#2-5-数组的响应式处理" class="headerlink" title="2.5 数组的响应式处理"></a>2.5 数组的响应式处理</h3><ul>
+<li>出于性能和业务场景（大多数情况下是通过方法来改变数组，而非直接操作 key&#x2F;index 来改变数组）的考虑。数组不会针对每一条数据使用 Object.defineProperty() 进行数据拦截。</li>
+<li>数组的响应式处理为在 <code>get</code> 中<code>收集依赖</code>，在<code>数组方法</code>中<code>触发依赖</code>。</li>
+<li>重写七个可改变数组的方法</li>
+</ul>
+<pre class="line-numbers language-javascript" data-language="javascript"><code class="language-javascript"><span class="token comment">// 一、基于 Array.prototype 实现重写数组方法</span>
+<span class="token keyword">const</span> arrayProto <span class="token operator">=</span> <span class="token class-name">Array</span><span class="token punctuation">.</span>prototype<span class="token punctuation">;</span>
+<span class="token keyword">const</span> arrayMethods <span class="token operator">=</span> Object<span class="token punctuation">.</span><span class="token function">create</span><span class="token punctuation">(</span>arrayProto<span class="token punctuation">)</span><span class="token punctuation">[</span>
+  <span class="token punctuation">(</span><span class="token string">"push"</span><span class="token punctuation">,</span> <span class="token string">"pop"</span><span class="token punctuation">,</span> <span class="token string">"shift"</span><span class="token punctuation">,</span> <span class="token string">"unshift"</span><span class="token punctuation">,</span> <span class="token string">"splice"</span><span class="token punctuation">,</span> <span class="token string">"sort"</span><span class="token punctuation">,</span> <span class="token string">"reverse"</span><span class="token punctuation">)</span>
+<span class="token punctuation">]</span><span class="token punctuation">.</span><span class="token function">forEach</span><span class="token punctuation">(</span><span class="token keyword">function</span> <span class="token punctuation">(</span><span class="token parameter">method</span><span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+  <span class="token comment">// 1. 借用 Array.prototype 上的方法, 实现原本的功能</span>
+  <span class="token comment">// 2. 在修改数据的同时发送通知</span>
+<span class="token punctuation">&#125;</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+<span class="token comment">// 二、使用__proto__ 替换响应式数组的原型</span>
+<span class="token keyword">const</span> arr <span class="token operator">=</span> <span class="token punctuation">[</span><span class="token punctuation">]</span><span class="token punctuation">;</span>
+arr<span class="token punctuation">.</span>__proto__ <span class="token operator">=</span> arrayMethods<span class="token punctuation">;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<h3 id="2-6-Vue2-响应式数据的缺陷"><a href="#2-6-Vue2-响应式数据的缺陷" class="headerlink" title="2.6 Vue2 响应式数据的缺陷"></a>2.6 Vue2 响应式数据的缺陷</h3><h3 id="1-缺陷的体现"><a href="#1-缺陷的体现" class="headerlink" title="(1) 缺陷的体现"></a>(1) 缺陷的体现</h3><ol>
+<li>由于 Vue 会在实例初始化的时候对 property 进行 getter&#x2F;setter 转化。所以只有在一开始就存在 data 中的数据才是响应式的。(比如在组件的 created, beforeCreate 钩子函数中为组件添加一个属性，这个数据不是响应式的数据)</li>
+<li>对象: Object.defineProperty 只能追踪一个属性<code>是否被更改</code>。在一个对象中<code>添加</code>一个新属性，使用 <code>delete 删除</code>一个属性的时候<code>不会触发响应式</code>。</li>
+<li>数组：push()、pop()、shift()、unshift()、splice()、sort()、reverse()称为变更方法，<code>会触发视图更新</code>。数组<code>长度的变化</code>是<code>非响应式</code>的。例如，<code>arr.length = 4</code>。通过<code>索引</code>来直接修改数组中的数据也是<code>非响应式</code>的。例如，<code>arr[2] = &#39;foo&#39;</code></li>
+</ol>
+<h3 id="2-缺陷的解决方案"><a href="#2-缺陷的解决方案" class="headerlink" title="(2) 缺陷的解决方案"></a>(2) 缺陷的解决方案</h3><pre class="line-numbers language-javascript" data-language="javascript"><code class="language-javascript"><span class="token comment">// 对象上使用 $set 方法，实际上就是 Vue 手动去调用响应式的方法，手动的将新增的属性变成响应式的</span>
+<span class="token template-string"><span class="token template-punctuation string">`</span><span class="token string">Vue.set(object, 'key', 'value')</span><span class="token template-punctuation string">`</span></span> <span class="token comment">// 对象上使用 $delete 方法，实际上就是 Vue 手动的去触发依赖，通知所有使用到该对象的组件去重新渲染</span>
+<span class="token template-string"><span class="token template-punctuation string">`</span><span class="token string">Vue.delete(object, 'key')</span><span class="token template-punctuation string">`</span></span><span class="token punctuation">;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span></span></code></pre>
+
+<h2 id="三、Vue3-的响应式原理"><a href="#三、Vue3-的响应式原理" class="headerlink" title="三、Vue3 的响应式原理"></a>三、Vue3 的响应式原理</h2><h3 id="3-1-使用-proxy-监听对象的行为"><a href="#3-1-使用-proxy-监听对象的行为" class="headerlink" title="3.1 使用 proxy 监听对象的行为"></a>3.1 使用 proxy 监听对象的行为</h3><pre class="line-numbers language-javascript" data-language="javascript"><code class="language-javascript"><span class="token comment">// 一、存储副作用函数的桶</span>
+<span class="token keyword">const</span> bucket <span class="token operator">=</span> <span class="token keyword">new</span> <span class="token class-name">Set</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+<span class="token comment">// 二、原始数据</span>
+<span class="token keyword">const</span> data <span class="token operator">=</span> <span class="token punctuation">&#123;</span> <span class="token literal-property property">text</span><span class="token operator">:</span> <span class="token string">"hello world"</span> <span class="token punctuation">&#125;</span><span class="token punctuation">;</span>
+
+<span class="token comment">// 三、对原始数据的代理</span>
+<span class="token keyword">const</span> obj <span class="token operator">=</span> <span class="token keyword">new</span> <span class="token class-name">Proxy</span><span class="token punctuation">(</span>data<span class="token punctuation">,</span> <span class="token punctuation">&#123;</span>
+  <span class="token comment">// 拦截读取操作</span>
+  <span class="token function">get</span><span class="token punctuation">(</span>target<span class="token punctuation">,</span> key<span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+    <span class="token comment">// 将副作用函数 effect 添加到存储副作用函数的桶中</span>
+    bucket<span class="token punctuation">.</span><span class="token function">add</span><span class="token punctuation">(</span>effect<span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token comment">// 返回属性值</span>
+    <span class="token keyword">return</span> target<span class="token punctuation">[</span>key<span class="token punctuation">]</span><span class="token punctuation">;</span>
+  <span class="token punctuation">&#125;</span><span class="token punctuation">,</span>
+  <span class="token comment">// 拦截设置操作</span>
+  <span class="token function">set</span><span class="token punctuation">(</span>target<span class="token punctuation">,</span> key<span class="token punctuation">,</span> newVal<span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+    <span class="token comment">// 设置属性值</span>
+    target<span class="token punctuation">[</span>key<span class="token punctuation">]</span> <span class="token operator">=</span> newVal<span class="token punctuation">;</span>
+    <span class="token comment">// 把副作用函数从桶里取出并执行</span>
+    bucket<span class="token punctuation">.</span><span class="token function">forEach</span><span class="token punctuation">(</span><span class="token punctuation">(</span><span class="token parameter">fn</span><span class="token punctuation">)</span> <span class="token operator">=></span> <span class="token function">fn</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token comment">// 返回 true 代表设置操作成功</span>
+    <span class="token keyword">return</span> <span class="token boolean">true</span><span class="token punctuation">;</span>
+  <span class="token punctuation">&#125;</span><span class="token punctuation">,</span>
+<span class="token punctuation">&#125;</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+<span class="token comment">// 四、测试</span>
+<span class="token comment">// 副作用函数</span>
+<span class="token keyword">function</span> <span class="token function">effect</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+  document<span class="token punctuation">.</span>body<span class="token punctuation">.</span>innerText <span class="token operator">=</span> obj<span class="token punctuation">.</span>text<span class="token punctuation">;</span>
+<span class="token punctuation">&#125;</span>
+<span class="token comment">// 执行副作用函数，触发读取</span>
+<span class="token function">effect</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token comment">// 1 秒后修改响应式数据</span>
+<span class="token function">setTimeout</span><span class="token punctuation">(</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token operator">=></span> <span class="token punctuation">&#123;</span>
+  obj<span class="token punctuation">.</span>text <span class="token operator">=</span> <span class="token string">"hello vue3"</span><span class="token punctuation">;</span>
+<span class="token punctuation">&#125;</span><span class="token punctuation">,</span> <span class="token number">1000</span><span class="token punctuation">)</span><span class="token punctuation">;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<h3 id="4-2-Proxy-和-Object-defineProperty-对比"><a href="#4-2-Proxy-和-Object-defineProperty-对比" class="headerlink" title="4.2 Proxy 和 Object.defineProperty() 对比"></a>4.2 Proxy 和 Object.defineProperty() 对比</h3><ol>
+<li>通过 Proxy（代理）能够拦截对象中任意属性的变化, 包括属性值的<code>读写</code>、属性的<code>添加</code>、属性的<code>删除</code>等。</li>
+<li>Vue3 对于响应式数据，不在像 Vue2 那种递归对所有的子数据进行影响是定义。而是在获取到深层数据的时候再去利用 proxy 进一步定义响应式，这对于大量数据的初始化场景来说收益会非常大。</li>
+<li>Proxy 是 ES6 的语法，兼容性较差。不支持 IE 11</li>
+</ol>
+</div>
+
+  <div class="mb-foot">
+    <a href="/phone/">返回手机首页</a>
+    <a href="/phone/tags/">星迹索引</a>
+  </div>
+</div>
+
+
+<script>
+  /* 作用：懒加载本地 mermaid 库；无 mermaid 代码块时不加载 */
+  function loadLocalMermaid(){
+    return new Promise(function(resolve, reject){
+      if(window.mermaid) return resolve(window.mermaid);
+      var s = document.createElement('script');
+      s.src = '/js/third-party/mermaid/mermaid.min.js?v=10';
+      s.onload = function(){ resolve(window.mermaid); };
+      s.onerror = function(){ reject(new Error('mermaid local load failed')); };
+      document.head.appendChild(s);
+    });
+  }
+
+  /* 作用：把 ```mermaid 代码块替换成 SVG 图（手机端字号略小、图可横向滚动） */
+  async function renderMermaidDiagram(){
+    var blocks = document.querySelectorAll('pre[class*="language-mermaid"]');
+    if(!blocks.length) return;
+    var mermaid;
+    try { mermaid = await loadLocalMermaid(); }
+    catch(e){ console.warn('[mermaid] 本地库加载失败：', e); return; }
+
+    mermaid.initialize({
+      startOnLoad: false,
+      theme: 'base',
+      themeVariables: {
+        darkMode: true,
+        background: 'transparent',
+        fontFamily: '"Microsoft YaHei", "PingFang SC", "Segoe UI", sans-serif',
+        fontSize: '12px',
+        primaryColor: '#062f3d',
+        primaryTextColor: '#d6f6ff',
+        primaryBorderColor: '#00eeff',
+        secondaryColor: '#04222d',
+        tertiaryColor: '#04222d',
+        mainBkg: '#062f3d',
+        nodeBorder: '#00eeff',
+        clusterBkg: '#02161f',
+        clusterBorder: '#00eeff55',
+        lineColor: '#00eeff',
+        textColor: '#c0e8ff',
+        edgeLabelBackground: '#02161f'
+      },
+      flowchart: { curve: 'basis', useMaxWidth: false, htmlLabels: false, nodeSpacing: 30, rankSpacing: 40, padding: 10 }
+    });
+
+    var targets = [];
+    blocks.forEach(function(el){
+      var codeEl = el.querySelector('code');
+      if(!codeEl) return;
+      var div = document.createElement('div');
+      div.className = 'mermaid';
+      div.textContent = codeEl.textContent;
+      el.parentNode.replaceChild(div, el);
+      targets.push(div);
+    });
+    if(!targets.length) return;
+    try { await mermaid.run({ nodes: targets }); }
+    catch(e){ console.warn('[mermaid] 渲染失败：', e); }
+  }
+  /* 作用：多次触发兜底（延迟重试 + DOM 变化），防止某次时机没跑到导致图表留在代码块 */
+  var mmBusy = false;
+  function scheduleMermaid(){
+    if(mmBusy) return;
+    mmBusy = true;
+    renderMermaidDiagram().then(function(){ mmBusy = false; }, function(){ mmBusy = false; });
+  }
+  scheduleMermaid();
+  window.addEventListener('load', scheduleMermaid);
+  [1000, 3000, 8000].forEach(function(ms){ setTimeout(scheduleMermaid, ms); });
+  if(document.readyState !== 'loading') scheduleMermaid();
+  if(window.MutationObserver){
+    var mmTimer = null;
+    var mmObserver = new MutationObserver(function(){
+      clearTimeout(mmTimer);
+      mmTimer = setTimeout(scheduleMermaid, 400);
+    });
+    mmObserver.observe(document.querySelector('.mb-article') || document.body, { childList: true, subtree: true });
+  }
+</script>
+</body>
+</html>

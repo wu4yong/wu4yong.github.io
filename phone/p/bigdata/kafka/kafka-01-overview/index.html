@@ -1,0 +1,297 @@
+<!--
+  ============================================
+  手机端 · 文章原文页
+  文件：phone/post.njk
+  适用终端：手机端（路由 /phone/p/<slug>/，由 scripts/phone-routes.js 生成）
+  作用：手机阅读单篇文章；单列布局、无侧栏无雷达，替代电脑端 post.njk
+        数据由生成期算好：page.item = { title, dateStr, content, cats, tags }
+  样式依赖：source/css/theme/phone/common.css、source/css/theme/phone/list.css
+  组件依赖：phone/_components/Particles.njk
+  最后修改：2026-11-11
+  ============================================
+-->
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="color-scheme" content="dark">
+  <meta name="theme-color" content="#020817">
+  <!-- 首帧兜底：浏览器默认画布是白的，样式未解析前会闪一下白。这条规则先锁死深空底色 -->
+  <style>html{background-color:#020817}</style>
+  <title>Kafka（一）架构与核心概念 - 时空秘境</title>
+  <!-- 手机端样式：基础 + 列表/正文，外链引入（源文件 source/css/theme/phone/） -->
+  <link rel="stylesheet" href="/css/theme/phone/common.css">
+  <link rel="stylesheet" href="/css/theme/phone/list.css">
+<meta name="generator" content="Hexo 8.1.2"></head>
+<body>
+<div class="mb-shell">
+  <!--
+  ============================================
+  手机端星空粒子组件
+  文件：Particles.njk
+  适用终端：手机端
+  作用：Particles.njk 的手机端副本（nunjucks 子目录 include 取不到上级）
+        参数与电脑端 _components/Particles.njk 保持一致：
+        粒子 95 / 连线 118px / opacity 0.32，外加星座层与零星闪烁层
+  最后修改：2026-11-12
+  ============================================
+--><!-- z-index 必须是 0：负层级会被 body 不透明背景盖住，粒子在跑却看不见 -->
+<div id="particles" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 0; pointer-events: none;"></div>
+<!-- 星座层（与首页同一套：随机零星散布星座图形 + 偶尔闪烁的小星） -->
+<div id="constellations" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 1; pointer-events: none;" aria-hidden="true"></div>
+<script src="/js/particles.min.js"></script>
+<script>
+particlesJS("particles", {
+  particles: {
+    number: {
+      value: 95,
+      density: {
+        enable: true,
+        value_area: 800
+      }
+    },
+    color: {
+      value: "#00eeff"
+    },
+    shape: {
+      type: "circle",
+      stroke: {
+        width: 0,
+        color: "#000000"
+      }
+    },
+    opacity: {
+      value: 0.6,
+      random: true,
+      anim: {
+        enable: true,
+        speed: 0.5,
+        opacity_min: 0.1,
+        sync: false
+      }
+    },
+    size: {
+      value: 3,
+      random: true,
+      anim: {
+        enable: true,
+        speed: 2,
+        size_min: 0.1,
+        sync: false
+      }
+    },
+    line_linked: {
+      enable: true,
+      distance: 118,
+      color: "#00eeff",
+      opacity: 0.32,
+      width: 1
+    },
+    move: {
+      enable: true,
+      speed: 0.8,
+      direction: "none",
+      random: true,
+      straight: false,
+      out_mode: "out",
+      bounce: false,
+      attract: {
+        enable: true,
+        rotateX: 600,
+        rotateY: 1200
+      }
+    }
+  },
+  interactivity: {
+    detect_on: "canvas",
+    events: {
+      onhover: {
+        enable: true,
+        mode: "grab"       // 手指按住时粒子聚集
+      },
+      onclick: {
+        enable: true,
+        mode: "push"       // 点击时产生新粒子
+      },
+      resize: true
+    },
+    modes: {
+      grab: {
+        distance: 200,
+        line_linked: {
+          opacity: 1
+        }
+      },
+      push: {
+        particles_nb: 6
+      }
+    }
+  },
+  retina_detect: true
+});
+</script>
+<!-- 星座 + 零星闪烁层：与电脑端共用同一份绘制脚本 -->
+<script src="/js/theme/home/starfield.js"></script>
+
+
+  <div class="mb-top">
+    <a class="mb-back" href="/phone/">← 返回手机首页</a>
+    <span class="mb-sub" style="margin:0">2023-08-26</span>
+  </div>
+
+  <h1 class="mb-title">Kafka（一）架构与核心概念</h1>
+  <div class="mb-sub">
+    分类：bigdata · kafka
+     ｜ 标签：Kafka
+  </div>
+
+  <div class="mb-article"><div class="essay-banner essay-kafka"></div>
+
+<h1 id="架构与核心概念"><a href="#架构与核心概念" class="headerlink" title="架构与核心概念"></a><strong>架构与核心概念</strong></h1><p>Kafka 常被当成”消息队列”用，但它真正的定位是一条<strong>可重放的分布式提交日志</strong>：写进去的数据按分区顺序落盘、按偏移量随机读，消费者自己记住读到哪。这个定位决定了后面所有设计选择，也决定了它和 RabbitMQ 那类”消费即删除”的队列在语义上不是一回事。</p>
+<p><img src="https://wu4yong.github.io/starry-images/assets/img/kafka/kafka-01-overview.webp" alt="三台 broker、三条分区轨道与副本叠影"></p>
+<p><em>分区是并行单位，副本是可靠性单位，两者不要混着理解</em></p>
+<h2 id="1-1-四个基本概念"><a href="#1-1-四个基本概念" class="headerlink" title="1.1 四个基本概念"></a>1.1 四个基本概念</h2><div class="data-grid data-grid-link-table"><div class="grid-header"><div class="grid-cell">概念</div><div class="grid-cell">含义</div><div class="grid-cell">常见误解</div></div><div class="grid-row"><div class="grid-cell">Broker</div><div class="grid-cell">一个 Kafka 服务进程</div><div class="grid-cell">不是”一台机必有一个”，同机可多实例</div></div><div class="grid-row"><div class="grid-cell">Topic</div><div class="grid-cell">逻辑上的数据类别</div><div class="grid-cell">不是物理目录，数据落在分区里</div></div><div class="grid-row"><div class="grid-cell">Partition</div><div class="grid-cell">Topic 的并行分片，有序追加</div><div class="grid-cell">全局有序不存在，只有分区内有序</div></div><div class="grid-row"><div class="grid-cell">Replica</div><div class="grid-cell">分区的副本，含 leader 与 follower</div><div class="grid-cell">follower 不对外提供读写，只同步</div></div></div>
+
+<p>生产者写、消费者读，全部围绕”分区”发生。一个 Topic 有几个分区，理论上的最大并行度就是几——这也是为什么分区数要在建 Topic 时想清楚。</p>
+<h2 id="1-2-分区与顺序"><a href="#1-2-分区与顺序" class="headerlink" title="1.2 分区与顺序"></a>1.2 分区与顺序</h2><p>分区内部是<strong>只追加</strong>的日志，每条消息拿到一个递增的 offset。相同 key 的消息经分区器哈希后落到同一分区，因此同 key 有序；不指定 key 时按轮询或粘性批次分配，顺序不保证。</p>
+<p>顺序的边界必须说清：跨分区的顺序不存在，任何”全表有序”的需求都要退回到单分区或下游重排。单分区能给的吞吐有上限，这是拿顺序换并行度的必然代价。</p>
+<h2 id="1-3-副本、ISR-与-HW"><a href="#1-3-副本、ISR-与-HW" class="headerlink" title="1.3 副本、ISR 与 HW"></a>1.3 副本、ISR 与 HW</h2><p>每个分区有 N 个副本，其中一个 leader 负责读写，其余 follower 拉取日志。<strong>ISR（In-Sync Replicas）</strong> 是”跟得上 leader”的副本集合，落后太多的会被踢出 ISR。</p>
+<div class="data-grid data-grid-link-table"><div class="grid-header"><div class="grid-cell">术语</div><div class="grid-cell">含义</div><div class="grid-cell">影响</div></div><div class="grid-row"><div class="grid-cell">LEO</div><div class="grid-cell">Log End Offset，下一条要写的位点</div><div class="grid-cell">各副本 LEO 不同步说明有延迟</div></div><div class="grid-row"><div class="grid-cell">HW</div><div class="grid-cell">High Watermark，ISR 中最小的 LEO</div><div class="grid-cell">消费者最多只能读到 HW</div></div><div class="grid-row"><div class="grid-cell">ISR</div><div class="grid-cell">同步副本集合</div><div class="grid-cell">集合大小决定可用性与一致性的权衡</div></div></div>
+
+<p>消费者读不到 HW 之后的数据，这条规则保证了”读到的消息在足够多副本上都存在”。所以 producer 的 <code>acks</code> 与 ISR 大小是一组参数，单独调其中一个没有意义。</p>
+<h2 id="1-4-最小可跑的环境"><a href="#1-4-最小可跑的环境" class="headerlink" title="1.4 最小可跑的环境"></a>1.4 最小可跑的环境</h2><p>本地验证用官方二进制包最快，单节点 KRaft 模式（2.8 起提供预览，3.3 之后成为推荐形态）不需要再起 ZooKeeper：</p>
+<pre class="line-numbers language-bash" data-language="bash"><code class="language-bash"><span class="token comment"># 2.8+ 单节点 KRaft 启动（示意，目录按实际改）</span>
+bin/kafka-storage.sh random-uuid
+bin/kafka-storage.sh <span class="token function">format</span> <span class="token parameter variable">-t</span> <span class="token operator">&lt;</span>uuid<span class="token operator">></span> <span class="token parameter variable">-c</span> config/kraft/server.properties
+bin/kafka-server-start.sh config/kraft/server.properties
+
+bin/kafka-topics.sh <span class="token parameter variable">--create</span> <span class="token parameter variable">--topic</span> order-events <span class="token punctuation">\</span>
+  <span class="token parameter variable">--partitions</span> <span class="token number">3</span> --replication-factor <span class="token number">1</span> --bootstrap-server localhost:9092<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<p>老版本则是先起 ZooKeeper 再起 broker，<code>server.properties</code> 里配 <code>zookeeper.connect</code>。两种形态的客户端 API 一致，差别在元数据由谁管。</p>
+<h2 id="1-5-一次写入的完整链路"><a href="#1-5-一次写入的完整链路" class="headerlink" title="1.5 一次写入的完整链路"></a>1.5 一次写入的完整链路</h2><ol>
+<li>生产者按 key 选分区，把消息攒进批次缓冲</li>
+<li>批次发到该分区 leader 所在的 broker</li>
+<li>leader 追加到本地日志（页缓存），并按 <code>acks</code> 等待副本确认</li>
+<li>达到确认条件后返回，同时推进 HW</li>
+<li>消费者按 offset 拉取，读到 HW 为止</li>
+</ol>
+<p>第 3 步的”追加到页缓存”是 Kafka 高吞吐的关键：它不主动刷盘，靠操作系统页缓存与顺序写。代价是机器掉电可能丢最近未刷盘的数据，这也是”至少一次”语义的物理来源。</p>
+<h2 id="1-6-容易踩的坑"><a href="#1-6-容易踩的坑" class="headerlink" title="1.6 容易踩的坑"></a>1.6 容易踩的坑</h2><ul>
+<li><strong>把分区数当性能旋钮随手改</strong>：增加分区会让同 key 的消息落到新分区，历史顺序被打乱；减少分区官方不支持。</li>
+<li><strong>replication-factor 用 1 上生产</strong>：任何一台 broker 挂掉就有分区不可用，至少 2，重要数据 3。</li>
+<li><strong>消费端以为”读到了就是处理完了”</strong>：位移提交与业务处理不在同一事务里，重复消费是常态，幂等要自己做。</li>
+<li><strong>用 Kafka 存”需要删除”的任务队列</strong>：它的模型是保留 + 重放，不是出队即删；任务型队列要考虑 compact 或独立存储。</li>
+</ul>
+<h2 id="1-7-与-RabbitMQ、RocketMQ-的定位差异"><a href="#1-7-与-RabbitMQ、RocketMQ-的定位差异" class="headerlink" title="1.7 与 RabbitMQ、RocketMQ 的定位差异"></a>1.7 与 RabbitMQ、RocketMQ 的定位差异</h2><p>同为消息中间件，三者的取舍点完全不同，选型时别只看”能不能发消息”：</p>
+<div class="data-grid data-grid-link-table"><div class="grid-header"><div class="grid-cell">维度</div><div class="grid-cell">Kafka</div><div class="grid-cell">RabbitMQ</div><div class="grid-cell">RocketMQ</div></div><div class="grid-row"><div class="grid-cell">模型</div><div class="grid-cell">分区日志，读不删</div><div class="grid-cell">队列，消费即删</div><div class="grid-cell">队列 + 日志混合</div></div><div class="grid-row"><div class="grid-cell">顺序</div><div class="grid-cell">分区内有序</div><div class="grid-cell">单队列有序</div><div class="grid-cell">队列内严格有序</div></div><div class="grid-row"><div class="grid-cell">堆积能力</div><div class="grid-cell">磁盘级，百万级无压力</div><div class="grid-cell">内存为主，深堆积性能下降</div><div class="grid-cell">磁盘级，支持海量堆积</div></div><div class="grid-row"><div class="grid-cell">延迟消息</div><div class="grid-cell">不支持（需外部实现）</div><div class="grid-cell">插件支持</div><div class="grid-cell">原生支持多级延迟</div></div><div class="grid-row"><div class="grid-cell">事务消息</div><div class="grid-cell">事务写 Kafka 自身</div><div class="grid-cell">不涉及</div><div class="grid-cell">原生事务消息</div></div><div class="grid-row"><div class="grid-cell">典型场景</div><div class="grid-cell">日志、CDC、流计算</div><div class="grid-cell">业务解耦、RPC 异步化</div><div class="grid-cell">电商交易、订单链路</div></div></div>
+
+<p>真正的分水岭是”消费完要不要留”。Kafka 留，所以能重放、能多组独立消费、能做流计算输入；RabbitMQ 删，所以队列长度是瞬时状态，堆积就等于内存压力。需要延迟消息、严格优先级这类队列特性时，Kafka 反而不合适。</p>
+<h2 id="1-8-官方资料"><a href="#1-8-官方资料" class="headerlink" title="1.8 官方资料"></a>1.8 官方资料</h2><ul>
+<li>Apache Kafka 官网：<a target="_blank" rel="noopener" href="https://kafka.apache.org/">https://kafka.apache.org/</a></li>
+<li>设计文档（Design）：<a target="_blank" rel="noopener" href="https://kafka.apache.org/documentation/#design">https://kafka.apache.org/documentation/#design</a></li>
+<li>快速开始：<a target="_blank" rel="noopener" href="https://kafka.apache.org/quickstart">https://kafka.apache.org/quickstart</a></li>
+<li>KRaft 说明：<a target="_blank" rel="noopener" href="https://kafka.apache.org/documentation/#kraft">https://kafka.apache.org/documentation/#kraft</a></li>
+</ul>
+<h2 id="1-9-清单"><a href="#1-9-清单" class="headerlink" title="1.9 清单"></a>1.9 清单</h2><ol>
+<li>Kafka 是可重放的分布式日志，不是”读完即删”的队列</li>
+<li>Broker 存分区，Partition 是有序追加单位，Replica 是可靠性单位</li>
+<li>顺序只在分区内成立，同 key 靠分区器保证落同一分区</li>
+<li>ISR 决定可用性，HW 决定消费者能读到哪，两者共同构成”已提交”的定义</li>
+<li>写入走页缓存 + 顺序写，吞吐靠这个，掉电风险也来自这个</li>
+<li>分区数建表时定，后续只增不减，且增分区会打乱同 key 顺序</li>
+<li>生产至少 2 副本，重要数据 3 副本</li>
+<li>与 RabbitMQ &#x2F; RocketMQ 的分水岭是”消费完是否保留”，不是吞吐数字</li>
+<li>延迟消息、优先级这类队列特性 Kafka 不提供，需要外部方案</li>
+</ol>
+</div>
+
+  <div class="mb-foot">
+    <a href="/phone/">返回手机首页</a>
+    <a href="/phone/tags/">星迹索引</a>
+  </div>
+</div>
+
+
+<script>
+  /* 作用：懒加载本地 mermaid 库；无 mermaid 代码块时不加载 */
+  function loadLocalMermaid(){
+    return new Promise(function(resolve, reject){
+      if(window.mermaid) return resolve(window.mermaid);
+      var s = document.createElement('script');
+      s.src = '/js/third-party/mermaid/mermaid.min.js?v=10';
+      s.onload = function(){ resolve(window.mermaid); };
+      s.onerror = function(){ reject(new Error('mermaid local load failed')); };
+      document.head.appendChild(s);
+    });
+  }
+
+  /* 作用：把 ```mermaid 代码块替换成 SVG 图（手机端字号略小、图可横向滚动） */
+  async function renderMermaidDiagram(){
+    var blocks = document.querySelectorAll('pre[class*="language-mermaid"]');
+    if(!blocks.length) return;
+    var mermaid;
+    try { mermaid = await loadLocalMermaid(); }
+    catch(e){ console.warn('[mermaid] 本地库加载失败：', e); return; }
+
+    mermaid.initialize({
+      startOnLoad: false,
+      theme: 'base',
+      themeVariables: {
+        darkMode: true,
+        background: 'transparent',
+        fontFamily: '"Microsoft YaHei", "PingFang SC", "Segoe UI", sans-serif',
+        fontSize: '12px',
+        primaryColor: '#062f3d',
+        primaryTextColor: '#d6f6ff',
+        primaryBorderColor: '#00eeff',
+        secondaryColor: '#04222d',
+        tertiaryColor: '#04222d',
+        mainBkg: '#062f3d',
+        nodeBorder: '#00eeff',
+        clusterBkg: '#02161f',
+        clusterBorder: '#00eeff55',
+        lineColor: '#00eeff',
+        textColor: '#c0e8ff',
+        edgeLabelBackground: '#02161f'
+      },
+      flowchart: { curve: 'basis', useMaxWidth: false, htmlLabels: false, nodeSpacing: 30, rankSpacing: 40, padding: 10 }
+    });
+
+    var targets = [];
+    blocks.forEach(function(el){
+      var codeEl = el.querySelector('code');
+      if(!codeEl) return;
+      var div = document.createElement('div');
+      div.className = 'mermaid';
+      div.textContent = codeEl.textContent;
+      el.parentNode.replaceChild(div, el);
+      targets.push(div);
+    });
+    if(!targets.length) return;
+    try { await mermaid.run({ nodes: targets }); }
+    catch(e){ console.warn('[mermaid] 渲染失败：', e); }
+  }
+  /* 作用：多次触发兜底（延迟重试 + DOM 变化），防止某次时机没跑到导致图表留在代码块 */
+  var mmBusy = false;
+  function scheduleMermaid(){
+    if(mmBusy) return;
+    mmBusy = true;
+    renderMermaidDiagram().then(function(){ mmBusy = false; }, function(){ mmBusy = false; });
+  }
+  scheduleMermaid();
+  window.addEventListener('load', scheduleMermaid);
+  [1000, 3000, 8000].forEach(function(ms){ setTimeout(scheduleMermaid, ms); });
+  if(document.readyState !== 'loading') scheduleMermaid();
+  if(window.MutationObserver){
+    var mmTimer = null;
+    var mmObserver = new MutationObserver(function(){
+      clearTimeout(mmTimer);
+      mmTimer = setTimeout(scheduleMermaid, 400);
+    });
+    mmObserver.observe(document.querySelector('.mb-article') || document.body, { childList: true, subtree: true });
+  }
+</script>
+</body>
+</html>

@@ -1,0 +1,304 @@
+<!--
+  ============================================
+  手机端 · 文章原文页
+  文件：phone/post.njk
+  适用终端：手机端（路由 /phone/p/<slug>/，由 scripts/phone-routes.js 生成）
+  作用：手机阅读单篇文章；单列布局、无侧栏无雷达，替代电脑端 post.njk
+        数据由生成期算好：page.item = { title, dateStr, content, cats, tags }
+  样式依赖：source/css/theme/phone/common.css、source/css/theme/phone/list.css
+  组件依赖：phone/_components/Particles.njk
+  最后修改：2026-11-11
+  ============================================
+-->
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="color-scheme" content="dark">
+  <meta name="theme-color" content="#020817">
+  <!-- 首帧兜底：浏览器默认画布是白的，样式未解析前会闪一下白。这条规则先锁死深空底色 -->
+  <style>html{background-color:#020817}</style>
+  <title>ES31-bucket 聚合的精度与时间轴 - 时空秘境</title>
+  <!-- 手机端样式：基础 + 列表/正文，外链引入（源文件 source/css/theme/phone/） -->
+  <link rel="stylesheet" href="/css/theme/phone/common.css">
+  <link rel="stylesheet" href="/css/theme/phone/list.css">
+<meta name="generator" content="Hexo 8.1.2"></head>
+<body>
+<div class="mb-shell">
+  <!--
+  ============================================
+  手机端星空粒子组件
+  文件：Particles.njk
+  适用终端：手机端
+  作用：Particles.njk 的手机端副本（nunjucks 子目录 include 取不到上级）
+        参数与电脑端 _components/Particles.njk 保持一致：
+        粒子 95 / 连线 118px / opacity 0.32，外加星座层与零星闪烁层
+  最后修改：2026-11-12
+  ============================================
+--><!-- z-index 必须是 0：负层级会被 body 不透明背景盖住，粒子在跑却看不见 -->
+<div id="particles" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 0; pointer-events: none;"></div>
+<!-- 星座层（与首页同一套：随机零星散布星座图形 + 偶尔闪烁的小星） -->
+<div id="constellations" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 1; pointer-events: none;" aria-hidden="true"></div>
+<script src="/js/particles.min.js"></script>
+<script>
+particlesJS("particles", {
+  particles: {
+    number: {
+      value: 95,
+      density: {
+        enable: true,
+        value_area: 800
+      }
+    },
+    color: {
+      value: "#00eeff"
+    },
+    shape: {
+      type: "circle",
+      stroke: {
+        width: 0,
+        color: "#000000"
+      }
+    },
+    opacity: {
+      value: 0.6,
+      random: true,
+      anim: {
+        enable: true,
+        speed: 0.5,
+        opacity_min: 0.1,
+        sync: false
+      }
+    },
+    size: {
+      value: 3,
+      random: true,
+      anim: {
+        enable: true,
+        speed: 2,
+        size_min: 0.1,
+        sync: false
+      }
+    },
+    line_linked: {
+      enable: true,
+      distance: 118,
+      color: "#00eeff",
+      opacity: 0.32,
+      width: 1
+    },
+    move: {
+      enable: true,
+      speed: 0.8,
+      direction: "none",
+      random: true,
+      straight: false,
+      out_mode: "out",
+      bounce: false,
+      attract: {
+        enable: true,
+        rotateX: 600,
+        rotateY: 1200
+      }
+    }
+  },
+  interactivity: {
+    detect_on: "canvas",
+    events: {
+      onhover: {
+        enable: true,
+        mode: "grab"       // 手指按住时粒子聚集
+      },
+      onclick: {
+        enable: true,
+        mode: "push"       // 点击时产生新粒子
+      },
+      resize: true
+    },
+    modes: {
+      grab: {
+        distance: 200,
+        line_linked: {
+          opacity: 1
+        }
+      },
+      push: {
+        particles_nb: 6
+      }
+    }
+  },
+  retina_detect: true
+});
+</script>
+<!-- 星座 + 零星闪烁层：与电脑端共用同一份绘制脚本 -->
+<script src="/js/theme/home/starfield.js"></script>
+
+
+  <div class="mb-top">
+    <a class="mb-back" href="/phone/">← 返回手机首页</a>
+    <span class="mb-sub" style="margin:0">2023-12-25</span>
+  </div>
+
+  <h1 class="mb-title">ES31-bucket 聚合的精度与时间轴</h1>
+  <div class="mb-sub">
+    分类：bigdata · elasticsearch
+     ｜ 标签：Elasticsearch · 系统课
+  </div>
+
+  <div class="mb-article"><div class="essay-banner essay-elasticsearch"></div>
+
+<h1 id="bucket-聚合的精度与时间轴：terms、date-histogram、composite"><a href="#bucket-聚合的精度与时间轴：terms、date-histogram、composite" class="headerlink" title="bucket 聚合的精度与时间轴：terms、date_histogram、composite"></a>bucket 聚合的精度与时间轴：terms、date_histogram、composite</h1><p><code>terms</code> 的计数可能是近似的，<code>date_histogram</code> 的「月」有两种算法，桶多到一屏放不下时得换 <code>composite</code>。</p>
+<p>这三个坑不在语法里，在分布式聚合的机制里。</p>
+<!-- 配图 31-1：待生成，放到图床同名路径后启用下面一行 -->
+<blockquote>
+<p><strong>配图 31-1｜提示词</strong>：左半边三个分片各产出一份「Top 10 品牌榜」，箭头汇入中央协调节点合并成一份全局榜，旁边标注 <code>doc_count_error_upper_bound</code> 与 <code>sum_other_doc_count</code>；右半边时间轴对比：<code>calendar_interval: month</code> 画成日历格子（长短不一），<code>fixed_interval: 30d</code> 画成等宽刻度。底部一条 <code>composite</code> 分页示意：<code>after</code> 游标把 10 万个桶切成若干批。深色星空背景。</p>
+</blockquote>
+<h2 id="一、学习目标"><a href="#一、学习目标" class="headerlink" title="一、学习目标"></a>一、学习目标</h2><ol>
+<li>说清 <code>terms</code> 为什么是近似结果，以及两个误差字段的含义；</li>
+<li>会用 <code>shard_size</code> 与 <code>size</code> 控制精度与开销；</li>
+<li>分清 <code>calendar_interval</code> 与 <code>fixed_interval</code>，会用 <code>time_zone</code>；</li>
+<li>会用 <code>composite</code> 分页遍历海量桶。</li>
+</ol>
+<h2 id="二、前置知识"><a href="#二、前置知识" class="headerlink" title="二、前置知识"></a>二、前置知识</h2><div class="data-grid data-grid-link-table"><div class="grid-header"><div class="grid-cell">需要掌握</div><div class="grid-cell">到什么程度</div><div class="grid-cell">出处</div></div><div class="grid-row"><div class="grid-cell">三层结构</div><div class="grid-cell">知道 bucket 干什么</div><div class="grid-cell">M5-1</div></div><div class="grid-row"><div class="grid-cell"><code>search.max_buckets</code></div><div class="grid-cell">知道有上限</div><div class="grid-cell">M5-1</div></div></div>
+
+<h2 id="三、理论讲解"><a href="#三、理论讲解" class="headerlink" title="三、理论讲解"></a>三、理论讲解</h2><div class="data-grid data-grid-link-table"><div class="grid-header"><div class="grid-cell">参数</div><div class="grid-cell">默认</div><div class="grid-cell">作用</div></div><div class="grid-row"><div class="grid-cell"><code>terms.size</code></div><div class="grid-cell">10</div><div class="grid-cell">返回多少个桶</div></div><div class="grid-row"><div class="grid-cell"><code>terms.shard_size</code></div><div class="grid-cell"><code>size * 1.5 + 10</code></div><div class="grid-cell">每个分片先取多少个候选</div></div><div class="grid-row"><div class="grid-cell"><code>doc_count_error_upper_bound</code></div><div class="grid-cell">返回字段</div><div class="grid-cell">计数误差上界</div></div><div class="grid-row"><div class="grid-cell"><code>sum_other_doc_count</code></div><div class="grid-cell">返回字段</div><div class="grid-cell">未进入返回桶的文档总数</div></div><div class="grid-row"><div class="grid-cell"><code>date_histogram.calendar_interval</code></div><div class="grid-cell">—</div><div class="grid-cell">日历单位（<code>month</code> 随月份长短变化）</div></div><div class="grid-row"><div class="grid-cell"><code>date_histogram.fixed_interval</code></div><div class="grid-cell">—</div><div class="grid-cell">固定毫秒单位（如 <code>30d</code>）</div></div><div class="grid-row"><div class="grid-cell"><code>date_histogram.time_zone</code></div><div class="grid-cell">UTC</div><div class="grid-cell">决定「天&#x2F;月」的边界</div></div><div class="grid-row"><div class="grid-cell"><code>date_histogram.min_doc_count</code></div><div class="grid-cell">0</div><div class="grid-cell">0 会补空桶</div></div><div class="grid-row"><div class="grid-cell"><code>composite.size</code></div><div class="grid-cell">10</div><div class="grid-cell">每批返回多少个组合桶</div></div></div>
+
+<h2 id="四、原理拆解：terms-为什么会「少算」"><a href="#四、原理拆解：terms-为什么会「少算」" class="headerlink" title="四、原理拆解：terms 为什么会「少算」"></a>四、原理拆解：terms 为什么会「少算」</h2><p>分布式下，每个分片只能看到自己的数据。为了让最终 Top 10 尽量准，协调节点让每个分片各返回 <code>shard_size</code> 个候选，再合并取前 <code>size</code> 个。如果某个品牌在 A 分片排第 15、在 B 分片排第 1，它在 A 分片的票数就没被带上来，最终总数偏小——这就是 <code>doc_count_error_upper_bound</code> 的来源。</p>
+<p>调大 <code>shard_size</code> 能降低误差，代价是分片间传输与内存上升。判断标准很实际：<strong>报表要对账就必须精确</strong>——要么把字段做成单分片索引，要么改用 <code>composite</code> 一页页全量遍历后自己累加，要么用 <code>cardinality</code> 那种近似指标时心里有数。</p>
+<p>时间轴这块，<code>month</code> 是日历月（1 月 31 天、2 月 28 天），<code>30d</code> 是固定 30 天窗口，两者在跨月报表里结果完全不同。而 <code>time_zone</code> 决定「一天从几点开始」，做国内日报必须给 <code>+08:00</code>，否则会出现「昨天 8 点的数据算到今天」。</p>
+<h2 id="五、场景说明"><a href="#五、场景说明" class="headerlink" title="五、场景说明"></a>五、场景说明</h2><div class="data-grid data-grid-link-table"><div class="grid-header"><div class="grid-cell">需求</div><div class="grid-cell">写法</div></div><div class="grid-row"><div class="grid-cell">Top N 榜单（可近似）</div><div class="grid-cell"><code>terms</code> 默认参数</div></div><div class="grid-row"><div class="grid-cell">榜单要对账</div><div class="grid-cell">调大 <code>shard_size</code>，或换 <code>composite</code> 全量</div></div><div class="grid-row"><div class="grid-cell">自然月报表</div><div class="grid-cell"><code>calendar_interval: month</code> + <code>time_zone</code></div></div><div class="grid-row"><div class="grid-cell">固定窗口（近 30 天）</div><div class="grid-cell"><code>fixed_interval: 30d</code></div></div><div class="grid-row"><div class="grid-cell">桶太多要分批导出</div><div class="grid-cell"><code>composite</code> + <code>after</code></div></div><div class="grid-row"><div class="grid-cell">不要空桶</div><div class="grid-cell"><code>min_doc_count: 1</code></div></div></div>
+
+<h2 id="六、实操"><a href="#六、实操" class="headerlink" title="六、实操"></a>六、实操</h2><pre class="line-numbers language-bash" data-language="bash"><code class="language-bash"><span class="token comment"># terms：看误差字段，并手动加大 shard_size</span>
+<span class="token function">curl</span> <span class="token parameter variable">-s</span> <span class="token parameter variable">-X</span> GET <span class="token string">"http://localhost:9200/goods/_search"</span> <span class="token parameter variable">-H</span> <span class="token string">'Content-Type: application/json'</span> <span class="token parameter variable">-d</span> <span class="token string">'
+&#123; "size": 0, "aggs": &#123; "b": &#123; "terms": &#123; "field": "brand", "size": 10, "shard_size": 50 &#125; &#125; &#125; &#125;'</span>
+
+<span class="token comment"># 自然月 + 东八区</span>
+<span class="token function">curl</span> <span class="token parameter variable">-s</span> <span class="token parameter variable">-X</span> GET <span class="token string">"http://localhost:9200/orders/_search"</span> <span class="token parameter variable">-H</span> <span class="token string">'Content-Type: application/json'</span> <span class="token parameter variable">-d</span> <span class="token string">'
+&#123; "size": 0, "aggs": &#123; "m": &#123; "date_histogram": &#123;
+    "field": "created", "calendar_interval": "month", "time_zone": "+08:00", "min_doc_count": 0 &#125; &#125; &#125; &#125;'</span>
+
+<span class="token comment"># composite：先拿第一批，用 after 继续</span>
+<span class="token function">curl</span> <span class="token parameter variable">-s</span> <span class="token parameter variable">-X</span> GET <span class="token string">"http://localhost:9200/goods/_search"</span> <span class="token parameter variable">-H</span> <span class="token string">'Content-Type: application/json'</span> <span class="token parameter variable">-d</span> <span class="token string">'
+&#123; "size": 0, "aggs": &#123; "c": &#123; "composite": &#123;
+    "size": 100,
+    "sources": [ &#123; "brand": &#123; "terms": &#123; "field": "brand" &#125; &#125; &#125;,
+                 &#123; "day": &#123; "date_histogram": &#123; "field": "created", "calendar_interval": "day" &#125; &#125; &#125; ] &#125; &#125; &#125; &#125;'</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<p><code>composite</code> 返回的 <code>after_key</code> 就是下一页游标，按 <code>after</code> 循环直到为空，即可拿到全部组合桶。</p>
+<h2 id="七、常见坑"><a href="#七、常见坑" class="headerlink" title="七、常见坑"></a>七、常见坑</h2><ol>
+<li><strong>把 <code>terms.doc_count</code> 当绝对值</strong>：多分片下是近似，报表对不上很正常。</li>
+<li><strong>不设 <code>time_zone</code> 做日报</strong>：跨时区边界错位，数据对不上账。</li>
+<li><strong><code>calendar_interval</code> 与 <code>fixed_interval</code> 混用</strong>：同一字段两套口径，趋势图会互相打架。</li>
+<li><strong><code>min_doc_count: 0</code> 画折线</strong>：空桶补 0 是对的，但桶数会显著上升。</li>
+<li><strong><code>composite</code> 忘了 <code>after</code> 循环</strong>：只拿到第一批就以为拿全了。</li>
+<li><strong><code>shard_size</code> 拉得过大</strong>：精度上去了，内存与网络也上去了。</li>
+</ol>
+<h2 id="八、课后小结"><a href="#八、课后小结" class="headerlink" title="八、课后小结"></a>八、课后小结</h2><ol>
+<li><code>terms</code> 是分片 Top N 汇总，天然近似，看两个误差字段。</li>
+<li><code>shard_size</code> 是精度旋钮，<code>size</code> 是返回量旋钮，两者不同。</li>
+<li>日历月用 <code>calendar_interval</code>，固定窗口用 <code>fixed_interval</code>。</li>
+<li><code>time_zone</code> 决定桶边界，跨时区统计必须显式给。</li>
+<li>海量桶用 <code>composite</code> + <code>after</code> 分批遍历。</li>
+</ol>
+<h2 id="九、思考题"><a href="#九、思考题" class="headerlink" title="九、思考题"></a>九、思考题</h2><ol>
+<li>5 分片、<code>size: 10</code>、默认 <code>shard_size</code>，协调节点最多合并多少个候选桶？</li>
+<li>为什么「按自然月」和「按 30 天」在 3 月的数据上会差出一截？</li>
+<li>一张 100 万组合的报表，你会选调大 <code>shard_size</code> 还是 <code>composite</code> 全量？理由？</li>
+</ol>
+<h2 id="十、官方资料"><a href="#十、官方资料" class="headerlink" title="十、官方资料"></a>十、官方资料</h2><ul>
+<li>Terms aggregation：<a target="_blank" rel="noopener" href="https://www.elastic.co/guide/en/elasticsearch/reference/current/search-aggregations-bucket-terms-aggregation.html">https://www.elastic.co/guide/en/elasticsearch/reference/current/search-aggregations-bucket-terms-aggregation.html</a></li>
+<li>Date histogram：<a target="_blank" rel="noopener" href="https://www.elastic.co/guide/en/elasticsearch/reference/current/search-aggregations-bucket-datehistogram-aggregation.html">https://www.elastic.co/guide/en/elasticsearch/reference/current/search-aggregations-bucket-datehistogram-aggregation.html</a></li>
+<li>Composite aggregation：<a target="_blank" rel="noopener" href="https://www.elastic.co/guide/en/elasticsearch/reference/current/search-aggregations-bucket-composite-aggregation.html">https://www.elastic.co/guide/en/elasticsearch/reference/current/search-aggregations-bucket-composite-aggregation.html</a></li>
+</ul>
+<p>上一篇：<a href="/2023/12/22/bigdata/elasticsearch/es-30-aggregation-structure/">M5-1 聚合三层结构</a> ｜ 下一篇：<a href="/2023/12/28/bigdata/elasticsearch/es-32-metric-pipeline/">M5-3 metric 与 pipeline 聚合</a> ｜ <a href="/2023/09/22/bigdata/elasticsearch/es-00-series-index/">总目录</a></p>
+</div>
+
+  <div class="mb-foot">
+    <a href="/phone/">返回手机首页</a>
+    <a href="/phone/tags/">星迹索引</a>
+  </div>
+</div>
+
+
+<script>
+  /* 作用：懒加载本地 mermaid 库；无 mermaid 代码块时不加载 */
+  function loadLocalMermaid(){
+    return new Promise(function(resolve, reject){
+      if(window.mermaid) return resolve(window.mermaid);
+      var s = document.createElement('script');
+      s.src = '/js/third-party/mermaid/mermaid.min.js?v=10';
+      s.onload = function(){ resolve(window.mermaid); };
+      s.onerror = function(){ reject(new Error('mermaid local load failed')); };
+      document.head.appendChild(s);
+    });
+  }
+
+  /* 作用：把 ```mermaid 代码块替换成 SVG 图（手机端字号略小、图可横向滚动） */
+  async function renderMermaidDiagram(){
+    var blocks = document.querySelectorAll('pre[class*="language-mermaid"]');
+    if(!blocks.length) return;
+    var mermaid;
+    try { mermaid = await loadLocalMermaid(); }
+    catch(e){ console.warn('[mermaid] 本地库加载失败：', e); return; }
+
+    mermaid.initialize({
+      startOnLoad: false,
+      theme: 'base',
+      themeVariables: {
+        darkMode: true,
+        background: 'transparent',
+        fontFamily: '"Microsoft YaHei", "PingFang SC", "Segoe UI", sans-serif',
+        fontSize: '12px',
+        primaryColor: '#062f3d',
+        primaryTextColor: '#d6f6ff',
+        primaryBorderColor: '#00eeff',
+        secondaryColor: '#04222d',
+        tertiaryColor: '#04222d',
+        mainBkg: '#062f3d',
+        nodeBorder: '#00eeff',
+        clusterBkg: '#02161f',
+        clusterBorder: '#00eeff55',
+        lineColor: '#00eeff',
+        textColor: '#c0e8ff',
+        edgeLabelBackground: '#02161f'
+      },
+      flowchart: { curve: 'basis', useMaxWidth: false, htmlLabels: false, nodeSpacing: 30, rankSpacing: 40, padding: 10 }
+    });
+
+    var targets = [];
+    blocks.forEach(function(el){
+      var codeEl = el.querySelector('code');
+      if(!codeEl) return;
+      var div = document.createElement('div');
+      div.className = 'mermaid';
+      div.textContent = codeEl.textContent;
+      el.parentNode.replaceChild(div, el);
+      targets.push(div);
+    });
+    if(!targets.length) return;
+    try { await mermaid.run({ nodes: targets }); }
+    catch(e){ console.warn('[mermaid] 渲染失败：', e); }
+  }
+  /* 作用：多次触发兜底（延迟重试 + DOM 变化），防止某次时机没跑到导致图表留在代码块 */
+  var mmBusy = false;
+  function scheduleMermaid(){
+    if(mmBusy) return;
+    mmBusy = true;
+    renderMermaidDiagram().then(function(){ mmBusy = false; }, function(){ mmBusy = false; });
+  }
+  scheduleMermaid();
+  window.addEventListener('load', scheduleMermaid);
+  [1000, 3000, 8000].forEach(function(ms){ setTimeout(scheduleMermaid, ms); });
+  if(document.readyState !== 'loading') scheduleMermaid();
+  if(window.MutationObserver){
+    var mmTimer = null;
+    var mmObserver = new MutationObserver(function(){
+      clearTimeout(mmTimer);
+      mmTimer = setTimeout(scheduleMermaid, 400);
+    });
+    mmObserver.observe(document.querySelector('.mb-article') || document.body, { childList: true, subtree: true });
+  }
+</script>
+</body>
+</html>

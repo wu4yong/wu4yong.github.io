@@ -1,0 +1,358 @@
+<!--
+  ============================================
+  手机端 · 文章原文页
+  文件：phone/post.njk
+  适用终端：手机端（路由 /phone/p/<slug>/，由 scripts/phone-routes.js 生成）
+  作用：手机阅读单篇文章；单列布局、无侧栏无雷达，替代电脑端 post.njk
+        数据由生成期算好：page.item = { title, dateStr, content, cats, tags }
+  样式依赖：source/css/theme/phone/common.css、source/css/theme/phone/list.css
+  组件依赖：phone/_components/Particles.njk
+  最后修改：2026-11-11
+  ============================================
+-->
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="color-scheme" content="dark">
+  <meta name="theme-color" content="#020817">
+  <!-- 首帧兜底：浏览器默认画布是白的，样式未解析前会闪一下白。这条规则先锁死深空底色 -->
+  <style>html{background-color:#020817}</style>
+  <title>Spring Data（四）事务、审计与批量处理 - 时空秘境</title>
+  <!-- 手机端样式：基础 + 列表/正文，外链引入（源文件 source/css/theme/phone/） -->
+  <link rel="stylesheet" href="/css/theme/phone/common.css">
+  <link rel="stylesheet" href="/css/theme/phone/list.css">
+<meta name="generator" content="Hexo 8.1.2"></head>
+<body>
+<div class="mb-shell">
+  <!--
+  ============================================
+  手机端星空粒子组件
+  文件：Particles.njk
+  适用终端：手机端
+  作用：Particles.njk 的手机端副本（nunjucks 子目录 include 取不到上级）
+        参数与电脑端 _components/Particles.njk 保持一致：
+        粒子 95 / 连线 118px / opacity 0.32，外加星座层与零星闪烁层
+  最后修改：2026-11-12
+  ============================================
+--><!-- z-index 必须是 0：负层级会被 body 不透明背景盖住，粒子在跑却看不见 -->
+<div id="particles" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 0; pointer-events: none;"></div>
+<!-- 星座层（与首页同一套：随机零星散布星座图形 + 偶尔闪烁的小星） -->
+<div id="constellations" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 1; pointer-events: none;" aria-hidden="true"></div>
+<script src="/js/particles.min.js"></script>
+<script>
+particlesJS("particles", {
+  particles: {
+    number: {
+      value: 95,
+      density: {
+        enable: true,
+        value_area: 800
+      }
+    },
+    color: {
+      value: "#00eeff"
+    },
+    shape: {
+      type: "circle",
+      stroke: {
+        width: 0,
+        color: "#000000"
+      }
+    },
+    opacity: {
+      value: 0.6,
+      random: true,
+      anim: {
+        enable: true,
+        speed: 0.5,
+        opacity_min: 0.1,
+        sync: false
+      }
+    },
+    size: {
+      value: 3,
+      random: true,
+      anim: {
+        enable: true,
+        speed: 2,
+        size_min: 0.1,
+        sync: false
+      }
+    },
+    line_linked: {
+      enable: true,
+      distance: 118,
+      color: "#00eeff",
+      opacity: 0.32,
+      width: 1
+    },
+    move: {
+      enable: true,
+      speed: 0.8,
+      direction: "none",
+      random: true,
+      straight: false,
+      out_mode: "out",
+      bounce: false,
+      attract: {
+        enable: true,
+        rotateX: 600,
+        rotateY: 1200
+      }
+    }
+  },
+  interactivity: {
+    detect_on: "canvas",
+    events: {
+      onhover: {
+        enable: true,
+        mode: "grab"       // 手指按住时粒子聚集
+      },
+      onclick: {
+        enable: true,
+        mode: "push"       // 点击时产生新粒子
+      },
+      resize: true
+    },
+    modes: {
+      grab: {
+        distance: 200,
+        line_linked: {
+          opacity: 1
+        }
+      },
+      push: {
+        particles_nb: 6
+      }
+    }
+  },
+  retina_detect: true
+});
+</script>
+<!-- 星座 + 零星闪烁层：与电脑端共用同一份绘制脚本 -->
+<script src="/js/theme/home/starfield.js"></script>
+
+
+  <div class="mb-top">
+    <a class="mb-back" href="/phone/">← 返回手机首页</a>
+    <span class="mb-sub" style="margin:0">2022-09-08</span>
+  </div>
+
+  <h1 class="mb-title">Spring Data（四）事务、审计与批量处理</h1>
+  <div class="mb-sub">
+    分类：java · springdata
+     ｜ 标签：SpringData
+  </div>
+
+  <div class="mb-article"><div class="essay-banner essay-springdata"></div>
+
+<h1 id="事务边界、审计字段与批量写入"><a href="#事务边界、审计字段与批量写入" class="headerlink" title="事务边界、审计字段与批量写入"></a><strong>事务边界、审计字段与批量写入</strong></h1><p>JPA 跑通不难，难的是”事务边界划在哪、审计字段谁填、一万条数据怎么插得快”。这一篇只讲这三件在生产里最容易出问题的事。</p>
+<p><img src="https://wu4yong.github.io/starry-images/assets/img/springdata/springdata-04-jpa-advanced.webp" alt="事务链环绕数据源，锁与批量写入并存"></p>
+<p><em>事务链环绕数据源，锁与批量写入并存</em></p>
+<h2 id="1-1-事务边界"><a href="#1-1-事务边界" class="headerlink" title="1.1 事务边界"></a>1.1 事务边界</h2><pre class="line-numbers language-java" data-language="java"><code class="language-java"><span class="token annotation punctuation">@Service</span>
+<span class="token keyword">public</span> <span class="token keyword">class</span> <span class="token class-name">OrderService</span> <span class="token punctuation">&#123;</span>
+
+    <span class="token annotation punctuation">@Transactional</span><span class="token punctuation">(</span>rollbackFor <span class="token operator">=</span> <span class="token class-name">Exception</span><span class="token punctuation">.</span><span class="token keyword">class</span><span class="token punctuation">)</span>
+    <span class="token keyword">public</span> <span class="token keyword">void</span> <span class="token function">create</span><span class="token punctuation">(</span><span class="token class-name">OrderDTO</span> dto<span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+        orderRepository<span class="token punctuation">.</span><span class="token function">save</span><span class="token punctuation">(</span>order<span class="token punctuation">)</span><span class="token punctuation">;</span>          <span class="token comment">// 不提交</span>
+        stockRepository<span class="token punctuation">.</span><span class="token function">deduct</span><span class="token punctuation">(</span>dto<span class="token punctuation">)</span><span class="token punctuation">;</span>          <span class="token comment">// 不提交</span>
+    <span class="token punctuation">&#125;</span>                                          <span class="token comment">// 方法结束才 commit</span>
+<span class="token punctuation">&#125;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<div class="data-grid data-grid-link-table"><div class="grid-header"><div class="grid-cell">要点</div><div class="grid-cell">说明</div></div><div class="grid-row"><div class="grid-cell"><code>rollbackFor = Exception.class</code></div><div class="grid-cell">默认只回滚 RuntimeException，受检异常不回滚</div></div><div class="grid-row"><div class="grid-cell">方法必须是 <code>public</code></div><div class="grid-cell">代理拦截，<code>private</code>&#x2F;同类内部调用失效</div></div><div class="grid-row"><div class="grid-cell">事务内不要做远程调用</div><div class="grid-cell">连接被长时间占用</div></div><div class="grid-row"><div class="grid-cell">事务内不要开线程</div><div class="grid-cell">新线程不共享事务上下文</div></div></div>
+
+<p><strong>自调用失效</strong>：同类内部 <code>this.method()</code> 绕过了代理，<code>@Transactional</code> 不生效。要么拆到另一个 Bean，要么注入自身代理（<code>AopContext.currentProxy()</code>）。</p>
+<h2 id="1-2-只读事务"><a href="#1-2-只读事务" class="headerlink" title="1.2 只读事务"></a>1.2 只读事务</h2><pre class="line-numbers language-java" data-language="java"><code class="language-java"><span class="token annotation punctuation">@Transactional</span><span class="token punctuation">(</span>readOnly <span class="token operator">=</span> <span class="token boolean">true</span><span class="token punctuation">)</span>
+<span class="token keyword">public</span> <span class="token class-name">List</span><span class="token generics"><span class="token punctuation">&lt;</span><span class="token class-name">Order</span><span class="token punctuation">></span></span> <span class="token function">list</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">&#123;</span> <span class="token punctuation">.</span><span class="token punctuation">.</span><span class="token punctuation">.</span> <span class="token punctuation">&#125;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span></span></code></pre>
+
+<p><code>readOnly</code> 让 Hibernate 关闭脏检查（dirty checking），查询列表场景能省掉一次全量比对，性能提升在实体多时很明显。</p>
+<h2 id="1-3-审计字段"><a href="#1-3-审计字段" class="headerlink" title="1.3 审计字段"></a>1.3 审计字段</h2><pre class="line-numbers language-java" data-language="java"><code class="language-java"><span class="token annotation punctuation">@EntityListeners</span><span class="token punctuation">(</span><span class="token class-name">AuditingEntityListener</span><span class="token punctuation">.</span><span class="token keyword">class</span><span class="token punctuation">)</span>
+<span class="token annotation punctuation">@MappedSuperclass</span>
+<span class="token keyword">public</span> <span class="token keyword">abstract</span> <span class="token keyword">class</span> <span class="token class-name">BaseEntity</span> <span class="token punctuation">&#123;</span>
+    <span class="token annotation punctuation">@CreatedDate</span>
+    <span class="token keyword">private</span> <span class="token class-name">LocalDateTime</span> createdAt<span class="token punctuation">;</span>
+    <span class="token annotation punctuation">@LastModifiedDate</span>
+    <span class="token keyword">private</span> <span class="token class-name">LocalDateTime</span> updatedAt<span class="token punctuation">;</span>
+    <span class="token annotation punctuation">@CreatedBy</span>
+    <span class="token keyword">private</span> <span class="token class-name">String</span> createdBy<span class="token punctuation">;</span>
+    <span class="token annotation punctuation">@LastModifiedBy</span>
+    <span class="token keyword">private</span> <span class="token class-name">String</span> updatedBy<span class="token punctuation">;</span>
+<span class="token punctuation">&#125;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<pre class="line-numbers language-java" data-language="java"><code class="language-java"><span class="token annotation punctuation">@EnableJpaAuditing</span><span class="token punctuation">(</span>auditorAwareRef <span class="token operator">=</span> <span class="token string">"auditorProvider"</span><span class="token punctuation">)</span>
+<span class="token annotation punctuation">@Configuration</span>
+<span class="token keyword">public</span> <span class="token keyword">class</span> <span class="token class-name">JpaConfig</span> <span class="token punctuation">&#123;</span>
+    <span class="token annotation punctuation">@Bean</span>
+    <span class="token keyword">public</span> <span class="token class-name">AuditorAware</span><span class="token generics"><span class="token punctuation">&lt;</span><span class="token class-name">String</span><span class="token punctuation">></span></span> <span class="token function">auditorProvider</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+        <span class="token keyword">return</span> <span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token operator">-></span> <span class="token class-name">Optional</span><span class="token punctuation">.</span><span class="token function">ofNullable</span><span class="token punctuation">(</span><span class="token class-name">SecurityContextHolder</span><span class="token punctuation">.</span><span class="token function">getContext</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span>
+                <span class="token punctuation">.</span><span class="token function">map</span><span class="token punctuation">(</span><span class="token class-name">SecurityContext</span><span class="token operator">::</span><span class="token function">getAuthentication</span><span class="token punctuation">)</span>
+                <span class="token punctuation">.</span><span class="token function">map</span><span class="token punctuation">(</span><span class="token class-name">Authentication</span><span class="token operator">::</span><span class="token function">getName</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token punctuation">&#125;</span>
+<span class="token punctuation">&#125;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<div class="data-grid data-grid-link-table"><div class="grid-header"><div class="grid-cell">注解</div><div class="grid-cell">触发时机</div><div class="grid-cell">注意</div></div><div class="grid-row"><div class="grid-cell"><code>@CreatedDate</code></div><div class="grid-cell">insert 前</div><div class="grid-cell">字段类型用 <code>LocalDateTime</code></div></div><div class="grid-row"><div class="grid-cell"><code>@LastModifiedDate</code></div><div class="grid-cell">update 前</div><div class="grid-cell">与 <code>@Version</code> 不同，这是时间戳</div></div><div class="grid-row"><div class="grid-cell"><code>@CreatedBy</code></div><div class="grid-cell">insert 前</div><div class="grid-cell">需要 <code>AuditorAware</code></div></div><div class="grid-row"><div class="grid-cell"><code>@LastModifiedBy</code></div><div class="grid-cell">update 前</div><div class="grid-cell">同上</div></div></div>
+
+<p>忘了 <code>@EnableJpaAuditing</code> 的后果是字段永远为 null，且不报错。</p>
+<h2 id="1-4-乐观锁"><a href="#1-4-乐观锁" class="headerlink" title="1.4 乐观锁"></a>1.4 乐观锁</h2><pre class="line-numbers language-java" data-language="java"><code class="language-java"><span class="token annotation punctuation">@Version</span>
+<span class="token keyword">private</span> <span class="token class-name">Integer</span> version<span class="token punctuation">;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span></span></code></pre>
+
+<div class="data-grid data-grid-link-table"><div class="grid-header"><div class="grid-cell">场景</div><div class="grid-cell">行为</div></div><div class="grid-row"><div class="grid-cell">两个事务同时更新</div><div class="grid-cell">后提交者抛 <code>OptimisticLockException</code></div></div><div class="grid-row"><div class="grid-cell">读多写少</div><div class="grid-cell">几乎无冲突，推荐</div></div><div class="grid-row"><div class="grid-cell">写冲突频繁</div><div class="grid-cell">需要业务层重试</div></div></div>
+
+<pre class="line-numbers language-java" data-language="java"><code class="language-java"><span class="token keyword">try</span> <span class="token punctuation">&#123;</span>
+    repo<span class="token punctuation">.</span><span class="token function">save</span><span class="token punctuation">(</span>entity<span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">&#125;</span> <span class="token keyword">catch</span> <span class="token punctuation">(</span><span class="token class-name">OptimisticLockException</span> e<span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+    <span class="token comment">// 重新查询最新数据，重算后重试</span>
+<span class="token punctuation">&#125;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<p>乐观锁解决的是”覆盖写”，不是”并发写”——高冲突业务该用悲观锁（<code>@Lock(LockModeType.PESSIMISTIC_WRITE)</code>）或数据库行锁。</p>
+<h2 id="1-5-批量插入"><a href="#1-5-批量插入" class="headerlink" title="1.5 批量插入"></a>1.5 批量插入</h2><p>JPA 单条 <code>save</code> 一万条会慢到不可接受（每条一条 insert + 一次 flush 检查）。正确姿势：</p>
+<pre class="line-numbers language-yaml" data-language="yaml"><code class="language-yaml"><span class="token key atrule">spring</span><span class="token punctuation">:</span>
+  <span class="token key atrule">jpa</span><span class="token punctuation">:</span>
+    <span class="token key atrule">properties</span><span class="token punctuation">:</span>
+      <span class="token key atrule">hibernate</span><span class="token punctuation">:</span>
+        <span class="token key atrule">jdbc</span><span class="token punctuation">:</span>
+          <span class="token key atrule">batch_size</span><span class="token punctuation">:</span> <span class="token number">500</span>              <span class="token comment"># 每 500 条发一批</span>
+        <span class="token key atrule">order_inserts</span><span class="token punctuation">:</span> <span class="token boolean important">true</span>
+        <span class="token key atrule">order_updates</span><span class="token punctuation">:</span> <span class="token boolean important">true</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<pre class="line-numbers language-java" data-language="java"><code class="language-java"><span class="token annotation punctuation">@Service</span>
+<span class="token keyword">public</span> <span class="token keyword">class</span> <span class="token class-name">BatchService</span> <span class="token punctuation">&#123;</span>
+    <span class="token annotation punctuation">@PersistenceContext</span>
+    <span class="token keyword">private</span> <span class="token class-name">EntityManager</span> em<span class="token punctuation">;</span>
+
+    <span class="token annotation punctuation">@Transactional</span>
+    <span class="token keyword">public</span> <span class="token keyword">void</span> <span class="token function">batchInsert</span><span class="token punctuation">(</span><span class="token class-name">List</span><span class="token generics"><span class="token punctuation">&lt;</span><span class="token class-name">User</span><span class="token punctuation">></span></span> users<span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+        <span class="token keyword">for</span> <span class="token punctuation">(</span><span class="token keyword">int</span> i <span class="token operator">=</span> <span class="token number">0</span><span class="token punctuation">;</span> i <span class="token operator">&lt;</span> users<span class="token punctuation">.</span><span class="token function">size</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span> i<span class="token operator">++</span><span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+            em<span class="token punctuation">.</span><span class="token function">persist</span><span class="token punctuation">(</span>users<span class="token punctuation">.</span><span class="token function">get</span><span class="token punctuation">(</span>i<span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+            <span class="token keyword">if</span> <span class="token punctuation">(</span>i <span class="token operator">%</span> <span class="token number">500</span> <span class="token operator">==</span> <span class="token number">0</span><span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+                em<span class="token punctuation">.</span><span class="token function">flush</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+                em<span class="token punctuation">.</span><span class="token function">clear</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>          <span class="token comment">// 释放一级缓存，防止内存爆</span>
+            <span class="token punctuation">&#125;</span>
+        <span class="token punctuation">&#125;</span>
+    <span class="token punctuation">&#125;</span>
+<span class="token punctuation">&#125;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<div class="data-grid data-grid-link-table"><div class="grid-header"><div class="grid-cell">关键点</div><div class="grid-cell">原因</div></div><div class="grid-row"><div class="grid-cell"><code>batch_size</code></div><div class="grid-cell">合并成多值 insert</div></div><div class="grid-row"><div class="grid-cell"><code>order_inserts</code></div><div class="grid-cell">相同 SQL 归并，才能凑批</div></div><div class="grid-row"><div class="grid-cell"><code>em.flush()</code> + <code>em.clear()</code></div><div class="grid-cell">控制内存与批大小</div></div><div class="grid-row"><div class="grid-cell">用 <code>IDENTITY</code> 主键</div><div class="grid-cell">会退化成逐条插入，批量场景要换</div></div></div>
+
+<p>一万条数据在 MySQL + <code>IDENTITY</code> 下可能 40 秒，换成 <code>SEQUENCE</code>&#x2F;雪花 ID + 批量参数后能到 2 秒级。</p>
+<h2 id="1-6-只读大批量导出"><a href="#1-6-只读大批量导出" class="headerlink" title="1.6 只读大批量导出"></a>1.6 只读大批量导出</h2><pre class="line-numbers language-java" data-language="java"><code class="language-java"><span class="token annotation punctuation">@Transactional</span><span class="token punctuation">(</span>readOnly <span class="token operator">=</span> <span class="token boolean">true</span><span class="token punctuation">)</span>
+<span class="token keyword">public</span> <span class="token keyword">void</span> <span class="token function">export</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+    <span class="token keyword">try</span> <span class="token punctuation">(</span><span class="token class-name">Stream</span><span class="token generics"><span class="token punctuation">&lt;</span><span class="token class-name">User</span><span class="token punctuation">></span></span> stream <span class="token operator">=</span> userRepository<span class="token punctuation">.</span><span class="token function">streamAllBy</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+        stream<span class="token punctuation">.</span><span class="token function">forEach</span><span class="token punctuation">(</span><span class="token keyword">this</span><span class="token operator">::</span><span class="token function">writeLine</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token punctuation">&#125;</span>
+<span class="token punctuation">&#125;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<p><code>Stream</code> 查询是游标式读取，不把整个结果集放进内存。<strong>必须 try-with-resources 关闭</strong>，否则连接不释放。</p>
+<h2 id="1-7-常见坑"><a href="#1-7-常见坑" class="headerlink" title="1.7 常见坑"></a>1.7 常见坑</h2><ol>
+<li><code>@Transactional</code> 写在 Controller 上 → 事务范围过大，远程调用也包在事务里</li>
+<li>事务内 <code>save</code> 后立即查列表 → 可能读到一级缓存旧值，需 <code>flush</code></li>
+<li>审计字段类型用 <code>Date</code> → 时区混乱，统一 <code>LocalDateTime</code></li>
+<li>批量 <code>save</code> 没用 <code>EntityManager</code> → Hibernate 无法攒批</li>
+<li><code>@Version</code> 字段被 DTO 覆盖为 null → 更新时丢失乐观锁保护</li>
+</ol>
+<h2 id="1-8-官方资料"><a href="#1-8-官方资料" class="headerlink" title="1.8 官方资料"></a>1.8 官方资料</h2><ul>
+<li>事务管理：<a target="_blank" rel="noopener" href="https://docs.spring.io/spring-framework/docs/5.3.x/reference/html/data-access.html#transaction">https://docs.spring.io/spring-framework/docs/5.3.x/reference/html/data-access.html#transaction</a></li>
+<li>审计：<a target="_blank" rel="noopener" href="https://docs.spring.io/spring-data/jpa/docs/2.5.x/reference/html/#auditing">https://docs.spring.io/spring-data/jpa/docs/2.5.x/reference/html/#auditing</a></li>
+<li>批量性能建议：<a target="_blank" rel="noopener" href="https://docs.jboss.org/hibernate/orm/5.6/userguide/html_single/Hibernate_User_Guide.html#batch">https://docs.jboss.org/hibernate/orm/5.6/userguide/html_single/Hibernate_User_Guide.html#batch</a></li>
+</ul>
+<h2 id="1-9-清单"><a href="#1-9-清单" class="headerlink" title="1.9 清单"></a>1.9 清单</h2><ol>
+<li><code>@Transactional</code> 放 Service，<code>rollbackFor = Exception.class</code></li>
+<li>同类自调用会绕过代理，事务失效</li>
+<li>查询列表加 <code>readOnly = true</code>，省掉脏检查</li>
+<li>审计字段必须配 <code>@EnableJpaAuditing</code>，否则静默为 null</li>
+<li><code>@Version</code> 防覆盖写，冲突要业务层重试</li>
+<li>批量插入必须配 <code>batch_size</code> + <code>order_inserts</code>，并定期 <code>flush/clear</code></li>
+<li>大批量导出用 <code>Stream</code> 查询并确保关闭</li>
+</ol>
+</div>
+
+  <div class="mb-foot">
+    <a href="/phone/">返回手机首页</a>
+    <a href="/phone/tags/">星迹索引</a>
+  </div>
+</div>
+
+
+<script>
+  /* 作用：懒加载本地 mermaid 库；无 mermaid 代码块时不加载 */
+  function loadLocalMermaid(){
+    return new Promise(function(resolve, reject){
+      if(window.mermaid) return resolve(window.mermaid);
+      var s = document.createElement('script');
+      s.src = '/js/third-party/mermaid/mermaid.min.js?v=10';
+      s.onload = function(){ resolve(window.mermaid); };
+      s.onerror = function(){ reject(new Error('mermaid local load failed')); };
+      document.head.appendChild(s);
+    });
+  }
+
+  /* 作用：把 ```mermaid 代码块替换成 SVG 图（手机端字号略小、图可横向滚动） */
+  async function renderMermaidDiagram(){
+    var blocks = document.querySelectorAll('pre[class*="language-mermaid"]');
+    if(!blocks.length) return;
+    var mermaid;
+    try { mermaid = await loadLocalMermaid(); }
+    catch(e){ console.warn('[mermaid] 本地库加载失败：', e); return; }
+
+    mermaid.initialize({
+      startOnLoad: false,
+      theme: 'base',
+      themeVariables: {
+        darkMode: true,
+        background: 'transparent',
+        fontFamily: '"Microsoft YaHei", "PingFang SC", "Segoe UI", sans-serif',
+        fontSize: '12px',
+        primaryColor: '#062f3d',
+        primaryTextColor: '#d6f6ff',
+        primaryBorderColor: '#00eeff',
+        secondaryColor: '#04222d',
+        tertiaryColor: '#04222d',
+        mainBkg: '#062f3d',
+        nodeBorder: '#00eeff',
+        clusterBkg: '#02161f',
+        clusterBorder: '#00eeff55',
+        lineColor: '#00eeff',
+        textColor: '#c0e8ff',
+        edgeLabelBackground: '#02161f'
+      },
+      flowchart: { curve: 'basis', useMaxWidth: false, htmlLabels: false, nodeSpacing: 30, rankSpacing: 40, padding: 10 }
+    });
+
+    var targets = [];
+    blocks.forEach(function(el){
+      var codeEl = el.querySelector('code');
+      if(!codeEl) return;
+      var div = document.createElement('div');
+      div.className = 'mermaid';
+      div.textContent = codeEl.textContent;
+      el.parentNode.replaceChild(div, el);
+      targets.push(div);
+    });
+    if(!targets.length) return;
+    try { await mermaid.run({ nodes: targets }); }
+    catch(e){ console.warn('[mermaid] 渲染失败：', e); }
+  }
+  /* 作用：多次触发兜底（延迟重试 + DOM 变化），防止某次时机没跑到导致图表留在代码块 */
+  var mmBusy = false;
+  function scheduleMermaid(){
+    if(mmBusy) return;
+    mmBusy = true;
+    renderMermaidDiagram().then(function(){ mmBusy = false; }, function(){ mmBusy = false; });
+  }
+  scheduleMermaid();
+  window.addEventListener('load', scheduleMermaid);
+  [1000, 3000, 8000].forEach(function(ms){ setTimeout(scheduleMermaid, ms); });
+  if(document.readyState !== 'loading') scheduleMermaid();
+  if(window.MutationObserver){
+    var mmTimer = null;
+    var mmObserver = new MutationObserver(function(){
+      clearTimeout(mmTimer);
+      mmTimer = setTimeout(scheduleMermaid, 400);
+    });
+    mmObserver.observe(document.querySelector('.mb-article') || document.body, { childList: true, subtree: true });
+  }
+</script>
+</body>
+</html>

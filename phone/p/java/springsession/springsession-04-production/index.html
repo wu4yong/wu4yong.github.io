@@ -1,0 +1,295 @@
+<!--
+  ============================================
+  手机端 · 文章原文页
+  文件：phone/post.njk
+  适用终端：手机端（路由 /phone/p/<slug>/，由 scripts/phone-routes.js 生成）
+  作用：手机阅读单篇文章；单列布局、无侧栏无雷达，替代电脑端 post.njk
+        数据由生成期算好：page.item = { title, dateStr, content, cats, tags }
+  样式依赖：source/css/theme/phone/common.css、source/css/theme/phone/list.css
+  组件依赖：phone/_components/Particles.njk
+  最后修改：2026-11-11
+  ============================================
+-->
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="color-scheme" content="dark">
+  <meta name="theme-color" content="#020817">
+  <!-- 首帧兜底：浏览器默认画布是白的，样式未解析前会闪一下白。这条规则先锁死深空底色 -->
+  <style>html{background-color:#020817}</style>
+  <title>Spring Session（四）生产实践与故障排查 - 时空秘境</title>
+  <!-- 手机端样式：基础 + 列表/正文，外链引入（源文件 source/css/theme/phone/） -->
+  <link rel="stylesheet" href="/css/theme/phone/common.css">
+  <link rel="stylesheet" href="/css/theme/phone/list.css">
+<meta name="generator" content="Hexo 8.1.2"></head>
+<body>
+<div class="mb-shell">
+  <!--
+  ============================================
+  手机端星空粒子组件
+  文件：Particles.njk
+  适用终端：手机端
+  作用：Particles.njk 的手机端副本（nunjucks 子目录 include 取不到上级）
+        参数与电脑端 _components/Particles.njk 保持一致：
+        粒子 95 / 连线 118px / opacity 0.32，外加星座层与零星闪烁层
+  最后修改：2026-11-12
+  ============================================
+--><!-- z-index 必须是 0：负层级会被 body 不透明背景盖住，粒子在跑却看不见 -->
+<div id="particles" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 0; pointer-events: none;"></div>
+<!-- 星座层（与首页同一套：随机零星散布星座图形 + 偶尔闪烁的小星） -->
+<div id="constellations" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 1; pointer-events: none;" aria-hidden="true"></div>
+<script src="/js/particles.min.js"></script>
+<script>
+particlesJS("particles", {
+  particles: {
+    number: {
+      value: 95,
+      density: {
+        enable: true,
+        value_area: 800
+      }
+    },
+    color: {
+      value: "#00eeff"
+    },
+    shape: {
+      type: "circle",
+      stroke: {
+        width: 0,
+        color: "#000000"
+      }
+    },
+    opacity: {
+      value: 0.6,
+      random: true,
+      anim: {
+        enable: true,
+        speed: 0.5,
+        opacity_min: 0.1,
+        sync: false
+      }
+    },
+    size: {
+      value: 3,
+      random: true,
+      anim: {
+        enable: true,
+        speed: 2,
+        size_min: 0.1,
+        sync: false
+      }
+    },
+    line_linked: {
+      enable: true,
+      distance: 118,
+      color: "#00eeff",
+      opacity: 0.32,
+      width: 1
+    },
+    move: {
+      enable: true,
+      speed: 0.8,
+      direction: "none",
+      random: true,
+      straight: false,
+      out_mode: "out",
+      bounce: false,
+      attract: {
+        enable: true,
+        rotateX: 600,
+        rotateY: 1200
+      }
+    }
+  },
+  interactivity: {
+    detect_on: "canvas",
+    events: {
+      onhover: {
+        enable: true,
+        mode: "grab"       // 手指按住时粒子聚集
+      },
+      onclick: {
+        enable: true,
+        mode: "push"       // 点击时产生新粒子
+      },
+      resize: true
+    },
+    modes: {
+      grab: {
+        distance: 200,
+        line_linked: {
+          opacity: 1
+        }
+      },
+      push: {
+        particles_nb: 6
+      }
+    }
+  },
+  retina_detect: true
+});
+</script>
+<!-- 星座 + 零星闪烁层：与电脑端共用同一份绘制脚本 -->
+<script src="/js/theme/home/starfield.js"></script>
+
+
+  <div class="mb-top">
+    <a class="mb-back" href="/phone/">← 返回手机首页</a>
+    <span class="mb-sub" style="margin:0">2022-10-12</span>
+  </div>
+
+  <h1 class="mb-title">Spring Session（四）生产实践与故障排查</h1>
+  <div class="mb-sub">
+    分类：java · springsession
+     ｜ 标签：SpringSession
+  </div>
+
+  <div class="mb-article"><div class="essay-banner essay-springsession"></div>
+
+<h1 id="生产实践：容量、灰度与故障排查"><a href="#生产实践：容量、灰度与故障排查" class="headerlink" title="生产实践：容量、灰度与故障排查"></a><strong>生产实践：容量、灰度与故障排查</strong></h1><p>会话层是”平时没人看、出事全站挂”的组件。这一篇把生产上真正会遇到的几件事列清：容量怎么估、Redis 掉了会怎样、灰度上线怎么不踢人、日志里该看什么。</p>
+<p><img src="https://wu4yong.github.io/starry-images/assets/img/springsession/springsession-04-production.webp" alt="会话流量与缓存池的容量管理"></p>
+<p><em>会话流量与缓存池的容量管理</em></p>
+<h2 id="1-1-容量估算"><a href="#1-1-容量估算" class="headerlink" title="1.1 容量估算"></a>1.1 容量估算</h2><pre class="line-numbers language-text" data-language="text"><code class="language-text">在线用户 10 万
+平均会话大小 2KB（属性 hash + 序列化开销）
+总占用 = 10 万 × 2KB ≈ 200MB
+写入 QPS ≈ 在线数 ÷ 会话续期粒度（若每次请求都写，峰值可达数千）<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span></span></code></pre>
+
+<div class="data-grid data-grid-link-table"><div class="grid-header"><div class="grid-cell">参数</div><div class="grid-cell">影响</div><div class="grid-cell">建议</div></div><div class="grid-row"><div class="grid-cell"><code>flush-mode</code></div><div class="grid-cell"><code>on_save</code> 请求结束统一写，<code>immediate</code> 每次改都写</div><div class="grid-cell">用 <code>on_save</code></div></div><div class="grid-row"><div class="grid-cell">属性数量</div><div class="grid-cell">直接决定写入量</div><div class="grid-cell">只存必要字段</div></div><div class="grid-row"><div class="grid-cell">TTL 长度</div><div class="grid-cell">决定驻留量</div><div class="grid-cell">与业务会话时长一致</div></div><div class="grid-row"><div class="grid-cell">Redis 内存</div><div class="grid-cell">会话与缓存共用</div><div class="grid-cell">会话单独规划，别与缓存抢</div></div></div>
+
+<p>会话数据一丢就是全员掉登录，别和业务缓存共用一个实例的 <code>maxmemory-policy=allkeys-lru</code>，否则缓存压力大时会话会被淘汰。</p>
+<h2 id="1-2-Redis-故障时会怎样"><a href="#1-2-Redis-故障时会怎样" class="headerlink" title="1.2 Redis 故障时会怎样"></a>1.2 Redis 故障时会怎样</h2><div class="data-grid data-grid-link-table"><div class="grid-header"><div class="grid-cell">故障</div><div class="grid-cell">现象</div><div class="grid-cell">应对</div></div><div class="grid-row"><div class="grid-cell">Redis 不可用</div><div class="grid-cell">请求报 500 &#x2F; 全部掉登录</div><div class="grid-cell">降级为本地会话（临时）或拒绝登录</div></div><div class="grid-row"><div class="grid-cell">主从切换</div><div class="grid-cell">秒级闪断</div><div class="grid-cell">客户端重连重试</div></div><div class="grid-row"><div class="grid-cell">内存淘汰会话</div><div class="grid-cell">部分用户掉登录</div><div class="grid-cell">会话实例改 <code>noeviction</code> 或独立实例</div></div><div class="grid-row"><div class="grid-cell">网络抖动</div><div class="grid-cell">偶发掉登录</div><div class="grid-cell">调大连接超时、加本地二级缓存</div></div></div>
+
+<p>更狠的做法是<strong>本地 Caffeine 兜底</strong>：Redis 读失败时用本地副本，牺牲一致性保可用性。这在秒杀&#x2F;大促场景很常见。</p>
+<h2 id="1-3-灰度发布不踢人"><a href="#1-3-灰度发布不踢人" class="headerlink" title="1.3 灰度发布不踢人"></a>1.3 灰度发布不踢人</h2><p>新版本要改 Session 里存的数据结构时，滚动发布会导致”旧格式读不出来 → 全员掉登录”。</p>
+<div class="data-grid data-grid-link-table"><div class="grid-header"><div class="grid-cell">策略</div><div class="grid-cell">做法</div><div class="grid-cell">风险</div></div><div class="grid-row"><div class="grid-cell">兼容读取</div><div class="grid-cell">新代码同时支持旧字段与旧格式</div><div class="grid-cell">最稳</div></div><div class="grid-row"><div class="grid-cell">双写过渡</div><div class="grid-cell">新旧字段都写一段时间</div><div class="grid-cell">简单</div></div><div class="grid-row"><div class="grid-cell">灰度命名空间</div><div class="grid-cell">新版本用新 namespace</div><div class="grid-cell">会丢会话</div></div><div class="grid-row"><div class="grid-cell">不停机迁移</div><div class="grid-cell">脚本批量转换</div><div class="grid-cell">成本高</div></div></div>
+
+<p>推荐”兼容读取 + 双写”：上线期新老两版同时能解析，等旧会话自然过期后再删兼容代码。</p>
+<h2 id="1-4-关键日志与指标"><a href="#1-4-关键日志与指标" class="headerlink" title="1.4 关键日志与指标"></a>1.4 关键日志与指标</h2><pre class="line-numbers language-text" data-language="text"><code class="language-text"># 应用侧
+session.created / session.destroyed 事件日志
+401/403 突增 → 会话失效或 Cookie 未带
+Redis 慢查询（session save 耗时）
+
+# Redis 侧
+INFO memory / keyspace_hits / keyspace_misses
+会话 key 数量趋势（HLEN 或 SCAN 统计）<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<div class="data-grid data-grid-link-table"><div class="grid-header"><div class="grid-cell">指标</div><div class="grid-cell">正常值</div><div class="grid-cell">异常含义</div></div><div class="grid-row"><div class="grid-cell">会话 key 数</div><div class="grid-cell">与在线用户同量级</div><div class="grid-cell">暴涨说明会话泄漏</div></div><div class="grid-row"><div class="grid-cell">save 耗时 P99</div><div class="grid-cell">&lt; 5ms</div><div class="grid-cell">偏高说明 value 太大</div></div><div class="grid-row"><div class="grid-cell">401 比例</div><div class="grid-cell">&lt; 1%</div><div class="grid-cell">突增说明会话失效</div></div><div class="grid-row"><div class="grid-cell">Redis 内存使用</div><div class="grid-cell">低于 maxmemory 80%</div><div class="grid-cell">接近上限会被淘汰</div></div></div>
+
+<h2 id="1-5-Cookie-相关故障对照"><a href="#1-5-Cookie-相关故障对照" class="headerlink" title="1.5 Cookie 相关故障对照"></a>1.5 Cookie 相关故障对照</h2><div class="data-grid data-grid-link-table"><div class="grid-header"><div class="grid-cell">现象</div><div class="grid-cell">原因</div><div class="grid-cell">处理</div></div><div class="grid-row"><div class="grid-cell">登录成功但下个请求 401</div><div class="grid-cell">Cookie 没落 &#x2F; 跨域未带</div><div class="grid-cell">查 <code>SameSite</code>、<code>credentials</code></div></div><div class="grid-row"><div class="grid-cell">同一浏览器两个标签互踢</div><div class="grid-cell">并发策略为”只留最新”</div><div class="grid-cell">改”踢最旧”或按设备区分</div></div><div class="grid-row"><div class="grid-cell">iOS 微信内掉登录</div><div class="grid-cell"><code>SameSite=Strict</code> 被拦</div><div class="grid-cell">改 <code>Lax</code> 或 <code>None+secure</code></div></div><div class="grid-row"><div class="grid-cell">切子域后掉登录</div><div class="grid-cell"><code>domain</code> 写成了具体域名</div><div class="grid-cell">改 <code>.example.com</code></div></div><div class="grid-row"><div class="grid-cell">升级 HTTPS 后掉登录</div><div class="grid-cell"><code>secure=true</code> 但本地 http 调试</div><div class="grid-cell">环境区分配置</div></div></div>
+
+<h2 id="1-6-与网关、鉴权的衔接"><a href="#1-6-与网关、鉴权的衔接" class="headerlink" title="1.6 与网关、鉴权的衔接"></a>1.6 与网关、鉴权的衔接</h2><ul>
+<li>网关做鉴权时<strong>不要自己解析 Session</strong>，让它透传到下游，避免两套解析逻辑</li>
+<li>网关若用 <code>SESSION</code> Cookie 做限流 key，注意隐私与泄漏风险</li>
+<li>Feign 跨服务调用不自动带 Cookie，需要显式传递（或用 token 方案）</li>
+</ul>
+<pre class="line-numbers language-java" data-language="java"><code class="language-java"><span class="token comment">// Feign 透传 Cookie</span>
+template<span class="token punctuation">.</span><span class="token function">header</span><span class="token punctuation">(</span><span class="token string">"Cookie"</span><span class="token punctuation">,</span> request<span class="token punctuation">.</span><span class="token function">getHeader</span><span class="token punctuation">(</span><span class="token string">"Cookie"</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span></span></code></pre>
+
+<h2 id="1-7-安全清单"><a href="#1-7-安全清单" class="headerlink" title="1.7 安全清单"></a>1.7 安全清单</h2><div class="data-grid data-grid-link-table"><div class="grid-header"><div class="grid-cell">项</div><div class="grid-cell">做法</div></div><div class="grid-row"><div class="grid-cell">Cookie 属性</div><div class="grid-cell"><code>HttpOnly</code> + <code>Secure</code> + 合理的 <code>SameSite</code></div></div><div class="grid-row"><div class="grid-cell">会话固定攻击</div><div class="grid-cell">登录成功后 <code>changeSessionId()</code></div></div><div class="grid-row"><div class="grid-cell">会话 ID 熵</div><div class="grid-cell">用默认 <code>DefaultSessionIdResolver</code>（UUID）</div></div><div class="grid-row"><div class="grid-cell">敏感字段</div><div class="grid-cell">不落脚色的密码，只存 ID</div></div><div class="grid-row"><div class="grid-cell">跨站请求</div><div class="grid-cell">配合 CSRF token，不单靠 Session</div></div></div>
+
+<h2 id="1-8-官方资料"><a href="#1-8-官方资料" class="headerlink" title="1.8 官方资料"></a>1.8 官方资料</h2><ul>
+<li>Spring Session 参考：<a target="_blank" rel="noopener" href="https://docs.spring.io/spring-session/docs/2.5.x/reference/html/">https://docs.spring.io/spring-session/docs/2.5.x/reference/html/</a></li>
+<li>Redis 内存策略：<a target="_blank" rel="noopener" href="https://redis.io/topics/memory-optimization">https://redis.io/topics/memory-optimization</a></li>
+<li>OWASP 会话管理：<a target="_blank" rel="noopener" href="https://owasp.org/www-project-cheat-sheets/">https://owasp.org/www-project-cheat-sheets/</a></li>
+</ul>
+<h2 id="1-9-清单"><a href="#1-9-清单" class="headerlink" title="1.9 清单"></a>1.9 清单</h2><ol>
+<li>会话实例与业务缓存分开，避免被 LRU 淘汰</li>
+<li>容量按”在线数 × 平均会话大小”估，写入量看属性数量与 <code>flush-mode</code></li>
+<li>改数据结构时用”兼容读取 + 双写”，别直接换格式</li>
+<li><code>401</code> 突增先查 Cookie 的 <code>SameSite</code> &#x2F; <code>domain</code> &#x2F; <code>secure</code></li>
+<li>登录后 <code>changeSessionId()</code>，防会话固定攻击</li>
+<li>网关不重复解析会话，Feign 需显式透传 Cookie</li>
+<li>会话 key 数与 save 耗时是最该盯的两个指标</li>
+</ol>
+</div>
+
+  <div class="mb-foot">
+    <a href="/phone/">返回手机首页</a>
+    <a href="/phone/tags/">星迹索引</a>
+  </div>
+</div>
+
+
+<script>
+  /* 作用：懒加载本地 mermaid 库；无 mermaid 代码块时不加载 */
+  function loadLocalMermaid(){
+    return new Promise(function(resolve, reject){
+      if(window.mermaid) return resolve(window.mermaid);
+      var s = document.createElement('script');
+      s.src = '/js/third-party/mermaid/mermaid.min.js?v=10';
+      s.onload = function(){ resolve(window.mermaid); };
+      s.onerror = function(){ reject(new Error('mermaid local load failed')); };
+      document.head.appendChild(s);
+    });
+  }
+
+  /* 作用：把 ```mermaid 代码块替换成 SVG 图（手机端字号略小、图可横向滚动） */
+  async function renderMermaidDiagram(){
+    var blocks = document.querySelectorAll('pre[class*="language-mermaid"]');
+    if(!blocks.length) return;
+    var mermaid;
+    try { mermaid = await loadLocalMermaid(); }
+    catch(e){ console.warn('[mermaid] 本地库加载失败：', e); return; }
+
+    mermaid.initialize({
+      startOnLoad: false,
+      theme: 'base',
+      themeVariables: {
+        darkMode: true,
+        background: 'transparent',
+        fontFamily: '"Microsoft YaHei", "PingFang SC", "Segoe UI", sans-serif',
+        fontSize: '12px',
+        primaryColor: '#062f3d',
+        primaryTextColor: '#d6f6ff',
+        primaryBorderColor: '#00eeff',
+        secondaryColor: '#04222d',
+        tertiaryColor: '#04222d',
+        mainBkg: '#062f3d',
+        nodeBorder: '#00eeff',
+        clusterBkg: '#02161f',
+        clusterBorder: '#00eeff55',
+        lineColor: '#00eeff',
+        textColor: '#c0e8ff',
+        edgeLabelBackground: '#02161f'
+      },
+      flowchart: { curve: 'basis', useMaxWidth: false, htmlLabels: false, nodeSpacing: 30, rankSpacing: 40, padding: 10 }
+    });
+
+    var targets = [];
+    blocks.forEach(function(el){
+      var codeEl = el.querySelector('code');
+      if(!codeEl) return;
+      var div = document.createElement('div');
+      div.className = 'mermaid';
+      div.textContent = codeEl.textContent;
+      el.parentNode.replaceChild(div, el);
+      targets.push(div);
+    });
+    if(!targets.length) return;
+    try { await mermaid.run({ nodes: targets }); }
+    catch(e){ console.warn('[mermaid] 渲染失败：', e); }
+  }
+  /* 作用：多次触发兜底（延迟重试 + DOM 变化），防止某次时机没跑到导致图表留在代码块 */
+  var mmBusy = false;
+  function scheduleMermaid(){
+    if(mmBusy) return;
+    mmBusy = true;
+    renderMermaidDiagram().then(function(){ mmBusy = false; }, function(){ mmBusy = false; });
+  }
+  scheduleMermaid();
+  window.addEventListener('load', scheduleMermaid);
+  [1000, 3000, 8000].forEach(function(ms){ setTimeout(scheduleMermaid, ms); });
+  if(document.readyState !== 'loading') scheduleMermaid();
+  if(window.MutationObserver){
+    var mmTimer = null;
+    var mmObserver = new MutationObserver(function(){
+      clearTimeout(mmTimer);
+      mmTimer = setTimeout(scheduleMermaid, 400);
+    });
+    mmObserver.observe(document.querySelector('.mb-article') || document.body, { childList: true, subtree: true });
+  }
+</script>
+</body>
+</html>

@@ -1,0 +1,300 @@
+<!--
+  ============================================
+  手机端 · 文章原文页
+  文件：phone/post.njk
+  适用终端：手机端（路由 /phone/p/<slug>/，由 scripts/phone-routes.js 生成）
+  作用：手机阅读单篇文章；单列布局、无侧栏无雷达，替代电脑端 post.njk
+        数据由生成期算好：page.item = { title, dateStr, content, cats, tags }
+  样式依赖：source/css/theme/phone/common.css、source/css/theme/phone/list.css
+  组件依赖：phone/_components/Particles.njk
+  最后修改：2026-11-11
+  ============================================
+-->
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="color-scheme" content="dark">
+  <meta name="theme-color" content="#020817">
+  <!-- 首帧兜底：浏览器默认画布是白的，样式未解析前会闪一下白。这条规则先锁死深空底色 -->
+  <style>html{background-color:#020817}</style>
+  <title>ES44-熔断器、缓存与线程池 - 时空秘境</title>
+  <!-- 手机端样式：基础 + 列表/正文，外链引入（源文件 source/css/theme/phone/） -->
+  <link rel="stylesheet" href="/css/theme/phone/common.css">
+  <link rel="stylesheet" href="/css/theme/phone/list.css">
+<meta name="generator" content="Hexo 8.1.2"></head>
+<body>
+<div class="mb-shell">
+  <!--
+  ============================================
+  手机端星空粒子组件
+  文件：Particles.njk
+  适用终端：手机端
+  作用：Particles.njk 的手机端副本（nunjucks 子目录 include 取不到上级）
+        参数与电脑端 _components/Particles.njk 保持一致：
+        粒子 95 / 连线 118px / opacity 0.32，外加星座层与零星闪烁层
+  最后修改：2026-11-12
+  ============================================
+--><!-- z-index 必须是 0：负层级会被 body 不透明背景盖住，粒子在跑却看不见 -->
+<div id="particles" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 0; pointer-events: none;"></div>
+<!-- 星座层（与首页同一套：随机零星散布星座图形 + 偶尔闪烁的小星） -->
+<div id="constellations" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 1; pointer-events: none;" aria-hidden="true"></div>
+<script src="/js/particles.min.js"></script>
+<script>
+particlesJS("particles", {
+  particles: {
+    number: {
+      value: 95,
+      density: {
+        enable: true,
+        value_area: 800
+      }
+    },
+    color: {
+      value: "#00eeff"
+    },
+    shape: {
+      type: "circle",
+      stroke: {
+        width: 0,
+        color: "#000000"
+      }
+    },
+    opacity: {
+      value: 0.6,
+      random: true,
+      anim: {
+        enable: true,
+        speed: 0.5,
+        opacity_min: 0.1,
+        sync: false
+      }
+    },
+    size: {
+      value: 3,
+      random: true,
+      anim: {
+        enable: true,
+        speed: 2,
+        size_min: 0.1,
+        sync: false
+      }
+    },
+    line_linked: {
+      enable: true,
+      distance: 118,
+      color: "#00eeff",
+      opacity: 0.32,
+      width: 1
+    },
+    move: {
+      enable: true,
+      speed: 0.8,
+      direction: "none",
+      random: true,
+      straight: false,
+      out_mode: "out",
+      bounce: false,
+      attract: {
+        enable: true,
+        rotateX: 600,
+        rotateY: 1200
+      }
+    }
+  },
+  interactivity: {
+    detect_on: "canvas",
+    events: {
+      onhover: {
+        enable: true,
+        mode: "grab"       // 手指按住时粒子聚集
+      },
+      onclick: {
+        enable: true,
+        mode: "push"       // 点击时产生新粒子
+      },
+      resize: true
+    },
+    modes: {
+      grab: {
+        distance: 200,
+        line_linked: {
+          opacity: 1
+        }
+      },
+      push: {
+        particles_nb: 6
+      }
+    }
+  },
+  retina_detect: true
+});
+</script>
+<!-- 星座 + 零星闪烁层：与电脑端共用同一份绘制脚本 -->
+<script src="/js/theme/home/starfield.js"></script>
+
+
+  <div class="mb-top">
+    <a class="mb-back" href="/phone/">← 返回手机首页</a>
+    <span class="mb-sub" style="margin:0">2024-02-02</span>
+  </div>
+
+  <h1 class="mb-title">ES44-熔断器、缓存与线程池</h1>
+  <div class="mb-sub">
+    分类：bigdata · elasticsearch
+     ｜ 标签：Elasticsearch · 系统课
+  </div>
+
+  <div class="mb-article"><div class="essay-banner essay-elasticsearch"></div>
+
+<h1 id="熔断器、缓存与线程池：内存是怎么被守住的"><a href="#熔断器、缓存与线程池：内存是怎么被守住的" class="headerlink" title="熔断器、缓存与线程池：内存是怎么被守住的"></a>熔断器、缓存与线程池：内存是怎么被守住的</h1><p>ES 保护内存靠三层：<strong>熔断器</strong>在分配前拒绝、<strong>缓存</strong>决定什么值得留、<strong>线程池</strong>决定请求排队还是直接拒绝。</p>
+<p>三者协同的结果就是：宁可返回 429 或 <code>circuit_breaking_exception</code>，也不让 JVM 先 OOM。</p>
+<!-- 配图 44-1：待生成，放到图床同名路径后启用下面一行 -->
+<blockquote>
+<p><strong>配图 44-1｜提示词</strong>：三层防护塔。最上层一排熔断器开关，标 <code>total 70%</code>、<code>fielddata 40%</code>、<code>request 60%</code>，旁边一个红灯 <code>circuit_breaking_exception</code>；中层两块缓存：<code>node query cache 10%</code> 与 <code>shard request cache</code>，标「只对 filter 结果 &#x2F; size:0 请求」；最下层三个线程池方块 <code>search</code>、<code>write</code>、<code>get</code>，队列满时抛出 429。深色星空背景，青蓝为主，告警红。</p>
+</blockquote>
+<h2 id="一、学习目标"><a href="#一、学习目标" class="headerlink" title="一、学习目标"></a>一、学习目标</h2><ol>
+<li>记住四个主要熔断器的默认上限，并能说清「它在拦什么」；</li>
+<li>知道 query cache 与 request cache 各自缓存什么；</li>
+<li>会用 <code>_nodes/stats</code> 看线程池与拒绝数；</li>
+<li>明白 429 与熔断异常的区别。</li>
+</ol>
+<h2 id="二、前置知识"><a href="#二、前置知识" class="headerlink" title="二、前置知识"></a>二、前置知识</h2><div class="data-grid data-grid-link-table"><div class="grid-header"><div class="grid-cell">需要掌握</div><div class="grid-cell">到什么程度</div><div class="grid-cell">出处</div></div><div class="grid-row"><div class="grid-cell">filter 上下文</div><div class="grid-cell">filter 结果可缓存</div><div class="grid-cell">M4-1</div></div><div class="grid-row"><div class="grid-cell">聚合内存</div><div class="grid-cell">桶数吃堆</div><div class="grid-cell">M5-4</div></div><div class="grid-row"><div class="grid-cell">写入背压</div><div class="grid-cell">429 来自队列满</div><div class="grid-cell">M3-7</div></div></div>
+
+<h2 id="三、理论讲解"><a href="#三、理论讲解" class="headerlink" title="三、理论讲解"></a>三、理论讲解</h2><div class="data-grid data-grid-link-table"><div class="grid-header"><div class="grid-cell">机制</div><div class="grid-cell">默认</div><div class="grid-cell">拦什么</div></div><div class="grid-row"><div class="grid-cell"><code>indices.breaker.total.limit</code></div><div class="grid-cell">70%</div><div class="grid-cell">所有熔断器之和的上限</div></div><div class="grid-row"><div class="grid-cell"><code>indices.breaker.fielddata.limit</code></div><div class="grid-cell">40%</div><div class="grid-cell">fielddata（text 排序&#x2F;聚合）</div></div><div class="grid-row"><div class="grid-cell"><code>indices.breaker.request.limit</code></div><div class="grid-cell">60%</div><div class="grid-cell">单次请求（聚合、排序）估算用量</div></div><div class="grid-row"><div class="grid-cell"><code>network.breaker.inflight_requests.limit</code></div><div class="grid-cell">100%</div><div class="grid-cell">在途请求体</div></div><div class="grid-row"><div class="grid-cell"><code>indices.queries.cache.size</code></div><div class="grid-cell">10%</div><div class="grid-cell">node query cache（filter 结果）</div></div><div class="grid-row"><div class="grid-cell">shard request cache</div><div class="grid-cell">按请求开启</div><div class="grid-cell"><code>size: 0</code> 类请求结果</div></div><div class="grid-row"><div class="grid-cell"><code>search</code> 线程池队列</div><div class="grid-cell">1000</div><div class="grid-cell">搜索任务排队</div></div></div>
+
+<h2 id="四、原理拆解：熔断是「预判」，不是「事后」"><a href="#四、原理拆解：熔断是「预判」，不是「事后」" class="headerlink" title="四、原理拆解：熔断是「预判」，不是「事后」"></a>四、原理拆解：熔断是「预判」，不是「事后」</h2><p>熔断器在<strong>分配内存之前</strong>估算这次操作要多少，加上已用量超过阈值就直接抛 <code>circuit_breaking_exception</code>。所以它保护的是「不要让一次大聚合把堆吃光」，代价是误判——估算偏保守时会「明明还有内存却拒绝」。</p>
+<p><code>fielddata</code> 熔断占 40% 是有原因的：它是唯一会把正排数据搬进堆的结构（text 字段排序&#x2F;聚合时触发），最容易被大字段打爆。真正的解法不是调大熔断，而是给字段加 <code>keyword</code> 子字段并避免对 text 聚合。</p>
+<p>两类缓存别混：</p>
+<div class="data-grid data-grid-link-table"><div class="grid-header"><div class="grid-cell">缓存</div><div class="grid-cell">缓存内容</div><div class="grid-cell">生效条件</div><div class="grid-cell">失效点</div></div><div class="grid-row"><div class="grid-cell">node query cache</div><div class="grid-cell">filter 子句的匹配结果（bitset）</div><div class="grid-cell">filter 上下文</div><div class="grid-cell">段合并、写入</div></div><div class="grid-row"><div class="grid-cell">shard request cache</div><div class="grid-cell">整个请求的<strong>结果</strong></div><div class="grid-cell"><code>size: 0</code> 类请求</div><div class="grid-cell">索引刷新、请求体变化</div></div></div>
+
+<h2 id="五、场景说明"><a href="#五、场景说明" class="headerlink" title="五、场景说明"></a>五、场景说明</h2><div class="data-grid data-grid-link-table"><div class="grid-header"><div class="grid-cell">现象</div><div class="grid-cell">常见原因</div><div class="grid-cell">处置</div></div><div class="grid-row"><div class="grid-cell"><code>circuit_breaking_exception</code>（fielddata）</div><div class="grid-cell">text 字段排序&#x2F;聚合</div><div class="grid-cell">加 keyword 子字段</div></div><div class="grid-row"><div class="grid-cell"><code>circuit_breaking_exception</code>（request）</div><div class="grid-cell">超大聚合、超大排序</div><div class="grid-cell">缩范围、降桶数</div></div><div class="grid-row"><div class="grid-cell">429 <code>too many requests</code></div><div class="grid-cell">search&#x2F;write 队列满</div><div class="grid-cell">降并发、扩节点、优化查询</div></div><div class="grid-row"><div class="grid-cell">缓存命中率低</div><div class="grid-cell">每次请求体不同</div><div class="grid-cell">统一查询模板</div></div><div class="grid-row"><div class="grid-cell">堆缓慢上涨</div><div class="grid-cell">fielddata 累积</div><div class="grid-cell">查 <code>_nodes/stats/indices/fielddata</code></div></div></div>
+
+<h2 id="六、实操"><a href="#六、实操" class="headerlink" title="六、实操"></a>六、实操</h2><pre class="line-numbers language-bash" data-language="bash"><code class="language-bash"><span class="token comment"># 熔断器与线程池现状</span>
+<span class="token function">curl</span> <span class="token parameter variable">-s</span> <span class="token string">"http://localhost:9200/_nodes/stats/breaker,thread_pool,jvm?pretty"</span> <span class="token operator">|</span> Select-String <span class="token parameter variable">-Pattern</span> <span class="token string">'tripped|limit_size|queue|rejected|heap_used_percent'</span>
+
+<span class="token comment"># 只看拒绝数</span>
+<span class="token function">curl</span> <span class="token parameter variable">-s</span> <span class="token string">"http://localhost:9200/_cat/thread_pool?v&amp;h=node_name,name,active,queue,rejected,completed"</span>
+
+<span class="token comment"># 缓存命中</span>
+<span class="token function">curl</span> <span class="token parameter variable">-s</span> <span class="token string">"http://localhost:9200/_nodes/stats/indices/query_cache,request_cache?pretty"</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<p><code>rejected</code> 持续增长就说明「队列长期满」，这是扩容或优化查询的信号，不是调大队列能解决的。</p>
+<h2 id="七、常见坑"><a href="#七、常见坑" class="headerlink" title="七、常见坑"></a>七、常见坑</h2><ol>
+<li><strong>遇到熔断就调大 limit</strong>：只是把 OOM 推后，问题根因还在。</li>
+<li><strong>对 text 字段排序&#x2F;聚合</strong>：fielddata 吃堆，官方不建议。</li>
+<li><strong>以为 request cache 对所有查询生效</strong>：只对 <code>size: 0</code> 一类。</li>
+<li><strong>每次请求体带随机参数</strong>：缓存永久失效，命中率接近 0。</li>
+<li><strong>把 <code>rejected</code> 当集群故障</strong>：它是背压机制在工作（M3-7）。</li>
+<li><strong>线程池队列调得很大</strong>：请求堆积、延迟飙升，不如早拒绝。</li>
+</ol>
+<h2 id="八、课后小结"><a href="#八、课后小结" class="headerlink" title="八、课后小结"></a>八、课后小结</h2><ol>
+<li>total 70%、fielddata 40%、request 60%，是三层熔断的主参数。</li>
+<li>fielddata 是唯一把正排搬进堆的结构，最该防。</li>
+<li>query cache 缓 filter 结果，request cache 缓 <code>size: 0</code> 请求结果。</li>
+<li><code>search</code> 线程池队列默认 1000，满了返回 429。</li>
+<li>遇熔断先找「谁在吃内存」，别先调阈值。</li>
+</ol>
+<h2 id="九、思考题"><a href="#九、思考题" class="headerlink" title="九、思考题"></a>九、思考题</h2><ol>
+<li>一个请求报 fielddata 熔断，你会先改熔断阈值还是改 mapping？为什么？</li>
+<li>为什么 request cache 只对 <code>size: 0</code> 生效？从「结果可复用性」解释。</li>
+<li><code>rejected</code> 与 <code>circuit_breaking_exception</code> 分别代表哪一层在拦？</li>
+</ol>
+<h2 id="十、官方资料"><a href="#十、官方资料" class="headerlink" title="十、官方资料"></a>十、官方资料</h2><ul>
+<li>Circuit breaker settings：<a target="_blank" rel="noopener" href="https://www.elastic.co/guide/en/elasticsearch/reference/current/circuit-breaker.html">https://www.elastic.co/guide/en/elasticsearch/reference/current/circuit-breaker.html</a></li>
+<li>Query cache：<a target="_blank" rel="noopener" href="https://www.elastic.co/guide/en/elasticsearch/reference/current/query-cache.html">https://www.elastic.co/guide/en/elasticsearch/reference/current/query-cache.html</a></li>
+<li>Shard request cache：<a target="_blank" rel="noopener" href="https://www.elastic.co/guide/en/elasticsearch/reference/current/shard-request-cache.html">https://www.elastic.co/guide/en/elasticsearch/reference/current/shard-request-cache.html</a></li>
+<li>Thread pools：<a target="_blank" rel="noopener" href="https://www.elastic.co/guide/en/elasticsearch/reference/current/modules-threadpool.html">https://www.elastic.co/guide/en/elasticsearch/reference/current/modules-threadpool.html</a></li>
+</ul>
+<p>上一篇：<a href="/2024/01/30/bigdata/elasticsearch/es-43-heap-memory/">M7-2 堆、内存与 bootstrap checks</a> ｜ 下一篇：<a href="/2024/02/05/bigdata/elasticsearch/es-45-slowlog-profile/">M7-4 慢日志、profile 与 hot_threads</a> ｜ <a href="/2023/09/22/bigdata/elasticsearch/es-00-series-index/">总目录</a></p>
+</div>
+
+  <div class="mb-foot">
+    <a href="/phone/">返回手机首页</a>
+    <a href="/phone/tags/">星迹索引</a>
+  </div>
+</div>
+
+
+<script>
+  /* 作用：懒加载本地 mermaid 库；无 mermaid 代码块时不加载 */
+  function loadLocalMermaid(){
+    return new Promise(function(resolve, reject){
+      if(window.mermaid) return resolve(window.mermaid);
+      var s = document.createElement('script');
+      s.src = '/js/third-party/mermaid/mermaid.min.js?v=10';
+      s.onload = function(){ resolve(window.mermaid); };
+      s.onerror = function(){ reject(new Error('mermaid local load failed')); };
+      document.head.appendChild(s);
+    });
+  }
+
+  /* 作用：把 ```mermaid 代码块替换成 SVG 图（手机端字号略小、图可横向滚动） */
+  async function renderMermaidDiagram(){
+    var blocks = document.querySelectorAll('pre[class*="language-mermaid"]');
+    if(!blocks.length) return;
+    var mermaid;
+    try { mermaid = await loadLocalMermaid(); }
+    catch(e){ console.warn('[mermaid] 本地库加载失败：', e); return; }
+
+    mermaid.initialize({
+      startOnLoad: false,
+      theme: 'base',
+      themeVariables: {
+        darkMode: true,
+        background: 'transparent',
+        fontFamily: '"Microsoft YaHei", "PingFang SC", "Segoe UI", sans-serif',
+        fontSize: '12px',
+        primaryColor: '#062f3d',
+        primaryTextColor: '#d6f6ff',
+        primaryBorderColor: '#00eeff',
+        secondaryColor: '#04222d',
+        tertiaryColor: '#04222d',
+        mainBkg: '#062f3d',
+        nodeBorder: '#00eeff',
+        clusterBkg: '#02161f',
+        clusterBorder: '#00eeff55',
+        lineColor: '#00eeff',
+        textColor: '#c0e8ff',
+        edgeLabelBackground: '#02161f'
+      },
+      flowchart: { curve: 'basis', useMaxWidth: false, htmlLabels: false, nodeSpacing: 30, rankSpacing: 40, padding: 10 }
+    });
+
+    var targets = [];
+    blocks.forEach(function(el){
+      var codeEl = el.querySelector('code');
+      if(!codeEl) return;
+      var div = document.createElement('div');
+      div.className = 'mermaid';
+      div.textContent = codeEl.textContent;
+      el.parentNode.replaceChild(div, el);
+      targets.push(div);
+    });
+    if(!targets.length) return;
+    try { await mermaid.run({ nodes: targets }); }
+    catch(e){ console.warn('[mermaid] 渲染失败：', e); }
+  }
+  /* 作用：多次触发兜底（延迟重试 + DOM 变化），防止某次时机没跑到导致图表留在代码块 */
+  var mmBusy = false;
+  function scheduleMermaid(){
+    if(mmBusy) return;
+    mmBusy = true;
+    renderMermaidDiagram().then(function(){ mmBusy = false; }, function(){ mmBusy = false; });
+  }
+  scheduleMermaid();
+  window.addEventListener('load', scheduleMermaid);
+  [1000, 3000, 8000].forEach(function(ms){ setTimeout(scheduleMermaid, ms); });
+  if(document.readyState !== 'loading') scheduleMermaid();
+  if(window.MutationObserver){
+    var mmTimer = null;
+    var mmObserver = new MutationObserver(function(){
+      clearTimeout(mmTimer);
+      mmTimer = setTimeout(scheduleMermaid, 400);
+    });
+    mmObserver.observe(document.querySelector('.mb-article') || document.body, { childList: true, subtree: true });
+  }
+</script>
+</body>
+</html>

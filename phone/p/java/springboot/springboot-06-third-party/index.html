@@ -1,0 +1,392 @@
+<!--
+  ============================================
+  手机端 · 文章原文页
+  文件：phone/post.njk
+  适用终端：手机端（路由 /phone/p/<slug>/，由 scripts/phone-routes.js 生成）
+  作用：手机阅读单篇文章；单列布局、无侧栏无雷达，替代电脑端 post.njk
+        数据由生成期算好：page.item = { title, dateStr, content, cats, tags }
+  样式依赖：source/css/theme/phone/common.css、source/css/theme/phone/list.css
+  组件依赖：phone/_components/Particles.njk
+  最后修改：2026-11-11
+  ============================================
+-->
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="color-scheme" content="dark">
+  <meta name="theme-color" content="#020817">
+  <!-- 首帧兜底：浏览器默认画布是白的，样式未解析前会闪一下白。这条规则先锁死深空底色 -->
+  <style>html{background-color:#020817}</style>
+  <title>Spring Boot（六）整合第三方技术 - 时空秘境</title>
+  <!-- 手机端样式：基础 + 列表/正文，外链引入（源文件 source/css/theme/phone/） -->
+  <link rel="stylesheet" href="/css/theme/phone/common.css">
+  <link rel="stylesheet" href="/css/theme/phone/list.css">
+<meta name="generator" content="Hexo 8.1.2"></head>
+<body>
+<div class="mb-shell">
+  <!--
+  ============================================
+  手机端星空粒子组件
+  文件：Particles.njk
+  适用终端：手机端
+  作用：Particles.njk 的手机端副本（nunjucks 子目录 include 取不到上级）
+        参数与电脑端 _components/Particles.njk 保持一致：
+        粒子 95 / 连线 118px / opacity 0.32，外加星座层与零星闪烁层
+  最后修改：2026-11-12
+  ============================================
+--><!-- z-index 必须是 0：负层级会被 body 不透明背景盖住，粒子在跑却看不见 -->
+<div id="particles" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 0; pointer-events: none;"></div>
+<!-- 星座层（与首页同一套：随机零星散布星座图形 + 偶尔闪烁的小星） -->
+<div id="constellations" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 1; pointer-events: none;" aria-hidden="true"></div>
+<script src="/js/particles.min.js"></script>
+<script>
+particlesJS("particles", {
+  particles: {
+    number: {
+      value: 95,
+      density: {
+        enable: true,
+        value_area: 800
+      }
+    },
+    color: {
+      value: "#00eeff"
+    },
+    shape: {
+      type: "circle",
+      stroke: {
+        width: 0,
+        color: "#000000"
+      }
+    },
+    opacity: {
+      value: 0.6,
+      random: true,
+      anim: {
+        enable: true,
+        speed: 0.5,
+        opacity_min: 0.1,
+        sync: false
+      }
+    },
+    size: {
+      value: 3,
+      random: true,
+      anim: {
+        enable: true,
+        speed: 2,
+        size_min: 0.1,
+        sync: false
+      }
+    },
+    line_linked: {
+      enable: true,
+      distance: 118,
+      color: "#00eeff",
+      opacity: 0.32,
+      width: 1
+    },
+    move: {
+      enable: true,
+      speed: 0.8,
+      direction: "none",
+      random: true,
+      straight: false,
+      out_mode: "out",
+      bounce: false,
+      attract: {
+        enable: true,
+        rotateX: 600,
+        rotateY: 1200
+      }
+    }
+  },
+  interactivity: {
+    detect_on: "canvas",
+    events: {
+      onhover: {
+        enable: true,
+        mode: "grab"       // 手指按住时粒子聚集
+      },
+      onclick: {
+        enable: true,
+        mode: "push"       // 点击时产生新粒子
+      },
+      resize: true
+    },
+    modes: {
+      grab: {
+        distance: 200,
+        line_linked: {
+          opacity: 1
+        }
+      },
+      push: {
+        particles_nb: 6
+      }
+    }
+  },
+  retina_detect: true
+});
+</script>
+<!-- 星座 + 零星闪烁层：与电脑端共用同一份绘制脚本 -->
+<script src="/js/theme/home/starfield.js"></script>
+
+
+  <div class="mb-top">
+    <a class="mb-back" href="/phone/">← 返回手机首页</a>
+    <span class="mb-sub" style="margin:0">2022-04-17</span>
+  </div>
+
+  <h1 class="mb-title">Spring Boot（六）整合第三方技术</h1>
+  <div class="mb-sub">
+    分类：java · springboot
+     ｜ 标签：SpringBoot
+  </div>
+
+  <div class="mb-article"><div class="essay-banner essay-springboot"></div>
+
+<h1 id="整合任意第三方技术"><a href="#整合任意第三方技术" class="headerlink" title="整合任意第三方技术"></a><strong>整合任意第三方技术</strong></h1><p>“Spring Boot 能整合任何技术”不是玄学，它有一套固定套路：<strong>加 starter → 写配置 → 用默认 Bean → 不满意就自己定义 Bean 覆盖</strong>。这一篇用 Redis、定时任务、HTTP 客户端三个例子把套路演示一遍，再讲清楚为什么自定义 Bean 能覆盖自动配置。</p>
+<p><img src="https://wu4yong.github.io/starry-images/assets/img/springboot/springboot-06-third-party.webp" alt="任意第三方技术都通过同一套插槽接入"></p>
+<p><em>任意第三方技术都通过同一套插槽接入</em></p>
+<h2 id="1-1-整合的四个动作"><a href="#1-1-整合的四个动作" class="headerlink" title="1.1 整合的四个动作"></a>1.1 整合的四个动作</h2><div class="data-grid data-grid-link-table"><div class="grid-header"><div class="grid-cell">步骤</div><div class="grid-cell">做什么</div><div class="grid-cell">判断依据</div></div><div class="grid-row"><div class="grid-cell"><ol>
+<li>加依赖</li>
+</ol></div><div class="grid-cell">starter 或普通依赖</div><div class="grid-cell">官方 starter 优先，没有就用普通依赖</div></div><div class="grid-row"><div class="grid-cell"><ol start="2">
+<li>写配置</li>
+</ol></div><div class="grid-cell">yml 里按前缀填</div><div class="grid-cell">看 starter 的配置元数据&#x2F;文档</div></div><div class="grid-row"><div class="grid-cell"><ol start="3">
+<li>直接用</li>
+</ol></div><div class="grid-cell">注入自动装配好的 Bean</div><div class="grid-cell">先假设”它已经给你准备好了”</div></div><div class="grid-row"><div class="grid-cell"><ol start="4">
+<li>覆盖</li>
+</ol></div><div class="grid-cell">自己 <code>@Bean</code> 定义同类型</div><div class="grid-cell">默认配置不满足需求时</div></div></div>
+
+<p>第 4 步是关键：Spring Boot 的自动配置大量使用 <code>@ConditionalOnMissingBean</code>，<strong>你定义的 Bean 优先</strong>，这不是约定而是机制（第八篇讲原理）。</p>
+<h2 id="1-2-例一：Redis"><a href="#1-2-例一：Redis" class="headerlink" title="1.2 例一：Redis"></a>1.2 例一：Redis</h2><p>依赖：</p>
+<pre class="line-numbers language-markup" data-language="markup"><code class="language-markup"><span class="token tag"><span class="token tag"><span class="token punctuation">&lt;</span>dependency</span><span class="token punctuation">></span></span>
+    <span class="token tag"><span class="token tag"><span class="token punctuation">&lt;</span>groupId</span><span class="token punctuation">></span></span>org.springframework.boot<span class="token tag"><span class="token tag"><span class="token punctuation">&lt;/</span>groupId</span><span class="token punctuation">></span></span>
+    <span class="token tag"><span class="token tag"><span class="token punctuation">&lt;</span>artifactId</span><span class="token punctuation">></span></span>spring-boot-starter-data-redis<span class="token tag"><span class="token tag"><span class="token punctuation">&lt;/</span>artifactId</span><span class="token punctuation">></span></span>
+<span class="token tag"><span class="token tag"><span class="token punctuation">&lt;/</span>dependency</span><span class="token punctuation">></span></span>
+<span class="token comment">&lt;!-- 连接池 --></span>
+<span class="token tag"><span class="token tag"><span class="token punctuation">&lt;</span>dependency</span><span class="token punctuation">></span></span>
+    <span class="token tag"><span class="token tag"><span class="token punctuation">&lt;</span>groupId</span><span class="token punctuation">></span></span>org.apache.commons<span class="token tag"><span class="token tag"><span class="token punctuation">&lt;/</span>groupId</span><span class="token punctuation">></span></span>
+    <span class="token tag"><span class="token tag"><span class="token punctuation">&lt;</span>artifactId</span><span class="token punctuation">></span></span>commons-pool2<span class="token tag"><span class="token tag"><span class="token punctuation">&lt;/</span>artifactId</span><span class="token punctuation">></span></span>
+<span class="token tag"><span class="token tag"><span class="token punctuation">&lt;/</span>dependency</span><span class="token punctuation">></span></span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<p>配置：</p>
+<pre class="line-numbers language-yaml" data-language="yaml"><code class="language-yaml"><span class="token key atrule">spring</span><span class="token punctuation">:</span>
+  <span class="token key atrule">redis</span><span class="token punctuation">:</span>
+    <span class="token key atrule">host</span><span class="token punctuation">:</span> 127.0.0.1
+    <span class="token key atrule">port</span><span class="token punctuation">:</span> <span class="token number">6379</span>
+    <span class="token key atrule">password</span><span class="token punctuation">:</span> $<span class="token punctuation">&#123;</span>REDIS_PWD<span class="token punctuation">:</span><span class="token punctuation">&#125;</span>
+    <span class="token key atrule">database</span><span class="token punctuation">:</span> <span class="token number">0</span>
+    <span class="token key atrule">timeout</span><span class="token punctuation">:</span> 3000ms
+    <span class="token key atrule">lettuce</span><span class="token punctuation">:</span>
+      <span class="token key atrule">pool</span><span class="token punctuation">:</span>
+        <span class="token key atrule">max-active</span><span class="token punctuation">:</span> <span class="token number">8</span>
+        <span class="token key atrule">max-idle</span><span class="token punctuation">:</span> <span class="token number">8</span>
+        <span class="token key atrule">min-idle</span><span class="token punctuation">:</span> <span class="token number">0</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<p>直接使用（<code>StringRedisTemplate</code> 与 <code>RedisTemplate</code> 都已自动装配）：</p>
+<pre class="line-numbers language-java" data-language="java"><code class="language-java"><span class="token annotation punctuation">@Service</span>
+<span class="token annotation punctuation">@RequiredArgsConstructor</span>
+<span class="token keyword">public</span> <span class="token keyword">class</span> <span class="token class-name">CacheService</span> <span class="token punctuation">&#123;</span>
+    <span class="token keyword">private</span> <span class="token keyword">final</span> <span class="token class-name">StringRedisTemplate</span> redis<span class="token punctuation">;</span>
+
+    <span class="token keyword">public</span> <span class="token keyword">void</span> <span class="token function">put</span><span class="token punctuation">(</span><span class="token class-name">String</span> k<span class="token punctuation">,</span> <span class="token class-name">String</span> v<span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+        redis<span class="token punctuation">.</span><span class="token function">opsForValue</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token function">set</span><span class="token punctuation">(</span>k<span class="token punctuation">,</span> v<span class="token punctuation">,</span> <span class="token class-name">Duration</span><span class="token punctuation">.</span><span class="token function">ofMinutes</span><span class="token punctuation">(</span><span class="token number">10</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token punctuation">&#125;</span>
+    <span class="token keyword">public</span> <span class="token class-name">String</span> <span class="token function">get</span><span class="token punctuation">(</span><span class="token class-name">String</span> k<span class="token punctuation">)</span> <span class="token punctuation">&#123;</span> <span class="token keyword">return</span> redis<span class="token punctuation">.</span><span class="token function">opsForValue</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token function">get</span><span class="token punctuation">(</span>k<span class="token punctuation">)</span><span class="token punctuation">;</span> <span class="token punctuation">&#125;</span>
+<span class="token punctuation">&#125;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<p>不满意默认的 JDK 序列化（存进去是乱码二进制），就自己定义 <code>RedisTemplate</code> 覆盖：</p>
+<pre class="line-numbers language-java" data-language="java"><code class="language-java"><span class="token annotation punctuation">@Configuration</span>
+<span class="token keyword">public</span> <span class="token keyword">class</span> <span class="token class-name">RedisConfig</span> <span class="token punctuation">&#123;</span>
+    <span class="token annotation punctuation">@Bean</span>
+    <span class="token keyword">public</span> <span class="token class-name">RedisTemplate</span><span class="token generics"><span class="token punctuation">&lt;</span><span class="token class-name">String</span><span class="token punctuation">,</span> <span class="token class-name">Object</span><span class="token punctuation">></span></span> <span class="token function">redisTemplate</span><span class="token punctuation">(</span><span class="token class-name">RedisConnectionFactory</span> f<span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+        <span class="token class-name">RedisTemplate</span><span class="token generics"><span class="token punctuation">&lt;</span><span class="token class-name">String</span><span class="token punctuation">,</span> <span class="token class-name">Object</span><span class="token punctuation">></span></span> t <span class="token operator">=</span> <span class="token keyword">new</span> <span class="token class-name">RedisTemplate</span><span class="token generics"><span class="token punctuation">&lt;</span><span class="token punctuation">></span></span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+        t<span class="token punctuation">.</span><span class="token function">setConnectionFactory</span><span class="token punctuation">(</span>f<span class="token punctuation">)</span><span class="token punctuation">;</span>
+        <span class="token class-name">StringRedisSerializer</span> keySer <span class="token operator">=</span> <span class="token keyword">new</span> <span class="token class-name">StringRedisSerializer</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+        <span class="token class-name">Jackson2JsonRedisSerializer</span><span class="token generics"><span class="token punctuation">&lt;</span><span class="token class-name">Object</span><span class="token punctuation">></span></span> valSer <span class="token operator">=</span>
+                <span class="token keyword">new</span> <span class="token class-name">Jackson2JsonRedisSerializer</span><span class="token generics"><span class="token punctuation">&lt;</span><span class="token punctuation">></span></span><span class="token punctuation">(</span><span class="token class-name">Object</span><span class="token punctuation">.</span><span class="token keyword">class</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+        t<span class="token punctuation">.</span><span class="token function">setKeySerializer</span><span class="token punctuation">(</span>keySer<span class="token punctuation">)</span><span class="token punctuation">;</span>
+        t<span class="token punctuation">.</span><span class="token function">setHashKeySerializer</span><span class="token punctuation">(</span>keySer<span class="token punctuation">)</span><span class="token punctuation">;</span>
+        t<span class="token punctuation">.</span><span class="token function">setValueSerializer</span><span class="token punctuation">(</span>valSer<span class="token punctuation">)</span><span class="token punctuation">;</span>
+        t<span class="token punctuation">.</span><span class="token function">setHashValueSerializer</span><span class="token punctuation">(</span>valSer<span class="token punctuation">)</span><span class="token punctuation">;</span>
+        t<span class="token punctuation">.</span><span class="token function">afterPropertiesSet</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+        <span class="token keyword">return</span> t<span class="token punctuation">;</span>
+    <span class="token punctuation">&#125;</span>
+<span class="token punctuation">&#125;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<p>注意名字必须叫 <code>redisTemplate</code>——自动配置用的是 <code>@ConditionalOnMissingBean(name = &quot;redisTemplate&quot;)</code>，名字不对不会被覆盖。</p>
+<h2 id="1-3-例二：定时任务"><a href="#1-3-例二：定时任务" class="headerlink" title="1.3 例二：定时任务"></a>1.3 例二：定时任务</h2><pre class="line-numbers language-java" data-language="java"><code class="language-java"><span class="token annotation punctuation">@SpringBootApplication</span>
+<span class="token annotation punctuation">@EnableScheduling</span>                    <span class="token comment">// 打开调度能力</span>
+<span class="token keyword">public</span> <span class="token keyword">class</span> <span class="token class-name">DemoApplication</span> <span class="token punctuation">&#123;</span> <span class="token punctuation">&#125;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span></span></code></pre>
+
+<pre class="line-numbers language-java" data-language="java"><code class="language-java"><span class="token annotation punctuation">@Component</span>
+<span class="token keyword">public</span> <span class="token keyword">class</span> <span class="token class-name">JobDemo</span> <span class="token punctuation">&#123;</span>
+    <span class="token comment">// 每 5 秒一次；cron 用 6 段（秒 分 时 日 月 周）</span>
+    <span class="token annotation punctuation">@Scheduled</span><span class="token punctuation">(</span>fixedRate <span class="token operator">=</span> <span class="token number">5000</span><span class="token punctuation">)</span>
+    <span class="token keyword">public</span> <span class="token keyword">void</span> <span class="token function">tick</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">&#123;</span> <span class="token punctuation">&#125;</span>
+
+    <span class="token annotation punctuation">@Scheduled</span><span class="token punctuation">(</span>cron <span class="token operator">=</span> <span class="token string">"0 0 3 * * *"</span><span class="token punctuation">)</span>
+    <span class="token keyword">public</span> <span class="token keyword">void</span> <span class="token function">daily</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">&#123;</span> <span class="token punctuation">&#125;</span>
+<span class="token punctuation">&#125;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<p>默认调度线程池只有 <strong>1 个线程</strong>，多个任务会互相排队，必须自己配：</p>
+<pre class="line-numbers language-yaml" data-language="yaml"><code class="language-yaml"><span class="token key atrule">spring</span><span class="token punctuation">:</span>
+  <span class="token key atrule">task</span><span class="token punctuation">:</span>
+    <span class="token key atrule">scheduling</span><span class="token punctuation">:</span>
+      <span class="token key atrule">pool</span><span class="token punctuation">:</span>
+        <span class="token key atrule">size</span><span class="token punctuation">:</span> <span class="token number">4</span>                     <span class="token comment"># 线程数</span>
+      <span class="token key atrule">thread-name-prefix</span><span class="token punctuation">:</span> sched<span class="token punctuation">-</span>
+      <span class="token key atrule">shutdown</span><span class="token punctuation">:</span>
+        <span class="token key atrule">await-termination</span><span class="token punctuation">:</span> <span class="token boolean important">true</span>
+        <span class="token key atrule">await-termination-period</span><span class="token punctuation">:</span> 30s<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<div class="data-grid data-grid-link-table"><div class="grid-header"><div class="grid-cell">表达式</div><div class="grid-cell">含义</div><div class="grid-cell">说明</div></div><div class="grid-row"><div class="grid-cell"><code>fixedRate</code></div><div class="grid-cell">固定频率</div><div class="grid-cell">上一次开始后计时，任务慢会堆积</div></div><div class="grid-row"><div class="grid-cell"><code>fixedDelay</code></div><div class="grid-cell">固定间隔</div><div class="grid-cell">上一次结束后计时，更安全</div></div><div class="grid-row"><div class="grid-cell"><code>initialDelay</code></div><div class="grid-cell">首次延迟</div><div class="grid-cell">配合上面两个</div></div><div class="grid-row"><div class="grid-cell"><code>cron</code></div><div class="grid-cell">cron 表达式</div><div class="grid-cell">Spring 是 6 段，含秒</div></div></div>
+
+<p>分布式部署时单机 <code>@Scheduled</code> 会每台都跑一遍，需要分布式锁或换 XXL-JOB &#x2F; Quartz 集群方案。</p>
+<h2 id="1-4-例三：HTTP-客户端"><a href="#1-4-例三：HTTP-客户端" class="headerlink" title="1.4 例三：HTTP 客户端"></a>1.4 例三：HTTP 客户端</h2><p>Spring Boot 只自动装配 <code>RestTemplateBuilder</code>，<code>RestTemplate</code> 要自己建：</p>
+<pre class="line-numbers language-java" data-language="java"><code class="language-java"><span class="token annotation punctuation">@Configuration</span>
+<span class="token keyword">public</span> <span class="token keyword">class</span> <span class="token class-name">HttpClientConfig</span> <span class="token punctuation">&#123;</span>
+
+    <span class="token annotation punctuation">@Bean</span>
+    <span class="token keyword">public</span> <span class="token class-name">RestTemplate</span> <span class="token function">restTemplate</span><span class="token punctuation">(</span><span class="token class-name">RestTemplateBuilder</span> builder<span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+        <span class="token keyword">return</span> builder
+                <span class="token punctuation">.</span><span class="token function">setConnectTimeout</span><span class="token punctuation">(</span><span class="token class-name">Duration</span><span class="token punctuation">.</span><span class="token function">ofSeconds</span><span class="token punctuation">(</span><span class="token number">3</span><span class="token punctuation">)</span><span class="token punctuation">)</span>
+                <span class="token punctuation">.</span><span class="token function">setReadTimeout</span><span class="token punctuation">(</span><span class="token class-name">Duration</span><span class="token punctuation">.</span><span class="token function">ofSeconds</span><span class="token punctuation">(</span><span class="token number">10</span><span class="token punctuation">)</span><span class="token punctuation">)</span>
+                <span class="token punctuation">.</span><span class="token function">rootUri</span><span class="token punctuation">(</span><span class="token string">"https://api.example.com"</span><span class="token punctuation">)</span>
+                <span class="token punctuation">.</span><span class="token function">build</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token punctuation">&#125;</span>
+<span class="token punctuation">&#125;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<p><code>RestTemplateBuilder</code> 的好处是：<strong>它已经把 Spring Boot 的全局配置（如自定义 <code>ClientHttpRequestFactory</code>）应用上去了</strong>，比自己 <code>new RestTemplate()</code> 更”官方”。</p>
+<h2 id="1-5-覆盖自动配置的三种姿势"><a href="#1-5-覆盖自动配置的三种姿势" class="headerlink" title="1.5 覆盖自动配置的三种姿势"></a>1.5 覆盖自动配置的三种姿势</h2><div class="data-grid data-grid-link-table"><div class="grid-header"><div class="grid-cell">姿势</div><div class="grid-cell">做法</div><div class="grid-cell">适用</div></div><div class="grid-row"><div class="grid-cell">自定义 Bean</div><div class="grid-cell">定义同名&#x2F;同类型 Bean</div><div class="grid-cell">只想换实现细节（序列化、线程池）</div></div><div class="grid-row"><div class="grid-cell">调整属性</div><div class="grid-cell">只改 yml</div><div class="grid-cell">默认 Bean 已够用</div></div><div class="grid-row"><div class="grid-cell">排除自动配置</div><div class="grid-cell"><code>spring.autoconfigure.exclude</code> 或 <code>@SpringBootApplication(exclude=...)</code></div><div class="grid-cell">完全不用某项能力（如不想用默认数据源）</div></div></div>
+
+<pre class="line-numbers language-yaml" data-language="yaml"><code class="language-yaml"><span class="token comment"># 排除某个自动配置类（注意写全类名）</span>
+<span class="token key atrule">spring</span><span class="token punctuation">:</span>
+  <span class="token key atrule">autoconfigure</span><span class="token punctuation">:</span>
+    <span class="token key atrule">exclude</span><span class="token punctuation">:</span>
+      <span class="token punctuation">-</span> org.springframework.boot.autoconfigure.jdbc.DataSourceAutoConfiguration<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<pre class="line-numbers language-java" data-language="java"><code class="language-java"><span class="token comment">// 或者注解方式</span>
+<span class="token annotation punctuation">@SpringBootApplication</span><span class="token punctuation">(</span>exclude <span class="token operator">=</span> <span class="token class-name">DataSourceAutoConfiguration</span><span class="token punctuation">.</span><span class="token keyword">class</span><span class="token punctuation">)</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span></span></code></pre>
+
+<p>排错技巧：启动时加 <code>--debug</code>，日志里会打印 <strong>Condition evaluation report</strong>，逐条告诉你哪个自动配置类因为什么条件没生效——这是排查”为什么我的 Bean 没被装上”的最快路径。</p>
+<h2 id="1-6-判断”这个技术有没有官方支持”"><a href="#1-6-判断”这个技术有没有官方支持”" class="headerlink" title="1.6 判断”这个技术有没有官方支持”"></a>1.6 判断”这个技术有没有官方支持”</h2><div class="data-grid data-grid-link-table"><div class="grid-header"><div class="grid-cell">情况</div><div class="grid-cell">做法</div><div class="grid-cell">例子</div></div><div class="grid-row"><div class="grid-cell">有官方 starter</div><div class="grid-cell">直接用 <code>spring-boot-starter-*</code></div><div class="grid-cell">web、data-jpa、security</div></div><div class="grid-row"><div class="grid-cell">有第三方 starter</div><div class="grid-cell">用第三方 starter + 自己指定版本</div><div class="grid-cell">mybatis、druid、pagehelper</div></div><div class="grid-row"><div class="grid-cell">只有普通 jar</div><div class="grid-cell">手动加依赖 + <code>@Configuration</code> 造 Bean</div><div class="grid-cell">老 SDK、自定义客户端</div></div><div class="grid-row"><div class="grid-cell">需要生命周期管理</div><div class="grid-cell">用 <code>SmartLifecycle</code> 或 <code>@PostConstruct/@PreDestroy</code></div><div class="grid-cell">连接、线程池、定时器</div></div></div>
+
+<p>命名上有个规律：官方的叫 <code>spring-boot-starter-xxx</code>，第三方的叫 <code>xxx-spring-boot-starter</code>（注意顺序反过来）。看名字就能判断是谁维护的。</p>
+<h2 id="1-7-常见坑"><a href="#1-7-常见坑" class="headerlink" title="1.7 常见坑"></a>1.7 常见坑</h2><ol>
+<li><strong>自动配置没生效</strong>：少了 <code>@EnableXxx</code>（如 <code>@EnableScheduling</code>、<code>@EnableCaching</code>）</li>
+<li><strong>自定义 Bean 没覆盖</strong>：名字不匹配，或用了 <code>@ConditionalOnMissingBean</code> 之外的限定（类型不同）</li>
+<li><strong>版本冲突</strong>：第三方 starter 传递依赖了别的 Spring 版本，启动报 <code>NoSuchMethodError</code>，用 <code>mvn dependency:tree</code> 查</li>
+<li><strong>配置前缀写错</strong>：<code>spring.redis</code> 写成 <code>spring.redis-pool</code>，属性静默无效</li>
+<li><strong>线程池太小</strong>：<code>@Scheduled</code> 默认单线程，任务互相阻塞</li>
+<li><strong>连接没关</strong>：手动 <code>new</code> 的客户端不在容器管理内，要在 <code>@PreDestroy</code> 里关闭</li>
+</ol>
+<h2 id="1-8-官方资料"><a href="#1-8-官方资料" class="headerlink" title="1.8 官方资料"></a>1.8 官方资料</h2><ul>
+<li>官方 starter 清单：<a target="_blank" rel="noopener" href="https://docs.spring.io/spring-boot/docs/2.5.0/reference/htmlsingle/#using-boot-starter">https://docs.spring.io/spring-boot/docs/2.5.0/reference/htmlsingle/#using-boot-starter</a></li>
+<li>Redis 支持：<a target="_blank" rel="noopener" href="https://docs.spring.io/spring-boot/docs/2.5.0/reference/htmlsingle/#boot-features-redis">https://docs.spring.io/spring-boot/docs/2.5.0/reference/htmlsingle/#boot-features-redis</a></li>
+<li>任务调度：<a target="_blank" rel="noopener" href="https://docs.spring.io/spring-boot/docs/2.5.0/reference/htmlsingle/#boot-features-task-execution-scheduling">https://docs.spring.io/spring-boot/docs/2.5.0/reference/htmlsingle/#boot-features-task-execution-scheduling</a></li>
+<li>自动配置排除：<a target="_blank" rel="noopener" href="https://docs.spring.io/spring-boot/docs/2.5.0/reference/htmlsingle/#using-boot-disabling-specific-auto-configuration">https://docs.spring.io/spring-boot/docs/2.5.0/reference/htmlsingle/#using-boot-disabling-specific-auto-configuration</a></li>
+</ul>
+<h2 id="1-9-清单"><a href="#1-9-清单" class="headerlink" title="1.9 清单"></a>1.9 清单</h2><ol>
+<li>整合任何技术都是四步：依赖 → 配置 → 用默认 Bean → 不满意就覆盖</li>
+<li>覆盖靠 <code>@ConditionalOnMissingBean</code>，所以自定义 Bean 的名字&#x2F;类型必须对得上</li>
+<li>Redis 换序列化就自定义 <code>redisTemplate</code>，名字不能改</li>
+<li><code>@Scheduled</code> 默认单线程，多任务必须配 <code>spring.task.scheduling.pool.size</code></li>
+<li>HTTP 客户端用 <code>RestTemplateBuilder</code> 构建，别直接 <code>new</code></li>
+<li>完全不用某项能力时用 <code>exclude</code> 排掉自动配置</li>
+<li>启动加 <code>--debug</code> 看条件评估报告，比猜快得多</li>
+</ol>
+</div>
+
+  <div class="mb-foot">
+    <a href="/phone/">返回手机首页</a>
+    <a href="/phone/tags/">星迹索引</a>
+  </div>
+</div>
+
+
+<script>
+  /* 作用：懒加载本地 mermaid 库；无 mermaid 代码块时不加载 */
+  function loadLocalMermaid(){
+    return new Promise(function(resolve, reject){
+      if(window.mermaid) return resolve(window.mermaid);
+      var s = document.createElement('script');
+      s.src = '/js/third-party/mermaid/mermaid.min.js?v=10';
+      s.onload = function(){ resolve(window.mermaid); };
+      s.onerror = function(){ reject(new Error('mermaid local load failed')); };
+      document.head.appendChild(s);
+    });
+  }
+
+  /* 作用：把 ```mermaid 代码块替换成 SVG 图（手机端字号略小、图可横向滚动） */
+  async function renderMermaidDiagram(){
+    var blocks = document.querySelectorAll('pre[class*="language-mermaid"]');
+    if(!blocks.length) return;
+    var mermaid;
+    try { mermaid = await loadLocalMermaid(); }
+    catch(e){ console.warn('[mermaid] 本地库加载失败：', e); return; }
+
+    mermaid.initialize({
+      startOnLoad: false,
+      theme: 'base',
+      themeVariables: {
+        darkMode: true,
+        background: 'transparent',
+        fontFamily: '"Microsoft YaHei", "PingFang SC", "Segoe UI", sans-serif',
+        fontSize: '12px',
+        primaryColor: '#062f3d',
+        primaryTextColor: '#d6f6ff',
+        primaryBorderColor: '#00eeff',
+        secondaryColor: '#04222d',
+        tertiaryColor: '#04222d',
+        mainBkg: '#062f3d',
+        nodeBorder: '#00eeff',
+        clusterBkg: '#02161f',
+        clusterBorder: '#00eeff55',
+        lineColor: '#00eeff',
+        textColor: '#c0e8ff',
+        edgeLabelBackground: '#02161f'
+      },
+      flowchart: { curve: 'basis', useMaxWidth: false, htmlLabels: false, nodeSpacing: 30, rankSpacing: 40, padding: 10 }
+    });
+
+    var targets = [];
+    blocks.forEach(function(el){
+      var codeEl = el.querySelector('code');
+      if(!codeEl) return;
+      var div = document.createElement('div');
+      div.className = 'mermaid';
+      div.textContent = codeEl.textContent;
+      el.parentNode.replaceChild(div, el);
+      targets.push(div);
+    });
+    if(!targets.length) return;
+    try { await mermaid.run({ nodes: targets }); }
+    catch(e){ console.warn('[mermaid] 渲染失败：', e); }
+  }
+  /* 作用：多次触发兜底（延迟重试 + DOM 变化），防止某次时机没跑到导致图表留在代码块 */
+  var mmBusy = false;
+  function scheduleMermaid(){
+    if(mmBusy) return;
+    mmBusy = true;
+    renderMermaidDiagram().then(function(){ mmBusy = false; }, function(){ mmBusy = false; });
+  }
+  scheduleMermaid();
+  window.addEventListener('load', scheduleMermaid);
+  [1000, 3000, 8000].forEach(function(ms){ setTimeout(scheduleMermaid, ms); });
+  if(document.readyState !== 'loading') scheduleMermaid();
+  if(window.MutationObserver){
+    var mmTimer = null;
+    var mmObserver = new MutationObserver(function(){
+      clearTimeout(mmTimer);
+      mmTimer = setTimeout(scheduleMermaid, 400);
+    });
+    mmObserver.observe(document.querySelector('.mb-article') || document.body, { childList: true, subtree: true });
+  }
+</script>
+</body>
+</html>

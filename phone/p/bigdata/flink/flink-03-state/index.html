@@ -1,0 +1,316 @@
+<!--
+  ============================================
+  手机端 · 文章原文页
+  文件：phone/post.njk
+  适用终端：手机端（路由 /phone/p/<slug>/，由 scripts/phone-routes.js 生成）
+  作用：手机阅读单篇文章；单列布局、无侧栏无雷达，替代电脑端 post.njk
+        数据由生成期算好：page.item = { title, dateStr, content, cats, tags }
+  样式依赖：source/css/theme/phone/common.css、source/css/theme/phone/list.css
+  组件依赖：phone/_components/Particles.njk
+  最后修改：2026-11-11
+  ============================================
+-->
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="color-scheme" content="dark">
+  <meta name="theme-color" content="#020817">
+  <!-- 首帧兜底：浏览器默认画布是白的，样式未解析前会闪一下白。这条规则先锁死深空底色 -->
+  <style>html{background-color:#020817}</style>
+  <title>Flink（三）状态与容错 - 时空秘境</title>
+  <!-- 手机端样式：基础 + 列表/正文，外链引入（源文件 source/css/theme/phone/） -->
+  <link rel="stylesheet" href="/css/theme/phone/common.css">
+  <link rel="stylesheet" href="/css/theme/phone/list.css">
+<meta name="generator" content="Hexo 8.1.2"></head>
+<body>
+<div class="mb-shell">
+  <!--
+  ============================================
+  手机端星空粒子组件
+  文件：Particles.njk
+  适用终端：手机端
+  作用：Particles.njk 的手机端副本（nunjucks 子目录 include 取不到上级）
+        参数与电脑端 _components/Particles.njk 保持一致：
+        粒子 95 / 连线 118px / opacity 0.32，外加星座层与零星闪烁层
+  最后修改：2026-11-12
+  ============================================
+--><!-- z-index 必须是 0：负层级会被 body 不透明背景盖住，粒子在跑却看不见 -->
+<div id="particles" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 0; pointer-events: none;"></div>
+<!-- 星座层（与首页同一套：随机零星散布星座图形 + 偶尔闪烁的小星） -->
+<div id="constellations" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 1; pointer-events: none;" aria-hidden="true"></div>
+<script src="/js/particles.min.js"></script>
+<script>
+particlesJS("particles", {
+  particles: {
+    number: {
+      value: 95,
+      density: {
+        enable: true,
+        value_area: 800
+      }
+    },
+    color: {
+      value: "#00eeff"
+    },
+    shape: {
+      type: "circle",
+      stroke: {
+        width: 0,
+        color: "#000000"
+      }
+    },
+    opacity: {
+      value: 0.6,
+      random: true,
+      anim: {
+        enable: true,
+        speed: 0.5,
+        opacity_min: 0.1,
+        sync: false
+      }
+    },
+    size: {
+      value: 3,
+      random: true,
+      anim: {
+        enable: true,
+        speed: 2,
+        size_min: 0.1,
+        sync: false
+      }
+    },
+    line_linked: {
+      enable: true,
+      distance: 118,
+      color: "#00eeff",
+      opacity: 0.32,
+      width: 1
+    },
+    move: {
+      enable: true,
+      speed: 0.8,
+      direction: "none",
+      random: true,
+      straight: false,
+      out_mode: "out",
+      bounce: false,
+      attract: {
+        enable: true,
+        rotateX: 600,
+        rotateY: 1200
+      }
+    }
+  },
+  interactivity: {
+    detect_on: "canvas",
+    events: {
+      onhover: {
+        enable: true,
+        mode: "grab"       // 手指按住时粒子聚集
+      },
+      onclick: {
+        enable: true,
+        mode: "push"       // 点击时产生新粒子
+      },
+      resize: true
+    },
+    modes: {
+      grab: {
+        distance: 200,
+        line_linked: {
+          opacity: 1
+        }
+      },
+      push: {
+        particles_nb: 6
+      }
+    }
+  },
+  retina_detect: true
+});
+</script>
+<!-- 星座 + 零星闪烁层：与电脑端共用同一份绘制脚本 -->
+<script src="/js/theme/home/starfield.js"></script>
+
+
+  <div class="mb-top">
+    <a class="mb-back" href="/phone/">← 返回手机首页</a>
+    <span class="mb-sub" style="margin:0">2023-07-22</span>
+  </div>
+
+  <h1 class="mb-title">Flink（三）状态与容错</h1>
+  <div class="mb-sub">
+    分类：bigdata · flink
+     ｜ 标签：Flink
+  </div>
+
+  <div class="mb-article"><div class="essay-banner essay-flink"></div>
+
+<h1 id="状态与容错"><a href="#状态与容错" class="headerlink" title="状态与容错"></a><strong>状态与容错</strong></h1><p>流处理不能只看”这条数据怎么算”，还要记住”之前见过什么”：去重集合、累计计数、窗口里攒下的明细，都是状态。状态丢了，重算结果就对不上；状态太大，内存和恢复时间又扛不住。这一篇讲清楚状态的分类、存储后端、快照机制，以及端到端 Exactly-Once 在 Sink 侧是怎么落地的。</p>
+<p><img src="https://wu4yong.github.io/starry-images/assets/img/flink/flink-03-state.webp" alt="分层透明快照板叠在状态存储立方体之上，每块快照由发光的两阶段锁封住"></p>
+<p><em>分层透明快照板叠在状态存储立方体之上，每块快照由发光的两阶段锁封住</em></p>
+<h2 id="1-1-为什么状态是运行时内建能力"><a href="#1-1-为什么状态是运行时内建能力" class="headerlink" title="1.1 为什么状态是运行时内建能力"></a>1.1 为什么状态是运行时内建能力</h2><p>无状态作业挂了可以重放数据从头算；有状态作业不行——已经累加过的计数、已经判重过的记录，重放会重复计入。所以容错的核心问题是：<strong>在不停止处理的前提下，周期性地拿到一份一致的状态副本，故障时从副本恢复</strong>。</p>
+<p>Flink 把状态托管在运行时里，业务代码通过状态描述符（StateDescriptor）读写，不需要自己找 Redis 或数据库存中间结果。这样做的好处是快照、恢复、TTL 清理都由框架统一接管。</p>
+<h2 id="1-2-Keyed-State-与-Operator-State"><a href="#1-2-Keyed-State-与-Operator-State" class="headerlink" title="1.2 Keyed State 与 Operator State"></a>1.2 Keyed State 与 Operator State</h2><p>状态按绑定范围分两类：</p>
+<div class="data-grid data-grid-link-table"><div class="grid-header"><div class="grid-cell">类别</div><div class="grid-cell">绑定范围</div><div class="grid-cell">典型形态</div><div class="grid-cell">适用场景</div></div><div class="grid-row"><div class="grid-cell">Keyed State</div><div class="grid-cell">绑定到 key，每个 key 一份</div><div class="grid-cell">ValueState、ListState、MapState</div><div class="grid-cell">按用户、按商品聚合去重</div></div><div class="grid-row"><div class="grid-cell">Operator State</div><div class="grid-cell">绑定到算子并行子任务，与 key 无关</div><div class="grid-cell">ListState、BroadcastState</div><div class="grid-cell">Source 消费位点、路由表广播</div></div></div>
+
+<p>判断方法很简单：逻辑里先 <code>keyBy</code> 了，后面用的就是 Keyed State；没有分组、算子自己记一份全局信息，用的是 Operator State。Source 记 Kafka 消费位点、Broadcast State 下发配置规则，都是 Operator State 的典型用法。</p>
+<h2 id="1-3-Keyed-State-的几种类型"><a href="#1-3-Keyed-State-的几种类型" class="headerlink" title="1.3 Keyed State 的几种类型"></a>1.3 Keyed State 的几种类型</h2><div class="data-grid data-grid-link-table"><div class="grid-header"><div class="grid-cell">类型</div><div class="grid-cell">存什么</div><div class="grid-cell">读写方式</div></div><div class="grid-row"><div class="grid-cell">ValueState<T></div><div class="grid-cell">单个值</div><div class="grid-cell">value() &#x2F; update()</div></div><div class="grid-row"><div class="grid-cell">ListState<T></div><div class="grid-cell">一组元素</div><div class="grid-cell">add() &#x2F; get() &#x2F; update()</div></div><div class="grid-row"><div class="grid-cell">MapState&lt;K,V&gt;</div><div class="grid-cell">键值集合</div><div class="grid-cell">put() &#x2F; get() &#x2F; entries()</div></div><div class="grid-row"><div class="grid-cell">ReducingState<T></div><div class="grid-cell">折叠后的单值</div><div class="grid-cell">add() 时按 ReduceFunction 聚合</div></div><div class="grid-row"><div class="grid-cell">AggregatingState&lt;IN,OUT&gt;</div><div class="grid-cell">输入进、聚合结果出</div><div class="grid-cell">与 ReducingState 类似，输入输出可不同类型</div></div></div>
+
+<p>一个 ValueState 的最小写法：</p>
+<pre class="line-numbers language-java" data-language="java"><code class="language-java"><span class="token class-name">ValueStateDescriptor</span><span class="token generics"><span class="token punctuation">&lt;</span><span class="token class-name">Long</span><span class="token punctuation">></span></span> desc <span class="token operator">=</span>
+        <span class="token keyword">new</span> <span class="token class-name">ValueStateDescriptor</span><span class="token generics"><span class="token punctuation">&lt;</span><span class="token punctuation">></span></span><span class="token punctuation">(</span><span class="token string">"order-count"</span><span class="token punctuation">,</span> <span class="token class-name">Long</span><span class="token punctuation">.</span><span class="token keyword">class</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token class-name">ValueState</span><span class="token generics"><span class="token punctuation">&lt;</span><span class="token class-name">Long</span><span class="token punctuation">></span></span> countState <span class="token operator">=</span> <span class="token function">getRuntimeContext</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token function">getState</span><span class="token punctuation">(</span>desc<span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+<span class="token class-name">Long</span> current <span class="token operator">=</span> countState<span class="token punctuation">.</span><span class="token function">value</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+countState<span class="token punctuation">.</span><span class="token function">update</span><span class="token punctuation">(</span>current <span class="token operator">==</span> <span class="token keyword">null</span> <span class="token operator">?</span> <span class="token number">1L</span> <span class="token operator">:</span> current <span class="token operator">+</span> <span class="token number">1</span><span class="token punctuation">)</span><span class="token punctuation">;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<p>状态可以配 TTL（Time-To-Live），超过存活时间的条目自动清理，避免去重集合无限膨胀。TTL 基于事件时间或处理时间配置，清理策略分增量过期与全量过期，大状态要提前规划。</p>
+<h2 id="1-4-StateBackend：状态存在哪"><a href="#1-4-StateBackend：状态存在哪" class="headerlink" title="1.4 StateBackend：状态存在哪"></a>1.4 StateBackend：状态存在哪</h2><p>StateBackend 决定状态的存储介质和快照落盘方式。1.13 主线的两类实现：</p>
+<div class="data-grid data-grid-link-table"><div class="grid-header"><div class="grid-cell">后端</div><div class="grid-cell">介质</div><div class="grid-cell">适用场景</div></div><div class="grid-row"><div class="grid-cell">HashMapStateBackend</div><div class="grid-cell">JVM 堆内存</div><div class="grid-cell">状态小、访问快，快照写远端文件系统</div></div><div class="grid-row"><div class="grid-cell">EmbeddedRocksDBStateBackend</div><div class="grid-cell">本地 RocksDB，可溢出磁盘</div><div class="grid-cell">状态大、超过堆内存上限，支持增量快照</div></div></div>
+
+<pre class="line-numbers language-yaml" data-language="yaml"><code class="language-yaml"><span class="token comment"># flink-conf.yaml：状态后端与检查点存储</span>
+<span class="token key atrule">state</span><span class="token punctuation">:</span>
+  <span class="token key atrule">backend</span><span class="token punctuation">:</span> rocksdb                      <span class="token comment"># 大状态用 RocksDB，小状态可改 hashmap</span>
+  <span class="token key atrule">checkpoint</span><span class="token punctuation">:</span>
+    <span class="token key atrule">dir</span><span class="token punctuation">:</span> oss<span class="token punctuation">:</span>//bucket/flink/checkpoints <span class="token comment"># 快照落远端存储，节点宕机不丢</span>
+    <span class="token key atrule">interval</span><span class="token punctuation">:</span> <span class="token number">60000</span>                     <span class="token comment"># 检查点间隔，按延迟与恢复成本权衡</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<p>老教程里的 <code>MemoryStateBackend</code>、<code>FsStateBackend</code>、<code>RocksDBStateBackend</code> 是旧命名，新版本已合并成上面两类；线上大状态基本都选 RocksDB，代价是序列化访问比堆内存慢。</p>
+<h2 id="1-5-Checkpoint：异步快照与屏障对齐"><a href="#1-5-Checkpoint：异步快照与屏障对齐" class="headerlink" title="1.5 Checkpoint：异步快照与屏障对齐"></a>1.5 Checkpoint：异步快照与屏障对齐</h2><p>Flink 的检查点基于 Chandy-Lamport 分布式快照算法。核心机制是在数据流里插入检查点屏障（Barrier），把流切成”快照前”和”快照后”两段：</p>
+<ul>
+<li>JobManager 定时向 Source 注入屏障，屏障随记录向下游流动</li>
+<li>算子收到多个上游的屏障后先对齐：等所有上游屏障到齐，再对自己当前状态做快照</li>
+<li>快照默认异步进行：状态副本写到后端的同时，算子继续处理新数据，不阻塞流水线</li>
+<li>全部算子快照完成，这次检查点才算成功，JobManager 提交这次快照元数据</li>
+</ul>
+<p>对齐的作用是保证快照里不混入”部分上游已到、部分上游未到”的记录。 barrier 对齐期间算子会缓冲快分区的数据，反压严重时缓冲会涨。</p>
+<p>检查点是框架自动管理的内部恢复点，默认不对外保留；配置外部化检查点后，作业取消也能从最近检查点拉起。</p>
+<h2 id="1-6-Savepoint-与作业升级"><a href="#1-6-Savepoint-与作业升级" class="headerlink" title="1.6 Savepoint 与作业升级"></a>1.6 Savepoint 与作业升级</h2><p>Savepoint 是用户主动触发的、格式受版本兼容保证的快照，主要用于作业升级和迁移：</p>
+<div class="data-grid data-grid-link-table"><div class="grid-header"><div class="grid-cell">用途</div><div class="grid-cell">说明</div></div><div class="grid-row"><div class="grid-cell">修改作业逻辑</div><div class="grid-cell">从 savepoint 重启，延续已有状态</div></div><div class="grid-row"><div class="grid-cell">调整并行度</div><div class="grid-cell">只要状态可重分区，可在 savepoint 基础上扩缩并行度</div></div><div class="grid-row"><div class="grid-cell">迁移集群</div><div class="grid-cell">换 YARN &#x2F; K8s &#x2F; 换存储都可从 savepoint 恢复</div></div><div class="grid-row"><div class="grid-cell">版本升级</div><div class="grid-cell">跨 Flink 小版本升级，优先走 savepoint 校验兼容性</div></div></div>
+
+<p>命令行触发与恢复的典型形式：</p>
+<pre class="line-numbers language-bash" data-language="bash"><code class="language-bash"><span class="token comment"># 主动做一次 savepoint</span>
+flink savepoint <span class="token operator">&lt;</span>jobId<span class="token operator">></span> oss://bucket/flink/savepoints
+
+<span class="token comment"># 从 savepoint 恢复启动</span>
+flink run <span class="token parameter variable">-s</span> oss://bucket/flink/savepoints/savepoint-xxxx ./job.jar<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<p>注意：状态结构改了（删了某个 state、改了 state 类型），直接从老 savepoint 恢复会报错；这类变更需要先做状态迁移或清空状态重启。</p>
+<h2 id="1-7-Exactly-Once-与两阶段提交"><a href="#1-7-Exactly-Once-与两阶段提交" class="headerlink" title="1.7 Exactly-Once 与两阶段提交"></a>1.7 Exactly-Once 与两阶段提交</h2><p>Checkpoint 只保证 Flink 内部状态一致，不等于端到端 Exactly-Once。结果已经写到外部系统后作业挂掉，重放会重复写。端到端一致性需要 Sink 配合实现两阶段提交（Two-Phase Commit, 2PC）：</p>
+<div class="data-grid data-grid-link-table"><div class="grid-header"><div class="grid-cell">阶段</div><div class="grid-cell">动作</div><div class="grid-cell">失败影响</div></div><div class="grid-row"><div class="grid-cell">预提交（Pre-commit）</div><div class="grid-cell">检查点快照时，Sink 把未提交数据暂存到外部事务</div><div class="grid-cell">预提交失败可丢弃，不影响外部可见数据</div></div><div class="grid-row"><div class="grid-cell">提交（Commit）</div><div class="grid-cell">检查点对全部算子完成后，统一提交事务</div><div class="grid-cell">提交前故障，事务回滚，外部无重复写入</div></div></div>
+
+<p>这套机制的前提是 <strong>Sink 本身支持事务或两阶段提交协议</strong>，不是所有连接器都具备。以 Kafka 为例，2.0 之后的 <code>KafkaSink</code> 提供 <code>DeliveryGuarantee.EXACTLY_ONCE</code>，底层用事务生产者配合检查点提交；写文件、写 JDBC 的连接器若没有事务能力，只能做到 At-Least-Once，需要靠幂等写入或去重表兜底。</p>
+<h2 id="1-8-常见易错点"><a href="#1-8-常见易错点" class="headerlink" title="1.8 常见易错点"></a>1.8 常见易错点</h2><ul>
+<li>把 Checkpoint 当 Savepoint 用：检查点可能被框架清理，升级迁移必须用 savepoint。</li>
+<li>以为开了检查点就是端到端 Exactly-Once：Sink 不支持事务时，外部系统仍可能重复写。</li>
+<li>大状态选了堆内存后端，快照时直接 OOM；RocksDB 才是大状态的归宿。</li>
+<li>改了状态结构还从老快照恢复，启动阶段报状态不兼容。</li>
+<li>状态里存大对象、不设 TTL，去重集合随时间无限膨胀。</li>
+</ul>
+<h2 id="1-9-官方资料"><a href="#1-9-官方资料" class="headerlink" title="1.9 官方资料"></a>1.9 官方资料</h2><ul>
+<li>状态架构文档：<a target="_blank" rel="noopener" href="https://nightlies.apache.org/flink/flink-docs-release-1.13/docs/concepts/stateful-stream-processing/">https://nightlies.apache.org/flink/flink-docs-release-1.13/docs/concepts/stateful-stream-processing/</a></li>
+<li>State Backend 配置：<a target="_blank" rel="noopener" href="https://nightlies.apache.org/flink/flink-docs-release-1.13/docs/ops/state/state_backends/">https://nightlies.apache.org/flink/flink-docs-release-1.13/docs/ops/state/state_backends/</a></li>
+<li>检查点容错机制：<a target="_blank" rel="noopener" href="https://nightlies.apache.org/flink/flink-docs-release-1.13/docs/concepts/checkpointing/">https://nightlies.apache.org/flink/flink-docs-release-1.13/docs/concepts/checkpointing/</a></li>
+<li>两阶段提交 Sink：<a target="_blank" rel="noopener" href="https://nightlies.apache.org/flink/flink-docs-release-1.13/docs/connectors/datastream/connectors/">https://nightlies.apache.org/flink/flink-docs-release-1.13/docs/connectors/datastream/connectors/</a></li>
+</ul>
+<h2 id="1-10-清单"><a href="#1-10-清单" class="headerlink" title="1.10 清单"></a>1.10 清单</h2><ol>
+<li>状态分 Keyed State（绑 key）与 Operator State（绑算子子任务），通过 StateDescriptor 读写</li>
+<li>Keyed State 常用 Value &#x2F; List &#x2F; Map &#x2F; Reducing &#x2F; Aggregating 五种，大集合要配 TTL</li>
+<li>后端分 HashMap（堆内存）与 EmbeddedRocksDB（磁盘溢出），大状态选 RocksDB</li>
+<li>Checkpoint 基于 Chandy-Lamport 快照，屏障对齐后默认异步快照，不阻塞持续处理</li>
+<li>Savepoint 用于升级、扩并行度、迁集群；状态结构变更需迁移或清空重启</li>
+<li>端到端 Exactly-Once 依赖 Sink 的两阶段提交，Kafka 2.0+ 事务生产者支持；无事务能力的 Sink 只能幂等兜底</li>
+</ol>
+</div>
+
+  <div class="mb-foot">
+    <a href="/phone/">返回手机首页</a>
+    <a href="/phone/tags/">星迹索引</a>
+  </div>
+</div>
+
+
+<script>
+  /* 作用：懒加载本地 mermaid 库；无 mermaid 代码块时不加载 */
+  function loadLocalMermaid(){
+    return new Promise(function(resolve, reject){
+      if(window.mermaid) return resolve(window.mermaid);
+      var s = document.createElement('script');
+      s.src = '/js/third-party/mermaid/mermaid.min.js?v=10';
+      s.onload = function(){ resolve(window.mermaid); };
+      s.onerror = function(){ reject(new Error('mermaid local load failed')); };
+      document.head.appendChild(s);
+    });
+  }
+
+  /* 作用：把 ```mermaid 代码块替换成 SVG 图（手机端字号略小、图可横向滚动） */
+  async function renderMermaidDiagram(){
+    var blocks = document.querySelectorAll('pre[class*="language-mermaid"]');
+    if(!blocks.length) return;
+    var mermaid;
+    try { mermaid = await loadLocalMermaid(); }
+    catch(e){ console.warn('[mermaid] 本地库加载失败：', e); return; }
+
+    mermaid.initialize({
+      startOnLoad: false,
+      theme: 'base',
+      themeVariables: {
+        darkMode: true,
+        background: 'transparent',
+        fontFamily: '"Microsoft YaHei", "PingFang SC", "Segoe UI", sans-serif',
+        fontSize: '12px',
+        primaryColor: '#062f3d',
+        primaryTextColor: '#d6f6ff',
+        primaryBorderColor: '#00eeff',
+        secondaryColor: '#04222d',
+        tertiaryColor: '#04222d',
+        mainBkg: '#062f3d',
+        nodeBorder: '#00eeff',
+        clusterBkg: '#02161f',
+        clusterBorder: '#00eeff55',
+        lineColor: '#00eeff',
+        textColor: '#c0e8ff',
+        edgeLabelBackground: '#02161f'
+      },
+      flowchart: { curve: 'basis', useMaxWidth: false, htmlLabels: false, nodeSpacing: 30, rankSpacing: 40, padding: 10 }
+    });
+
+    var targets = [];
+    blocks.forEach(function(el){
+      var codeEl = el.querySelector('code');
+      if(!codeEl) return;
+      var div = document.createElement('div');
+      div.className = 'mermaid';
+      div.textContent = codeEl.textContent;
+      el.parentNode.replaceChild(div, el);
+      targets.push(div);
+    });
+    if(!targets.length) return;
+    try { await mermaid.run({ nodes: targets }); }
+    catch(e){ console.warn('[mermaid] 渲染失败：', e); }
+  }
+  /* 作用：多次触发兜底（延迟重试 + DOM 变化），防止某次时机没跑到导致图表留在代码块 */
+  var mmBusy = false;
+  function scheduleMermaid(){
+    if(mmBusy) return;
+    mmBusy = true;
+    renderMermaidDiagram().then(function(){ mmBusy = false; }, function(){ mmBusy = false; });
+  }
+  scheduleMermaid();
+  window.addEventListener('load', scheduleMermaid);
+  [1000, 3000, 8000].forEach(function(ms){ setTimeout(scheduleMermaid, ms); });
+  if(document.readyState !== 'loading') scheduleMermaid();
+  if(window.MutationObserver){
+    var mmTimer = null;
+    var mmObserver = new MutationObserver(function(){
+      clearTimeout(mmTimer);
+      mmTimer = setTimeout(scheduleMermaid, 400);
+    });
+    mmObserver.observe(document.querySelector('.mb-article') || document.body, { childList: true, subtree: true });
+  }
+</script>
+</body>
+</html>

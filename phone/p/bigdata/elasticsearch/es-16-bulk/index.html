@@ -1,0 +1,308 @@
+<!--
+  ============================================
+  手机端 · 文章原文页
+  文件：phone/post.njk
+  适用终端：手机端（路由 /phone/p/<slug>/，由 scripts/phone-routes.js 生成）
+  作用：手机阅读单篇文章；单列布局、无侧栏无雷达，替代电脑端 post.njk
+        数据由生成期算好：page.item = { title, dateStr, content, cats, tags }
+  样式依赖：source/css/theme/phone/common.css、source/css/theme/phone/list.css
+  组件依赖：phone/_components/Particles.njk
+  最后修改：2026-11-11
+  ============================================
+-->
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="color-scheme" content="dark">
+  <meta name="theme-color" content="#020817">
+  <!-- 首帧兜底：浏览器默认画布是白的，样式未解析前会闪一下白。这条规则先锁死深空底色 -->
+  <style>html{background-color:#020817}</style>
+  <title>ES16-_bulk 的正确用法 - 时空秘境</title>
+  <!-- 手机端样式：基础 + 列表/正文，外链引入（源文件 source/css/theme/phone/） -->
+  <link rel="stylesheet" href="/css/theme/phone/common.css">
+  <link rel="stylesheet" href="/css/theme/phone/list.css">
+<meta name="generator" content="Hexo 8.1.2"></head>
+<body>
+<div class="mb-shell">
+  <!--
+  ============================================
+  手机端星空粒子组件
+  文件：Particles.njk
+  适用终端：手机端
+  作用：Particles.njk 的手机端副本（nunjucks 子目录 include 取不到上级）
+        参数与电脑端 _components/Particles.njk 保持一致：
+        粒子 95 / 连线 118px / opacity 0.32，外加星座层与零星闪烁层
+  最后修改：2026-11-12
+  ============================================
+--><!-- z-index 必须是 0：负层级会被 body 不透明背景盖住，粒子在跑却看不见 -->
+<div id="particles" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 0; pointer-events: none;"></div>
+<!-- 星座层（与首页同一套：随机零星散布星座图形 + 偶尔闪烁的小星） -->
+<div id="constellations" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 1; pointer-events: none;" aria-hidden="true"></div>
+<script src="/js/particles.min.js"></script>
+<script>
+particlesJS("particles", {
+  particles: {
+    number: {
+      value: 95,
+      density: {
+        enable: true,
+        value_area: 800
+      }
+    },
+    color: {
+      value: "#00eeff"
+    },
+    shape: {
+      type: "circle",
+      stroke: {
+        width: 0,
+        color: "#000000"
+      }
+    },
+    opacity: {
+      value: 0.6,
+      random: true,
+      anim: {
+        enable: true,
+        speed: 0.5,
+        opacity_min: 0.1,
+        sync: false
+      }
+    },
+    size: {
+      value: 3,
+      random: true,
+      anim: {
+        enable: true,
+        speed: 2,
+        size_min: 0.1,
+        sync: false
+      }
+    },
+    line_linked: {
+      enable: true,
+      distance: 118,
+      color: "#00eeff",
+      opacity: 0.32,
+      width: 1
+    },
+    move: {
+      enable: true,
+      speed: 0.8,
+      direction: "none",
+      random: true,
+      straight: false,
+      out_mode: "out",
+      bounce: false,
+      attract: {
+        enable: true,
+        rotateX: 600,
+        rotateY: 1200
+      }
+    }
+  },
+  interactivity: {
+    detect_on: "canvas",
+    events: {
+      onhover: {
+        enable: true,
+        mode: "grab"       // 手指按住时粒子聚集
+      },
+      onclick: {
+        enable: true,
+        mode: "push"       // 点击时产生新粒子
+      },
+      resize: true
+    },
+    modes: {
+      grab: {
+        distance: 200,
+        line_linked: {
+          opacity: 1
+        }
+      },
+      push: {
+        particles_nb: 6
+      }
+    }
+  },
+  retina_detect: true
+});
+</script>
+<!-- 星座 + 零星闪烁层：与电脑端共用同一份绘制脚本 -->
+<script src="/js/theme/home/starfield.js"></script>
+
+
+  <div class="mb-top">
+    <a class="mb-back" href="/phone/">← 返回手机首页</a>
+    <span class="mb-sub" style="margin:0">2023-11-10</span>
+  </div>
+
+  <h1 class="mb-title">ES16-_bulk 的正确用法</h1>
+  <div class="mb-sub">
+    分类：bigdata · elasticsearch
+     ｜ 标签：Elasticsearch · 系统课
+  </div>
+
+  <div class="mb-article"><div class="essay-banner essay-elasticsearch"></div>
+
+<h1 id="bulk-的正确用法：格式、批量大小与部分失败处理"><a href="#bulk-的正确用法：格式、批量大小与部分失败处理" class="headerlink" title="_bulk 的正确用法：格式、批量大小与部分失败处理"></a>_bulk 的正确用法：格式、批量大小与部分失败处理</h1><p><code>_bulk</code> 是吞吐的生命线，也是「数据悄悄少了一批」的高发地。</p>
+<p>原因不复杂：<strong>请求整体返回 200，单条可能已经失败</strong>。这一讲把格式、大小、失败处理三件事钉死。</p>
+<p><img src="https://wu4yong.github.io/starry-images/assets/img/elasticsearch/es-16-bulk.svg" alt="_bulk 的两层结果：请求是一个，结果是每行一个"></p>
+<p><em>NDJSON 成对两行，items 里每条文档各自成败｜依据 Elasticsearch 官方文档 8.17 自绘</em></p>
+<h2 id="一、学习目标"><a href="#一、学习目标" class="headerlink" title="一、学习目标"></a>一、学习目标</h2><ol>
+<li>写出格式完全正确的 NDJSON 请求体（含末行换行）；</li>
+<li>说清四个动作（index &#x2F; create &#x2F; update &#x2F; delete）的差别；</li>
+<li>知道批量大小该怎么定，以及官方调优章节的经验区间；</li>
+<li>会用 <code>filter_path</code> 只捞出失败条目。</li>
+</ol>
+<h2 id="二、前置知识"><a href="#二、前置知识" class="headerlink" title="二、前置知识"></a>二、前置知识</h2><div class="data-grid data-grid-link-table"><div class="grid-header"><div class="grid-cell">需要掌握</div><div class="grid-cell">到什么程度</div><div class="grid-cell">出处</div></div><div class="grid-row"><div class="grid-cell">写入五步</div><div class="grid-cell">知道一批写入共用链路</div><div class="grid-cell">M3-1</div></div><div class="grid-row"><div class="grid-cell">mapping 类型</div><div class="grid-cell">知道类型冲突会报错</div><div class="grid-cell">M2-2</div></div></div>
+
+<h2 id="三、理论讲解"><a href="#三、理论讲解" class="headerlink" title="三、理论讲解"></a>三、理论讲解</h2><div class="data-grid data-grid-link-table"><div class="grid-header"><div class="grid-cell">动作</div><div class="grid-cell">语义</div><div class="grid-cell">是否覆盖</div><div class="grid-cell">典型用途</div></div><div class="grid-row"><div class="grid-cell"><code>index</code></div><div class="grid-cell">写入；同 ID 已存在则覆盖</div><div class="grid-cell">是</div><div class="grid-cell">常规导入</div></div><div class="grid-row"><div class="grid-cell"><code>create</code></div><div class="grid-cell">仅在 ID 不存在时写入</div><div class="grid-cell">否（冲突即失败）</div><div class="grid-cell">迁移、防覆盖</div></div><div class="grid-row"><div class="grid-cell"><code>update</code></div><div class="grid-cell">局部更新（需 <code>_source</code>）</div><div class="grid-cell">—</div><div class="grid-cell">打补丁</div></div><div class="grid-row"><div class="grid-cell"><code>delete</code></div><div class="grid-cell">按 ID 删除</div><div class="grid-cell">—</div><div class="grid-cell">清理</div></div></div>
+
+<p>格式硬要求（官方 <code>_bulk</code> 文档写明）：</p>
+<div class="data-grid data-grid-link-table"><div class="grid-header"><div class="grid-cell">要求</div><div class="grid-cell">违反后果</div></div><div class="grid-row"><div class="grid-cell">每行一个 JSON（NDJSON），不是数组</div><div class="grid-cell">400 解析失败</div></div><div class="grid-row"><div class="grid-cell"><strong>最后一行必须有换行符</strong></div><div class="grid-cell">最后一条被吞或报错</div></div><div class="grid-row"><div class="grid-cell">动作行与数据行成对出现（delete 只有动作行）</div><div class="grid-cell">结构错位</div></div><div class="grid-row"><div class="grid-cell"><code>Content-Type: application/x-ndjson</code></div><div class="grid-cell">客户端&#x2F;网关拒绝</div></div></div>
+
+<h2 id="四、原理拆解：为什么「整体-200」不等于「全都成功」"><a href="#四、原理拆解：为什么「整体-200」不等于「全都成功」" class="headerlink" title="四、原理拆解：为什么「整体 200」不等于「全都成功」"></a>四、原理拆解：为什么「整体 200」不等于「全都成功」</h2><p><code>_bulk</code> 的语义是<strong>逐条独立执行</strong>：每条自己解析、自己走路由、自己落分片。某条因类型冲突失败，不会中断整批，也不会让整体状态码变成 4xx。于是响应里出现这种结构：</p>
+<pre class="line-numbers language-json" data-language="json"><code class="language-json"><span class="token punctuation">&#123;</span> <span class="token property">"took"</span><span class="token operator">:</span> <span class="token number">42</span><span class="token punctuation">,</span> <span class="token property">"errors"</span><span class="token operator">:</span> <span class="token boolean">true</span><span class="token punctuation">,</span>
+  <span class="token property">"items"</span><span class="token operator">:</span> <span class="token punctuation">[</span> <span class="token punctuation">&#123;</span> <span class="token property">"index"</span><span class="token operator">:</span> <span class="token punctuation">&#123;</span> <span class="token property">"_id"</span><span class="token operator">:</span> <span class="token string">"1"</span><span class="token punctuation">,</span> <span class="token property">"status"</span><span class="token operator">:</span> <span class="token number">201</span> <span class="token punctuation">&#125;</span> <span class="token punctuation">&#125;</span><span class="token punctuation">,</span>
+             <span class="token punctuation">&#123;</span> <span class="token property">"index"</span><span class="token operator">:</span> <span class="token punctuation">&#123;</span> <span class="token property">"_id"</span><span class="token operator">:</span> <span class="token string">"2"</span><span class="token punctuation">,</span> <span class="token property">"status"</span><span class="token operator">:</span> <span class="token number">400</span><span class="token punctuation">,</span>
+                          <span class="token property">"error"</span><span class="token operator">:</span> <span class="token punctuation">&#123;</span> <span class="token property">"type"</span><span class="token operator">:</span> <span class="token string">"mapper_parsing_exception"</span> <span class="token punctuation">&#125;</span> <span class="token punctuation">&#125;</span> <span class="token punctuation">&#125;</span> <span class="token punctuation">]</span> <span class="token punctuation">&#125;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span></span></code></pre>
+
+<p>生产里最危险的写法是「只看 HTTP 200 就认为成功」。正确动作是：<strong>解析 <code>items</code>，按 <code>status &gt;= 400</code> 收集失败 ID，再决定重试或告警</strong>。</p>
+<h2 id="五、场景说明"><a href="#五、场景说明" class="headerlink" title="五、场景说明"></a>五、场景说明</h2><div class="data-grid data-grid-link-table"><div class="grid-header"><div class="grid-cell">场景</div><div class="grid-cell">动作</div><div class="grid-cell">批量建议</div></div><div class="grid-row"><div class="grid-cell">首次全量导入</div><div class="grid-cell"><code>index</code></div><div class="grid-cell">每批数百到数千条</div></div><div class="grid-row"><div class="grid-cell">增量同步（怕重复）</div><div class="grid-cell"><code>create</code></div><div class="grid-cell">同上，冲突当「已存在」处理</div></div><div class="grid-row"><div class="grid-cell">日常补字段</div><div class="grid-cell"><code>update</code></div><div class="grid-cell">小批量，注意 <code>retry_on_conflict</code></div></div><div class="grid-row"><div class="grid-cell">批量删旧数据</div><div class="grid-cell"><code>delete</code></div><div class="grid-cell">大量删除优先考虑按索引&#x2F;时间淘汰</div></div></div>
+
+<p>批量大小官方在调优章节给的思路是「控制在 5–15 MB 量级、几百到几千条」，不是越大越好：过大会撑爆请求缓冲、拉长单次失败的影响面，也会让背压（M3-7）更容易触发。</p>
+<h2 id="六、实操"><a href="#六、实操" class="headerlink" title="六、实操"></a>六、实操</h2><pre class="line-numbers language-bash" data-language="bash"><code class="language-bash"><span class="token comment"># 正确格式：末行换行、NDJSON</span>
+<span class="token function">curl</span> <span class="token parameter variable">-X</span> POST <span class="token string">"http://localhost:9200/goods/_bulk"</span> <span class="token parameter variable">-H</span> <span class="token string">'Content-Type: application/x-ndjson'</span> <span class="token parameter variable">-d</span> <span class="token string">'
+&#123;"create":&#123;"_id":"1"&#125;&#125;
+&#123;"title":"批量一","price":10&#125;
+&#123;"create":&#123;"_id":"1"&#125;&#125;
+&#123;"title":"重复 ID，应当失败","price":20&#125;
+&#123;"index":&#123;"_id":"2"&#125;&#125;
+&#123;"title":"批量二","price":30&#125;
+'</span>
+
+<span class="token comment"># 只捞失败条目：排障首选</span>
+<span class="token function">curl</span> <span class="token parameter variable">-s</span> <span class="token parameter variable">-X</span> POST <span class="token string">"http://localhost:9200/goods/_bulk"</span> <span class="token parameter variable">-H</span> <span class="token string">'Content-Type: application/x-ndjson'</span> <span class="token punctuation">\</span>
+  --data-binary @batch.ndjson <span class="token operator">|</span> jq <span class="token string">'.items[] | select(.create.status >= 400)'</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<p>第二条命令演示了正确的排障姿势：<code>filter_path</code>（或 <code>jq</code>）只挑失败项，避免在上万条 <code>items</code> 里肉眼找。</p>
+<h2 id="七、常见坑"><a href="#七、常见坑" class="headerlink" title="七、常见坑"></a>七、常见坑</h2><ol>
+<li><strong>写成 JSON 数组</strong>：<code>_bulk</code> 只认 NDJSON。</li>
+<li><strong>末行没换行</strong>：最后一条静默丢失，这是最隐蔽的一条。</li>
+<li><strong>只看 <code>errors</code> 不看 <code>items</code></strong>：<code>errors: true</code> 只是「有失败」，具体哪条要逐项看。</li>
+<li><strong>该用 <code>create</code> 却用 <code>index</code></strong>：重复导入会覆盖原文档，看起来「成功」其实数据被替换。</li>
+<li><strong>不指定 <code>_id</code> 让 ES 自动生成</strong>：之后无法按 ID 更新，只能整批重灌。</li>
+<li><strong>单批几十 MB</strong>：请求缓冲压力大，失败重试代价高，还容易触发 429。</li>
+</ol>
+<h2 id="八、课后小结"><a href="#八、课后小结" class="headerlink" title="八、课后小结"></a>八、课后小结</h2><ol>
+<li><code>_bulk</code> 是 NDJSON、成对行、末行换行、<code>x-ndjson</code>。</li>
+<li>四个动作里只有 <code>create</code> 不覆盖；防重复导入必须用它。</li>
+<li>整体 200 ≠ 全部成功，必须解析 <code>items</code> 的 <code>status</code>。</li>
+<li>批量大小控制在 5–15 MB 量级是官方调优思路，不是硬指标。</li>
+<li>失败处理要能只取失败项，重试只重试失败项。</li>
+</ol>
+<h2 id="九、思考题"><a href="#九、思考题" class="headerlink" title="九、思考题"></a>九、思考题</h2><ol>
+<li>一次 1 万条的 bulk 有 12 条 400（类型冲突），你会怎么设计重试？会不会把成功那 9988 条重发？</li>
+<li>为什么官方要求末行换行？从解析器实现角度解释。</li>
+<li>用 <code>index</code> 导入历史数据导致「新数据被旧数据覆盖」，你会怎么发现？给出两个监控点。</li>
+</ol>
+<h2 id="十、官方资料"><a href="#十、官方资料" class="headerlink" title="十、官方资料"></a>十、官方资料</h2><ul>
+<li>Bulk API：<a target="_blank" rel="noopener" href="https://www.elastic.co/guide/en/elasticsearch/reference/current/docs-bulk.html">https://www.elastic.co/guide/en/elasticsearch/reference/current/docs-bulk.html</a></li>
+<li>Tune for indexing speed：<a target="_blank" rel="noopener" href="https://www.elastic.co/guide/en/elasticsearch/reference/current/tune-for-indexing-speed.html">https://www.elastic.co/guide/en/elasticsearch/reference/current/tune-for-indexing-speed.html</a></li>
+<li><code>filter_path</code>：<a target="_blank" rel="noopener" href="https://www.elastic.co/guide/en/elasticsearch/reference/current/common-options.html#common-options-response-filtering">https://www.elastic.co/guide/en/elasticsearch/reference/current/common-options.html#common-options-response-filtering</a></li>
+</ul>
+<p>上一篇：<a href="/2023/11/07/bigdata/elasticsearch/es-15-refresh-flush-merge/">M3-2 四个「刷」的区别</a> ｜ 下一篇：<a href="/2023/11/13/bigdata/elasticsearch/es-17-optimistic-concurrency/">M3-4 乐观并发控制</a> ｜ <a href="/2023/09/22/bigdata/elasticsearch/es-00-series-index/">总目录</a></p>
+</div>
+
+  <div class="mb-foot">
+    <a href="/phone/">返回手机首页</a>
+    <a href="/phone/tags/">星迹索引</a>
+  </div>
+</div>
+
+
+<script>
+  /* 作用：懒加载本地 mermaid 库；无 mermaid 代码块时不加载 */
+  function loadLocalMermaid(){
+    return new Promise(function(resolve, reject){
+      if(window.mermaid) return resolve(window.mermaid);
+      var s = document.createElement('script');
+      s.src = '/js/third-party/mermaid/mermaid.min.js?v=10';
+      s.onload = function(){ resolve(window.mermaid); };
+      s.onerror = function(){ reject(new Error('mermaid local load failed')); };
+      document.head.appendChild(s);
+    });
+  }
+
+  /* 作用：把 ```mermaid 代码块替换成 SVG 图（手机端字号略小、图可横向滚动） */
+  async function renderMermaidDiagram(){
+    var blocks = document.querySelectorAll('pre[class*="language-mermaid"]');
+    if(!blocks.length) return;
+    var mermaid;
+    try { mermaid = await loadLocalMermaid(); }
+    catch(e){ console.warn('[mermaid] 本地库加载失败：', e); return; }
+
+    mermaid.initialize({
+      startOnLoad: false,
+      theme: 'base',
+      themeVariables: {
+        darkMode: true,
+        background: 'transparent',
+        fontFamily: '"Microsoft YaHei", "PingFang SC", "Segoe UI", sans-serif',
+        fontSize: '12px',
+        primaryColor: '#062f3d',
+        primaryTextColor: '#d6f6ff',
+        primaryBorderColor: '#00eeff',
+        secondaryColor: '#04222d',
+        tertiaryColor: '#04222d',
+        mainBkg: '#062f3d',
+        nodeBorder: '#00eeff',
+        clusterBkg: '#02161f',
+        clusterBorder: '#00eeff55',
+        lineColor: '#00eeff',
+        textColor: '#c0e8ff',
+        edgeLabelBackground: '#02161f'
+      },
+      flowchart: { curve: 'basis', useMaxWidth: false, htmlLabels: false, nodeSpacing: 30, rankSpacing: 40, padding: 10 }
+    });
+
+    var targets = [];
+    blocks.forEach(function(el){
+      var codeEl = el.querySelector('code');
+      if(!codeEl) return;
+      var div = document.createElement('div');
+      div.className = 'mermaid';
+      div.textContent = codeEl.textContent;
+      el.parentNode.replaceChild(div, el);
+      targets.push(div);
+    });
+    if(!targets.length) return;
+    try { await mermaid.run({ nodes: targets }); }
+    catch(e){ console.warn('[mermaid] 渲染失败：', e); }
+  }
+  /* 作用：多次触发兜底（延迟重试 + DOM 变化），防止某次时机没跑到导致图表留在代码块 */
+  var mmBusy = false;
+  function scheduleMermaid(){
+    if(mmBusy) return;
+    mmBusy = true;
+    renderMermaidDiagram().then(function(){ mmBusy = false; }, function(){ mmBusy = false; });
+  }
+  scheduleMermaid();
+  window.addEventListener('load', scheduleMermaid);
+  [1000, 3000, 8000].forEach(function(ms){ setTimeout(scheduleMermaid, ms); });
+  if(document.readyState !== 'loading') scheduleMermaid();
+  if(window.MutationObserver){
+    var mmTimer = null;
+    var mmObserver = new MutationObserver(function(){
+      clearTimeout(mmTimer);
+      mmTimer = setTimeout(scheduleMermaid, 400);
+    });
+    mmObserver.observe(document.querySelector('.mb-article') || document.body, { childList: true, subtree: true });
+  }
+</script>
+</body>
+</html>

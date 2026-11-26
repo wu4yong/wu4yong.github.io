@@ -1,0 +1,317 @@
+<!--
+  ============================================
+  手机端 · 文章原文页
+  文件：phone/post.njk
+  适用终端：手机端（路由 /phone/p/<slug>/，由 scripts/phone-routes.js 生成）
+  作用：手机阅读单篇文章；单列布局、无侧栏无雷达，替代电脑端 post.njk
+        数据由生成期算好：page.item = { title, dateStr, content, cats, tags }
+  样式依赖：source/css/theme/phone/common.css、source/css/theme/phone/list.css
+  组件依赖：phone/_components/Particles.njk
+  最后修改：2026-11-11
+  ============================================
+-->
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="color-scheme" content="dark">
+  <meta name="theme-color" content="#020817">
+  <!-- 首帧兜底：浏览器默认画布是白的，样式未解析前会闪一下白。这条规则先锁死深空底色 -->
+  <style>html{background-color:#020817}</style>
+  <title>HBase（五）与 MapReduce/Hive/Spark 集成 - 时空秘境</title>
+  <!-- 手机端样式：基础 + 列表/正文，外链引入（源文件 source/css/theme/phone/） -->
+  <link rel="stylesheet" href="/css/theme/phone/common.css">
+  <link rel="stylesheet" href="/css/theme/phone/list.css">
+<meta name="generator" content="Hexo 8.1.2"></head>
+<body>
+<div class="mb-shell">
+  <!--
+  ============================================
+  手机端星空粒子组件
+  文件：Particles.njk
+  适用终端：手机端
+  作用：Particles.njk 的手机端副本（nunjucks 子目录 include 取不到上级）
+        参数与电脑端 _components/Particles.njk 保持一致：
+        粒子 95 / 连线 118px / opacity 0.32，外加星座层与零星闪烁层
+  最后修改：2026-11-12
+  ============================================
+--><!-- z-index 必须是 0：负层级会被 body 不透明背景盖住，粒子在跑却看不见 -->
+<div id="particles" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 0; pointer-events: none;"></div>
+<!-- 星座层（与首页同一套：随机零星散布星座图形 + 偶尔闪烁的小星） -->
+<div id="constellations" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 1; pointer-events: none;" aria-hidden="true"></div>
+<script src="/js/particles.min.js"></script>
+<script>
+particlesJS("particles", {
+  particles: {
+    number: {
+      value: 95,
+      density: {
+        enable: true,
+        value_area: 800
+      }
+    },
+    color: {
+      value: "#00eeff"
+    },
+    shape: {
+      type: "circle",
+      stroke: {
+        width: 0,
+        color: "#000000"
+      }
+    },
+    opacity: {
+      value: 0.6,
+      random: true,
+      anim: {
+        enable: true,
+        speed: 0.5,
+        opacity_min: 0.1,
+        sync: false
+      }
+    },
+    size: {
+      value: 3,
+      random: true,
+      anim: {
+        enable: true,
+        speed: 2,
+        size_min: 0.1,
+        sync: false
+      }
+    },
+    line_linked: {
+      enable: true,
+      distance: 118,
+      color: "#00eeff",
+      opacity: 0.32,
+      width: 1
+    },
+    move: {
+      enable: true,
+      speed: 0.8,
+      direction: "none",
+      random: true,
+      straight: false,
+      out_mode: "out",
+      bounce: false,
+      attract: {
+        enable: true,
+        rotateX: 600,
+        rotateY: 1200
+      }
+    }
+  },
+  interactivity: {
+    detect_on: "canvas",
+    events: {
+      onhover: {
+        enable: true,
+        mode: "grab"       // 手指按住时粒子聚集
+      },
+      onclick: {
+        enable: true,
+        mode: "push"       // 点击时产生新粒子
+      },
+      resize: true
+    },
+    modes: {
+      grab: {
+        distance: 200,
+        line_linked: {
+          opacity: 1
+        }
+      },
+      push: {
+        particles_nb: 6
+      }
+    }
+  },
+  retina_detect: true
+});
+</script>
+<!-- 星座 + 零星闪烁层：与电脑端共用同一份绘制脚本 -->
+<script src="/js/theme/home/starfield.js"></script>
+
+
+  <div class="mb-top">
+    <a class="mb-back" href="/phone/">← 返回手机首页</a>
+    <span class="mb-sub" style="margin:0">2023-04-09</span>
+  </div>
+
+  <h1 class="mb-title">HBase（五）与 MapReduce/Hive/Spark 集成</h1>
+  <div class="mb-sub">
+    分类：bigdata · hbase
+     ｜ 标签：HBase
+  </div>
+
+  <div class="mb-article"><div class="essay-banner essay-hbase"></div>
+
+<h1 id="与-MapReduce-Hive-Spark-集成"><a href="#与-MapReduce-Hive-Spark-集成" class="headerlink" title="与 MapReduce&#x2F;Hive&#x2F;Spark 集成"></a><strong>与 MapReduce&#x2F;Hive&#x2F;Spark 集成</strong></h1><p>HBase 自己擅长随机读写和点查，但批量统计、SQL 分析这类活要交给外围计算框架。这一篇看 HBase 怎么和 MapReduce、Hive、Spark 对接，以及 Phoenix 在 HBase 之上补了哪一层 SQL 能力。重点是每种集成的数据进出方式和并行粒度，而不是把连接器配置背下来。</p>
+<p><img src="https://wu4yong.github.io/starry-images/assets/img/hbase/hbase-05-integration.webp" alt="存储分区向多个计算引擎分别开放读取通道，结果再经 SQL 层统一对外查询"></p>
+<p><em>存储分区向多个计算引擎分别开放读取通道，结果再经 SQL 层统一对外查询</em></p>
+<h2 id="1-1-集成要解决什么问题"><a href="#1-1-集成要解决什么问题" class="headerlink" title="1.1 集成要解决什么问题"></a>1.1 集成要解决什么问题</h2><p>HBase 直接对外提供的是 Java 客户端和 Scan 接口，适合在线服务；离线分析场景需要把 HBase 数据批量读出来做聚合，或者把计算结果批量写回 HBase。各框架对接的本质都是同一件事：<strong>把 HBase 的 Region 作为并行输入分片，把读写操作封装成框架认识的 InputFormat &#x2F; 数据源</strong>。</p>
+<div class="data-grid data-grid-link-table"><div class="grid-header"><div class="grid-cell">集成方向</div><div class="grid-cell">典型场景</div><div class="grid-cell">数据通道</div></div><div class="grid-row"><div class="grid-cell">MapReduce</div><div class="grid-cell">全量批量迁移、离线归并</div><div class="grid-cell">TableInputFormat &#x2F; TableOutputFormat</div></div><div class="grid-row"><div class="grid-cell">Hive</div><div class="grid-cell">用 SQL 分析 HBase 中的数据</div><div class="grid-cell">HiveStorageHandler 映射外表</div></div><div class="grid-row"><div class="grid-cell">Spark</div><div class="grid-cell">内存化批量处理、流式写入</div><div class="grid-cell">hbase-spark 连接器 &#x2F; Hadoop RDD 接口</div></div><div class="grid-row"><div class="grid-cell">Phoenix</div><div class="grid-cell">在线 SQL 查询与二级索引</div><div class="grid-cell">JDBC 直连 HBase</div></div></div>
+
+<h2 id="1-2-MapReduce：TableInputFormat-按-Region-并行"><a href="#1-2-MapReduce：TableInputFormat-按-Region-并行" class="headerlink" title="1.2 MapReduce：TableInputFormat 按 Region 并行"></a>1.2 MapReduce：TableInputFormat 按 Region 并行</h2><p>HBase 官方提供 <code>TableInputFormat</code>，让 MapReduce 作业把 HBase 表当输入源。它的并行粒度是 Region：每个 Region 对应一个 InputSplit，Map 任务就近读取该 Region 的数据，避免单点扫全表。</p>
+<div class="data-grid data-grid-link-table"><div class="grid-header"><div class="grid-cell">组件</div><div class="grid-cell">作用</div><div class="grid-cell">关键点</div></div><div class="grid-row"><div class="grid-cell">TableInputFormat</div><div class="grid-cell">把 HBase 表包装成 MR 输入</div><div class="grid-cell">按 Region 切 split，并行度与 Region 数量对齐</div></div><div class="grid-row"><div class="grid-cell">TableOutputFormat</div><div class="grid-cell">把 Reduce 结果写回 HBase</div><div class="grid-cell">批量 Put 写出，按 Region 分组</div></div><div class="grid-row"><div class="grid-cell">RowCounter &#x2F; Export</div><div class="grid-cell">官方自带工具类</div><div class="grid-cell">行数统计、全量导出，可直接复用</div></div></div>
+
+<p>典型配置片段（MapReduce 作业的 Job 配置）：</p>
+<pre class="line-numbers language-java" data-language="java"><code class="language-java"><span class="token keyword">import</span> <span class="token import"><span class="token namespace">org<span class="token punctuation">.</span>apache<span class="token punctuation">.</span>hadoop<span class="token punctuation">.</span>hbase<span class="token punctuation">.</span>mapreduce<span class="token punctuation">.</span></span><span class="token class-name">TableInputFormat</span></span><span class="token punctuation">;</span>
+<span class="token keyword">import</span> <span class="token import"><span class="token namespace">org<span class="token punctuation">.</span>apache<span class="token punctuation">.</span>hadoop<span class="token punctuation">.</span>hbase<span class="token punctuation">.</span>client<span class="token punctuation">.</span></span><span class="token class-name">Scan</span></span><span class="token punctuation">;</span>
+<span class="token keyword">import</span> <span class="token import"><span class="token namespace">org<span class="token punctuation">.</span>apache<span class="token punctuation">.</span>hadoop<span class="token punctuation">.</span>conf<span class="token punctuation">.</span></span><span class="token class-name">Configuration</span></span><span class="token punctuation">;</span>
+
+<span class="token class-name">Configuration</span> conf <span class="token operator">=</span> <span class="token class-name">HBaseConfiguration</span><span class="token punctuation">.</span><span class="token function">create</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+conf<span class="token punctuation">.</span><span class="token function">set</span><span class="token punctuation">(</span><span class="token class-name">TableInputFormat</span><span class="token punctuation">.</span><span class="token constant">INPUT_TABLE</span><span class="token punctuation">,</span> <span class="token string">"user_table"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+<span class="token class-name">Scan</span> scan <span class="token operator">=</span> <span class="token keyword">new</span> <span class="token class-name">Scan</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+scan<span class="token punctuation">.</span><span class="token function">setCaching</span><span class="token punctuation">(</span><span class="token number">100</span><span class="token punctuation">)</span><span class="token punctuation">;</span> <span class="token comment">// 每次 RPC 拉取行数，平衡 RPC 次数与内存</span>
+<span class="token class-name">TableInputFormat</span><span class="token punctuation">.</span><span class="token function">setScan</span><span class="token punctuation">(</span>conf<span class="token punctuation">,</span> scan<span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+job<span class="token punctuation">.</span><span class="token function">setInputFormatClass</span><span class="token punctuation">(</span><span class="token class-name">TableInputFormat</span><span class="token punctuation">.</span><span class="token keyword">class</span><span class="token punctuation">)</span><span class="token punctuation">;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<p>要点：MapReduce 读 HBase 仍然受 RowKey 设计约束，没有前缀的全表扫会分散到所有 Region，但每个 Map 内部仍是顺序遍历。写出到 HBase 走批量 Put，不要在 Map 里逐条 RPC。</p>
+<h2 id="1-3-Hive：StorageHandler-映射外表"><a href="#1-3-Hive：StorageHandler-映射外表" class="headerlink" title="1.3 Hive：StorageHandler 映射外表"></a>1.3 Hive：StorageHandler 映射外表</h2><p>Hive 不直接存 HBase 数据，而是通过 <code>hive-hbase-handler</code> 里的 <strong>HiveStorageHandler</strong> 把 HBase 表映射成 Hive 外表。建表时声明列族、列限定符和 RowKey 的对应关系，Hive 查这张表时实际下推到 HBase Scan 读取：</p>
+<div class="data-grid data-grid-link-table"><div class="grid-header"><div class="grid-cell">环节</div><div class="grid-cell">做法</div><div class="grid-cell">注意点</div></div><div class="grid-row"><div class="grid-cell">建表映射</div><div class="grid-cell">Hive DDL 指定 StorageHandler 与 HBase 表名、列映射</div><div class="grid-cell">HBase 侧表与列族需已存在</div></div><div class="grid-row"><div class="grid-cell">查询执行</div><div class="grid-cell">Hive 生成扫描计划，经 Handler 读 HBase</div><div class="grid-cell">不支持跨 HBase 表的高效 Join</div></div><div class="grid-row"><div class="grid-cell">写入</div><div class="grid-cell">从 Hive 结果批量落 HBase</div><div class="grid-cell">大批量写入注意压缩与版本数</div></div></div>
+
+<p>这种集成适合”已经在 Hive 数仓里，需要顺带查一份 HBase 明细”的场景。它不是把 HBase 变成数仓：Hive 层面的聚合仍然要扫描 HBase 数据，点查性能不如直连 HBase 客户端。</p>
+<h2 id="1-4-Spark：hbase-spark-连接器"><a href="#1-4-Spark：hbase-spark-连接器" class="headerlink" title="1.4 Spark：hbase-spark 连接器"></a>1.4 Spark：hbase-spark 连接器</h2><p>Spark 对接 HBase 有两条路径：一条是复用 Hadoop 的 <code>TableInputFormat</code> 生成 RDD，另一条是使用官方 <code>hbase-spark</code> 模块提供的 DataFrame 接口。前者兼容性好，后者在结构化读写上更顺手：</p>
+<pre class="line-numbers language-scala" data-language="scala"><code class="language-scala"><span class="token keyword">import</span> <span class="token namespace">org<span class="token punctuation">.</span>apache<span class="token punctuation">.</span>hadoop<span class="token punctuation">.</span>hbase<span class="token punctuation">.</span>mapreduce<span class="token punctuation">.</span></span>TableInputFormat
+<span class="token keyword">import</span> <span class="token namespace">org<span class="token punctuation">.</span>apache<span class="token punctuation">.</span>hadoop<span class="token punctuation">.</span>hbase<span class="token punctuation">.</span>client<span class="token punctuation">.</span></span>Scan
+<span class="token keyword">import</span> <span class="token namespace">org<span class="token punctuation">.</span>apache<span class="token punctuation">.</span>hadoop<span class="token punctuation">.</span>conf<span class="token punctuation">.</span></span>Configuration
+
+<span class="token keyword">val</span> conf <span class="token operator">=</span> <span class="token keyword">new</span> Configuration<span class="token punctuation">(</span>conf<span class="token punctuation">)</span>
+conf<span class="token punctuation">.</span>set<span class="token punctuation">(</span>TableInputFormat<span class="token punctuation">.</span>INPUT_TABLE<span class="token punctuation">,</span> <span class="token string">"user_table"</span><span class="token punctuation">)</span>
+
+<span class="token comment">// 复用 Hadoop InputFormat，按 Region 并行得到 RDD</span>
+<span class="token keyword">val</span> rdd <span class="token operator">=</span> sc<span class="token punctuation">.</span>newAPIHadoopRDD<span class="token punctuation">(</span>
+  conf<span class="token punctuation">,</span>
+  classOf<span class="token punctuation">[</span>TableInputFormat<span class="token punctuation">]</span><span class="token punctuation">,</span>
+  classOf<span class="token punctuation">[</span>org<span class="token punctuation">.</span>apache<span class="token punctuation">.</span>hadoop<span class="token punctuation">.</span>hbase<span class="token punctuation">.</span>io<span class="token punctuation">.</span>ImmutableBytesWritable<span class="token punctuation">]</span><span class="token punctuation">,</span>
+  classOf<span class="token punctuation">[</span>org<span class="token punctuation">.</span>apache<span class="token punctuation">.</span>hadoop<span class="token punctuation">.</span>hbase<span class="token punctuation">.</span>client<span class="token punctuation">.</span>Result<span class="token punctuation">]</span>
+<span class="token punctuation">)</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<p>Spark 侧的经验判断：</p>
+<ul>
+<li>批量离线读走 RDD &#x2F; DataFrame 批处理，按 Region 并行，避免一个任务扫全表</li>
+<li>流式写出用批量 Put 攒批，不要每条数据一个 RPC</li>
+<li>缓存 RDD 前先确认数据量，HBase 全表数据放进内存很容易把 Executor 撑爆</li>
+</ul>
+<h2 id="1-5-Phoenix：在-HBase-之上的-SQL-层"><a href="#1-5-Phoenix：在-HBase-之上的-SQL-层" class="headerlink" title="1.5 Phoenix：在 HBase 之上的 SQL 层"></a>1.5 Phoenix：在 HBase 之上的 SQL 层</h2><p>Phoenix 是构建在 HBase 之上的 SQL 层，把 HBase 的列式存储包装成关系表模型，对外提供 JDBC 接口。它解决的是 HBase 原生只能写客户端代码、缺少二级索引和 SQL 查询的问题：</p>
+<div class="data-grid data-grid-link-table"><div class="grid-header"><div class="grid-cell">能力</div><div class="grid-cell">说明</div><div class="grid-cell">与原生 HBase 的关系</div></div><div class="grid-row"><div class="grid-cell">SQL DDL &#x2F; DML</div><div class="grid-cell">建表、增删改查用 SQL 表达</div><div class="grid-cell">底层仍是 HBase 表与 RowKey</div></div><div class="grid-row"><div class="grid-cell">二级索引</div><div class="grid-cell">为非 RowKey 字段建索引</div><div class="grid-cell">索引以额外 HBase 表维护</div></div><div class="grid-row"><div class="grid-cell">JDBC 接入</div><div class="grid-cell">通用 JDBC 驱动连接</div><div class="grid-cell">业务侧不必直接写 HBase 客户端</div></div></div>
+
+<p>需要注意：Phoenix 的二级索引和物化视图都会落成额外的 HBase 表，写入放大和存储成本要算进去；复杂分析查询仍然受 HBase 存储模型限制，跨大表 Join 不是它的强项。</p>
+<h2 id="1-6-集成选型对照"><a href="#1-6-集成选型对照" class="headerlink" title="1.6 集成选型对照"></a>1.6 集成选型对照</h2><div class="data-grid data-grid-link-table"><div class="grid-header"><div class="grid-cell">需求</div><div class="grid-cell">推荐路径</div><div class="grid-cell">不建议</div></div><div class="grid-row"><div class="grid-cell">全量批量导出 &#x2F; 迁移</div><div class="grid-cell">MapReduce TableInputFormat</div><div class="grid-cell">客户端逐条 Scan 导出</div></div><div class="grid-row"><div class="grid-cell">SQL 查 HBase 明细</div><div class="grid-cell">Hive StorageHandler 或 Phoenix</div><div class="grid-cell">为分析场景直连 HBase Scan</div></div><div class="grid-row"><div class="grid-cell">内存化批处理、特征加工</div><div class="grid-cell">Spark + hbase-spark</div><div class="grid-cell">全量数据缓存进 Executor</div></div><div class="grid-row"><div class="grid-cell">在线按条件点查</div><div class="grid-cell">Phoenix + 二级索引</div><div class="grid-cell">Hive 外表接在线请求</div></div></div>
+
+<h2 id="1-7-容易踩的坑"><a href="#1-7-容易踩的坑" class="headerlink" title="1.7 容易踩的坑"></a>1.7 容易踩的坑</h2><ul>
+<li>以为连接器能绕过 RowKey 设计：不管 MR、Hive 还是 Spark，底层扫描路径都受主键分布约束</li>
+<li>用 Hive 外表扛在线查询：Hive 是批处理引擎，响应延迟不适合在线点查</li>
+<li>Spark 里把全表 RDD 缓存：HBase 表数据量通常远超 Executor 内存，缓存前先抽样估算</li>
+<li>Phoenix 索引随便建：每个索引都是一张额外 HBase 表，写入放大和磁盘占用随索引数增长</li>
+</ul>
+<h2 id="1-8-官方资料"><a href="#1-8-官方资料" class="headerlink" title="1.8 官方资料"></a>1.8 官方资料</h2><ul>
+<li>Apache HBase 官网：<a target="_blank" rel="noopener" href="https://hbase.apache.org/">https://hbase.apache.org/</a></li>
+<li>HBase MapReduce 集成：<a target="_blank" rel="noopener" href="https://hbase.apache.org/book.html#mapreduce">https://hbase.apache.org/book.html#mapreduce</a></li>
+<li>HBase Spark 集成：<a target="_blank" rel="noopener" href="https://hbase.apache.org/book.html#spark">https://hbase.apache.org/book.html#spark</a></li>
+<li>Apache Phoenix 官网：<a target="_blank" rel="noopener" href="https://phoenix.apache.org/">https://phoenix.apache.org/</a></li>
+</ul>
+<h2 id="1-9-清单"><a href="#1-9-清单" class="headerlink" title="1.9 清单"></a>1.9 清单</h2><ol>
+<li>各框架集成的本质是把 HBase Region 作为并行分片，读写封装成 InputFormat 或数据源</li>
+<li>MapReduce 用 TableInputFormat &#x2F; TableOutputFormat，按 Region 切 split，写出走批量 Put</li>
+<li>Hive 通过 HiveStorageHandler 把 HBase 表映射为外表，适合顺带分析，不适合在线点查</li>
+<li>Spark 可复用 TableInputFormat 生成 RDD，或用 hbase-spark 的 DataFrame 接口，注意批量写出与内存边界</li>
+<li>Phoenix 在 HBase 之上提供 SQL 与 JDBC，支持二级索引；索引落成额外 HBase 表，有写入放大</li>
+<li>连接器替代不了 RowKey 设计，所有扫描路径仍受主键分布约束</li>
+<li>选型按在线点查、批量分析、SQL 查询三类需求分开，批处理引擎不要接在线流量</li>
+</ol>
+</div>
+
+  <div class="mb-foot">
+    <a href="/phone/">返回手机首页</a>
+    <a href="/phone/tags/">星迹索引</a>
+  </div>
+</div>
+
+
+<script>
+  /* 作用：懒加载本地 mermaid 库；无 mermaid 代码块时不加载 */
+  function loadLocalMermaid(){
+    return new Promise(function(resolve, reject){
+      if(window.mermaid) return resolve(window.mermaid);
+      var s = document.createElement('script');
+      s.src = '/js/third-party/mermaid/mermaid.min.js?v=10';
+      s.onload = function(){ resolve(window.mermaid); };
+      s.onerror = function(){ reject(new Error('mermaid local load failed')); };
+      document.head.appendChild(s);
+    });
+  }
+
+  /* 作用：把 ```mermaid 代码块替换成 SVG 图（手机端字号略小、图可横向滚动） */
+  async function renderMermaidDiagram(){
+    var blocks = document.querySelectorAll('pre[class*="language-mermaid"]');
+    if(!blocks.length) return;
+    var mermaid;
+    try { mermaid = await loadLocalMermaid(); }
+    catch(e){ console.warn('[mermaid] 本地库加载失败：', e); return; }
+
+    mermaid.initialize({
+      startOnLoad: false,
+      theme: 'base',
+      themeVariables: {
+        darkMode: true,
+        background: 'transparent',
+        fontFamily: '"Microsoft YaHei", "PingFang SC", "Segoe UI", sans-serif',
+        fontSize: '12px',
+        primaryColor: '#062f3d',
+        primaryTextColor: '#d6f6ff',
+        primaryBorderColor: '#00eeff',
+        secondaryColor: '#04222d',
+        tertiaryColor: '#04222d',
+        mainBkg: '#062f3d',
+        nodeBorder: '#00eeff',
+        clusterBkg: '#02161f',
+        clusterBorder: '#00eeff55',
+        lineColor: '#00eeff',
+        textColor: '#c0e8ff',
+        edgeLabelBackground: '#02161f'
+      },
+      flowchart: { curve: 'basis', useMaxWidth: false, htmlLabels: false, nodeSpacing: 30, rankSpacing: 40, padding: 10 }
+    });
+
+    var targets = [];
+    blocks.forEach(function(el){
+      var codeEl = el.querySelector('code');
+      if(!codeEl) return;
+      var div = document.createElement('div');
+      div.className = 'mermaid';
+      div.textContent = codeEl.textContent;
+      el.parentNode.replaceChild(div, el);
+      targets.push(div);
+    });
+    if(!targets.length) return;
+    try { await mermaid.run({ nodes: targets }); }
+    catch(e){ console.warn('[mermaid] 渲染失败：', e); }
+  }
+  /* 作用：多次触发兜底（延迟重试 + DOM 变化），防止某次时机没跑到导致图表留在代码块 */
+  var mmBusy = false;
+  function scheduleMermaid(){
+    if(mmBusy) return;
+    mmBusy = true;
+    renderMermaidDiagram().then(function(){ mmBusy = false; }, function(){ mmBusy = false; });
+  }
+  scheduleMermaid();
+  window.addEventListener('load', scheduleMermaid);
+  [1000, 3000, 8000].forEach(function(ms){ setTimeout(scheduleMermaid, ms); });
+  if(document.readyState !== 'loading') scheduleMermaid();
+  if(window.MutationObserver){
+    var mmTimer = null;
+    var mmObserver = new MutationObserver(function(){
+      clearTimeout(mmTimer);
+      mmTimer = setTimeout(scheduleMermaid, 400);
+    });
+    mmObserver.observe(document.querySelector('.mb-article') || document.body, { childList: true, subtree: true });
+  }
+</script>
+</body>
+</html>

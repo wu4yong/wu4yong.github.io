@@ -1,0 +1,302 @@
+<!--
+  ============================================
+  手机端 · 文章原文页
+  文件：phone/post.njk
+  适用终端：手机端（路由 /phone/p/<slug>/，由 scripts/phone-routes.js 生成）
+  作用：手机阅读单篇文章；单列布局、无侧栏无雷达，替代电脑端 post.njk
+        数据由生成期算好：page.item = { title, dateStr, content, cats, tags }
+  样式依赖：source/css/theme/phone/common.css、source/css/theme/phone/list.css
+  组件依赖：phone/_components/Particles.njk
+  最后修改：2026-11-11
+  ============================================
+-->
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="color-scheme" content="dark">
+  <meta name="theme-color" content="#020817">
+  <!-- 首帧兜底：浏览器默认画布是白的，样式未解析前会闪一下白。这条规则先锁死深空底色 -->
+  <style>html{background-color:#020817}</style>
+  <title>Flink（七）反压与性能调优 - 时空秘境</title>
+  <!-- 手机端样式：基础 + 列表/正文，外链引入（源文件 source/css/theme/phone/） -->
+  <link rel="stylesheet" href="/css/theme/phone/common.css">
+  <link rel="stylesheet" href="/css/theme/phone/list.css">
+<meta name="generator" content="Hexo 8.1.2"></head>
+<body>
+<div class="mb-shell">
+  <!--
+  ============================================
+  手机端星空粒子组件
+  文件：Particles.njk
+  适用终端：手机端
+  作用：Particles.njk 的手机端副本（nunjucks 子目录 include 取不到上级）
+        参数与电脑端 _components/Particles.njk 保持一致：
+        粒子 95 / 连线 118px / opacity 0.32，外加星座层与零星闪烁层
+  最后修改：2026-11-12
+  ============================================
+--><!-- z-index 必须是 0：负层级会被 body 不透明背景盖住，粒子在跑却看不见 -->
+<div id="particles" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 0; pointer-events: none;"></div>
+<!-- 星座层（与首页同一套：随机零星散布星座图形 + 偶尔闪烁的小星） -->
+<div id="constellations" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 1; pointer-events: none;" aria-hidden="true"></div>
+<script src="/js/particles.min.js"></script>
+<script>
+particlesJS("particles", {
+  particles: {
+    number: {
+      value: 95,
+      density: {
+        enable: true,
+        value_area: 800
+      }
+    },
+    color: {
+      value: "#00eeff"
+    },
+    shape: {
+      type: "circle",
+      stroke: {
+        width: 0,
+        color: "#000000"
+      }
+    },
+    opacity: {
+      value: 0.6,
+      random: true,
+      anim: {
+        enable: true,
+        speed: 0.5,
+        opacity_min: 0.1,
+        sync: false
+      }
+    },
+    size: {
+      value: 3,
+      random: true,
+      anim: {
+        enable: true,
+        speed: 2,
+        size_min: 0.1,
+        sync: false
+      }
+    },
+    line_linked: {
+      enable: true,
+      distance: 118,
+      color: "#00eeff",
+      opacity: 0.32,
+      width: 1
+    },
+    move: {
+      enable: true,
+      speed: 0.8,
+      direction: "none",
+      random: true,
+      straight: false,
+      out_mode: "out",
+      bounce: false,
+      attract: {
+        enable: true,
+        rotateX: 600,
+        rotateY: 1200
+      }
+    }
+  },
+  interactivity: {
+    detect_on: "canvas",
+    events: {
+      onhover: {
+        enable: true,
+        mode: "grab"       // 手指按住时粒子聚集
+      },
+      onclick: {
+        enable: true,
+        mode: "push"       // 点击时产生新粒子
+      },
+      resize: true
+    },
+    modes: {
+      grab: {
+        distance: 200,
+        line_linked: {
+          opacity: 1
+        }
+      },
+      push: {
+        particles_nb: 6
+      }
+    }
+  },
+  retina_detect: true
+});
+</script>
+<!-- 星座 + 零星闪烁层：与电脑端共用同一份绘制脚本 -->
+<script src="/js/theme/home/starfield.js"></script>
+
+
+  <div class="mb-top">
+    <a class="mb-back" href="/phone/">← 返回手机首页</a>
+    <span class="mb-sub" style="margin:0">2023-08-14</span>
+  </div>
+
+  <h1 class="mb-title">Flink（七）反压与性能调优</h1>
+  <div class="mb-sub">
+    分类：bigdata · flink
+     ｜ 标签：Flink
+  </div>
+
+  <div class="mb-article"><div class="essay-banner essay-flink"></div>
+
+<h1 id="反压与性能调优"><a href="#反压与性能调优" class="headerlink" title="反压与性能调优"></a><strong>反压与性能调优</strong></h1><p>实时作业跑着跑着延迟越来越大、Kafka 位点停滞，多半是链路出现了反压：下游算不动，缓冲区堆满，上游被卡住，压力一直传回到 Source。调优的第一步不是盲目加机器，而是先定位瓶颈算子，再按内存、序列化、并行度逐项排查。这一篇讲反压的传播规律、定位手段、TaskManager 内存模型和常见调优点。</p>
+<p><img src="https://wu4yong.github.io/starry-images/assets/img/flink/flink-07-tuning.webp" alt="算子链路上某段压力堆积成增厚的青色流带，下方是分层内存板与一排横向扩容的并行槽位"></p>
+<p><em>算子链路上某段压力堆积成增厚的青色流带，下方是分层内存板与一排横向扩容的并行槽位</em></p>
+<h2 id="1-1-反压是怎么产生与传播的"><a href="#1-1-反压是怎么产生与传播的" class="headerlink" title="1.1 反压是怎么产生与传播的"></a>1.1 反压是怎么产生与传播的</h2><p>数据在算子之间通过缓冲区传递。下游处理速度低于上游生产速度时，下游缓冲区被填满，上游拿不到空缓冲区就被阻塞；上游被阻塞后又拖住更上游，压力逐级向上传播，最终 Source 消费停滞。这就是反压（Backpressure）。</p>
+<div class="data-grid data-grid-link-table"><div class="grid-header"><div class="grid-cell">环节</div><div class="grid-cell">积压表现</div><div class="grid-cell">常见根因</div></div><div class="grid-row"><div class="grid-cell">下游算子</div><div class="grid-cell">缓冲区满、busy 高</div><div class="grid-cell">计算重、外部查询慢、状态太大</div></div><div class="grid-row"><div class="grid-cell">网络传输</div><div class="grid-cell">输出缓冲占满</div><div class="grid-cell">记录过大、序列化开销高、带宽不足</div></div><div class="grid-row"><div class="grid-cell">上游算子</div><div class="grid-cell">被动等待空缓冲</div><div class="grid-cell">被下游反压，自身未必有问题</div></div><div class="grid-row"><div class="grid-cell">Source</div><div class="grid-cell">位点停滞、消费滞后</div><div class="grid-cell">链路整体反压传导到入口</div></div></div>
+
+<p>反压是链路的自我保护机制，不是错误；要解决的是”哪个算子是瓶颈”。盲目调大上游并行度只会让更多数据堆到瓶颈后面。</p>
+<h2 id="1-2-定位反压：看-Web-UI-与指标"><a href="#1-2-定位反压：看-Web-UI-与指标" class="headerlink" title="1.2 定位反压：看 Web UI 与指标"></a>1.2 定位反压：看 Web UI 与指标</h2><p>Flink Web UI 的作业页面按算子展示背压状态、忙闲比例和缓冲占用：</p>
+<div class="data-grid data-grid-link-table"><div class="grid-header"><div class="grid-cell">指标</div><div class="grid-cell">含义</div><div class="grid-cell">判读</div></div><div class="grid-row"><div class="grid-cell">Backpressure</div><div class="grid-cell">算子线程被下游阻塞的比例</div><div class="grid-cell">HIGH 说明被反压严重，顺链路找瓶颈</div></div><div class="grid-row"><div class="grid-cell">Busy</div><div class="grid-cell">算子线程在真正计算的比例</div><div class="grid-cell">高而无反压，说明计算本身是瓶颈</div></div><div class="grid-row"><div class="grid-cell">Idle</div><div class="grid-cell">线程空闲等待比例</div><div class="grid-cell">持续高空闲，可能上游断流或分区倾斜</div></div><div class="grid-row"><div class="grid-cell">Input &#x2F; Output Buffer</div><div class="grid-cell">收发缓冲占用</div><div class="grid-cell">输出缓冲持续满，下游消费不动</div></div></div>
+
+<p>定位顺序：从 Source 往后看，第一个 <code>busy</code> 高、输出缓冲堆积的算子就是瓶颈；它上游的高反压是被连累的，不要在那里调优。除了 UI，还可以看消费延迟、记录吞吐量、GC 停顿和 RocksDB 读写指标，互相印证。</p>
+<h2 id="1-3-TaskManager-内存模型"><a href="#1-3-TaskManager-内存模型" class="headerlink" title="1.3 TaskManager 内存模型"></a>1.3 TaskManager 内存模型</h2><p>调内存前先分清 TM 进程里几块内存各管什么，否则加了总量还是 OOM：</p>
+<div class="data-grid data-grid-link-table"><div class="grid-header"><div class="grid-cell">内存区</div><div class="grid-cell">用途</div><div class="grid-cell">调优方向</div></div><div class="grid-row"><div class="grid-cell">JVM Heap</div><div class="grid-cell">用户对象、状态堆存、批量处理</div><div class="grid-cell">状态对象大、批量大时上调</div></div><div class="grid-row"><div class="grid-cell">Managed Memory</div><div class="grid-cell">RocksDB 本地存、排序批处理</div><div class="grid-cell">RocksDB 后端占大头，按状态规模配</div></div><div class="grid-row"><div class="grid-cell">Network Memory</div><div class="grid-cell">算子间传输缓冲</div><div class="grid-cell">记录大、并发高时增加网络缓冲</div></div><div class="grid-row"><div class="grid-cell">Off-Heap</div><div class="grid-cell">原生内存、堆外缓存</div><div class="grid-cell">外部客户端、异步框架占用</div></div></div>
+
+<pre class="line-numbers language-yaml" data-language="yaml"><code class="language-yaml"><span class="token comment"># taskmanager 内存配置：先定进程总量，再按状态类型切分</span>
+<span class="token key atrule">taskmanager</span><span class="token punctuation">:</span>
+  <span class="token key atrule">memory</span><span class="token punctuation">:</span>
+    <span class="token key atrule">process</span><span class="token punctuation">:</span>
+      <span class="token key atrule">size</span><span class="token punctuation">:</span> 4096mb              <span class="token comment"># 进程总内存上限</span>
+    <span class="token key atrule">network</span><span class="token punctuation">:</span>
+      <span class="token key atrule">min</span><span class="token punctuation">:</span> 256mb                <span class="token comment"># 网络缓冲，大记录/高并发适当上调</span>
+    <span class="token key atrule">managed</span><span class="token punctuation">:</span>
+      <span class="token key atrule">min</span><span class="token punctuation">:</span> 1024mb               <span class="token comment"># RocksDB 与批处理可用的托管内存</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<p>常见错误是状态全放堆内存，快照和大对象直接撑爆 Heap；大状态走 RocksDB 后，堆压力下降，瓶颈转移到本地磁盘读写。</p>
+<p>稳定性配置和内存同样相关，重启策略决定作业失败后怎么拉起：</p>
+<div class="data-grid data-grid-link-table"><div class="grid-header"><div class="grid-cell">策略</div><div class="grid-cell">行为</div><div class="grid-cell">适用</div></div><div class="grid-row"><div class="grid-cell">固定延迟重启</div><div class="grid-cell">失败后间隔固定时间重试，限制总次数</div><div class="grid-cell">偶发外部抖动、测试作业</div></div><div class="grid-row"><div class="grid-cell">失败率重启</div><div class="grid-cell">单位时间内失败超阈值才放弃</div><div class="grid-cell">生产长作业，避免反复重启</div></div><div class="grid-row"><div class="grid-cell">不重启</div><div class="grid-cell">失败即停，交给外部调度拉起</div><div class="grid-cell">批量补数、一次性任务</div></div></div>
+
+<p>重启次数与间隔要和检查点间隔配合：重启后从最近检查点恢复，恢复时长取决于状态大小；状态越大，单次重启成本越高，不能只靠”失败自动拉起”兜底。</p>
+<h2 id="1-4-序列化与数据倾斜"><a href="#1-4-序列化与数据倾斜" class="headerlink" title="1.4 序列化与数据倾斜"></a>1.4 序列化与数据倾斜</h2><p>吞吐问题里，序列化和倾斜占了很大比例：</p>
+<ul>
+<li><strong>序列化</strong>：Flink 用类型信息生成高效序列化器；POJO 字段公开、有无参构造时走 POJO 序列化，开销低。混用泛型、闭包、不可识别类型会退到 Kryo，序列化体积和 CPU 都上涨。日志里出现 Kryo 序列化提示，要回头检查数据类型定义。</li>
+<li><strong>记录体积</strong>：一条记录带大量未使用字段，网络与状态存储都跟着膨胀，先裁剪字段再谈扩容。</li>
+<li><strong>数据倾斜</strong>：热点 key 集中到个别 SubTask，其他子任务空闲。表现为个别 Slot 负载极高、反压卡在同一算子。先按 key 统计分布，再用加随机前缀、拆分热点、局部扩并行度处理，不能简单全链路加并行度。</li>
+</ul>
+<h2 id="1-5-并行度与槽位共享"><a href="#1-5-并行度与槽位共享" class="headerlink" title="1.5 并行度与槽位共享"></a>1.5 并行度与槽位共享</h2><p>并行度调优要结合槽位共享一起看：</p>
+<div class="data-grid data-grid-link-table"><div class="grid-header"><div class="grid-cell">手段</div><div class="grid-cell">效果</div><div class="grid-cell">注意</div></div><div class="grid-row"><div class="grid-cell">提高并行度</div><div class="grid-cell">算子拆更多子任务，分摊负载</div><div class="grid-cell">只对瓶颈算子提，避免全链路盲目扩</div></div><div class="grid-row"><div class="grid-cell">槽位共享</div><div class="grid-cell">轻量算子挤进同一 Slot，省资源</div><div class="grid-cell">重状态算子单独 <code>slotSharingGroup</code></div></div><div class="grid-row"><div class="grid-cell">禁用链式</div><div class="grid-cell">算子隔离线程与缓冲</div><div class="grid-cell">隔离有成本，默认链式最优</div></div><div class="grid-row"><div class="grid-cell">资源均衡</div><div class="grid-cell">重算子分散到不同 Slot &#x2F; 机器</div><div class="grid-cell">避免一个槽位堆多个大状态算子</div></div></div>
+
+<p>经验顺序：先定位瓶颈算子 → 判断是计算重、状态大还是外部查询慢 → 针对性提并行度或隔离资源 → 再核对内存与序列化。顺序反了，加机器和加内存都可能看不到收益。</p>
+<h2 id="1-6-常见易错点"><a href="#1-6-常见易错点" class="headerlink" title="1.6 常见易错点"></a>1.6 常见易错点</h2><ul>
+<li>看到反压就给 Source 加并行度，瓶颈在下游，上游扩了只会堆更多数据。</li>
+<li>状态全压堆内存，RocksDB 没用上，快照时 OOM。</li>
+<li>类型不可识别退到 Kryo，序列化开销翻倍却没被注意到。</li>
+<li>热点 key 不拆分，个别 Slot 跑满，集群整体利用率很低。</li>
+<li>网络缓冲给太小，大记录传输时缓冲反复申请释放，吞吐上不去。</li>
+<li>检查点间隔过短，快照抢占计算资源；过长则故障后重放与恢复成本升高。</li>
+<li>只看吞吐不看缓冲占用，反压初期被忙闲指标掩盖，等到积压明显才介入。</li>
+</ul>
+<h2 id="1-7-官方资料"><a href="#1-7-官方资料" class="headerlink" title="1.7 官方资料"></a>1.7 官方资料</h2><ul>
+<li>反压与性能排查：<a target="_blank" rel="noopener" href="https://nightlies.apache.org/flink/flink-docs-release-1.13/docs/ops/performance.html">https://nightlies.apache.org/flink/flink-docs-release-1.13/docs/ops/performance.html</a></li>
+<li>TaskManager 内存配置：<a target="_blank" rel="noopener" href="https://nightlies.apache.org/flink/flink-docs-release-1.13/docs/deployment/memory/task_mem.html">https://nightlies.apache.org/flink/flink-docs-release-1.13/docs/deployment/memory/task_mem.html</a></li>
+<li>状态后端与 RocksDB：<a target="_blank" rel="noopener" href="https://nightlies.apache.org/flink/flink-docs-release-1.13/docs/ops/state/state_backends/">https://nightlies.apache.org/flink/flink-docs-release-1.13/docs/ops/state/state_backends/</a></li>
+<li>并行执行调优：<a target="_blank" rel="noopener" href="https://nightlies.apache.org/flink/flink-docs-release-1.13/docs/concepts/parallelization/">https://nightlies.apache.org/flink/flink-docs-release-1.13/docs/concepts/parallelization/</a></li>
+</ul>
+<h2 id="1-8-清单"><a href="#1-8-清单" class="headerlink" title="1.8 清单"></a>1.8 清单</h2><ol>
+<li>反压由下游慢引起，逐级向上传播到 Source；反压是保护机制，定位瓶颈算子才是关键</li>
+<li>UI 看 Backpressure、Busy、Idle 与缓冲占用；第一个 busy 高、输出堆积的算子才是瓶颈</li>
+<li>TM 内存分 Heap、Managed、Network、Off-Heap，各管一块，大状态用 RocksDB 吃托管内存</li>
+<li>序列化优先 POJO，退到 Kryo 要回头查类型；记录裁剪后再谈扩容</li>
+<li>倾斜先查 key 分布，热点拆分或局部扩并行度，不要全链路盲目提并行度</li>
+<li>调优顺序：定位瓶颈 → 判断根因（计算&#x2F;状态&#x2F;外部查询）→ 调并行度与资源 → 核对内存序列化</li>
+</ol>
+</div>
+
+  <div class="mb-foot">
+    <a href="/phone/">返回手机首页</a>
+    <a href="/phone/tags/">星迹索引</a>
+  </div>
+</div>
+
+
+<script>
+  /* 作用：懒加载本地 mermaid 库；无 mermaid 代码块时不加载 */
+  function loadLocalMermaid(){
+    return new Promise(function(resolve, reject){
+      if(window.mermaid) return resolve(window.mermaid);
+      var s = document.createElement('script');
+      s.src = '/js/third-party/mermaid/mermaid.min.js?v=10';
+      s.onload = function(){ resolve(window.mermaid); };
+      s.onerror = function(){ reject(new Error('mermaid local load failed')); };
+      document.head.appendChild(s);
+    });
+  }
+
+  /* 作用：把 ```mermaid 代码块替换成 SVG 图（手机端字号略小、图可横向滚动） */
+  async function renderMermaidDiagram(){
+    var blocks = document.querySelectorAll('pre[class*="language-mermaid"]');
+    if(!blocks.length) return;
+    var mermaid;
+    try { mermaid = await loadLocalMermaid(); }
+    catch(e){ console.warn('[mermaid] 本地库加载失败：', e); return; }
+
+    mermaid.initialize({
+      startOnLoad: false,
+      theme: 'base',
+      themeVariables: {
+        darkMode: true,
+        background: 'transparent',
+        fontFamily: '"Microsoft YaHei", "PingFang SC", "Segoe UI", sans-serif',
+        fontSize: '12px',
+        primaryColor: '#062f3d',
+        primaryTextColor: '#d6f6ff',
+        primaryBorderColor: '#00eeff',
+        secondaryColor: '#04222d',
+        tertiaryColor: '#04222d',
+        mainBkg: '#062f3d',
+        nodeBorder: '#00eeff',
+        clusterBkg: '#02161f',
+        clusterBorder: '#00eeff55',
+        lineColor: '#00eeff',
+        textColor: '#c0e8ff',
+        edgeLabelBackground: '#02161f'
+      },
+      flowchart: { curve: 'basis', useMaxWidth: false, htmlLabels: false, nodeSpacing: 30, rankSpacing: 40, padding: 10 }
+    });
+
+    var targets = [];
+    blocks.forEach(function(el){
+      var codeEl = el.querySelector('code');
+      if(!codeEl) return;
+      var div = document.createElement('div');
+      div.className = 'mermaid';
+      div.textContent = codeEl.textContent;
+      el.parentNode.replaceChild(div, el);
+      targets.push(div);
+    });
+    if(!targets.length) return;
+    try { await mermaid.run({ nodes: targets }); }
+    catch(e){ console.warn('[mermaid] 渲染失败：', e); }
+  }
+  /* 作用：多次触发兜底（延迟重试 + DOM 变化），防止某次时机没跑到导致图表留在代码块 */
+  var mmBusy = false;
+  function scheduleMermaid(){
+    if(mmBusy) return;
+    mmBusy = true;
+    renderMermaidDiagram().then(function(){ mmBusy = false; }, function(){ mmBusy = false; });
+  }
+  scheduleMermaid();
+  window.addEventListener('load', scheduleMermaid);
+  [1000, 3000, 8000].forEach(function(ms){ setTimeout(scheduleMermaid, ms); });
+  if(document.readyState !== 'loading') scheduleMermaid();
+  if(window.MutationObserver){
+    var mmTimer = null;
+    var mmObserver = new MutationObserver(function(){
+      clearTimeout(mmTimer);
+      mmTimer = setTimeout(scheduleMermaid, 400);
+    });
+    mmObserver.observe(document.querySelector('.mb-article') || document.body, { childList: true, subtree: true });
+  }
+</script>
+</body>
+</html>

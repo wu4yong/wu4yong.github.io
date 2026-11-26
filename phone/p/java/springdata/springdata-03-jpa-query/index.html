@@ -1,0 +1,334 @@
+<!--
+  ============================================
+  手机端 · 文章原文页
+  文件：phone/post.njk
+  适用终端：手机端（路由 /phone/p/<slug>/，由 scripts/phone-routes.js 生成）
+  作用：手机阅读单篇文章；单列布局、无侧栏无雷达，替代电脑端 post.njk
+        数据由生成期算好：page.item = { title, dateStr, content, cats, tags }
+  样式依赖：source/css/theme/phone/common.css、source/css/theme/phone/list.css
+  组件依赖：phone/_components/Particles.njk
+  最后修改：2026-11-11
+  ============================================
+-->
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="color-scheme" content="dark">
+  <meta name="theme-color" content="#020817">
+  <!-- 首帧兜底：浏览器默认画布是白的，样式未解析前会闪一下白。这条规则先锁死深空底色 -->
+  <style>html{background-color:#020817}</style>
+  <title>Spring Data（三）派生查询、JPQL 与 Specification - 时空秘境</title>
+  <!-- 手机端样式：基础 + 列表/正文，外链引入（源文件 source/css/theme/phone/） -->
+  <link rel="stylesheet" href="/css/theme/phone/common.css">
+  <link rel="stylesheet" href="/css/theme/phone/list.css">
+<meta name="generator" content="Hexo 8.1.2"></head>
+<body>
+<div class="mb-shell">
+  <!--
+  ============================================
+  手机端星空粒子组件
+  文件：Particles.njk
+  适用终端：手机端
+  作用：Particles.njk 的手机端副本（nunjucks 子目录 include 取不到上级）
+        参数与电脑端 _components/Particles.njk 保持一致：
+        粒子 95 / 连线 118px / opacity 0.32，外加星座层与零星闪烁层
+  最后修改：2026-11-12
+  ============================================
+--><!-- z-index 必须是 0：负层级会被 body 不透明背景盖住，粒子在跑却看不见 -->
+<div id="particles" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 0; pointer-events: none;"></div>
+<!-- 星座层（与首页同一套：随机零星散布星座图形 + 偶尔闪烁的小星） -->
+<div id="constellations" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 1; pointer-events: none;" aria-hidden="true"></div>
+<script src="/js/particles.min.js"></script>
+<script>
+particlesJS("particles", {
+  particles: {
+    number: {
+      value: 95,
+      density: {
+        enable: true,
+        value_area: 800
+      }
+    },
+    color: {
+      value: "#00eeff"
+    },
+    shape: {
+      type: "circle",
+      stroke: {
+        width: 0,
+        color: "#000000"
+      }
+    },
+    opacity: {
+      value: 0.6,
+      random: true,
+      anim: {
+        enable: true,
+        speed: 0.5,
+        opacity_min: 0.1,
+        sync: false
+      }
+    },
+    size: {
+      value: 3,
+      random: true,
+      anim: {
+        enable: true,
+        speed: 2,
+        size_min: 0.1,
+        sync: false
+      }
+    },
+    line_linked: {
+      enable: true,
+      distance: 118,
+      color: "#00eeff",
+      opacity: 0.32,
+      width: 1
+    },
+    move: {
+      enable: true,
+      speed: 0.8,
+      direction: "none",
+      random: true,
+      straight: false,
+      out_mode: "out",
+      bounce: false,
+      attract: {
+        enable: true,
+        rotateX: 600,
+        rotateY: 1200
+      }
+    }
+  },
+  interactivity: {
+    detect_on: "canvas",
+    events: {
+      onhover: {
+        enable: true,
+        mode: "grab"       // 手指按住时粒子聚集
+      },
+      onclick: {
+        enable: true,
+        mode: "push"       // 点击时产生新粒子
+      },
+      resize: true
+    },
+    modes: {
+      grab: {
+        distance: 200,
+        line_linked: {
+          opacity: 1
+        }
+      },
+      push: {
+        particles_nb: 6
+      }
+    }
+  },
+  retina_detect: true
+});
+</script>
+<!-- 星座 + 零星闪烁层：与电脑端共用同一份绘制脚本 -->
+<script src="/js/theme/home/starfield.js"></script>
+
+
+  <div class="mb-top">
+    <a class="mb-back" href="/phone/">← 返回手机首页</a>
+    <span class="mb-sub" style="margin:0">2022-09-02</span>
+  </div>
+
+  <h1 class="mb-title">Spring Data（三）派生查询、JPQL 与 Specification</h1>
+  <div class="mb-sub">
+    分类：java · springdata
+     ｜ 标签：SpringData
+  </div>
+
+  <div class="mb-article"><div class="essay-banner essay-springdata"></div>
+
+<h1 id="派生查询、JPQL-与-Specification"><a href="#派生查询、JPQL-与-Specification" class="headerlink" title="派生查询、JPQL 与 Specification"></a><strong>派生查询、JPQL 与 Specification</strong></h1><p>四层查询手段从简到繁：方法名派生 → <code>@Query</code> → <code>Specification</code> → 原生 SQL。选错了要么写得又长又不可读，要么把 “简单查询” 变成”维护不动的手写 SQL”。</p>
+<p><img src="https://wu4yong.github.io/starry-images/assets/img/springdata/springdata-03-jpa-query.webp" alt="方法名、过滤条件与分页组合成一次查询"></p>
+<p><em>方法名、过滤条件与分页组合成一次查询</em></p>
+<h2 id="1-1-四种手段的选择"><a href="#1-1-四种手段的选择" class="headerlink" title="1.1 四种手段的选择"></a>1.1 四种手段的选择</h2><div class="data-grid data-grid-link-table"><div class="grid-header"><div class="grid-cell">手段</div><div class="grid-cell">条件复杂度</div><div class="grid-cell">类型安全</div><div class="grid-cell">适用</div></div><div class="grid-row"><div class="grid-cell">方法名派生</div><div class="grid-cell">1–3 个固定条件</div><div class="grid-cell">编译期（方法名）</div><div class="grid-cell">简单查询</div></div><div class="grid-row"><div class="grid-cell"><code>@Query</code>（JPQL）</div><div class="grid-cell">中等，含 join</div><div class="grid-cell">弱（字符串）</div><div class="grid-cell">多表 join、固定复杂查询</div></div><div class="grid-row"><div class="grid-cell"><code>Specification</code></div><div class="grid-cell">动态条件</div><div class="grid-cell">强</div><div class="grid-cell">前端可选筛选项</div></div><div class="grid-row"><div class="grid-cell">原生 SQL</div><div class="grid-cell">任意</div><div class="grid-cell">弱</div><div class="grid-cell">数据库特有能力</div></div></div>
+
+<h2 id="1-2-派生查询的边界"><a href="#1-2-派生查询的边界" class="headerlink" title="1.2 派生查询的边界"></a>1.2 派生查询的边界</h2><pre class="line-numbers language-java" data-language="java"><code class="language-java"><span class="token class-name">List</span><span class="token generics"><span class="token punctuation">&lt;</span><span class="token class-name">Order</span><span class="token punctuation">></span></span> <span class="token function">findByUserIdAndStatusOrderByCreatedAtDesc</span><span class="token punctuation">(</span><span class="token class-name">Long</span> userId<span class="token punctuation">,</span> <span class="token class-name">String</span> status<span class="token punctuation">)</span><span class="token punctuation">;</span><span aria-hidden="true" class="line-numbers-rows"><span></span></span></code></pre>
+
+<p>能写，但已经不好读了。经验阈值：<strong>条件 ≥ 4 个、或出现 Or 嵌套、或需要 join，换手段</strong>。</p>
+<h2 id="1-3-Query（JPQL）"><a href="#1-3-Query（JPQL）" class="headerlink" title="1.3 @Query（JPQL）"></a>1.3 <code>@Query</code>（JPQL）</h2><pre class="line-numbers language-java" data-language="java"><code class="language-java"><span class="token comment">// 单表 + 参数</span>
+<span class="token annotation punctuation">@Query</span><span class="token punctuation">(</span><span class="token string">"select u from User u where u.status = :status and u.age > :age"</span><span class="token punctuation">)</span>
+<span class="token class-name">List</span><span class="token generics"><span class="token punctuation">&lt;</span><span class="token class-name">User</span><span class="token punctuation">></span></span> <span class="token function">findActiveAdults</span><span class="token punctuation">(</span><span class="token annotation punctuation">@Param</span><span class="token punctuation">(</span><span class="token string">"status"</span><span class="token punctuation">)</span> <span class="token class-name">String</span> status<span class="token punctuation">,</span> <span class="token annotation punctuation">@Param</span><span class="token punctuation">(</span><span class="token string">"age"</span><span class="token punctuation">)</span> <span class="token class-name">Integer</span> age<span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+<span class="token comment">// join fetch 解决 N+1</span>
+<span class="token annotation punctuation">@Query</span><span class="token punctuation">(</span><span class="token string">"select o from Order o join fetch o.user where o.status = :status"</span><span class="token punctuation">)</span>
+<span class="token class-name">List</span><span class="token generics"><span class="token punctuation">&lt;</span><span class="token class-name">Order</span><span class="token punctuation">></span></span> <span class="token function">findWithUser</span><span class="token punctuation">(</span><span class="token annotation punctuation">@Param</span><span class="token punctuation">(</span><span class="token string">"status"</span><span class="token punctuation">)</span> <span class="token class-name">String</span> status<span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+<span class="token comment">// 更新（必须配 @Modifying 与事务）</span>
+<span class="token annotation punctuation">@Modifying</span>
+<span class="token annotation punctuation">@Transactional</span>
+<span class="token annotation punctuation">@Query</span><span class="token punctuation">(</span><span class="token string">"update User u set u.status = :status where u.id = :id"</span><span class="token punctuation">)</span>
+<span class="token keyword">int</span> <span class="token function">updateStatus</span><span class="token punctuation">(</span><span class="token annotation punctuation">@Param</span><span class="token punctuation">(</span><span class="token string">"id"</span><span class="token punctuation">)</span> <span class="token class-name">Long</span> id<span class="token punctuation">,</span> <span class="token annotation punctuation">@Param</span><span class="token punctuation">(</span><span class="token string">"status"</span><span class="token punctuation">)</span> <span class="token class-name">String</span> status<span class="token punctuation">)</span><span class="token punctuation">;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<div class="data-grid data-grid-link-table"><div class="grid-header"><div class="grid-cell">要点</div><div class="grid-cell">说明</div></div><div class="grid-row"><div class="grid-cell"><code>:param</code></div><div class="grid-cell">命名参数，配 <code>@Param</code></div></div><div class="grid-row"><div class="grid-cell"><code>?1</code></div><div class="grid-cell">位置参数，少用</div></div><div class="grid-row"><div class="grid-cell"><code>u.status</code></div><div class="grid-cell">用实体字段名，不是列名</div></div><div class="grid-row"><div class="grid-cell"><code>@Modifying</code></div><div class="grid-cell">增删改必须加，否则被当成查询</div></div><div class="grid-row"><div class="grid-cell"><code>clearAutomatically</code></div><div class="grid-cell">更新后清一级缓存，避免读到旧值</div></div></div>
+
+<p>批量更新后要 <code>entityManager.clear()</code>（或 <code>@Modifying(clearAutomatically = true)</code>），否则同一事务里再查还是旧数据。</p>
+<h2 id="1-4-原生-SQL"><a href="#1-4-原生-SQL" class="headerlink" title="1.4 原生 SQL"></a>1.4 原生 SQL</h2><pre class="line-numbers language-java" data-language="java"><code class="language-java"><span class="token annotation punctuation">@Query</span><span class="token punctuation">(</span>value <span class="token operator">=</span> <span class="token string">"select * from tb_order where amount > ?1"</span><span class="token punctuation">,</span> nativeQuery <span class="token operator">=</span> <span class="token boolean">true</span><span class="token punctuation">)</span>
+<span class="token class-name">List</span><span class="token generics"><span class="token punctuation">&lt;</span><span class="token class-name">Order</span><span class="token punctuation">></span></span> <span class="token function">findBigOrders</span><span class="token punctuation">(</span><span class="token class-name">BigDecimal</span> amount<span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+<span class="token comment">// 返回投影（不返回实体）</span>
+<span class="token annotation punctuation">@Query</span><span class="token punctuation">(</span>value <span class="token operator">=</span> <span class="token string">"select status, count(*) as cnt from tb_order group by status"</span><span class="token punctuation">,</span> nativeQuery <span class="token operator">=</span> <span class="token boolean">true</span><span class="token punctuation">)</span>
+<span class="token class-name">List</span><span class="token operator">&lt;</span><span class="token class-name">Object</span><span class="token punctuation">[</span><span class="token punctuation">]</span><span class="token operator">></span> <span class="token function">countByStatus</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<p>原生的代价：<strong>不参与实体缓存、字段改名不报错、分页要自己处理</strong>。只在需要数据库专有语法（窗口函数、特定索引提示）时使用。</p>
+<h2 id="1-5-Specification：动态条件"><a href="#1-5-Specification：动态条件" class="headerlink" title="1.5 Specification：动态条件"></a>1.5 Specification：动态条件</h2><pre class="line-numbers language-java" data-language="java"><code class="language-java"><span class="token keyword">public</span> <span class="token keyword">class</span> <span class="token class-name">OrderSpecs</span> <span class="token punctuation">&#123;</span>
+    <span class="token keyword">public</span> <span class="token keyword">static</span> <span class="token class-name">Specification</span><span class="token generics"><span class="token punctuation">&lt;</span><span class="token class-name">Order</span><span class="token punctuation">></span></span> <span class="token function">status</span><span class="token punctuation">(</span><span class="token class-name">String</span> status<span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+        <span class="token keyword">return</span> <span class="token punctuation">(</span>root<span class="token punctuation">,</span> query<span class="token punctuation">,</span> cb<span class="token punctuation">)</span> <span class="token operator">-></span>
+                status <span class="token operator">==</span> <span class="token keyword">null</span> <span class="token operator">?</span> <span class="token keyword">null</span> <span class="token operator">:</span> cb<span class="token punctuation">.</span><span class="token function">equal</span><span class="token punctuation">(</span>root<span class="token punctuation">.</span><span class="token function">get</span><span class="token punctuation">(</span><span class="token string">"status"</span><span class="token punctuation">)</span><span class="token punctuation">,</span> status<span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token punctuation">&#125;</span>
+
+    <span class="token keyword">public</span> <span class="token keyword">static</span> <span class="token class-name">Specification</span><span class="token generics"><span class="token punctuation">&lt;</span><span class="token class-name">Order</span><span class="token punctuation">></span></span> <span class="token function">amountBetween</span><span class="token punctuation">(</span><span class="token class-name">BigDecimal</span> min<span class="token punctuation">,</span> <span class="token class-name">BigDecimal</span> max<span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+        <span class="token keyword">return</span> <span class="token punctuation">(</span>root<span class="token punctuation">,</span> query<span class="token punctuation">,</span> cb<span class="token punctuation">)</span> <span class="token operator">-></span> <span class="token punctuation">&#123;</span>
+            <span class="token keyword">if</span> <span class="token punctuation">(</span>min <span class="token operator">==</span> <span class="token keyword">null</span> <span class="token operator">&amp;&amp;</span> max <span class="token operator">==</span> <span class="token keyword">null</span><span class="token punctuation">)</span> <span class="token keyword">return</span> <span class="token keyword">null</span><span class="token punctuation">;</span>
+            <span class="token keyword">if</span> <span class="token punctuation">(</span>max <span class="token operator">==</span> <span class="token keyword">null</span><span class="token punctuation">)</span> <span class="token keyword">return</span> cb<span class="token punctuation">.</span><span class="token function">greaterThanOrEqualTo</span><span class="token punctuation">(</span>root<span class="token punctuation">.</span><span class="token function">get</span><span class="token punctuation">(</span><span class="token string">"amount"</span><span class="token punctuation">)</span><span class="token punctuation">,</span> min<span class="token punctuation">)</span><span class="token punctuation">;</span>
+            <span class="token keyword">return</span> cb<span class="token punctuation">.</span><span class="token function">between</span><span class="token punctuation">(</span>root<span class="token punctuation">.</span><span class="token function">get</span><span class="token punctuation">(</span><span class="token string">"amount"</span><span class="token punctuation">)</span><span class="token punctuation">,</span> min<span class="token punctuation">,</span> max<span class="token punctuation">)</span><span class="token punctuation">;</span>
+        <span class="token punctuation">&#125;</span><span class="token punctuation">;</span>
+    <span class="token punctuation">&#125;</span>
+<span class="token punctuation">&#125;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<p>组合使用：</p>
+<pre class="line-numbers language-java" data-language="java"><code class="language-java"><span class="token class-name">Specification</span><span class="token generics"><span class="token punctuation">&lt;</span><span class="token class-name">Order</span><span class="token punctuation">></span></span> spec <span class="token operator">=</span> <span class="token class-name">Specification</span><span class="token punctuation">.</span><span class="token function">where</span><span class="token punctuation">(</span><span class="token keyword">null</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token keyword">if</span> <span class="token punctuation">(</span>dto<span class="token punctuation">.</span><span class="token function">getStatus</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token operator">!=</span> <span class="token keyword">null</span><span class="token punctuation">)</span> spec <span class="token operator">=</span> spec<span class="token punctuation">.</span><span class="token function">and</span><span class="token punctuation">(</span><span class="token class-name">OrderSpecs</span><span class="token punctuation">.</span><span class="token function">status</span><span class="token punctuation">(</span>dto<span class="token punctuation">.</span><span class="token function">getStatus</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token keyword">if</span> <span class="token punctuation">(</span>dto<span class="token punctuation">.</span><span class="token function">getMin</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token operator">!=</span> <span class="token keyword">null</span><span class="token punctuation">)</span> spec <span class="token operator">=</span> spec<span class="token punctuation">.</span><span class="token function">and</span><span class="token punctuation">(</span><span class="token class-name">OrderSpecs</span><span class="token punctuation">.</span><span class="token function">amountBetween</span><span class="token punctuation">(</span>dto<span class="token punctuation">.</span><span class="token function">getMin</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">,</span> dto<span class="token punctuation">.</span><span class="token function">getMax</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+<span class="token class-name">Page</span><span class="token generics"><span class="token punctuation">&lt;</span><span class="token class-name">Order</span><span class="token punctuation">></span></span> page <span class="token operator">=</span> orderRepository<span class="token punctuation">.</span><span class="token function">findAll</span><span class="token punctuation">(</span>spec<span class="token punctuation">,</span> <span class="token class-name">PageRequest</span><span class="token punctuation">.</span><span class="token function">of</span><span class="token punctuation">(</span><span class="token number">0</span><span class="token punctuation">,</span> <span class="token number">10</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<div class="data-grid data-grid-link-table"><div class="grid-header"><div class="grid-cell">优势</div><div class="grid-cell">说明</div></div><div class="grid-row"><div class="grid-cell">返回 <code>null</code> 即忽略</div><div class="grid-cell">条件是空的自然不生效</div></div><div class="grid-row"><div class="grid-cell">类型安全</div><div class="grid-cell"><code>root.get(&quot;status&quot;)</code> 拼错在运行期才报，但至少不是拼 SQL</div></div><div class="grid-row"><div class="grid-cell">可组合</div><div class="grid-cell"><code>and</code> &#x2F; <code>or</code> &#x2F; <code>not</code> 任意拼</div></div><div class="grid-row"><div class="grid-cell">可复用</div><div class="grid-cell">每个条件是一个独立方法</div></div></div>
+
+<p><code>Specification</code> 也可用于 <code>count</code>、<code>delete</code>、<code>exists</code>，且天然支持分页排序。</p>
+<h2 id="1-6-投影（只查需要的字段）"><a href="#1-6-投影（只查需要的字段）" class="headerlink" title="1.6 投影（只查需要的字段）"></a>1.6 投影（只查需要的字段）</h2><pre class="line-numbers language-java" data-language="java"><code class="language-java"><span class="token comment">// 接口投影</span>
+<span class="token keyword">public</span> <span class="token keyword">interface</span> <span class="token class-name">UserNameOnly</span> <span class="token punctuation">&#123;</span>
+    <span class="token class-name">String</span> <span class="token function">getUsername</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token class-name">Integer</span> <span class="token function">getAge</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">&#125;</span>
+
+<span class="token annotation punctuation">@Query</span><span class="token punctuation">(</span><span class="token string">"select u.username as username, u.age as age from User u where u.status = :s"</span><span class="token punctuation">)</span>
+<span class="token class-name">List</span><span class="token generics"><span class="token punctuation">&lt;</span><span class="token class-name">UserNameOnly</span><span class="token punctuation">></span></span> <span class="token function">findNames</span><span class="token punctuation">(</span><span class="token annotation punctuation">@Param</span><span class="token punctuation">(</span><span class="token string">"s"</span><span class="token punctuation">)</span> <span class="token class-name">String</span> status<span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+<span class="token comment">// 构造器投影</span>
+<span class="token annotation punctuation">@Query</span><span class="token punctuation">(</span><span class="token string">"select new cn.demo.dto.UserDto(u.id, u.username) from User u"</span><span class="token punctuation">)</span>
+<span class="token class-name">List</span><span class="token generics"><span class="token punctuation">&lt;</span><span class="token class-name">UserDto</span><span class="token punctuation">></span></span> <span class="token function">findDtos</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<p>大列表查询只取必要字段，能省掉大量无用列的网络与序列化开销。</p>
+<h2 id="1-7-排序与分页的两种写法"><a href="#1-7-排序与分页的两种写法" class="headerlink" title="1.7 排序与分页的两种写法"></a>1.7 排序与分页的两种写法</h2><pre class="line-numbers language-java" data-language="java"><code class="language-java"><span class="token comment">// 一：Pageable 直接传</span>
+<span class="token class-name">Page</span><span class="token generics"><span class="token punctuation">&lt;</span><span class="token class-name">Order</span><span class="token punctuation">></span></span> <span class="token function">findByStatus</span><span class="token punctuation">(</span><span class="token class-name">String</span> status<span class="token punctuation">,</span> <span class="token class-name">Pageable</span> pageable<span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+<span class="token comment">// 二：@Query + Pageable（必须返回 Page，且查询本身别写 order by 冲突）</span>
+<span class="token annotation punctuation">@Query</span><span class="token punctuation">(</span><span class="token string">"select o from Order o where o.amount > :min"</span><span class="token punctuation">)</span>
+<span class="token class-name">Page</span><span class="token generics"><span class="token punctuation">&lt;</span><span class="token class-name">Order</span><span class="token punctuation">></span></span> <span class="token function">findBig</span><span class="token punctuation">(</span><span class="token annotation punctuation">@Param</span><span class="token punctuation">(</span><span class="token string">"min"</span><span class="token punctuation">)</span> <span class="token class-name">BigDecimal</span> min<span class="token punctuation">,</span> <span class="token class-name">Pageable</span> pageable<span class="token punctuation">)</span><span class="token punctuation">;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<p><code>@Query</code> 里的 <code>order by</code> 与 <code>Pageable</code> 的 <code>Sort</code> 同时存在时，后者会被忽略——排序统一放 <code>Pageable</code>。</p>
+<h2 id="1-8-官方资料"><a href="#1-8-官方资料" class="headerlink" title="1.8 官方资料"></a>1.8 官方资料</h2><ul>
+<li>Query methods：<a target="_blank" rel="noopener" href="https://docs.spring.io/spring-data/jpa/docs/2.5.x/reference/html/#jpa.query-methods">https://docs.spring.io/spring-data/jpa/docs/2.5.x/reference/html/#jpa.query-methods</a></li>
+<li><code>@Query</code> 与 JPQL：<a target="_blank" rel="noopener" href="https://docs.spring.io/spring-data/jpa/docs/2.5.x/reference/html/#jpa.query-methods.at-query">https://docs.spring.io/spring-data/jpa/docs/2.5.x/reference/html/#jpa.query-methods.at-query</a></li>
+<li><code>Specification</code>：<a target="_blank" rel="noopener" href="https://docs.spring.io/spring-data/jpa/docs/2.5.x/reference/html/#specifications">https://docs.spring.io/spring-data/jpa/docs/2.5.x/reference/html/#specifications</a></li>
+</ul>
+<h2 id="1-9-清单"><a href="#1-9-清单" class="headerlink" title="1.9 清单"></a>1.9 清单</h2><ol>
+<li>条件 1–3 个用方法名派生，4 个以上换 <code>@Query</code> 或 <code>Specification</code></li>
+<li><code>@Modifying</code> 必须配合事务，更新后清缓存再查</li>
+<li><code>Specification</code> 条件返回 <code>null</code> 即被忽略，天然适配可选筛选项</li>
+<li>只取部分字段用投影，接口投影与构造器投影都可选</li>
+<li><code>@Query</code> 的 <code>order by</code> 会被 <code>Pageable</code> 的排序覆盖，排序统一放 <code>Pageable</code></li>
+<li>原生 SQL 不参与实体缓存，字段改动不报错，慎用</li>
+<li>多表 join 用 <code>join fetch</code> 一次取齐，比懒加载逐条取快一个量级</li>
+</ol>
+</div>
+
+  <div class="mb-foot">
+    <a href="/phone/">返回手机首页</a>
+    <a href="/phone/tags/">星迹索引</a>
+  </div>
+</div>
+
+
+<script>
+  /* 作用：懒加载本地 mermaid 库；无 mermaid 代码块时不加载 */
+  function loadLocalMermaid(){
+    return new Promise(function(resolve, reject){
+      if(window.mermaid) return resolve(window.mermaid);
+      var s = document.createElement('script');
+      s.src = '/js/third-party/mermaid/mermaid.min.js?v=10';
+      s.onload = function(){ resolve(window.mermaid); };
+      s.onerror = function(){ reject(new Error('mermaid local load failed')); };
+      document.head.appendChild(s);
+    });
+  }
+
+  /* 作用：把 ```mermaid 代码块替换成 SVG 图（手机端字号略小、图可横向滚动） */
+  async function renderMermaidDiagram(){
+    var blocks = document.querySelectorAll('pre[class*="language-mermaid"]');
+    if(!blocks.length) return;
+    var mermaid;
+    try { mermaid = await loadLocalMermaid(); }
+    catch(e){ console.warn('[mermaid] 本地库加载失败：', e); return; }
+
+    mermaid.initialize({
+      startOnLoad: false,
+      theme: 'base',
+      themeVariables: {
+        darkMode: true,
+        background: 'transparent',
+        fontFamily: '"Microsoft YaHei", "PingFang SC", "Segoe UI", sans-serif',
+        fontSize: '12px',
+        primaryColor: '#062f3d',
+        primaryTextColor: '#d6f6ff',
+        primaryBorderColor: '#00eeff',
+        secondaryColor: '#04222d',
+        tertiaryColor: '#04222d',
+        mainBkg: '#062f3d',
+        nodeBorder: '#00eeff',
+        clusterBkg: '#02161f',
+        clusterBorder: '#00eeff55',
+        lineColor: '#00eeff',
+        textColor: '#c0e8ff',
+        edgeLabelBackground: '#02161f'
+      },
+      flowchart: { curve: 'basis', useMaxWidth: false, htmlLabels: false, nodeSpacing: 30, rankSpacing: 40, padding: 10 }
+    });
+
+    var targets = [];
+    blocks.forEach(function(el){
+      var codeEl = el.querySelector('code');
+      if(!codeEl) return;
+      var div = document.createElement('div');
+      div.className = 'mermaid';
+      div.textContent = codeEl.textContent;
+      el.parentNode.replaceChild(div, el);
+      targets.push(div);
+    });
+    if(!targets.length) return;
+    try { await mermaid.run({ nodes: targets }); }
+    catch(e){ console.warn('[mermaid] 渲染失败：', e); }
+  }
+  /* 作用：多次触发兜底（延迟重试 + DOM 变化），防止某次时机没跑到导致图表留在代码块 */
+  var mmBusy = false;
+  function scheduleMermaid(){
+    if(mmBusy) return;
+    mmBusy = true;
+    renderMermaidDiagram().then(function(){ mmBusy = false; }, function(){ mmBusy = false; });
+  }
+  scheduleMermaid();
+  window.addEventListener('load', scheduleMermaid);
+  [1000, 3000, 8000].forEach(function(ms){ setTimeout(scheduleMermaid, ms); });
+  if(document.readyState !== 'loading') scheduleMermaid();
+  if(window.MutationObserver){
+    var mmTimer = null;
+    var mmObserver = new MutationObserver(function(){
+      clearTimeout(mmTimer);
+      mmTimer = setTimeout(scheduleMermaid, 400);
+    });
+    mmObserver.observe(document.querySelector('.mb-article') || document.body, { childList: true, subtree: true });
+  }
+</script>
+</body>
+</html>

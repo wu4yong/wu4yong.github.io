@@ -1,0 +1,306 @@
+<!--
+  ============================================
+  手机端 · 文章原文页
+  文件：phone/post.njk
+  适用终端：手机端（路由 /phone/p/<slug>/，由 scripts/phone-routes.js 生成）
+  作用：手机阅读单篇文章；单列布局、无侧栏无雷达，替代电脑端 post.njk
+        数据由生成期算好：page.item = { title, dateStr, content, cats, tags }
+  样式依赖：source/css/theme/phone/common.css、source/css/theme/phone/list.css
+  组件依赖：phone/_components/Particles.njk
+  最后修改：2026-11-11
+  ============================================
+-->
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="color-scheme" content="dark">
+  <meta name="theme-color" content="#020817">
+  <!-- 首帧兜底：浏览器默认画布是白的，样式未解析前会闪一下白。这条规则先锁死深空底色 -->
+  <style>html{background-color:#020817}</style>
+  <title>ES33-聚合的内存与性能 - 时空秘境</title>
+  <!-- 手机端样式：基础 + 列表/正文，外链引入（源文件 source/css/theme/phone/） -->
+  <link rel="stylesheet" href="/css/theme/phone/common.css">
+  <link rel="stylesheet" href="/css/theme/phone/list.css">
+<meta name="generator" content="Hexo 8.1.2"></head>
+<body>
+<div class="mb-shell">
+  <!--
+  ============================================
+  手机端星空粒子组件
+  文件：Particles.njk
+  适用终端：手机端
+  作用：Particles.njk 的手机端副本（nunjucks 子目录 include 取不到上级）
+        参数与电脑端 _components/Particles.njk 保持一致：
+        粒子 95 / 连线 118px / opacity 0.32，外加星座层与零星闪烁层
+  最后修改：2026-11-12
+  ============================================
+--><!-- z-index 必须是 0：负层级会被 body 不透明背景盖住，粒子在跑却看不见 -->
+<div id="particles" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 0; pointer-events: none;"></div>
+<!-- 星座层（与首页同一套：随机零星散布星座图形 + 偶尔闪烁的小星） -->
+<div id="constellations" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 1; pointer-events: none;" aria-hidden="true"></div>
+<script src="/js/particles.min.js"></script>
+<script>
+particlesJS("particles", {
+  particles: {
+    number: {
+      value: 95,
+      density: {
+        enable: true,
+        value_area: 800
+      }
+    },
+    color: {
+      value: "#00eeff"
+    },
+    shape: {
+      type: "circle",
+      stroke: {
+        width: 0,
+        color: "#000000"
+      }
+    },
+    opacity: {
+      value: 0.6,
+      random: true,
+      anim: {
+        enable: true,
+        speed: 0.5,
+        opacity_min: 0.1,
+        sync: false
+      }
+    },
+    size: {
+      value: 3,
+      random: true,
+      anim: {
+        enable: true,
+        speed: 2,
+        size_min: 0.1,
+        sync: false
+      }
+    },
+    line_linked: {
+      enable: true,
+      distance: 118,
+      color: "#00eeff",
+      opacity: 0.32,
+      width: 1
+    },
+    move: {
+      enable: true,
+      speed: 0.8,
+      direction: "none",
+      random: true,
+      straight: false,
+      out_mode: "out",
+      bounce: false,
+      attract: {
+        enable: true,
+        rotateX: 600,
+        rotateY: 1200
+      }
+    }
+  },
+  interactivity: {
+    detect_on: "canvas",
+    events: {
+      onhover: {
+        enable: true,
+        mode: "grab"       // 手指按住时粒子聚集
+      },
+      onclick: {
+        enable: true,
+        mode: "push"       // 点击时产生新粒子
+      },
+      resize: true
+    },
+    modes: {
+      grab: {
+        distance: 200,
+        line_linked: {
+          opacity: 1
+        }
+      },
+      push: {
+        particles_nb: 6
+      }
+    }
+  },
+  retina_detect: true
+});
+</script>
+<!-- 星座 + 零星闪烁层：与电脑端共用同一份绘制脚本 -->
+<script src="/js/theme/home/starfield.js"></script>
+
+
+  <div class="mb-top">
+    <a class="mb-back" href="/phone/">← 返回手机首页</a>
+    <span class="mb-sub" style="margin:0">2023-12-31</span>
+  </div>
+
+  <h1 class="mb-title">ES33-聚合的内存与性能</h1>
+  <div class="mb-sub">
+    分类：bigdata · elasticsearch
+     ｜ 标签：Elasticsearch · 系统课
+  </div>
+
+  <div class="mb-article"><div class="essay-banner essay-elasticsearch"></div>
+
+<h1 id="聚合的内存与性能：桶上限、执行顺序与采样"><a href="#聚合的内存与性能：桶上限、执行顺序与采样" class="headerlink" title="聚合的内存与性能：桶上限、执行顺序与采样"></a>聚合的内存与性能：桶上限、执行顺序与采样</h1><p>聚合打挂集群的方式很统一：桶太多。一个 <code>terms</code> 分 10 万组，每组再挂两个 metric，堆内存瞬间就被吃掉。</p>
+<p>官方给了两道防线——桶数上限与执行策略——这一篇讲怎么用它们。</p>
+<!-- 配图 33-1：待生成，放到图床同名路径后启用下面一行 -->
+<blockquote>
+<p><strong>配图 33-1｜提示词</strong>：一座堆内存水池，池边两道闸门：第一道标 <code>search.max_buckets = 65536</code>，超限时喷出 <code>too_many_buckets_exception</code> 红字；第二道标 <code>breadth_first</code>（从左到右逐层推进的箭头）与 <code>depth_first</code>（纵深下钻的箭头）对比。池底一排小方块标 <code>doc_values</code>、<code>execution_hint</code>、<code>random_sampler</code>。深色星空背景，青蓝为主，告警红。</p>
+</blockquote>
+<h2 id="一、学习目标"><a href="#一、学习目标" class="headerlink" title="一、学习目标"></a>一、学习目标</h2><ol>
+<li>记住桶数上限的设置名与默认值；</li>
+<li>分清 <code>breadth_first</code> 与 <code>depth_first</code> 的适用场景；</li>
+<li>会用 <code>execution_hint</code>、<code>random_sampler</code> 降开销；</li>
+<li>知道「聚合慢」的三条排查入口。</li>
+</ol>
+<h2 id="二、前置知识"><a href="#二、前置知识" class="headerlink" title="二、前置知识"></a>二、前置知识</h2><div class="data-grid data-grid-link-table"><div class="grid-header"><div class="grid-cell">需要掌握</div><div class="grid-cell">到什么程度</div><div class="grid-cell">出处</div></div><div class="grid-row"><div class="grid-cell">bucket 聚合</div><div class="grid-cell">知道桶怎么膨胀</div><div class="grid-cell">M5-1</div></div><div class="grid-row"><div class="grid-cell">terms 精度</div><div class="grid-cell">知道 <code>shard_size</code></div><div class="grid-cell">M5-2</div></div><div class="grid-row"><div class="grid-cell">doc_values</div><div class="grid-cell">聚合只读列存</div><div class="grid-cell">M4-6</div></div></div>
+
+<h2 id="三、理论讲解"><a href="#三、理论讲解" class="headerlink" title="三、理论讲解"></a>三、理论讲解</h2><div class="data-grid data-grid-link-table"><div class="grid-header"><div class="grid-cell">设置&#x2F;参数</div><div class="grid-cell">默认</div><div class="grid-cell">作用</div></div><div class="grid-row"><div class="grid-cell"><code>search.max_buckets</code></div><div class="grid-cell">65536</div><div class="grid-cell">单请求最多桶数，超限报错</div></div><div class="grid-row"><div class="grid-cell"><code>terms.execution_hint</code></div><div class="grid-cell">自动</div><div class="grid-cell"><code>map</code>&#x2F;<code>global_ordinals</code>&#x2F;<code>bytes_hash</code> 三种执行策略</div></div><div class="grid-row"><div class="grid-cell"><code>breadth_first</code></div><div class="grid-cell">多数聚合默认</div><div class="grid-cell">先收集全部文档的父桶 key，再按桶算子聚合</div></div><div class="grid-row"><div class="grid-cell"><code>depth_first</code></div><div class="grid-cell"><code>nested</code> 等少数场景</div><div class="grid-cell">逐文档下钻，一次算完父子链</div></div><div class="grid-row"><div class="grid-cell"><code>random_sampler</code></div><div class="grid-cell">0（关闭）</div><div class="grid-cell">按比例抽样，用概率换速度</div></div></div>
+
+<h2 id="四、原理拆解：先分桶还是先算子聚合"><a href="#四、原理拆解：先分桶还是先算子聚合" class="headerlink" title="四、原理拆解：先分桶还是先算子聚合"></a>四、原理拆解：先分桶还是先算子聚合</h2><p><code>depth_first</code> 是「来一篇文档，就把它塞进父桶、同时更新子聚合」，适合父子强耦合（如 <code>nested</code>）。但父桶太多时，每个桶都要维护一堆子聚合状态，内存吃不消。</p>
+<p><code>breadth_first</code> 反过来：先用一遍数据把父桶 key 收集齐，再按桶逐个取文档算子聚合。内存占用只跟「桶数」有关，不跟「桶数 × 子聚合数」有关。所以官方把它设为多数场景的默认——<strong>桶多、子聚合多的时候，这个选择能救命</strong>。</p>
+<p><code>execution_hint</code> 是另一档手动挡：<code>global_ordinals</code> 适合高基数字段（利用序数映射，省内存但预热慢），<code>map</code> 适合低基数，<code>bytes_hash</code> 居中。选错不会错结果，只会慢。</p>
+<p><code>random_sampler</code> 适合「趋势看一眼」的场景：抽 10% 文档算聚合，误差可接受、速度提升明显，但结果<strong>不能用于对账</strong>。</p>
+<h2 id="五、场景说明"><a href="#五、场景说明" class="headerlink" title="五、场景说明"></a>五、场景说明</h2><div class="data-grid data-grid-link-table"><div class="grid-header"><div class="grid-cell">症状</div><div class="grid-cell">处置</div></div><div class="grid-row"><div class="grid-cell"><code>too_many_buckets_exception</code></div><div class="grid-cell">减少桶维数、加 filter 缩范围、或改 composite 分页</div></div><div class="grid-row"><div class="grid-cell">聚合 GC 高、堆涨</div><div class="grid-cell">降 <code>terms.size</code>、检查子聚合数量、考虑 <code>breadth_first</code>（默认已是）</div></div><div class="grid-row"><div class="grid-cell">高基数字段慢</div><div class="grid-cell">试 <code>execution_hint: global_ordinals</code></div></div><div class="grid-row"><div class="grid-cell">大范围趋势图</div><div class="grid-cell"><code>random_sampler</code> 抽样</div></div><div class="grid-row"><div class="grid-cell">只要近似分布</div><div class="grid-cell">用 <code>cardinality</code>&#x2F;<code>percentiles</code> 代替全量</div></div></div>
+
+<h2 id="六、实操"><a href="#六、实操" class="headerlink" title="六、实操"></a>六、实操</h2><pre class="line-numbers language-bash" data-language="bash"><code class="language-bash"><span class="token comment"># 看桶上限</span>
+<span class="token function">curl</span> <span class="token parameter variable">-s</span> <span class="token string">"http://localhost:9200/_cluster/settings?include_defaults=true&amp;flat_settings=true"</span> <span class="token operator">|</span> <span class="token function">grep</span> <span class="token parameter variable">-o</span> <span class="token string">'"search.max_buckets":"[^"]*"'</span>
+
+<span class="token comment"># 指定执行策略</span>
+<span class="token function">curl</span> <span class="token parameter variable">-s</span> <span class="token parameter variable">-X</span> GET <span class="token string">"http://localhost:9200/goods/_search"</span> <span class="token parameter variable">-H</span> <span class="token string">'Content-Type: application/json'</span> <span class="token parameter variable">-d</span> <span class="token string">'
+&#123; "size": 0, "aggs": &#123; "b": &#123; "terms": &#123; "field": "brand", "execution_hint": "global_ordinals" &#125; &#125; &#125; &#125;'</span>
+
+<span class="token comment"># 抽样聚合：10% 文档</span>
+<span class="token function">curl</span> <span class="token parameter variable">-s</span> <span class="token parameter variable">-X</span> GET <span class="token string">"http://localhost:9200/logs/_search"</span> <span class="token parameter variable">-H</span> <span class="token string">'Content-Type: application/json'</span> <span class="token parameter variable">-d</span> <span class="token string">'
+&#123; "size": 0, "aggs": &#123;
+    "sample": &#123; "random_sampler": &#123; "probability": 0.1 &#125;,
+      "aggs": &#123; "by_level": &#123; "terms": &#123; "field": "level" &#125; &#125; &#125; &#125; &#125; &#125;'</span>
+
+<span class="token comment"># 先缩范围再聚合（最有效的一招）</span>
+<span class="token function">curl</span> <span class="token parameter variable">-s</span> <span class="token parameter variable">-X</span> GET <span class="token string">"http://localhost:9200/logs/_search"</span> <span class="token parameter variable">-H</span> <span class="token string">'Content-Type: application/json'</span> <span class="token parameter variable">-d</span> <span class="token string">'
+&#123; "size": 0, "query": &#123; "range": &#123; "@timestamp": &#123; "gte": "now-1h" &#125; &#125; &#125;,
+  "aggs": &#123; "by_level": &#123; "terms": &#123; "field": "level" &#125; &#125; &#125; &#125;'</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<h2 id="七、常见坑"><a href="#七、常见坑" class="headerlink" title="七、常见坑"></a>七、常见坑</h2><ol>
+<li><strong><code>search.max_buckets</code> 调大当解法</strong>：内存问题不会消失，只是延后爆。</li>
+<li><strong>对 <code>text</code> 字段聚合</strong>：需 <code>fielddata</code>，官方明确不建议，堆占用极高。</li>
+<li><strong><code>terms.size</code> 设 10000</strong>：桶数与子聚合状态同步膨胀。</li>
+<li><strong>多维嵌套不估桶数</strong>：10 × 31 × 24 就是 7440 个桶，再加子聚合就很危险。</li>
+<li><strong><code>random_sampler</code> 结果拿去对账</strong>：抽样结果是估算值。</li>
+<li><strong><code>execution_hint</code> 盲调</strong>：不同数据分布最优解不同，改前先测。</li>
+</ol>
+<h2 id="八、课后小结"><a href="#八、课后小结" class="headerlink" title="八、课后小结"></a>八、课后小结</h2><ol>
+<li>桶数上限 <code>search.max_buckets</code> 默认 65536。</li>
+<li><code>breadth_first</code> 是多数聚合的默认，桶多时更省内存。</li>
+<li><code>execution_hint</code> 调执行策略，不改结果只改速度。</li>
+<li><code>random_sampler</code> 用概率换性能，不适合精确统计。</li>
+<li>缩小查询范围永远是第一优先的手段。</li>
+</ol>
+<h2 id="九、思考题"><a href="#九、思考题" class="headerlink" title="九、思考题"></a>九、思考题</h2><ol>
+<li>为什么 <code>depth_first</code> 在父桶很多时会吃内存？用状态数量解释。</li>
+<li>一个 <code>terms(size:1000)</code> 下挂 <code>date_histogram</code>（31 天）与 <code>percentiles</code>，桶与状态规模大概多少？</li>
+<li>抽样 10% 得到的占比，与全量差多少才算出格？业务上怎么约定？</li>
+</ol>
+<h2 id="十、官方资料"><a href="#十、官方资料" class="headerlink" title="十、官方资料"></a>十、官方资料</h2><ul>
+<li><code>search.max_buckets</code>：<a target="_blank" rel="noopener" href="https://www.elastic.co/guide/en/elasticsearch/reference/current/search-settings.html">https://www.elastic.co/guide/en/elasticsearch/reference/current/search-settings.html</a></li>
+<li>Terms aggregation（<code>execution_hint</code>）：<a target="_blank" rel="noopener" href="https://www.elastic.co/guide/en/elasticsearch/reference/current/search-aggregations-bucket-terms-aggregation.html">https://www.elastic.co/guide/en/elasticsearch/reference/current/search-aggregations-bucket-terms-aggregation.html</a></li>
+<li>Random sampler：<a target="_blank" rel="noopener" href="https://www.elastic.co/guide/en/elasticsearch/reference/current/search-aggregations-random-sampler-aggregation.html">https://www.elastic.co/guide/en/elasticsearch/reference/current/search-aggregations-random-sampler-aggregation.html</a></li>
+</ul>
+<p>上一篇：<a href="/2023/12/28/bigdata/elasticsearch/es-32-metric-pipeline/">M5-3 metric 与 pipeline 聚合</a> ｜ 下一篇：<a href="/2024/01/03/bigdata/elasticsearch/es-34-esql-basics/">M5-5 ES|QL 入门</a> ｜ <a href="/2023/09/22/bigdata/elasticsearch/es-00-series-index/">总目录</a></p>
+</div>
+
+  <div class="mb-foot">
+    <a href="/phone/">返回手机首页</a>
+    <a href="/phone/tags/">星迹索引</a>
+  </div>
+</div>
+
+
+<script>
+  /* 作用：懒加载本地 mermaid 库；无 mermaid 代码块时不加载 */
+  function loadLocalMermaid(){
+    return new Promise(function(resolve, reject){
+      if(window.mermaid) return resolve(window.mermaid);
+      var s = document.createElement('script');
+      s.src = '/js/third-party/mermaid/mermaid.min.js?v=10';
+      s.onload = function(){ resolve(window.mermaid); };
+      s.onerror = function(){ reject(new Error('mermaid local load failed')); };
+      document.head.appendChild(s);
+    });
+  }
+
+  /* 作用：把 ```mermaid 代码块替换成 SVG 图（手机端字号略小、图可横向滚动） */
+  async function renderMermaidDiagram(){
+    var blocks = document.querySelectorAll('pre[class*="language-mermaid"]');
+    if(!blocks.length) return;
+    var mermaid;
+    try { mermaid = await loadLocalMermaid(); }
+    catch(e){ console.warn('[mermaid] 本地库加载失败：', e); return; }
+
+    mermaid.initialize({
+      startOnLoad: false,
+      theme: 'base',
+      themeVariables: {
+        darkMode: true,
+        background: 'transparent',
+        fontFamily: '"Microsoft YaHei", "PingFang SC", "Segoe UI", sans-serif',
+        fontSize: '12px',
+        primaryColor: '#062f3d',
+        primaryTextColor: '#d6f6ff',
+        primaryBorderColor: '#00eeff',
+        secondaryColor: '#04222d',
+        tertiaryColor: '#04222d',
+        mainBkg: '#062f3d',
+        nodeBorder: '#00eeff',
+        clusterBkg: '#02161f',
+        clusterBorder: '#00eeff55',
+        lineColor: '#00eeff',
+        textColor: '#c0e8ff',
+        edgeLabelBackground: '#02161f'
+      },
+      flowchart: { curve: 'basis', useMaxWidth: false, htmlLabels: false, nodeSpacing: 30, rankSpacing: 40, padding: 10 }
+    });
+
+    var targets = [];
+    blocks.forEach(function(el){
+      var codeEl = el.querySelector('code');
+      if(!codeEl) return;
+      var div = document.createElement('div');
+      div.className = 'mermaid';
+      div.textContent = codeEl.textContent;
+      el.parentNode.replaceChild(div, el);
+      targets.push(div);
+    });
+    if(!targets.length) return;
+    try { await mermaid.run({ nodes: targets }); }
+    catch(e){ console.warn('[mermaid] 渲染失败：', e); }
+  }
+  /* 作用：多次触发兜底（延迟重试 + DOM 变化），防止某次时机没跑到导致图表留在代码块 */
+  var mmBusy = false;
+  function scheduleMermaid(){
+    if(mmBusy) return;
+    mmBusy = true;
+    renderMermaidDiagram().then(function(){ mmBusy = false; }, function(){ mmBusy = false; });
+  }
+  scheduleMermaid();
+  window.addEventListener('load', scheduleMermaid);
+  [1000, 3000, 8000].forEach(function(ms){ setTimeout(scheduleMermaid, ms); });
+  if(document.readyState !== 'loading') scheduleMermaid();
+  if(window.MutationObserver){
+    var mmTimer = null;
+    var mmObserver = new MutationObserver(function(){
+      clearTimeout(mmTimer);
+      mmTimer = setTimeout(scheduleMermaid, 400);
+    });
+    mmObserver.observe(document.querySelector('.mb-article') || document.body, { childList: true, subtree: true });
+  }
+</script>
+</body>
+</html>

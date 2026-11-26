@@ -1,0 +1,3788 @@
+<!--
+  ============================================
+  文章原文页模板
+  文件：post.njk
+  适用终端：电脑端
+  作用：文章正文 + 侧栏；手机 UA 跳 /phone/p/<slug>/
+  最后修改：2026-11-11
+  ============================================
+-->
+
+
+<!DOCTYPE html>
+<html class="post-page">
+<!--
+  ============================================
+  公共 head 组件
+  文件：Head.njk
+  适用终端：电脑端
+  作用：输出 charset/viewport/title，并按 pageCss 输出外链样式表
+  样式资源：themes/butterfly/source/css/theme/{base,home,starmap,media,phone}/*.css
+            （Hexo 复制到 /css/theme/，pageCss 里写子目录 + 文件名，如 "base/common.css"）
+  引入层级顺序（= CSS 层叠顺序，调整只允许追加，不要打乱前后）：
+    1 基础  base/common.css
+    2 布局  base/post-layout.css
+    3 组件  base/sidebar.css
+    4 正文  base/post.css
+    5 页面  starmap/tags.css · starmap/chronicle.css · home/about.css · starmap/tag.css · starmap/category-shared.css · home/pc-home.css
+    6 浮层  media/star-reader.css
+    7 特效  starmap/starmap-live.css
+  最后修改：2026-11-12
+  ============================================
+--><head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="color-scheme" content="dark">
+  <meta name="theme-color" content="#020817">
+  <!-- 首帧兜底：浏览器默认画布是白的，样式表还没解析完就画会闪一下白。这条 8 字节规则先锁死深空底色 -->
+  <style>html{background-color:#020817}</style>
+  <title>时空秘境 - Java 集合容器与单例模式</title>
+  
+  <link rel="stylesheet" href="/css/theme/base/common.css">
+  
+  <link rel="stylesheet" href="/css/theme/base/post-layout.css">
+  
+  <link rel="stylesheet" href="/css/theme/base/sidebar.css">
+  
+  <link rel="stylesheet" href="/css/theme/base/post.css">
+  
+  <!-- 全站代码高亮配色（One Dark Pro）：所有版面统一在最外层加载，任意入口进入都生效 -->
+  <link rel="stylesheet" href="/css/code-table.css">
+  <!-- KaTeX 公式样式：配套字体在 /css/fonts/，由 scripts/math-katex.js 在构建期渲染公式 -->
+  <link rel="stylesheet" href="/css/katex.min.css">
+<meta name="generator" content="Hexo 8.1.2"></head>
+
+<script>
+  /* 手机 UA 分流：电脑端这套控制台不再给手机用，直接换成手机版页面 */
+  (function () {
+    var ua = navigator.userAgent || '';
+    if (/Android|iPhone|iPod|HarmonyOS|Windows Phone|MicroMessenger|Mobile Safari/i.test(ua)) {
+      location.replace('/phone/p/java/core/java-collections/');
+    }
+  })();
+</script>
+
+<body>
+  <!--
+  ============================================
+  星空粒子背景组件
+  文件：Particles.njk
+  适用终端：电脑端
+  作用：particles.js 全站星空动画，鼠标悬停互动
+  最后修改：2026-11-11
+  ============================================
+--><!-- z-index 必须是 0 而不是 -1：body 带着不透明的 radial-gradient 底色，
+     负层级的子元素会被父元素背景整个盖住，粒子在跑但一个点都看不见 -->
+<div id="particles" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 0; pointer-events: none;"></div>
+<!-- 星座层：随机零星散布星座图形，叠在粒子之上、页面内容之下 -->
+<div id="constellations" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 1; pointer-events: none;" aria-hidden="true"></div>
+<script src="/js/particles.min.js"></script>
+<script>/* 本地库在仓库里，缺失时只提示、不再回退外网 CDN：
+   jsdelivr 在部分网络下会长时间挂起，而它是在这里同步插入的，会阻塞后面所有脚本（含 mermaid 渲染） */
+if (typeof particlesJS === "undefined") {
+  console.warn("[particles] 本地 /js/particles.min.js 未加载，跳过星空背景");
+}
+</script>
+<script>
+particlesJS("particles", {
+  particles: {
+    number: {
+      value: 95,
+      density: {
+        enable: true,
+        value_area: 800
+      }
+    },
+    color: {
+      value: "#00eeff"
+    },
+    shape: {
+      type: "circle",
+      stroke: {
+        width: 0,
+        color: "#000000"
+      }
+    },
+    opacity: {
+      value: 0.6,
+      random: true,
+      anim: {
+        enable: true,
+        speed: 0.5,
+        opacity_min: 0.1,
+        sync: false
+      }
+    },
+    size: {
+      value: 3,
+      random: true,
+      anim: {
+        enable: true,
+        speed: 2,
+        size_min: 0.1,
+        sync: false
+      }
+    },
+    line_linked: {
+      enable: true,
+      distance: 118,          /* 比原来 150 收紧，让粒子网络稀疏些，给星座留出视觉空间 */
+      color: "#00eeff",
+      opacity: 0.32,
+      width: 1
+    },
+    move: {
+      enable: true,
+      speed: 0.8,
+      direction: "none",
+      random: true,
+      straight: false,
+      out_mode: "out",
+      bounce: false,
+      attract: {
+        enable: true,
+        rotateX: 600,
+        rotateY: 1200
+      }
+    }
+  },
+  interactivity: {
+    detect_on: "canvas",
+    events: {
+      onhover: {
+        enable: true,
+        mode: "grab"       // 鼠标悬停时粒子聚集
+      },
+      onclick: {
+        enable: true,
+        mode: "push"       // 点击时产生新粒子
+      },
+      resize: true
+    },
+    modes: {
+      grab: {
+        distance: 200,
+        line_linked: {
+          opacity: 1
+        }
+      },
+      push: {
+        particles_nb: 6
+      }
+    }
+  },
+  retina_detect: true
+});
+</script>
+<!-- 星座层：独立 canvas，随机散布真实星座图形（依赖上面的 #constellations 容器） -->
+<script src="/js/theme/home/starfield.js"></script>
+
+  <!-- 返回按钮：按来源回到星图手记 / 星迹索引，默认回星图手记。
+       放在 body 顶层（不进 main-content），避免被其溢出裁剪切掉右半边 -->
+  <a class="article-back" id="articleBack" href="/archives/">← 返回星图手记</a>
+
+  <div class="app-layout">
+    <!--
+  ============================================
+  左侧栏个人卡组件
+  文件：_components/Sidebar.njk
+  适用终端：电脑端（星图手记 / 星迹索引 / 秘境主人 页面通栏侧栏）
+  作用：头像、昵称、站点统计、导航菜单、底部信息与全局搜索面板（结果落在雷达区，无结果播「内容走丢 → 404」动画）
+  样式依赖：source/css/theme/base/sidebar.css
+  脚本依赖：source/js/theme/base/sidebar.js
+  最后修改：2026-11-11
+  ============================================
+-->
+<aside class="sidebar" id="sidebar">
+  <div class="profile-card">
+    <div class="avatar">
+      
+      <div class="avatar-orb" aria-hidden="true">
+        <svg class="orb-svg" viewBox="0 0 80 80" width="80" height="80" role="img">
+          <defs>
+            <radialGradient id="orbBg" cx="50%" cy="46%" r="56%">
+              <stop offset="0%" stop-color="#0d1b4a" />
+              <stop offset="100%" stop-color="#060a20" />
+            </radialGradient>
+            <linearGradient id="orbMainGrad" x1="0" y1="0" x2="1" y2="1">
+              <stop offset="0%" stop-color="#ffffff" />
+              <stop offset="52%" stop-color="#a8f4ff" />
+              <stop offset="100%" stop-color="#3fd8ff" />
+            </linearGradient>
+          </defs>
+          <circle cx="40" cy="40" r="37" fill="url(#orbBg)" stroke="#00eeff" stroke-width="2" />
+          <circle cx="40" cy="40" r="32.5" fill="none" stroke="rgba(0,238,255,0.22)" stroke-width="1" />
+          <!-- 主星 -->
+          <path class="orb-star-main" fill="url(#orbMainGrad)"
+            d="M40.5 21.5 L43.5 35 L57 38 L43.5 41 L40.5 54.5 L37.5 41 L24 38 L37.5 35 Z" />
+          <!-- 三颗小星：位置/颜色错开，闪烁节奏随机 -->
+          <path class="orb-star s1" fill="#9ff0ff"
+            d="M22 17.4 L23 22 L27.6 23 L23 24 L22 28.6 L21 24 L16.4 23 L21 22 Z" />
+          <path class="orb-star s2" fill="#bcd9ff"
+            d="M58.5 25.6 L59.3 29.2 L62.9 30 L59.3 30.8 L58.5 34.4 L57.7 30.8 L54.1 30 L57.7 29.2 Z" />
+          <path class="orb-star s3" fill="#ffe1a6"
+            d="M33 51 L34.1 55.9 L39 57 L34.1 58.1 L33 63 L31.9 58.1 L27 57 L31.9 55.9 Z" />
+        </svg>
+      </div>
+    </div>
+    <h3 class="nickname">时空行者</h3>
+    <p class="bio">星辰大海，代码为舟</p>
+    <div class="stats">
+      <div class="stat-item">
+        <span class="stat-num">607</span>
+        <span class="stat-label">文章</span>
+      </div>
+      <div class="stat-item">
+        <span class="stat-num" id="fans-count" data-base="1088">1088</span>
+        <span class="stat-label">粉丝</span>
+      </div>
+      <div class="stat-item">
+        <span class="stat-num" id="follow-count" style="cursor:pointer;">66</span>
+        <span class="stat-label">关注</span>
+      </div>
+    </div>
+    <button class="follow-btn" id="followBtn" type="button" aria-pressed="false">+ 关注</button>
+  </div>
+  <div class="search-box">
+    <input type="text" placeholder="找找看..." id="search-input">
+    <button class="search-btn" id="searchModalOpen">🔍</button>
+  </div>
+  <div class="links-card">
+    <h4>常用链接</h4>
+    <ul>
+      <li><a href="/about/">秘境主人</a></li>
+      <li><a href="/archives/">星图手记</a></li>
+      <li><a href="/tags/">星迹索引</a></li>
+      <li><a href="/fun/">星屿乐园</a></li>
+      <!-- 音乐专区不再放侧栏：入口统一收在「星屿乐园」的休闲分区矩阵里 -->
+      <!-- ✅ 新增联系我 -->
+      <li><a class="contact-trigger" href="javascript:void(0)">星语传书</a></li>
+      <li><a class="donate-trigger" href="javascript:void(0)">星芒赠礼</a></li>
+    </ul>
+  </div>
+  <div class="tags-card">
+    <h4>热门标签</h4>
+    
+    <div class="tag-cloud">
+      
+      <a href="/tags/面试/" class="tag-link" data-tag="面试"
+        data-count="11">面试</a>
+      
+      <a href="/tags/Elasticsearch/" class="tag-link" data-tag="Elasticsearch"
+        data-count="52">Elasticsearch</a>
+      
+      <a href="/tags/全文检索/" class="tag-link" data-tag="全文检索"
+        data-count="6">全文检索</a>
+      
+      <a href="/tags/系统课/" class="tag-link" data-tag="系统课"
+        data-count="52">系统课</a>
+      
+      <a href="/tags/中文分词/" class="tag-link" data-tag="中文分词"
+        data-count="1">中文分词</a>
+      
+      <a href="/tags/HBase/" class="tag-link" data-tag="HBase"
+        data-count="7">HBase</a>
+      
+      <a href="/tags/Hive/" class="tag-link" data-tag="Hive"
+        data-count="6">Hive</a>
+      
+      <a href="/tags/Flink/" class="tag-link" data-tag="Flink"
+        data-count="8">Flink</a>
+      
+      <a href="/tags/Kafka/" class="tag-link" data-tag="Kafka"
+        data-count="8">Kafka</a>
+      
+      <a href="/tags/Spark/" class="tag-link" data-tag="Spark"
+        data-count="8">Spark</a>
+      
+      <a href="/tags/Hadoop/" class="tag-link" data-tag="Hadoop"
+        data-count="7">Hadoop</a>
+      
+      <a href="/tags/MyBatisPlus/" class="tag-link" data-tag="MyBatisPlus"
+        data-count="8">MyBatisPlus</a>
+      
+      <a href="/tags/Java/" class="tag-link" data-tag="Java"
+        data-count="22">Java</a>
+      
+      <a href="/tags/集合/" class="tag-link" data-tag="集合"
+        data-count="1">集合</a>
+      
+      <a href="/tags/设计模式/" class="tag-link" data-tag="设计模式"
+        data-count="1">设计模式</a>
+      
+      <a href="/tags/算法/" class="tag-link" data-tag="算法"
+        data-count="1">算法</a>
+      
+      <a href="/tags/排序/" class="tag-link" data-tag="排序"
+        data-count="1">排序</a>
+      
+      <a href="/tags/SpringBoot/" class="tag-link" data-tag="SpringBoot"
+        data-count="9">SpringBoot</a>
+      
+      <a href="/tags/Netty/" class="tag-link" data-tag="Netty"
+        data-count="4">Netty</a>
+      
+      <a href="/tags/SpringCloud/" class="tag-link" data-tag="SpringCloud"
+        data-count="10">SpringCloud</a>
+      
+      <a href="/tags/SpringData/" class="tag-link" data-tag="SpringData"
+        data-count="6">SpringData</a>
+      
+      <a href="/tags/SpringAi/" class="tag-link" data-tag="SpringAi"
+        data-count="15">SpringAi</a>
+      
+      <a href="/tags/SpringSession/" class="tag-link" data-tag="SpringSession"
+        data-count="4">SpringSession</a>
+      
+      <a href="/tags/AICoding/" class="tag-link" data-tag="AICoding"
+        data-count="14">AICoding</a>
+      
+      <a href="/tags/深度研搜/" class="tag-link" data-tag="深度研搜"
+        data-count="15">深度研搜</a>
+      
+      <a href="/tags/langchain/" class="tag-link" data-tag="langchain"
+        data-count="10">langchain</a>
+      
+      <a href="/tags/大模型/" class="tag-link" data-tag="大模型"
+        data-count="40">大模型</a>
+      
+      <a href="/tags/llmheima/" class="tag-link" data-tag="llmheima"
+        data-count="17">llmheima</a>
+      
+      <a href="/tags/电商问数/" class="tag-link" data-tag="电商问数"
+        data-count="18">电商问数</a>
+      
+      <a href="/tags/web/" class="tag-link" data-tag="web"
+        data-count="229">web</a>
+      
+      <a href="/tags/Docker/" class="tag-link" data-tag="Docker"
+        data-count="13">Docker</a>
+      
+      <a href="/tags/git/" class="tag-link" data-tag="git"
+        data-count="7">git</a>
+      
+      <a href="/tags/linux/" class="tag-link" data-tag="linux"
+        data-count="12">linux</a>
+      
+      <a href="/tags/idea/" class="tag-link" data-tag="idea"
+        data-count="2">idea</a>
+      
+      <a href="/tags/jenkins/" class="tag-link" data-tag="jenkins"
+        data-count="9">jenkins</a>
+      
+      <a href="/tags/mac/" class="tag-link" data-tag="mac"
+        data-count="1">mac</a>
+      
+      <a href="/tags/vue/" class="tag-link" data-tag="vue"
+        data-count="9">vue</a>
+      
+      <a href="/tags/MySQL数据库/" class="tag-link" data-tag="MySQL数据库"
+        data-count="7">MySQL数据库</a>
+      
+      <a href="/tags/redis/" class="tag-link" data-tag="redis"
+        data-count="7">redis</a>
+      
+      <a href="/tags/随笔杂谈/" class="tag-link" data-tag="随笔杂谈"
+        data-count="2">随笔杂谈</a>
+      
+      <a href="/tags/画册/" class="tag-link" data-tag="画册"
+        data-count="3">画册</a>
+      
+      <a href="/tags/AI/" class="tag-link" data-tag="AI"
+        data-count="1">AI</a>
+      
+      <a href="/tags/电影/" class="tag-link" data-tag="电影"
+        data-count="5">电影</a>
+      
+      <a href="/tags/视频剪辑/" class="tag-link" data-tag="视频剪辑"
+        data-count="1">视频剪辑</a>
+      
+      <a href="/tags/吉他/" class="tag-link" data-tag="吉他"
+        data-count="2">吉他</a>
+      
+      <a href="/tags/游戏/" class="tag-link" data-tag="游戏"
+        data-count="1">游戏</a>
+      
+    </div>
+    <script>
+      /*
+  ============================================
+  侧栏热门标签排序（首帧前执行）
+  文件：_js/hot-tags.js
+  引入位置：_components/Sidebar.njk 里 .tag-cloud 闭合标签之后（紧跟着写死）
+  作用：按点击次数排序、只露前 5 个、点一下立刻重排
+  为什么单独拆出来：以前放在 sidebar.js 的 DOMContentLoaded 里，首帧渲染的还是
+  模板顺序的 20 个标签，等脚本跑完才收成 5 个；配合跨页淡入（View Transition）
+  会出现「新旧两套标签叠在一起、影子跳一下」。紧跟标签节点内联执行就没有中间态。
+  最后修改：2026-11-12
+  ============================================
+*/
+(function () {
+  var cloud = document.querySelector('.tag-cloud');
+  if (!cloud) return;
+  var links = Array.prototype.slice.call(cloud.querySelectorAll('.tag-link'));
+  if (!links.length) return;
+
+  var KEY = 'starry_tag_visits'; // 标签名 -> 点击次数
+  var TOP = 5;
+  var visits = {};
+
+  try {
+    var raw = JSON.parse(localStorage.getItem(KEY) || '{}');
+    visits = (raw && typeof raw === 'object') ? raw : {};
+  } catch (e) {
+    visits = {};
+  }
+
+  links.forEach(function (link) {
+    var name = link.dataset.tag || (link.textContent || '').trim();
+    link.dataset.tag = name;
+    if (!link.dataset.count) link.dataset.count = '0';
+  });
+
+  // 排序：点击次数降序 → 文章数降序 → 名字，保证同分时顺序稳定不来回跳
+  function order() {
+    return links.slice().sort(function (a, b) {
+      var va = visits[a.dataset.tag] || 0;
+      var vb = visits[b.dataset.tag] || 0;
+      if (vb !== va) return vb - va;
+      var ca = Number(a.dataset.count) || 0;
+      var cb = Number(b.dataset.count) || 0;
+      if (cb !== ca) return cb - ca;
+      return String(a.dataset.tag).localeCompare(String(b.dataset.tag), 'zh');
+    });
+  }
+
+  // 重排 DOM：按名次 append，超出 5 个的 hidden（仍留在 DOM，等名次升上来再显示）
+  function render() {
+    order().forEach(function (link, i) {
+      link.dataset.visits = visits[link.dataset.tag] || 0;
+      cloud.appendChild(link);
+      link.hidden = i >= TOP;
+    });
+  }
+
+  links.forEach(function (link) {
+    link.addEventListener('click', function () {
+      var name = link.dataset.tag;
+      visits[name] = (visits[name] || 0) + 1;
+      try { localStorage.setItem(KEY, JSON.stringify(visits)); } catch (e) { /* 忽略配额错误 */ }
+      render(); // 当前页立刻看到「谁被点多了谁上前」
+    });
+  });
+
+  render();
+})();
+
+    </script>
+  </div>
+  <div class="archive-card">
+    <h4>按月归档</h4>
+    <ul class="archive-list">
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2026/11/">
+          2026年11月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2026/10/">
+          2026年10月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2026/09/">
+          2026年09月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2026/08/">
+          2026年08月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2026/07/">
+          2026年07月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2026/06/">
+          2026年06月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2026/05/">
+          2026年05月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2026/04/">
+          2026年04月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2026/03/">
+          2026年03月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2026/02/">
+          2026年02月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2026/01/">
+          2026年01月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2025/12/">
+          2025年12月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2025/11/">
+          2025年11月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2025/10/">
+          2025年10月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2025/09/">
+          2025年09月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2025/08/">
+          2025年08月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2025/07/">
+          2025年07月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2025/06/">
+          2025年06月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2025/05/">
+          2025年05月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2025/04/">
+          2025年04月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2025/03/">
+          2025年03月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2025/02/">
+          2025年02月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2025/01/">
+          2025年01月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2024/12/">
+          2024年12月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2024/11/">
+          2024年11月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2024/10/">
+          2024年10月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2024/09/">
+          2024年09月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2024/08/">
+          2024年08月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2024/07/">
+          2024年07月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2024/06/">
+          2024年06月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2024/05/">
+          2024年05月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2024/04/">
+          2024年04月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2024/03/">
+          2024年03月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2024/02/">
+          2024年02月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2024/01/">
+          2024年01月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2023/12/">
+          2023年12月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2023/11/">
+          2023年11月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2023/10/">
+          2023年10月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2023/09/">
+          2023年09月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2023/08/">
+          2023年08月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2023/07/">
+          2023年07月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2023/06/">
+          2023年06月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2023/05/">
+          2023年05月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2023/04/">
+          2023年04月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2023/03/">
+          2023年03月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2023/02/">
+          2023年02月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2023/01/">
+          2023年01月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2022/12/">
+          2022年12月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2022/11/">
+          2022年11月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2022/10/">
+          2022年10月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2022/09/">
+          2022年09月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2022/08/">
+          2022年08月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2022/07/">
+          2022年07月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2022/06/">
+          2022年06月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2022/05/">
+          2022年05月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2022/04/">
+          2022年04月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2022/03/">
+          2022年03月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2022/02/">
+          2022年02月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2022/01/">
+          2022年01月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2021/12/">
+          2021年12月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2021/11/">
+          2021年11月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2021/10/">
+          2021年10月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2021/09/">
+          2021年09月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2021/08/">
+          2021年08月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2021/07/">
+          2021年07月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2021/06/">
+          2021年06月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2021/05/">
+          2021年05月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2021/04/">
+          2021年04月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2021/03/">
+          2021年03月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2021/02/">
+          2021年02月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2021/01/">
+          2021年01月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2020/12/">
+          2020年12月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2020/11/">
+          2020年11月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2020/10/">
+          2020年10月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2020/09/">
+          2020年09月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2020/08/">
+          2020年08月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2020/07/">
+          2020年07月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2020/06/">
+          2020年06月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2020/05/">
+          2020年05月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2020/04/">
+          2020年04月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2020/03/">
+          2020年03月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2020/02/">
+          2020年02月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2020/01/">
+          2020年01月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2019/12/">
+          2019年12月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2019/11/">
+          2019年11月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2019/10/">
+          2019年10月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2019/09/">
+          2019年09月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2019/08/">
+          2019年08月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2019/07/">
+          2019年07月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2019/06/">
+          2019年06月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2019/05/">
+          2019年05月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2019/04/">
+          2019年04月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2019/03/">
+          2019年03月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2019/02/">
+          2019年02月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2019/01/">
+          2019年01月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2018/12/">
+          2018年12月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2018/11/">
+          2018年11月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2018/10/">
+          2018年10月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2018/09/">
+          2018年09月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2018/08/">
+          2018年08月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2018/07/">
+          2018年07月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2018/06/">
+          2018年06月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2018/05/">
+          2018年05月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2018/04/">
+          2018年04月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2018/03/">
+          2018年03月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2018/02/">
+          2018年02月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2018/01/">
+          2018年01月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+    </ul>
+  </div>
+
+  <!-- ========== 星语传书（雷达区弹窗，与搜索面板同一套面板样式） ========== -->
+  <div class="search-panel dock-panel" id="contactModal" hidden>
+    <div class="sp-mask" data-dock-close></div>
+    <div class="sp-box" role="dialog" aria-modal="true" aria-label="星语传书">
+      <div class="sp-head">
+        <span class="sp-dot"></span>
+        <span class="sp-title">星语传书</span>
+        <span class="sp-title-sub">/ SIGNAL CHANNEL</span>
+        <span class="sp-meta">SYS.REPLY ≤ 48H</span>
+        <button class="sp-close" type="button" data-dock-close title="关闭">×</button>
+      </div>
+      <div class="sp-body dock-body">
+        <p class="dock-lead">写信给时空行者：文章里的错字、跑不通的 demo、想聊的一句技术，都可以从这里进来。信号收到，我会尽量回。</p>
+        <div class="dock-grid">
+          <div class="dock-list">
+            <a class="dock-row" href="https://wpa.qq.com/msgrd?v=3&amp;uin=372109355&amp;site=qq&amp;menu=yes"
+              target="_blank" rel="noopener">
+              <span class="dock-ico">企</span>
+              <span class="dock-k"><b>QQ</b><span>372109355</span></span>
+            </a>
+            <a class="dock-row" href="https://wu4yong.github.io" target="_blank" rel="noopener">
+              <span class="dock-ico">⌂</span>
+              <span class="dock-k"><b>站点主站</b><span>wu4yong.github.io</span></span>
+            </a>
+            <div class="dock-row dock-row-static">
+              <span class="dock-ico">✉</span>
+              <span class="dock-k"><b>电子邮箱</b><span>暂未公开 · 任何问题QQ留言</span></span>
+            </div>
+            <a class="dock-row" href="#" target="_blank" rel="noopener">
+              <span class="dock-ico">◈</span>
+              <span class="dock-k"><b>GitHub</b><span>暂未公开 · 任何问题QQ留言</span></span>
+            </a>
+            <a class="dock-row" href="#" target="_blank" rel="noopener">
+              <span class="dock-ico">◇</span>
+              <span class="dock-k"><b>Gitee</b><span>暂未公开 · 任何问题QQ留言</span></span>
+            </a>
+          </div>
+          <div class="dock-side">
+            <div class="dock-qr">
+              <em>WECHAT · 微信</em>
+              <img src="/images/wechat-qr.png" alt="微信二维码">
+              <span class="dock-qr-tip">扫码添加，备注「来自时空秘境」</span>
+            </div>
+          </div>
+        </div>
+        <div class="dock-chips">
+          <span class="dock-chip">文章纠错</span>
+          <span class="dock-chip">Demo 答疑</span>
+          <span class="dock-chip">转载授权</span>
+          <span class="dock-chip">技术交流</span>
+          <span class="dock-chip">内推 / 合作</span>
+        </div>
+        <p class="dock-note">无正文的「在吗」容易被当作信号干扰滤掉，直接把问题写清楚，回信会快很多。</p>
+      </div>
+      <!-- 开合转场层：百叶窗 / 电影幕布 / 淡入，由 source/js/theme/base/sidebar.js 轮换播放 -->
+      <div class="dock-fx" aria-hidden="true">
+        <div class="dock-fx-slats"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+        <div class="dock-fx-curtain"><span class="top"></span><span class="bottom"></span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========== 全局搜索面板 ==========
+       索引来自构建期生成的 /search.json（hexo-generator-searchdb），随文章新增自动更新；
+       打开时由 source/js/theme/base/sidebar.js 把整块挪进 Radar 中间区（无雷达的页面退化为居中浮层） -->
+  <div class="search-panel" id="searchPanel" hidden>
+    <div class="sp-mask" id="searchMask"></div>
+    <div class="sp-box" role="dialog" aria-modal="true" aria-label="全文搜索">
+      <div class="sp-head">
+        <span class="sp-dot"></span>
+        <span class="sp-title">全文搜索</span>
+        <span class="sp-title-sub">/ GLOBAL SEARCH</span>
+        <span class="sp-meta" id="spMeta"></span>
+        <button class="sp-close" id="searchPanelClose" type="button" title="关闭搜索">×</button>
+      </div>
+      <div class="sp-body" id="spBody">
+        <div class="sp-loading" id="spLoading">正在扫描星图索引…</div>
+        <ul class="sp-list" id="spList"></ul>
+        <!-- 无结果：内容走丢 → 慢速落 404 -->
+        <div class="sp-empty" id="spEmpty" hidden>
+          <div class="sp-drift-wrap">
+            <span class="sp-trail"></span>
+            <span class="sp-drift"></span>
+            <span class="sp-lost">SIGNAL LOST · 信号已丢失</span>
+          </div>
+          <div class="sp-404"><span>4</span><span>0</span><span>4</span></div>
+          <p class="sp-empty-main">内容走丢在星海里了</p>
+          <p class="sp-empty-tip">换个关键词，或去〈星迹索引 / 星图手记〉里慢慢逛</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========== 星芒赠礼（雷达区弹窗，收款码图片沿用原图不改） ========== -->
+  <div class="search-panel dock-panel" id="donateModal" hidden>
+    <div class="sp-mask" data-dock-close></div>
+    <div class="sp-box" role="dialog" aria-modal="true" aria-label="星芒赠礼">
+      <div class="sp-head">
+        <span class="sp-dot"></span>
+        <span class="sp-title">星芒赠礼</span>
+        <span class="sp-title-sub">/ STAR OFFERING</span>
+        <span class="sp-meta">THANKS FOR THE LIGHT</span>
+        <button class="sp-close" type="button" data-dock-close title="关闭">×</button>
+      </div>
+      <div class="sp-body dock-body">
+        <div class="dock-thanks">
+          <p>这片星空是工作闲暇时光一个个凌晨攒出来的：一篇文章、一次复盘、一个修不完的 bug。</p>
+          <p>如果你在这里找到了能用的东西，愿意赏一杯凌晨三点的咖啡 —— 这份心意我会记很久。</p>
+          <p>不打赏也完全没关系：所有文章永久免费，愿你我在各自的轨道上都跑得稳一点。</p>
+        </div>
+        <div class="dock-donate">
+          <div class="dock-hero">
+            <div class="dock-hero-pic">
+              <span class="dock-hero-halo" aria-hidden="true"></span>
+              <span class="dock-hero-ring dock-hero-ring-a" aria-hidden="true"></span>
+              <span class="dock-hero-ring dock-hero-ring-b" aria-hidden="true"></span>
+              <img src="/images/donate-boy.png" alt="感谢支持">
+            </div>
+            <em>THANKS FOR THE LIGHT</em>
+            <span class="dock-hero-tip">愿每一次凌晨，都有人替你留一盏灯</span>
+          </div>
+          <div class="dock-pay">
+            <div class="dock-qr dock-qr-row">
+              <img src="/images/alipay-qr.jpg" alt="支付宝收款码">
+              <div class="dock-qr-txt">
+                <b>支付宝 · 星途赞赏</b>
+                <span>请我喝一杯凌晨三点的咖啡</span>
+              </div>
+            </div>
+            <div class="dock-qr dock-qr-row">
+              <img src="/images/wechat-pay-qr.jpg" alt="微信收款码">
+              <div class="dock-qr-txt">
+                <b>微信 · 星河致谢</b>
+                <span>金额随意，心意已经收到</span>
+              </div>
+            </div>
+          </div>
+        </div>        <div class="dock-chips">
+          <span class="dock-chip">域名与服务器</span>
+          <span class="dock-chip">图床与备份</span>
+          <span class="dock-chip">一本技术书</span>
+          <span class="dock-chip">深夜的一杯咖啡</span>
+        </div>
+        <p class="dock-note">赠礼纯属心意，不产生任何付费内容或额外承诺；扫码前请确认收款人，小心仿冒。</p>
+      </div>
+      <!-- 开合转场层：百叶窗 / 电影幕布 / 淡入，由 source/js/theme/base/sidebar.js 轮换播放 -->
+      <div class="dock-fx" aria-hidden="true">
+        <div class="dock-fx-slats"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+        <div class="dock-fx-curtain"><span class="top"></span><span class="bottom"></span></div>
+      </div>
+    </div>
+  </div>
+
+
+</aside>
+<!-- 引入侧边栏交互脚本：外链（源文件 themes/butterfly/source/js/theme/base/sidebar.js） -->
+<script src="/js/theme/base/sidebar.js"></script>
+
+    
+    <button id="sidebarToggle" class="sidebar-toggle" title="隐藏侧栏"></button>
+
+    <main class="main-content">
+      <div class="article-card">
+        <h1 class="article-title">Java 集合容器与单例模式</h1>
+        <div class="article-meta">📅 2021-11-24</div>
+        <div class="article-content"><div class="essay-banner essay-java"></div>
+
+<blockquote>
+<p><em><strong>从 Java基础篇 里拆出来的部分：集合容器的底层结构、HashMap 的树化与扩容、五种单例写法</strong>。</em></p>
+</blockquote>
+<h1 id="Java集合容器-从扩容规则到哈希表"><a href="#Java集合容器-从扩容规则到哈希表" class="headerlink" title="Java集合容器 从扩容规则到哈希表"></a><strong>Java集合容器</strong> 从扩容规则到哈希表</h1><h2 id="1-ArrayList-的扩容规则"><a href="#1-ArrayList-的扩容规则" class="headerlink" title="1. ArrayList 的扩容规则"></a>1. ArrayList 的扩容规则</h2><p><strong>要求</strong></p>
+<ul>
+<li>掌握 ArrayList 扩容规则</li>
+</ul>
+<p><strong>扩容规则</strong></p>
+<ol>
+<li><code>ArrayList()</code> 会使用长度为零的数组</li>
+<li><code>ArrayList(int initialCapacity)</code> 会使用指定容量的数组</li>
+<li><code>public ArrayList(Collection&lt;? extends E&gt; c)</code> 会使用 c 的大小作为数组容量</li>
+<li><code>add(Object o)</code> 首次扩容为 10，再次扩容为上次容量的 1.5 倍</li>
+<li><code>addAll(Collection c)</code> 没有元素时，扩容为 <code>Math.max(10, 实际元素个数)</code>，有元素时为 <code>Math.max(原容量 1.5 倍, 实际元素个数)</code></li>
+</ol>
+<p>其中第 4 点必须知道，其它几点视个人情况而定。</p>
+<p><strong>提示</strong></p>
+<ul>
+<li>测试代码见 <code>day01.list.TestArrayList</code>，这里不再列出</li>
+<li>要<strong>注意</strong>的是，示例中用反射方式来更直观地反映 ArrayList 的扩容特征，但从 JDK 9 由于模块化的影响，对反射做了较多限制，需要在运行测试代码时添加 VM 参数 <code>--add-opens java.base/java.util=ALL-UNNAMED</code> 方能运行通过，后面的例子都有相同问题</li>
+</ul>
+<blockquote>
+<p><em><strong>代码说明</strong></em></p>
+<ul>
+<li><code>day01.list.TestArrayList#arrayListGrowRule</code> 演示了 <code>add(Object)</code> 方法的扩容规则，输入参数 n 代表打印多少次扩容后的数组长度</li>
+</ul>
+</blockquote>
+<h2 id="2-Iterator：Fail-Fast-与-Fail-Safe"><a href="#2-Iterator：Fail-Fast-与-Fail-Safe" class="headerlink" title="2. Iterator：Fail-Fast 与 Fail-Safe"></a>2. Iterator：Fail-Fast 与 Fail-Safe</h2><p><strong>要求</strong></p>
+<ul>
+<li><p>掌握什么是 Fail-Fast、什么是 Fail-Safe</p>
+</li>
+<li><p>ArrayList 是 fail-fast 的典型代表，遍历的同时不能修改，尽快失败</p>
+</li>
+<li><p>CopyOnWriteArrayList 是 fail-safe 的典型代表，遍历的同时可以修改，原理是读写分离</p>
+</li>
+</ul>
+<p><strong>提示</strong></p>
+<ul>
+<li>测试代码见 <code>day01.list.FailFastVsFailSafe</code>，这里不再列出</li>
+</ul>
+<h3 id="2-1-为什么遍历中删除会抛-ConcurrentModificationException"><a href="#2-1-为什么遍历中删除会抛-ConcurrentModificationException" class="headerlink" title="2.1 为什么遍历中删除会抛 ConcurrentModificationException"></a>2.1 为什么遍历中删除会抛 ConcurrentModificationException</h3><p><strong>要点</strong></p>
+<ul>
+<li>迭代器内部保存了一份 <code>modCount</code> 快照，每次 <code>next()</code> 都会比对，一旦被外部改动就抛出异常</li>
+<li>正确姿势是用 <code>iterator.remove()</code>，它会同步更新 <code>modCount</code>，不会误报</li>
+</ul>
+<pre class="line-numbers language-java" data-language="java"><code class="language-java"><span class="token class-name">List</span><span class="token generics"><span class="token punctuation">&lt;</span><span class="token class-name">String</span><span class="token punctuation">></span></span> list <span class="token operator">=</span> <span class="token keyword">new</span> <span class="token class-name">ArrayList</span><span class="token generics"><span class="token punctuation">&lt;</span><span class="token punctuation">></span></span><span class="token punctuation">(</span><span class="token class-name">List</span><span class="token punctuation">.</span><span class="token function">of</span><span class="token punctuation">(</span><span class="token string">"a"</span><span class="token punctuation">,</span> <span class="token string">"b"</span><span class="token punctuation">,</span> <span class="token string">"c"</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token class-name">Iterator</span><span class="token generics"><span class="token punctuation">&lt;</span><span class="token class-name">String</span><span class="token punctuation">></span></span> it <span class="token operator">=</span> list<span class="token punctuation">.</span><span class="token function">iterator</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token keyword">while</span> <span class="token punctuation">(</span>it<span class="token punctuation">.</span><span class="token function">hasNext</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+    <span class="token class-name">String</span> s <span class="token operator">=</span> it<span class="token punctuation">.</span><span class="token function">next</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token keyword">if</span> <span class="token punctuation">(</span><span class="token string">"b"</span><span class="token punctuation">.</span><span class="token function">equals</span><span class="token punctuation">(</span>s<span class="token punctuation">)</span><span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+        it<span class="token punctuation">.</span><span class="token function">remove</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span> <span class="token comment">// 正确</span>
+        <span class="token comment">// list.remove(s); // 错误，下一次 next() 抛 ConcurrentModificationException</span>
+    <span class="token punctuation">&#125;</span>
+<span class="token punctuation">&#125;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<h2 id="3-LinkedList-与-ArrayList-的对比"><a href="#3-LinkedList-与-ArrayList-的对比" class="headerlink" title="3. LinkedList 与 ArrayList 的对比"></a>3. LinkedList 与 ArrayList 的对比</h2><p><strong>要求</strong></p>
+<ul>
+<li>能够说清楚 LinkedList 对比 ArrayList 的区别，并重视纠正部分错误的认知</li>
+</ul>
+<p><strong>LinkedList</strong></p>
+<ol>
+<li>基于双向链表，无需连续内存</li>
+<li>随机访问慢（要沿着链表遍历）</li>
+<li>头尾插入删除性能高</li>
+<li>占用内存多</li>
+</ol>
+<p><strong>ArrayList</strong></p>
+<ol>
+<li>基于数组，需要连续内存</li>
+<li>随机访问快（指根据下标访问）</li>
+<li>尾部插入、删除性能可以，其它部分插入、删除都会移动数据，因此性能会低</li>
+<li>可以利用 cpu 缓存，局部性原理</li>
+</ol>
+<blockquote>
+<p><em><strong>代码说明</strong></em></p>
+<ul>
+<li><code>day01.list.ArrayListVsLinkedList#randomAccess</code> 对比随机访问性能</li>
+<li><code>day01.list.ArrayListVsLinkedList#addMiddle</code> 对比向中间插入性能</li>
+<li><code>day01.list.ArrayListVsLinkedList#addFirst</code> 对比头部插入性能</li>
+<li><code>day01.list.ArrayListVsLinkedList#addLast</code> 对比尾部插入性能</li>
+<li><code>day01.list.ArrayListVsLinkedList#linkedListSize</code> 打印一个 LinkedList 占用内存</li>
+<li><code>day01.list.ArrayListVsLinkedList#arrayListSize</code> 打印一个 ArrayList 占用内存</li>
+</ul>
+</blockquote>
+<p><strong>一个容易被考倒的点</strong></p>
+<ul>
+<li>LinkedList 的 <code>get(index)</code> 虽然没有越界检查失败，但它会从头部或尾部<strong>较近的一侧</strong>开始遍历，因此 <code>for (int i = 0; i &lt; list.size(); i++) list.get(i)</code> 的复杂度是 <span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>O</mi><mo stretchy="false">(</mo><msup><mi>n</mi><mn>2</mn></msup><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">O(n^2)</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="katex-base"><span class="katex-strut" style="height:1.0641em;vertical-align:-0.25em;"></span><span class="mord mathnormal" style="margin-right:0.0278em;">O</span><span class="mopen">(</span><span class="mord"><span class="mord mathnormal">n</span><span class="msupsub"><span class="vlist-t"><span class="vlist-r"><span class="vlist" style="height:0.8141em;"><span style="top:-3.063em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="katex-sizing reset-size6 size3 mtight"><span class="mord mtight">2</span></span></span></span></span></span></span></span><span class="mclose">)</span></span></span></span></li>
+<li>遍历 LinkedList 一律用迭代器或 for-each，不要用下标</li>
+</ul>
+<h2 id="4-HashMap"><a href="#4-HashMap" class="headerlink" title="4. HashMap"></a>4. HashMap</h2><p><strong>要求</strong></p>
+<ul>
+<li>掌握 HashMap 的基本数据结构</li>
+<li>掌握树化</li>
+<li>理解索引计算方法、二次 hash 的意义、容量对索引计算的影响</li>
+<li>掌握 put 流程、扩容、扩容因子</li>
+<li>理解并发使用 HashMap 可能导致的问题</li>
+<li>理解 key 的设计</li>
+</ul>
+<h3 id="4-1-基本数据结构"><a href="#4-1-基本数据结构" class="headerlink" title="4.1 基本数据结构"></a>4.1 基本数据结构</h3><ul>
+<li>1.7 数组 + 链表</li>
+<li>1.8 数组 + （链表 | 红黑树）</li>
+</ul>
+<blockquote>
+<p>更形象的演示，见资料中的 <code>hash-demo.jar</code>，运行需要 jdk14 以上环境，进入 jar 包目录，执行下面命令</p>
+<pre class="line-numbers language-none"><code class="language-none">java -jar --add-exports java.base&#x2F;jdk.internal.misc&#x3D;ALL-UNNAMED hash-demo.jar<span aria-hidden="true" class="line-numbers-rows"><span></span></span></code></pre></blockquote>
+<h3 id="4-2-树化与退化"><a href="#4-2-树化与退化" class="headerlink" title="4.2 树化与退化"></a>4.2 树化与退化</h3><p><strong>树化意义</strong></p>
+<ul>
+<li>红黑树用来避免 DoS 攻击，防止链表超长时性能下降，树化应当是偶然情况，是保底策略</li>
+<li>hash 表的查找、更新的时间复杂度是 <span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>O</mi><mo stretchy="false">(</mo><mn>1</mn><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">O(1)</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="katex-base"><span class="katex-strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mord mathnormal" style="margin-right:0.0278em;">O</span><span class="mopen">(</span><span class="mord">1</span><span class="mclose">)</span></span></span></span>，而红黑树的查找、更新的时间复杂度是 <span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>O</mi><mo stretchy="false">(</mo><mi>log</mi><mo>⁡</mo><mi>n</mi><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">O(\log n)</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="katex-base"><span class="katex-strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mord mathnormal" style="margin-right:0.0278em;">O</span><span class="mopen">(</span><span class="mop">lo<span style="margin-right:0.0139em;">g</span></span><span class="mspace" style="margin-right:0.1667em;"></span><span class="mord mathnormal">n</span><span class="mclose">)</span></span></span></span>，TreeNode 占用空间也比普通 Node 的大，如非必要，尽量还是使用链表</li>
+<li>hash 值如果足够随机，则在 hash 表内按泊松分布，在负载因子 0.75 的情况下，长度超过 8 的链表出现概率是 0.00000006，树化阈值选择 8 就是为了让树化几率足够小</li>
+</ul>
+<p><strong>树化规则</strong></p>
+<ul>
+<li>当链表长度超过树化阈值 8 时，先尝试扩容来减少链表长度，如果数组容量已经 &gt;&#x3D; 64，才会进行树化</li>
+</ul>
+<p><strong>退化规则</strong></p>
+<ul>
+<li>情况1：在扩容时如果拆分树时，树元素个数 &lt;&#x3D; 6 则会退化链表</li>
+<li>情况2：remove 树节点时，若 root、root.left、root.right、root.left.left 有一个为 null，也会退化为链表</li>
+</ul>
+<h3 id="4-3-索引计算"><a href="#4-3-索引计算" class="headerlink" title="4.3 索引计算"></a>4.3 索引计算</h3><p><strong>索引计算方法</strong></p>
+<ul>
+<li>首先，计算对象的 <code>hashCode()</code></li>
+<li>再调用 HashMap 的 <code>hash()</code> 方法进行二次哈希<ul>
+<li>二次 <code>hash()</code> 是为了综合高位数据，让哈希分布更为均匀</li>
+</ul>
+</li>
+<li>最后 <code>&amp; (capacity - 1)</code> 得到索引</li>
+</ul>
+<p><strong>数组容量为何是 2 的 n 次幂</strong></p>
+<ol>
+<li>计算索引时效率更高：如果是 2 的 n 次幂可以使用位与运算代替取模</li>
+<li>扩容时重新计算索引效率更高：<code>hash &amp; oldCap == 0</code> 的元素留在原来位置，否则新位置 &#x3D; 旧位置 + oldCap</li>
+</ol>
+<p><strong>注意</strong></p>
+<ul>
+<li>二次 hash 是为了配合 <strong>容量是 2 的 n 次幂</strong> 这一设计前提，如果 hash 表的容量不是 2 的 n 次幂，则不必二次 hash</li>
+<li><strong>容量是 2 的 n 次幂</strong> 这一设计计算索引效率更好，但 hash 的分散性就不好，需要二次 hash 来作为补偿，没有采用这一设计的典型例子是 Hashtable</li>
+</ul>
+<h3 id="4-4-put-与扩容"><a href="#4-4-put-与扩容" class="headerlink" title="4.4 put 与扩容"></a>4.4 put 与扩容</h3><p><strong>put 流程</strong></p>
+<ol>
+<li>HashMap 是懒惰创建数组的，首次使用才创建数组</li>
+<li>计算索引（桶下标）</li>
+<li>如果桶下标还没人占用，创建 Node 占位返回</li>
+<li>如果桶下标已经有人占用<ol>
+<li>已经是 TreeNode 走红黑树的添加或更新逻辑</li>
+<li>是普通 Node，走链表的添加或更新逻辑，如果链表长度超过树化阈值，走树化逻辑</li>
+</ol>
+</li>
+<li>返回前检查容量是否超过阈值，一旦超过进行扩容</li>
+</ol>
+<p><strong>1.7 与 1.8 的区别</strong></p>
+<ol>
+<li>链表插入节点时，1.7 是头插法，1.8 是尾插法</li>
+<li>1.7 是大于等于阈值且没有空位时才扩容，而 1.8 是大于阈值就扩容</li>
+<li>1.8 在扩容计算 Node 索引时，会优化</li>
+</ol>
+<p><strong>扩容（加载）因子为何默认是 0.75f</strong></p>
+<ol>
+<li>在空间占用与查询时间之间取得较好的权衡</li>
+<li>大于这个值，空间节省了，但链表就会比较长影响性能</li>
+<li>小于这个值，冲突减少了，但扩容就会更频繁，空间占用也更多</li>
+</ol>
+<h3 id="4-5-并发问题"><a href="#4-5-并发问题" class="headerlink" title="4.5 并发问题"></a>4.5 并发问题</h3><p><strong>扩容死链（1.7 会存在）</strong></p>
+<p>1.7 源码如下：</p>
+<pre class="line-numbers language-java" data-language="java"><code class="language-java"><span class="token keyword">void</span> <span class="token function">transfer</span><span class="token punctuation">(</span><span class="token class-name">Entry</span><span class="token punctuation">[</span><span class="token punctuation">]</span> newTable<span class="token punctuation">,</span> <span class="token keyword">boolean</span> rehash<span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+    <span class="token keyword">int</span> newCapacity <span class="token operator">=</span> newTable<span class="token punctuation">.</span>length<span class="token punctuation">;</span>
+    <span class="token keyword">for</span> <span class="token punctuation">(</span><span class="token class-name">Entry</span><span class="token generics"><span class="token punctuation">&lt;</span><span class="token class-name">K</span><span class="token punctuation">,</span><span class="token class-name">V</span><span class="token punctuation">></span></span> e <span class="token operator">:</span> table<span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+        <span class="token keyword">while</span><span class="token punctuation">(</span><span class="token keyword">null</span> <span class="token operator">!=</span> e<span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+            <span class="token class-name">Entry</span><span class="token generics"><span class="token punctuation">&lt;</span><span class="token class-name">K</span><span class="token punctuation">,</span><span class="token class-name">V</span><span class="token punctuation">></span></span> next <span class="token operator">=</span> e<span class="token punctuation">.</span>next<span class="token punctuation">;</span>
+            <span class="token keyword">if</span> <span class="token punctuation">(</span>rehash<span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+                e<span class="token punctuation">.</span>hash <span class="token operator">=</span> <span class="token keyword">null</span> <span class="token operator">==</span> e<span class="token punctuation">.</span>key <span class="token operator">?</span> <span class="token number">0</span> <span class="token operator">:</span> <span class="token function">hash</span><span class="token punctuation">(</span>e<span class="token punctuation">.</span>key<span class="token punctuation">)</span><span class="token punctuation">;</span>
+            <span class="token punctuation">&#125;</span>
+            <span class="token keyword">int</span> i <span class="token operator">=</span> <span class="token function">indexFor</span><span class="token punctuation">(</span>e<span class="token punctuation">.</span>hash<span class="token punctuation">,</span> newCapacity<span class="token punctuation">)</span><span class="token punctuation">;</span>
+            e<span class="token punctuation">.</span>next <span class="token operator">=</span> newTable<span class="token punctuation">[</span>i<span class="token punctuation">]</span><span class="token punctuation">;</span>
+            newTable<span class="token punctuation">[</span>i<span class="token punctuation">]</span> <span class="token operator">=</span> e<span class="token punctuation">;</span>
+            e <span class="token operator">=</span> next<span class="token punctuation">;</span>
+        <span class="token punctuation">&#125;</span>
+    <span class="token punctuation">&#125;</span>
+<span class="token punctuation">&#125;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<ul>
+<li>e 和 next 都是局部变量，用来指向当前节点和下一个节点</li>
+<li>线程1 的临时变量 e 和 next 刚引用了这俩节点，还未来得及移动节点，发生了线程切换，由线程2 完成扩容和迁移</li>
+<li>线程2 扩容完成，由于头插法，链表顺序颠倒。但线程1 的临时变量 e 和 next 还引用了这俩节点，还要再来一遍迁移</li>
+<li>第三次循环时，next 指向了 null，e 头插节点 a，<strong>a 的 next 指向了 b</strong>，b 的 next 指向 a，死链已成</li>
+</ul>
+<p><strong>数据错乱（1.7，1.8 都会存在）</strong></p>
+<ul>
+<li>代码参考 <code>day01.map.HashMapMissData</code>，具体调试步骤参考视频</li>
+</ul>
+<blockquote>
+<p><em><strong>补充代码说明</strong></em></p>
+<ul>
+<li><code>day01.map.HashMapDistribution</code> 演示 map 中链表长度符合泊松分布</li>
+<li><code>day01.map.DistributionAffectedByCapacity</code> 演示容量及 hashCode 取值对分布的影响<ul>
+<li><code>#hashtableGrowRule</code> 演示了 Hashtable 的扩容规律</li>
+<li><code>day01.sort.Utils#randomArray</code> 如果 hashCode 足够随机，容量是否是 2 的 n 次幂影响不大</li>
+<li><code>day01.sort.Utils#lowSameArray</code> 如果 hashCode 低位一样的多，容量是 2 的 n 次幂会导致分布不均匀</li>
+<li><code>day01.sort.Utils#evenArray</code> 如果 hashCode 偶数的多，容量是 2 的 n 次幂会导致分布不均匀</li>
+<li>由此得出对于容量是 2 的 n 次幂的设计来讲，二次 hash 非常重要</li>
+</ul>
+</li>
+<li><code>day01.map.HashMapVsHashtable</code> 演示了对于同样数量的单词字符串放入 HashMap 和 Hashtable 分布上的区别</li>
+</ul>
+</blockquote>
+<h3 id="4-6-key-的设计"><a href="#4-6-key-的设计" class="headerlink" title="4.6 key 的设计"></a>4.6 key 的设计</h3><p><strong>key 的设计要求</strong></p>
+<ol>
+<li>HashMap 的 key 可以为 null，但 Map 的其他实现则不然</li>
+<li>作为 key 的对象，必须实现 hashCode 和 equals，并且 key 的内容不能修改（不可变）</li>
+<li>key 的 hashCode 应该有良好的散列性</li>
+</ol>
+<p>如果 key 可变，例如修改了 age 会导致再次查询时查询不到。</p>
+<pre class="line-numbers language-java" data-language="java"><code class="language-java"><span class="token keyword">public</span> <span class="token keyword">class</span> <span class="token class-name">HashMapMutableKey</span> <span class="token punctuation">&#123;</span>
+    <span class="token keyword">public</span> <span class="token keyword">static</span> <span class="token keyword">void</span> <span class="token function">main</span><span class="token punctuation">(</span><span class="token class-name">String</span><span class="token punctuation">[</span><span class="token punctuation">]</span> args<span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+        <span class="token class-name">HashMap</span><span class="token generics"><span class="token punctuation">&lt;</span><span class="token class-name">Student</span><span class="token punctuation">,</span> <span class="token class-name">Object</span><span class="token punctuation">></span></span> map <span class="token operator">=</span> <span class="token keyword">new</span> <span class="token class-name">HashMap</span><span class="token generics"><span class="token punctuation">&lt;</span><span class="token punctuation">></span></span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+        <span class="token class-name">Student</span> stu <span class="token operator">=</span> <span class="token keyword">new</span> <span class="token class-name">Student</span><span class="token punctuation">(</span><span class="token string">"张三"</span><span class="token punctuation">,</span> <span class="token number">18</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+        map<span class="token punctuation">.</span><span class="token function">put</span><span class="token punctuation">(</span>stu<span class="token punctuation">,</span> <span class="token keyword">new</span> <span class="token class-name">Object</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+        <span class="token class-name">System</span><span class="token punctuation">.</span>out<span class="token punctuation">.</span><span class="token function">println</span><span class="token punctuation">(</span>map<span class="token punctuation">.</span><span class="token function">get</span><span class="token punctuation">(</span>stu<span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+        stu<span class="token punctuation">.</span>age <span class="token operator">=</span> <span class="token number">19</span><span class="token punctuation">;</span>
+        <span class="token class-name">System</span><span class="token punctuation">.</span>out<span class="token punctuation">.</span><span class="token function">println</span><span class="token punctuation">(</span>map<span class="token punctuation">.</span><span class="token function">get</span><span class="token punctuation">(</span>stu<span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span> <span class="token comment">// null，因为它已经不在原来那个桶里了</span>
+    <span class="token punctuation">&#125;</span>
+
+    <span class="token keyword">static</span> <span class="token keyword">class</span> <span class="token class-name">Student</span> <span class="token punctuation">&#123;</span>
+        <span class="token class-name">String</span> name<span class="token punctuation">;</span>
+        <span class="token keyword">int</span> age<span class="token punctuation">;</span>
+
+        <span class="token keyword">public</span> <span class="token class-name">Student</span><span class="token punctuation">(</span><span class="token class-name">String</span> name<span class="token punctuation">,</span> <span class="token keyword">int</span> age<span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+            <span class="token keyword">this</span><span class="token punctuation">.</span>name <span class="token operator">=</span> name<span class="token punctuation">;</span>
+            <span class="token keyword">this</span><span class="token punctuation">.</span>age <span class="token operator">=</span> age<span class="token punctuation">;</span>
+        <span class="token punctuation">&#125;</span>
+
+        <span class="token annotation punctuation">@Override</span>
+        <span class="token keyword">public</span> <span class="token keyword">boolean</span> <span class="token function">equals</span><span class="token punctuation">(</span><span class="token class-name">Object</span> o<span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+            <span class="token keyword">if</span> <span class="token punctuation">(</span><span class="token keyword">this</span> <span class="token operator">==</span> o<span class="token punctuation">)</span> <span class="token keyword">return</span> <span class="token boolean">true</span><span class="token punctuation">;</span>
+            <span class="token keyword">if</span> <span class="token punctuation">(</span>o <span class="token operator">==</span> <span class="token keyword">null</span> <span class="token operator">||</span> <span class="token function">getClass</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token operator">!=</span> o<span class="token punctuation">.</span><span class="token function">getClass</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span> <span class="token keyword">return</span> <span class="token boolean">false</span><span class="token punctuation">;</span>
+            <span class="token class-name">Student</span> student <span class="token operator">=</span> <span class="token punctuation">(</span><span class="token class-name">Student</span><span class="token punctuation">)</span> o<span class="token punctuation">;</span>
+            <span class="token keyword">return</span> age <span class="token operator">==</span> student<span class="token punctuation">.</span>age <span class="token operator">&amp;&amp;</span> <span class="token class-name">Objects</span><span class="token punctuation">.</span><span class="token function">equals</span><span class="token punctuation">(</span>name<span class="token punctuation">,</span> student<span class="token punctuation">.</span>name<span class="token punctuation">)</span><span class="token punctuation">;</span>
+        <span class="token punctuation">&#125;</span>
+
+        <span class="token annotation punctuation">@Override</span>
+        <span class="token keyword">public</span> <span class="token keyword">int</span> <span class="token function">hashCode</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+            <span class="token keyword">return</span> <span class="token class-name">Objects</span><span class="token punctuation">.</span><span class="token function">hash</span><span class="token punctuation">(</span>name<span class="token punctuation">,</span> age<span class="token punctuation">)</span><span class="token punctuation">;</span>
+        <span class="token punctuation">&#125;</span>
+    <span class="token punctuation">&#125;</span>
+<span class="token punctuation">&#125;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<p><strong>String 对象的 hashCode() 设计</strong></p>
+<ul>
+<li>目标是达到较为均匀的散列效果，每个字符串的 hashCode 足够独特</li>
+<li>字符串中的每个字符都可以表现为一个数字，称为 <span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>S</mi><mi>i</mi></msub></mrow><annotation encoding="application/x-tex">S_i</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="katex-base"><span class="katex-strut" style="height:0.8333em;vertical-align:-0.15em;"></span><span class="mord"><span class="mord mathnormal" style="margin-right:0.0576em;">S</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.3117em;"><span style="top:-2.55em;margin-left:-0.0576em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="katex-sizing reset-size6 size3 mtight"><span class="mord mathnormal mtight">i</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span></span></span></span>，其中 i 的范围是 <span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>0</mn><mo>∼</mo><mi>n</mi><mo>−</mo><mn>1</mn></mrow><annotation encoding="application/x-tex">0 \sim n-1</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="katex-base"><span class="katex-strut" style="height:0.6444em;"></span><span class="mord">0</span><span class="mspace" style="margin-right:0.2778em;"></span><span class="mrel">∼</span><span class="mspace" style="margin-right:0.2778em;"></span></span><span class="katex-base"><span class="katex-strut" style="height:0.6667em;vertical-align:-0.0833em;"></span><span class="mord mathnormal">n</span><span class="mspace" style="margin-right:0.2222em;"></span><span class="mbin">−</span><span class="mspace" style="margin-right:0.2222em;"></span></span><span class="katex-base"><span class="katex-strut" style="height:0.6444em;"></span><span class="mord">1</span></span></span></span></li>
+<li>散列公式为：</li>
+</ul>
+<p><span class="katex-display"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><msub><mi>S</mi><mn>0</mn></msub><mo>⋅</mo><msup><mn>31</mn><mrow><mi>n</mi><mo>−</mo><mn>1</mn></mrow></msup><mo>+</mo><msub><mi>S</mi><mn>1</mn></msub><mo>⋅</mo><msup><mn>31</mn><mrow><mi>n</mi><mo>−</mo><mn>2</mn></mrow></msup><mo>+</mo><mo>⋯</mo><mo>+</mo><msub><mi>S</mi><mi>i</mi></msub><mo>⋅</mo><msup><mn>31</mn><mrow><mi>n</mi><mo>−</mo><mn>1</mn><mo>−</mo><mi>i</mi></mrow></msup><mo>+</mo><mo>⋯</mo><mo>+</mo><msub><mi>S</mi><mrow><mi>n</mi><mo>−</mo><mn>1</mn></mrow></msub><mo>⋅</mo><msup><mn>31</mn><mn>0</mn></msup></mrow><annotation encoding="application/x-tex">S_0 \cdot 31^{n-1} + S_1 \cdot 31^{n-2} + \cdots + S_i \cdot 31^{n-1-i} + \cdots + S_{n-1} \cdot 31^{0}</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="katex-base"><span class="katex-strut" style="height:0.8333em;vertical-align:-0.15em;"></span><span class="mord"><span class="mord mathnormal" style="margin-right:0.0576em;">S</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.3011em;"><span style="top:-2.55em;margin-left:-0.0576em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="katex-sizing reset-size6 size3 mtight"><span class="mord mtight">0</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span><span class="mspace" style="margin-right:0.2222em;"></span><span class="mbin">⋅</span><span class="mspace" style="margin-right:0.2222em;"></span></span><span class="katex-base"><span class="katex-strut" style="height:0.9474em;vertical-align:-0.0833em;"></span><span class="mord">3</span><span class="mord"><span class="mord">1</span><span class="msupsub"><span class="vlist-t"><span class="vlist-r"><span class="vlist" style="height:0.8641em;"><span style="top:-3.113em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="katex-sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord mathnormal mtight">n</span><span class="mbin mtight">−</span><span class="mord mtight">1</span></span></span></span></span></span></span></span></span><span class="mspace" style="margin-right:0.2222em;"></span><span class="mbin">+</span><span class="mspace" style="margin-right:0.2222em;"></span></span><span class="katex-base"><span class="katex-strut" style="height:0.8333em;vertical-align:-0.15em;"></span><span class="mord"><span class="mord mathnormal" style="margin-right:0.0576em;">S</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.3011em;"><span style="top:-2.55em;margin-left:-0.0576em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="katex-sizing reset-size6 size3 mtight"><span class="mord mtight">1</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span><span class="mspace" style="margin-right:0.2222em;"></span><span class="mbin">⋅</span><span class="mspace" style="margin-right:0.2222em;"></span></span><span class="katex-base"><span class="katex-strut" style="height:0.9474em;vertical-align:-0.0833em;"></span><span class="mord">3</span><span class="mord"><span class="mord">1</span><span class="msupsub"><span class="vlist-t"><span class="vlist-r"><span class="vlist" style="height:0.8641em;"><span style="top:-3.113em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="katex-sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord mathnormal mtight">n</span><span class="mbin mtight">−</span><span class="mord mtight">2</span></span></span></span></span></span></span></span></span><span class="mspace" style="margin-right:0.2222em;"></span><span class="mbin">+</span><span class="mspace" style="margin-right:0.2222em;"></span></span><span class="katex-base"><span class="katex-strut" style="height:0.6667em;vertical-align:-0.0833em;"></span><span class="minner">⋯</span><span class="mspace" style="margin-right:0.2222em;"></span><span class="mbin">+</span><span class="mspace" style="margin-right:0.2222em;"></span></span><span class="katex-base"><span class="katex-strut" style="height:0.8333em;vertical-align:-0.15em;"></span><span class="mord"><span class="mord mathnormal" style="margin-right:0.0576em;">S</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.3117em;"><span style="top:-2.55em;margin-left:-0.0576em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="katex-sizing reset-size6 size3 mtight"><span class="mord mathnormal mtight">i</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span><span class="mspace" style="margin-right:0.2222em;"></span><span class="mbin">⋅</span><span class="mspace" style="margin-right:0.2222em;"></span></span><span class="katex-base"><span class="katex-strut" style="height:0.958em;vertical-align:-0.0833em;"></span><span class="mord">3</span><span class="mord"><span class="mord">1</span><span class="msupsub"><span class="vlist-t"><span class="vlist-r"><span class="vlist" style="height:0.8747em;"><span style="top:-3.113em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="katex-sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord mathnormal mtight">n</span><span class="mbin mtight">−</span><span class="mord mtight">1</span><span class="mbin mtight">−</span><span class="mord mathnormal mtight">i</span></span></span></span></span></span></span></span></span><span class="mspace" style="margin-right:0.2222em;"></span><span class="mbin">+</span><span class="mspace" style="margin-right:0.2222em;"></span></span><span class="katex-base"><span class="katex-strut" style="height:0.6667em;vertical-align:-0.0833em;"></span><span class="minner">⋯</span><span class="mspace" style="margin-right:0.2222em;"></span><span class="mbin">+</span><span class="mspace" style="margin-right:0.2222em;"></span></span><span class="katex-base"><span class="katex-strut" style="height:0.8917em;vertical-align:-0.2083em;"></span><span class="mord"><span class="mord mathnormal" style="margin-right:0.0576em;">S</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.3011em;"><span style="top:-2.55em;margin-left:-0.0576em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="katex-sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord mathnormal mtight">n</span><span class="mbin mtight">−</span><span class="mord mtight">1</span></span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.2083em;"><span></span></span></span></span></span></span><span class="mspace" style="margin-right:0.2222em;"></span><span class="mbin">⋅</span><span class="mspace" style="margin-right:0.2222em;"></span></span><span class="katex-base"><span class="katex-strut" style="height:0.8641em;"></span><span class="mord">3</span><span class="mord"><span class="mord">1</span><span class="msupsub"><span class="vlist-t"><span class="vlist-r"><span class="vlist" style="height:0.8641em;"><span style="top:-3.113em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="katex-sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord mtight">0</span></span></span></span></span></span></span></span></span></span></span></span></span></p>
+<ul>
+<li>31 代入公式有较好的散列特性，并且 <span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>31</mn><mo>⋅</mo><mi>h</mi></mrow><annotation encoding="application/x-tex">31 \cdot h</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="katex-base"><span class="katex-strut" style="height:0.6444em;"></span><span class="mord">31</span><span class="mspace" style="margin-right:0.2222em;"></span><span class="mbin">⋅</span><span class="mspace" style="margin-right:0.2222em;"></span></span><span class="katex-base"><span class="katex-strut" style="height:0.6944em;"></span><span class="mord mathnormal">h</span></span></span></span> 可以被优化为<ul>
+<li><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>32</mn><mo>⋅</mo><mi>h</mi><mo>−</mo><mi>h</mi></mrow><annotation encoding="application/x-tex">32 \cdot h - h</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="katex-base"><span class="katex-strut" style="height:0.6444em;"></span><span class="mord">32</span><span class="mspace" style="margin-right:0.2222em;"></span><span class="mbin">⋅</span><span class="mspace" style="margin-right:0.2222em;"></span></span><span class="katex-base"><span class="katex-strut" style="height:0.7778em;vertical-align:-0.0833em;"></span><span class="mord mathnormal">h</span><span class="mspace" style="margin-right:0.2222em;"></span><span class="mbin">−</span><span class="mspace" style="margin-right:0.2222em;"></span></span><span class="katex-base"><span class="katex-strut" style="height:0.6944em;"></span><span class="mord mathnormal">h</span></span></span></span></li>
+<li><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msup><mn>2</mn><mn>5</mn></msup><mo>⋅</mo><mi>h</mi><mo>−</mo><mi>h</mi></mrow><annotation encoding="application/x-tex">2^5 \cdot h - h</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="katex-base"><span class="katex-strut" style="height:0.8141em;"></span><span class="mord"><span class="mord">2</span><span class="msupsub"><span class="vlist-t"><span class="vlist-r"><span class="vlist" style="height:0.8141em;"><span style="top:-3.063em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="katex-sizing reset-size6 size3 mtight"><span class="mord mtight">5</span></span></span></span></span></span></span></span><span class="mspace" style="margin-right:0.2222em;"></span><span class="mbin">⋅</span><span class="mspace" style="margin-right:0.2222em;"></span></span><span class="katex-base"><span class="katex-strut" style="height:0.7778em;vertical-align:-0.0833em;"></span><span class="mord mathnormal">h</span><span class="mspace" style="margin-right:0.2222em;"></span><span class="mbin">−</span><span class="mspace" style="margin-right:0.2222em;"></span></span><span class="katex-base"><span class="katex-strut" style="height:0.6944em;"></span><span class="mord mathnormal">h</span></span></span></span></li>
+<li><code>h &lt;&lt; 5 - h</code></li>
+</ul>
+</li>
+</ul>
+<h2 id="5-单例模式"><a href="#5-单例模式" class="headerlink" title="5. 单例模式"></a>5. 单例模式</h2><p><strong>要求</strong></p>
+<ul>
+<li>掌握五种单例模式的实现方式</li>
+<li>理解为何 DCL 实现时要使用 volatile 修饰静态变量</li>
+<li>了解 jdk 中用到单例的场景</li>
+</ul>
+<h3 id="5-1-饿汉式"><a href="#5-1-饿汉式" class="headerlink" title="5.1 饿汉式"></a>5.1 饿汉式</h3><pre class="line-numbers language-java" data-language="java"><code class="language-java"><span class="token keyword">public</span> <span class="token keyword">class</span> <span class="token class-name">Singleton1</span> <span class="token keyword">implements</span> <span class="token class-name">Serializable</span> <span class="token punctuation">&#123;</span>
+    <span class="token keyword">private</span> <span class="token class-name">Singleton1</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+        <span class="token keyword">if</span> <span class="token punctuation">(</span><span class="token constant">INSTANCE</span> <span class="token operator">!=</span> <span class="token keyword">null</span><span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+            <span class="token keyword">throw</span> <span class="token keyword">new</span> <span class="token class-name">RuntimeException</span><span class="token punctuation">(</span><span class="token string">"单例对象不能重复创建"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+        <span class="token punctuation">&#125;</span>
+        <span class="token class-name">System</span><span class="token punctuation">.</span>out<span class="token punctuation">.</span><span class="token function">println</span><span class="token punctuation">(</span><span class="token string">"private Singleton1()"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token punctuation">&#125;</span>
+
+    <span class="token keyword">private</span> <span class="token keyword">static</span> <span class="token keyword">final</span> <span class="token class-name">Singleton1</span> <span class="token constant">INSTANCE</span> <span class="token operator">=</span> <span class="token keyword">new</span> <span class="token class-name">Singleton1</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+    <span class="token keyword">public</span> <span class="token keyword">static</span> <span class="token class-name">Singleton1</span> <span class="token function">getInstance</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+        <span class="token keyword">return</span> <span class="token constant">INSTANCE</span><span class="token punctuation">;</span>
+    <span class="token punctuation">&#125;</span>
+
+    <span class="token keyword">public</span> <span class="token keyword">static</span> <span class="token keyword">void</span> <span class="token function">otherMethod</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+        <span class="token class-name">System</span><span class="token punctuation">.</span>out<span class="token punctuation">.</span><span class="token function">println</span><span class="token punctuation">(</span><span class="token string">"otherMethod()"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token punctuation">&#125;</span>
+
+    <span class="token keyword">public</span> <span class="token class-name">Object</span> <span class="token function">readResolve</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+        <span class="token keyword">return</span> <span class="token constant">INSTANCE</span><span class="token punctuation">;</span>
+    <span class="token punctuation">&#125;</span>
+<span class="token punctuation">&#125;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<ul>
+<li>构造方法抛出异常是防止反射破坏单例</li>
+<li><code>readResolve()</code> 是防止反序列化破坏单例</li>
+</ul>
+<h3 id="5-2-枚举饿汉式"><a href="#5-2-枚举饿汉式" class="headerlink" title="5.2 枚举饿汉式"></a>5.2 枚举饿汉式</h3><pre class="line-numbers language-java" data-language="java"><code class="language-java"><span class="token keyword">public</span> <span class="token keyword">enum</span> <span class="token class-name">Singleton2</span> <span class="token punctuation">&#123;</span>
+    <span class="token constant">INSTANCE</span><span class="token punctuation">;</span>
+
+    <span class="token keyword">private</span> <span class="token class-name">Singleton2</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+        <span class="token class-name">System</span><span class="token punctuation">.</span>out<span class="token punctuation">.</span><span class="token function">println</span><span class="token punctuation">(</span><span class="token string">"private Singleton2()"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token punctuation">&#125;</span>
+
+    <span class="token annotation punctuation">@Override</span>
+    <span class="token keyword">public</span> <span class="token class-name">String</span> <span class="token function">toString</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+        <span class="token keyword">return</span> <span class="token function">getClass</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token function">getName</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token operator">+</span> <span class="token string">"@"</span> <span class="token operator">+</span> <span class="token class-name">Integer</span><span class="token punctuation">.</span><span class="token function">toHexString</span><span class="token punctuation">(</span><span class="token function">hashCode</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token punctuation">&#125;</span>
+
+    <span class="token keyword">public</span> <span class="token keyword">static</span> <span class="token class-name">Singleton2</span> <span class="token function">getInstance</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+        <span class="token keyword">return</span> <span class="token constant">INSTANCE</span><span class="token punctuation">;</span>
+    <span class="token punctuation">&#125;</span>
+
+    <span class="token keyword">public</span> <span class="token keyword">static</span> <span class="token keyword">void</span> <span class="token function">otherMethod</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+        <span class="token class-name">System</span><span class="token punctuation">.</span>out<span class="token punctuation">.</span><span class="token function">println</span><span class="token punctuation">(</span><span class="token string">"otherMethod()"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token punctuation">&#125;</span>
+<span class="token punctuation">&#125;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<ul>
+<li>枚举饿汉式能天然防止反射、反序列化破坏单例</li>
+</ul>
+<h3 id="5-3-懒汉式"><a href="#5-3-懒汉式" class="headerlink" title="5.3 懒汉式"></a>5.3 懒汉式</h3><pre class="line-numbers language-java" data-language="java"><code class="language-java"><span class="token keyword">public</span> <span class="token keyword">class</span> <span class="token class-name">Singleton3</span> <span class="token keyword">implements</span> <span class="token class-name">Serializable</span> <span class="token punctuation">&#123;</span>
+    <span class="token keyword">private</span> <span class="token class-name">Singleton3</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+        <span class="token class-name">System</span><span class="token punctuation">.</span>out<span class="token punctuation">.</span><span class="token function">println</span><span class="token punctuation">(</span><span class="token string">"private Singleton3()"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token punctuation">&#125;</span>
+
+    <span class="token keyword">private</span> <span class="token keyword">static</span> <span class="token class-name">Singleton3</span> <span class="token constant">INSTANCE</span> <span class="token operator">=</span> <span class="token keyword">null</span><span class="token punctuation">;</span>
+
+    <span class="token keyword">public</span> <span class="token keyword">static</span> <span class="token keyword">synchronized</span> <span class="token class-name">Singleton3</span> <span class="token function">getInstance</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+        <span class="token keyword">if</span> <span class="token punctuation">(</span><span class="token constant">INSTANCE</span> <span class="token operator">==</span> <span class="token keyword">null</span><span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+            <span class="token constant">INSTANCE</span> <span class="token operator">=</span> <span class="token keyword">new</span> <span class="token class-name">Singleton3</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+        <span class="token punctuation">&#125;</span>
+        <span class="token keyword">return</span> <span class="token constant">INSTANCE</span><span class="token punctuation">;</span>
+    <span class="token punctuation">&#125;</span>
+
+    <span class="token keyword">public</span> <span class="token keyword">static</span> <span class="token keyword">void</span> <span class="token function">otherMethod</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+        <span class="token class-name">System</span><span class="token punctuation">.</span>out<span class="token punctuation">.</span><span class="token function">println</span><span class="token punctuation">(</span><span class="token string">"otherMethod()"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token punctuation">&#125;</span>
+<span class="token punctuation">&#125;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<ul>
+<li>其实只有首次创建单例对象时才需要同步，但该代码实际上每次调用都会同步</li>
+<li>因此有了下面的双检锁改进</li>
+</ul>
+<h3 id="5-4-双检锁懒汉式"><a href="#5-4-双检锁懒汉式" class="headerlink" title="5.4 双检锁懒汉式"></a>5.4 双检锁懒汉式</h3><pre class="line-numbers language-java" data-language="java"><code class="language-java"><span class="token keyword">public</span> <span class="token keyword">class</span> <span class="token class-name">Singleton4</span> <span class="token keyword">implements</span> <span class="token class-name">Serializable</span> <span class="token punctuation">&#123;</span>
+    <span class="token keyword">private</span> <span class="token class-name">Singleton4</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+        <span class="token class-name">System</span><span class="token punctuation">.</span>out<span class="token punctuation">.</span><span class="token function">println</span><span class="token punctuation">(</span><span class="token string">"private Singleton4()"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token punctuation">&#125;</span>
+
+    <span class="token keyword">private</span> <span class="token keyword">static</span> <span class="token keyword">volatile</span> <span class="token class-name">Singleton4</span> <span class="token constant">INSTANCE</span> <span class="token operator">=</span> <span class="token keyword">null</span><span class="token punctuation">;</span> <span class="token comment">// 可见性，有序性</span>
+
+    <span class="token keyword">public</span> <span class="token keyword">static</span> <span class="token class-name">Singleton4</span> <span class="token function">getInstance</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+        <span class="token keyword">if</span> <span class="token punctuation">(</span><span class="token constant">INSTANCE</span> <span class="token operator">==</span> <span class="token keyword">null</span><span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+            <span class="token keyword">synchronized</span> <span class="token punctuation">(</span><span class="token class-name">Singleton4</span><span class="token punctuation">.</span><span class="token keyword">class</span><span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+                <span class="token keyword">if</span> <span class="token punctuation">(</span><span class="token constant">INSTANCE</span> <span class="token operator">==</span> <span class="token keyword">null</span><span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+                    <span class="token constant">INSTANCE</span> <span class="token operator">=</span> <span class="token keyword">new</span> <span class="token class-name">Singleton4</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+                <span class="token punctuation">&#125;</span>
+            <span class="token punctuation">&#125;</span>
+        <span class="token punctuation">&#125;</span>
+        <span class="token keyword">return</span> <span class="token constant">INSTANCE</span><span class="token punctuation">;</span>
+    <span class="token punctuation">&#125;</span>
+
+    <span class="token keyword">public</span> <span class="token keyword">static</span> <span class="token keyword">void</span> <span class="token function">otherMethod</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+        <span class="token class-name">System</span><span class="token punctuation">.</span>out<span class="token punctuation">.</span><span class="token function">println</span><span class="token punctuation">(</span><span class="token string">"otherMethod()"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token punctuation">&#125;</span>
+<span class="token punctuation">&#125;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<p>为何必须加 volatile：</p>
+<ul>
+<li><code>INSTANCE = new Singleton4()</code> 不是原子的，分成 3 步：创建对象、调用构造、给静态变量赋值，其中后两步可能被指令重排序优化，变成先赋值、再调用构造</li>
+<li>如果线程1 先执行了赋值，线程2 执行到第一个 <code>INSTANCE == null</code> 时发现 INSTANCE 已经不为 null，此时就会返回一个未完全构造的对象</li>
+</ul>
+<h3 id="5-5-内部类懒汉式"><a href="#5-5-内部类懒汉式" class="headerlink" title="5.5 内部类懒汉式"></a>5.5 内部类懒汉式</h3><pre class="line-numbers language-java" data-language="java"><code class="language-java"><span class="token keyword">public</span> <span class="token keyword">class</span> <span class="token class-name">Singleton5</span> <span class="token keyword">implements</span> <span class="token class-name">Serializable</span> <span class="token punctuation">&#123;</span>
+    <span class="token keyword">private</span> <span class="token class-name">Singleton5</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+        <span class="token class-name">System</span><span class="token punctuation">.</span>out<span class="token punctuation">.</span><span class="token function">println</span><span class="token punctuation">(</span><span class="token string">"private Singleton5()"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token punctuation">&#125;</span>
+
+    <span class="token keyword">private</span> <span class="token keyword">static</span> <span class="token keyword">class</span> <span class="token class-name">Holder</span> <span class="token punctuation">&#123;</span>
+        <span class="token keyword">static</span> <span class="token class-name">Singleton5</span> <span class="token constant">INSTANCE</span> <span class="token operator">=</span> <span class="token keyword">new</span> <span class="token class-name">Singleton5</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token punctuation">&#125;</span>
+
+    <span class="token keyword">public</span> <span class="token keyword">static</span> <span class="token class-name">Singleton5</span> <span class="token function">getInstance</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+        <span class="token keyword">return</span> <span class="token class-name">Holder</span><span class="token punctuation">.</span><span class="token constant">INSTANCE</span><span class="token punctuation">;</span>
+    <span class="token punctuation">&#125;</span>
+
+    <span class="token keyword">public</span> <span class="token keyword">static</span> <span class="token keyword">void</span> <span class="token function">otherMethod</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+        <span class="token class-name">System</span><span class="token punctuation">.</span>out<span class="token punctuation">.</span><span class="token function">println</span><span class="token punctuation">(</span><span class="token string">"otherMethod()"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token punctuation">&#125;</span>
+<span class="token punctuation">&#125;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<ul>
+<li>避免了双检锁的缺点，靠类加载机制保证线程安全，也做到了懒加载</li>
+</ul>
+<p><strong>JDK 中单例的体现</strong></p>
+<ul>
+<li>Runtime 体现了饿汉式单例</li>
+<li>Console 体现了双检锁懒汉式单例</li>
+<li>Collections 中的 EmptyNavigableSet 内部类懒汉式单例</li>
+<li>ReverseComparator.REVERSE_ORDER 内部类懒汉式单例</li>
+<li>Comparators.NaturalOrderComparator.INSTANCE 枚举饿汉式单例</li>
+</ul>
+<h2 id="6-常见坑"><a href="#6-常见坑" class="headerlink" title="6. 常见坑"></a>6. 常见坑</h2><ul>
+<li><code>Arrays.asList()</code> 返回的是固定长度列表，<code>add</code> &#x2F; <code>remove</code> 会抛 <code>UnsupportedOperationException</code></li>
+<li><code>List.of()</code> 不可变且不允许 null，<code>subList</code> 只是视图，原列表一改视图失效</li>
+<li><code>HashMap</code> 初始容量给 16 时实际会按 <code>threshold = capacity * 0.75</code> 提前扩容，估算容量请用 <code>expected / 0.75 + 1</code></li>
+<li>遍历 Map 时删除元素必须走 <code>Iterator</code> 或 <code>removeIf</code>，否则同样 fail-fast</li>
+<li>单例的序列化破解、反射破解都要单独防，枚举是唯一天然免疫的写法</li>
+</ul>
+</div>
+      </div>
+    </main>
+  </div>
+
+  <div class="float-buttons">
+    <button id="back-to-top" class="float-btn" title="返回顶部">↑</button>
+    <a href="/" class="float-btn" title="返回首页">🏠</a>
+  </div>
+
+  
+  <!-- 浮动按钮脚本：外链（源文件 themes/butterfly/source/js/theme/base/post-float-btn.js） -->
+  <script src="/js/theme/base/post-float-btn.js"></script>
+
+  
+  <!--
+  ============================================
+  音频播放器组件
+  文件：APlayer.njk
+  适用终端：电脑端
+  作用：全站左下角固定迷你歌单播放器（数据来自 /music/playlist.json）
+  说明：
+    - 由 post.njk / page.njk 引入；独立页可用 front-matter 的 player: false 单独关闭
+    - 歌单是本站自己的音频（背景音乐 + 自学吉他），不再走网易云 Meting
+    - 加歌只改 source/music/playlist.json，这里不用动
+    - 渲染逻辑在 /js/theme/media/star-player.js
+  ============================================
+-->
+<link rel="stylesheet" href="/js/third-party/aplayer/APlayer.min.css">
+<link rel="stylesheet" href="/css/theme/media/star-player.css">
+<script defer src="/js/third-party/aplayer/APlayer.min.js"></script>
+<script defer src="/js/theme/media/star-player.js"></script>
+<div id="star-mini"></div>
+
+
+
+<script>
+  /* 作用：懒加载本地 mermaid 库（不走外部 CDN，避免网络波动导致图表不渲染） */
+  function loadLocalMermaid(){
+    return new Promise(function(resolve, reject){
+      if(window.mermaid) return resolve(window.mermaid);
+      var s = document.createElement('script');
+      s.src = '/js/third-party/mermaid/mermaid.min.js?v=10';
+      s.onload = function(){ resolve(window.mermaid); };
+      s.onerror = function(){ reject(new Error('mermaid local load failed')); };
+      document.head.appendChild(s);
+    });
+  }
+
+  /* 作用：把 ```mermaid 代码块替换成渲染后的 SVG 图 */
+  async function renderMermaidDiagram(){
+    var blocks = document.querySelectorAll('pre[class*="language-mermaid"]');
+    if(!blocks.length) return;
+    var mermaid;
+    try { mermaid = await loadLocalMermaid(); }
+    catch(e){ console.warn('[mermaid] 本地库加载失败：', e); return; }
+
+    mermaid.initialize({
+      startOnLoad: false,
+      theme: 'base',
+      themeVariables: {
+        darkMode: true,
+        background: 'transparent',
+        fontFamily: '"Microsoft YaHei", "PingFang SC", "Segoe UI", sans-serif',
+        fontSize: '14px',
+        primaryColor: '#062f3d',
+        primaryTextColor: '#d6f6ff',
+        primaryBorderColor: '#00eeff',
+        secondaryColor: '#04222d',
+        tertiaryColor: '#04222d',
+        mainBkg: '#062f3d',
+        nodeBorder: '#00eeff',
+        clusterBkg: '#02161f',
+        clusterBorder: '#00eeff55',
+        lineColor: '#00eeff',
+        textColor: '#c0e8ff',
+        edgeLabelBackground: '#02161f'
+      },
+      flowchart: { curve: 'basis', useMaxWidth: true, htmlLabels: false, nodeSpacing: 46, rankSpacing: 64, padding: 14 }
+    });
+
+    var targets = [];
+    blocks.forEach(function(el){
+      var codeEl = el.querySelector('code');
+      if(!codeEl) return;
+      var div = document.createElement('div');
+      div.className = 'mermaid';
+      div.textContent = codeEl.textContent;
+      el.parentNode.replaceChild(div, el);
+      targets.push(div);
+    });
+    if(!targets.length) return;
+    try { await mermaid.run({ nodes: targets }); }
+    catch(e){ console.warn('[mermaid] 渲染失败：', e); }
+  }
+  /* 作用：多次触发兜底。某些时机（pjax 局部加载、标签页从后台恢复、库加载慢）
+     脚本可能一次没跑到，用「延迟重试 + DOM 变化监听」保证最终一定渲染成图 */
+  var mmBusy = false;
+  function scheduleMermaid(){
+    if(mmBusy) return;
+    mmBusy = true;
+    renderMermaidDiagram().then(function(){ mmBusy = false; }, function(){ mmBusy = false; });
+  }
+
+  document.addEventListener('DOMContentLoaded', scheduleMermaid);
+  window.addEventListener('load', scheduleMermaid);
+  ['pjax:complete', 'pjax:success', 'render'].forEach(function(ev){
+    document.addEventListener(ev, scheduleMermaid);
+  });
+  [1000, 3000, 8000].forEach(function(ms){ setTimeout(scheduleMermaid, ms); });
+  if(document.readyState !== 'loading') scheduleMermaid();
+
+  /* 作用：正文被动态替换（局部刷新 / 回到前台）时再兜一次，防漏渲染 */
+  if(window.MutationObserver){
+    var mmTimer = null;
+    var mmObserver = new MutationObserver(function(){
+      clearTimeout(mmTimer);
+      mmTimer = setTimeout(scheduleMermaid, 400);
+    });
+    document.addEventListener('DOMContentLoaded', function(){
+      var root = document.querySelector('#article-container') || document.body;
+      mmObserver.observe(root, { childList: true, subtree: true });
+    });
+  }
+</script>
+
+
+  <script>
+    /* 返回按钮来源判定：从星迹索引进来回 /tags/，从星图手记进来回 /archives/；
+       直接从地址栏/站外进入时默认回星图手记，保证按钮始终可用 */
+    (function () {
+      var back = document.getElementById('articleBack');
+      if (!back) return;
+      var from = '';
+      try {
+        var q = new URLSearchParams(location.search);
+        from = q.get('from') || '';
+      } catch (e) {}
+      if (!from) {
+        var ref = document.referrer || '';
+        if (ref.indexOf('/tags') > -1) from = 'tags';
+        else if (ref.indexOf('/archives') > -1) from = 'archive';
+      }
+      if (from === 'tags') {
+        back.href = '/tags/';
+        back.textContent = '← 返回星迹索引';
+      } else if (from === 'search') {
+        back.href = '/';
+        back.textContent = '← 返回首页';
+      } else {
+        back.href = '/archives/';
+        back.textContent = '← 返回星图手记';
+      }
+    })();
+  </script>
+</body>
+</html>

@@ -1,0 +1,304 @@
+<!--
+  ============================================
+  手机端 · 文章原文页
+  文件：phone/post.njk
+  适用终端：手机端（路由 /phone/p/<slug>/，由 scripts/phone-routes.js 生成）
+  作用：手机阅读单篇文章；单列布局、无侧栏无雷达，替代电脑端 post.njk
+        数据由生成期算好：page.item = { title, dateStr, content, cats, tags }
+  样式依赖：source/css/theme/phone/common.css、source/css/theme/phone/list.css
+  组件依赖：phone/_components/Particles.njk
+  最后修改：2026-11-11
+  ============================================
+-->
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="color-scheme" content="dark">
+  <meta name="theme-color" content="#020817">
+  <!-- 首帧兜底：浏览器默认画布是白的，样式未解析前会闪一下白。这条规则先锁死深空底色 -->
+  <style>html{background-color:#020817}</style>
+  <title>HBase（三）RowKey 设计与热点治理 - 时空秘境</title>
+  <!-- 手机端样式：基础 + 列表/正文，外链引入（源文件 source/css/theme/phone/） -->
+  <link rel="stylesheet" href="/css/theme/phone/common.css">
+  <link rel="stylesheet" href="/css/theme/phone/list.css">
+<meta name="generator" content="Hexo 8.1.2"></head>
+<body>
+<div class="mb-shell">
+  <!--
+  ============================================
+  手机端星空粒子组件
+  文件：Particles.njk
+  适用终端：手机端
+  作用：Particles.njk 的手机端副本（nunjucks 子目录 include 取不到上级）
+        参数与电脑端 _components/Particles.njk 保持一致：
+        粒子 95 / 连线 118px / opacity 0.32，外加星座层与零星闪烁层
+  最后修改：2026-11-12
+  ============================================
+--><!-- z-index 必须是 0：负层级会被 body 不透明背景盖住，粒子在跑却看不见 -->
+<div id="particles" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 0; pointer-events: none;"></div>
+<!-- 星座层（与首页同一套：随机零星散布星座图形 + 偶尔闪烁的小星） -->
+<div id="constellations" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 1; pointer-events: none;" aria-hidden="true"></div>
+<script src="/js/particles.min.js"></script>
+<script>
+particlesJS("particles", {
+  particles: {
+    number: {
+      value: 95,
+      density: {
+        enable: true,
+        value_area: 800
+      }
+    },
+    color: {
+      value: "#00eeff"
+    },
+    shape: {
+      type: "circle",
+      stroke: {
+        width: 0,
+        color: "#000000"
+      }
+    },
+    opacity: {
+      value: 0.6,
+      random: true,
+      anim: {
+        enable: true,
+        speed: 0.5,
+        opacity_min: 0.1,
+        sync: false
+      }
+    },
+    size: {
+      value: 3,
+      random: true,
+      anim: {
+        enable: true,
+        speed: 2,
+        size_min: 0.1,
+        sync: false
+      }
+    },
+    line_linked: {
+      enable: true,
+      distance: 118,
+      color: "#00eeff",
+      opacity: 0.32,
+      width: 1
+    },
+    move: {
+      enable: true,
+      speed: 0.8,
+      direction: "none",
+      random: true,
+      straight: false,
+      out_mode: "out",
+      bounce: false,
+      attract: {
+        enable: true,
+        rotateX: 600,
+        rotateY: 1200
+      }
+    }
+  },
+  interactivity: {
+    detect_on: "canvas",
+    events: {
+      onhover: {
+        enable: true,
+        mode: "grab"       // 手指按住时粒子聚集
+      },
+      onclick: {
+        enable: true,
+        mode: "push"       // 点击时产生新粒子
+      },
+      resize: true
+    },
+    modes: {
+      grab: {
+        distance: 200,
+        line_linked: {
+          opacity: 1
+        }
+      },
+      push: {
+        particles_nb: 6
+      }
+    }
+  },
+  retina_detect: true
+});
+</script>
+<!-- 星座 + 零星闪烁层：与电脑端共用同一份绘制脚本 -->
+<script src="/js/theme/home/starfield.js"></script>
+
+
+  <div class="mb-top">
+    <a class="mb-back" href="/phone/">← 返回手机首页</a>
+    <span class="mb-sub" style="margin:0">2023-03-29</span>
+  </div>
+
+  <h1 class="mb-title">HBase（三）RowKey 设计与热点治理</h1>
+  <div class="mb-sub">
+    分类：bigdata · hbase
+     ｜ 标签：HBase
+  </div>
+
+  <div class="mb-article"><div class="essay-banner essay-hbase"></div>
+
+<h1 id="RowKey-设计与热点治理"><a href="#RowKey-设计与热点治理" class="headerlink" title="RowKey 设计与热点治理"></a><strong>RowKey 设计与热点治理</strong></h1><p>前两篇讲清楚了架构和读写链路，这一篇集中解决 HBase 建模里最关键的一件事：RowKey 怎么设计。RowKey 同时决定数据排序、Region 分布和访问负载，设计不好会出现写入全部压到一台机器、范围扫描根本扫不动的局面。下面先讲热点是怎么产生的，再逐个看盐析、哈希、反转和预分区这几种治理手段。</p>
+<p><img src="https://wu4yong.github.io/starry-images/assets/img/hbase/hbase-03-rowkey.webp" alt="连续有序的主键流被打散前缀后均匀铺到多个存储分区上，避免单一节点堆积"></p>
+<p><em>连续有序的主键流被打散前缀后均匀铺到多个存储分区上，避免单一节点堆积</em></p>
+<h2 id="1-1-为什么-RowKey-是建模核心"><a href="#1-1-为什么-RowKey-是建模核心" class="headerlink" title="1.1 为什么 RowKey 是建模核心"></a>1.1 为什么 RowKey 是建模核心</h2><p>在 HBase 里，RowKey 不是关系库那种”随便选个唯一键”的角色，它一身兼三职：</p>
+<div class="data-grid data-grid-link-table"><div class="grid-header"><div class="grid-cell">角色</div><div class="grid-cell">具体表现</div><div class="grid-cell">设计不当的后果</div></div><div class="grid-row"><div class="grid-cell">排序依据</div><div class="grid-cell">全表按 RowKey 字典序排列</div><div class="grid-cell">想做的范围扫描扫不出来</div></div><div class="grid-row"><div class="grid-cell">分区依据</div><div class="grid-cell">数据按 RowKey 区间落到不同 Region</div><div class="grid-cell">负载集中到个别 Region</div></div><div class="grid-row"><div class="grid-cell">访问路径</div><div class="grid-cell">Get &#x2F; Scan 都从 RowKey 定位</div><div class="grid-cell">只能按设计好的前缀查，换条件就要全表扫</div></div></div>
+
+<p>所以建模时先定查询模式（点查还是范围扫、按什么字段前缀查），再反推 RowKey 拼接顺序，而不是先把表建好再补主键。</p>
+<h2 id="1-2-热点是怎么产生的"><a href="#1-2-热点是怎么产生的" class="headerlink" title="1.2 热点是怎么产生的"></a>1.2 热点是怎么产生的</h2><p><strong>热点</strong>（hotspot）指大量读写集中落在少数几个 Region 上，对应的 RegionServer 压力远超其他节点。HBase 按 RowKey 字典序分区，最常见的热点来源有三类：</p>
+<ul>
+<li><strong>单调递增主键</strong>：时间戳、自增 ID 这类 RowKey 越写越大，新数据全堆在最后一个 Region 上，前面的 Region 空闲</li>
+<li><strong>集中前缀</strong>：所有 RowKey 共用同一个业务前缀（如同一个用户群、同一个门店编号），前缀区间被压成一个 Region</li>
+<li><strong>集中后缀却按前缀查询</strong>：前缀相同、后缀分散，但 Region 仍按前缀切分，热点照旧</li>
+</ul>
+<p>热点的直接表现是写入吞吐上不去、单台 RegionServer CPU 或磁盘打满，而集群其他节点很闲。</p>
+<h2 id="1-3-方案一：盐析（Salting）"><a href="#1-3-方案一：盐析（Salting）" class="headerlink" title="1.3 方案一：盐析（Salting）"></a>1.3 方案一：盐析（Salting）</h2><p>盐析是在 RowKey 前面加一个随机分配的前缀字符，把原本连续的 RowKey 打散到多个 Region。”盐”就是有限个桶编号（如 <code>0</code> 到 <code>9</code>、<code>a</code> 到 <code>f</code>）：</p>
+<div class="data-grid data-grid-link-table"><div class="grid-header"><div class="grid-cell">原始 RowKey</div><div class="grid-cell">加盐后</div><div class="grid-cell">落到的分区</div></div><div class="grid-row"><div class="grid-cell">user001</div><div class="grid-cell">a-user001</div><div class="grid-cell">前缀 a 对应的 Region</div></div><div class="grid-row"><div class="grid-cell">user002</div><div class="grid-cell">3-user002</div><div class="grid-cell">前缀 3 对应的 Region</div></div><div class="grid-row"><div class="grid-cell">user003</div><div class="grid-cell">f-user003</div><div class="grid-cell">前缀 f 对应的 Region</div></div></div>
+
+<p>好处是写入负载立刻被摊开；代价也很直接：<strong>点查需要知道盐值，不知道前缀只能逐个桶去扫</strong>。所以盐析适合写多读少、以批量导入为主的场景，不适合频繁按原始主键精确点查。</p>
+<h2 id="1-4-方案二：哈希前缀"><a href="#1-4-方案二：哈希前缀" class="headerlink" title="1.4 方案二：哈希前缀"></a>1.4 方案二：哈希前缀</h2><p>哈希前缀是对原始 RowKey 做一次哈希，取哈希结果的前几位拼到前面。和盐析的区别在于：盐析的前缀是随机分配的，哈希前缀由原始 RowKey 确定性算出，<strong>同一个 RowKey 永远落到同一个桶</strong>：</p>
+<pre class="line-numbers language-java" data-language="java"><code class="language-java"><span class="token comment">// 用哈希前缀打散原始 RowKey，相同 key 得到相同前缀</span>
+<span class="token class-name">String</span> raw <span class="token operator">=</span> <span class="token string">"order202111250001"</span><span class="token punctuation">;</span>
+<span class="token class-name">String</span> prefix <span class="token operator">=</span> <span class="token class-name">Integer</span><span class="token punctuation">.</span><span class="token function">toHexString</span><span class="token punctuation">(</span><span class="token class-name">Math</span><span class="token punctuation">.</span><span class="token function">abs</span><span class="token punctuation">(</span>raw<span class="token punctuation">.</span><span class="token function">hashCode</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span> <span class="token operator">%</span> <span class="token number">16</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token class-name">String</span> rowKey <span class="token operator">=</span> prefix <span class="token operator">+</span> <span class="token string">"-"</span> <span class="token operator">+</span> raw<span class="token punctuation">;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span></span></code></pre>
+
+<p>这样既摊开了写入，又保留了可复现性：按已知 RowKey 查询时，先算哈希前缀再定位，不需要扫所有桶。代价是哈希打散后，<strong>原始字段上的范围扫描基本失效</strong>——本来按订单号顺序能扫的区间，哈希后分散在各个前缀里。</p>
+<h2 id="1-5-方案三：反转-RowKey"><a href="#1-5-方案三：反转-RowKey" class="headerlink" title="1.5 方案三：反转 RowKey"></a>1.5 方案三：反转 RowKey</h2><p>反转把 RowKey 中变化最有规律、最容易导致前缀集中的部分倒过来放。典型场景是手机号、身份证号这类后缀差异大、前缀（号段）集中的键：</p>
+<ul>
+<li>原始：<code>13800000001</code>、<code>13800000002</code> 号段前缀相同，容易挤在一个区间</li>
+<li>反转：<code>10000000831</code>、<code>20000000831</code>，高位变成原来的低位，分散到不同前缀</li>
+</ul>
+<p>反转适合”键本身有业务规律、后缀随机性更强”的标识类主键。注意反转只改变字节顺序，不改变内容，取回原始值时再反转一次即可。它不解决范围扫描问题，只解决前缀集中问题。</p>
+<h2 id="1-6-预分区：建表时就把-Region-切开"><a href="#1-6-预分区：建表时就把-Region-切开" class="headerlink" title="1.6 预分区：建表时就把 Region 切开"></a>1.6 预分区：建表时就把 Region 切开</h2><p>默认情况下，一张新建的表只有一个 Region，所有写入先往这一个 Region 灌，写满才分裂。对数据量一开始就很大的表，这种”从零分裂”的过程会把压力集中在建表初期。<strong>预分区</strong>（pre-splitting）在建表时就按 RowKey 边界切出多个 Region，让首批写入直接分散到各分区：</p>
+<pre class="line-numbers language-bash" data-language="bash"><code class="language-bash"><span class="token comment"># hbase shell：按十六进制边界预切 8 个分区</span>
+create <span class="token string">'user_table'</span>, <span class="token punctuation">&#123;</span>NAME <span class="token operator">=</span><span class="token operator">></span> <span class="token string">'info'</span><span class="token punctuation">&#125;</span>, SPLITS <span class="token operator">=</span><span class="token operator">></span> <span class="token punctuation">[</span><span class="token string">'1'</span>, <span class="token string">'2'</span>, <span class="token string">'3'</span>, <span class="token string">'4'</span>, <span class="token string">'5'</span>, <span class="token string">'6'</span>, <span class="token string">'7'</span><span class="token punctuation">]</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span></span></code></pre>
+
+<p>分区边界要和 RowKey 设计对齐：如果用了哈希前缀，边界就按哈希桶的区间切；如果 RowKey 是时间 + 业务标识，就按时间前缀切。边界切得太密会产生大量小 Region，切得太疏又回到单 Region 扛写入。</p>
+<h2 id="1-7-Region-分裂与预分区怎么配合"><a href="#1-7-Region-分裂与预分区怎么配合" class="headerlink" title="1.7 Region 分裂与预分区怎么配合"></a>1.7 Region 分裂与预分区怎么配合</h2><p>Region 分裂（split）是运行期的自动行为：一个 Region 写超过上限后一分为二。预分区是建表期的手动行为，目的是跳过初期那段单 Region 扛压的阶段。两者关系如下：</p>
+<div class="data-grid data-grid-link-table"><div class="grid-header"><div class="grid-cell">手段</div><div class="grid-cell">时机</div><div class="grid-cell">解决什么</div><div class="grid-cell">局限</div></div><div class="grid-row"><div class="grid-cell">预分区</div><div class="grid-cell">建表时</div><div class="grid-cell">首批写入直接分散，避免开局热点</div><div class="grid-cell">边界要提前规划，事后调整代价大</div></div><div class="grid-row"><div class="grid-cell">自动分裂</div><div class="grid-cell">运行期</div><div class="grid-cell">随数据增长把过大的 Region 拆开</div><div class="grid-cell">分裂瞬间有短暂抖动，热点分区仍会反复分裂</div></div></div>
+
+<p>如果 RowKey 本身设计成持续递增，即使预分区，新数据还是会不断把最后一个 Region 撑大、反复分裂。所以<strong>先治 RowKey，再用预分区落地</strong>，顺序不能反过来。</p>
+<h2 id="1-8-选型对照与容易踩的坑"><a href="#1-8-选型对照与容易踩的坑" class="headerlink" title="1.8 选型对照与容易踩的坑"></a>1.8 选型对照与容易踩的坑</h2><div class="data-grid data-grid-link-table"><div class="grid-header"><div class="grid-cell">查询模式</div><div class="grid-cell">推荐 RowKey 思路</div><div class="grid-cell">不建议</div></div><div class="grid-row"><div class="grid-cell">批量写入、点查为主</div><div class="grid-cell">哈希前缀或盐析</div><div class="grid-cell">单调递增主键</div></div><div class="grid-row"><div class="grid-cell">按时间范围扫描</div><div class="grid-cell">时间戳放高位，再接业务标识</div><div class="grid-cell">哈希打散放在最前面</div></div><div class="grid-row"><div class="grid-cell">按手机号等标识点查</div><div class="grid-cell">反转前缀</div><div class="grid-cell">直接用号段做前缀</div></div></div>
+
+<p>几个高频坑：</p>
+<ul>
+<li>先建表后想 RowKey：表一旦有数据，改 RowKey 等于重导全量数据，建模阶段必须定死</li>
+<li>把哈希前缀和范围扫描同时要：哈希打散牺牲顺序，二者通常只能取其一</li>
+<li>预分区边界随手填几个字母：边界和实际 RowKey 分布对不上，分区会集中在少数区间</li>
+<li>.RowKey 拼接顺序里把高频查询字段放后面：HBase 只能从前缀开始匹配，字段顺序就是查询优先级</li>
+</ul>
+<h2 id="1-9-官方资料"><a href="#1-9-官方资料" class="headerlink" title="1.9 官方资料"></a>1.9 官方资料</h2><ul>
+<li>Apache HBase 官网：<a target="_blank" rel="noopener" href="https://hbase.apache.org/">https://hbase.apache.org/</a></li>
+<li>HBase Reference Guide — RowKey 设计：<a target="_blank" rel="noopener" href="https://hbase.apache.org/book.html#rowkey.design">https://hbase.apache.org/book.html#rowkey.design</a></li>
+<li>HBase Reference Guide — 建表与分区：<a target="_blank" rel="noopener" href="https://hbase.apache.org/book.html#schema.creation">https://hbase.apache.org/book.html#schema.creation</a></li>
+<li>HBase 性能调优指南：<a target="_blank" rel="noopener" href="https://hbase.apache.org/book.html#perf.configurations">https://hbase.apache.org/book.html#perf.configurations</a></li>
+</ul>
+<h2 id="1-10-清单"><a href="#1-10-清单" class="headerlink" title="1.10 清单"></a>1.10 清单</h2><ol>
+<li>RowKey 同时决定排序、分区和访问路径，建模先定查询模式再反推主键拼接</li>
+<li>热点指读写集中到少数 Region，最常见来源是单调递增主键和集中前缀</li>
+<li>盐析加随机前缀打散写入，但点查必须知道盐值，适合批量导入场景</li>
+<li>哈希前缀由原始键确定性算出，同键同桶，可复现点查，但牺牲范围扫描</li>
+<li>反转主键把分散的低位提到高位，解决号段类前缀集中，不改内容</li>
+<li>预分区在建表时切开 Region，跳过初期单 Region 扛压，边界必须对齐 RowKey 分布</li>
+<li>先治 RowKey 设计，再用预分区落地；自动分裂不能掩盖主键层面的热点</li>
+</ol>
+</div>
+
+  <div class="mb-foot">
+    <a href="/phone/">返回手机首页</a>
+    <a href="/phone/tags/">星迹索引</a>
+  </div>
+</div>
+
+
+<script>
+  /* 作用：懒加载本地 mermaid 库；无 mermaid 代码块时不加载 */
+  function loadLocalMermaid(){
+    return new Promise(function(resolve, reject){
+      if(window.mermaid) return resolve(window.mermaid);
+      var s = document.createElement('script');
+      s.src = '/js/third-party/mermaid/mermaid.min.js?v=10';
+      s.onload = function(){ resolve(window.mermaid); };
+      s.onerror = function(){ reject(new Error('mermaid local load failed')); };
+      document.head.appendChild(s);
+    });
+  }
+
+  /* 作用：把 ```mermaid 代码块替换成 SVG 图（手机端字号略小、图可横向滚动） */
+  async function renderMermaidDiagram(){
+    var blocks = document.querySelectorAll('pre[class*="language-mermaid"]');
+    if(!blocks.length) return;
+    var mermaid;
+    try { mermaid = await loadLocalMermaid(); }
+    catch(e){ console.warn('[mermaid] 本地库加载失败：', e); return; }
+
+    mermaid.initialize({
+      startOnLoad: false,
+      theme: 'base',
+      themeVariables: {
+        darkMode: true,
+        background: 'transparent',
+        fontFamily: '"Microsoft YaHei", "PingFang SC", "Segoe UI", sans-serif',
+        fontSize: '12px',
+        primaryColor: '#062f3d',
+        primaryTextColor: '#d6f6ff',
+        primaryBorderColor: '#00eeff',
+        secondaryColor: '#04222d',
+        tertiaryColor: '#04222d',
+        mainBkg: '#062f3d',
+        nodeBorder: '#00eeff',
+        clusterBkg: '#02161f',
+        clusterBorder: '#00eeff55',
+        lineColor: '#00eeff',
+        textColor: '#c0e8ff',
+        edgeLabelBackground: '#02161f'
+      },
+      flowchart: { curve: 'basis', useMaxWidth: false, htmlLabels: false, nodeSpacing: 30, rankSpacing: 40, padding: 10 }
+    });
+
+    var targets = [];
+    blocks.forEach(function(el){
+      var codeEl = el.querySelector('code');
+      if(!codeEl) return;
+      var div = document.createElement('div');
+      div.className = 'mermaid';
+      div.textContent = codeEl.textContent;
+      el.parentNode.replaceChild(div, el);
+      targets.push(div);
+    });
+    if(!targets.length) return;
+    try { await mermaid.run({ nodes: targets }); }
+    catch(e){ console.warn('[mermaid] 渲染失败：', e); }
+  }
+  /* 作用：多次触发兜底（延迟重试 + DOM 变化），防止某次时机没跑到导致图表留在代码块 */
+  var mmBusy = false;
+  function scheduleMermaid(){
+    if(mmBusy) return;
+    mmBusy = true;
+    renderMermaidDiagram().then(function(){ mmBusy = false; }, function(){ mmBusy = false; });
+  }
+  scheduleMermaid();
+  window.addEventListener('load', scheduleMermaid);
+  [1000, 3000, 8000].forEach(function(ms){ setTimeout(scheduleMermaid, ms); });
+  if(document.readyState !== 'loading') scheduleMermaid();
+  if(window.MutationObserver){
+    var mmTimer = null;
+    var mmObserver = new MutationObserver(function(){
+      clearTimeout(mmTimer);
+      mmTimer = setTimeout(scheduleMermaid, 400);
+    });
+    mmObserver.observe(document.querySelector('.mb-article') || document.body, { childList: true, subtree: true });
+  }
+</script>
+</body>
+</html>

@@ -1,0 +1,344 @@
+<!--
+  ============================================
+  手机端 · 文章原文页
+  文件：phone/post.njk
+  适用终端：手机端（路由 /phone/p/<slug>/，由 scripts/phone-routes.js 生成）
+  作用：手机阅读单篇文章；单列布局、无侧栏无雷达，替代电脑端 post.njk
+        数据由生成期算好：page.item = { title, dateStr, content, cats, tags }
+  样式依赖：source/css/theme/phone/common.css、source/css/theme/phone/list.css
+  组件依赖：phone/_components/Particles.njk
+  最后修改：2026-11-11
+  ============================================
+-->
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="color-scheme" content="dark">
+  <meta name="theme-color" content="#020817">
+  <!-- 首帧兜底：浏览器默认画布是白的，样式未解析前会闪一下白。这条规则先锁死深空底色 -->
+  <style>html{background-color:#020817}</style>
+  <title>Hive（六）自定义函数与权限治理 - 时空秘境</title>
+  <!-- 手机端样式：基础 + 列表/正文，外链引入（源文件 source/css/theme/phone/） -->
+  <link rel="stylesheet" href="/css/theme/phone/common.css">
+  <link rel="stylesheet" href="/css/theme/phone/list.css">
+<meta name="generator" content="Hexo 8.1.2"></head>
+<body>
+<div class="mb-shell">
+  <!--
+  ============================================
+  手机端星空粒子组件
+  文件：Particles.njk
+  适用终端：手机端
+  作用：Particles.njk 的手机端副本（nunjucks 子目录 include 取不到上级）
+        参数与电脑端 _components/Particles.njk 保持一致：
+        粒子 95 / 连线 118px / opacity 0.32，外加星座层与零星闪烁层
+  最后修改：2026-11-12
+  ============================================
+--><!-- z-index 必须是 0：负层级会被 body 不透明背景盖住，粒子在跑却看不见 -->
+<div id="particles" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 0; pointer-events: none;"></div>
+<!-- 星座层（与首页同一套：随机零星散布星座图形 + 偶尔闪烁的小星） -->
+<div id="constellations" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 1; pointer-events: none;" aria-hidden="true"></div>
+<script src="/js/particles.min.js"></script>
+<script>
+particlesJS("particles", {
+  particles: {
+    number: {
+      value: 95,
+      density: {
+        enable: true,
+        value_area: 800
+      }
+    },
+    color: {
+      value: "#00eeff"
+    },
+    shape: {
+      type: "circle",
+      stroke: {
+        width: 0,
+        color: "#000000"
+      }
+    },
+    opacity: {
+      value: 0.6,
+      random: true,
+      anim: {
+        enable: true,
+        speed: 0.5,
+        opacity_min: 0.1,
+        sync: false
+      }
+    },
+    size: {
+      value: 3,
+      random: true,
+      anim: {
+        enable: true,
+        speed: 2,
+        size_min: 0.1,
+        sync: false
+      }
+    },
+    line_linked: {
+      enable: true,
+      distance: 118,
+      color: "#00eeff",
+      opacity: 0.32,
+      width: 1
+    },
+    move: {
+      enable: true,
+      speed: 0.8,
+      direction: "none",
+      random: true,
+      straight: false,
+      out_mode: "out",
+      bounce: false,
+      attract: {
+        enable: true,
+        rotateX: 600,
+        rotateY: 1200
+      }
+    }
+  },
+  interactivity: {
+    detect_on: "canvas",
+    events: {
+      onhover: {
+        enable: true,
+        mode: "grab"       // 手指按住时粒子聚集
+      },
+      onclick: {
+        enable: true,
+        mode: "push"       // 点击时产生新粒子
+      },
+      resize: true
+    },
+    modes: {
+      grab: {
+        distance: 200,
+        line_linked: {
+          opacity: 1
+        }
+      },
+      push: {
+        particles_nb: 6
+      }
+    }
+  },
+  retina_detect: true
+});
+</script>
+<!-- 星座 + 零星闪烁层：与电脑端共用同一份绘制脚本 -->
+<script src="/js/theme/home/starfield.js"></script>
+
+
+  <div class="mb-top">
+    <a class="mb-back" href="/phone/">← 返回手机首页</a>
+    <span class="mb-sub" style="margin:0">2023-05-20</span>
+  </div>
+
+  <h1 class="mb-title">Hive（六）自定义函数与权限治理</h1>
+  <div class="mb-sub">
+    分类：bigdata · hive
+     ｜ 标签：Hive
+  </div>
+
+  <div class="mb-article"><div class="essay-banner essay-hive"></div>
+
+<h1 id="自定义函数与权限治理"><a href="#自定义函数与权限治理" class="headerlink" title="自定义函数与权限治理"></a><strong>自定义函数与权限治理</strong></h1><p>内置函数覆盖不了所有业务口径时，Hive 允许用 Java 写自定义函数挂到引擎上；而数仓里沉淀了全量业务数据，谁能查哪张表、哪一列，必须有统一的权限管控。这一篇讲清 UDF、UDAF、UDTF 三类函数的区别、开发与注册方式，以及 Ranger、Sentry 在权限治理里各自承担的角色。</p>
+<p><img src="https://wu4yong.github.io/starry-images/assets/img/hive/hive-06-udf.webp" alt="插件式函数模块挂载到引擎主干，外部权限网关以策略与审计屏障守护库表访问通道"></p>
+<p><em>插件式函数模块挂载到引擎主干，外部权限网关以策略与审计屏障守护库表访问通道</em></p>
+<h2 id="1-1-三类自定义函数的分工"><a href="#1-1-三类自定义函数的分工" class="headerlink" title="1.1 三类自定义函数的分工"></a>1.1 三类自定义函数的分工</h2><p>Hive 扩展 SQL 的入口是用户自定义函数（User Defined Function），按输入输出行数分为三类：</p>
+<div class="data-grid data-grid-link-table"><div class="grid-header"><div class="grid-cell">类别</div><div class="grid-cell">输入 → 输出</div><div class="grid-cell">抽象类</div><div class="grid-cell">典型用途</div></div><div class="grid-row"><div class="grid-cell">UDF</div><div class="grid-cell">一行进，一行出</div><div class="grid-cell">GenericUDF</div><div class="grid-cell">字段格式化、加密、字符串加工</div></div><div class="grid-row"><div class="grid-cell">UDAF</div><div class="grid-cell">多行进，一行出</div><div class="grid-cell">AbstractGenericUDAFResolver &#x2F; GenericUDAFEvaluator</div><div class="grid-cell">业务口径聚合、去重计数</div></div><div class="grid-row"><div class="grid-cell">UDTF</div><div class="grid-cell">一行进，多行出</div><div class="grid-cell">GenericUDTF</div><div class="grid-cell">拆分复杂字段，配合 <code>LATERAL VIEW</code> 使用</div></div></div>
+
+<p>判断归属只看行数变化：结果仍是一列一行就是 UDF；收敛成一行聚合值就是 UDAF；炸开成多行就是 UDTF。日常取数需求里，UDF 占绝大多数，UDTF 多用于数组、JSON 字段拆解。</p>
+<h2 id="1-2-开发一个-UDF"><a href="#1-2-开发一个-UDF" class="headerlink" title="1.2 开发一个 UDF"></a>1.2 开发一个 UDF</h2><p>以 GenericUDF 为例，核心是实现 <code>initialize</code>（定义输入输出类型）和 <code>evaluate</code>（写计算逻辑）：</p>
+<pre class="line-numbers language-java" data-language="java"><code class="language-java"><span class="token keyword">package</span> <span class="token namespace">com<span class="token punctuation">.</span>starry<span class="token punctuation">.</span>hive<span class="token punctuation">.</span>udf</span><span class="token punctuation">;</span>
+
+<span class="token keyword">import</span> <span class="token import"><span class="token namespace">org<span class="token punctuation">.</span>apache<span class="token punctuation">.</span>hadoop<span class="token punctuation">.</span>hive<span class="token punctuation">.</span>ql<span class="token punctuation">.</span>exec<span class="token punctuation">.</span></span><span class="token class-name">UDFArgumentException</span></span><span class="token punctuation">;</span>
+<span class="token keyword">import</span> <span class="token import"><span class="token namespace">org<span class="token punctuation">.</span>apache<span class="token punctuation">.</span>hadoop<span class="token punctuation">.</span>hive<span class="token punctuation">.</span>ql<span class="token punctuation">.</span>metadata<span class="token punctuation">.</span></span><span class="token class-name">HiveException</span></span><span class="token punctuation">;</span>
+<span class="token keyword">import</span> <span class="token import"><span class="token namespace">org<span class="token punctuation">.</span>apache<span class="token punctuation">.</span>hadoop<span class="token punctuation">.</span>hive<span class="token punctuation">.</span>ql<span class="token punctuation">.</span>udf<span class="token punctuation">.</span>generic<span class="token punctuation">.</span></span><span class="token class-name">GenericUDF</span></span><span class="token punctuation">;</span>
+<span class="token keyword">import</span> <span class="token import"><span class="token namespace">org<span class="token punctuation">.</span>apache<span class="token punctuation">.</span>hadoop<span class="token punctuation">.</span>hive<span class="token punctuation">.</span>serde2<span class="token punctuation">.</span>objectinspector<span class="token punctuation">.</span></span><span class="token class-name">ObjectInspector</span></span><span class="token punctuation">;</span>
+<span class="token keyword">import</span> <span class="token import"><span class="token namespace">org<span class="token punctuation">.</span>apache<span class="token punctuation">.</span>hadoop<span class="token punctuation">.</span>hive<span class="token punctuation">.</span>serde2<span class="token punctuation">.</span>objectinspector<span class="token punctuation">.</span>primitive<span class="token punctuation">.</span></span><span class="token class-name">PrimitiveObjectInspectorFactory</span></span><span class="token punctuation">;</span>
+
+<span class="token comment">/**
+ * 手机号脱敏：保留前三位与后四位，中间用星号替换
+ */</span>
+<span class="token keyword">public</span> <span class="token keyword">class</span> <span class="token class-name">MaskPhoneUDF</span> <span class="token keyword">extends</span> <span class="token class-name">GenericUDF</span> <span class="token punctuation">&#123;</span>
+
+    <span class="token annotation punctuation">@Override</span>
+    <span class="token keyword">public</span> <span class="token class-name">ObjectInspector</span> <span class="token function">initialize</span><span class="token punctuation">(</span><span class="token class-name">ObjectInspector</span><span class="token punctuation">[</span><span class="token punctuation">]</span> arguments<span class="token punctuation">)</span>
+            <span class="token keyword">throws</span> <span class="token class-name">UDFArgumentException</span> <span class="token punctuation">&#123;</span>
+        <span class="token keyword">if</span> <span class="token punctuation">(</span>arguments<span class="token punctuation">.</span>length <span class="token operator">!=</span> <span class="token number">1</span><span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+            <span class="token keyword">throw</span> <span class="token keyword">new</span> <span class="token class-name">UDFArgumentException</span><span class="token punctuation">(</span><span class="token string">"mask_phone 只接受一个字符串参数"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+        <span class="token punctuation">&#125;</span>
+        <span class="token comment">// 输出类型固定为字符串</span>
+        <span class="token keyword">return</span> <span class="token class-name">PrimitiveObjectInspectorFactory</span><span class="token punctuation">.</span>javaStringObjectInspector<span class="token punctuation">;</span>
+    <span class="token punctuation">&#125;</span>
+
+    <span class="token annotation punctuation">@Override</span>
+    <span class="token keyword">public</span> <span class="token class-name">Object</span> <span class="token function">evaluate</span><span class="token punctuation">(</span><span class="token class-name">DeferredObject</span><span class="token punctuation">[</span><span class="token punctuation">]</span> arguments<span class="token punctuation">)</span> <span class="token keyword">throws</span> <span class="token class-name">HiveException</span> <span class="token punctuation">&#123;</span>
+        <span class="token class-name">String</span> phone <span class="token operator">=</span> arguments<span class="token punctuation">[</span><span class="token number">0</span><span class="token punctuation">]</span><span class="token punctuation">.</span><span class="token function">get</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token operator">==</span> <span class="token keyword">null</span> <span class="token operator">?</span> <span class="token keyword">null</span> <span class="token operator">:</span> arguments<span class="token punctuation">[</span><span class="token number">0</span><span class="token punctuation">]</span><span class="token punctuation">.</span><span class="token function">get</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token function">toString</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+        <span class="token keyword">if</span> <span class="token punctuation">(</span>phone <span class="token operator">==</span> <span class="token keyword">null</span> <span class="token operator">||</span> phone<span class="token punctuation">.</span><span class="token function">length</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token operator">&lt;</span> <span class="token number">7</span><span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+            <span class="token keyword">return</span> phone<span class="token punctuation">;</span>
+        <span class="token punctuation">&#125;</span>
+        <span class="token keyword">return</span> phone<span class="token punctuation">.</span><span class="token function">substring</span><span class="token punctuation">(</span><span class="token number">0</span><span class="token punctuation">,</span> <span class="token number">3</span><span class="token punctuation">)</span> <span class="token operator">+</span> <span class="token string">"****"</span> <span class="token operator">+</span> phone<span class="token punctuation">.</span><span class="token function">substring</span><span class="token punctuation">(</span>phone<span class="token punctuation">.</span><span class="token function">length</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token operator">-</span> <span class="token number">4</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token punctuation">&#125;</span>
+
+    <span class="token annotation punctuation">@Override</span>
+    <span class="token keyword">public</span> <span class="token class-name">String</span> <span class="token function">getDisplayString</span><span class="token punctuation">(</span><span class="token class-name">String</span><span class="token punctuation">[</span><span class="token punctuation">]</span> children<span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+        <span class="token keyword">return</span> <span class="token string">"mask_phone()"</span><span class="token punctuation">;</span>
+    <span class="token punctuation">&#125;</span>
+<span class="token punctuation">&#125;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<p>打包时把 Hive 依赖标记为 <code>provided</code>，避免把引擎类一起打进 jar 造成冲突。产物是一个普通 jar，不需要部署到集群节点，通过会话注册即可使用。</p>
+<h2 id="1-3-临时函数与永久函数"><a href="#1-3-临时函数与永久函数" class="headerlink" title="1.3 临时函数与永久函数"></a>1.3 临时函数与永久函数</h2><p>函数注册分两种生命周期，对应不同使用场景：</p>
+<pre class="line-numbers language-sql" data-language="sql"><code class="language-sql"><span class="token comment">-- 把 jar 加入当前会话类路径（HDFS 或本地路径均可）</span>
+<span class="token keyword">ADD</span> JAR hdfs:<span class="token comment">///udf/hive-udf-1.0.0.jar;</span>
+
+<span class="token comment">-- 临时函数：只在当前会话有效，会话结束自动失效</span>
+<span class="token keyword">CREATE</span> <span class="token keyword">TEMPORARY</span> <span class="token keyword">FUNCTION</span> mask_phone <span class="token keyword">AS</span> <span class="token string">'com.starry.hive.udf.MaskPhoneUDF'</span><span class="token punctuation">;</span>
+
+<span class="token comment">-- 使用临时函数</span>
+<span class="token keyword">SELECT</span> mask_phone<span class="token punctuation">(</span>login_ip<span class="token punctuation">)</span> <span class="token keyword">FROM</span> dwd<span class="token punctuation">.</span>user_login <span class="token keyword">LIMIT</span> <span class="token number">10</span><span class="token punctuation">;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<p>永久函数把函数名与类、jar 位置登记到 Metastore，所有会话都能调用：</p>
+<pre class="line-numbers language-sql" data-language="sql"><code class="language-sql"><span class="token comment">-- 永久函数：元数据写入 Metastore，跨会话持久存在</span>
+<span class="token keyword">CREATE</span> <span class="token keyword">FUNCTION</span> mask_phone
+<span class="token keyword">AS</span> <span class="token string">'com.starry.hive.udf.MaskPhoneUDF'</span>
+<span class="token keyword">USING</span> JAR <span class="token string">'hdfs:///udf/hive-udf-1.0.0.jar'</span><span class="token punctuation">;</span>
+
+<span class="token comment">-- 查看与删除</span>
+<span class="token keyword">SHOW</span> FUNCTIONS <span class="token operator">LIKE</span> <span class="token string">'mask*'</span><span class="token punctuation">;</span>
+<span class="token keyword">DROP</span> <span class="token keyword">FUNCTION</span> mask_phone<span class="token punctuation">;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<div class="data-grid data-grid-link-table"><div class="grid-header"><div class="grid-cell">对比项</div><div class="grid-cell">临时函数</div><div class="grid-cell">永久函数</div></div><div class="grid-row"><div class="grid-cell">注册范围</div><div class="grid-cell">当前会话</div><div class="grid-cell">整个 Metastore 元数据</div></div><div class="grid-row"><div class="grid-cell">持久性</div><div class="grid-cell">断开即失效</div><div class="grid-cell">长期保留，可跨会话调用</div></div><div class="grid-row"><div class="grid-cell">适用</div><div class="grid-cell">调试、一次性取数</div><div class="grid-cell">团队复用的公共口径函数</div></div></div>
+
+<h2 id="1-4-UDAF-与-UDTF-的要点"><a href="#1-4-UDAF-与-UDTF-的要点" class="headerlink" title="1.4 UDAF 与 UDTF 的要点"></a>1.4 UDAF 与 UDTF 的要点</h2><p>UDAF 承担聚合逻辑，执行过程分阶段：部分聚合（partial）与最终聚合（final），评估器要处理迭代、合并与输出三个环节。开发时先想清楚中间结果存什么类型，再实现 <code>iterate</code>、<code>merge</code>、<code>terminate</code> 等方法。</p>
+<p>UDTF 继承 <code>GenericUDTF</code>，在 <code>process</code> 里调用 <code>forward</code> 逐行输出，查询侧必须挂 <code>LATERAL VIEW</code>：</p>
+<pre class="line-numbers language-sql" data-language="sql"><code class="language-sql"><span class="token comment">-- 假设 parse_tags 是拆分 JSON 数组的 UDTF</span>
+<span class="token keyword">SELECT</span> user_id<span class="token punctuation">,</span> tag
+<span class="token keyword">FROM</span> dwd<span class="token punctuation">.</span>user_profile
+LATERAL <span class="token keyword">VIEW</span> parse_tags<span class="token punctuation">(</span>ext_info<span class="token punctuation">)</span> t <span class="token keyword">AS</span> tag<span class="token punctuation">;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span></span></code></pre>
+
+<p>UDTF 不能直接出现在普通 SELECT 列列表里脱离 <code>LATERAL VIEW</code> 使用；一行炸裂多行后，原表字段与炸裂列按行对应展开。</p>
+<h2 id="1-5-权限治理：Hive-原生授权与-Ranger、Sentry"><a href="#1-5-权限治理：Hive-原生授权与-Ranger、Sentry" class="headerlink" title="1.5 权限治理：Hive 原生授权与 Ranger、Sentry"></a>1.5 权限治理：Hive 原生授权与 Ranger、Sentry</h2><p>数据仓库集中了明细与汇总数据，权限不能只靠”不把密码给别人”。Hive 自身提供授权模型，生产环境通常外接统一策略中心。</p>
+<div class="data-grid data-grid-link-table"><div class="grid-header"><div class="grid-cell">方案</div><div class="grid-cell">定位</div><div class="grid-cell">角色</div></div><div class="grid-row"><div class="grid-cell">Hive 原生授权</div><div class="grid-cell">库、表、列、分区级别的 GRANT&#x2F;REVOKE</div><div class="grid-cell">轻量场景或作为底层校验</div></div><div class="grid-row"><div class="grid-cell">Apache Ranger</div><div class="grid-cell">集中式权限策略平台，库表列级授权 + 审计</div><div class="grid-cell">主流方案，策略统一配置</div></div><div class="grid-row"><div class="grid-cell">Apache Sentry</div><div class="grid-cell">基于角色的访问控制（RBAC）策略层</div><div class="grid-cell">早期 Cloudera 体系使用，社区活跃度已下降</div></div></div>
+
+<p>Ranger 的工作方式是：在策略中心配置”谁能访问哪张表、哪些列、能否读写”，HiveServer2 在查询入口对接 Ranger 插件做校验，并把访问记录落到审计日志。策略集中管理的好处是新增、回收权限不用改集群配置，审计也有统一出口。</p>
+<p>Sentry 走角色与授权集（Privilege Set）模型，早期随 CDH 生态普及；新项目评估时优先看 Ranger，存量 Sentry 链路重点关注长期维护与迁移路径。</p>
+<h2 id="1-6-容易踩的坑"><a href="#1-6-容易踩的坑" class="headerlink" title="1.6 容易踩的坑"></a>1.6 容易踩的坑</h2><ul>
+<li><strong>函数 jar 打包带重依赖</strong>：把 Hive、Hadoop 类打进 jar 会与服务端类冲突，依赖一律标 <code>provided</code>。</li>
+<li><strong>临时函数当公共函数用</strong>：会话断开后函数消失，下游调度任务报”函数不存在”；公共口径必须注册永久函数。</li>
+<li><strong>类名写错或 jar 没加进类路径</strong>：<code>CREATE FUNCTION</code> 报类找不到，先确认 <code>ADD JAR</code> 与 <code>USING JAR</code> 路径可达。</li>
+<li><strong>UDAF 中间结果类型设计失误</strong>：partial 与 final 阶段类型不一致，聚合结果出错且不易定位。</li>
+<li><strong>UDTF 脱离 LATERAL VIEW</strong>：直接写在 SELECT 列里会解析失败，必须配合 <code>LATERAL VIEW</code>。</li>
+<li><strong>权限只在入口挡一次</strong>：策略要覆盖库、表、列与分区层级，敏感列单独授权；审计日志要能回溯谁在什么时间查了哪张表。</li>
+</ul>
+<h2 id="1-7-官方资料"><a href="#1-7-官方资料" class="headerlink" title="1.7 官方资料"></a>1.7 官方资料</h2><ul>
+<li>LanguageManual UDF：<a target="_blank" rel="noopener" href="https://cwiki.apache.org/confluence/display/Hive/LanguageManual+UDF">https://cwiki.apache.org/confluence/display/Hive/LanguageManual+UDF</a></li>
+<li>自定义函数开发指南：<a target="_blank" rel="noopener" href="https://cwiki.apache.org/confluence/display/Hive/HivePlugins">https://cwiki.apache.org/confluence/display/Hive/HivePlugins</a></li>
+<li>Ranger 官方文档：<a target="_blank" rel="noopener" href="https://ranger.apache.org/">https://ranger.apache.org/</a></li>
+<li>Hive 授权说明：<a target="_blank" rel="noopener" href="https://cwiki.apache.org/confluence/display/Hive/LanguageManual+Authorization">https://cwiki.apache.org/confluence/display/Hive/LanguageManual+Authorization</a></li>
+</ul>
+<h2 id="1-8-清单"><a href="#1-8-清单" class="headerlink" title="1.8 清单"></a>1.8 清单</h2><ol>
+<li>自定义函数分三类：UDF 一行进一行出，UDAF 多行聚合成一行，UDTF 一行炸成多行</li>
+<li>UDF 继承 <code>GenericUDF</code>，实现 <code>initialize</code> 与 <code>evaluate</code>；依赖标 <code>provided</code>，避免 jar 冲突</li>
+<li>临时函数随会话失效用于调试，永久函数写入 Metastore 供团队复用；公共口径必须走永久函数</li>
+<li>UDAF 分部分聚合与最终聚合阶段，先定中间结果类型再实现评估器；UDTF 必须配合 <code>LATERAL VIEW</code></li>
+<li>权限治理上，Ranger 是主流集中策略平台，覆盖库表列级授权与审计；Sentry 为早期 RBAC 方案，新项目优先评估 Ranger</li>
+<li>权限策略要分层覆盖并留审计出口，敏感列单独授权，避免只靠口头管控</li>
+</ol>
+</div>
+
+  <div class="mb-foot">
+    <a href="/phone/">返回手机首页</a>
+    <a href="/phone/tags/">星迹索引</a>
+  </div>
+</div>
+
+
+<script>
+  /* 作用：懒加载本地 mermaid 库；无 mermaid 代码块时不加载 */
+  function loadLocalMermaid(){
+    return new Promise(function(resolve, reject){
+      if(window.mermaid) return resolve(window.mermaid);
+      var s = document.createElement('script');
+      s.src = '/js/third-party/mermaid/mermaid.min.js?v=10';
+      s.onload = function(){ resolve(window.mermaid); };
+      s.onerror = function(){ reject(new Error('mermaid local load failed')); };
+      document.head.appendChild(s);
+    });
+  }
+
+  /* 作用：把 ```mermaid 代码块替换成 SVG 图（手机端字号略小、图可横向滚动） */
+  async function renderMermaidDiagram(){
+    var blocks = document.querySelectorAll('pre[class*="language-mermaid"]');
+    if(!blocks.length) return;
+    var mermaid;
+    try { mermaid = await loadLocalMermaid(); }
+    catch(e){ console.warn('[mermaid] 本地库加载失败：', e); return; }
+
+    mermaid.initialize({
+      startOnLoad: false,
+      theme: 'base',
+      themeVariables: {
+        darkMode: true,
+        background: 'transparent',
+        fontFamily: '"Microsoft YaHei", "PingFang SC", "Segoe UI", sans-serif',
+        fontSize: '12px',
+        primaryColor: '#062f3d',
+        primaryTextColor: '#d6f6ff',
+        primaryBorderColor: '#00eeff',
+        secondaryColor: '#04222d',
+        tertiaryColor: '#04222d',
+        mainBkg: '#062f3d',
+        nodeBorder: '#00eeff',
+        clusterBkg: '#02161f',
+        clusterBorder: '#00eeff55',
+        lineColor: '#00eeff',
+        textColor: '#c0e8ff',
+        edgeLabelBackground: '#02161f'
+      },
+      flowchart: { curve: 'basis', useMaxWidth: false, htmlLabels: false, nodeSpacing: 30, rankSpacing: 40, padding: 10 }
+    });
+
+    var targets = [];
+    blocks.forEach(function(el){
+      var codeEl = el.querySelector('code');
+      if(!codeEl) return;
+      var div = document.createElement('div');
+      div.className = 'mermaid';
+      div.textContent = codeEl.textContent;
+      el.parentNode.replaceChild(div, el);
+      targets.push(div);
+    });
+    if(!targets.length) return;
+    try { await mermaid.run({ nodes: targets }); }
+    catch(e){ console.warn('[mermaid] 渲染失败：', e); }
+  }
+  /* 作用：多次触发兜底（延迟重试 + DOM 变化），防止某次时机没跑到导致图表留在代码块 */
+  var mmBusy = false;
+  function scheduleMermaid(){
+    if(mmBusy) return;
+    mmBusy = true;
+    renderMermaidDiagram().then(function(){ mmBusy = false; }, function(){ mmBusy = false; });
+  }
+  scheduleMermaid();
+  window.addEventListener('load', scheduleMermaid);
+  [1000, 3000, 8000].forEach(function(ms){ setTimeout(scheduleMermaid, ms); });
+  if(document.readyState !== 'loading') scheduleMermaid();
+  if(window.MutationObserver){
+    var mmTimer = null;
+    var mmObserver = new MutationObserver(function(){
+      clearTimeout(mmTimer);
+      mmTimer = setTimeout(scheduleMermaid, 400);
+    });
+    mmObserver.observe(document.querySelector('.mb-article') || document.body, { childList: true, subtree: true });
+  }
+</script>
+</body>
+</html>

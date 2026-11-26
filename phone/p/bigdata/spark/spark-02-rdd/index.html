@@ -1,0 +1,308 @@
+<!--
+  ============================================
+  手机端 · 文章原文页
+  文件：phone/post.njk
+  适用终端：手机端（路由 /phone/p/<slug>/，由 scripts/phone-routes.js 生成）
+  作用：手机阅读单篇文章；单列布局、无侧栏无雷达，替代电脑端 post.njk
+        数据由生成期算好：page.item = { title, dateStr, content, cats, tags }
+  样式依赖：source/css/theme/phone/common.css、source/css/theme/phone/list.css
+  组件依赖：phone/_components/Particles.njk
+  最后修改：2026-11-11
+  ============================================
+-->
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="color-scheme" content="dark">
+  <meta name="theme-color" content="#020817">
+  <!-- 首帧兜底：浏览器默认画布是白的，样式未解析前会闪一下白。这条规则先锁死深空底色 -->
+  <style>html{background-color:#020817}</style>
+  <title>Spark（二）RDD 与算子体系 - 时空秘境</title>
+  <!-- 手机端样式：基础 + 列表/正文，外链引入（源文件 source/css/theme/phone/） -->
+  <link rel="stylesheet" href="/css/theme/phone/common.css">
+  <link rel="stylesheet" href="/css/theme/phone/list.css">
+<meta name="generator" content="Hexo 8.1.2"></head>
+<body>
+<div class="mb-shell">
+  <!--
+  ============================================
+  手机端星空粒子组件
+  文件：Particles.njk
+  适用终端：手机端
+  作用：Particles.njk 的手机端副本（nunjucks 子目录 include 取不到上级）
+        参数与电脑端 _components/Particles.njk 保持一致：
+        粒子 95 / 连线 118px / opacity 0.32，外加星座层与零星闪烁层
+  最后修改：2026-11-12
+  ============================================
+--><!-- z-index 必须是 0：负层级会被 body 不透明背景盖住，粒子在跑却看不见 -->
+<div id="particles" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 0; pointer-events: none;"></div>
+<!-- 星座层（与首页同一套：随机零星散布星座图形 + 偶尔闪烁的小星） -->
+<div id="constellations" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 1; pointer-events: none;" aria-hidden="true"></div>
+<script src="/js/particles.min.js"></script>
+<script>
+particlesJS("particles", {
+  particles: {
+    number: {
+      value: 95,
+      density: {
+        enable: true,
+        value_area: 800
+      }
+    },
+    color: {
+      value: "#00eeff"
+    },
+    shape: {
+      type: "circle",
+      stroke: {
+        width: 0,
+        color: "#000000"
+      }
+    },
+    opacity: {
+      value: 0.6,
+      random: true,
+      anim: {
+        enable: true,
+        speed: 0.5,
+        opacity_min: 0.1,
+        sync: false
+      }
+    },
+    size: {
+      value: 3,
+      random: true,
+      anim: {
+        enable: true,
+        speed: 2,
+        size_min: 0.1,
+        sync: false
+      }
+    },
+    line_linked: {
+      enable: true,
+      distance: 118,
+      color: "#00eeff",
+      opacity: 0.32,
+      width: 1
+    },
+    move: {
+      enable: true,
+      speed: 0.8,
+      direction: "none",
+      random: true,
+      straight: false,
+      out_mode: "out",
+      bounce: false,
+      attract: {
+        enable: true,
+        rotateX: 600,
+        rotateY: 1200
+      }
+    }
+  },
+  interactivity: {
+    detect_on: "canvas",
+    events: {
+      onhover: {
+        enable: true,
+        mode: "grab"       // 手指按住时粒子聚集
+      },
+      onclick: {
+        enable: true,
+        mode: "push"       // 点击时产生新粒子
+      },
+      resize: true
+    },
+    modes: {
+      grab: {
+        distance: 200,
+        line_linked: {
+          opacity: 1
+        }
+      },
+      push: {
+        particles_nb: 6
+      }
+    }
+  },
+  retina_detect: true
+});
+</script>
+<!-- 星座 + 零星闪烁层：与电脑端共用同一份绘制脚本 -->
+<script src="/js/theme/home/starfield.js"></script>
+
+
+  <div class="mb-top">
+    <a class="mb-back" href="/phone/">← 返回手机首页</a>
+    <span class="mb-sub" style="margin:0">2023-05-31</span>
+  </div>
+
+  <h1 class="mb-title">Spark（二）RDD 与算子体系</h1>
+  <div class="mb-sub">
+    分类：bigdata · spark
+     ｜ 标签：Spark
+  </div>
+
+  <div class="mb-article"><div class="essay-banner essay-spark"></div>
+
+<h1 id="RDD-与算子体系"><a href="#RDD-与算子体系" class="headerlink" title="RDD 与算子体系"></a><strong>RDD 与算子体系</strong></h1><p>RDD（Resilient Distributed Dataset，弹性分布式数据集）是 Spark 最底层的抽象：一批被分区、可并行计算、出故障可重算的数据集合。理解 RDD 的关键不是记住接口，而是分清两件事——哪些算子只是”登记计划”，哪些算子会真正触发计算；以及一次算子链里哪里会发生 shuffle。这一篇把依赖、算子、缓存三件事串起来讲。</p>
+<p><img src="https://wu4yong.github.io/starry-images/assets/img/spark/spark-02-rdd.webp" alt="分区数据沿算子链分组汇聚，宽依赖处数据经过重分区后流向新的分区"></p>
+<p><em>分区数据沿算子链分组汇聚，宽依赖处数据经过重分区后流向新的分区</em></p>
+<h2 id="1-1-RDD-到底是什么"><a href="#1-1-RDD-到底是什么" class="headerlink" title="1.1 RDD 到底是什么"></a>1.1 RDD 到底是什么</h2><p>RDD 有四个特性，对应它名字里的四个词：</p>
+<div class="data-grid data-grid-link-table"><div class="grid-header"><div class="grid-cell">特性</div><div class="grid-cell">含义</div><div class="grid-cell">落地方式</div></div><div class="grid-row"><div class="grid-cell">分区（Distributed）</div><div class="grid-cell">数据被切成多个分片，分布在不同节点</div><div class="grid-cell">分区数决定 Task 并发度</div></div><div class="grid-row"><div class="grid-cell">弹性（Resilient）</div><div class="grid-cell">丢了能靠血缘（lineage）重算</div><div class="grid-cell">不依赖固定副本，沿依赖链重建</div></div><div class="grid-row"><div class="grid-cell">数据集</div><div class="grid-cell">每个元素是一条记录</div><div class="grid-cell">RDD 是记录的集合，不是单张表</div></div><div class="grid-row"><div class="grid-cell">不可变</div><div class="grid-cell">生成新 RDD，不修改老 RDD</div><div class="grid-cell">算子返回新 RDD，源 RDD 原样保留</div></div></div>
+
+<p>血缘（lineage）是 RDD 容错的核心：某个分区挂了，Driver 沿依赖关系找到父分区重新算一遍即可，不需要像复制副本那样提前存多份。代价是长血缘链一旦末端丢数据，重算成本会逐层放大，所以关键节点会做缓存或 checkpoint。</p>
+<h2 id="1-2-窄依赖与宽依赖"><a href="#1-2-窄依赖与宽依赖" class="headerlink" title="1.2 窄依赖与宽依赖"></a>1.2 窄依赖与宽依赖</h2><p>依赖描述”子分区怎么对应父分区”，是划分 Stage 和判断能不能流水线执行的依据：</p>
+<div class="data-grid data-grid-link-table"><div class="grid-header"><div class="grid-cell">类型</div><div class="grid-cell">分区对应</div><div class="grid-cell">是否 shuffle</div><div class="grid-cell">典型算子</div></div><div class="grid-row"><div class="grid-cell">窄依赖</div><div class="grid-cell">子分区只依赖一个父分区</div><div class="grid-cell">否</div><div class="grid-cell"><code>map</code>、<code>filter</code>、<code>union</code>、<code>mapPartitions</code></div></div><div class="grid-row"><div class="grid-cell">宽依赖</div><div class="grid-cell">子分区依赖父 RDD 多个分区</div><div class="grid-cell">是</div><div class="grid-cell"><code>groupByKey</code>、<code>reduceByKey</code>、<code>join</code>、<code>repartition</code></div></div></div>
+
+<p>窄依赖下，同一父分区的数据可以在一个线程里把 <code>filter</code>、<code>map</code> 串着跑完，中间不落盘；宽依赖下，同 key 的数据要从上游各分区拉到一起，必须经过网络传输和分区重写，也就是 shuffle。判断算子是窄是宽，先问一句：<strong>子分区是否要跨多个父分区取数</strong>。</p>
+<h2 id="1-3-transformation-与-action"><a href="#1-3-transformation-与-action" class="headerlink" title="1.3 transformation 与 action"></a>1.3 transformation 与 action</h2><p>算子分两类，区别在于是否触发一个 Job：</p>
+<div class="data-grid data-grid-link-table"><div class="grid-header"><div class="grid-cell">类别</div><div class="grid-cell">行为</div><div class="grid-cell">是否触发计算</div><div class="grid-cell">代表算子</div></div><div class="grid-row"><div class="grid-cell">transformation</div><div class="grid-cell">返回新 RDD，只登记计划</div><div class="grid-cell">否，惰性求值</div><div class="grid-cell"><code>map</code>、<code>filter</code>、<code>flatMap</code>、<code>reduceByKey</code>、<code>join</code></div></div><div class="grid-row"><div class="grid-cell">action</div><div class="grid-cell">把结果算出来并返回驱动端或写出</div><div class="grid-cell">是，生成 Job</div><div class="grid-cell"><code>count</code>、<code>collect</code>、<code>take</code>、<code>saveAsTextFile</code>、<code>foreach</code></div></div></div>
+
+<p>惰性求值的好处是 Driver 可以看到完整算子链再做优化：合并相邻窄依赖、裁剪不必要的列、判断哪些分区可以跳过。坏处是调试时容易误判——加了一行 <code>map</code> 不代表真的跑了，日志里看不到任何动作是正常的，必须等 action 出现。</p>
+<h2 id="1-4-shuffle-发生在哪、代价是什么"><a href="#1-4-shuffle-发生在哪、代价是什么" class="headerlink" title="1.4 shuffle 发生在哪、代价是什么"></a>1.4 shuffle 发生在哪、代价是什么</h2><p>宽依赖算子执行时，上游每个分区按 key 的哈希（或分区器规则）把数据写入本地磁盘文件，下游分区再把属于自己的文件拉过来聚合。代价集中在三处：</p>
+<ul>
+<li>网络：上游到下游按分区批量传输，shuffle 数据量直接决定作业时长</li>
+<li>磁盘：map 端先落盘，reduce 端再读回，多一轮磁盘读写</li>
+<li>排序与归并：分组聚合前需要按 key 排序或归并</li>
+</ul>
+<p>同一个业务需求，算子选法不同 shuffle 量差别很大：<code>reduceByKey</code> 在 map 端先做本地聚合（combiner）再 shuffle，<code>groupByKey</code> 则把全量记录都拉到下游，热点场景下 <code>groupByKey</code> 容易把 reduce 端压垮。</p>
+<p>shuffle 过程中上游分区的输出会按分区器规则写成数据文件，下游拉取时按分区编号对应；分区器（Partitioner）决定 key 落到哪个分区，默认哈希分区，按 key 哈希值对分区数取模。</p>
+<h2 id="1-5-缓存：cache-与-persist"><a href="#1-5-缓存：cache-与-persist" class="headerlink" title="1.5 缓存：cache 与 persist"></a>1.5 缓存：cache 与 persist</h2><p>反复使用的 RDD 不缓存，每次 action 都会从头重算血缘。Spark 提供两个方法控制存储级别：</p>
+<div class="data-grid data-grid-link-table"><div class="grid-header"><div class="grid-cell">存储级别</div><div class="grid-cell">内存</div><div class="grid-cell">磁盘</div><div class="grid-cell">说明</div></div><div class="grid-row"><div class="grid-cell"><code>MEMORY_ONLY</code></div><div class="grid-cell">是</div><div class="grid-cell">否</div><div class="grid-cell">纯内存，放不下的分区下次用时重算，RDD 默认级别</div></div><div class="grid-row"><div class="grid-cell"><code>MEMORY_ONLY_SER</code></div><div class="grid-cell">是（序列化后）</div><div class="grid-cell">否</div><div class="grid-cell">存序列化字节，省空间，读时要反序列化</div></div><div class="grid-row"><div class="grid-cell"><code>MEMORY_AND_DISK</code></div><div class="grid-cell">是</div><div class="grid-cell">是</div><div class="grid-cell">内存放不下溢写磁盘，丢了不必从头算</div></div><div class="grid-row"><div class="grid-cell"><code>MEMORY_AND_DISK_SER</code></div><div class="grid-cell">是（序列化）</div><div class="grid-cell">是</div><div class="grid-cell">序列化版本，空间最省，CPU 开销略高</div></div><div class="grid-row"><div class="grid-cell"><code>DISK_ONLY</code></div><div class="grid-cell">否</div><div class="grid-cell">是</div><div class="grid-cell">只落磁盘，适合数据量明显超内存的场景</div></div></div>
+
+<p><code>cache()</code> 等价于 <code>persist(MEMORY_ONLY)</code>。缓存是<strong>惰性</strong>的：调用 <code>persist</code> 本身不存数据，第一次 action 跑完后块才留在 Executor 内存里。缓存不主动释放，应用结束才回收，长期运行的作业要注意用 <code>unpersist()</code> 清掉不再需要的缓存。</p>
+<p>还要区分缓存与 checkpoint：缓存靠血缘重建，适合反复读取的中间结果；checkpoint 把数据真正写到可靠存储（HDFS），切断血缘，适合链路太长、重算成本高的场景。两者解决的是不同问题，不能互相替代。</p>
+<h2 id="1-6-一段可对照阅读的示例"><a href="#1-6-一段可对照阅读的示例" class="headerlink" title="1.6 一段可对照阅读的示例"></a>1.6 一段可对照阅读的示例</h2><pre class="line-numbers language-scala" data-language="scala"><code class="language-scala"><span class="token keyword">val</span> spark <span class="token operator">=</span> SparkSession<span class="token punctuation">.</span>builder<span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">.</span>master<span class="token punctuation">(</span><span class="token string">"local[*]"</span><span class="token punctuation">)</span><span class="token punctuation">.</span>appName<span class="token punctuation">(</span><span class="token string">"rdd-demo"</span><span class="token punctuation">)</span><span class="token punctuation">.</span>getOrCreate<span class="token punctuation">(</span><span class="token punctuation">)</span>
+<span class="token keyword">val</span> sc <span class="token operator">=</span> spark<span class="token punctuation">.</span>sparkContext
+
+<span class="token keyword">val</span> raw <span class="token operator">=</span> sc<span class="token punctuation">.</span>textFile<span class="token punctuation">(</span><span class="token string">"hdfs:///data/access.log"</span><span class="token punctuation">)</span>
+
+<span class="token comment">// 窄依赖链：切分、过滤，同一分区内流水线执行</span>
+<span class="token keyword">val</span> parsed <span class="token operator">=</span> raw<span class="token punctuation">.</span>map<span class="token punctuation">(</span>line <span class="token keyword">=></span> line<span class="token punctuation">.</span>split<span class="token punctuation">(</span><span class="token string">"\\s+"</span><span class="token punctuation">)</span><span class="token punctuation">)</span>
+  <span class="token punctuation">.</span>filter<span class="token punctuation">(</span>arr <span class="token keyword">=></span> arr<span class="token punctuation">.</span>length <span class="token operator">>=</span> <span class="token number">8</span><span class="token punctuation">)</span>
+  <span class="token punctuation">.</span>map<span class="token punctuation">(</span>arr <span class="token keyword">=></span> <span class="token punctuation">(</span>arr<span class="token punctuation">(</span><span class="token number">0</span><span class="token punctuation">)</span><span class="token punctuation">,</span> arr<span class="token punctuation">(</span><span class="token number">7</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">)</span>
+
+<span class="token comment">// 宽依赖：按首列分组聚合，触发一次 shuffle</span>
+<span class="token keyword">val</span> summary <span class="token operator">=</span> parsed<span class="token punctuation">.</span>reduceByKey<span class="token punctuation">(</span><span class="token punctuation">(</span>a<span class="token punctuation">,</span> b<span class="token punctuation">)</span> <span class="token keyword">=></span> a <span class="token operator">+</span> b<span class="token punctuation">)</span>
+
+summary<span class="token punctuation">.</span>persist<span class="token punctuation">(</span>org<span class="token punctuation">.</span>apache<span class="token punctuation">.</span>spark<span class="token punctuation">.</span>storage<span class="token punctuation">.</span>StorageLevel<span class="token punctuation">.</span>MEMORY_AND_DISK_SER<span class="token punctuation">)</span>
+println<span class="token punctuation">(</span>summary<span class="token punctuation">.</span>count<span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span>   <span class="token comment">// action，触发 Job；缓存块在这一轮之后落位</span>
+summary<span class="token punctuation">.</span>take<span class="token punctuation">(</span><span class="token number">5</span><span class="token punctuation">)</span><span class="token punctuation">.</span>foreach<span class="token punctuation">(</span>println<span class="token punctuation">)</span>
+
+sc<span class="token punctuation">.</span>stop<span class="token punctuation">(</span><span class="token punctuation">)</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<h2 id="1-7-容易踩的坑"><a href="#1-7-容易踩的坑" class="headerlink" title="1.7 容易踩的坑"></a>1.7 容易踩的坑</h2><ul>
+<li>把 <code>count()</code>、<code>collect()</code> 当成 transformation 反复调，一个算子链被触发成多个 Job，重算血缘</li>
+<li>用 <code>groupByKey</code> 做聚合，map 端没有 combiner，数据倾斜时 reduce 端内存爆掉</li>
+<li>缓存级别选 <code>MEMORY_ONLY</code>，内存不足后被驱逐，下次 action 又从头重算，作业表现为”忽快忽慢”</li>
+<li>以为 <code>persist</code> 调用当下就把数据存好，在第一次 action 之前就去估算缓存大小</li>
+<li>缓存大对象用未序列化方式，Java 对象头和引用占掉大半内存，实际能存的记录远少于预期</li>
+</ul>
+<h2 id="1-8-官方资料"><a href="#1-8-官方资料" class="headerlink" title="1.8 官方资料"></a>1.8 官方资料</h2><ul>
+<li>RDD 编程指南：<a target="_blank" rel="noopener" href="https://spark.apache.org/docs/latest/rdd-programming-guide.html">https://spark.apache.org/docs/latest/rdd-programming-guide.html</a></li>
+<li>RDD API 文档：<a target="_blank" rel="noopener" href="https://spark.apache.org/docs/latest/api/scala/org/apache/spark/rdd/RDD.html">https://spark.apache.org/docs/latest/api/scala/org/apache/spark/rdd/RDD.html</a></li>
+<li>作业调度概览：<a target="_blank" rel="noopener" href="https://spark.apache.org/docs/latest/job-scheduling.html">https://spark.apache.org/docs/latest/job-scheduling.html</a></li>
+<li>Spark 配置说明：<a target="_blank" rel="noopener" href="https://spark.apache.org/docs/latest/configuration.html">https://spark.apache.org/docs/latest/configuration.html</a></li>
+</ul>
+<h2 id="1-9-清单"><a href="#1-9-清单" class="headerlink" title="1.9 清单"></a>1.9 清单</h2><ol>
+<li>RDD &#x3D; 分区、弹性（血缘重算）、记录集合、不可变，容错靠 lineage 不靠多副本</li>
+<li>窄依赖不 shuffle，可流水线；宽依赖必 shuffle，天然是 Stage 边界</li>
+<li>transformation 只登记计划，action 才触发 Job；调试时先找 action 在哪</li>
+<li>shuffle 代价在网络、磁盘、排序三处，优先用带 combiner 的聚合算子</li>
+<li><code>cache()</code> 即 <code>persist(MEMORY_ONLY)</code>，缓存惰性落位，用完记得 <code>unpersist</code></li>
+<li>序列化存储级别省空间但吃 CPU，纯内存级别放不下就会被驱逐重算</li>
+</ol>
+</div>
+
+  <div class="mb-foot">
+    <a href="/phone/">返回手机首页</a>
+    <a href="/phone/tags/">星迹索引</a>
+  </div>
+</div>
+
+
+<script>
+  /* 作用：懒加载本地 mermaid 库；无 mermaid 代码块时不加载 */
+  function loadLocalMermaid(){
+    return new Promise(function(resolve, reject){
+      if(window.mermaid) return resolve(window.mermaid);
+      var s = document.createElement('script');
+      s.src = '/js/third-party/mermaid/mermaid.min.js?v=10';
+      s.onload = function(){ resolve(window.mermaid); };
+      s.onerror = function(){ reject(new Error('mermaid local load failed')); };
+      document.head.appendChild(s);
+    });
+  }
+
+  /* 作用：把 ```mermaid 代码块替换成 SVG 图（手机端字号略小、图可横向滚动） */
+  async function renderMermaidDiagram(){
+    var blocks = document.querySelectorAll('pre[class*="language-mermaid"]');
+    if(!blocks.length) return;
+    var mermaid;
+    try { mermaid = await loadLocalMermaid(); }
+    catch(e){ console.warn('[mermaid] 本地库加载失败：', e); return; }
+
+    mermaid.initialize({
+      startOnLoad: false,
+      theme: 'base',
+      themeVariables: {
+        darkMode: true,
+        background: 'transparent',
+        fontFamily: '"Microsoft YaHei", "PingFang SC", "Segoe UI", sans-serif',
+        fontSize: '12px',
+        primaryColor: '#062f3d',
+        primaryTextColor: '#d6f6ff',
+        primaryBorderColor: '#00eeff',
+        secondaryColor: '#04222d',
+        tertiaryColor: '#04222d',
+        mainBkg: '#062f3d',
+        nodeBorder: '#00eeff',
+        clusterBkg: '#02161f',
+        clusterBorder: '#00eeff55',
+        lineColor: '#00eeff',
+        textColor: '#c0e8ff',
+        edgeLabelBackground: '#02161f'
+      },
+      flowchart: { curve: 'basis', useMaxWidth: false, htmlLabels: false, nodeSpacing: 30, rankSpacing: 40, padding: 10 }
+    });
+
+    var targets = [];
+    blocks.forEach(function(el){
+      var codeEl = el.querySelector('code');
+      if(!codeEl) return;
+      var div = document.createElement('div');
+      div.className = 'mermaid';
+      div.textContent = codeEl.textContent;
+      el.parentNode.replaceChild(div, el);
+      targets.push(div);
+    });
+    if(!targets.length) return;
+    try { await mermaid.run({ nodes: targets }); }
+    catch(e){ console.warn('[mermaid] 渲染失败：', e); }
+  }
+  /* 作用：多次触发兜底（延迟重试 + DOM 变化），防止某次时机没跑到导致图表留在代码块 */
+  var mmBusy = false;
+  function scheduleMermaid(){
+    if(mmBusy) return;
+    mmBusy = true;
+    renderMermaidDiagram().then(function(){ mmBusy = false; }, function(){ mmBusy = false; });
+  }
+  scheduleMermaid();
+  window.addEventListener('load', scheduleMermaid);
+  [1000, 3000, 8000].forEach(function(ms){ setTimeout(scheduleMermaid, ms); });
+  if(document.readyState !== 'loading') scheduleMermaid();
+  if(window.MutationObserver){
+    var mmTimer = null;
+    var mmObserver = new MutationObserver(function(){
+      clearTimeout(mmTimer);
+      mmTimer = setTimeout(scheduleMermaid, 400);
+    });
+    mmObserver.observe(document.querySelector('.mb-article') || document.body, { childList: true, subtree: true });
+  }
+</script>
+</body>
+</html>

@@ -1,0 +1,319 @@
+<!--
+  ============================================
+  手机端 · 文章原文页
+  文件：phone/post.njk
+  适用终端：手机端（路由 /phone/p/<slug>/，由 scripts/phone-routes.js 生成）
+  作用：手机阅读单篇文章；单列布局、无侧栏无雷达，替代电脑端 post.njk
+        数据由生成期算好：page.item = { title, dateStr, content, cats, tags }
+  样式依赖：source/css/theme/phone/common.css、source/css/theme/phone/list.css
+  组件依赖：phone/_components/Particles.njk
+  最后修改：2026-11-11
+  ============================================
+-->
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="color-scheme" content="dark">
+  <meta name="theme-color" content="#020817">
+  <!-- 首帧兜底：浏览器默认画布是白的，样式未解析前会闪一下白。这条规则先锁死深空底色 -->
+  <style>html{background-color:#020817}</style>
+  <title>ES09-中文分析的方案取舍 - 时空秘境</title>
+  <!-- 手机端样式：基础 + 列表/正文，外链引入（源文件 source/css/theme/phone/） -->
+  <link rel="stylesheet" href="/css/theme/phone/common.css">
+  <link rel="stylesheet" href="/css/theme/phone/list.css">
+<meta name="generator" content="Hexo 8.1.2"></head>
+<body>
+<div class="mb-shell">
+  <!--
+  ============================================
+  手机端星空粒子组件
+  文件：Particles.njk
+  适用终端：手机端
+  作用：Particles.njk 的手机端副本（nunjucks 子目录 include 取不到上级）
+        参数与电脑端 _components/Particles.njk 保持一致：
+        粒子 95 / 连线 118px / opacity 0.32，外加星座层与零星闪烁层
+  最后修改：2026-11-12
+  ============================================
+--><!-- z-index 必须是 0：负层级会被 body 不透明背景盖住，粒子在跑却看不见 -->
+<div id="particles" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 0; pointer-events: none;"></div>
+<!-- 星座层（与首页同一套：随机零星散布星座图形 + 偶尔闪烁的小星） -->
+<div id="constellations" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 1; pointer-events: none;" aria-hidden="true"></div>
+<script src="/js/particles.min.js"></script>
+<script>
+particlesJS("particles", {
+  particles: {
+    number: {
+      value: 95,
+      density: {
+        enable: true,
+        value_area: 800
+      }
+    },
+    color: {
+      value: "#00eeff"
+    },
+    shape: {
+      type: "circle",
+      stroke: {
+        width: 0,
+        color: "#000000"
+      }
+    },
+    opacity: {
+      value: 0.6,
+      random: true,
+      anim: {
+        enable: true,
+        speed: 0.5,
+        opacity_min: 0.1,
+        sync: false
+      }
+    },
+    size: {
+      value: 3,
+      random: true,
+      anim: {
+        enable: true,
+        speed: 2,
+        size_min: 0.1,
+        sync: false
+      }
+    },
+    line_linked: {
+      enable: true,
+      distance: 118,
+      color: "#00eeff",
+      opacity: 0.32,
+      width: 1
+    },
+    move: {
+      enable: true,
+      speed: 0.8,
+      direction: "none",
+      random: true,
+      straight: false,
+      out_mode: "out",
+      bounce: false,
+      attract: {
+        enable: true,
+        rotateX: 600,
+        rotateY: 1200
+      }
+    }
+  },
+  interactivity: {
+    detect_on: "canvas",
+    events: {
+      onhover: {
+        enable: true,
+        mode: "grab"       // 手指按住时粒子聚集
+      },
+      onclick: {
+        enable: true,
+        mode: "push"       // 点击时产生新粒子
+      },
+      resize: true
+    },
+    modes: {
+      grab: {
+        distance: 200,
+        line_linked: {
+          opacity: 1
+        }
+      },
+      push: {
+        particles_nb: 6
+      }
+    }
+  },
+  retina_detect: true
+});
+</script>
+<!-- 星座 + 零星闪烁层：与电脑端共用同一份绘制脚本 -->
+<script src="/js/theme/home/starfield.js"></script>
+
+
+  <div class="mb-top">
+    <a class="mb-back" href="/phone/">← 返回手机首页</a>
+    <span class="mb-sub" style="margin:0">2023-10-20</span>
+  </div>
+
+  <h1 class="mb-title">ES09-中文分析的方案取舍</h1>
+  <div class="mb-sub">
+    分类：bigdata · elasticsearch
+     ｜ 标签：Elasticsearch · 系统课 · 中文分词
+  </div>
+
+  <div class="mb-article"><div class="essay-banner essay-elasticsearch"></div>
+
+<h1 id="中文分析：官方插件的边界与第三方分词的取舍"><a href="#中文分析：官方插件的边界与第三方分词的取舍" class="headerlink" title="中文分析：官方插件的边界与第三方分词的取舍"></a>中文分析：官方插件的边界与第三方分词的取舍</h1><p>中文是 Elasticsearch 上最容易「看起来能用、实际不好用」的一块。</p>
+<p>默认 <code>standard</code> 分析器会把中文切成<strong>单字</strong>，于是「系统课」变成「系」「统」「课」三个词条——查得到，但召回和精度都糟糕。这一讲把官方给出的中文方案说清，并把第三方插件的边界划出来。</p>
+<p><img src="https://wu4yong.github.io/starry-images/assets/img/elasticsearch/es-09-chinese-analysis.svg" alt="同一句中文在 standard、smartcn、ik 三种分词下的切分结果"></p>
+<p><em>同一句中文的三种切分：官方内置分析器不含中文分词器，中文业务需要 smartcn &#x2F; ICU 或第三方方案｜依据 Elasticsearch 官方文档 8.17 自绘</em></p>
+<h2 id="一、学习目标"><a href="#一、学习目标" class="headerlink" title="一、学习目标"></a>一、学习目标</h2><ol>
+<li>说清为什么 <code>standard</code> 对中文是单字切分，以及它的后果；</li>
+<li>列出官方提供中文能力的两个插件，并说清各自定位；</li>
+<li>明确第三方分词（如 ik）在「官方依据」上的位置——它是社区插件，不在官方支持范围；</li>
+<li>会装插件、验证切词效果、并给出选型结论。</li>
+</ol>
+<h2 id="二、前置知识"><a href="#二、前置知识" class="headerlink" title="二、前置知识"></a>二、前置知识</h2><div class="data-grid data-grid-link-table"><div class="grid-header"><div class="grid-cell">需要掌握</div><div class="grid-cell">到什么程度</div><div class="grid-cell">出处</div></div><div class="grid-row"><div class="grid-cell">分析器三段式</div><div class="grid-cell">知道 tokenizer 只能有一个</div><div class="grid-cell">M2-3</div></div><div class="grid-row"><div class="grid-cell">text vs keyword</div><div class="grid-cell">知道只有 text 分词</div><div class="grid-cell">M2-2</div></div><div class="grid-row"><div class="grid-cell"><code>_analyze</code></div><div class="grid-cell">会用它验证切词</div><div class="grid-cell">M2-3</div></div></div>
+
+<h2 id="三、理论讲解：官方的两个中文插件"><a href="#三、理论讲解：官方的两个中文插件" class="headerlink" title="三、理论讲解：官方的两个中文插件"></a>三、理论讲解：官方的两个中文插件</h2><p>Elastic 官方维护的中文相关分析插件有两个：</p>
+<div class="data-grid data-grid-link-table"><div class="grid-header"><div class="grid-cell">插件</div><div class="grid-cell">提供的能力</div><div class="grid-cell">官方定位</div><div class="grid-cell">局限</div></div><div class="grid-row"><div class="grid-cell"><code>analysis-smartcn</code></div><div class="grid-cell">Smart Chinese 分析器与分词器</div><div class="grid-cell">官方维护，开箱即用</div><div class="grid-cell">词典固定，领域新词覆盖有限</div></div><div class="grid-row"><div class="grid-cell"><code>analysis-icu</code></div><div class="grid-cell">基于 ICU 的 tokenizer 与 analyzer，含 Unicode 归一化、折叠</div><div class="grid-cell">官方维护，跨语言通用</div><div class="grid-cell">配置项多，中文并非其唯一目标</div></div></div>
+
+<p>它们都<strong>不在默认发行包里</strong>，需要按官方插件方式安装，且<strong>版本必须与 ES 完全一致</strong>（官方对插件的硬要求，版本错位会直接起不来）。</p>
+<p>对比三者的实际切分（同一句「时空秘境系统课程」）：</p>
+<div class="data-grid data-grid-link-table"><div class="grid-header"><div class="grid-cell">方案</div><div class="grid-cell">切分结果（示意）</div><div class="grid-cell">召回</div><div class="grid-cell">精度</div><div class="grid-cell">是否官方</div></div><div class="grid-row"><div class="grid-cell"><code>standard</code></div><div class="grid-cell">时 &#x2F; 空 &#x2F; 秘 &#x2F; 境 &#x2F; 系 &#x2F; 统 &#x2F; 课 &#x2F; 程</div><div class="grid-cell">高</div><div class="grid-cell">低</div><div class="grid-cell">是（内置）</div></div><div class="grid-row"><div class="grid-cell"><code>smartcn</code></div><div class="grid-cell">时空 &#x2F; 秘境 &#x2F; 系统 &#x2F; 课程</div><div class="grid-cell">中</div><div class="grid-cell">中</div><div class="grid-cell">是（插件）</div></div><div class="grid-row"><div class="grid-cell"><code>icu_analyzer</code></div><div class="grid-cell">依赖 ICU 词典，通常接近词组切分</div><div class="grid-cell">中</div><div class="grid-cell">中</div><div class="grid-cell">是（插件）</div></div><div class="grid-row"><div class="grid-cell"><code>ik</code>（第三方）</div><div class="grid-cell"><code>ik_smart</code> 粗粒度 &#x2F; <code>ik_max_word</code> 细粒度</div><div class="grid-cell">高</div><div class="grid-cell">高（配词典）</div><div class="grid-cell"><strong>否</strong></div></div></div>
+
+<p>关于 ik 要说清楚：它是社区插件，<strong>官方文档没有覆盖</strong>。这不代表不能用（很多生产系统在用），但它带来两个额外责任：版本兼容自行验证、词典与分词效果自行负责。写作规则里「官方唯一权威」，指的就是这类边界必须标注。</p>
+<h2 id="四、原理拆解：为什么单字切分会拖垮检索质量"><a href="#四、原理拆解：为什么单字切分会拖垮检索质量" class="headerlink" title="四、原理拆解：为什么单字切分会拖垮检索质量"></a>四、原理拆解：为什么单字切分会拖垮检索质量</h2><p>倒排表里如果是单字，那么：</p>
+<ol>
+<li><strong>召回爆炸</strong>：搜「课程」会命中所有含「课」或「程」的文档；</li>
+<li><strong>打分失真</strong>：BM25 认为「课」这个单字很常见，于是相关性被稀释；</li>
+<li><strong>短语查询代价高</strong>：要表达「系统课」必须用 <code>match_phrase</code> 并依赖位置信息。</li>
+</ol>
+<p>按词切分则相反：词条更具体，<code>match</code> 的精度自然上来，代价是词典覆盖不到的新词会「查不到」（比如产品型号、网络新词）。这就是中文分词的经典取舍：<strong>召回与精度不可兼得，只能调平衡</strong>。</p>
+<h2 id="五、场景说明"><a href="#五、场景说明" class="headerlink" title="五、场景说明"></a>五、场景说明</h2><div class="data-grid data-grid-link-table"><div class="grid-header"><div class="grid-cell">场景</div><div class="grid-cell">建议</div><div class="grid-cell">理由</div></div><div class="grid-row"><div class="grid-cell">通用中文站内搜索，先跑起来</div><div class="grid-cell"><code>smartcn</code></div><div class="grid-cell">官方插件、零词典维护</div></div><div class="grid-row"><div class="grid-cell">多语言混合（中&#x2F;日&#x2F;韩&#x2F;英）</div><div class="grid-cell"><code>analysis-icu</code></div><div class="grid-cell">一套 tokenizer 覆盖多语种</div></div><div class="grid-row"><div class="grid-cell">行业术语密集（医疗、法律、电商型号）</div><div class="grid-cell">第三方词典分词（如 ik）+ 自维护词典</div><div class="grid-cell">官方插件词典覆盖不到行业新词</div></div><div class="grid-row"><div class="grid-cell">精确匹配类字段（编码、型号）</div><div class="grid-cell">用 <code>keyword</code>，不参与分词</div><div class="grid-cell">分词只会帮倒忙</div></div></div>
+
+<h2 id="六、实操：装插件、验切词、配字段"><a href="#六、实操：装插件、验切词、配字段" class="headerlink" title="六、实操：装插件、验切词、配字段"></a>六、实操：装插件、验切词、配字段</h2><pre class="line-numbers language-bash" data-language="bash"><code class="language-bash"><span class="token comment"># 1) 安装官方插件（容器环境；版本必须与 ES 一致）</span>
+<span class="token function">docker</span> <span class="token builtin class-name">exec</span> <span class="token parameter variable">-it</span> es01 bin/elasticsearch-plugin <span class="token function">install</span> analysis-smartcn
+<span class="token function">docker</span> restart es01
+
+<span class="token comment"># 2) 验证切分</span>
+<span class="token function">curl</span> <span class="token parameter variable">-s</span> <span class="token parameter variable">-X</span> POST <span class="token string">"http://localhost:9200/_analyze"</span> <span class="token parameter variable">-H</span> <span class="token string">'Content-Type: application/json'</span> <span class="token parameter variable">-d</span> <span class="token string">'
+&#123; "analyzer": "smartcn", "text": "时空秘境系统课程" &#125;'</span>
+
+<span class="token comment"># 3) 建索引并挂到字段（索引级定义，字段引用）</span>
+<span class="token function">curl</span> <span class="token parameter variable">-X</span> PUT <span class="token string">"http://localhost:9200/zh_docs"</span> <span class="token parameter variable">-H</span> <span class="token string">'Content-Type: application/json'</span> <span class="token parameter variable">-d</span> <span class="token string">'
+&#123; "settings": &#123; "analysis": &#123;
+    "analyzer": &#123; "zh": &#123; "type": "custom", "tokenizer": "smartcn_tokenizer",
+                          "filter": ["lowercase"] &#125; &#125; &#125; &#125;,
+  "mappings": &#123; "properties": &#123;
+    "title":   &#123; "type": "text", "analyzer": "zh" &#125;,
+    "content": &#123; "type": "text", "analyzer": "zh" &#125;,
+    "code":    &#123; "type": "keyword" &#125; &#125; &#125; &#125;'</span>
+
+<span class="token comment"># 4) 对比：同一句在 standard 与 zh 下的切分差异</span>
+<span class="token function">curl</span> <span class="token parameter variable">-s</span> <span class="token parameter variable">-X</span> POST <span class="token string">"http://localhost:9200/zh_docs/_analyze"</span> <span class="token parameter variable">-H</span> <span class="token string">'Content-Type: application/json'</span> <span class="token parameter variable">-d</span> <span class="token string">'
+&#123; "field": "title", "text": "时空秘境系统课程" &#125;'</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<p>第 4 步做完你会直观看到词条数量从 8 个降到 4 个左右——这就是召回收窄、精度提升的来源。</p>
+<h2 id="七、常见坑"><a href="#七、常见坑" class="headerlink" title="七、常见坑"></a>七、常见坑</h2><ol>
+<li><strong>以为默认就支持中文分词</strong>：<code>standard</code> 是单字切，官方从不承诺中文词级切分。</li>
+<li><strong>插件版本与 ES 不一致</strong>：官方要求严格对齐，错位会启动失败。</li>
+<li><strong>给 <code>keyword</code> 字段配中文分析器</strong>：<code>keyword</code> 不分词，配了也不生效。</li>
+<li><strong>混用不同分析器写读</strong>：写入 <code>smartcn</code>、检索 <code>standard</code>，词条对不上，必然漏搜。</li>
+<li><strong>把第三方插件当官方能力引用</strong>：文档、培训材料里必须标注来源，否则出问题无人背书。</li>
+<li><strong>词典不更新</strong>：行业新词半年不补，搜索质量会明显下滑。</li>
+</ol>
+<h2 id="八、课后小结"><a href="#八、课后小结" class="headerlink" title="八、课后小结"></a>八、课后小结</h2><ol>
+<li><code>standard</code> 对中文是单字切分，召回高、精度低。</li>
+<li>官方中文能力来自 <code>analysis-smartcn</code> 与 <code>analysis-icu</code> 两个插件，需手动安装且版本严格对齐。</li>
+<li>第三方分词（ik 等）可用，但不在官方支持范围，需自行验证兼容与效果。</li>
+<li>写入与检索必须用同一分析器。</li>
+<li>精确匹配字段一律 <code>keyword</code>。</li>
+</ol>
+<h2 id="九、思考题"><a href="#九、思考题" class="headerlink" title="九、思考题"></a>九、思考题</h2><ol>
+<li>用户反馈「搜『课程』出来一堆含『课』的文章」，你会先改分析器还是先改查询？为什么？</li>
+<li>一个中英混排的技术文档库，你会选 <code>smartcn</code> 还是 <code>icu</code>？给出判断依据与验证方法。</li>
+<li>引入第三方分词后，如何证明「效果确实更好」？设计一个可复现的评测办法。</li>
+</ol>
+<h2 id="十、官方资料"><a href="#十、官方资料" class="headerlink" title="十、官方资料"></a>十、官方资料</h2><ul>
+<li>Analysis 插件清单（含 smartcn、icu）：<a target="_blank" rel="noopener" href="https://www.elastic.co/guide/en/elasticsearch/plugins/current/analysis.html">https://www.elastic.co/guide/en/elasticsearch/plugins/current/analysis.html</a></li>
+<li>Smart Chinese 插件：<a target="_blank" rel="noopener" href="https://www.elastic.co/guide/en/elasticsearch/plugins/current/analysis-smartcn.html">https://www.elastic.co/guide/en/elasticsearch/plugins/current/analysis-smartcn.html</a></li>
+<li>ICU 插件：<a target="_blank" rel="noopener" href="https://www.elastic.co/guide/en/elasticsearch/plugins/current/analysis-icu.html">https://www.elastic.co/guide/en/elasticsearch/plugins/current/analysis-icu.html</a></li>
+<li>插件安装与版本要求：<a target="_blank" rel="noopener" href="https://www.elastic.co/guide/en/elasticsearch/plugins/current/plugin-management.html">https://www.elastic.co/guide/en/elasticsearch/plugins/current/plugin-management.html</a></li>
+</ul>
+<p>上一篇：<a href="/2023/10/17/bigdata/elasticsearch/es-08-analyzers/">M2-3 分析器三段式</a> ｜ 下一篇：<a href="/2023/10/23/bigdata/elasticsearch/es-10-explicit-mapping/">M2-5 显式 mapping 写法</a> ｜ <a href="/2023/09/22/bigdata/elasticsearch/es-00-series-index/">总目录</a></p>
+</div>
+
+  <div class="mb-foot">
+    <a href="/phone/">返回手机首页</a>
+    <a href="/phone/tags/">星迹索引</a>
+  </div>
+</div>
+
+
+<script>
+  /* 作用：懒加载本地 mermaid 库；无 mermaid 代码块时不加载 */
+  function loadLocalMermaid(){
+    return new Promise(function(resolve, reject){
+      if(window.mermaid) return resolve(window.mermaid);
+      var s = document.createElement('script');
+      s.src = '/js/third-party/mermaid/mermaid.min.js?v=10';
+      s.onload = function(){ resolve(window.mermaid); };
+      s.onerror = function(){ reject(new Error('mermaid local load failed')); };
+      document.head.appendChild(s);
+    });
+  }
+
+  /* 作用：把 ```mermaid 代码块替换成 SVG 图（手机端字号略小、图可横向滚动） */
+  async function renderMermaidDiagram(){
+    var blocks = document.querySelectorAll('pre[class*="language-mermaid"]');
+    if(!blocks.length) return;
+    var mermaid;
+    try { mermaid = await loadLocalMermaid(); }
+    catch(e){ console.warn('[mermaid] 本地库加载失败：', e); return; }
+
+    mermaid.initialize({
+      startOnLoad: false,
+      theme: 'base',
+      themeVariables: {
+        darkMode: true,
+        background: 'transparent',
+        fontFamily: '"Microsoft YaHei", "PingFang SC", "Segoe UI", sans-serif',
+        fontSize: '12px',
+        primaryColor: '#062f3d',
+        primaryTextColor: '#d6f6ff',
+        primaryBorderColor: '#00eeff',
+        secondaryColor: '#04222d',
+        tertiaryColor: '#04222d',
+        mainBkg: '#062f3d',
+        nodeBorder: '#00eeff',
+        clusterBkg: '#02161f',
+        clusterBorder: '#00eeff55',
+        lineColor: '#00eeff',
+        textColor: '#c0e8ff',
+        edgeLabelBackground: '#02161f'
+      },
+      flowchart: { curve: 'basis', useMaxWidth: false, htmlLabels: false, nodeSpacing: 30, rankSpacing: 40, padding: 10 }
+    });
+
+    var targets = [];
+    blocks.forEach(function(el){
+      var codeEl = el.querySelector('code');
+      if(!codeEl) return;
+      var div = document.createElement('div');
+      div.className = 'mermaid';
+      div.textContent = codeEl.textContent;
+      el.parentNode.replaceChild(div, el);
+      targets.push(div);
+    });
+    if(!targets.length) return;
+    try { await mermaid.run({ nodes: targets }); }
+    catch(e){ console.warn('[mermaid] 渲染失败：', e); }
+  }
+  /* 作用：多次触发兜底（延迟重试 + DOM 变化），防止某次时机没跑到导致图表留在代码块 */
+  var mmBusy = false;
+  function scheduleMermaid(){
+    if(mmBusy) return;
+    mmBusy = true;
+    renderMermaidDiagram().then(function(){ mmBusy = false; }, function(){ mmBusy = false; });
+  }
+  scheduleMermaid();
+  window.addEventListener('load', scheduleMermaid);
+  [1000, 3000, 8000].forEach(function(ms){ setTimeout(scheduleMermaid, ms); });
+  if(document.readyState !== 'loading') scheduleMermaid();
+  if(window.MutationObserver){
+    var mmTimer = null;
+    var mmObserver = new MutationObserver(function(){
+      clearTimeout(mmTimer);
+      mmTimer = setTimeout(scheduleMermaid, 400);
+    });
+    mmObserver.observe(document.querySelector('.mb-article') || document.body, { childList: true, subtree: true });
+  }
+</script>
+</body>
+</html>

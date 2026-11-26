@@ -1,0 +1,355 @@
+<!--
+  ============================================
+  手机端 · 文章原文页
+  文件：phone/post.njk
+  适用终端：手机端（路由 /phone/p/<slug>/，由 scripts/phone-routes.js 生成）
+  作用：手机阅读单篇文章；单列布局、无侧栏无雷达，替代电脑端 post.njk
+        数据由生成期算好：page.item = { title, dateStr, content, cats, tags }
+  样式依赖：source/css/theme/phone/common.css、source/css/theme/phone/list.css
+  组件依赖：phone/_components/Particles.njk
+  最后修改：2026-11-11
+  ============================================
+-->
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="color-scheme" content="dark">
+  <meta name="theme-color" content="#020817">
+  <!-- 首帧兜底：浏览器默认画布是白的，样式未解析前会闪一下白。这条规则先锁死深空底色 -->
+  <style>html{background-color:#020817}</style>
+  <title>Spring Data（六）MongoDB 与 Elasticsearch 访问 - 时空秘境</title>
+  <!-- 手机端样式：基础 + 列表/正文，外链引入（源文件 source/css/theme/phone/） -->
+  <link rel="stylesheet" href="/css/theme/phone/common.css">
+  <link rel="stylesheet" href="/css/theme/phone/list.css">
+<meta name="generator" content="Hexo 8.1.2"></head>
+<body>
+<div class="mb-shell">
+  <!--
+  ============================================
+  手机端星空粒子组件
+  文件：Particles.njk
+  适用终端：手机端
+  作用：Particles.njk 的手机端副本（nunjucks 子目录 include 取不到上级）
+        参数与电脑端 _components/Particles.njk 保持一致：
+        粒子 95 / 连线 118px / opacity 0.32，外加星座层与零星闪烁层
+  最后修改：2026-11-12
+  ============================================
+--><!-- z-index 必须是 0：负层级会被 body 不透明背景盖住，粒子在跑却看不见 -->
+<div id="particles" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 0; pointer-events: none;"></div>
+<!-- 星座层（与首页同一套：随机零星散布星座图形 + 偶尔闪烁的小星） -->
+<div id="constellations" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 1; pointer-events: none;" aria-hidden="true"></div>
+<script src="/js/particles.min.js"></script>
+<script>
+particlesJS("particles", {
+  particles: {
+    number: {
+      value: 95,
+      density: {
+        enable: true,
+        value_area: 800
+      }
+    },
+    color: {
+      value: "#00eeff"
+    },
+    shape: {
+      type: "circle",
+      stroke: {
+        width: 0,
+        color: "#000000"
+      }
+    },
+    opacity: {
+      value: 0.6,
+      random: true,
+      anim: {
+        enable: true,
+        speed: 0.5,
+        opacity_min: 0.1,
+        sync: false
+      }
+    },
+    size: {
+      value: 3,
+      random: true,
+      anim: {
+        enable: true,
+        speed: 2,
+        size_min: 0.1,
+        sync: false
+      }
+    },
+    line_linked: {
+      enable: true,
+      distance: 118,
+      color: "#00eeff",
+      opacity: 0.32,
+      width: 1
+    },
+    move: {
+      enable: true,
+      speed: 0.8,
+      direction: "none",
+      random: true,
+      straight: false,
+      out_mode: "out",
+      bounce: false,
+      attract: {
+        enable: true,
+        rotateX: 600,
+        rotateY: 1200
+      }
+    }
+  },
+  interactivity: {
+    detect_on: "canvas",
+    events: {
+      onhover: {
+        enable: true,
+        mode: "grab"       // 手指按住时粒子聚集
+      },
+      onclick: {
+        enable: true,
+        mode: "push"       // 点击时产生新粒子
+      },
+      resize: true
+    },
+    modes: {
+      grab: {
+        distance: 200,
+        line_linked: {
+          opacity: 1
+        }
+      },
+      push: {
+        particles_nb: 6
+      }
+    }
+  },
+  retina_detect: true
+});
+</script>
+<!-- 星座 + 零星闪烁层：与电脑端共用同一份绘制脚本 -->
+<script src="/js/theme/home/starfield.js"></script>
+
+
+  <div class="mb-top">
+    <a class="mb-back" href="/phone/">← 返回手机首页</a>
+    <span class="mb-sub" style="margin:0">2022-09-19</span>
+  </div>
+
+  <h1 class="mb-title">Spring Data（六）MongoDB 与 Elasticsearch 访问</h1>
+  <div class="mb-sub">
+    分类：java · springdata
+     ｜ 标签：SpringData
+  </div>
+
+  <div class="mb-article"><div class="essay-banner essay-springdata"></div>
+
+<h1 id="MongoDB-与-Elasticsearch-的数据访问"><a href="#MongoDB-与-Elasticsearch-的数据访问" class="headerlink" title="MongoDB 与 Elasticsearch 的数据访问"></a><strong>MongoDB 与 Elasticsearch 的数据访问</strong></h1><p>同一套 Spring Data 抽象，换成文档库就是 <code>MongoRepository</code> + <code>MongoTemplate</code>，换成搜索引擎就是 <code>ElasticsearchRepository</code> + <code>NativeSearchQuery</code>。这一篇讲两者各自的写法与选型边界。</p>
+<p><img src="https://wu4yong.github.io/starry-images/assets/img/springdata/springdata-06-mongo-es.webp" alt="文档、倒排索引与检索结果三段式"></p>
+<p><em>文档、倒排索引与检索结果三段式</em></p>
+<h2 id="1-1-MongoDB-接入"><a href="#1-1-MongoDB-接入" class="headerlink" title="1.1 MongoDB 接入"></a>1.1 MongoDB 接入</h2><pre class="line-numbers language-markup" data-language="markup"><code class="language-markup"><span class="token tag"><span class="token tag"><span class="token punctuation">&lt;</span>dependency</span><span class="token punctuation">></span></span>
+    <span class="token tag"><span class="token tag"><span class="token punctuation">&lt;</span>groupId</span><span class="token punctuation">></span></span>org.springframework.boot<span class="token tag"><span class="token tag"><span class="token punctuation">&lt;/</span>groupId</span><span class="token punctuation">></span></span>
+    <span class="token tag"><span class="token tag"><span class="token punctuation">&lt;</span>artifactId</span><span class="token punctuation">></span></span>spring-boot-starter-data-mongodb<span class="token tag"><span class="token tag"><span class="token punctuation">&lt;/</span>artifactId</span><span class="token punctuation">></span></span>
+<span class="token tag"><span class="token tag"><span class="token punctuation">&lt;/</span>dependency</span><span class="token punctuation">></span></span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span></span></code></pre>
+
+<pre class="line-numbers language-yaml" data-language="yaml"><code class="language-yaml"><span class="token key atrule">spring</span><span class="token punctuation">:</span>
+  <span class="token key atrule">data</span><span class="token punctuation">:</span>
+    <span class="token key atrule">mongodb</span><span class="token punctuation">:</span>
+      <span class="token key atrule">uri</span><span class="token punctuation">:</span> mongodb<span class="token punctuation">:</span>//127.0.0.1<span class="token punctuation">:</span>27017/demo<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span></span></code></pre>
+
+<pre class="line-numbers language-java" data-language="java"><code class="language-java"><span class="token annotation punctuation">@Document</span><span class="token punctuation">(</span>collection <span class="token operator">=</span> <span class="token string">"orders"</span><span class="token punctuation">)</span>
+<span class="token annotation punctuation">@CompoundIndex</span><span class="token punctuation">(</span>name <span class="token operator">=</span> <span class="token string">"idx_user_status"</span><span class="token punctuation">,</span> def <span class="token operator">=</span> <span class="token string">"&#123;'userId': 1, 'status': 1&#125;"</span><span class="token punctuation">)</span>
+<span class="token keyword">public</span> <span class="token keyword">class</span> <span class="token class-name">OrderDoc</span> <span class="token punctuation">&#123;</span>
+    <span class="token annotation punctuation">@Id</span>
+    <span class="token keyword">private</span> <span class="token class-name">String</span> id<span class="token punctuation">;</span>
+    <span class="token annotation punctuation">@Indexed</span>
+    <span class="token keyword">private</span> <span class="token class-name">Long</span> userId<span class="token punctuation">;</span>
+    <span class="token keyword">private</span> <span class="token class-name">String</span> status<span class="token punctuation">;</span>
+    <span class="token keyword">private</span> <span class="token class-name">List</span><span class="token generics"><span class="token punctuation">&lt;</span><span class="token class-name">OrderItem</span><span class="token punctuation">></span></span> items<span class="token punctuation">;</span>
+    <span class="token keyword">private</span> <span class="token class-name">LocalDateTime</span> createdAt<span class="token punctuation">;</span>
+<span class="token punctuation">&#125;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<pre class="line-numbers language-java" data-language="java"><code class="language-java"><span class="token keyword">public</span> <span class="token keyword">interface</span> <span class="token class-name">OrderDocRepository</span> <span class="token keyword">extends</span> <span class="token class-name">MongoRepository</span><span class="token generics"><span class="token punctuation">&lt;</span><span class="token class-name">OrderDoc</span><span class="token punctuation">,</span> <span class="token class-name">String</span><span class="token punctuation">></span></span> <span class="token punctuation">&#123;</span>
+    <span class="token class-name">List</span><span class="token generics"><span class="token punctuation">&lt;</span><span class="token class-name">OrderDoc</span><span class="token punctuation">></span></span> <span class="token function">findByUserIdOrderByCreatedAtDesc</span><span class="token punctuation">(</span><span class="token class-name">Long</span> userId<span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token keyword">long</span> <span class="token function">countByStatus</span><span class="token punctuation">(</span><span class="token class-name">String</span> status<span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">&#125;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span></span></code></pre>
+
+<div class="data-grid data-grid-link-table"><div class="grid-header"><div class="grid-cell">注解</div><div class="grid-cell">作用</div></div><div class="grid-row"><div class="grid-cell"><code>@Document</code></div><div class="grid-cell">指定集合名</div></div><div class="grid-row"><div class="grid-cell"><code>@Id</code></div><div class="grid-cell">主键（默认 ObjectId 字符串）</div></div><div class="grid-row"><div class="grid-cell"><code>@Indexed</code></div><div class="grid-cell">单字段索引</div></div><div class="grid-row"><div class="grid-cell"><code>@CompoundIndex</code></div><div class="grid-cell">联合索引，顺序很关键</div></div><div class="grid-row"><div class="grid-cell"><code>@Field</code></div><div class="grid-cell">字段改名，兼容历史文档</div></div></div>
+
+<h2 id="1-2-MongoTemplate：复杂查询"><a href="#1-2-MongoTemplate：复杂查询" class="headerlink" title="1.2 MongoTemplate：复杂查询"></a>1.2 MongoTemplate：复杂查询</h2><pre class="line-numbers language-java" data-language="java"><code class="language-java"><span class="token class-name">Criteria</span> criteria <span class="token operator">=</span> <span class="token class-name">Criteria</span><span class="token punctuation">.</span><span class="token function">where</span><span class="token punctuation">(</span><span class="token string">"userId"</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token function">is</span><span class="token punctuation">(</span>userId<span class="token punctuation">)</span>
+        <span class="token punctuation">.</span><span class="token function">and</span><span class="token punctuation">(</span><span class="token string">"createdAt"</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token function">gte</span><span class="token punctuation">(</span>start<span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token function">lt</span><span class="token punctuation">(</span>end<span class="token punctuation">)</span>
+        <span class="token punctuation">.</span><span class="token function">and</span><span class="token punctuation">(</span><span class="token string">"status"</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token function">in</span><span class="token punctuation">(</span><span class="token string">"PAID"</span><span class="token punctuation">,</span> <span class="token string">"SHIPPED"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+<span class="token class-name">Query</span> query <span class="token operator">=</span> <span class="token class-name">Query</span><span class="token punctuation">.</span><span class="token function">query</span><span class="token punctuation">(</span>criteria<span class="token punctuation">)</span>
+        <span class="token punctuation">.</span><span class="token keyword">with</span><span class="token punctuation">(</span><span class="token class-name">Sort</span><span class="token punctuation">.</span><span class="token function">by</span><span class="token punctuation">(</span><span class="token class-name">Sort<span class="token punctuation">.</span>Direction</span><span class="token punctuation">.</span><span class="token constant">DESC</span><span class="token punctuation">,</span> <span class="token string">"createdAt"</span><span class="token punctuation">)</span><span class="token punctuation">)</span>
+        <span class="token punctuation">.</span><span class="token function">limit</span><span class="token punctuation">(</span><span class="token number">20</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+<span class="token class-name">List</span><span class="token generics"><span class="token punctuation">&lt;</span><span class="token class-name">OrderDoc</span><span class="token punctuation">></span></span> list <span class="token operator">=</span> mongoTemplate<span class="token punctuation">.</span><span class="token function">find</span><span class="token punctuation">(</span>query<span class="token punctuation">,</span> <span class="token class-name">OrderDoc</span><span class="token punctuation">.</span><span class="token keyword">class</span><span class="token punctuation">)</span><span class="token punctuation">;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<p>聚合管道：</p>
+<pre class="line-numbers language-java" data-language="java"><code class="language-java"><span class="token class-name">Aggregation</span> agg <span class="token operator">=</span> <span class="token class-name">Aggregation</span><span class="token punctuation">.</span><span class="token function">newAggregation</span><span class="token punctuation">(</span>
+        <span class="token class-name">Aggregation</span><span class="token punctuation">.</span><span class="token function">match</span><span class="token punctuation">(</span><span class="token class-name">Criteria</span><span class="token punctuation">.</span><span class="token function">where</span><span class="token punctuation">(</span><span class="token string">"status"</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token function">is</span><span class="token punctuation">(</span><span class="token string">"PAID"</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">,</span>
+        <span class="token class-name">Aggregation</span><span class="token punctuation">.</span><span class="token function">group</span><span class="token punctuation">(</span><span class="token string">"userId"</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token function">count</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token function">as</span><span class="token punctuation">(</span><span class="token string">"orderCount"</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token function">sum</span><span class="token punctuation">(</span><span class="token string">"amount"</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token function">as</span><span class="token punctuation">(</span><span class="token string">"total"</span><span class="token punctuation">)</span><span class="token punctuation">,</span>
+        <span class="token class-name">Aggregation</span><span class="token punctuation">.</span><span class="token function">limit</span><span class="token punctuation">(</span><span class="token number">100</span><span class="token punctuation">)</span>
+<span class="token punctuation">)</span><span class="token punctuation">;</span>
+mongoTemplate<span class="token punctuation">.</span><span class="token function">aggregate</span><span class="token punctuation">(</span>agg<span class="token punctuation">,</span> <span class="token string">"orders"</span><span class="token punctuation">,</span> <span class="token class-name">OrderStat</span><span class="token punctuation">.</span><span class="token keyword">class</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token function">getMappedResults</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<div class="data-grid data-grid-link-table"><div class="grid-header"><div class="grid-cell">手段</div><div class="grid-cell">条件复杂度</div><div class="grid-cell">说明</div></div><div class="grid-row"><div class="grid-cell">派生查询</div><div class="grid-cell">简单</div><div class="grid-cell"><code>findByXxx</code></div></div><div class="grid-row"><div class="grid-cell"><code>MongoTemplate</code> + <code>Criteria</code></div><div class="grid-cell">中等</div><div class="grid-cell">动态条件首选</div></div><div class="grid-row"><div class="grid-cell">聚合管道</div><div class="grid-cell">复杂</div><div class="grid-cell">分组、统计、联表（<code>$lookup</code>）</div></div><div class="grid-row"><div class="grid-cell">原生 JSON</div><div class="grid-cell">任意</div><div class="grid-cell">调试时可用</div></div></div>
+
+<h2 id="1-3-Elasticsearch-接入"><a href="#1-3-Elasticsearch-接入" class="headerlink" title="1.3 Elasticsearch 接入"></a>1.3 Elasticsearch 接入</h2><pre class="line-numbers language-markup" data-language="markup"><code class="language-markup"><span class="token tag"><span class="token tag"><span class="token punctuation">&lt;</span>dependency</span><span class="token punctuation">></span></span>
+    <span class="token tag"><span class="token tag"><span class="token punctuation">&lt;</span>groupId</span><span class="token punctuation">></span></span>org.springframework.boot<span class="token tag"><span class="token tag"><span class="token punctuation">&lt;/</span>groupId</span><span class="token punctuation">></span></span>
+    <span class="token tag"><span class="token tag"><span class="token punctuation">&lt;</span>artifactId</span><span class="token punctuation">></span></span>spring-boot-starter-data-elasticsearch<span class="token tag"><span class="token tag"><span class="token punctuation">&lt;/</span>artifactId</span><span class="token punctuation">></span></span>
+<span class="token tag"><span class="token tag"><span class="token punctuation">&lt;/</span>dependency</span><span class="token punctuation">></span></span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span></span></code></pre>
+
+<pre class="line-numbers language-yaml" data-language="yaml"><code class="language-yaml"><span class="token key atrule">spring</span><span class="token punctuation">:</span>
+  <span class="token key atrule">elasticsearch</span><span class="token punctuation">:</span>
+    <span class="token key atrule">rest</span><span class="token punctuation">:</span>
+      <span class="token key atrule">uris</span><span class="token punctuation">:</span> http<span class="token punctuation">:</span>//127.0.0.1<span class="token punctuation">:</span><span class="token number">9200</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span></span></code></pre>
+
+<pre class="line-numbers language-java" data-language="java"><code class="language-java"><span class="token annotation punctuation">@Document</span><span class="token punctuation">(</span>indexName <span class="token operator">=</span> <span class="token string">"item"</span><span class="token punctuation">)</span>
+<span class="token keyword">public</span> <span class="token keyword">class</span> <span class="token class-name">ItemDoc</span> <span class="token punctuation">&#123;</span>
+    <span class="token annotation punctuation">@Id</span>
+    <span class="token keyword">private</span> <span class="token class-name">Long</span> id<span class="token punctuation">;</span>
+    <span class="token annotation punctuation">@Field</span><span class="token punctuation">(</span>type <span class="token operator">=</span> <span class="token class-name">FieldType<span class="token punctuation">.</span>Text</span><span class="token punctuation">,</span> analyzer <span class="token operator">=</span> <span class="token string">"ik_max_word"</span><span class="token punctuation">)</span>
+    <span class="token keyword">private</span> <span class="token class-name">String</span> name<span class="token punctuation">;</span>
+    <span class="token annotation punctuation">@Field</span><span class="token punctuation">(</span>type <span class="token operator">=</span> <span class="token class-name">FieldType<span class="token punctuation">.</span>Keyword</span><span class="token punctuation">)</span>
+    <span class="token keyword">private</span> <span class="token class-name">String</span> category<span class="token punctuation">;</span>
+    <span class="token annotation punctuation">@Field</span><span class="token punctuation">(</span>type <span class="token operator">=</span> <span class="token class-name">FieldType<span class="token punctuation">.</span>Double</span><span class="token punctuation">)</span>
+    <span class="token keyword">private</span> <span class="token class-name">BigDecimal</span> price<span class="token punctuation">;</span>
+<span class="token punctuation">&#125;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<pre class="line-numbers language-java" data-language="java"><code class="language-java"><span class="token keyword">public</span> <span class="token keyword">interface</span> <span class="token class-name">ItemDocRepository</span> <span class="token keyword">extends</span> <span class="token class-name">ElasticsearchRepository</span><span class="token generics"><span class="token punctuation">&lt;</span><span class="token class-name">ItemDoc</span><span class="token punctuation">,</span> <span class="token class-name">Long</span><span class="token punctuation">></span></span> <span class="token punctuation">&#123;</span>
+    <span class="token class-name">List</span><span class="token generics"><span class="token punctuation">&lt;</span><span class="token class-name">ItemDoc</span><span class="token punctuation">></span></span> <span class="token function">findByName</span><span class="token punctuation">(</span><span class="token class-name">String</span> name<span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">&#125;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span></span></code></pre>
+
+<div class="data-grid data-grid-link-table"><div class="grid-header"><div class="grid-cell">类型</div><div class="grid-cell">用途</div><div class="grid-cell">注意</div></div><div class="grid-row"><div class="grid-cell"><code>Text</code></div><div class="grid-cell">全文检索</div><div class="grid-cell">需分词器（中文用 ik）</div></div><div class="grid-row"><div class="grid-cell"><code>Keyword</code></div><div class="grid-cell">精确匹配&#x2F;聚合</div><div class="grid-cell">不分词</div></div><div class="grid-row"><div class="grid-cell"><code>Double/Long/Date</code></div><div class="grid-cell">数值与时间</div><div class="grid-cell">聚合时用 <code>keyword</code> 或数值类型</div></div><div class="grid-row"><div class="grid-cell"><code>Nested</code></div><div class="grid-cell">数组内对象独立检索</div><div class="grid-cell">查询语法不同</div></div></div>
+
+<p>中文不分词是”搜不到”的第一原因：<code>Text</code> 不加 <code>ik_max_word</code> 时，中文会被按单字切分。</p>
+<h2 id="1-4-复杂检索"><a href="#1-4-复杂检索" class="headerlink" title="1.4 复杂检索"></a>1.4 复杂检索</h2><pre class="line-numbers language-java" data-language="java"><code class="language-java"><span class="token class-name">NativeSearchQuery</span> query <span class="token operator">=</span> <span class="token keyword">new</span> <span class="token class-name">NativeSearchQueryBuilder</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+        <span class="token punctuation">.</span><span class="token function">withQuery</span><span class="token punctuation">(</span><span class="token class-name">QueryBuilders</span><span class="token punctuation">.</span><span class="token function">boolQuery</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+                <span class="token punctuation">.</span><span class="token function">must</span><span class="token punctuation">(</span><span class="token class-name">QueryBuilders</span><span class="token punctuation">.</span><span class="token function">matchQuery</span><span class="token punctuation">(</span><span class="token string">"name"</span><span class="token punctuation">,</span> keyword<span class="token punctuation">)</span><span class="token punctuation">)</span>
+                <span class="token punctuation">.</span><span class="token function">filter</span><span class="token punctuation">(</span><span class="token class-name">QueryBuilders</span><span class="token punctuation">.</span><span class="token function">termQuery</span><span class="token punctuation">(</span><span class="token string">"category"</span><span class="token punctuation">,</span> category<span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">)</span>
+        <span class="token punctuation">.</span><span class="token function">withPageable</span><span class="token punctuation">(</span><span class="token class-name">PageRequest</span><span class="token punctuation">.</span><span class="token function">of</span><span class="token punctuation">(</span><span class="token number">0</span><span class="token punctuation">,</span> <span class="token number">10</span><span class="token punctuation">)</span><span class="token punctuation">)</span>
+        <span class="token punctuation">.</span><span class="token function">withSort</span><span class="token punctuation">(</span><span class="token class-name">SortBuilders</span><span class="token punctuation">.</span><span class="token function">fieldSort</span><span class="token punctuation">(</span><span class="token string">"price"</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token function">order</span><span class="token punctuation">(</span><span class="token class-name">SortOrder</span><span class="token punctuation">.</span><span class="token constant">ASC</span><span class="token punctuation">)</span><span class="token punctuation">)</span>
+        <span class="token punctuation">.</span><span class="token function">build</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+<span class="token class-name">Page</span><span class="token generics"><span class="token punctuation">&lt;</span><span class="token class-name">ItemDoc</span><span class="token punctuation">></span></span> page <span class="token operator">=</span> itemDocRepository<span class="token punctuation">.</span><span class="token function">search</span><span class="token punctuation">(</span>query<span class="token punctuation">)</span><span class="token punctuation">;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<div class="data-grid data-grid-link-table"><div class="grid-header"><div class="grid-cell">子句</div><div class="grid-cell">含义</div><div class="grid-cell">是否算分</div></div><div class="grid-row"><div class="grid-cell"><code>must</code></div><div class="grid-cell">必须匹配</div><div class="grid-cell">算</div></div><div class="grid-row"><div class="grid-cell"><code>filter</code></div><div class="grid-cell">必须匹配</div><div class="grid-cell">不算，可缓存</div></div><div class="grid-row"><div class="grid-cell"><code>should</code></div><div class="grid-cell">匹配加分</div><div class="grid-cell">算</div></div><div class="grid-row"><div class="grid-cell"><code>must_not</code></div><div class="grid-cell">必须不匹配</div><div class="grid-cell">不算</div></div></div>
+
+<p>能用 <code>filter</code> 就别用 <code>must</code>：不打分、可缓存、更快。</p>
+<h2 id="1-5-数据同步策略"><a href="#1-5-数据同步策略" class="headerlink" title="1.5 数据同步策略"></a>1.5 数据同步策略</h2><p>关系库是主数据，ES 只是索引，同步方式：</p>
+<div class="data-grid data-grid-link-table"><div class="grid-header"><div class="grid-cell">方式</div><div class="grid-cell">实时性</div><div class="grid-cell">复杂度</div></div><div class="grid-row"><div class="grid-cell">业务代码双写</div><div class="grid-cell">准实时</div><div class="grid-cell">低，但容易漏</div></div><div class="grid-row"><div class="grid-cell">监听 binlog（Canal）</div><div class="grid-cell">准实时</div><div class="grid-cell">中，运维成本</div></div><div class="grid-row"><div class="grid-cell">定时全量 + 增量</div><div class="grid-cell">分钟级</div><div class="grid-cell">低，适合小数据量</div></div><div class="grid-row"><div class="grid-cell">MQ 解耦</div><div class="grid-cell">准实时</div><div class="grid-cell">中，推荐</div></div></div>
+
+<p>双写最危险：写库成功、写 ES 失败，索引就永久缺失。加对账任务或走 MQ 补偿。</p>
+<h2 id="1-6-与-JPA-的分工"><a href="#1-6-与-JPA-的分工" class="headerlink" title="1.6 与 JPA 的分工"></a>1.6 与 JPA 的分工</h2><div class="data-grid data-grid-link-table"><div class="grid-header"><div class="grid-cell">场景</div><div class="grid-cell">选型</div></div><div class="grid-row"><div class="grid-cell">强事务、复杂 join</div><div class="grid-cell">JPA + MySQL</div></div><div class="grid-row"><div class="grid-cell">结构多变、快速迭代</div><div class="grid-cell">MongoDB</div></div><div class="grid-row"><div class="grid-cell">全文检索、聚合统计、海量筛选</div><div class="grid-cell">Elasticsearch</div></div><div class="grid-row"><div class="grid-cell">会话&#x2F;缓存&#x2F;计数</div><div class="grid-cell">Redis</div></div></div>
+
+<p>不要用 MongoDB 替代关系库做核心交易表：它没有跨文档事务（4.0 起支持副本集事务，但性能与运维成本都高）。</p>
+<h2 id="1-7-官方资料"><a href="#1-7-官方资料" class="headerlink" title="1.7 官方资料"></a>1.7 官方资料</h2><ul>
+<li>Spring Data MongoDB：<a target="_blank" rel="noopener" href="https://docs.spring.io/spring-data/mongodb/docs/3.1.x/reference/html/">https://docs.spring.io/spring-data/mongodb/docs/3.1.x/reference/html/</a></li>
+<li>Spring Data Elasticsearch：<a target="_blank" rel="noopener" href="https://docs.spring.io/spring-data/elasticsearch/docs/4.1.x/reference/html/">https://docs.spring.io/spring-data/elasticsearch/docs/4.1.x/reference/html/</a></li>
+<li>IK 分词器：<a target="_blank" rel="noopener" href="https://github.com/medcl/elasticsearch-analysis-ik">https://github.com/medcl/elasticsearch-analysis-ik</a></li>
+</ul>
+<h2 id="1-8-清单"><a href="#1-8-清单" class="headerlink" title="1.8 清单"></a>1.8 清单</h2><ol>
+<li>简单查询用 <code>MongoRepository</code>，动态与聚合用 <code>MongoTemplate</code></li>
+<li>联合索引的字段顺序按查询顺序写，否则不生效</li>
+<li>ES 的 <code>Text</code> 必须配分词器，中文要 ik，否则等于按字切</li>
+<li>过滤条件用 <code>filter</code> 不用 <code>must</code>，不打分还能缓存</li>
+<li>索引与主库同步走 MQ 或 binlog，别裸双写</li>
+<li>MongoDB 不适合强事务的核心交易场景</li>
+<li>三种存储各司其职，别指望一个库解决所有问题</li>
+</ol>
+</div>
+
+  <div class="mb-foot">
+    <a href="/phone/">返回手机首页</a>
+    <a href="/phone/tags/">星迹索引</a>
+  </div>
+</div>
+
+
+<script>
+  /* 作用：懒加载本地 mermaid 库；无 mermaid 代码块时不加载 */
+  function loadLocalMermaid(){
+    return new Promise(function(resolve, reject){
+      if(window.mermaid) return resolve(window.mermaid);
+      var s = document.createElement('script');
+      s.src = '/js/third-party/mermaid/mermaid.min.js?v=10';
+      s.onload = function(){ resolve(window.mermaid); };
+      s.onerror = function(){ reject(new Error('mermaid local load failed')); };
+      document.head.appendChild(s);
+    });
+  }
+
+  /* 作用：把 ```mermaid 代码块替换成 SVG 图（手机端字号略小、图可横向滚动） */
+  async function renderMermaidDiagram(){
+    var blocks = document.querySelectorAll('pre[class*="language-mermaid"]');
+    if(!blocks.length) return;
+    var mermaid;
+    try { mermaid = await loadLocalMermaid(); }
+    catch(e){ console.warn('[mermaid] 本地库加载失败：', e); return; }
+
+    mermaid.initialize({
+      startOnLoad: false,
+      theme: 'base',
+      themeVariables: {
+        darkMode: true,
+        background: 'transparent',
+        fontFamily: '"Microsoft YaHei", "PingFang SC", "Segoe UI", sans-serif',
+        fontSize: '12px',
+        primaryColor: '#062f3d',
+        primaryTextColor: '#d6f6ff',
+        primaryBorderColor: '#00eeff',
+        secondaryColor: '#04222d',
+        tertiaryColor: '#04222d',
+        mainBkg: '#062f3d',
+        nodeBorder: '#00eeff',
+        clusterBkg: '#02161f',
+        clusterBorder: '#00eeff55',
+        lineColor: '#00eeff',
+        textColor: '#c0e8ff',
+        edgeLabelBackground: '#02161f'
+      },
+      flowchart: { curve: 'basis', useMaxWidth: false, htmlLabels: false, nodeSpacing: 30, rankSpacing: 40, padding: 10 }
+    });
+
+    var targets = [];
+    blocks.forEach(function(el){
+      var codeEl = el.querySelector('code');
+      if(!codeEl) return;
+      var div = document.createElement('div');
+      div.className = 'mermaid';
+      div.textContent = codeEl.textContent;
+      el.parentNode.replaceChild(div, el);
+      targets.push(div);
+    });
+    if(!targets.length) return;
+    try { await mermaid.run({ nodes: targets }); }
+    catch(e){ console.warn('[mermaid] 渲染失败：', e); }
+  }
+  /* 作用：多次触发兜底（延迟重试 + DOM 变化），防止某次时机没跑到导致图表留在代码块 */
+  var mmBusy = false;
+  function scheduleMermaid(){
+    if(mmBusy) return;
+    mmBusy = true;
+    renderMermaidDiagram().then(function(){ mmBusy = false; }, function(){ mmBusy = false; });
+  }
+  scheduleMermaid();
+  window.addEventListener('load', scheduleMermaid);
+  [1000, 3000, 8000].forEach(function(ms){ setTimeout(scheduleMermaid, ms); });
+  if(document.readyState !== 'loading') scheduleMermaid();
+  if(window.MutationObserver){
+    var mmTimer = null;
+    var mmObserver = new MutationObserver(function(){
+      clearTimeout(mmTimer);
+      mmTimer = setTimeout(scheduleMermaid, 400);
+    });
+    mmObserver.observe(document.querySelector('.mb-article') || document.body, { childList: true, subtree: true });
+  }
+</script>
+</body>
+</html>

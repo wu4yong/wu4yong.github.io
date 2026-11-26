@@ -1,0 +1,317 @@
+<!--
+  ============================================
+  手机端 · 文章原文页
+  文件：phone/post.njk
+  适用终端：手机端（路由 /phone/p/<slug>/，由 scripts/phone-routes.js 生成）
+  作用：手机阅读单篇文章；单列布局、无侧栏无雷达，替代电脑端 post.njk
+        数据由生成期算好：page.item = { title, dateStr, content, cats, tags }
+  样式依赖：source/css/theme/phone/common.css、source/css/theme/phone/list.css
+  组件依赖：phone/_components/Particles.njk
+  最后修改：2026-11-11
+  ============================================
+-->
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="color-scheme" content="dark">
+  <meta name="theme-color" content="#020817">
+  <!-- 首帧兜底：浏览器默认画布是白的，样式未解析前会闪一下白。这条规则先锁死深空底色 -->
+  <style>html{background-color:#020817}</style>
+  <title>Kafka（八）监控调优与故障处理 - 时空秘境</title>
+  <!-- 手机端样式：基础 + 列表/正文，外链引入（源文件 source/css/theme/phone/） -->
+  <link rel="stylesheet" href="/css/theme/phone/common.css">
+  <link rel="stylesheet" href="/css/theme/phone/list.css">
+<meta name="generator" content="Hexo 8.1.2"></head>
+<body>
+<div class="mb-shell">
+  <!--
+  ============================================
+  手机端星空粒子组件
+  文件：Particles.njk
+  适用终端：手机端
+  作用：Particles.njk 的手机端副本（nunjucks 子目录 include 取不到上级）
+        参数与电脑端 _components/Particles.njk 保持一致：
+        粒子 95 / 连线 118px / opacity 0.32，外加星座层与零星闪烁层
+  最后修改：2026-11-12
+  ============================================
+--><!-- z-index 必须是 0：负层级会被 body 不透明背景盖住，粒子在跑却看不见 -->
+<div id="particles" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 0; pointer-events: none;"></div>
+<!-- 星座层（与首页同一套：随机零星散布星座图形 + 偶尔闪烁的小星） -->
+<div id="constellations" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 1; pointer-events: none;" aria-hidden="true"></div>
+<script src="/js/particles.min.js"></script>
+<script>
+particlesJS("particles", {
+  particles: {
+    number: {
+      value: 95,
+      density: {
+        enable: true,
+        value_area: 800
+      }
+    },
+    color: {
+      value: "#00eeff"
+    },
+    shape: {
+      type: "circle",
+      stroke: {
+        width: 0,
+        color: "#000000"
+      }
+    },
+    opacity: {
+      value: 0.6,
+      random: true,
+      anim: {
+        enable: true,
+        speed: 0.5,
+        opacity_min: 0.1,
+        sync: false
+      }
+    },
+    size: {
+      value: 3,
+      random: true,
+      anim: {
+        enable: true,
+        speed: 2,
+        size_min: 0.1,
+        sync: false
+      }
+    },
+    line_linked: {
+      enable: true,
+      distance: 118,
+      color: "#00eeff",
+      opacity: 0.32,
+      width: 1
+    },
+    move: {
+      enable: true,
+      speed: 0.8,
+      direction: "none",
+      random: true,
+      straight: false,
+      out_mode: "out",
+      bounce: false,
+      attract: {
+        enable: true,
+        rotateX: 600,
+        rotateY: 1200
+      }
+    }
+  },
+  interactivity: {
+    detect_on: "canvas",
+    events: {
+      onhover: {
+        enable: true,
+        mode: "grab"       // 手指按住时粒子聚集
+      },
+      onclick: {
+        enable: true,
+        mode: "push"       // 点击时产生新粒子
+      },
+      resize: true
+    },
+    modes: {
+      grab: {
+        distance: 200,
+        line_linked: {
+          opacity: 1
+        }
+      },
+      push: {
+        particles_nb: 6
+      }
+    }
+  },
+  retina_detect: true
+});
+</script>
+<!-- 星座 + 零星闪烁层：与电脑端共用同一份绘制脚本 -->
+<script src="/js/theme/home/starfield.js"></script>
+
+
+  <div class="mb-top">
+    <a class="mb-back" href="/phone/">← 返回手机首页</a>
+    <span class="mb-sub" style="margin:0">2023-10-05</span>
+  </div>
+
+  <h1 class="mb-title">Kafka（八）监控调优与故障处理</h1>
+  <div class="mb-sub">
+    分类：bigdata · kafka
+     ｜ 标签：Kafka
+  </div>
+
+  <div class="mb-article"><div class="essay-banner essay-kafka"></div>
+
+<h1 id="监控调优与故障处理"><a href="#监控调优与故障处理" class="headerlink" title="监控调优与故障处理"></a><strong>监控调优与故障处理</strong></h1><p>最后一篇讲运维视角：哪些指标必须盯、JVM 与 OS 层怎么调、出故障时的排查顺序。Kafka 的故障大多有明确信号，问题在于信号出现时没人看。</p>
+<p><img src="https://wu4yong.github.io/starry-images/assets/img/kafka/kafka-08-production.webp" alt="三块监控面板与三台故障机柜、容量刻度"></p>
+<p><em>监控不是看”挂了没”，是看”离挂还有多远”</em></p>
+<h2 id="8-1-四个必看指标"><a href="#8-1-四个必看指标" class="headerlink" title="8.1 四个必看指标"></a>8.1 四个必看指标</h2><div class="data-grid data-grid-link-table"><div class="grid-header"><div class="grid-cell">指标</div><div class="grid-cell">阈值参考</div><div class="grid-cell">含义</div></div><div class="grid-row"><div class="grid-cell">UnderReplicatedPartitions</div><div class="grid-cell">长时间 &gt; 0</div><div class="grid-cell">有分区副本不足，数据不安全</div></div><div class="grid-row"><div class="grid-cell">ActiveControllerCount</div><div class="grid-cell">全集群合计应为 1</div><div class="grid-cell">不为 1 说明脑裂或 controller 异常</div></div><div class="grid-row"><div class="grid-cell">RequestHandlerAvgIdlePercent</div><div class="grid-cell">持续 &lt; 30%</div><div class="grid-cell">请求线程忙不过来，需加线程或减负载</div></div><div class="grid-row"><div class="grid-cell">MessagesInPerSec 与日志写入延迟</div><div class="grid-cell">突降或抖动</div><div class="grid-cell">生产受阻，常伴磁盘问题</div></div></div>
+
+<p>再加两个消费侧指标：组的 lag 总量与 lag 增长趋势。lag 值本身不重要，”持续增长”才是问题。</p>
+<h2 id="8-2-JVM-与-OS-调优"><a href="#8-2-JVM-与-OS-调优" class="headerlink" title="8.2 JVM 与 OS 调优"></a>8.2 JVM 与 OS 调优</h2><pre class="line-numbers language-bash" data-language="bash"><code class="language-bash"><span class="token comment"># broker 启动参数（生产常见起点）</span>
+<span class="token assign-left variable">KAFKA_HEAP_OPTS</span><span class="token operator">=</span><span class="token string">"-Xmx6g -Xms6g"</span>
+<span class="token assign-left variable">KAFKA_JVM_PERFORMANCE_OPTS</span><span class="token operator">=</span><span class="token string">"-XX:+UseG1GC -XX:MaxGCPauseMillis=20 \
+  -XX:InitiatingHeapOccupancyPercent=35 \
+  -XX:+ExplicitGCInvokesConcurrent"</span>
+
+<span class="token comment"># OS 侧</span>
+<span class="token assign-left variable">vm.swappiness</span><span class="token operator">=</span><span class="token number">1</span>
+<span class="token assign-left variable">vm.dirty_background_ratio</span><span class="token operator">=</span><span class="token number">5</span>
+<span class="token assign-left variable">vm.dirty_ratio</span><span class="token operator">=</span><span class="token number">60</span>
+<span class="token assign-left variable">vm.max_map_count</span><span class="token operator">=</span><span class="token number">262144</span>        <span class="token comment"># RocksDB / mmap 需要</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<p>堆不用给太大：Kafka 的数据主要待在页缓存里，堆大了反而拖长 GC。G1 是常规选择，<code>MaxGCPauseMillis=20</code> 是经验值，别设太小否则 GC 频繁。<code>vm.max_map_count</code> 不够时，Streams 应用会报 RocksDB 打开文件失败。</p>
+<h2 id="8-3-磁盘与网络排查"><a href="#8-3-磁盘与网络排查" class="headerlink" title="8.3 磁盘与网络排查"></a>8.3 磁盘与网络排查</h2><p>症状 → 检查顺序：</p>
+<ol>
+<li>写入延迟升高 → 先看磁盘 <code>iostat</code> 的 <code>await</code> 与 <code>util</code>，再看是否有大量 segment 滚动</li>
+<li>副本同步落后 → 看跨机柜带宽是否打满，是否有人在跑 <code>reassign</code> 未限流</li>
+<li>消费延迟突增但磁盘正常 → 看下游依赖（DB 连接池、HTTP 超时）</li>
+<li>broker 频繁 GC → 看堆内对象，常见是大量小请求 + 过量 <code>fetch</code> 缓存</li>
+</ol>
+<p>磁盘是唯一不能用”加机器”绕过的瓶颈：单分区写入速率受单盘限制，扩容只能加分区并分散到不同盘。</p>
+<h2 id="8-4-故障处置清单"><a href="#8-4-故障处置清单" class="headerlink" title="8.4 故障处置清单"></a>8.4 故障处置清单</h2><p><strong>broker 挂了一台</strong></p>
+<ul>
+<li>确认副本在其他节点上、<code>UnderReplicatedPartitions</code> 是否回落</li>
+<li>重启前检查 <code>log.dirs</code> 是否完整，别在磁盘故障时反复重启</li>
+<li>重启后观察 ISR 恢复速度，慢说明网络或磁盘有问题</li>
+</ul>
+<p><strong>全组 rebalance 循环</strong></p>
+<ul>
+<li>看日志里 <code>CommitFailedException</code> 与 <code>max.poll.interval.ms</code></li>
+<li>降 <code>max.poll.records</code>，确认处理逻辑里没有长阻塞</li>
+<li>检查 <code>session.timeout.ms</code> 与 <code>heartbeat.interval.ms</code> 是否被调得过激进</li>
+</ul>
+<p><strong>位移丢失导致全量重读</strong></p>
+<ul>
+<li>查 <code>__consumer_offsets</code> 副本数与是否被误删</li>
+<li>确认没有用 <code>auto.offset.reset=earliest</code> 的新组名重启</li>
+<li>业务侧先开幂等兜底，再想位移恢复</li>
+</ul>
+<h2 id="8-5-容量规划的口径"><a href="#8-5-容量规划的口径" class="headerlink" title="8.5 容量规划的口径"></a>8.5 容量规划的口径</h2><p>按”每天写入字节 ÷ 保留期 × 副本数 × 1.3（余量）”估原始磁盘，再留 30% 给 segment 滚动与 compact。分区数按”峰值生产 TPS ÷ 单分区可持续写入速率”估，单分区 5–10MB&#x2F;s 是常见经验区间。</p>
+<p>坑在于只算数据量不算峰值：日均能过，大促那两小时过不去，扩容来不及。</p>
+<h2 id="8-6-容易踩的坑"><a href="#8-6-容易踩的坑" class="headerlink" title="8.6 容易踩的坑"></a>8.6 容易踩的坑</h2><ul>
+<li><strong>把 <code>UnderReplicatedPartitions</code> 当瞬时抖动忽略</strong>：持续几分钟就说明有节点在拖后腿。</li>
+<li><strong>堆设到 30G 以上</strong>：GC 停顿变长，且页缓存被挤占，吞吐反而下降。</li>
+<li><strong>只监控 broker，不监控消费者 lag</strong>：数据在 Kafka 里安全，但业务侧已经停止更新。</li>
+<li><strong>故障时先重启再说</strong>：不确认副本状态就重启，可能把唯一完整副本也弄坏。</li>
+</ul>
+<h2 id="8-7-告警阈值与响应口径"><a href="#8-7-告警阈值与响应口径" class="headerlink" title="8.7 告警阈值与响应口径"></a>8.7 告警阈值与响应口径</h2><p>阈值不是照搬别人的数字，而是”在这台机器上触发时还有多少余量”：</p>
+<div class="data-grid data-grid-link-table"><div class="grid-header"><div class="grid-cell">告警项</div><div class="grid-cell">建议阈值</div><div class="grid-cell">响应</div></div><div class="grid-row"><div class="grid-cell">磁盘剩余</div><div class="grid-cell">&lt; 25% 预警，&lt; 10% 严重</div><div class="grid-cell">预警先扩盘或调保留期，严重时准备扩容</div></div><div class="grid-row"><div class="grid-cell">URP 持续</div><div class="grid-cell"><blockquote>
+<p>5 分钟</p>
+</blockquote></div><div class="grid-cell">查副本所在节点、网络、磁盘</div></div><div class="grid-row"><div class="grid-cell">消费 lag 增长</div><div class="grid-cell">连续 10 分钟单调上升</div><div class="grid-cell">查下游依赖与处理耗时</div></div><div class="grid-row"><div class="grid-cell">broker 请求延迟 P99</div><div class="grid-cell"><blockquote>
+<p>100ms 持续</p>
+</blockquote></div><div class="grid-cell">查磁盘 await、线程池、GC</div></div></div>
+
+<p>分级的价值在于减少噪音：磁盘 25% 是”可以排期处理”，10% 是”现在就要动手”。只设一个阈值时，往往在 5% 才被叫醒，已经来不及。</p>
+<h2 id="8-8-官方资料"><a href="#8-8-官方资料" class="headerlink" title="8.8 官方资料"></a>8.8 官方资料</h2><ul>
+<li>监控指标（JMX）：<a target="_blank" rel="noopener" href="https://kafka.apache.org/documentation/#monitoring">https://kafka.apache.org/documentation/#monitoring</a></li>
+<li>硬件与 OS 建议：<a target="_blank" rel="noopener" href="https://kafka.apache.org/documentation/#hwandos">https://kafka.apache.org/documentation/#hwandos</a></li>
+<li>运维与故障排查：<a target="_blank" rel="noopener" href="https://kafka.apache.org/documentation/#basic_ops">https://kafka.apache.org/documentation/#basic_ops</a></li>
+</ul>
+<h2 id="8-9-清单"><a href="#8-9-清单" class="headerlink" title="8.9 清单"></a>8.9 清单</h2><ol>
+<li>必须盯：URP、ActiveControllerCount、请求线程空闲率、写入速率</li>
+<li>消费侧盯 lag 总量与增长趋势，”增长”才是问题</li>
+<li>堆不用大，6G 起步，G1 + 20ms 暂停是常规起点</li>
+<li><code>vm.max_map_count</code> 不够会让 Streams 的 RocksDB 直接报错</li>
+<li>磁盘是硬瓶颈，只能靠加分区与分盘扩展</li>
+<li>broker 重启前先确认副本状态，别在磁盘故障时硬起</li>
+<li>容量按保留期 × 副本 × 1.3 估算，并单独验峰值时段</li>
+<li>告警要分级，单一阈值往往在余量耗尽时才响，来不及处理</li>
+<li>lag 看趋势、磁盘看两级阈值、URP 看持续时长，三者组合才准</li>
+</ol>
+</div>
+
+  <div class="mb-foot">
+    <a href="/phone/">返回手机首页</a>
+    <a href="/phone/tags/">星迹索引</a>
+  </div>
+</div>
+
+
+<script>
+  /* 作用：懒加载本地 mermaid 库；无 mermaid 代码块时不加载 */
+  function loadLocalMermaid(){
+    return new Promise(function(resolve, reject){
+      if(window.mermaid) return resolve(window.mermaid);
+      var s = document.createElement('script');
+      s.src = '/js/third-party/mermaid/mermaid.min.js?v=10';
+      s.onload = function(){ resolve(window.mermaid); };
+      s.onerror = function(){ reject(new Error('mermaid local load failed')); };
+      document.head.appendChild(s);
+    });
+  }
+
+  /* 作用：把 ```mermaid 代码块替换成 SVG 图（手机端字号略小、图可横向滚动） */
+  async function renderMermaidDiagram(){
+    var blocks = document.querySelectorAll('pre[class*="language-mermaid"]');
+    if(!blocks.length) return;
+    var mermaid;
+    try { mermaid = await loadLocalMermaid(); }
+    catch(e){ console.warn('[mermaid] 本地库加载失败：', e); return; }
+
+    mermaid.initialize({
+      startOnLoad: false,
+      theme: 'base',
+      themeVariables: {
+        darkMode: true,
+        background: 'transparent',
+        fontFamily: '"Microsoft YaHei", "PingFang SC", "Segoe UI", sans-serif',
+        fontSize: '12px',
+        primaryColor: '#062f3d',
+        primaryTextColor: '#d6f6ff',
+        primaryBorderColor: '#00eeff',
+        secondaryColor: '#04222d',
+        tertiaryColor: '#04222d',
+        mainBkg: '#062f3d',
+        nodeBorder: '#00eeff',
+        clusterBkg: '#02161f',
+        clusterBorder: '#00eeff55',
+        lineColor: '#00eeff',
+        textColor: '#c0e8ff',
+        edgeLabelBackground: '#02161f'
+      },
+      flowchart: { curve: 'basis', useMaxWidth: false, htmlLabels: false, nodeSpacing: 30, rankSpacing: 40, padding: 10 }
+    });
+
+    var targets = [];
+    blocks.forEach(function(el){
+      var codeEl = el.querySelector('code');
+      if(!codeEl) return;
+      var div = document.createElement('div');
+      div.className = 'mermaid';
+      div.textContent = codeEl.textContent;
+      el.parentNode.replaceChild(div, el);
+      targets.push(div);
+    });
+    if(!targets.length) return;
+    try { await mermaid.run({ nodes: targets }); }
+    catch(e){ console.warn('[mermaid] 渲染失败：', e); }
+  }
+  /* 作用：多次触发兜底（延迟重试 + DOM 变化），防止某次时机没跑到导致图表留在代码块 */
+  var mmBusy = false;
+  function scheduleMermaid(){
+    if(mmBusy) return;
+    mmBusy = true;
+    renderMermaidDiagram().then(function(){ mmBusy = false; }, function(){ mmBusy = false; });
+  }
+  scheduleMermaid();
+  window.addEventListener('load', scheduleMermaid);
+  [1000, 3000, 8000].forEach(function(ms){ setTimeout(scheduleMermaid, ms); });
+  if(document.readyState !== 'loading') scheduleMermaid();
+  if(window.MutationObserver){
+    var mmTimer = null;
+    var mmObserver = new MutationObserver(function(){
+      clearTimeout(mmTimer);
+      mmTimer = setTimeout(scheduleMermaid, 400);
+    });
+    mmObserver.observe(document.querySelector('.mb-article') || document.body, { childList: true, subtree: true });
+  }
+</script>
+</body>
+</html>

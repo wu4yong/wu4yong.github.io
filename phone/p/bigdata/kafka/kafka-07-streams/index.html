@@ -1,0 +1,314 @@
+<!--
+  ============================================
+  手机端 · 文章原文页
+  文件：phone/post.njk
+  适用终端：手机端（路由 /phone/p/<slug>/，由 scripts/phone-routes.js 生成）
+  作用：手机阅读单篇文章；单列布局、无侧栏无雷达，替代电脑端 post.njk
+        数据由生成期算好：page.item = { title, dateStr, content, cats, tags }
+  样式依赖：source/css/theme/phone/common.css、source/css/theme/phone/list.css
+  组件依赖：phone/_components/Particles.njk
+  最后修改：2026-11-11
+  ============================================
+-->
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="color-scheme" content="dark">
+  <meta name="theme-color" content="#020817">
+  <!-- 首帧兜底：浏览器默认画布是白的，样式未解析前会闪一下白。这条规则先锁死深空底色 -->
+  <style>html{background-color:#020817}</style>
+  <title>Kafka（七）Kafka Streams 与 Connect - 时空秘境</title>
+  <!-- 手机端样式：基础 + 列表/正文，外链引入（源文件 source/css/theme/phone/） -->
+  <link rel="stylesheet" href="/css/theme/phone/common.css">
+  <link rel="stylesheet" href="/css/theme/phone/list.css">
+<meta name="generator" content="Hexo 8.1.2"></head>
+<body>
+<div class="mb-shell">
+  <!--
+  ============================================
+  手机端星空粒子组件
+  文件：Particles.njk
+  适用终端：手机端
+  作用：Particles.njk 的手机端副本（nunjucks 子目录 include 取不到上级）
+        参数与电脑端 _components/Particles.njk 保持一致：
+        粒子 95 / 连线 118px / opacity 0.32，外加星座层与零星闪烁层
+  最后修改：2026-11-12
+  ============================================
+--><!-- z-index 必须是 0：负层级会被 body 不透明背景盖住，粒子在跑却看不见 -->
+<div id="particles" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 0; pointer-events: none;"></div>
+<!-- 星座层（与首页同一套：随机零星散布星座图形 + 偶尔闪烁的小星） -->
+<div id="constellations" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 1; pointer-events: none;" aria-hidden="true"></div>
+<script src="/js/particles.min.js"></script>
+<script>
+particlesJS("particles", {
+  particles: {
+    number: {
+      value: 95,
+      density: {
+        enable: true,
+        value_area: 800
+      }
+    },
+    color: {
+      value: "#00eeff"
+    },
+    shape: {
+      type: "circle",
+      stroke: {
+        width: 0,
+        color: "#000000"
+      }
+    },
+    opacity: {
+      value: 0.6,
+      random: true,
+      anim: {
+        enable: true,
+        speed: 0.5,
+        opacity_min: 0.1,
+        sync: false
+      }
+    },
+    size: {
+      value: 3,
+      random: true,
+      anim: {
+        enable: true,
+        speed: 2,
+        size_min: 0.1,
+        sync: false
+      }
+    },
+    line_linked: {
+      enable: true,
+      distance: 118,
+      color: "#00eeff",
+      opacity: 0.32,
+      width: 1
+    },
+    move: {
+      enable: true,
+      speed: 0.8,
+      direction: "none",
+      random: true,
+      straight: false,
+      out_mode: "out",
+      bounce: false,
+      attract: {
+        enable: true,
+        rotateX: 600,
+        rotateY: 1200
+      }
+    }
+  },
+  interactivity: {
+    detect_on: "canvas",
+    events: {
+      onhover: {
+        enable: true,
+        mode: "grab"       // 手指按住时粒子聚集
+      },
+      onclick: {
+        enable: true,
+        mode: "push"       // 点击时产生新粒子
+      },
+      resize: true
+    },
+    modes: {
+      grab: {
+        distance: 200,
+        line_linked: {
+          opacity: 1
+        }
+      },
+      push: {
+        particles_nb: 6
+      }
+    }
+  },
+  retina_detect: true
+});
+</script>
+<!-- 星座 + 零星闪烁层：与电脑端共用同一份绘制脚本 -->
+<script src="/js/theme/home/starfield.js"></script>
+
+
+  <div class="mb-top">
+    <a class="mb-back" href="/phone/">← 返回手机首页</a>
+    <span class="mb-sub" style="margin:0">2023-09-29</span>
+  </div>
+
+  <h1 class="mb-title">Kafka（七）Kafka Streams 与 Connect</h1>
+  <div class="mb-sub">
+    分类：bigdata · kafka
+     ｜ 标签：Kafka
+  </div>
+
+  <div class="mb-article"><div class="essay-banner essay-kafka"></div>
+
+<h1 id="Kafka-Streams-与-Connect"><a href="#Kafka-Streams-与-Connect" class="headerlink" title="Kafka Streams 与 Connect"></a><strong>Kafka Streams 与 Connect</strong></h1><p>Kafka 自己带了两套”上下游”能力：<strong>Streams</strong> 做流式计算（拓扑在应用内跑），<strong>Connect</strong> 做数据搬运（源与汇的标准化连接器）。它们都不需要独立集群，是库与进程，不是平台。</p>
+<p><img src="https://wu4yong.github.io/starry-images/assets/img/kafka/kafka-07-streams.webp" alt="处理拓扑连到状态库，两端各接一个连接器插头"></p>
+<p><em>Streams 算、Connect 搬，两者常常串在同一条链路里</em></p>
+<h2 id="7-1-Streams-的三个核心抽象"><a href="#7-1-Streams-的三个核心抽象" class="headerlink" title="7.1 Streams 的三个核心抽象"></a>7.1 Streams 的三个核心抽象</h2><div class="data-grid data-grid-link-table"><div class="grid-header"><div class="grid-cell">抽象</div><div class="grid-cell">含义</div><div class="grid-cell">关键点</div></div><div class="grid-row"><div class="grid-cell">KStream</div><div class="grid-cell">事件流，每条记录独立</div><div class="grid-cell">追加语义，不保存历史</div></div><div class="grid-row"><div class="grid-cell">KTable</div><div class="grid-cell">变更日志视图，按 key 保留最新</div><div class="grid-cell">底层是 compacted topic</div></div><div class="grid-row"><div class="grid-cell">GlobalKTable</div><div class="grid-cell">全量广播到每个实例</div><div class="grid-cell">适合小维度表，占内存</div></div></div>
+
+<p><code>KStream</code> 与 <code>KTable</code> 的差别不是类型包装，而是<strong>同一份数据被如何解读</strong>：把 topic 当事件流读就是 KStream，当”当前值集合”读就是 KTable。</p>
+<h2 id="7-2-一个最小拓扑"><a href="#7-2-一个最小拓扑" class="headerlink" title="7.2 一个最小拓扑"></a>7.2 一个最小拓扑</h2><pre class="line-numbers language-java" data-language="java"><code class="language-java"><span class="token class-name">StreamsBuilder</span> builder <span class="token operator">=</span> <span class="token keyword">new</span> <span class="token class-name">StreamsBuilder</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+<span class="token class-name">KStream</span><span class="token generics"><span class="token punctuation">&lt;</span><span class="token class-name">String</span><span class="token punctuation">,</span> <span class="token class-name">String</span><span class="token punctuation">></span></span> orders <span class="token operator">=</span> builder<span class="token punctuation">.</span><span class="token function">stream</span><span class="token punctuation">(</span><span class="token string">"order-events"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token class-name">KTable</span><span class="token generics"><span class="token punctuation">&lt;</span><span class="token class-name">String</span><span class="token punctuation">,</span> <span class="token class-name">Long</span><span class="token punctuation">></span></span> counts <span class="token operator">=</span> orders
+    <span class="token punctuation">.</span><span class="token function">groupByKey</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+    <span class="token punctuation">.</span><span class="token function">count</span><span class="token punctuation">(</span><span class="token class-name">Materialized</span><span class="token punctuation">.</span><span class="token function">as</span><span class="token punctuation">(</span><span class="token string">"order-count-store"</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+counts<span class="token punctuation">.</span><span class="token function">toStream</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token keyword">to</span><span class="token punctuation">(</span><span class="token string">"order-counts"</span><span class="token punctuation">,</span> <span class="token class-name">Produced</span><span class="token punctuation">.</span><span class="token keyword">with</span><span class="token punctuation">(</span><span class="token class-name">Serdes<span class="token punctuation">.</span>String</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">,</span> <span class="token class-name">Serdes<span class="token punctuation">.</span>Long</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+<span class="token class-name">KafkaStreams</span> streams <span class="token operator">=</span> <span class="token keyword">new</span> <span class="token class-name">KafkaStreams</span><span class="token punctuation">(</span>builder<span class="token punctuation">.</span><span class="token function">build</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">,</span> props<span class="token punctuation">)</span><span class="token punctuation">;</span>
+streams<span class="token punctuation">.</span><span class="token function">start</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<p><code>Materialized.as(&quot;order-count-store&quot;)</code> 建立的是本地状态存储，默认由 RocksDB 承载，并通过 changelog topic 在实例间同步。这个 changelog 是状态恢复的唯一依据——它的副本数不能是 1。</p>
+<h2 id="7-3-时间语义与水位线"><a href="#7-3-时间语义与水位线" class="headerlink" title="7.3 时间语义与水位线"></a>7.3 时间语义与水位线</h2><div class="data-grid data-grid-link-table"><div class="grid-header"><div class="grid-cell">概念</div><div class="grid-cell">含义</div><div class="grid-cell">取舍</div></div><div class="grid-row"><div class="grid-cell">Event time</div><div class="grid-cell">事件自身携带的时间戳</div><div class="grid-cell">结果正确，需处理乱序</div></div><div class="grid-row"><div class="grid-cell">Processing time</div><div class="grid-cell">处理机器的时间</div><div class="grid-cell">简单，受延迟影响大</div></div><div class="grid-row"><div class="grid-cell">Ingestion time</div><div class="grid-cell">进入 Kafka 的时间</div><div class="grid-cell">折中，接近 event time</div></div></div>
+
+<p>窗口计算必须选 event time 才靠谱，代价是要处理乱序：<code>grace</code> 配置允许迟到多久内仍算入窗口，<code>suppress</code> 用于等窗口关闭后再输出。默认的”窗口一结束就输出”会让结果分成多条，下游要能接受这种更新语义。</p>
+<h2 id="7-4-Connect-的定位"><a href="#7-4-Connect-的定位" class="headerlink" title="7.4 Connect 的定位"></a>7.4 Connect 的定位</h2><p>Connect 把”从 A 读到 B”标准化成配置，不用写代码：</p>
+<pre class="line-numbers language-json" data-language="json"><code class="language-json"><span class="token punctuation">&#123;</span>
+  <span class="token property">"name"</span><span class="token operator">:</span> <span class="token string">"mysql-source-orders"</span><span class="token punctuation">,</span>
+  <span class="token property">"config"</span><span class="token operator">:</span> <span class="token punctuation">&#123;</span>
+    <span class="token property">"connector.class"</span><span class="token operator">:</span> <span class="token string">"io.debezium.connector.mysql.MySqlConnector"</span><span class="token punctuation">,</span>
+    <span class="token property">"tasks.max"</span><span class="token operator">:</span> <span class="token string">"1"</span><span class="token punctuation">,</span>
+    <span class="token property">"database.hostname"</span><span class="token operator">:</span> <span class="token string">"mysql.example.com"</span><span class="token punctuation">,</span>
+    <span class="token property">"database.server.id"</span><span class="token operator">:</span> <span class="token string">"184054"</span><span class="token punctuation">,</span>
+    <span class="token property">"topic.prefix"</span><span class="token operator">:</span> <span class="token string">"cdc"</span><span class="token punctuation">,</span>
+    <span class="token property">"table.include.list"</span><span class="token operator">:</span> <span class="token string">"shop.orders"</span><span class="token punctuation">,</span>
+    <span class="token property">"key.converter"</span><span class="token operator">:</span> <span class="token string">"org.apache.kafka.connect.json.JsonConverter"</span><span class="token punctuation">,</span>
+    <span class="token property">"value.converter"</span><span class="token operator">:</span> <span class="token string">"org.apache.kafka.connect.json.JsonConverter"</span>
+  <span class="token punctuation">&#125;</span>
+<span class="token punctuation">&#125;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<p><code>tasks.max</code> 决定并行度，但真正的上限由源端的可分片性决定——MySQL binlog 单实例只能一个 task 读，加 task 无效。</p>
+<h2 id="7-5-两套工具的边界"><a href="#7-5-两套工具的边界" class="headerlink" title="7.5 两套工具的边界"></a>7.5 两套工具的边界</h2><ul>
+<li>Streams 适合：有状态聚合、窗口、join、实时指标；拓扑复杂度中等、希望随应用一起部署</li>
+<li>Connect 适合：整表同步、CDC、写入数仓或 ES；配置化、可运维、少改动</li>
+<li>都不适合：复杂机器学习推理、跨系统强事务、需要外部编排的长流程</li>
+</ul>
+<p>如果只是为了”把数据从一个库搬到另一个库”，优先 Connect；如果要做”实时聚合出报表指标”，优先 Streams；两者常常组合——Connect 抽数进 Kafka，Streams 算指标，再 Connect 写出去。</p>
+<h2 id="7-6-容易踩的坑"><a href="#7-6-容易踩的坑" class="headerlink" title="7.6 容易踩的坑"></a>7.6 容易踩的坑</h2><ul>
+<li><strong>changelog topic 副本数为 1</strong>：实例重启后状态无法恢复，只能全量重算。</li>
+<li><strong>本地状态目录没配持久盘</strong>：容器重启后 RocksDB 丢失，恢复全靠 changelog 回放，启动时间飙升。</li>
+<li><strong>Connect 的 offset topic 用了默认 1 副本</strong>：<code>connect-offsets</code> 是连接器的进度账本，单副本会丢进度导致重复同步。</li>
+<li><strong>窗口无条件输出</strong>：下游把它当”最终结果”，实际同一窗口会多次更新。</li>
+</ul>
+<h2 id="7-7-并行度与容错"><a href="#7-7-并行度与容错" class="headerlink" title="7.7 并行度与容错"></a>7.7 并行度与容错</h2><p>Streams 的并行度由”任务数（task）”决定：一个分区对应一个任务，一个任务对应一条处理线程。所以<strong>分区数就是 Streams 应用的并行上限</strong>，应用实例再多也只是分摊任务。</p>
+<pre class="line-numbers language-properties" data-language="properties"><code class="language-properties"><span class="token key attr-name">num.stream.threads</span><span class="token punctuation">=</span><span class="token value attr-value">4</span>
+<span class="token key attr-name">processing.guarantee</span><span class="token punctuation">=</span><span class="token value attr-value">exactly_once_v2      # 2.5+ 支持，事务写 + 事务提交位移</span>
+<span class="token key attr-name">state.dir</span><span class="token punctuation">=</span><span class="token value attr-value">/data/kafka-streams-state       # 必须落在持久盘</span>
+<span class="token key attr-name">standby.replicas</span><span class="token punctuation">=</span><span class="token value attr-value">1                        # 热备副本，缩短故障恢复</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span></span></code></pre>
+
+<p><code>processing.guarantee=at_least_once</code> 是默认值，重启可能重复输出；<code>exactly_once_v2</code> 用事务把”输出 + 位移”一起提交，代价是延迟与事务开销。选择标准很简单：下游能不能吃重复，能吃就选轻的。</p>
+<p><code>standby.replicas=1</code> 在别的实例上维护热备状态，故障切换时不必从 changelog 全量回放——这是把”分钟级恢复”压到”秒级”的关键配置，代价是多一份状态存储的磁盘与同步流量。</p>
+<h2 id="7-8-官方资料"><a href="#7-8-官方资料" class="headerlink" title="7.8 官方资料"></a>7.8 官方资料</h2><ul>
+<li>Kafka Streams 文档：<a target="_blank" rel="noopener" href="https://kafka.apache.org/documentation/streams/">https://kafka.apache.org/documentation/streams/</a></li>
+<li>Streams DSL 与处理器 API：<a target="_blank" rel="noopener" href="https://kafka.apache.org/documentation/streams/developer-guide/dsl-api.html">https://kafka.apache.org/documentation/streams/developer-guide/dsl-api.html</a></li>
+<li>Kafka Connect：<a target="_blank" rel="noopener" href="https://kafka.apache.org/documentation/#connect">https://kafka.apache.org/documentation/#connect</a></li>
+</ul>
+<h2 id="7-9-清单"><a href="#7-9-清单" class="headerlink" title="7.9 清单"></a>7.9 清单</h2><ol>
+<li>Streams 是库，跑在应用进程里，不需要独立集群</li>
+<li>KStream 看事件、KTable 看当前值，同一 topic 两种读法</li>
+<li>本地状态靠 RocksDB + changelog，changelog 副本数必须 ≥2</li>
+<li>窗口用 event time，配 grace 处理乱序，输出可能是多次更新</li>
+<li>Connect 是配置化的搬运工，<code>tasks.max</code> 受源端可分片性限制</li>
+<li><code>connect-offsets</code> 不能单副本，否则进度丢失重复同步</li>
+<li>先看清是要”搬”还是”算”，再决定用 Connect 还是 Streams</li>
+<li>Streams 并行度上限是分区数，<code>num.stream.threads</code> 只是单机内的线程数</li>
+<li><code>exactly_once_v2</code> 用事务换语义，<code>standby.replicas=1</code> 换恢复速度，两者都要算成本</li>
+</ol>
+</div>
+
+  <div class="mb-foot">
+    <a href="/phone/">返回手机首页</a>
+    <a href="/phone/tags/">星迹索引</a>
+  </div>
+</div>
+
+
+<script>
+  /* 作用：懒加载本地 mermaid 库；无 mermaid 代码块时不加载 */
+  function loadLocalMermaid(){
+    return new Promise(function(resolve, reject){
+      if(window.mermaid) return resolve(window.mermaid);
+      var s = document.createElement('script');
+      s.src = '/js/third-party/mermaid/mermaid.min.js?v=10';
+      s.onload = function(){ resolve(window.mermaid); };
+      s.onerror = function(){ reject(new Error('mermaid local load failed')); };
+      document.head.appendChild(s);
+    });
+  }
+
+  /* 作用：把 ```mermaid 代码块替换成 SVG 图（手机端字号略小、图可横向滚动） */
+  async function renderMermaidDiagram(){
+    var blocks = document.querySelectorAll('pre[class*="language-mermaid"]');
+    if(!blocks.length) return;
+    var mermaid;
+    try { mermaid = await loadLocalMermaid(); }
+    catch(e){ console.warn('[mermaid] 本地库加载失败：', e); return; }
+
+    mermaid.initialize({
+      startOnLoad: false,
+      theme: 'base',
+      themeVariables: {
+        darkMode: true,
+        background: 'transparent',
+        fontFamily: '"Microsoft YaHei", "PingFang SC", "Segoe UI", sans-serif',
+        fontSize: '12px',
+        primaryColor: '#062f3d',
+        primaryTextColor: '#d6f6ff',
+        primaryBorderColor: '#00eeff',
+        secondaryColor: '#04222d',
+        tertiaryColor: '#04222d',
+        mainBkg: '#062f3d',
+        nodeBorder: '#00eeff',
+        clusterBkg: '#02161f',
+        clusterBorder: '#00eeff55',
+        lineColor: '#00eeff',
+        textColor: '#c0e8ff',
+        edgeLabelBackground: '#02161f'
+      },
+      flowchart: { curve: 'basis', useMaxWidth: false, htmlLabels: false, nodeSpacing: 30, rankSpacing: 40, padding: 10 }
+    });
+
+    var targets = [];
+    blocks.forEach(function(el){
+      var codeEl = el.querySelector('code');
+      if(!codeEl) return;
+      var div = document.createElement('div');
+      div.className = 'mermaid';
+      div.textContent = codeEl.textContent;
+      el.parentNode.replaceChild(div, el);
+      targets.push(div);
+    });
+    if(!targets.length) return;
+    try { await mermaid.run({ nodes: targets }); }
+    catch(e){ console.warn('[mermaid] 渲染失败：', e); }
+  }
+  /* 作用：多次触发兜底（延迟重试 + DOM 变化），防止某次时机没跑到导致图表留在代码块 */
+  var mmBusy = false;
+  function scheduleMermaid(){
+    if(mmBusy) return;
+    mmBusy = true;
+    renderMermaidDiagram().then(function(){ mmBusy = false; }, function(){ mmBusy = false; });
+  }
+  scheduleMermaid();
+  window.addEventListener('load', scheduleMermaid);
+  [1000, 3000, 8000].forEach(function(ms){ setTimeout(scheduleMermaid, ms); });
+  if(document.readyState !== 'loading') scheduleMermaid();
+  if(window.MutationObserver){
+    var mmTimer = null;
+    var mmObserver = new MutationObserver(function(){
+      clearTimeout(mmTimer);
+      mmTimer = setTimeout(scheduleMermaid, 400);
+    });
+    mmObserver.observe(document.querySelector('.mb-article') || document.body, { childList: true, subtree: true });
+  }
+</script>
+</body>
+</html>

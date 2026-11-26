@@ -1,0 +1,335 @@
+<!--
+  ============================================
+  手机端 · 文章原文页
+  文件：phone/post.njk
+  适用终端：手机端（路由 /phone/p/<slug>/，由 scripts/phone-routes.js 生成）
+  作用：手机阅读单篇文章；单列布局、无侧栏无雷达，替代电脑端 post.njk
+        数据由生成期算好：page.item = { title, dateStr, content, cats, tags }
+  样式依赖：source/css/theme/phone/common.css、source/css/theme/phone/list.css
+  组件依赖：phone/_components/Particles.njk
+  最后修改：2026-11-11
+  ============================================
+-->
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="color-scheme" content="dark">
+  <meta name="theme-color" content="#020817">
+  <!-- 首帧兜底：浏览器默认画布是白的，样式未解析前会闪一下白。这条规则先锁死深空底色 -->
+  <style>html{background-color:#020817}</style>
+  <title>Spark（七）UDF 与 Catalog - 时空秘境</title>
+  <!-- 手机端样式：基础 + 列表/正文，外链引入（源文件 source/css/theme/phone/） -->
+  <link rel="stylesheet" href="/css/theme/phone/common.css">
+  <link rel="stylesheet" href="/css/theme/phone/list.css">
+<meta name="generator" content="Hexo 8.1.2"></head>
+<body>
+<div class="mb-shell">
+  <!--
+  ============================================
+  手机端星空粒子组件
+  文件：Particles.njk
+  适用终端：手机端
+  作用：Particles.njk 的手机端副本（nunjucks 子目录 include 取不到上级）
+        参数与电脑端 _components/Particles.njk 保持一致：
+        粒子 95 / 连线 118px / opacity 0.32，外加星座层与零星闪烁层
+  最后修改：2026-11-12
+  ============================================
+--><!-- z-index 必须是 0：负层级会被 body 不透明背景盖住，粒子在跑却看不见 -->
+<div id="particles" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 0; pointer-events: none;"></div>
+<!-- 星座层（与首页同一套：随机零星散布星座图形 + 偶尔闪烁的小星） -->
+<div id="constellations" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 1; pointer-events: none;" aria-hidden="true"></div>
+<script src="/js/particles.min.js"></script>
+<script>
+particlesJS("particles", {
+  particles: {
+    number: {
+      value: 95,
+      density: {
+        enable: true,
+        value_area: 800
+      }
+    },
+    color: {
+      value: "#00eeff"
+    },
+    shape: {
+      type: "circle",
+      stroke: {
+        width: 0,
+        color: "#000000"
+      }
+    },
+    opacity: {
+      value: 0.6,
+      random: true,
+      anim: {
+        enable: true,
+        speed: 0.5,
+        opacity_min: 0.1,
+        sync: false
+      }
+    },
+    size: {
+      value: 3,
+      random: true,
+      anim: {
+        enable: true,
+        speed: 2,
+        size_min: 0.1,
+        sync: false
+      }
+    },
+    line_linked: {
+      enable: true,
+      distance: 118,
+      color: "#00eeff",
+      opacity: 0.32,
+      width: 1
+    },
+    move: {
+      enable: true,
+      speed: 0.8,
+      direction: "none",
+      random: true,
+      straight: false,
+      out_mode: "out",
+      bounce: false,
+      attract: {
+        enable: true,
+        rotateX: 600,
+        rotateY: 1200
+      }
+    }
+  },
+  interactivity: {
+    detect_on: "canvas",
+    events: {
+      onhover: {
+        enable: true,
+        mode: "grab"       // 手指按住时粒子聚集
+      },
+      onclick: {
+        enable: true,
+        mode: "push"       // 点击时产生新粒子
+      },
+      resize: true
+    },
+    modes: {
+      grab: {
+        distance: 200,
+        line_linked: {
+          opacity: 1
+        }
+      },
+      push: {
+        particles_nb: 6
+      }
+    }
+  },
+  retina_detect: true
+});
+</script>
+<!-- 星座 + 零星闪烁层：与电脑端共用同一份绘制脚本 -->
+<script src="/js/theme/home/starfield.js"></script>
+
+
+  <div class="mb-top">
+    <a class="mb-back" href="/phone/">← 返回手机首页</a>
+    <span class="mb-sub" style="margin:0">2023-06-29</span>
+  </div>
+
+  <h1 class="mb-title">Spark（七）UDF 与 Catalog</h1>
+  <div class="mb-sub">
+    分类：bigdata · spark
+     ｜ 标签：Spark
+  </div>
+
+  <div class="mb-article"><div class="essay-banner essay-spark"></div>
+
+<h1 id="UDF-与-Catalog"><a href="#UDF-与-Catalog" class="headerlink" title="UDF 与 Catalog"></a><strong>UDF 与 Catalog</strong></h1><p>内置函数覆盖不了的业务逻辑，需要自己写函数注册给 SQL 用，这就是 UDF（User Defined Function）。除了普通逐行 UDF，Spark 还提供基于 Apache Arrow 的 pandas UDF，把批量数据按 pandas Series 处理，Python 侧性能比逐行调用好一个档次。这一篇梳理 UDF 注册路径、临时视图 API 的区别，以及 <code>spark.catalog</code> 提供的元数据操作入口。</p>
+<p><img src="https://wu4yong.github.io/starry-images/assets/img/spark/spark-07-udf.webp" alt="自定义函数被注册进会话目录，列值经过函数处理后写入结果列，批量数据以 Arrow 格式在节点间传输"></p>
+<p><em>自定义函数被注册进会话目录，列值经过函数处理后写入结果列，批量数据以 Arrow 格式在节点间传输</em></p>
+<h2 id="1-1-UDF-注册的两条路径"><a href="#1-1-UDF-注册的两条路径" class="headerlink" title="1.1 UDF 注册的两条路径"></a>1.1 UDF 注册的两条路径</h2><p>写好的函数要让 SQL 表达式认到，核心动作是”注册到当前会话的函数目录”。Scala 端两种写法等价：</p>
+<pre class="line-numbers language-scala" data-language="scala"><code class="language-scala"><span class="token keyword">import</span> <span class="token namespace">org<span class="token punctuation">.</span>apache<span class="token punctuation">.</span>spark<span class="token punctuation">.</span>sql<span class="token punctuation">.</span>functions<span class="token punctuation">.</span>udf</span>
+
+<span class="token comment">// 写法一：先包成 UserDefinedFunction，再注册进 SQL 目录</span>
+<span class="token keyword">val</span> upperUdf <span class="token operator">=</span> udf<span class="token punctuation">(</span><span class="token punctuation">(</span>s<span class="token operator">:</span> <span class="token builtin">String</span><span class="token punctuation">)</span> <span class="token keyword">=></span> <span class="token keyword">if</span> <span class="token punctuation">(</span>s <span class="token operator">==</span> <span class="token keyword">null</span><span class="token punctuation">)</span> <span class="token keyword">null</span> <span class="token keyword">else</span> s<span class="token punctuation">.</span>trim<span class="token punctuation">.</span>toUpperCase<span class="token punctuation">)</span>
+spark<span class="token punctuation">.</span>udf<span class="token punctuation">.</span>register<span class="token punctuation">(</span><span class="token string">"to_upper"</span><span class="token punctuation">,</span> upperUdf<span class="token punctuation">)</span>
+
+<span class="token comment">// 写法二：直接注册匿名函数</span>
+spark<span class="token punctuation">.</span>udf<span class="token punctuation">.</span>register<span class="token punctuation">(</span><span class="token string">"str_len"</span><span class="token punctuation">,</span> <span class="token punctuation">(</span>s<span class="token operator">:</span> <span class="token builtin">String</span><span class="token punctuation">)</span> <span class="token keyword">=></span> <span class="token keyword">if</span> <span class="token punctuation">(</span>s <span class="token operator">==</span> <span class="token keyword">null</span><span class="token punctuation">)</span> <span class="token number">0</span> <span class="token keyword">else</span> s<span class="token punctuation">.</span>length<span class="token punctuation">)</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<p>注册之后可以在 SQL 里按名字调用：</p>
+<pre class="line-numbers language-sql" data-language="sql"><code class="language-sql"><span class="token keyword">SELECT</span> to_upper<span class="token punctuation">(</span>name<span class="token punctuation">)</span> <span class="token keyword">AS</span> name<span class="token punctuation">,</span> str_len<span class="token punctuation">(</span>phone<span class="token punctuation">)</span> <span class="token keyword">AS</span> phone_len
+<span class="token keyword">FROM</span> user_view<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span></span></code></pre>
+
+<p>UDF 不参与 Catalyst 的表达式内联优化，重计算逻辑放 UDF 里会损失部分优化空间；能用内置函数表达的，优先用内置函数。</p>
+<h2 id="1-2-临时视图：会话级与全局级"><a href="#1-2-临时视图：会话级与全局级" class="headerlink" title="1.2 临时视图：会话级与全局级"></a>1.2 临时视图：会话级与全局级</h2><p>DataFrame 要被 SQL 按表名引用，先注册成临时视图。三个 API 容易混淆，按作用域区分：</p>
+<div class="data-grid data-grid-link-table"><div class="grid-header"><div class="grid-cell">API</div><div class="grid-cell">作用域</div><div class="grid-cell">生命周期</div><div class="grid-cell">说明</div></div><div class="grid-row"><div class="grid-cell"><code>createOrReplaceTempView</code></div><div class="grid-cell">当前会话</div><div class="grid-cell">会话结束即销毁</div><div class="grid-cell">最常用，覆盖同名旧视图</div></div><div class="grid-row"><div class="grid-cell"><code>createOrReplaceGlobalTempView</code></div><div class="grid-cell">跨会话，挂在 <code>global_temp</code> 库下</div><div class="grid-cell">应用结束销毁</div><div class="grid-cell">多个会话共享同一张视图</div></div><div class="grid-row"><div class="grid-cell"><code>registerTempTable</code></div><div class="grid-cell">旧版会话级 API</div><div class="grid-cell">已废弃</div><div class="grid-cell">新版代码不要再用</div></div></div>
+
+<pre class="line-numbers language-scala" data-language="scala"><code class="language-scala"><span class="token keyword">val</span> df <span class="token operator">=</span> spark<span class="token punctuation">.</span>read<span class="token punctuation">.</span>parquet<span class="token punctuation">(</span><span class="token string">"hdfs:///data/user.parquet"</span><span class="token punctuation">)</span>
+df<span class="token punctuation">.</span>createOrReplaceTempView<span class="token punctuation">(</span><span class="token string">"user_view"</span><span class="token punctuation">)</span>
+
+<span class="token comment">// 全局视图引用时必须带 global_temp 前缀</span>
+df<span class="token punctuation">.</span>createOrReplaceGlobalTempView<span class="token punctuation">(</span><span class="token string">"user_global"</span><span class="token punctuation">)</span>
+spark<span class="token punctuation">.</span>sql<span class="token punctuation">(</span><span class="token string">"SELECT * FROM global_temp.user_global"</span><span class="token punctuation">)</span><span class="token punctuation">.</span>show<span class="token punctuation">(</span><span class="token punctuation">)</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<p>易错点：全局视图默认在 <code>global_temp</code> 命名空间下，写 SQL 时漏掉前缀会报”表不存在”；会话视图在另一个 SparkSession 里查不到，跨会话共享必须走全局视图。</p>
+<h2 id="1-3-pandas-UDF：Arrow-批量序列化"><a href="#1-3-pandas-UDF：Arrow-批量序列化" class="headerlink" title="1.3 pandas UDF：Arrow 批量序列化"></a>1.3 pandas UDF：Arrow 批量序列化</h2><p>普通 Python UDF 逐行序列化调用，Python 进程与 JVM 之间来回转换开销很大。<strong>pandas UDF</strong> 借助 Apache Arrow 把列数据批量序列化成 pandas Series，函数一次处理一批，序列化和进程间传输成本大幅下降。</p>
+<p>使用前提：</p>
+<ul>
+<li>环境装好 <code>pyarrow</code>，版本与 Spark 支持范围匹配</li>
+<li>打开 Arrow 批量优化开关 <code>spark.sql.execution.arrow.pyspark.enabled=true</code></li>
+<li>函数输入输出是 pandas Series（或按组的 DataFrame），不是单条记录</li>
+</ul>
+<pre class="line-numbers language-python" data-language="python"><code class="language-python"><span class="token keyword">from</span> pyspark<span class="token punctuation">.</span>sql <span class="token keyword">import</span> SparkSession
+<span class="token keyword">from</span> pyspark<span class="token punctuation">.</span>sql<span class="token punctuation">.</span>functions <span class="token keyword">import</span> pandas_udf
+<span class="token keyword">import</span> pandas <span class="token keyword">as</span> pd
+
+spark <span class="token operator">=</span> SparkSession<span class="token punctuation">.</span>builder \
+    <span class="token punctuation">.</span>appName<span class="token punctuation">(</span><span class="token string">"pandas-udf"</span><span class="token punctuation">)</span> \
+    <span class="token punctuation">.</span>config<span class="token punctuation">(</span><span class="token string">"spark.sql.execution.arrow.pyspark.enabled"</span><span class="token punctuation">,</span> <span class="token string">"true"</span><span class="token punctuation">)</span> \
+    <span class="token punctuation">.</span>getOrCreate<span class="token punctuation">(</span><span class="token punctuation">)</span>
+
+<span class="token decorator annotation punctuation">@pandas_udf</span><span class="token punctuation">(</span><span class="token string">"double"</span><span class="token punctuation">)</span>
+<span class="token keyword">def</span> <span class="token function">avg_temperature</span><span class="token punctuation">(</span>series<span class="token punctuation">:</span> pd<span class="token punctuation">.</span>Series<span class="token punctuation">)</span> <span class="token operator">-</span><span class="token operator">></span> <span class="token builtin">float</span><span class="token punctuation">:</span>
+    <span class="token comment"># 整批传入 pandas Series，内部用向量化计算，避免 Python 逐行循环</span>
+    <span class="token keyword">return</span> <span class="token builtin">float</span><span class="token punctuation">(</span>series<span class="token punctuation">.</span>mean<span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span>
+
+spark<span class="token punctuation">.</span>udf<span class="token punctuation">.</span>register<span class="token punctuation">(</span><span class="token string">"avg_temp"</span><span class="token punctuation">,</span> avg_temperature<span class="token punctuation">)</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<p>pandas UDF 适合批量统计、字符串向量化清洗这类一次处理一整列的逻辑；如果函数本身依赖逐条外部调用（RPC、查缓存），换成批量也救不回外部开销。</p>
+<h2 id="1-4-Catalog-API：操作元数据"><a href="#1-4-Catalog-API：操作元数据" class="headerlink" title="1.4 Catalog API：操作元数据"></a>1.4 Catalog API：操作元数据</h2><p><code>spark.catalog</code> 是会话级的元数据入口，查库表、管缓存、注册持久化表都走它：</p>
+<pre class="line-numbers language-scala" data-language="scala"><code class="language-scala"><span class="token comment">// 列出当前会话可见的表</span>
+spark<span class="token punctuation">.</span>catalog<span class="token punctuation">.</span>listTables<span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">.</span>show<span class="token punctuation">(</span><span class="token punctuation">)</span>
+
+<span class="token comment">// 列出指定库下的表</span>
+spark<span class="token punctuation">.</span>catalog<span class="token punctuation">.</span>listTables<span class="token punctuation">(</span><span class="token string">"default"</span><span class="token punctuation">)</span><span class="token punctuation">.</span>show<span class="token punctuation">(</span><span class="token punctuation">)</span>
+
+<span class="token comment">// 缓存与移除缓存</span>
+spark<span class="token punctuation">.</span>catalog<span class="token punctuation">.</span>cacheTable<span class="token punctuation">(</span><span class="token string">"user_view"</span><span class="token punctuation">)</span>
+spark<span class="token punctuation">.</span>catalog<span class="token punctuation">.</span>uncacheTable<span class="token punctuation">(</span><span class="token string">"user_view"</span><span class="token punctuation">)</span>
+
+<span class="token comment">// 判断表是否缓存</span>
+spark<span class="token punctuation">.</span>catalog<span class="token punctuation">.</span>isCached<span class="token punctuation">(</span><span class="token string">"user_view"</span><span class="token punctuation">)</span>
+
+<span class="token comment">// 把 DataFrame 注册为持久化表（写入 Metastore）</span>
+df<span class="token punctuation">.</span>write<span class="token punctuation">.</span>saveAsTable<span class="token punctuation">(</span><span class="token string">"dwd_user_base"</span><span class="token punctuation">)</span>
+spark<span class="token punctuation">.</span>catalog<span class="token punctuation">.</span>dropTempView<span class="token punctuation">(</span><span class="token string">"user_view"</span><span class="token punctuation">)</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<div class="data-grid data-grid-link-table"><div class="grid-header"><div class="grid-cell">方法</div><div class="grid-cell">作用</div><div class="grid-cell">备注</div></div><div class="grid-row"><div class="grid-cell"><code>listTables</code> &#x2F; <code>listDatabases</code></div><div class="grid-cell">枚举元数据</div><div class="grid-cell">接了 Hive Metastore 能看到已持久化表</div></div><div class="grid-row"><div class="grid-cell"><code>cacheTable</code> &#x2F; <code>uncacheTable</code></div><div class="grid-cell">按表名管缓存</div><div class="grid-cell">等价于 DataFrame 上的 <code>persist</code></div></div><div class="grid-row"><div class="grid-cell"><code>dropTempView</code></div><div class="grid-cell">删会话视图</div><div class="grid-cell">全局视图需 <code>dropGlobalTempView</code></div></div><div class="grid-row"><div class="grid-cell"><code>table</code></div><div class="grid-cell">按名取 DataFrame</div><div class="grid-cell">找不到会抛分析异常</div></div></div>
+
+<h2 id="1-5-容易踩的坑"><a href="#1-5-容易踩的坑" class="headerlink" title="1.5 容易踩的坑"></a>1.5 容易踩的坑</h2><ul>
+<li>新代码还在用 <code>registerTempTable</code>，IDE 不报警但版本升级后直接移除</li>
+<li>全局视图 SQL 漏写 <code>global_temp.</code> 前缀，反复排查表名拼写</li>
+<li>Python UDF 不开 Arrow，逐行序列化把作业拖慢，还误以为是数据量大</li>
+<li>pandas 与 pyarrow 版本不兼容，启动即报序列化类找不到</li>
+<li>在 UDF 内部打开文件连接、初始化客户端，每个 Task 重复建连，资源被打满</li>
+<li>把重业务逻辑塞进 UDF，绕过 Catalyst 优化，谓词下推和列裁剪都受影响</li>
+</ul>
+<h2 id="1-6-官方资料"><a href="#1-6-官方资料" class="headerlink" title="1.6 官方资料"></a>1.6 官方资料</h2><ul>
+<li>标量 UDF 参考：<a target="_blank" rel="noopener" href="https://spark.apache.org/docs/latest/sql-ref-functions-udf-scalar.html">https://spark.apache.org/docs/latest/sql-ref-functions-udf-scalar.html</a></li>
+<li>pandas UDF（PySpark）：<a target="_blank" rel="noopener" href="https://spark.apache.org/docs/latest/api/python/reference/pyspark.sql/api/pyspark.sql.udf.html">https://spark.apache.org/docs/latest/api/python/reference/pyspark.sql/api/pyspark.sql.udf.html</a></li>
+<li>Catalog Java API：<a target="_blank" rel="noopener" href="https://spark.apache.org/docs/latest/api/java/org/apache/spark/sql/catalog/Catalog.html">https://spark.apache.org/docs/latest/api/java/org/apache/spark/sql/catalog/Catalog.html</a></li>
+<li>Hive 表与 Metastore：<a target="_blank" rel="noopener" href="https://spark.apache.org/docs/latest/sql-data-sources-hive-tables.html">https://spark.apache.org/docs/latest/sql-data-sources-hive-tables.html</a></li>
+</ul>
+<h2 id="1-7-清单"><a href="#1-7-清单" class="headerlink" title="1.7 清单"></a>1.7 清单</h2><ol>
+<li>UDF 注册进会话函数目录后才能在 SQL 中按名调用；内置函数能解决的不要写 UDF</li>
+<li><code>createOrReplaceTempView</code> 会话级，<code>createOrReplaceGlobalTempView</code> 跨会话且引用要带 <code>global_temp</code> 前缀</li>
+<li><code>registerTempTable</code> 已废弃，新代码禁用</li>
+<li>pandas UDF 靠 Arrow 批量序列化，前提是装好兼容版本 pyarrow 并打开 Arrow 开关</li>
+<li>Catalog 提供表枚举、缓存管理、视图删除等元数据操作，接 Metastore 后可见持久化表</li>
+<li>常见坑：漏前缀、不开 Arrow、版本不兼容、UDF 内重复建连接</li>
+</ol>
+</div>
+
+  <div class="mb-foot">
+    <a href="/phone/">返回手机首页</a>
+    <a href="/phone/tags/">星迹索引</a>
+  </div>
+</div>
+
+
+<script>
+  /* 作用：懒加载本地 mermaid 库；无 mermaid 代码块时不加载 */
+  function loadLocalMermaid(){
+    return new Promise(function(resolve, reject){
+      if(window.mermaid) return resolve(window.mermaid);
+      var s = document.createElement('script');
+      s.src = '/js/third-party/mermaid/mermaid.min.js?v=10';
+      s.onload = function(){ resolve(window.mermaid); };
+      s.onerror = function(){ reject(new Error('mermaid local load failed')); };
+      document.head.appendChild(s);
+    });
+  }
+
+  /* 作用：把 ```mermaid 代码块替换成 SVG 图（手机端字号略小、图可横向滚动） */
+  async function renderMermaidDiagram(){
+    var blocks = document.querySelectorAll('pre[class*="language-mermaid"]');
+    if(!blocks.length) return;
+    var mermaid;
+    try { mermaid = await loadLocalMermaid(); }
+    catch(e){ console.warn('[mermaid] 本地库加载失败：', e); return; }
+
+    mermaid.initialize({
+      startOnLoad: false,
+      theme: 'base',
+      themeVariables: {
+        darkMode: true,
+        background: 'transparent',
+        fontFamily: '"Microsoft YaHei", "PingFang SC", "Segoe UI", sans-serif',
+        fontSize: '12px',
+        primaryColor: '#062f3d',
+        primaryTextColor: '#d6f6ff',
+        primaryBorderColor: '#00eeff',
+        secondaryColor: '#04222d',
+        tertiaryColor: '#04222d',
+        mainBkg: '#062f3d',
+        nodeBorder: '#00eeff',
+        clusterBkg: '#02161f',
+        clusterBorder: '#00eeff55',
+        lineColor: '#00eeff',
+        textColor: '#c0e8ff',
+        edgeLabelBackground: '#02161f'
+      },
+      flowchart: { curve: 'basis', useMaxWidth: false, htmlLabels: false, nodeSpacing: 30, rankSpacing: 40, padding: 10 }
+    });
+
+    var targets = [];
+    blocks.forEach(function(el){
+      var codeEl = el.querySelector('code');
+      if(!codeEl) return;
+      var div = document.createElement('div');
+      div.className = 'mermaid';
+      div.textContent = codeEl.textContent;
+      el.parentNode.replaceChild(div, el);
+      targets.push(div);
+    });
+    if(!targets.length) return;
+    try { await mermaid.run({ nodes: targets }); }
+    catch(e){ console.warn('[mermaid] 渲染失败：', e); }
+  }
+  /* 作用：多次触发兜底（延迟重试 + DOM 变化），防止某次时机没跑到导致图表留在代码块 */
+  var mmBusy = false;
+  function scheduleMermaid(){
+    if(mmBusy) return;
+    mmBusy = true;
+    renderMermaidDiagram().then(function(){ mmBusy = false; }, function(){ mmBusy = false; });
+  }
+  scheduleMermaid();
+  window.addEventListener('load', scheduleMermaid);
+  [1000, 3000, 8000].forEach(function(ms){ setTimeout(scheduleMermaid, ms); });
+  if(document.readyState !== 'loading') scheduleMermaid();
+  if(window.MutationObserver){
+    var mmTimer = null;
+    var mmObserver = new MutationObserver(function(){
+      clearTimeout(mmTimer);
+      mmTimer = setTimeout(scheduleMermaid, 400);
+    });
+    mmObserver.observe(document.querySelector('.mb-article') || document.body, { childList: true, subtree: true });
+  }
+</script>
+</body>
+</html>

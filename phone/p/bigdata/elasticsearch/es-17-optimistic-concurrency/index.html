@@ -1,0 +1,306 @@
+<!--
+  ============================================
+  手机端 · 文章原文页
+  文件：phone/post.njk
+  适用终端：手机端（路由 /phone/p/<slug>/，由 scripts/phone-routes.js 生成）
+  作用：手机阅读单篇文章；单列布局、无侧栏无雷达，替代电脑端 post.njk
+        数据由生成期算好：page.item = { title, dateStr, content, cats, tags }
+  样式依赖：source/css/theme/phone/common.css、source/css/theme/phone/list.css
+  组件依赖：phone/_components/Particles.njk
+  最后修改：2026-11-11
+  ============================================
+-->
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="color-scheme" content="dark">
+  <meta name="theme-color" content="#020817">
+  <!-- 首帧兜底：浏览器默认画布是白的，样式未解析前会闪一下白。这条规则先锁死深空底色 -->
+  <style>html{background-color:#020817}</style>
+  <title>ES17-乐观并发与 409 - 时空秘境</title>
+  <!-- 手机端样式：基础 + 列表/正文，外链引入（源文件 source/css/theme/phone/） -->
+  <link rel="stylesheet" href="/css/theme/phone/common.css">
+  <link rel="stylesheet" href="/css/theme/phone/list.css">
+<meta name="generator" content="Hexo 8.1.2"></head>
+<body>
+<div class="mb-shell">
+  <!--
+  ============================================
+  手机端星空粒子组件
+  文件：Particles.njk
+  适用终端：手机端
+  作用：Particles.njk 的手机端副本（nunjucks 子目录 include 取不到上级）
+        参数与电脑端 _components/Particles.njk 保持一致：
+        粒子 95 / 连线 118px / opacity 0.32，外加星座层与零星闪烁层
+  最后修改：2026-11-12
+  ============================================
+--><!-- z-index 必须是 0：负层级会被 body 不透明背景盖住，粒子在跑却看不见 -->
+<div id="particles" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 0; pointer-events: none;"></div>
+<!-- 星座层（与首页同一套：随机零星散布星座图形 + 偶尔闪烁的小星） -->
+<div id="constellations" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 1; pointer-events: none;" aria-hidden="true"></div>
+<script src="/js/particles.min.js"></script>
+<script>
+particlesJS("particles", {
+  particles: {
+    number: {
+      value: 95,
+      density: {
+        enable: true,
+        value_area: 800
+      }
+    },
+    color: {
+      value: "#00eeff"
+    },
+    shape: {
+      type: "circle",
+      stroke: {
+        width: 0,
+        color: "#000000"
+      }
+    },
+    opacity: {
+      value: 0.6,
+      random: true,
+      anim: {
+        enable: true,
+        speed: 0.5,
+        opacity_min: 0.1,
+        sync: false
+      }
+    },
+    size: {
+      value: 3,
+      random: true,
+      anim: {
+        enable: true,
+        speed: 2,
+        size_min: 0.1,
+        sync: false
+      }
+    },
+    line_linked: {
+      enable: true,
+      distance: 118,
+      color: "#00eeff",
+      opacity: 0.32,
+      width: 1
+    },
+    move: {
+      enable: true,
+      speed: 0.8,
+      direction: "none",
+      random: true,
+      straight: false,
+      out_mode: "out",
+      bounce: false,
+      attract: {
+        enable: true,
+        rotateX: 600,
+        rotateY: 1200
+      }
+    }
+  },
+  interactivity: {
+    detect_on: "canvas",
+    events: {
+      onhover: {
+        enable: true,
+        mode: "grab"       // 手指按住时粒子聚集
+      },
+      onclick: {
+        enable: true,
+        mode: "push"       // 点击时产生新粒子
+      },
+      resize: true
+    },
+    modes: {
+      grab: {
+        distance: 200,
+        line_linked: {
+          opacity: 1
+        }
+      },
+      push: {
+        particles_nb: 6
+      }
+    }
+  },
+  retina_detect: true
+});
+</script>
+<!-- 星座 + 零星闪烁层：与电脑端共用同一份绘制脚本 -->
+<script src="/js/theme/home/starfield.js"></script>
+
+
+  <div class="mb-top">
+    <a class="mb-back" href="/phone/">← 返回手机首页</a>
+    <span class="mb-sub" style="margin:0">2023-11-13</span>
+  </div>
+
+  <h1 class="mb-title">ES17-乐观并发与 409</h1>
+  <div class="mb-sub">
+    分类：bigdata · elasticsearch
+     ｜ 标签：Elasticsearch · 系统课
+  </div>
+
+  <div class="mb-article"><div class="essay-banner essay-elasticsearch"></div>
+
+<h1 id="乐观并发：-version、-seq-no、-primary-term-与-409"><a href="#乐观并发：-version、-seq-no、-primary-term-与-409" class="headerlink" title="乐观并发：_version、_seq_no、_primary_term 与 409"></a>乐观并发：_version、_seq_no、_primary_term 与 409</h1><p>两个服务同时改同一条文档，谁赢？Elasticsearch 不给你加锁，它给你一对「票据」：<code>_seq_no</code> + <code>_primary_term</code>。</p>
+<p>带对了才能改，带错了返回 409。理解这套机制，才能写出不会互相覆盖的更新逻辑。</p>
+<p><img src="https://wu4yong.github.io/starry-images/assets/img/elasticsearch/es-17-concurrency.svg" alt="两个客户端抢同一条文档：一张 if_seq_no 票据只放行一次"></p>
+<p><em>if_seq_no + if_primary_term 冲突时 202 与 409 的分流｜依据 Elasticsearch 官方文档 8.17 自绘</em></p>
+<h2 id="一、学习目标"><a href="#一、学习目标" class="headerlink" title="一、学习目标"></a>一、学习目标</h2><ol>
+<li>说清 <code>_seq_no</code> 与 <code>_primary_term</code> 各自的含义与作用域；</li>
+<li>会写带 <code>if_seq_no</code> + <code>if_primary_term</code> 的条件更新；</li>
+<li>知道 409 出现后该重试还是该放弃；</li>
+<li>分清 <code>_version</code> 与业务版本号的区别。</li>
+</ol>
+<h2 id="二、前置知识"><a href="#二、前置知识" class="headerlink" title="二、前置知识"></a>二、前置知识</h2><div class="data-grid data-grid-link-table"><div class="grid-header"><div class="grid-cell">需要掌握</div><div class="grid-cell">到什么程度</div><div class="grid-cell">出处</div></div><div class="grid-row"><div class="grid-cell">写入返回字段</div><div class="grid-cell">知道 <code>_version</code>&#x2F;<code>_seq_no</code> 在哪</div><div class="grid-cell">M3-1</div></div><div class="grid-row"><div class="grid-cell">分片与副本</div><div class="grid-cell">知道主分片可切换</div><div class="grid-cell">M1-3</div></div></div>
+
+<h2 id="三、理论讲解"><a href="#三、理论讲解" class="headerlink" title="三、理论讲解"></a>三、理论讲解</h2><div class="data-grid data-grid-link-table"><div class="grid-header"><div class="grid-cell">字段</div><div class="grid-cell">作用域</div><div class="grid-cell">含义</div><div class="grid-cell">特点</div></div><div class="grid-row"><div class="grid-cell"><code>_version</code></div><div class="grid-cell">文档</div><div class="grid-cell">该文档被写过的次数</div><div class="grid-cell">每次写自增，适合展示</div></div><div class="grid-row"><div class="grid-cell"><code>_seq_no</code></div><div class="grid-cell"><strong>分片</strong></div><div class="grid-cell">该分片内写入的单调序号</div><div class="grid-cell">从 0 开始，随分片内所有文档共用</div></div><div class="grid-row"><div class="grid-cell"><code>_primary_term</code></div><div class="grid-cell">分片</div><div class="grid-cell">主分片「任期」，主分片切换时递增</div><div class="grid-cell">防止跨任期误用旧序号</div></div></div>
+
+<p>官方机制叫<strong>乐观并发控制</strong>：不锁文档，而是要求你在写入时带上「我看到的版本」。条件不满足就拒绝，由你自己决定重读还是放弃。</p>
+<pre class="line-numbers language-bash" data-language="bash"><code class="language-bash">PUT /goods/_doc/1?if_seq_no<span class="token operator">=</span><span class="token number">5</span><span class="token operator">&amp;</span><span class="token assign-left variable">if_primary_term</span><span class="token operator">=</span><span class="token number">1</span><span aria-hidden="true" class="line-numbers-rows"><span></span></span></code></pre>
+
+<p>语义：只有当前文档的 <code>_seq_no</code> 仍是 5、主分片还是第 1 任期时，这次写入才生效；否则返回 409 <code>version_conflict_engine_exception</code>。</p>
+<p>为什么必须两个字段一起带？因为主分片一旦故障转移，新主分片上的 <code>_seq_no</code> 序列可能与旧主分片重合，单看序号会误判；加上任期才能唯一标识「我看到的那一版」。</p>
+<h2 id="四、原理拆解：409-是不是错误"><a href="#四、原理拆解：409-是不是错误" class="headerlink" title="四、原理拆解：409 是不是错误"></a>四、原理拆解：409 是不是错误</h2><p>409 在语义上不是「失败」，而是「你的假设过期了」。处理方式取决于业务：</p>
+<div class="data-grid data-grid-link-table"><div class="grid-header"><div class="grid-cell">业务模型</div><div class="grid-cell">建议</div></div><div class="grid-row"><div class="grid-cell">计数&#x2F;累加类</div><div class="grid-cell">重读最新版本再重算，通常重试 3 次内收敛</div></div><div class="grid-row"><div class="grid-cell">状态机流转（下单→支付）</div><div class="grid-cell">重读后校验状态是否仍允许该动作，不允许就放弃</div></div><div class="grid-row"><div class="grid-cell">覆盖写（全量同步）</div><div class="grid-cell">直接重发不带条件的 <code>index</code>（后写者赢）</div></div></div>
+
+<p>内置的 <code>_update</code> API 也提供 <code>retry_on_conflict</code> 参数（默认 <code>0</code>，即不重试）：它在服务端自动重读并重放脚本，适合「脚本幂等」的场景。</p>
+<h2 id="五、场景说明"><a href="#五、场景说明" class="headerlink" title="五、场景说明"></a>五、场景说明</h2><div class="data-grid data-grid-link-table"><div class="grid-header"><div class="grid-cell">场景</div><div class="grid-cell">写法</div></div><div class="grid-row"><div class="grid-cell">库存扣减（避免超卖）</div><div class="grid-cell"><code>if_seq_no</code> + <code>if_primary_term</code>，冲突后走业务补偿</div></div><div class="grid-row"><div class="grid-cell">多副本同步的幂等写</div><div class="grid-cell"><code>version_type=external</code> 用业务版本号</div></div><div class="grid-row"><div class="grid-cell">日志&#x2F;埋点（后写者赢）</div><div class="grid-cell">普通 <code>index</code>，不带条件</div></div><div class="grid-row"><div class="grid-cell">批量补字段</div><div class="grid-cell"><code>_update_by_query</code>（内部同样做版本校验）</div></div></div>
+
+<h2 id="六、实操"><a href="#六、实操" class="headerlink" title="六、实操"></a>六、实操</h2><pre class="line-numbers language-bash" data-language="bash"><code class="language-bash"><span class="token comment"># 1) 拿到当前票据</span>
+<span class="token function">curl</span> <span class="token parameter variable">-s</span> <span class="token string">"http://localhost:9200/goods/_doc/1"</span> <span class="token operator">|</span> jq <span class="token string">'&#123;_seq_no, _primary_term&#125;'</span>
+
+<span class="token comment"># 2) 带条件更新（把上一步的值填进来）</span>
+<span class="token function">curl</span> <span class="token parameter variable">-X</span> PUT <span class="token string">"http://localhost:9200/goods/_doc/1?if_seq_no=0&amp;if_primary_term=1"</span> <span class="token punctuation">\</span>
+  <span class="token parameter variable">-H</span> <span class="token string">'Content-Type: application/json'</span> <span class="token parameter variable">-d</span> <span class="token string">'&#123; "title": "改了", "price": 12 &#125;'</span>
+
+<span class="token comment"># 3) 用错票据：预期 409</span>
+<span class="token function">curl</span> <span class="token parameter variable">-X</span> PUT <span class="token string">"http://localhost:9200/goods/_doc/1?if_seq_no=0&amp;if_primary_term=1"</span> <span class="token punctuation">\</span>
+  <span class="token parameter variable">-H</span> <span class="token string">'Content-Type: application/json'</span> <span class="token parameter variable">-d</span> <span class="token string">'&#123; "title": "又改一次", "price": 13 &#125;'</span>
+
+<span class="token comment"># 4) 服务端自动重试的更新（脚本幂等时可用）</span>
+<span class="token function">curl</span> <span class="token parameter variable">-X</span> POST <span class="token string">"http://localhost:9200/goods/_update/1?retry_on_conflict=3"</span> <span class="token punctuation">\</span>
+  <span class="token parameter variable">-H</span> <span class="token string">'Content-Type: application/json'</span> <span class="token parameter variable">-d</span> <span class="token string">'&#123; "doc": &#123; "price": 14 &#125; &#125;'</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<p>第 3 步会返回 409，这是<strong>预期行为</strong>，把它当异常日志刷屏会掩盖真正的问题。</p>
+<h2 id="七、常见坑"><a href="#七、常见坑" class="headerlink" title="七、常见坑"></a>七、常见坑</h2><ol>
+<li><strong>把 <code>_version</code> 当业务版本号</strong>：它是内部计数，业务回滚&#x2F;重建索引后会变。</li>
+<li><strong>只带 <code>if_seq_no</code> 不带 <code>if_primary_term</code></strong>：主分片切换后可能误判。</li>
+<li><strong>409 直接重试不重读</strong>：同一票据重发永远 409，必须先重新读取。</li>
+<li><strong><code>retry_on_conflict</code> 调很大</strong>：脚本非幂等时会造成重复累加，官方默认 0 是有原因的。</li>
+<li><strong>以为有分布式锁</strong>：ES 不提供跨文档锁，只有文档级的乐观并发。</li>
+</ol>
+<h2 id="八、课后小结"><a href="#八、课后小结" class="headerlink" title="八、课后小结"></a>八、课后小结</h2><ol>
+<li><code>_seq_no</code> 是分片内序号，<code>_primary_term</code> 是主分片任期，两者一起才构成有效票据。</li>
+<li>不满足条件返回 409，属正常并发结果。</li>
+<li>409 的处理策略由业务决定：重读重算、状态校验或放弃。</li>
+<li><code>_version</code> 是内部计数，不要当业务版本。</li>
+<li><code>_update</code> 的 <code>retry_on_conflict</code> 默认 0，脚本幂等才可放开。</li>
+</ol>
+<h2 id="九、思考题"><a href="#九、思考题" class="headerlink" title="九、思考题"></a>九、思考题</h2><ol>
+<li>两个线程同时用同一票据更新，为什么一定有一个失败？这和「加锁」的本质区别是什么？</li>
+<li>库存扣减为什么不能只靠 <code>_update</code> 脚本 + <code>retry_on_conflict</code>？给出一个会出错的时序。</li>
+<li><code>_seq_no</code> 是按分片递增的，那「同一文档的两次修改」在某些情况下会不会序号不连续？为什么？</li>
+</ol>
+<h2 id="十、官方资料"><a href="#十、官方资料" class="headerlink" title="十、官方资料"></a>十、官方资料</h2><ul>
+<li>Optimistic concurrency control：<a target="_blank" rel="noopener" href="https://www.elastic.co/guide/en/elasticsearch/reference/current/optimistic-concurrency-control.html">https://www.elastic.co/guide/en/elasticsearch/reference/current/optimistic-concurrency-control.html</a></li>
+<li>Update API（<code>retry_on_conflict</code>）：<a target="_blank" rel="noopener" href="https://www.elastic.co/guide/en/elasticsearch/reference/current/docs-update.html">https://www.elastic.co/guide/en/elasticsearch/reference/current/docs-update.html</a></li>
+<li>Version types：<a target="_blank" rel="noopener" href="https://www.elastic.co/guide/en/elasticsearch/reference/current/docs-index_.html#index-versioning">https://www.elastic.co/guide/en/elasticsearch/reference/current/docs-index_.html#index-versioning</a></li>
+</ul>
+<p>上一篇：<a href="/2023/11/10/bigdata/elasticsearch/es-16-bulk/">M3-3 <code>_bulk</code> 的正确用法</a> ｜ 下一篇：<a href="/2023/11/16/bigdata/elasticsearch/es-18-update-delete/">M3-5 更新与删除语义</a> ｜ <a href="/2023/09/22/bigdata/elasticsearch/es-00-series-index/">总目录</a></p>
+</div>
+
+  <div class="mb-foot">
+    <a href="/phone/">返回手机首页</a>
+    <a href="/phone/tags/">星迹索引</a>
+  </div>
+</div>
+
+
+<script>
+  /* 作用：懒加载本地 mermaid 库；无 mermaid 代码块时不加载 */
+  function loadLocalMermaid(){
+    return new Promise(function(resolve, reject){
+      if(window.mermaid) return resolve(window.mermaid);
+      var s = document.createElement('script');
+      s.src = '/js/third-party/mermaid/mermaid.min.js?v=10';
+      s.onload = function(){ resolve(window.mermaid); };
+      s.onerror = function(){ reject(new Error('mermaid local load failed')); };
+      document.head.appendChild(s);
+    });
+  }
+
+  /* 作用：把 ```mermaid 代码块替换成 SVG 图（手机端字号略小、图可横向滚动） */
+  async function renderMermaidDiagram(){
+    var blocks = document.querySelectorAll('pre[class*="language-mermaid"]');
+    if(!blocks.length) return;
+    var mermaid;
+    try { mermaid = await loadLocalMermaid(); }
+    catch(e){ console.warn('[mermaid] 本地库加载失败：', e); return; }
+
+    mermaid.initialize({
+      startOnLoad: false,
+      theme: 'base',
+      themeVariables: {
+        darkMode: true,
+        background: 'transparent',
+        fontFamily: '"Microsoft YaHei", "PingFang SC", "Segoe UI", sans-serif',
+        fontSize: '12px',
+        primaryColor: '#062f3d',
+        primaryTextColor: '#d6f6ff',
+        primaryBorderColor: '#00eeff',
+        secondaryColor: '#04222d',
+        tertiaryColor: '#04222d',
+        mainBkg: '#062f3d',
+        nodeBorder: '#00eeff',
+        clusterBkg: '#02161f',
+        clusterBorder: '#00eeff55',
+        lineColor: '#00eeff',
+        textColor: '#c0e8ff',
+        edgeLabelBackground: '#02161f'
+      },
+      flowchart: { curve: 'basis', useMaxWidth: false, htmlLabels: false, nodeSpacing: 30, rankSpacing: 40, padding: 10 }
+    });
+
+    var targets = [];
+    blocks.forEach(function(el){
+      var codeEl = el.querySelector('code');
+      if(!codeEl) return;
+      var div = document.createElement('div');
+      div.className = 'mermaid';
+      div.textContent = codeEl.textContent;
+      el.parentNode.replaceChild(div, el);
+      targets.push(div);
+    });
+    if(!targets.length) return;
+    try { await mermaid.run({ nodes: targets }); }
+    catch(e){ console.warn('[mermaid] 渲染失败：', e); }
+  }
+  /* 作用：多次触发兜底（延迟重试 + DOM 变化），防止某次时机没跑到导致图表留在代码块 */
+  var mmBusy = false;
+  function scheduleMermaid(){
+    if(mmBusy) return;
+    mmBusy = true;
+    renderMermaidDiagram().then(function(){ mmBusy = false; }, function(){ mmBusy = false; });
+  }
+  scheduleMermaid();
+  window.addEventListener('load', scheduleMermaid);
+  [1000, 3000, 8000].forEach(function(ms){ setTimeout(scheduleMermaid, ms); });
+  if(document.readyState !== 'loading') scheduleMermaid();
+  if(window.MutationObserver){
+    var mmTimer = null;
+    var mmObserver = new MutationObserver(function(){
+      clearTimeout(mmTimer);
+      mmTimer = setTimeout(scheduleMermaid, 400);
+    });
+    mmObserver.observe(document.querySelector('.mb-article') || document.body, { childList: true, subtree: true });
+  }
+</script>
+</body>
+</html>

@@ -1,0 +1,313 @@
+<!--
+  ============================================
+  手机端 · 文章原文页
+  文件：phone/post.njk
+  适用终端：手机端（路由 /phone/p/<slug>/，由 scripts/phone-routes.js 生成）
+  作用：手机阅读单篇文章；单列布局、无侧栏无雷达，替代电脑端 post.njk
+        数据由生成期算好：page.item = { title, dateStr, content, cats, tags }
+  样式依赖：source/css/theme/phone/common.css、source/css/theme/phone/list.css
+  组件依赖：phone/_components/Particles.njk
+  最后修改：2026-11-11
+  ============================================
+-->
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="color-scheme" content="dark">
+  <meta name="theme-color" content="#020817">
+  <!-- 首帧兜底：浏览器默认画布是白的，样式未解析前会闪一下白。这条规则先锁死深空底色 -->
+  <style>html{background-color:#020817}</style>
+  <title>ES12-改 mapping 的边界 - 时空秘境</title>
+  <!-- 手机端样式：基础 + 列表/正文，外链引入（源文件 source/css/theme/phone/） -->
+  <link rel="stylesheet" href="/css/theme/phone/common.css">
+  <link rel="stylesheet" href="/css/theme/phone/list.css">
+<meta name="generator" content="Hexo 8.1.2"></head>
+<body>
+<div class="mb-shell">
+  <!--
+  ============================================
+  手机端星空粒子组件
+  文件：Particles.njk
+  适用终端：手机端
+  作用：Particles.njk 的手机端副本（nunjucks 子目录 include 取不到上级）
+        参数与电脑端 _components/Particles.njk 保持一致：
+        粒子 95 / 连线 118px / opacity 0.32，外加星座层与零星闪烁层
+  最后修改：2026-11-12
+  ============================================
+--><!-- z-index 必须是 0：负层级会被 body 不透明背景盖住，粒子在跑却看不见 -->
+<div id="particles" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 0; pointer-events: none;"></div>
+<!-- 星座层（与首页同一套：随机零星散布星座图形 + 偶尔闪烁的小星） -->
+<div id="constellations" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 1; pointer-events: none;" aria-hidden="true"></div>
+<script src="/js/particles.min.js"></script>
+<script>
+particlesJS("particles", {
+  particles: {
+    number: {
+      value: 95,
+      density: {
+        enable: true,
+        value_area: 800
+      }
+    },
+    color: {
+      value: "#00eeff"
+    },
+    shape: {
+      type: "circle",
+      stroke: {
+        width: 0,
+        color: "#000000"
+      }
+    },
+    opacity: {
+      value: 0.6,
+      random: true,
+      anim: {
+        enable: true,
+        speed: 0.5,
+        opacity_min: 0.1,
+        sync: false
+      }
+    },
+    size: {
+      value: 3,
+      random: true,
+      anim: {
+        enable: true,
+        speed: 2,
+        size_min: 0.1,
+        sync: false
+      }
+    },
+    line_linked: {
+      enable: true,
+      distance: 118,
+      color: "#00eeff",
+      opacity: 0.32,
+      width: 1
+    },
+    move: {
+      enable: true,
+      speed: 0.8,
+      direction: "none",
+      random: true,
+      straight: false,
+      out_mode: "out",
+      bounce: false,
+      attract: {
+        enable: true,
+        rotateX: 600,
+        rotateY: 1200
+      }
+    }
+  },
+  interactivity: {
+    detect_on: "canvas",
+    events: {
+      onhover: {
+        enable: true,
+        mode: "grab"       // 手指按住时粒子聚集
+      },
+      onclick: {
+        enable: true,
+        mode: "push"       // 点击时产生新粒子
+      },
+      resize: true
+    },
+    modes: {
+      grab: {
+        distance: 200,
+        line_linked: {
+          opacity: 1
+        }
+      },
+      push: {
+        particles_nb: 6
+      }
+    }
+  },
+  retina_detect: true
+});
+</script>
+<!-- 星座 + 零星闪烁层：与电脑端共用同一份绘制脚本 -->
+<script src="/js/theme/home/starfield.js"></script>
+
+
+  <div class="mb-top">
+    <a class="mb-back" href="/phone/">← 返回手机首页</a>
+    <span class="mb-sub" style="margin:0">2023-10-29</span>
+  </div>
+
+  <h1 class="mb-title">ES12-改 mapping 的边界</h1>
+  <div class="mb-sub">
+    分类：bigdata · elasticsearch
+     ｜ 标签：Elasticsearch · 系统课
+  </div>
+
+  <div class="mb-article"><div class="essay-banner essay-elasticsearch"></div>
+
+<h1 id="改-mapping-的边界：能在线加的、只能重建的"><a href="#改-mapping-的边界：能在线加的、只能重建的" class="headerlink" title="改 mapping 的边界：能在线加的、只能重建的"></a>改 mapping 的边界：能在线加的、只能重建的</h1><p>「能不能在线改 mapping」这个问题，官方答案是分层的：<strong>加字段可以，改类型不行</strong>。</p>
+<p>搞清楚这条线，你才知道什么时候能十分钟搞定，什么时候必须走「新建索引 + reindex + 别名切换」这套完整迁移。</p>
+<p><img src="https://wu4yong.github.io/starry-images/assets/img/elasticsearch/es-12-mapping-changes.svg" alt="改 mapping 的两条路：在线可加字段，改类型与分析器必须重建索引"></p>
+<p><em>在线加字段 与 新建索引 + reindex 的分界｜依据 Elasticsearch 官方文档 8.17 自绘</em></p>
+<h2 id="一、学习目标"><a href="#一、学习目标" class="headerlink" title="一、学习目标"></a>一、学习目标</h2><ol>
+<li>分清 mapping 里「可在线变更」与「必须重建」的两类内容；</li>
+<li>会写一个安全的 reindex 迁移方案（含别名原子切换）；</li>
+<li>知道 <code>_reindex</code> 不复制 settings 与 mapping 这个坑；</li>
+<li>会说清迁移窗口期如何避免数据丢失。</li>
+</ol>
+<h2 id="二、前置知识"><a href="#二、前置知识" class="headerlink" title="二、前置知识"></a>二、前置知识</h2><div class="data-grid data-grid-link-table"><div class="grid-header"><div class="grid-cell">需要掌握</div><div class="grid-cell">到什么程度</div><div class="grid-cell">出处</div></div><div class="grid-row"><div class="grid-cell">mapping 结构</div><div class="grid-cell">知道类型&#x2F;分析器写在哪</div><div class="grid-cell">M2-2、M2-5</div></div><div class="grid-row"><div class="grid-cell">别名</div><div class="grid-cell">知道别名可以指向多个索引</div><div class="grid-cell">M2-8（下一篇）</div></div></div>
+
+<h2 id="三、理论讲解"><a href="#三、理论讲解" class="headerlink" title="三、理论讲解"></a>三、理论讲解</h2><div class="data-grid data-grid-link-table"><div class="grid-header"><div class="grid-cell">变更内容</div><div class="grid-cell">能否在线</div><div class="grid-cell">处理方式</div></div><div class="grid-row"><div class="grid-cell">新增字段</div><div class="grid-cell">能</div><div class="grid-cell"><code>PUT /index/_mapping</code> 追加 <code>properties</code></div></div><div class="grid-row"><div class="grid-cell">新增字段的 <code>fields</code> 子字段</div><div class="grid-cell">能</div><div class="grid-cell">同上，但要重灌历史数据才生效</div></div><div class="grid-row"><div class="grid-cell">索引级 settings（副本数、<code>refresh_interval</code>、<code>total_fields.limit</code>）</div><div class="grid-cell">能</div><div class="grid-cell"><code>PUT /index/_settings</code></div></div><div class="grid-row"><div class="grid-cell">字段类型（text → keyword）</div><div class="grid-cell"><strong>不能</strong></div><div class="grid-cell">新建索引 + reindex</div></div><div class="grid-row"><div class="grid-cell">字段分析器 &#x2F; <code>search_analyzer</code></div><div class="grid-cell"><strong>不能</strong>（对已索引数据）</div><div class="grid-cell">新建索引 + reindex</div></div><div class="grid-row"><div class="grid-cell">字段改名</div><div class="grid-cell"><strong>不能</strong></div><div class="grid-cell"><code>copy_to</code> 过渡或 reindex 时用 script 重命名字段</div></div></div>
+
+<p>核心原因只有一句：<strong>倒排索引与 doc values 已经按旧结构物理落盘</strong>，改「定义」不会重写历史段。所以官方把这套操作归类为「需要重建」。</p>
+<h2 id="四、原理拆解：一次安全迁移的四个阶段"><a href="#四、原理拆解：一次安全迁移的四个阶段" class="headerlink" title="四、原理拆解：一次安全迁移的四个阶段"></a>四、原理拆解：一次安全迁移的四个阶段</h2><ol>
+<li><strong>建新索引</strong>（v2）：完整 settings + mapping，一次写对；</li>
+<li><strong>灌数据</strong>：<code>_reindex</code> 从 v1 到 v2（可带 <code>script</code> 做字段改名&#x2F;类型转换、<code>source.query</code> 做筛选）；</li>
+<li><strong>切别名</strong>：用一个请求原子完成「别名从 v1 指向 v2」，写入侧必须已经用别名而不是物理索引名；</li>
+<li><strong>验证后删 v1</strong>：确认检索与写入都正常，保留快照再删。</li>
+</ol>
+<p>第 3 步是整套方案的关键：如果应用一直写的是物理索引名，就无法无损切换，只能停机。这也是 M2-8 要讲的「别名是建模的一部分」。</p>
+<h2 id="五、场景说明"><a href="#五、场景说明" class="headerlink" title="五、场景说明"></a>五、场景说明</h2><div class="data-grid data-grid-link-table"><div class="grid-header"><div class="grid-cell">问题</div><div class="grid-cell">走哪条路</div></div><div class="grid-row"><div class="grid-cell">只想加一个 <code>remark</code> 字段</div><div class="grid-cell">在线 <code>PUT _mapping</code>，老文档该字段为空</div></div><div class="grid-row"><div class="grid-cell">想把 <code>title</code> 从 text 改成 keyword</div><div class="grid-cell">完整迁移（v2 + reindex + 别名）</div></div><div class="grid-row"><div class="grid-cell">想给已有 text 字段加 <code>.keyword</code> 子字段</div><div class="grid-cell">在线加子字段可行，但历史文档的该子字段为空，需 <code>_update_by_query</code> 回溯</div></div><div class="grid-row"><div class="grid-cell">想换中文分析器</div><div class="grid-cell">必须重建，历史词条不会自动重切</div></div></div>
+
+<h2 id="六、实操：完整迁移"><a href="#六、实操：完整迁移" class="headerlink" title="六、实操：完整迁移"></a>六、实操：完整迁移</h2><pre class="line-numbers language-bash" data-language="bash"><code class="language-bash"><span class="token comment"># 1) 建 v2（结构一次写对）</span>
+<span class="token function">curl</span> <span class="token parameter variable">-X</span> PUT <span class="token string">"http://localhost:9200/goods_v2"</span> <span class="token parameter variable">-H</span> <span class="token string">'Content-Type: application/json'</span> <span class="token parameter variable">-d</span> <span class="token string">'
+&#123; "settings": &#123; "number_of_shards": 3, "number_of_replicas": 1 &#125;,
+  "mappings": &#123; "properties": &#123;
+    "title": &#123; "type": "text", "fields": &#123; "raw": &#123; "type": "keyword" &#125; &#125; &#125;,
+    "price": &#123; "type": "scaled_float", "scaling_factor": 100 &#125; &#125; &#125; &#125;'</span>
+
+<span class="token comment"># 2) 灌数据（注意：settings 与 mapping 不会自动带过来）</span>
+<span class="token function">curl</span> <span class="token parameter variable">-X</span> POST <span class="token string">"http://localhost:9200/_reindex?wait_for_completion=false"</span> <span class="token parameter variable">-H</span> <span class="token string">'Content-Type: application/json'</span> <span class="token parameter variable">-d</span> <span class="token string">'
+&#123; "source": &#123; "index": "goods_v1" &#125;,
+  "dest":   &#123; "index": "goods_v2", "op_type": "create" &#125; &#125;'</span>
+
+<span class="token comment"># 3) 查任务进度</span>
+<span class="token function">curl</span> <span class="token parameter variable">-s</span> <span class="token string">"http://localhost:9200/_tasks?actions=*reindex*"</span>
+
+<span class="token comment"># 4) 别名原子切换（一个请求完成，不给中间态）</span>
+<span class="token function">curl</span> <span class="token parameter variable">-X</span> POST <span class="token string">"http://localhost:9200/_aliases"</span> <span class="token parameter variable">-H</span> <span class="token string">'Content-Type: application/json'</span> <span class="token parameter variable">-d</span> <span class="token string">'
+&#123; "actions": [
+  &#123; "remove": &#123; "index": "goods_v1", "alias": "goods" &#125; &#125;,
+  &#123; "add":    &#123; "index": "goods_v2", "alias": "goods", "is_write_index": true &#125; &#125; ] &#125;'</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<p>第 2 步的 <code>op_type: create</code> 很关键：目标已存在同 ID 文档时不会覆盖，而是记一条冲突，避免「迁移把新数据冲掉」。返回里的 <code>failures</code> 与 <code>version_conflicts</code> 必须为 0 才算迁移成功。</p>
+<h2 id="七、常见坑"><a href="#七、常见坑" class="headerlink" title="七、常见坑"></a>七、常见坑</h2><ol>
+<li><strong>以为 reindex 会复制 settings&#x2F;mapping</strong>：官方只搬文档，结构必须你提前建好。</li>
+<li><strong>应用直写物理索引名</strong>：切别名时无法无损切换，只能停机。</li>
+<li><strong>迁移期间不清洗并发写入</strong>：v1 在迁移后又进新数据，切完别名就丢。要么暂停写、要么迁移完再补一次增量。</li>
+<li><strong><code>_reindex</code> 不带 <code>op_type</code></strong>：默认覆盖，目标侧已有数据可能被旧数据冲掉。</li>
+<li><strong>加子字段后忘了回溯历史文档</strong>：<code>fields</code> 新增只对后续文档生效，老文档该子字段为空。</li>
+<li><strong>切完就删 v1</strong>：没有回滚余地，官方建议保留快照或至少观察一段时间。</li>
+</ol>
+<h2 id="八、课后小结"><a href="#八、课后小结" class="headerlink" title="八、课后小结"></a>八、课后小结</h2><ol>
+<li>可在线改：加字段、改索引级 settings；不可在线改：字段类型、分析器、字段名。</li>
+<li>完整迁移四步：建 v2 → reindex → 别名原子切换 → 删 v1。</li>
+<li><code>_reindex</code> 只搬数据，不搬结构。</li>
+<li>写入侧必须走别名，否则无法无损切换。</li>
+<li>迁移要看 <code>failures</code> 与 <code>version_conflicts</code>，不能只看「完成了」。</li>
+</ol>
+<h2 id="九、思考题"><a href="#九、思考题" class="headerlink" title="九、思考题"></a>九、思考题</h2><ol>
+<li>一个 2 TB 的索引要改字段类型，直接 reindex 会在什么环节出问题？给出分批与限流的思路。</li>
+<li>迁移期间应用还在写 v1，你怎么保证切换后不丢数据？给出两种方案并比较。</li>
+<li>为什么官方把「改字段名」也归到必须重建？有没有不改结构的过渡办法？</li>
+</ol>
+<h2 id="十、官方资料"><a href="#十、官方资料" class="headerlink" title="十、官方资料"></a>十、官方资料</h2><ul>
+<li>PUT mapping（可在线追加字段）：<a target="_blank" rel="noopener" href="https://www.elastic.co/guide/en/elasticsearch/reference/current/indices-put-mapping.html">https://www.elastic.co/guide/en/elasticsearch/reference/current/indices-put-mapping.html</a></li>
+<li>Reindex API：<a target="_blank" rel="noopener" href="https://www.elastic.co/guide/en/elasticsearch/reference/current/docs-reindex.html">https://www.elastic.co/guide/en/elasticsearch/reference/current/docs-reindex.html</a></li>
+<li>Aliases API（原子切换）：<a target="_blank" rel="noopener" href="https://www.elastic.co/guide/en/elasticsearch/reference/current/indices-aliases.html">https://www.elastic.co/guide/en/elasticsearch/reference/current/indices-aliases.html</a></li>
+<li><code>_update_by_query</code>：<a target="_blank" rel="noopener" href="https://www.elastic.co/guide/en/elasticsearch/reference/current/docs-update-by-query.html">https://www.elastic.co/guide/en/elasticsearch/reference/current/docs-update-by-query.html</a></li>
+</ul>
+<p>上一篇：<a href="/2023/10/26/bigdata/elasticsearch/es-11-dynamic-mapping/">M2-6 dynamic mapping 与 strict 模式</a> ｜ 下一篇：<a href="/2023/11/01/bigdata/elasticsearch/es-13-aliases-data-streams/">M2-8 别名、data stream 与滚动索引</a> ｜ <a href="/2023/09/22/bigdata/elasticsearch/es-00-series-index/">总目录</a></p>
+</div>
+
+  <div class="mb-foot">
+    <a href="/phone/">返回手机首页</a>
+    <a href="/phone/tags/">星迹索引</a>
+  </div>
+</div>
+
+
+<script>
+  /* 作用：懒加载本地 mermaid 库；无 mermaid 代码块时不加载 */
+  function loadLocalMermaid(){
+    return new Promise(function(resolve, reject){
+      if(window.mermaid) return resolve(window.mermaid);
+      var s = document.createElement('script');
+      s.src = '/js/third-party/mermaid/mermaid.min.js?v=10';
+      s.onload = function(){ resolve(window.mermaid); };
+      s.onerror = function(){ reject(new Error('mermaid local load failed')); };
+      document.head.appendChild(s);
+    });
+  }
+
+  /* 作用：把 ```mermaid 代码块替换成 SVG 图（手机端字号略小、图可横向滚动） */
+  async function renderMermaidDiagram(){
+    var blocks = document.querySelectorAll('pre[class*="language-mermaid"]');
+    if(!blocks.length) return;
+    var mermaid;
+    try { mermaid = await loadLocalMermaid(); }
+    catch(e){ console.warn('[mermaid] 本地库加载失败：', e); return; }
+
+    mermaid.initialize({
+      startOnLoad: false,
+      theme: 'base',
+      themeVariables: {
+        darkMode: true,
+        background: 'transparent',
+        fontFamily: '"Microsoft YaHei", "PingFang SC", "Segoe UI", sans-serif',
+        fontSize: '12px',
+        primaryColor: '#062f3d',
+        primaryTextColor: '#d6f6ff',
+        primaryBorderColor: '#00eeff',
+        secondaryColor: '#04222d',
+        tertiaryColor: '#04222d',
+        mainBkg: '#062f3d',
+        nodeBorder: '#00eeff',
+        clusterBkg: '#02161f',
+        clusterBorder: '#00eeff55',
+        lineColor: '#00eeff',
+        textColor: '#c0e8ff',
+        edgeLabelBackground: '#02161f'
+      },
+      flowchart: { curve: 'basis', useMaxWidth: false, htmlLabels: false, nodeSpacing: 30, rankSpacing: 40, padding: 10 }
+    });
+
+    var targets = [];
+    blocks.forEach(function(el){
+      var codeEl = el.querySelector('code');
+      if(!codeEl) return;
+      var div = document.createElement('div');
+      div.className = 'mermaid';
+      div.textContent = codeEl.textContent;
+      el.parentNode.replaceChild(div, el);
+      targets.push(div);
+    });
+    if(!targets.length) return;
+    try { await mermaid.run({ nodes: targets }); }
+    catch(e){ console.warn('[mermaid] 渲染失败：', e); }
+  }
+  /* 作用：多次触发兜底（延迟重试 + DOM 变化），防止某次时机没跑到导致图表留在代码块 */
+  var mmBusy = false;
+  function scheduleMermaid(){
+    if(mmBusy) return;
+    mmBusy = true;
+    renderMermaidDiagram().then(function(){ mmBusy = false; }, function(){ mmBusy = false; });
+  }
+  scheduleMermaid();
+  window.addEventListener('load', scheduleMermaid);
+  [1000, 3000, 8000].forEach(function(ms){ setTimeout(scheduleMermaid, ms); });
+  if(document.readyState !== 'loading') scheduleMermaid();
+  if(window.MutationObserver){
+    var mmTimer = null;
+    var mmObserver = new MutationObserver(function(){
+      clearTimeout(mmTimer);
+      mmTimer = setTimeout(scheduleMermaid, 400);
+    });
+    mmObserver.observe(document.querySelector('.mb-article') || document.body, { childList: true, subtree: true });
+  }
+</script>
+</body>
+</html>

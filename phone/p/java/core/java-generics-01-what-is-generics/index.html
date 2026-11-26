@@ -1,0 +1,345 @@
+<!--
+  ============================================
+  手机端 · 文章原文页
+  文件：phone/post.njk
+  适用终端：手机端（路由 /phone/p/<slug>/，由 scripts/phone-routes.js 生成）
+  作用：手机阅读单篇文章；单列布局、无侧栏无雷达，替代电脑端 post.njk
+        数据由生成期算好：page.item = { title, dateStr, content, cats, tags }
+  样式依赖：source/css/theme/phone/common.css、source/css/theme/phone/list.css
+  组件依赖：phone/_components/Particles.njk
+  最后修改：2026-11-11
+  ============================================
+-->
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="color-scheme" content="dark">
+  <meta name="theme-color" content="#020817">
+  <!-- 首帧兜底：浏览器默认画布是白的，样式未解析前会闪一下白。这条规则先锁死深空底色 -->
+  <style>html{background-color:#020817}</style>
+  <title>Java 泛型（一）什么是泛型 - 时空秘境</title>
+  <!-- 手机端样式：基础 + 列表/正文，外链引入（源文件 source/css/theme/phone/） -->
+  <link rel="stylesheet" href="/css/theme/phone/common.css">
+  <link rel="stylesheet" href="/css/theme/phone/list.css">
+<meta name="generator" content="Hexo 8.1.2"></head>
+<body>
+<div class="mb-shell">
+  <!--
+  ============================================
+  手机端星空粒子组件
+  文件：Particles.njk
+  适用终端：手机端
+  作用：Particles.njk 的手机端副本（nunjucks 子目录 include 取不到上级）
+        参数与电脑端 _components/Particles.njk 保持一致：
+        粒子 95 / 连线 118px / opacity 0.32，外加星座层与零星闪烁层
+  最后修改：2026-11-12
+  ============================================
+--><!-- z-index 必须是 0：负层级会被 body 不透明背景盖住，粒子在跑却看不见 -->
+<div id="particles" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 0; pointer-events: none;"></div>
+<!-- 星座层（与首页同一套：随机零星散布星座图形 + 偶尔闪烁的小星） -->
+<div id="constellations" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 1; pointer-events: none;" aria-hidden="true"></div>
+<script src="/js/particles.min.js"></script>
+<script>
+particlesJS("particles", {
+  particles: {
+    number: {
+      value: 95,
+      density: {
+        enable: true,
+        value_area: 800
+      }
+    },
+    color: {
+      value: "#00eeff"
+    },
+    shape: {
+      type: "circle",
+      stroke: {
+        width: 0,
+        color: "#000000"
+      }
+    },
+    opacity: {
+      value: 0.6,
+      random: true,
+      anim: {
+        enable: true,
+        speed: 0.5,
+        opacity_min: 0.1,
+        sync: false
+      }
+    },
+    size: {
+      value: 3,
+      random: true,
+      anim: {
+        enable: true,
+        speed: 2,
+        size_min: 0.1,
+        sync: false
+      }
+    },
+    line_linked: {
+      enable: true,
+      distance: 118,
+      color: "#00eeff",
+      opacity: 0.32,
+      width: 1
+    },
+    move: {
+      enable: true,
+      speed: 0.8,
+      direction: "none",
+      random: true,
+      straight: false,
+      out_mode: "out",
+      bounce: false,
+      attract: {
+        enable: true,
+        rotateX: 600,
+        rotateY: 1200
+      }
+    }
+  },
+  interactivity: {
+    detect_on: "canvas",
+    events: {
+      onhover: {
+        enable: true,
+        mode: "grab"       // 手指按住时粒子聚集
+      },
+      onclick: {
+        enable: true,
+        mode: "push"       // 点击时产生新粒子
+      },
+      resize: true
+    },
+    modes: {
+      grab: {
+        distance: 200,
+        line_linked: {
+          opacity: 1
+        }
+      },
+      push: {
+        particles_nb: 6
+      }
+    }
+  },
+  retina_detect: true
+});
+</script>
+<!-- 星座 + 零星闪烁层：与电脑端共用同一份绘制脚本 -->
+<script src="/js/theme/home/starfield.js"></script>
+
+
+  <div class="mb-top">
+    <a class="mb-back" href="/phone/">← 返回手机首页</a>
+    <span class="mb-sub" style="margin:0">2022-02-12</span>
+  </div>
+
+  <h1 class="mb-title">Java 泛型（一）什么是泛型</h1>
+  <div class="mb-sub">
+    分类：java · core
+     ｜ 标签：Java
+  </div>
+
+  <div class="mb-article"><div class="essay-banner essay-java"></div>
+
+<h1 id="什么是泛型"><a href="#什么是泛型" class="headerlink" title="什么是泛型"></a><strong>什么是泛型</strong></h1><p>泛型解决的是一个非常具体的问题：<strong>容器里装什么，编译器不知道</strong>。Java 5 之前所有集合都是 <code>Object</code> 的垃圾桶，取出来要强转，转错了就在运行期炸。泛型把这件事挪到了编译期——代价是一整套”能写&#x2F;不能写”的规则。这一篇先讲清它为什么存在、带来了什么、又有哪些天生的限制。</p>
+<p><img src="https://wu4yong.github.io/starry-images/assets/img/java/generics/java-generics-01-what-is-generics.webp" alt="泛型让容器在编译期就知道自己装什么，取出来不用强转"></p>
+<p><em>泛型让容器在编译期就知道自己装什么，取出来不用强转</em></p>
+<h2 id="1-1-没有泛型的年代"><a href="#1-1-没有泛型的年代" class="headerlink" title="1.1 没有泛型的年代"></a>1.1 没有泛型的年代</h2><pre class="line-numbers language-java" data-language="java"><code class="language-java"><span class="token class-name">List</span> list <span class="token operator">=</span> <span class="token keyword">new</span> <span class="token class-name">ArrayList</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+list<span class="token punctuation">.</span><span class="token function">add</span><span class="token punctuation">(</span><span class="token string">"hello"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+list<span class="token punctuation">.</span><span class="token function">add</span><span class="token punctuation">(</span><span class="token number">1</span><span class="token punctuation">)</span><span class="token punctuation">;</span>                    <span class="token comment">// 能编译、能运行</span>
+
+<span class="token class-name">String</span> s <span class="token operator">=</span> <span class="token punctuation">(</span><span class="token class-name">String</span><span class="token punctuation">)</span> list<span class="token punctuation">.</span><span class="token function">get</span><span class="token punctuation">(</span><span class="token number">1</span><span class="token punctuation">)</span><span class="token punctuation">;</span> <span class="token comment">// 运行时 ClassCastException</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<p>三处隐患：</p>
+<ol>
+<li><strong>类型错误延后到运行期</strong>：编译器完全不拦，只有跑到了才抛 <code>ClassCastException</code></li>
+<li><strong>每次取值都要强转</strong>：<code>(String) list.get(i)</code>，写一百遍</li>
+<li><strong>类型信息被抹平</strong>：方法签名 <code>List</code> 看不出装什么，只能靠注释和命名约定</li>
+</ol>
+<h2 id="1-2-泛型是什么"><a href="#1-2-泛型是什么" class="headerlink" title="1.2 泛型是什么"></a>1.2 泛型是什么</h2><p>泛型 &#x3D; <strong>参数化类型</strong>：把”类型”当作参数传进去。<code>List&lt;String&gt;</code> 与 <code>List&lt;Integer&gt;</code> 是同一个类的不同<strong>实例化</strong>，它们的差异在编译期就被检查，运行期则被擦除（第五篇详述）。</p>
+<pre class="line-numbers language-java" data-language="java"><code class="language-java"><span class="token class-name">List</span><span class="token generics"><span class="token punctuation">&lt;</span><span class="token class-name">String</span><span class="token punctuation">></span></span> list <span class="token operator">=</span> <span class="token keyword">new</span> <span class="token class-name">ArrayList</span><span class="token generics"><span class="token punctuation">&lt;</span><span class="token punctuation">></span></span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+list<span class="token punctuation">.</span><span class="token function">add</span><span class="token punctuation">(</span><span class="token string">"hello"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token comment">// list.add(1);                 // 编译错误：类型不兼容</span>
+<span class="token class-name">String</span> s <span class="token operator">=</span> list<span class="token punctuation">.</span><span class="token function">get</span><span class="token punctuation">(</span><span class="token number">0</span><span class="token punctuation">)</span><span class="token punctuation">;</span>         <span class="token comment">// 不需要强转</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span></span></code></pre>
+
+<div class="data-grid data-grid-link-table"><div class="grid-header"><div class="grid-cell">维度</div><div class="grid-cell">没有泛型</div><div class="grid-cell">有泛型</div></div><div class="grid-row"><div class="grid-cell">类型检查时机</div><div class="grid-cell">运行期（ClassCastException）</div><div class="grid-cell">编译期（编译不通过）</div></div><div class="grid-row"><div class="grid-cell">取值</div><div class="grid-cell">必须强转</div><div class="grid-cell">编译器自动插入转型，源码不用写</div></div><div class="grid-row"><div class="grid-cell">类型信息</div><div class="grid-cell">只有 <code>Object</code></div><div class="grid-cell"><code>List&lt;String&gt;</code> 写进源码与 <code>Signature</code> 属性</div></div><div class="grid-row"><div class="grid-cell">代码复用</div><div class="grid-cell">靠 <code>Object</code> 硬塞</div><div class="grid-cell">靠类型参数，编译期生成多个视图</div></div></div>
+
+<p>一句话概括收益：<strong>把”可能出错”变成”编译不过”</strong>。这是 Java 引入泛型的唯一理由，其它所有好处都是副产品。</p>
+<h2 id="1-3-三条最直观的收益"><a href="#1-3-三条最直观的收益" class="headerlink" title="1.3 三条最直观的收益"></a>1.3 三条最直观的收益</h2><p><strong>（1）类型安全</strong>：错放进来的东西编译期就被拦。</p>
+<pre class="line-numbers language-java" data-language="java"><code class="language-java"><span class="token class-name">Map</span><span class="token generics"><span class="token punctuation">&lt;</span><span class="token class-name">String</span><span class="token punctuation">,</span> <span class="token class-name">Integer</span><span class="token punctuation">></span></span> scores <span class="token operator">=</span> <span class="token keyword">new</span> <span class="token class-name">HashMap</span><span class="token generics"><span class="token punctuation">&lt;</span><span class="token punctuation">></span></span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+scores<span class="token punctuation">.</span><span class="token function">put</span><span class="token punctuation">(</span><span class="token string">"tom"</span><span class="token punctuation">,</span> <span class="token number">90</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token comment">// scores.put("tom", "hi");        // 编译错误</span>
+<span class="token keyword">int</span> v <span class="token operator">=</span> scores<span class="token punctuation">.</span><span class="token function">get</span><span class="token punctuation">(</span><span class="token string">"tom"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>         <span class="token comment">// 自动拆箱，无需强转</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span></span></code></pre>
+
+<p><strong>（2）消除强转</strong>：<code>get</code> 直接返回 <code>T</code>（这里是 <code>Integer</code>），转型由编译器插入的 <code>checkcast</code> 完成。</p>
+<p><strong>（3）可复用的类型无关代码</strong>：一个 <code>Box&lt;T&gt;</code> 既能装 <code>String</code> 也能装 <code>Order</code>，不用为每种类型各写一个类。</p>
+<pre class="line-numbers language-java" data-language="java"><code class="language-java"><span class="token keyword">public</span> <span class="token keyword">class</span> <span class="token class-name">Box</span><span class="token generics"><span class="token punctuation">&lt;</span><span class="token class-name">T</span><span class="token punctuation">></span></span> <span class="token punctuation">&#123;</span>
+    <span class="token keyword">private</span> <span class="token class-name">T</span> value<span class="token punctuation">;</span>
+    <span class="token keyword">public</span> <span class="token class-name">Box</span><span class="token punctuation">(</span><span class="token class-name">T</span> value<span class="token punctuation">)</span> <span class="token punctuation">&#123;</span> <span class="token keyword">this</span><span class="token punctuation">.</span>value <span class="token operator">=</span> value<span class="token punctuation">;</span> <span class="token punctuation">&#125;</span>
+    <span class="token keyword">public</span> <span class="token class-name">T</span> <span class="token function">get</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">&#123;</span> <span class="token keyword">return</span> value<span class="token punctuation">;</span> <span class="token punctuation">&#125;</span>
+<span class="token punctuation">&#125;</span>
+
+<span class="token class-name">Box</span><span class="token generics"><span class="token punctuation">&lt;</span><span class="token class-name">String</span><span class="token punctuation">></span></span> b1 <span class="token operator">=</span> <span class="token keyword">new</span> <span class="token class-name">Box</span><span class="token generics"><span class="token punctuation">&lt;</span><span class="token punctuation">></span></span><span class="token punctuation">(</span><span class="token string">"x"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token class-name">Box</span><span class="token generics"><span class="token punctuation">&lt;</span><span class="token class-name">Integer</span><span class="token punctuation">></span></span> b2 <span class="token operator">=</span> <span class="token keyword">new</span> <span class="token class-name">Box</span><span class="token generics"><span class="token punctuation">&lt;</span><span class="token punctuation">></span></span><span class="token punctuation">(</span><span class="token number">1</span><span class="token punctuation">)</span><span class="token punctuation">;</span>   <span class="token comment">// 同一个类，两种实例化</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<h2 id="1-4-与-C-模板的区别"><a href="#1-4-与-C-模板的区别" class="headerlink" title="1.4 与 C++ 模板的区别"></a>1.4 与 C++ 模板的区别</h2><table>
+<thead>
+<tr>
+<th>对比项</th>
+<th>Java 泛型</th>
+<th>C++ 模板</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>实现方式</td>
+<td>类型擦除，只有一份字节码</td>
+<td>每个类型实例化一份代码</td>
+</tr>
+<tr>
+<td>基本类型</td>
+<td>不支持，必须用包装类</td>
+<td>支持 <code>vector&lt;int&gt;</code></td>
+</tr>
+<tr>
+<td>运行期类型信息</td>
+<td>没有（擦除后是 <code>Object</code>&#x2F;上界）</td>
+<td>有完整类型</td>
+</tr>
+<tr>
+<td>编译产物大小</td>
+<td>不变</td>
+<td>随实例化数量增长</td>
+</tr>
+</tbody></table>
+<p>Java 选择擦除的<strong>根本原因是向后兼容</strong>：Java 5 时 <code>ArrayList</code>、<code>HashMap</code> 已经被全世界用着，不能让老代码和老字节码失效。代价就是后面几篇要讲的一堆”不能”。</p>
+<h2 id="1-5-一开始就会撞上的三个限制"><a href="#1-5-一开始就会撞上的三个限制" class="headerlink" title="1.5 一开始就会撞上的三个限制"></a>1.5 一开始就会撞上的三个限制</h2><pre class="line-numbers language-java" data-language="java"><code class="language-java"><span class="token comment">// 1. 类型参数不能是基本类型</span>
+<span class="token comment">// List&lt;int> bad;                  // 编译错误</span>
+<span class="token class-name">List</span><span class="token generics"><span class="token punctuation">&lt;</span><span class="token class-name">Integer</span><span class="token punctuation">></span></span> ok <span class="token operator">=</span> <span class="token keyword">new</span> <span class="token class-name">ArrayList</span><span class="token generics"><span class="token punctuation">&lt;</span><span class="token punctuation">></span></span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>   <span class="token comment">// 只能装箱</span>
+
+<span class="token comment">// 2. 不能直接 new 类型参数</span>
+<span class="token keyword">public</span> <span class="token keyword">class</span> <span class="token class-name">Box</span><span class="token generics"><span class="token punctuation">&lt;</span><span class="token class-name">T</span><span class="token punctuation">></span></span> <span class="token punctuation">&#123;</span>
+    <span class="token comment">// T t = new T();               // 编译错误：擦除后不知道 T 是什么</span>
+<span class="token punctuation">&#125;</span>
+
+<span class="token comment">// 3. 不能用 instanceof 判断类型参数</span>
+<span class="token comment">// if (o instanceof List&lt;String>) &#123;&#125;    // 编译错误：擦除后无法区分</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<div class="data-grid data-grid-link-table"><div class="grid-header"><div class="grid-cell">限制</div><div class="grid-cell">原因</div><div class="grid-cell">绕过方式</div></div><div class="grid-row"><div class="grid-cell">不能用 <code>int</code> 等基本类型</div><div class="grid-cell">泛型参数必须是引用类型</div><div class="grid-cell">用 <code>Integer</code> 或 <code>Stream</code> 的数值流</div></div><div class="grid-row"><div class="grid-cell">不能 <code>new T()</code></div><div class="grid-cell">擦除后只剩上界，无法反射构造</div><div class="grid-cell">传 <code>Class&lt;T&gt;</code> 用 <code>newInstance</code></div></div><div class="grid-row"><div class="grid-cell">不能 <code>instanceof T</code></div><div class="grid-cell">运行时类型已擦除</div><div class="grid-cell">传 <code>Class&lt;T&gt;</code> 做 <code>isInstance</code></div></div><div class="grid-row"><div class="grid-cell">不能 <code>new T[n]</code></div><div class="grid-cell">数组需要运行期类型</div><div class="grid-cell">用 <code>Array.newInstance</code> 或集合</div></div></div>
+
+<h2 id="1-6-泛型不是”更强的注释”"><a href="#1-6-泛型不是”更强的注释”" class="headerlink" title="1.6 泛型不是”更强的注释”"></a>1.6 泛型不是”更强的注释”</h2><p>一个常见误解：泛型只是”写给编译器看的提示”。实际上它影响三件事：</p>
+<ol>
+<li><strong>编译期检查</strong>：直接决定代码能不能编译</li>
+<li><strong>编译器插入代码</strong>：取值时的 <code>checkcast</code>、装箱拆箱、桥方法，都是泛型带来的字节码</li>
+<li><strong>反射可见</strong>：<code>Signature</code> 属性保留了泛型签名，Spring、Jackson 都靠它做类型推断</li>
+</ol>
+<p>所以 <code>List&lt;String&gt;</code> 和 <code>List</code> 的字节码并不相同——后者是一份数据，前者多了一份签名。</p>
+<h2 id="1-7-官方文档"><a href="#1-7-官方文档" class="headerlink" title="1.7 官方文档"></a>1.7 官方文档</h2><ul>
+<li>泛型教程（Oracle，最权威的入门）：<a target="_blank" rel="noopener" href="https://docs.oracle.com/javase/tutorial/java/generics/index.html">https://docs.oracle.com/javase/tutorial/java/generics/index.html</a></li>
+<li>JLS 第 4.5 节（参数化类型）与第 8.1.2 节（泛型类）：<a target="_blank" rel="noopener" href="https://docs.oracle.com/javase/specs/jls/se8/html/jls-4.html#jls-4.5">https://docs.oracle.com/javase/specs/jls/se8/html/jls-4.html#jls-4.5</a></li>
+<li>泛型与类型擦除的规范说明：JLS 第 4.6 节</li>
+</ul>
+<h2 id="1-8-清单"><a href="#1-8-清单" class="headerlink" title="1.8 清单"></a>1.8 清单</h2><ol>
+<li>泛型的唯一核心目的：把类型错误从运行期挪到编译期</li>
+<li><code>List&lt;String&gt;</code>、<code>List&lt;Integer&gt;</code> 是同一个类的不同实例化，运行期类型相同</li>
+<li>基本类型不能作类型参数，只能装箱</li>
+<li>不能 <code>new T()</code>、不能 <code>instanceof T</code>，要用 <code>Class&lt;T&gt;</code> 绕</li>
+<li>Java 选类型擦除是为了兼容 Java 5 之前的老集合，代价是运行期没有类型信息</li>
+<li>泛型不只是注释，它会改变字节码（checkcast、桥方法）与反射结果</li>
+</ol>
+</div>
+
+  <div class="mb-foot">
+    <a href="/phone/">返回手机首页</a>
+    <a href="/phone/tags/">星迹索引</a>
+  </div>
+</div>
+
+
+<script>
+  /* 作用：懒加载本地 mermaid 库；无 mermaid 代码块时不加载 */
+  function loadLocalMermaid(){
+    return new Promise(function(resolve, reject){
+      if(window.mermaid) return resolve(window.mermaid);
+      var s = document.createElement('script');
+      s.src = '/js/third-party/mermaid/mermaid.min.js?v=10';
+      s.onload = function(){ resolve(window.mermaid); };
+      s.onerror = function(){ reject(new Error('mermaid local load failed')); };
+      document.head.appendChild(s);
+    });
+  }
+
+  /* 作用：把 ```mermaid 代码块替换成 SVG 图（手机端字号略小、图可横向滚动） */
+  async function renderMermaidDiagram(){
+    var blocks = document.querySelectorAll('pre[class*="language-mermaid"]');
+    if(!blocks.length) return;
+    var mermaid;
+    try { mermaid = await loadLocalMermaid(); }
+    catch(e){ console.warn('[mermaid] 本地库加载失败：', e); return; }
+
+    mermaid.initialize({
+      startOnLoad: false,
+      theme: 'base',
+      themeVariables: {
+        darkMode: true,
+        background: 'transparent',
+        fontFamily: '"Microsoft YaHei", "PingFang SC", "Segoe UI", sans-serif',
+        fontSize: '12px',
+        primaryColor: '#062f3d',
+        primaryTextColor: '#d6f6ff',
+        primaryBorderColor: '#00eeff',
+        secondaryColor: '#04222d',
+        tertiaryColor: '#04222d',
+        mainBkg: '#062f3d',
+        nodeBorder: '#00eeff',
+        clusterBkg: '#02161f',
+        clusterBorder: '#00eeff55',
+        lineColor: '#00eeff',
+        textColor: '#c0e8ff',
+        edgeLabelBackground: '#02161f'
+      },
+      flowchart: { curve: 'basis', useMaxWidth: false, htmlLabels: false, nodeSpacing: 30, rankSpacing: 40, padding: 10 }
+    });
+
+    var targets = [];
+    blocks.forEach(function(el){
+      var codeEl = el.querySelector('code');
+      if(!codeEl) return;
+      var div = document.createElement('div');
+      div.className = 'mermaid';
+      div.textContent = codeEl.textContent;
+      el.parentNode.replaceChild(div, el);
+      targets.push(div);
+    });
+    if(!targets.length) return;
+    try { await mermaid.run({ nodes: targets }); }
+    catch(e){ console.warn('[mermaid] 渲染失败：', e); }
+  }
+  /* 作用：多次触发兜底（延迟重试 + DOM 变化），防止某次时机没跑到导致图表留在代码块 */
+  var mmBusy = false;
+  function scheduleMermaid(){
+    if(mmBusy) return;
+    mmBusy = true;
+    renderMermaidDiagram().then(function(){ mmBusy = false; }, function(){ mmBusy = false; });
+  }
+  scheduleMermaid();
+  window.addEventListener('load', scheduleMermaid);
+  [1000, 3000, 8000].forEach(function(ms){ setTimeout(scheduleMermaid, ms); });
+  if(document.readyState !== 'loading') scheduleMermaid();
+  if(window.MutationObserver){
+    var mmTimer = null;
+    var mmObserver = new MutationObserver(function(){
+      clearTimeout(mmTimer);
+      mmTimer = setTimeout(scheduleMermaid, 400);
+    });
+    mmObserver.observe(document.querySelector('.mb-article') || document.body, { childList: true, subtree: true });
+  }
+</script>
+</body>
+</html>

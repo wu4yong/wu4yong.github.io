@@ -1,0 +1,339 @@
+<!--
+  ============================================
+  手机端 · 文章原文页
+  文件：phone/post.njk
+  适用终端：手机端（路由 /phone/p/<slug>/，由 scripts/phone-routes.js 生成）
+  作用：手机阅读单篇文章；单列布局、无侧栏无雷达，替代电脑端 post.njk
+        数据由生成期算好：page.item = { title, dateStr, content, cats, tags }
+  样式依赖：source/css/theme/phone/common.css、source/css/theme/phone/list.css
+  组件依赖：phone/_components/Particles.njk
+  最后修改：2026-11-11
+  ============================================
+-->
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="color-scheme" content="dark">
+  <meta name="theme-color" content="#020817">
+  <!-- 首帧兜底：浏览器默认画布是白的，样式未解析前会闪一下白。这条规则先锁死深空底色 -->
+  <style>html{background-color:#020817}</style>
+  <title>Spring Boot（八）自动配置原理 - 时空秘境</title>
+  <!-- 手机端样式：基础 + 列表/正文，外链引入（源文件 source/css/theme/phone/） -->
+  <link rel="stylesheet" href="/css/theme/phone/common.css">
+  <link rel="stylesheet" href="/css/theme/phone/list.css">
+<meta name="generator" content="Hexo 8.1.2"></head>
+<body>
+<div class="mb-shell">
+  <!--
+  ============================================
+  手机端星空粒子组件
+  文件：Particles.njk
+  适用终端：手机端
+  作用：Particles.njk 的手机端副本（nunjucks 子目录 include 取不到上级）
+        参数与电脑端 _components/Particles.njk 保持一致：
+        粒子 95 / 连线 118px / opacity 0.32，外加星座层与零星闪烁层
+  最后修改：2026-11-12
+  ============================================
+--><!-- z-index 必须是 0：负层级会被 body 不透明背景盖住，粒子在跑却看不见 -->
+<div id="particles" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 0; pointer-events: none;"></div>
+<!-- 星座层（与首页同一套：随机零星散布星座图形 + 偶尔闪烁的小星） -->
+<div id="constellations" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 1; pointer-events: none;" aria-hidden="true"></div>
+<script src="/js/particles.min.js"></script>
+<script>
+particlesJS("particles", {
+  particles: {
+    number: {
+      value: 95,
+      density: {
+        enable: true,
+        value_area: 800
+      }
+    },
+    color: {
+      value: "#00eeff"
+    },
+    shape: {
+      type: "circle",
+      stroke: {
+        width: 0,
+        color: "#000000"
+      }
+    },
+    opacity: {
+      value: 0.6,
+      random: true,
+      anim: {
+        enable: true,
+        speed: 0.5,
+        opacity_min: 0.1,
+        sync: false
+      }
+    },
+    size: {
+      value: 3,
+      random: true,
+      anim: {
+        enable: true,
+        speed: 2,
+        size_min: 0.1,
+        sync: false
+      }
+    },
+    line_linked: {
+      enable: true,
+      distance: 118,
+      color: "#00eeff",
+      opacity: 0.32,
+      width: 1
+    },
+    move: {
+      enable: true,
+      speed: 0.8,
+      direction: "none",
+      random: true,
+      straight: false,
+      out_mode: "out",
+      bounce: false,
+      attract: {
+        enable: true,
+        rotateX: 600,
+        rotateY: 1200
+      }
+    }
+  },
+  interactivity: {
+    detect_on: "canvas",
+    events: {
+      onhover: {
+        enable: true,
+        mode: "grab"       // 手指按住时粒子聚集
+      },
+      onclick: {
+        enable: true,
+        mode: "push"       // 点击时产生新粒子
+      },
+      resize: true
+    },
+    modes: {
+      grab: {
+        distance: 200,
+        line_linked: {
+          opacity: 1
+        }
+      },
+      push: {
+        particles_nb: 6
+      }
+    }
+  },
+  retina_detect: true
+});
+</script>
+<!-- 星座 + 零星闪烁层：与电脑端共用同一份绘制脚本 -->
+<script src="/js/theme/home/starfield.js"></script>
+
+
+  <div class="mb-top">
+    <a class="mb-back" href="/phone/">← 返回手机首页</a>
+    <span class="mb-sub" style="margin:0">2022-04-28</span>
+  </div>
+
+  <h1 class="mb-title">Spring Boot（八）自动配置原理</h1>
+  <div class="mb-sub">
+    分类：java · springboot
+     ｜ 标签：SpringBoot
+  </div>
+
+  <div class="mb-article"><div class="essay-banner essay-springboot"></div>
+
+<h1 id="理解整合第三方技术的原理：自动配置"><a href="#理解整合第三方技术的原理：自动配置" class="headerlink" title="理解整合第三方技术的原理：自动配置"></a><strong>理解整合第三方技术的原理：自动配置</strong></h1><p>为什么加一个 starter、写几行 yml，<code>DataSource</code>、<code>RedisTemplate</code>、<code>RestTemplate</code> 就自动出现了？答案全在 <code>@EnableAutoConfiguration</code> 与几十个 <code>XxxAutoConfiguration</code> 类里。这一篇把”名单从哪来、条件怎么判、顺序怎么排、怎么覆盖”讲清。</p>
+<p><img src="https://wu4yong.github.io/starry-images/assets/img/springboot/springboot-08-autoconfig.webp" alt="自动配置：名单 → 条件闸门 → 装配好的 Bean"></p>
+<p><em>自动配置：名单 → 条件闸门 → 装配好的 Bean</em></p>
+<h2 id="1-1-触发链"><a href="#1-1-触发链" class="headerlink" title="1.1 触发链"></a>1.1 触发链</h2><pre class="line-numbers language-java" data-language="java"><code class="language-java"><span class="token annotation punctuation">@SpringBootApplication</span>
+  └─ <span class="token annotation punctuation">@EnableAutoConfiguration</span>
+       └─ <span class="token annotation punctuation">@Import</span><span class="token punctuation">(</span><span class="token class-name">AutoConfigurationImportSelector</span><span class="token punctuation">.</span><span class="token keyword">class</span><span class="token punctuation">)</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span></span></code></pre>
+
+<p><code>AutoConfigurationImportSelector</code> 干三件事：</p>
+<ol>
+<li>从所有 jar 里收集”自动配置类名单”</li>
+<li>用 <code>AutoConfigurationMetadata</code> 与条件注解过滤掉不满足的</li>
+<li>按 <code>@AutoConfigureOrder</code> &#x2F; <code>@AutoConfigureBefore</code> &#x2F; <code>@AutoConfigureAfter</code> 排序后返回</li>
+</ol>
+<p>返回的类名会被 Spring 当作 <code>@Configuration</code> 类注册，于是它们的 <code>@Bean</code> 方法生效。</p>
+<h2 id="1-2-名单从哪来（2-7-是分水岭）"><a href="#1-2-名单从哪来（2-7-是分水岭）" class="headerlink" title="1.2 名单从哪来（2.7 是分水岭）"></a>1.2 名单从哪来（2.7 是分水岭）</h2><div class="data-grid data-grid-link-table"><div class="grid-header"><div class="grid-cell">版本</div><div class="grid-cell">文件</div><div class="grid-cell">键</div></div><div class="grid-row"><div class="grid-cell">2.7 之前</div><div class="grid-cell"><code>META-INF/spring.factories</code></div><div class="grid-cell"><code>org.springframework.boot.autoconfigure.EnableAutoConfiguration</code></div></div><div class="grid-row"><div class="grid-cell">2.7 及之后</div><div class="grid-cell"><code>META-INF/spring/org.springframework.boot.autoconfigure.AutoConfiguration.imports</code></div><div class="grid-cell">每行一个类名</div></div></div>
+
+<pre class="line-numbers language-properties" data-language="properties"><code class="language-properties"><span class="token comment"># spring.factories（2.7 前）</span>
+<span class="token key attr-name">org.springframework.boot.autoconfigure.EnableAutoConfiguration</span><span class="token punctuation">=</span><span class="token value attr-value">\
+org.springframework.boot.autoconfigure.jdbc.DataSourceAutoConfiguration,\
+org.springframework.boot.autoconfigure.data.redis.RedisAutoConfiguration</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span></span></code></pre>
+
+<pre class="line-numbers language-text" data-language="text"><code class="language-text"># AutoConfiguration.imports（2.7+，一行一个）
+org.springframework.boot.autoconfigure.jdbc.DataSourceAutoConfiguration
+org.springframework.boot.autoconfigure.data.redis.RedisAutoConfiguration<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span></span></code></pre>
+
+<p>对使用者的影响：<strong>如果你的第三方 starter 只在 <code>spring.factories</code> 里注册，在 Spring Boot 2.7+ 上会失效</strong>（官方在 2.7 仍兼容读取，但 3.0 起不再支持）。排查”升级后 Bean 突然不见了”，这是第一嫌疑点。</p>
+<h2 id="1-3-条件注解：装配的开关"><a href="#1-3-条件注解：装配的开关" class="headerlink" title="1.3 条件注解：装配的开关"></a>1.3 条件注解：装配的开关</h2><div class="data-grid data-grid-link-table"><div class="grid-header"><div class="grid-cell">注解</div><div class="grid-cell">判定</div><div class="grid-cell">典型用法</div></div><div class="grid-row"><div class="grid-cell"><code>@ConditionalOnClass</code></div><div class="grid-cell">classpath 里有指定类</div><div class="grid-cell"><code>RedisAutoConfiguration</code> 判断有没有 <code>RedisOperations</code></div></div><div class="grid-row"><div class="grid-cell"><code>@ConditionalOnMissingClass</code></div><div class="grid-cell">没有指定类</div><div class="grid-cell">互斥实现</div></div><div class="grid-row"><div class="grid-cell"><code>@ConditionalOnBean</code></div><div class="grid-cell">容器里有指定 Bean</div><div class="grid-cell">依赖另一个配置的结果</div></div><div class="grid-row"><div class="grid-cell"><code>@ConditionalOnMissingBean</code></div><div class="grid-cell">容器<strong>没有</strong>该 Bean</div><div class="grid-cell">允许用户覆盖默认实现</div></div><div class="grid-row"><div class="grid-cell"><code>@ConditionalOnProperty</code></div><div class="grid-cell">配置项匹配</div><div class="grid-cell"><code>spring.redis.enabled=false</code> 关掉</div></div><div class="grid-row"><div class="grid-cell"><code>@ConditionalOnWebApplication</code></div><div class="grid-cell">Web 应用</div><div class="grid-cell">MVC&#x2F;Servlet 相关</div></div><div class="grid-row"><div class="grid-cell"><code>@ConditionalOnResource</code></div><div class="grid-cell">资源文件存在</div><div class="grid-cell">有 <code>logback.xml</code> 才装配</div></div><div class="grid-row"><div class="grid-cell"><code>@ConditionalOnExpression</code></div><div class="grid-cell">SpEL 为真</div><div class="grid-cell">复杂条件</div></div></div>
+
+<p>一个真实的自动配置类长这样（简化自 <code>RedisAutoConfiguration</code>）：</p>
+<pre class="line-numbers language-java" data-language="java"><code class="language-java"><span class="token annotation punctuation">@Configuration</span><span class="token punctuation">(</span>proxyBeanMethods <span class="token operator">=</span> <span class="token boolean">false</span><span class="token punctuation">)</span>          <span class="token comment">// 不生成 CGLIB 代理，轻量</span>
+<span class="token annotation punctuation">@ConditionalOnClass</span><span class="token punctuation">(</span><span class="token class-name">RedisOperations</span><span class="token punctuation">.</span><span class="token keyword">class</span><span class="token punctuation">)</span>         <span class="token comment">// 有 Redis 依赖才生效</span>
+<span class="token annotation punctuation">@EnableConfigurationProperties</span><span class="token punctuation">(</span><span class="token class-name">RedisProperties</span><span class="token punctuation">.</span><span class="token keyword">class</span><span class="token punctuation">)</span>   <span class="token comment">// 绑定 spring.redis.*</span>
+<span class="token annotation punctuation">@Import</span><span class="token punctuation">(</span><span class="token punctuation">&#123;</span> <span class="token class-name">LettuceConnectionConfiguration</span><span class="token punctuation">.</span><span class="token keyword">class</span> <span class="token punctuation">&#125;</span><span class="token punctuation">)</span>   <span class="token comment">// 只有用 Lettuce 时才导入连接工厂</span>
+<span class="token keyword">public</span> <span class="token keyword">class</span> <span class="token class-name">RedisAutoConfiguration</span> <span class="token punctuation">&#123;</span>
+
+    <span class="token annotation punctuation">@Bean</span>
+    <span class="token annotation punctuation">@ConditionalOnMissingBean</span><span class="token punctuation">(</span>name <span class="token operator">=</span> <span class="token string">"redisTemplate"</span><span class="token punctuation">)</span>   <span class="token comment">// 用户没定义才给默认的</span>
+    <span class="token keyword">public</span> <span class="token class-name">RedisTemplate</span><span class="token generics"><span class="token punctuation">&lt;</span><span class="token class-name">Object</span><span class="token punctuation">,</span> <span class="token class-name">Object</span><span class="token punctuation">></span></span> <span class="token function">redisTemplate</span><span class="token punctuation">(</span>
+            <span class="token class-name">RedisConnectionFactory</span> factory<span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+        <span class="token class-name">RedisTemplate</span><span class="token generics"><span class="token punctuation">&lt;</span><span class="token class-name">Object</span><span class="token punctuation">,</span> <span class="token class-name">Object</span><span class="token punctuation">></span></span> t <span class="token operator">=</span> <span class="token keyword">new</span> <span class="token class-name">RedisTemplate</span><span class="token generics"><span class="token punctuation">&lt;</span><span class="token punctuation">></span></span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+        t<span class="token punctuation">.</span><span class="token function">setConnectionFactory</span><span class="token punctuation">(</span>factory<span class="token punctuation">)</span><span class="token punctuation">;</span>
+        <span class="token keyword">return</span> t<span class="token punctuation">;</span>
+    <span class="token punctuation">&#125;</span>
+
+    <span class="token annotation punctuation">@Bean</span>
+    <span class="token annotation punctuation">@ConditionalOnMissingBean</span>                       <span class="token comment">// 按类型判断</span>
+    <span class="token keyword">public</span> <span class="token class-name">StringRedisTemplate</span> <span class="token function">stringRedisTemplate</span><span class="token punctuation">(</span><span class="token class-name">RedisConnectionFactory</span> f<span class="token punctuation">)</span> <span class="token punctuation">&#123;</span> <span class="token punctuation">.</span><span class="token punctuation">.</span><span class="token punctuation">.</span> <span class="token punctuation">&#125;</span>
+<span class="token punctuation">&#125;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<div class="data-grid data-grid-link-table"><div class="grid-header"><div class="grid-cell">条件</div><div class="grid-cell">含义</div><div class="grid-cell">你的机会</div></div><div class="grid-row"><div class="grid-cell"><code>@ConditionalOnMissingBean</code></div><div class="grid-cell">你没有，我才给</div><div class="grid-cell">自定义同类型 Bean 即可覆盖</div></div><div class="grid-row"><div class="grid-cell"><code>@ConditionalOnMissingBean(name=...)</code></div><div class="grid-cell">你没有这个<strong>名字</strong></div><div class="grid-cell">Bean 名字必须一致</div></div><div class="grid-row"><div class="grid-cell"><code>@ConditionalOnProperty</code></div><div class="grid-cell">开关开才装配</div><div class="grid-cell">不想用就关掉</div></div><div class="grid-row"><div class="grid-cell"><code>@ConditionalOnClass</code></div><div class="grid-cell">依赖在才装配</div><div class="grid-cell">去掉依赖自动失效</div></div></div>
+
+<h2 id="1-4-顺序：谁先谁后"><a href="#1-4-顺序：谁先谁后" class="headerlink" title="1.4 顺序：谁先谁后"></a>1.4 顺序：谁先谁后</h2><p>自动配置类之间的依赖也用注解声明：</p>
+<pre class="line-numbers language-java" data-language="java"><code class="language-java"><span class="token annotation punctuation">@AutoConfigureAfter</span><span class="token punctuation">(</span><span class="token class-name">DataSourceAutoConfiguration</span><span class="token punctuation">.</span><span class="token keyword">class</span><span class="token punctuation">)</span>
+<span class="token keyword">public</span> <span class="token keyword">class</span> <span class="token class-name">JdbcTemplateAutoConfiguration</span> <span class="token punctuation">&#123;</span> <span class="token punctuation">&#125;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span></span></code></pre>
+
+<p>排序规则：<code>@AutoConfigureOrder</code>（绝对顺序，数字越小越前）&gt; <code>@AutoConfigureBefore/@AutoConfigureAfter</code>（相对）&gt; 名单原始顺序。</p>
+<p>为什么要排序：<code>JdbcTemplateAutoConfiguration</code> 依赖数据源，必须排在 <code>DataSourceAutoConfiguration</code> 之后；否则 <code>@ConditionalOnSingleCandidate(DataSource.class)</code> 会判定失败，<code>JdbcTemplate</code> 就装不上。</p>
+<h2 id="1-5-拿不到-Bean-时的排查顺序"><a href="#1-5-拿不到-Bean-时的排查顺序" class="headerlink" title="1.5 拿不到 Bean 时的排查顺序"></a>1.5 拿不到 Bean 时的排查顺序</h2><ol>
+<li>依赖加了吗？（<code>@ConditionalOnClass</code> 的第一道关）</li>
+<li>启动加 <code>--debug</code>，看 <strong>Negative matches</strong> 里是不是你的类，以及”did not match”的具体原因</li>
+<li>配置项前缀对不对？（属性没绑上，<code>@ConditionalOnProperty</code> 就会失效）</li>
+<li>有没有被 <code>spring.autoconfigure.exclude</code> 排掉？</li>
+<li>自己定义的 Bean 名字&#x2F;类型是否与 <code>@ConditionalOnMissingBean</code> 的判定一致？</li>
+</ol>
+<pre class="line-numbers language-bash" data-language="bash"><code class="language-bash"><span class="token function">java</span> <span class="token parameter variable">-jar</span> demo.jar <span class="token parameter variable">--debug</span> <span class="token operator"><span class="token file-descriptor important">2</span>></span><span class="token file-descriptor important">&amp;1</span> <span class="token operator">|</span> <span class="token function">grep</span> <span class="token parameter variable">-A3</span> <span class="token string">"RedisAutoConfiguration"</span><span aria-hidden="true" class="line-numbers-rows"><span></span></span></code></pre>
+
+<pre class="line-numbers language-text" data-language="text"><code class="language-text">RedisAutoConfiguration matched:
+  - @ConditionalOnClass found required class 'org.springframework.data.redis.core.RedisOperations'
+RedisAutoConfiguration#redisTemplate:
+  Did not match:
+     - @ConditionalOnMissingBean (types: ...; SearchStrategy: all) found beans of type ...<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<p>“Did not match” 这一行往往直接给出结论。</p>
+<h2 id="1-6-排除与裁剪"><a href="#1-6-排除与裁剪" class="headerlink" title="1.6 排除与裁剪"></a>1.6 排除与裁剪</h2><pre class="line-numbers language-yaml" data-language="yaml"><code class="language-yaml"><span class="token key atrule">spring</span><span class="token punctuation">:</span>
+  <span class="token key atrule">autoconfigure</span><span class="token punctuation">:</span>
+    <span class="token key atrule">exclude</span><span class="token punctuation">:</span>
+      <span class="token punctuation">-</span> org.springframework.boot.autoconfigure.jdbc.DataSourceAutoConfiguration<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span></span></code></pre>
+
+<pre class="line-numbers language-java" data-language="java"><code class="language-java"><span class="token annotation punctuation">@SpringBootApplication</span><span class="token punctuation">(</span>exclude <span class="token operator">=</span> <span class="token punctuation">&#123;</span> <span class="token class-name">DataSourceAutoConfiguration</span><span class="token punctuation">.</span><span class="token keyword">class</span> <span class="token punctuation">&#125;</span><span class="token punctuation">)</span><span aria-hidden="true" class="line-numbers-rows"><span></span></span></code></pre>
+
+<p>适用场景：多数据源自己管理、引了 JDBC 依赖却不想让 Spring 建默认数据源、单元测试里想跳过某些装配。</p>
+<h2 id="1-7-与”整合第三方”的对应关系"><a href="#1-7-与”整合第三方”的对应关系" class="headerlink" title="1.7 与”整合第三方”的对应关系"></a>1.7 与”整合第三方”的对应关系</h2><div class="data-grid data-grid-link-table"><div class="grid-header"><div class="grid-cell">你做的事</div><div class="grid-cell">背后机制</div></div><div class="grid-row"><div class="grid-cell">加 starter</div><div class="grid-cell">starter 的 jar 里带 <code>spring.factories</code> &#x2F; <code>imports</code> 名单</div></div><div class="grid-row"><div class="grid-cell">写 <code>spring.redis.host</code></div><div class="grid-cell"><code>@EnableConfigurationProperties</code> 绑到 <code>RedisProperties</code></div></div><div class="grid-row"><div class="grid-cell">直接注入 <code>RedisTemplate</code></div><div class="grid-cell">自动配置类里的 <code>@Bean</code> 已注册</div></div><div class="grid-row"><div class="grid-cell">自定义同名 Bean</div><div class="grid-cell"><code>@ConditionalOnMissingBean</code> 让位</div></div><div class="grid-row"><div class="grid-cell">用 <code>--debug</code> 排查</div><div class="grid-cell">条件评估报告</div></div></div>
+
+<p>这张表就是第六篇”四步整合”的理论版：<strong>starter 负责送名单，配置负责喂参数，条件注解负责决定装不装，你的 Bean 负责覆盖</strong>。</p>
+<h2 id="1-8-官方资料"><a href="#1-8-官方资料" class="headerlink" title="1.8 官方资料"></a>1.8 官方资料</h2><ul>
+<li>自动配置类清单与机制：<a target="_blank" rel="noopener" href="https://docs.spring.io/spring-boot/docs/2.5.0/reference/htmlsingle/#using-boot-auto-configuration">https://docs.spring.io/spring-boot/docs/2.5.0/reference/htmlsingle/#using-boot-auto-configuration</a></li>
+<li>创建自己的自动配置：<a target="_blank" rel="noopener" href="https://docs.spring.io/spring-boot/docs/2.5.0/reference/htmlsingle/#boot-features-developing-auto-configuration">https://docs.spring.io/spring-boot/docs/2.5.0/reference/htmlsingle/#boot-features-developing-auto-configuration</a></li>
+<li>条件注解 API：<a target="_blank" rel="noopener" href="https://docs.spring.io/spring-boot/docs/2.5.0/api/java/org/springframework/boot/autoconfigure/condition/ConditionalOnMissingBean.html">https://docs.spring.io/spring-boot/docs/2.5.0/api/java/org/springframework/boot/autoconfigure/condition/ConditionalOnMissingBean.html</a></li>
+<li>2.7 的 imports 变更：<a target="_blank" rel="noopener" href="https://docs.spring.io/spring-boot/docs/2.7.0/reference/htmlsingle/#boot-features-developing-auto-configuration">https://docs.spring.io/spring-boot/docs/2.7.0/reference/htmlsingle/#boot-features-developing-auto-configuration</a></li>
+</ul>
+<h2 id="1-9-清单"><a href="#1-9-清单" class="headerlink" title="1.9 清单"></a>1.9 清单</h2><ol>
+<li><code>@EnableAutoConfiguration</code> 通过 <code>AutoConfigurationImportSelector</code> 拉名单</li>
+<li>名单在 2.7 前是 <code>spring.factories</code>，2.7 后是 <code>AutoConfiguration.imports</code></li>
+<li>装配与否由条件注解决定，<code>@ConditionalOnMissingBean</code> 是”允许覆盖”的关键</li>
+<li>类之间用 <code>@AutoConfigureBefore/After</code> 排序，顺序错了会连带装配失败</li>
+<li>拿不到 Bean 就 <code>--debug</code> 看条件评估报告，Negative matches 里有答案</li>
+<li>不想用某项能力就 <code>exclude</code>，别硬留一个错误配置</li>
+<li>自定义 Bean 的名字&#x2F;类型必须与自动配置的判定完全一致才覆盖得上</li>
+</ol>
+</div>
+
+  <div class="mb-foot">
+    <a href="/phone/">返回手机首页</a>
+    <a href="/phone/tags/">星迹索引</a>
+  </div>
+</div>
+
+
+<script>
+  /* 作用：懒加载本地 mermaid 库；无 mermaid 代码块时不加载 */
+  function loadLocalMermaid(){
+    return new Promise(function(resolve, reject){
+      if(window.mermaid) return resolve(window.mermaid);
+      var s = document.createElement('script');
+      s.src = '/js/third-party/mermaid/mermaid.min.js?v=10';
+      s.onload = function(){ resolve(window.mermaid); };
+      s.onerror = function(){ reject(new Error('mermaid local load failed')); };
+      document.head.appendChild(s);
+    });
+  }
+
+  /* 作用：把 ```mermaid 代码块替换成 SVG 图（手机端字号略小、图可横向滚动） */
+  async function renderMermaidDiagram(){
+    var blocks = document.querySelectorAll('pre[class*="language-mermaid"]');
+    if(!blocks.length) return;
+    var mermaid;
+    try { mermaid = await loadLocalMermaid(); }
+    catch(e){ console.warn('[mermaid] 本地库加载失败：', e); return; }
+
+    mermaid.initialize({
+      startOnLoad: false,
+      theme: 'base',
+      themeVariables: {
+        darkMode: true,
+        background: 'transparent',
+        fontFamily: '"Microsoft YaHei", "PingFang SC", "Segoe UI", sans-serif',
+        fontSize: '12px',
+        primaryColor: '#062f3d',
+        primaryTextColor: '#d6f6ff',
+        primaryBorderColor: '#00eeff',
+        secondaryColor: '#04222d',
+        tertiaryColor: '#04222d',
+        mainBkg: '#062f3d',
+        nodeBorder: '#00eeff',
+        clusterBkg: '#02161f',
+        clusterBorder: '#00eeff55',
+        lineColor: '#00eeff',
+        textColor: '#c0e8ff',
+        edgeLabelBackground: '#02161f'
+      },
+      flowchart: { curve: 'basis', useMaxWidth: false, htmlLabels: false, nodeSpacing: 30, rankSpacing: 40, padding: 10 }
+    });
+
+    var targets = [];
+    blocks.forEach(function(el){
+      var codeEl = el.querySelector('code');
+      if(!codeEl) return;
+      var div = document.createElement('div');
+      div.className = 'mermaid';
+      div.textContent = codeEl.textContent;
+      el.parentNode.replaceChild(div, el);
+      targets.push(div);
+    });
+    if(!targets.length) return;
+    try { await mermaid.run({ nodes: targets }); }
+    catch(e){ console.warn('[mermaid] 渲染失败：', e); }
+  }
+  /* 作用：多次触发兜底（延迟重试 + DOM 变化），防止某次时机没跑到导致图表留在代码块 */
+  var mmBusy = false;
+  function scheduleMermaid(){
+    if(mmBusy) return;
+    mmBusy = true;
+    renderMermaidDiagram().then(function(){ mmBusy = false; }, function(){ mmBusy = false; });
+  }
+  scheduleMermaid();
+  window.addEventListener('load', scheduleMermaid);
+  [1000, 3000, 8000].forEach(function(ms){ setTimeout(scheduleMermaid, ms); });
+  if(document.readyState !== 'loading') scheduleMermaid();
+  if(window.MutationObserver){
+    var mmTimer = null;
+    var mmObserver = new MutationObserver(function(){
+      clearTimeout(mmTimer);
+      mmTimer = setTimeout(scheduleMermaid, 400);
+    });
+    mmObserver.observe(document.querySelector('.mb-article') || document.body, { childList: true, subtree: true });
+  }
+</script>
+</body>
+</html>

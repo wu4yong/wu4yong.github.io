@@ -1,0 +1,324 @@
+<!--
+  ============================================
+  手机端 · 文章原文页
+  文件：phone/post.njk
+  适用终端：手机端（路由 /phone/p/<slug>/，由 scripts/phone-routes.js 生成）
+  作用：手机阅读单篇文章；单列布局、无侧栏无雷达，替代电脑端 post.njk
+        数据由生成期算好：page.item = { title, dateStr, content, cats, tags }
+  样式依赖：source/css/theme/phone/common.css、source/css/theme/phone/list.css
+  组件依赖：phone/_components/Particles.njk
+  最后修改：2026-11-11
+  ============================================
+-->
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="color-scheme" content="dark">
+  <meta name="theme-color" content="#020817">
+  <!-- 首帧兜底：浏览器默认画布是白的，样式未解析前会闪一下白。这条规则先锁死深空底色 -->
+  <style>html{background-color:#020817}</style>
+  <title>Hive（一）架构与元数据 - 时空秘境</title>
+  <!-- 手机端样式：基础 + 列表/正文，外链引入（源文件 source/css/theme/phone/） -->
+  <link rel="stylesheet" href="/css/theme/phone/common.css">
+  <link rel="stylesheet" href="/css/theme/phone/list.css">
+<meta name="generator" content="Hexo 8.1.2"></head>
+<body>
+<div class="mb-shell">
+  <!--
+  ============================================
+  手机端星空粒子组件
+  文件：Particles.njk
+  适用终端：手机端
+  作用：Particles.njk 的手机端副本（nunjucks 子目录 include 取不到上级）
+        参数与电脑端 _components/Particles.njk 保持一致：
+        粒子 95 / 连线 118px / opacity 0.32，外加星座层与零星闪烁层
+  最后修改：2026-11-12
+  ============================================
+--><!-- z-index 必须是 0：负层级会被 body 不透明背景盖住，粒子在跑却看不见 -->
+<div id="particles" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 0; pointer-events: none;"></div>
+<!-- 星座层（与首页同一套：随机零星散布星座图形 + 偶尔闪烁的小星） -->
+<div id="constellations" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 1; pointer-events: none;" aria-hidden="true"></div>
+<script src="/js/particles.min.js"></script>
+<script>
+particlesJS("particles", {
+  particles: {
+    number: {
+      value: 95,
+      density: {
+        enable: true,
+        value_area: 800
+      }
+    },
+    color: {
+      value: "#00eeff"
+    },
+    shape: {
+      type: "circle",
+      stroke: {
+        width: 0,
+        color: "#000000"
+      }
+    },
+    opacity: {
+      value: 0.6,
+      random: true,
+      anim: {
+        enable: true,
+        speed: 0.5,
+        opacity_min: 0.1,
+        sync: false
+      }
+    },
+    size: {
+      value: 3,
+      random: true,
+      anim: {
+        enable: true,
+        speed: 2,
+        size_min: 0.1,
+        sync: false
+      }
+    },
+    line_linked: {
+      enable: true,
+      distance: 118,
+      color: "#00eeff",
+      opacity: 0.32,
+      width: 1
+    },
+    move: {
+      enable: true,
+      speed: 0.8,
+      direction: "none",
+      random: true,
+      straight: false,
+      out_mode: "out",
+      bounce: false,
+      attract: {
+        enable: true,
+        rotateX: 600,
+        rotateY: 1200
+      }
+    }
+  },
+  interactivity: {
+    detect_on: "canvas",
+    events: {
+      onhover: {
+        enable: true,
+        mode: "grab"       // 手指按住时粒子聚集
+      },
+      onclick: {
+        enable: true,
+        mode: "push"       // 点击时产生新粒子
+      },
+      resize: true
+    },
+    modes: {
+      grab: {
+        distance: 200,
+        line_linked: {
+          opacity: 1
+        }
+      },
+      push: {
+        particles_nb: 6
+      }
+    }
+  },
+  retina_detect: true
+});
+</script>
+<!-- 星座 + 零星闪烁层：与电脑端共用同一份绘制脚本 -->
+<script src="/js/theme/home/starfield.js"></script>
+
+
+  <div class="mb-top">
+    <a class="mb-back" href="/phone/">← 返回手机首页</a>
+    <span class="mb-sub" style="margin:0">2023-04-21</span>
+  </div>
+
+  <h1 class="mb-title">Hive（一）架构与元数据</h1>
+  <div class="mb-sub">
+    分类：bigdata · hive
+     ｜ 标签：Hive
+  </div>
+
+  <div class="mb-article"><div class="essay-banner essay-hive"></div>
+
+<h1 id="架构与元数据"><a href="#架构与元数据" class="headerlink" title="架构与元数据"></a><strong>架构与元数据</strong></h1><p>数据已经躺在 HDFS 上，但分析人员只会写 SQL，直接读文件要写一堆 MapReduce 程序，成本高得离谱。Hive 做的事情就是在文件之上加一层”表”的语义：你写 HQL，它负责翻译成分布式作业去跑，结果再以表的形式返回。这一篇先把它由哪些角色组成、元数据放在哪、内部表和外部表的边界讲清楚。</p>
+<p><img src="https://wu4yong.github.io/starry-images/assets/img/hive/hive-01-overview.webp" alt="查询引擎节点把 SQL 翻译为分布式作业，元数据独立存储，数据留在 HDFS 上"></p>
+<p><em>查询引擎节点把 SQL 翻译为分布式作业，元数据独立存储，数据留在 HDFS 上</em></p>
+<h2 id="1-1-Hive-到底是什么"><a href="#1-1-Hive-到底是什么" class="headerlink" title="1.1 Hive 到底是什么"></a>1.1 Hive 到底是什么</h2><p>Hive 建立在 Hadoop 之上，最初由 Facebook 开源，定位是数据仓库（Data Warehouse）而不是数据库。两者的差别决定了它的使用边界：</p>
+<div class="data-grid data-grid-link-table"><div class="grid-header"><div class="grid-cell">维度</div><div class="grid-cell">传统数据库</div><div class="grid-cell">Hive</div></div><div class="grid-row"><div class="grid-cell">定位</div><div class="grid-cell">在线事务处理，随机读写</div><div class="grid-cell">离线分析，批量扫描历史数据</div></div><div class="grid-row"><div class="grid-cell">存储</div><div class="grid-cell">本地磁盘 &#x2F; 共享存储</div><div class="grid-cell">HDFS、对象存储、HBase 等</div></div><div class="grid-row"><div class="grid-cell">执行</div><div class="grid-cell">单节点或共享集群进程</div><div class="grid-cell">翻译为 MR &#x2F; Tez &#x2F; Spark 作业跑在 YARN</div></div><div class="grid-row"><div class="grid-cell">延迟</div><div class="grid-cell">毫秒到秒级</div><div class="grid-cell">分钟级，大作业更久</div></div><div class="grid-row"><div class="grid-cell">更新</div><div class="grid-cell">支持行级增删改</div><div class="grid-cell">早期只支持追加，后续版本才有限支持 ACID</div></div></div>
+
+<p>一句话判断：<strong>要给前台页面供数据走 OLTP 数据库，要对全量历史做汇总分析走 Hive 这类数仓引擎</strong>。拿 Hive 去扛点查、去做实时写入，属于选型错误。</p>
+<h2 id="1-2-核心角色：Driver、HiveServer2、Metastore"><a href="#1-2-核心角色：Driver、HiveServer2、Metastore" class="headerlink" title="1.2 核心角色：Driver、HiveServer2、Metastore"></a>1.2 核心角色：Driver、HiveServer2、Metastore</h2><p>一套典型部署里，经常被混淆的是这三个进程，它们各自管一段：</p>
+<div class="data-grid data-grid-link-table"><div class="grid-header"><div class="grid-cell">组件</div><div class="grid-cell">职责</div><div class="grid-cell">关键点</div></div><div class="grid-row"><div class="grid-cell">Driver</div><div class="grid-cell">编译 SQL：解析、语义分析、生成逻辑计划与物理计划，提交执行并回收结果</div><div class="grid-cell">一次查询的调度中枢，内部分为 Compiler 与 Executor</div></div><div class="grid-row"><div class="grid-cell">HiveServer2（HS2）</div><div class="grid-cell">对外提供 JDBC&#x2F;ODBC 服务，支持多客户端并发与会话隔离</div><div class="grid-cell">早期的 HiveServer1 已废弃，现在说的服务端基本都是 HS2</div></div><div class="grid-row"><div class="grid-cell">Metastore</div><div class="grid-cell">存库、表、分区、列、SerDe、表属性等元数据</div><div class="grid-cell">本身是个服务，底层一般挂 MySQL 或 PostgreSQL</div></div></div>
+
+<p>一条语句进来的路径是：客户端通过 JDBC 连到 HS2 → Driver 接管语句，先去 Metastore 查表结构 → 编译器把 SQL 变成可执行计划 → 计划提交给底层计算引擎在 YARN 上跑 → 结果回传客户端。</p>
+<p>需要注意，<strong>Metastore 不是存数据的地方，它只存”数据长什么样”</strong>：表名对应哪个目录、有哪些分区、每列是什么类型。真正的行和字节仍然在 HDFS 上。</p>
+<h2 id="1-3-与-HDFS、YARN-的关系"><a href="#1-3-与-HDFS、YARN-的关系" class="headerlink" title="1.3 与 HDFS、YARN 的关系"></a>1.3 与 HDFS、YARN 的关系</h2><p>Hive 自己不存数据，也不直接抢机器资源，它把这两件事分别交给 Hadoop 的既有组件：</p>
+<div class="data-grid data-grid-link-table"><div class="grid-header"><div class="grid-cell">层</div><div class="grid-cell">谁负责</div><div class="grid-cell">Hive 这边的对应关系</div></div><div class="grid-row"><div class="grid-cell">存储层</div><div class="grid-cell">HDFS（也可接 S3、HBase）</div><div class="grid-cell">一张表对应一个目录，分区对应子目录</div></div><div class="grid-row"><div class="grid-cell">资源层</div><div class="grid-cell">YARN</div><div class="grid-cell">计算作业以 Container 形式申请 CPU 与内存</div></div><div class="grid-row"><div class="grid-cell">计算层</div><div class="grid-cell">MapReduce &#x2F; Tez &#x2F; Spark</div><div class="grid-cell">Hive 把物理计划交给其中一种引擎执行</div></div><div class="grid-row"><div class="grid-cell">元数据层</div><div class="grid-cell">Metastore 数据库</div><div class="grid-cell">与数据文件分离，可独立备份与迁移</div></div></div>
+
+<p>这种分层带来两个直接后果：一是<strong>换引擎不动表</strong>，同一份数据文件，底层从 MapReduce 切到 Tez，表定义和数据都不用改；二是<strong>元数据可以单独治理</strong>，Metastore 挂了查不了表，但 HDFS 上的文件不会丢，这也是区分内部表、外部表的前提。</p>
+<h2 id="1-4-Metastore-的三种部署模式"><a href="#1-4-Metastore-的三种部署模式" class="headerlink" title="1.4 Metastore 的三种部署模式"></a>1.4 Metastore 的三种部署模式</h2><p>Metastore 本身有三种运行方式，生产环境基本只用第三种：</p>
+<div class="data-grid data-grid-link-table"><div class="grid-header"><div class="grid-cell">模式</div><div class="grid-cell">结构</div><div class="grid-cell">适用场景</div></div><div class="grid-row"><div class="grid-cell">嵌入式</div><div class="grid-cell">Metastore 与 Hive 进程同进程，元数据默认存 Derby</div><div class="grid-cell">本地调试、单用户，Derby 不支持并发写</div></div><div class="grid-row"><div class="grid-cell">本地模式</div><div class="grid-cell">Metastore 仍在 Hive 进程内，但元数据外置到 MySQL</div><div class="grid-cell">小规模单机部署</div></div><div class="grid-row"><div class="grid-cell">远程模式</div><div class="grid-cell">Metastore 独立成服务，HS2 通过 RPC 访问</div><div class="grid-cell">生产标准部署，多实例共享一套元数据</div></div></div>
+
+<p>生产配置里常见的外置 Metastore 片段（<code>hive-site.xml</code>）：</p>
+<pre class="line-numbers language-markup" data-language="markup"><code class="language-markup"><span class="token comment">&lt;!-- 元数据外置到 MySQL，避免默认 Derby 的单进程限制 --></span>
+<span class="token tag"><span class="token tag"><span class="token punctuation">&lt;</span>property</span><span class="token punctuation">></span></span>
+  <span class="token tag"><span class="token tag"><span class="token punctuation">&lt;</span>name</span><span class="token punctuation">></span></span>hive.metastore.uris<span class="token tag"><span class="token tag"><span class="token punctuation">&lt;/</span>name</span><span class="token punctuation">></span></span>
+  <span class="token tag"><span class="token tag"><span class="token punctuation">&lt;</span>value</span><span class="token punctuation">></span></span>thrift://metastore-host:9083<span class="token tag"><span class="token tag"><span class="token punctuation">&lt;/</span>value</span><span class="token punctuation">></span></span>
+<span class="token tag"><span class="token tag"><span class="token punctuation">&lt;/</span>property</span><span class="token punctuation">></span></span>
+<span class="token tag"><span class="token tag"><span class="token punctuation">&lt;</span>property</span><span class="token punctuation">></span></span>
+  <span class="token tag"><span class="token tag"><span class="token punctuation">&lt;</span>name</span><span class="token punctuation">></span></span>javax.jdo.option.ConnectionURL<span class="token tag"><span class="token tag"><span class="token punctuation">&lt;/</span>name</span><span class="token punctuation">></span></span>
+  <span class="token tag"><span class="token tag"><span class="token punctuation">&lt;</span>value</span><span class="token punctuation">></span></span>jdbc:mysql://mysql-host:3306/hive_meta?useSSL=false<span class="token tag"><span class="token tag"><span class="token punctuation">&lt;/</span>value</span><span class="token punctuation">></span></span>
+<span class="token tag"><span class="token tag"><span class="token punctuation">&lt;/</span>property</span><span class="token punctuation">></span></span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<h2 id="1-5-内部表与外部表：drop-时谁删数据"><a href="#1-5-内部表与外部表：drop-时谁删数据" class="headerlink" title="1.5 内部表与外部表：drop 时谁删数据"></a>1.5 内部表与外部表：drop 时谁删数据</h2><p>这是 Hive 最容易在面试和生产事故里反复出现的概念，判断标准只有一条：<strong>drop 表的时候，Hive 删不删 HDFS 上的文件</strong>。</p>
+<div class="data-grid data-grid-link-table"><div class="grid-header"><div class="grid-cell">对比项</div><div class="grid-cell">内部表（Managed Table）</div><div class="grid-cell">外部表（External Table）</div></div><div class="grid-row"><div class="grid-cell">创建方式</div><div class="grid-cell"><code>CREATE TABLE</code></div><div class="grid-cell"><code>CREATE EXTERNAL TABLE</code></div></div><div class="grid-row"><div class="grid-cell">数据归属</div><div class="grid-cell">Hive 管理生命周期</div><div class="grid-cell">文件由外部系统管理，Hive 只登记元数据</div></div><div class="grid-row"><div class="grid-cell">drop 行为</div><div class="grid-cell">元数据和 HDFS 目录一起删</div><div class="grid-cell">只删元数据，文件原样保留</div></div><div class="grid-row"><div class="grid-cell">典型用途</div><div class="grid-cell">数仓中间层、临时结果表</div><div class="grid-cell">原始日志、共享数据、多引擎共用的表</div></div></div>
+
+<pre class="line-numbers language-sql" data-language="sql"><code class="language-sql"><span class="token comment">-- 内部表：drop 后目录一并消失</span>
+<span class="token keyword">CREATE</span> <span class="token keyword">TABLE</span> dwd_order <span class="token punctuation">(</span>
+  order_id STRING<span class="token punctuation">,</span>
+  amount  <span class="token keyword">DOUBLE</span>
+<span class="token punctuation">)</span> STORED <span class="token keyword">AS</span> ORC<span class="token punctuation">;</span>
+
+<span class="token comment">-- 外部表：drop 只清元数据，日志文件仍在 HDFS 上</span>
+<span class="token keyword">CREATE</span> EXTERNAL <span class="token keyword">TABLE</span> ods_access_log <span class="token punctuation">(</span>
+  ip      STRING<span class="token punctuation">,</span>
+  url     STRING<span class="token punctuation">,</span>
+  ts      <span class="token keyword">BIGINT</span>
+<span class="token punctuation">)</span>
+LOCATION <span class="token string">'/warehouse/ods/access_log'</span>
+STORED <span class="token keyword">AS</span> TEXTFILE<span class="token punctuation">;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<p>实操建议：<strong>原始数据层一律建外部表</strong>，防止误操作把上游还在用的文件删掉；清洗后的中间结果可以用内部表，让 Hive 跟着任务周期回收空间。</p>
+<h2 id="1-6-版本与常用配置"><a href="#1-6-版本与常用配置" class="headerlink" title="1.6 版本与常用配置"></a>1.6 版本与常用配置</h2><div class="data-grid data-grid-link-table"><div class="grid-header"><div class="grid-cell">版本线</div><div class="grid-cell">要点</div><div class="grid-cell">说明</div></div><div class="grid-row"><div class="grid-cell">1.x</div><div class="grid-cell">早期版本，引擎以 MapReduce 为主</div><div class="grid-cell">教材残留，新集群不建议</div></div><div class="grid-row"><div class="grid-cell">2.x</div><div class="grid-cell">引入 LLAP，推荐使用 Tez 作为执行引擎</div><div class="grid-cell">存量集群常见</div></div><div class="grid-row"><div class="grid-cell">3.x</div><div class="grid-cell">支持物化视图（Materialized View）、优化器增强</div><div class="grid-cell">新集群优先评估 3.x</div></div></div>
+
+<p>几个基础配置（<code>hive-site.xml</code>）：</p>
+<pre class="line-numbers language-markup" data-language="markup"><code class="language-markup"><span class="token comment">&lt;!-- 底层执行引擎：2.x 起生产推荐 Tez，老集群仍可能是 mr --></span>
+<span class="token tag"><span class="token tag"><span class="token punctuation">&lt;</span>property</span><span class="token punctuation">></span></span>
+  <span class="token tag"><span class="token tag"><span class="token punctuation">&lt;</span>name</span><span class="token punctuation">></span></span>hive.execution.engine<span class="token tag"><span class="token tag"><span class="token punctuation">&lt;/</span>name</span><span class="token punctuation">></span></span>
+  <span class="token tag"><span class="token tag"><span class="token punctuation">&lt;</span>value</span><span class="token punctuation">></span></span>tez<span class="token tag"><span class="token tag"><span class="token punctuation">&lt;/</span>value</span><span class="token punctuation">></span></span>
+<span class="token tag"><span class="token tag"><span class="token punctuation">&lt;/</span>property</span><span class="token punctuation">></span></span>
+<span class="token comment">&lt;!-- Metastore 服务地址，远程模式下必填 --></span>
+<span class="token tag"><span class="token tag"><span class="token punctuation">&lt;</span>property</span><span class="token punctuation">></span></span>
+  <span class="token tag"><span class="token tag"><span class="token punctuation">&lt;</span>name</span><span class="token punctuation">></span></span>hive.metastore.uris<span class="token tag"><span class="token tag"><span class="token punctuation">&lt;/</span>name</span><span class="token punctuation">></span></span>
+  <span class="token tag"><span class="token tag"><span class="token punctuation">&lt;</span>value</span><span class="token punctuation">></span></span>thrift://metastore-host:9083<span class="token tag"><span class="token tag"><span class="token punctuation">&lt;/</span>value</span><span class="token punctuation">></span></span>
+<span class="token tag"><span class="token tag"><span class="token punctuation">&lt;/</span>property</span><span class="token punctuation">></span></span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<h2 id="1-7-容易踩的坑"><a href="#1-7-容易踩的坑" class="headerlink" title="1.7 容易踩的坑"></a>1.7 容易踩的坑</h2><ul>
+<li><strong>把 Metastore 当成数据仓库</strong>：它只存 schema，文件在 HDFS；备份元数据不等于备份业务数据。</li>
+<li><strong>外部表误建成内部表</strong>：上线前确认 <code>EXTERNAL</code> 关键字，否则一次 drop 就把原始日志目录清掉。</li>
+<li><strong>Derby 当生产库</strong>：Derby 是嵌入式单连接数据库，第二个会话启动就会报元数据锁冲突。</li>
+<li><strong>跨引擎共用表时删表</strong>：如果一张表还被 Spark、HBase 等读取，优先用外部表，避免 Hive 单方面删文件。</li>
+<li><strong>误以为 Hive 是数据库</strong>：行级随机写、事务并发、点查都不是它的强项，需求落到这些场景要换组件。</li>
+</ul>
+<h2 id="1-8-官方资料"><a href="#1-8-官方资料" class="headerlink" title="1.8 官方资料"></a>1.8 官方资料</h2><ul>
+<li>Apache Hive 官网：<a target="_blank" rel="noopener" href="https://hive.apache.org/">https://hive.apache.org/</a></li>
+<li>Hive 文档首页：<a target="_blank" rel="noopener" href="https://cwiki.apache.org/confluence/display/Hive/Home">https://cwiki.apache.org/confluence/display/Hive/Home</a></li>
+<li>LanguageManual DDL：<a target="_blank" rel="noopener" href="https://cwiki.apache.org/confluence/display/Hive/LanguageManual+DDL">https://cwiki.apache.org/confluence/display/Hive/LanguageManual+DDL</a></li>
+<li>Hive 架构与设计说明：<a target="_blank" rel="noopener" href="https://cwiki.apache.org/confluence/display/Hive/Design">https://cwiki.apache.org/confluence/display/Hive/Design</a></li>
+</ul>
+<h2 id="1-9-清单"><a href="#1-9-清单" class="headerlink" title="1.9 清单"></a>1.9 清单</h2><ol>
+<li>Hive 是建在 Hadoop 之上的离线数仓引擎，把 HQL 翻译成分布式作业，不承担在线事务</li>
+<li>三个核心角色：Driver 编译调度、HiveServer2 对外提供 JDBC&#x2F;ODBC、Metastore 存元数据</li>
+<li>数据在 HDFS，资源由 YARN 分配，计算引擎可在 MapReduce、Tez、Spark 之间替换</li>
+<li>生产用远程模式 Metastore，元数据外置到 MySQL，不要用默认 Derby</li>
+<li>内部表 drop 删元数据和文件，外部表 drop 只删元数据；原始层一律用外部表</li>
+<li>2.x 起推荐 Tez，3.x 支持物化视图；选型先确认业务是离线分析还是在线读写</li>
+</ol>
+</div>
+
+  <div class="mb-foot">
+    <a href="/phone/">返回手机首页</a>
+    <a href="/phone/tags/">星迹索引</a>
+  </div>
+</div>
+
+
+<script>
+  /* 作用：懒加载本地 mermaid 库；无 mermaid 代码块时不加载 */
+  function loadLocalMermaid(){
+    return new Promise(function(resolve, reject){
+      if(window.mermaid) return resolve(window.mermaid);
+      var s = document.createElement('script');
+      s.src = '/js/third-party/mermaid/mermaid.min.js?v=10';
+      s.onload = function(){ resolve(window.mermaid); };
+      s.onerror = function(){ reject(new Error('mermaid local load failed')); };
+      document.head.appendChild(s);
+    });
+  }
+
+  /* 作用：把 ```mermaid 代码块替换成 SVG 图（手机端字号略小、图可横向滚动） */
+  async function renderMermaidDiagram(){
+    var blocks = document.querySelectorAll('pre[class*="language-mermaid"]');
+    if(!blocks.length) return;
+    var mermaid;
+    try { mermaid = await loadLocalMermaid(); }
+    catch(e){ console.warn('[mermaid] 本地库加载失败：', e); return; }
+
+    mermaid.initialize({
+      startOnLoad: false,
+      theme: 'base',
+      themeVariables: {
+        darkMode: true,
+        background: 'transparent',
+        fontFamily: '"Microsoft YaHei", "PingFang SC", "Segoe UI", sans-serif',
+        fontSize: '12px',
+        primaryColor: '#062f3d',
+        primaryTextColor: '#d6f6ff',
+        primaryBorderColor: '#00eeff',
+        secondaryColor: '#04222d',
+        tertiaryColor: '#04222d',
+        mainBkg: '#062f3d',
+        nodeBorder: '#00eeff',
+        clusterBkg: '#02161f',
+        clusterBorder: '#00eeff55',
+        lineColor: '#00eeff',
+        textColor: '#c0e8ff',
+        edgeLabelBackground: '#02161f'
+      },
+      flowchart: { curve: 'basis', useMaxWidth: false, htmlLabels: false, nodeSpacing: 30, rankSpacing: 40, padding: 10 }
+    });
+
+    var targets = [];
+    blocks.forEach(function(el){
+      var codeEl = el.querySelector('code');
+      if(!codeEl) return;
+      var div = document.createElement('div');
+      div.className = 'mermaid';
+      div.textContent = codeEl.textContent;
+      el.parentNode.replaceChild(div, el);
+      targets.push(div);
+    });
+    if(!targets.length) return;
+    try { await mermaid.run({ nodes: targets }); }
+    catch(e){ console.warn('[mermaid] 渲染失败：', e); }
+  }
+  /* 作用：多次触发兜底（延迟重试 + DOM 变化），防止某次时机没跑到导致图表留在代码块 */
+  var mmBusy = false;
+  function scheduleMermaid(){
+    if(mmBusy) return;
+    mmBusy = true;
+    renderMermaidDiagram().then(function(){ mmBusy = false; }, function(){ mmBusy = false; });
+  }
+  scheduleMermaid();
+  window.addEventListener('load', scheduleMermaid);
+  [1000, 3000, 8000].forEach(function(ms){ setTimeout(scheduleMermaid, ms); });
+  if(document.readyState !== 'loading') scheduleMermaid();
+  if(window.MutationObserver){
+    var mmTimer = null;
+    var mmObserver = new MutationObserver(function(){
+      clearTimeout(mmTimer);
+      mmTimer = setTimeout(scheduleMermaid, 400);
+    });
+    mmObserver.observe(document.querySelector('.mb-article') || document.body, { childList: true, subtree: true });
+  }
+</script>
+</body>
+</html>

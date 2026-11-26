@@ -1,0 +1,3723 @@
+<!--
+  ============================================
+  文章原文页模板
+  文件：post.njk
+  适用终端：电脑端
+  作用：文章正文 + 侧栏；手机 UA 跳 /phone/p/<slug>/
+  最后修改：2026-11-11
+  ============================================
+-->
+
+
+<!DOCTYPE html>
+<html class="post-page">
+<!--
+  ============================================
+  公共 head 组件
+  文件：Head.njk
+  适用终端：电脑端
+  作用：输出 charset/viewport/title，并按 pageCss 输出外链样式表
+  样式资源：themes/butterfly/source/css/theme/{base,home,starmap,media,phone}/*.css
+            （Hexo 复制到 /css/theme/，pageCss 里写子目录 + 文件名，如 "base/common.css"）
+  引入层级顺序（= CSS 层叠顺序，调整只允许追加，不要打乱前后）：
+    1 基础  base/common.css
+    2 布局  base/post-layout.css
+    3 组件  base/sidebar.css
+    4 正文  base/post.css
+    5 页面  starmap/tags.css · starmap/chronicle.css · home/about.css · starmap/tag.css · starmap/category-shared.css · home/pc-home.css
+    6 浮层  media/star-reader.css
+    7 特效  starmap/starmap-live.css
+  最后修改：2026-11-12
+  ============================================
+--><head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="color-scheme" content="dark">
+  <meta name="theme-color" content="#020817">
+  <!-- 首帧兜底：浏览器默认画布是白的，样式表还没解析完就画会闪一下白。这条 8 字节规则先锁死深空底色 -->
+  <style>html{background-color:#020817}</style>
+  <title>时空秘境 - 技术总结 Cursor 介绍</title>
+  
+  <link rel="stylesheet" href="/css/theme/base/common.css">
+  
+  <link rel="stylesheet" href="/css/theme/base/post-layout.css">
+  
+  <link rel="stylesheet" href="/css/theme/base/sidebar.css">
+  
+  <link rel="stylesheet" href="/css/theme/base/post.css">
+  
+  <!-- 全站代码高亮配色（One Dark Pro）：所有版面统一在最外层加载，任意入口进入都生效 -->
+  <link rel="stylesheet" href="/css/code-table.css">
+  <!-- KaTeX 公式样式：配套字体在 /css/fonts/，由 scripts/math-katex.js 在构建期渲染公式 -->
+  <link rel="stylesheet" href="/css/katex.min.css">
+<meta name="generator" content="Hexo 8.1.2"></head>
+
+<script>
+  /* 手机 UA 分流：电脑端这套控制台不再给手机用，直接换成手机版页面 */
+  (function () {
+    var ua = navigator.userAgent || '';
+    if (/Android|iPhone|iPod|HarmonyOS|Windows Phone|MicroMessenger|Mobile Safari/i.test(ua)) {
+      location.replace('/phone/p/frontend/engineering/tech-tools-cursor/');
+    }
+  })();
+</script>
+
+<body>
+  <!--
+  ============================================
+  星空粒子背景组件
+  文件：Particles.njk
+  适用终端：电脑端
+  作用：particles.js 全站星空动画，鼠标悬停互动
+  最后修改：2026-11-11
+  ============================================
+--><!-- z-index 必须是 0 而不是 -1：body 带着不透明的 radial-gradient 底色，
+     负层级的子元素会被父元素背景整个盖住，粒子在跑但一个点都看不见 -->
+<div id="particles" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 0; pointer-events: none;"></div>
+<!-- 星座层：随机零星散布星座图形，叠在粒子之上、页面内容之下 -->
+<div id="constellations" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 1; pointer-events: none;" aria-hidden="true"></div>
+<script src="/js/particles.min.js"></script>
+<script>/* 本地库在仓库里，缺失时只提示、不再回退外网 CDN：
+   jsdelivr 在部分网络下会长时间挂起，而它是在这里同步插入的，会阻塞后面所有脚本（含 mermaid 渲染） */
+if (typeof particlesJS === "undefined") {
+  console.warn("[particles] 本地 /js/particles.min.js 未加载，跳过星空背景");
+}
+</script>
+<script>
+particlesJS("particles", {
+  particles: {
+    number: {
+      value: 95,
+      density: {
+        enable: true,
+        value_area: 800
+      }
+    },
+    color: {
+      value: "#00eeff"
+    },
+    shape: {
+      type: "circle",
+      stroke: {
+        width: 0,
+        color: "#000000"
+      }
+    },
+    opacity: {
+      value: 0.6,
+      random: true,
+      anim: {
+        enable: true,
+        speed: 0.5,
+        opacity_min: 0.1,
+        sync: false
+      }
+    },
+    size: {
+      value: 3,
+      random: true,
+      anim: {
+        enable: true,
+        speed: 2,
+        size_min: 0.1,
+        sync: false
+      }
+    },
+    line_linked: {
+      enable: true,
+      distance: 118,          /* 比原来 150 收紧，让粒子网络稀疏些，给星座留出视觉空间 */
+      color: "#00eeff",
+      opacity: 0.32,
+      width: 1
+    },
+    move: {
+      enable: true,
+      speed: 0.8,
+      direction: "none",
+      random: true,
+      straight: false,
+      out_mode: "out",
+      bounce: false,
+      attract: {
+        enable: true,
+        rotateX: 600,
+        rotateY: 1200
+      }
+    }
+  },
+  interactivity: {
+    detect_on: "canvas",
+    events: {
+      onhover: {
+        enable: true,
+        mode: "grab"       // 鼠标悬停时粒子聚集
+      },
+      onclick: {
+        enable: true,
+        mode: "push"       // 点击时产生新粒子
+      },
+      resize: true
+    },
+    modes: {
+      grab: {
+        distance: 200,
+        line_linked: {
+          opacity: 1
+        }
+      },
+      push: {
+        particles_nb: 6
+      }
+    }
+  },
+  retina_detect: true
+});
+</script>
+<!-- 星座层：独立 canvas，随机散布真实星座图形（依赖上面的 #constellations 容器） -->
+<script src="/js/theme/home/starfield.js"></script>
+
+  <!-- 返回按钮：按来源回到星图手记 / 星迹索引，默认回星图手记。
+       放在 body 顶层（不进 main-content），避免被其溢出裁剪切掉右半边 -->
+  <a class="article-back" id="articleBack" href="/archives/">← 返回星图手记</a>
+
+  <div class="app-layout">
+    <!--
+  ============================================
+  左侧栏个人卡组件
+  文件：_components/Sidebar.njk
+  适用终端：电脑端（星图手记 / 星迹索引 / 秘境主人 页面通栏侧栏）
+  作用：头像、昵称、站点统计、导航菜单、底部信息与全局搜索面板（结果落在雷达区，无结果播「内容走丢 → 404」动画）
+  样式依赖：source/css/theme/base/sidebar.css
+  脚本依赖：source/js/theme/base/sidebar.js
+  最后修改：2026-11-11
+  ============================================
+-->
+<aside class="sidebar" id="sidebar">
+  <div class="profile-card">
+    <div class="avatar">
+      
+      <div class="avatar-orb" aria-hidden="true">
+        <svg class="orb-svg" viewBox="0 0 80 80" width="80" height="80" role="img">
+          <defs>
+            <radialGradient id="orbBg" cx="50%" cy="46%" r="56%">
+              <stop offset="0%" stop-color="#0d1b4a" />
+              <stop offset="100%" stop-color="#060a20" />
+            </radialGradient>
+            <linearGradient id="orbMainGrad" x1="0" y1="0" x2="1" y2="1">
+              <stop offset="0%" stop-color="#ffffff" />
+              <stop offset="52%" stop-color="#a8f4ff" />
+              <stop offset="100%" stop-color="#3fd8ff" />
+            </linearGradient>
+          </defs>
+          <circle cx="40" cy="40" r="37" fill="url(#orbBg)" stroke="#00eeff" stroke-width="2" />
+          <circle cx="40" cy="40" r="32.5" fill="none" stroke="rgba(0,238,255,0.22)" stroke-width="1" />
+          <!-- 主星 -->
+          <path class="orb-star-main" fill="url(#orbMainGrad)"
+            d="M40.5 21.5 L43.5 35 L57 38 L43.5 41 L40.5 54.5 L37.5 41 L24 38 L37.5 35 Z" />
+          <!-- 三颗小星：位置/颜色错开，闪烁节奏随机 -->
+          <path class="orb-star s1" fill="#9ff0ff"
+            d="M22 17.4 L23 22 L27.6 23 L23 24 L22 28.6 L21 24 L16.4 23 L21 22 Z" />
+          <path class="orb-star s2" fill="#bcd9ff"
+            d="M58.5 25.6 L59.3 29.2 L62.9 30 L59.3 30.8 L58.5 34.4 L57.7 30.8 L54.1 30 L57.7 29.2 Z" />
+          <path class="orb-star s3" fill="#ffe1a6"
+            d="M33 51 L34.1 55.9 L39 57 L34.1 58.1 L33 63 L31.9 58.1 L27 57 L31.9 55.9 Z" />
+        </svg>
+      </div>
+    </div>
+    <h3 class="nickname">时空行者</h3>
+    <p class="bio">星辰大海，代码为舟</p>
+    <div class="stats">
+      <div class="stat-item">
+        <span class="stat-num">607</span>
+        <span class="stat-label">文章</span>
+      </div>
+      <div class="stat-item">
+        <span class="stat-num" id="fans-count" data-base="1088">1088</span>
+        <span class="stat-label">粉丝</span>
+      </div>
+      <div class="stat-item">
+        <span class="stat-num" id="follow-count" style="cursor:pointer;">66</span>
+        <span class="stat-label">关注</span>
+      </div>
+    </div>
+    <button class="follow-btn" id="followBtn" type="button" aria-pressed="false">+ 关注</button>
+  </div>
+  <div class="search-box">
+    <input type="text" placeholder="找找看..." id="search-input">
+    <button class="search-btn" id="searchModalOpen">🔍</button>
+  </div>
+  <div class="links-card">
+    <h4>常用链接</h4>
+    <ul>
+      <li><a href="/about/">秘境主人</a></li>
+      <li><a href="/archives/">星图手记</a></li>
+      <li><a href="/tags/">星迹索引</a></li>
+      <li><a href="/fun/">星屿乐园</a></li>
+      <!-- 音乐专区不再放侧栏：入口统一收在「星屿乐园」的休闲分区矩阵里 -->
+      <!-- ✅ 新增联系我 -->
+      <li><a class="contact-trigger" href="javascript:void(0)">星语传书</a></li>
+      <li><a class="donate-trigger" href="javascript:void(0)">星芒赠礼</a></li>
+    </ul>
+  </div>
+  <div class="tags-card">
+    <h4>热门标签</h4>
+    
+    <div class="tag-cloud">
+      
+      <a href="/tags/面试/" class="tag-link" data-tag="面试"
+        data-count="11">面试</a>
+      
+      <a href="/tags/Elasticsearch/" class="tag-link" data-tag="Elasticsearch"
+        data-count="52">Elasticsearch</a>
+      
+      <a href="/tags/全文检索/" class="tag-link" data-tag="全文检索"
+        data-count="6">全文检索</a>
+      
+      <a href="/tags/系统课/" class="tag-link" data-tag="系统课"
+        data-count="52">系统课</a>
+      
+      <a href="/tags/中文分词/" class="tag-link" data-tag="中文分词"
+        data-count="1">中文分词</a>
+      
+      <a href="/tags/HBase/" class="tag-link" data-tag="HBase"
+        data-count="7">HBase</a>
+      
+      <a href="/tags/Hive/" class="tag-link" data-tag="Hive"
+        data-count="6">Hive</a>
+      
+      <a href="/tags/Flink/" class="tag-link" data-tag="Flink"
+        data-count="8">Flink</a>
+      
+      <a href="/tags/Kafka/" class="tag-link" data-tag="Kafka"
+        data-count="8">Kafka</a>
+      
+      <a href="/tags/Spark/" class="tag-link" data-tag="Spark"
+        data-count="8">Spark</a>
+      
+      <a href="/tags/Hadoop/" class="tag-link" data-tag="Hadoop"
+        data-count="7">Hadoop</a>
+      
+      <a href="/tags/MyBatisPlus/" class="tag-link" data-tag="MyBatisPlus"
+        data-count="8">MyBatisPlus</a>
+      
+      <a href="/tags/Java/" class="tag-link" data-tag="Java"
+        data-count="22">Java</a>
+      
+      <a href="/tags/集合/" class="tag-link" data-tag="集合"
+        data-count="1">集合</a>
+      
+      <a href="/tags/设计模式/" class="tag-link" data-tag="设计模式"
+        data-count="1">设计模式</a>
+      
+      <a href="/tags/算法/" class="tag-link" data-tag="算法"
+        data-count="1">算法</a>
+      
+      <a href="/tags/排序/" class="tag-link" data-tag="排序"
+        data-count="1">排序</a>
+      
+      <a href="/tags/SpringBoot/" class="tag-link" data-tag="SpringBoot"
+        data-count="9">SpringBoot</a>
+      
+      <a href="/tags/Netty/" class="tag-link" data-tag="Netty"
+        data-count="4">Netty</a>
+      
+      <a href="/tags/SpringCloud/" class="tag-link" data-tag="SpringCloud"
+        data-count="10">SpringCloud</a>
+      
+      <a href="/tags/SpringData/" class="tag-link" data-tag="SpringData"
+        data-count="6">SpringData</a>
+      
+      <a href="/tags/SpringAi/" class="tag-link" data-tag="SpringAi"
+        data-count="15">SpringAi</a>
+      
+      <a href="/tags/SpringSession/" class="tag-link" data-tag="SpringSession"
+        data-count="4">SpringSession</a>
+      
+      <a href="/tags/AICoding/" class="tag-link" data-tag="AICoding"
+        data-count="14">AICoding</a>
+      
+      <a href="/tags/深度研搜/" class="tag-link" data-tag="深度研搜"
+        data-count="15">深度研搜</a>
+      
+      <a href="/tags/langchain/" class="tag-link" data-tag="langchain"
+        data-count="10">langchain</a>
+      
+      <a href="/tags/大模型/" class="tag-link" data-tag="大模型"
+        data-count="40">大模型</a>
+      
+      <a href="/tags/llmheima/" class="tag-link" data-tag="llmheima"
+        data-count="17">llmheima</a>
+      
+      <a href="/tags/电商问数/" class="tag-link" data-tag="电商问数"
+        data-count="18">电商问数</a>
+      
+      <a href="/tags/web/" class="tag-link" data-tag="web"
+        data-count="229">web</a>
+      
+      <a href="/tags/Docker/" class="tag-link" data-tag="Docker"
+        data-count="13">Docker</a>
+      
+      <a href="/tags/git/" class="tag-link" data-tag="git"
+        data-count="7">git</a>
+      
+      <a href="/tags/linux/" class="tag-link" data-tag="linux"
+        data-count="12">linux</a>
+      
+      <a href="/tags/idea/" class="tag-link" data-tag="idea"
+        data-count="2">idea</a>
+      
+      <a href="/tags/jenkins/" class="tag-link" data-tag="jenkins"
+        data-count="9">jenkins</a>
+      
+      <a href="/tags/mac/" class="tag-link" data-tag="mac"
+        data-count="1">mac</a>
+      
+      <a href="/tags/vue/" class="tag-link" data-tag="vue"
+        data-count="9">vue</a>
+      
+      <a href="/tags/MySQL数据库/" class="tag-link" data-tag="MySQL数据库"
+        data-count="7">MySQL数据库</a>
+      
+      <a href="/tags/redis/" class="tag-link" data-tag="redis"
+        data-count="7">redis</a>
+      
+      <a href="/tags/随笔杂谈/" class="tag-link" data-tag="随笔杂谈"
+        data-count="2">随笔杂谈</a>
+      
+      <a href="/tags/画册/" class="tag-link" data-tag="画册"
+        data-count="3">画册</a>
+      
+      <a href="/tags/AI/" class="tag-link" data-tag="AI"
+        data-count="1">AI</a>
+      
+      <a href="/tags/电影/" class="tag-link" data-tag="电影"
+        data-count="5">电影</a>
+      
+      <a href="/tags/视频剪辑/" class="tag-link" data-tag="视频剪辑"
+        data-count="1">视频剪辑</a>
+      
+      <a href="/tags/吉他/" class="tag-link" data-tag="吉他"
+        data-count="2">吉他</a>
+      
+      <a href="/tags/游戏/" class="tag-link" data-tag="游戏"
+        data-count="1">游戏</a>
+      
+    </div>
+    <script>
+      /*
+  ============================================
+  侧栏热门标签排序（首帧前执行）
+  文件：_js/hot-tags.js
+  引入位置：_components/Sidebar.njk 里 .tag-cloud 闭合标签之后（紧跟着写死）
+  作用：按点击次数排序、只露前 5 个、点一下立刻重排
+  为什么单独拆出来：以前放在 sidebar.js 的 DOMContentLoaded 里，首帧渲染的还是
+  模板顺序的 20 个标签，等脚本跑完才收成 5 个；配合跨页淡入（View Transition）
+  会出现「新旧两套标签叠在一起、影子跳一下」。紧跟标签节点内联执行就没有中间态。
+  最后修改：2026-11-12
+  ============================================
+*/
+(function () {
+  var cloud = document.querySelector('.tag-cloud');
+  if (!cloud) return;
+  var links = Array.prototype.slice.call(cloud.querySelectorAll('.tag-link'));
+  if (!links.length) return;
+
+  var KEY = 'starry_tag_visits'; // 标签名 -> 点击次数
+  var TOP = 5;
+  var visits = {};
+
+  try {
+    var raw = JSON.parse(localStorage.getItem(KEY) || '{}');
+    visits = (raw && typeof raw === 'object') ? raw : {};
+  } catch (e) {
+    visits = {};
+  }
+
+  links.forEach(function (link) {
+    var name = link.dataset.tag || (link.textContent || '').trim();
+    link.dataset.tag = name;
+    if (!link.dataset.count) link.dataset.count = '0';
+  });
+
+  // 排序：点击次数降序 → 文章数降序 → 名字，保证同分时顺序稳定不来回跳
+  function order() {
+    return links.slice().sort(function (a, b) {
+      var va = visits[a.dataset.tag] || 0;
+      var vb = visits[b.dataset.tag] || 0;
+      if (vb !== va) return vb - va;
+      var ca = Number(a.dataset.count) || 0;
+      var cb = Number(b.dataset.count) || 0;
+      if (cb !== ca) return cb - ca;
+      return String(a.dataset.tag).localeCompare(String(b.dataset.tag), 'zh');
+    });
+  }
+
+  // 重排 DOM：按名次 append，超出 5 个的 hidden（仍留在 DOM，等名次升上来再显示）
+  function render() {
+    order().forEach(function (link, i) {
+      link.dataset.visits = visits[link.dataset.tag] || 0;
+      cloud.appendChild(link);
+      link.hidden = i >= TOP;
+    });
+  }
+
+  links.forEach(function (link) {
+    link.addEventListener('click', function () {
+      var name = link.dataset.tag;
+      visits[name] = (visits[name] || 0) + 1;
+      try { localStorage.setItem(KEY, JSON.stringify(visits)); } catch (e) { /* 忽略配额错误 */ }
+      render(); // 当前页立刻看到「谁被点多了谁上前」
+    });
+  });
+
+  render();
+})();
+
+    </script>
+  </div>
+  <div class="archive-card">
+    <h4>按月归档</h4>
+    <ul class="archive-list">
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2026/11/">
+          2026年11月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2026/10/">
+          2026年10月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2026/09/">
+          2026年09月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2026/08/">
+          2026年08月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2026/07/">
+          2026年07月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2026/06/">
+          2026年06月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2026/05/">
+          2026年05月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2026/04/">
+          2026年04月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2026/03/">
+          2026年03月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2026/02/">
+          2026年02月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2026/01/">
+          2026年01月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2025/12/">
+          2025年12月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2025/11/">
+          2025年11月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2025/10/">
+          2025年10月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2025/09/">
+          2025年09月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2025/08/">
+          2025年08月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2025/07/">
+          2025年07月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2025/06/">
+          2025年06月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2025/05/">
+          2025年05月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2025/04/">
+          2025年04月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2025/03/">
+          2025年03月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2025/02/">
+          2025年02月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2025/01/">
+          2025年01月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2024/12/">
+          2024年12月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2024/11/">
+          2024年11月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2024/10/">
+          2024年10月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2024/09/">
+          2024年09月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2024/08/">
+          2024年08月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2024/07/">
+          2024年07月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2024/06/">
+          2024年06月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2024/05/">
+          2024年05月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2024/04/">
+          2024年04月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2024/03/">
+          2024年03月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2024/02/">
+          2024年02月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2024/01/">
+          2024年01月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2023/12/">
+          2023年12月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2023/11/">
+          2023年11月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2023/10/">
+          2023年10月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2023/09/">
+          2023年09月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2023/08/">
+          2023年08月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2023/07/">
+          2023年07月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2023/06/">
+          2023年06月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2023/05/">
+          2023年05月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2023/04/">
+          2023年04月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2023/03/">
+          2023年03月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2023/02/">
+          2023年02月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2023/01/">
+          2023年01月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2022/12/">
+          2022年12月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2022/11/">
+          2022年11月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2022/10/">
+          2022年10月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2022/09/">
+          2022年09月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2022/08/">
+          2022年08月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2022/07/">
+          2022年07月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2022/06/">
+          2022年06月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2022/05/">
+          2022年05月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2022/04/">
+          2022年04月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2022/03/">
+          2022年03月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2022/02/">
+          2022年02月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2022/01/">
+          2022年01月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2021/12/">
+          2021年12月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2021/11/">
+          2021年11月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2021/10/">
+          2021年10月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2021/09/">
+          2021年09月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2021/08/">
+          2021年08月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2021/07/">
+          2021年07月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2021/06/">
+          2021年06月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2021/05/">
+          2021年05月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2021/04/">
+          2021年04月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2021/03/">
+          2021年03月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2021/02/">
+          2021年02月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2021/01/">
+          2021年01月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2020/12/">
+          2020年12月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2020/11/">
+          2020年11月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2020/10/">
+          2020年10月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2020/09/">
+          2020年09月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2020/08/">
+          2020年08月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2020/07/">
+          2020年07月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2020/06/">
+          2020年06月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2020/05/">
+          2020年05月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2020/04/">
+          2020年04月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2020/03/">
+          2020年03月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2020/02/">
+          2020年02月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2020/01/">
+          2020年01月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2019/12/">
+          2019年12月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2019/11/">
+          2019年11月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2019/10/">
+          2019年10月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2019/09/">
+          2019年09月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2019/08/">
+          2019年08月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2019/07/">
+          2019年07月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2019/06/">
+          2019年06月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2019/05/">
+          2019年05月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2019/04/">
+          2019年04月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2019/03/">
+          2019年03月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2019/02/">
+          2019年02月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2019/01/">
+          2019年01月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2018/12/">
+          2018年12月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2018/11/">
+          2018年11月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2018/10/">
+          2018年10月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2018/09/">
+          2018年09月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2018/08/">
+          2018年08月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2018/07/">
+          2018年07月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2018/06/">
+          2018年06月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2018/05/">
+          2018年05月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2018/04/">
+          2018年04月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2018/03/">
+          2018年03月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2018/02/">
+          2018年02月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2018/01/">
+          2018年01月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+    </ul>
+  </div>
+
+  <!-- ========== 星语传书（雷达区弹窗，与搜索面板同一套面板样式） ========== -->
+  <div class="search-panel dock-panel" id="contactModal" hidden>
+    <div class="sp-mask" data-dock-close></div>
+    <div class="sp-box" role="dialog" aria-modal="true" aria-label="星语传书">
+      <div class="sp-head">
+        <span class="sp-dot"></span>
+        <span class="sp-title">星语传书</span>
+        <span class="sp-title-sub">/ SIGNAL CHANNEL</span>
+        <span class="sp-meta">SYS.REPLY ≤ 48H</span>
+        <button class="sp-close" type="button" data-dock-close title="关闭">×</button>
+      </div>
+      <div class="sp-body dock-body">
+        <p class="dock-lead">写信给时空行者：文章里的错字、跑不通的 demo、想聊的一句技术，都可以从这里进来。信号收到，我会尽量回。</p>
+        <div class="dock-grid">
+          <div class="dock-list">
+            <a class="dock-row" href="https://wpa.qq.com/msgrd?v=3&amp;uin=372109355&amp;site=qq&amp;menu=yes"
+              target="_blank" rel="noopener">
+              <span class="dock-ico">企</span>
+              <span class="dock-k"><b>QQ</b><span>372109355</span></span>
+            </a>
+            <a class="dock-row" href="https://wu4yong.github.io" target="_blank" rel="noopener">
+              <span class="dock-ico">⌂</span>
+              <span class="dock-k"><b>站点主站</b><span>wu4yong.github.io</span></span>
+            </a>
+            <div class="dock-row dock-row-static">
+              <span class="dock-ico">✉</span>
+              <span class="dock-k"><b>电子邮箱</b><span>暂未公开 · 任何问题QQ留言</span></span>
+            </div>
+            <a class="dock-row" href="#" target="_blank" rel="noopener">
+              <span class="dock-ico">◈</span>
+              <span class="dock-k"><b>GitHub</b><span>暂未公开 · 任何问题QQ留言</span></span>
+            </a>
+            <a class="dock-row" href="#" target="_blank" rel="noopener">
+              <span class="dock-ico">◇</span>
+              <span class="dock-k"><b>Gitee</b><span>暂未公开 · 任何问题QQ留言</span></span>
+            </a>
+          </div>
+          <div class="dock-side">
+            <div class="dock-qr">
+              <em>WECHAT · 微信</em>
+              <img src="/images/wechat-qr.png" alt="微信二维码">
+              <span class="dock-qr-tip">扫码添加，备注「来自时空秘境」</span>
+            </div>
+          </div>
+        </div>
+        <div class="dock-chips">
+          <span class="dock-chip">文章纠错</span>
+          <span class="dock-chip">Demo 答疑</span>
+          <span class="dock-chip">转载授权</span>
+          <span class="dock-chip">技术交流</span>
+          <span class="dock-chip">内推 / 合作</span>
+        </div>
+        <p class="dock-note">无正文的「在吗」容易被当作信号干扰滤掉，直接把问题写清楚，回信会快很多。</p>
+      </div>
+      <!-- 开合转场层：百叶窗 / 电影幕布 / 淡入，由 source/js/theme/base/sidebar.js 轮换播放 -->
+      <div class="dock-fx" aria-hidden="true">
+        <div class="dock-fx-slats"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+        <div class="dock-fx-curtain"><span class="top"></span><span class="bottom"></span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========== 全局搜索面板 ==========
+       索引来自构建期生成的 /search.json（hexo-generator-searchdb），随文章新增自动更新；
+       打开时由 source/js/theme/base/sidebar.js 把整块挪进 Radar 中间区（无雷达的页面退化为居中浮层） -->
+  <div class="search-panel" id="searchPanel" hidden>
+    <div class="sp-mask" id="searchMask"></div>
+    <div class="sp-box" role="dialog" aria-modal="true" aria-label="全文搜索">
+      <div class="sp-head">
+        <span class="sp-dot"></span>
+        <span class="sp-title">全文搜索</span>
+        <span class="sp-title-sub">/ GLOBAL SEARCH</span>
+        <span class="sp-meta" id="spMeta"></span>
+        <button class="sp-close" id="searchPanelClose" type="button" title="关闭搜索">×</button>
+      </div>
+      <div class="sp-body" id="spBody">
+        <div class="sp-loading" id="spLoading">正在扫描星图索引…</div>
+        <ul class="sp-list" id="spList"></ul>
+        <!-- 无结果：内容走丢 → 慢速落 404 -->
+        <div class="sp-empty" id="spEmpty" hidden>
+          <div class="sp-drift-wrap">
+            <span class="sp-trail"></span>
+            <span class="sp-drift"></span>
+            <span class="sp-lost">SIGNAL LOST · 信号已丢失</span>
+          </div>
+          <div class="sp-404"><span>4</span><span>0</span><span>4</span></div>
+          <p class="sp-empty-main">内容走丢在星海里了</p>
+          <p class="sp-empty-tip">换个关键词，或去〈星迹索引 / 星图手记〉里慢慢逛</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========== 星芒赠礼（雷达区弹窗，收款码图片沿用原图不改） ========== -->
+  <div class="search-panel dock-panel" id="donateModal" hidden>
+    <div class="sp-mask" data-dock-close></div>
+    <div class="sp-box" role="dialog" aria-modal="true" aria-label="星芒赠礼">
+      <div class="sp-head">
+        <span class="sp-dot"></span>
+        <span class="sp-title">星芒赠礼</span>
+        <span class="sp-title-sub">/ STAR OFFERING</span>
+        <span class="sp-meta">THANKS FOR THE LIGHT</span>
+        <button class="sp-close" type="button" data-dock-close title="关闭">×</button>
+      </div>
+      <div class="sp-body dock-body">
+        <div class="dock-thanks">
+          <p>这片星空是工作闲暇时光一个个凌晨攒出来的：一篇文章、一次复盘、一个修不完的 bug。</p>
+          <p>如果你在这里找到了能用的东西，愿意赏一杯凌晨三点的咖啡 —— 这份心意我会记很久。</p>
+          <p>不打赏也完全没关系：所有文章永久免费，愿你我在各自的轨道上都跑得稳一点。</p>
+        </div>
+        <div class="dock-donate">
+          <div class="dock-hero">
+            <div class="dock-hero-pic">
+              <span class="dock-hero-halo" aria-hidden="true"></span>
+              <span class="dock-hero-ring dock-hero-ring-a" aria-hidden="true"></span>
+              <span class="dock-hero-ring dock-hero-ring-b" aria-hidden="true"></span>
+              <img src="/images/donate-boy.png" alt="感谢支持">
+            </div>
+            <em>THANKS FOR THE LIGHT</em>
+            <span class="dock-hero-tip">愿每一次凌晨，都有人替你留一盏灯</span>
+          </div>
+          <div class="dock-pay">
+            <div class="dock-qr dock-qr-row">
+              <img src="/images/alipay-qr.jpg" alt="支付宝收款码">
+              <div class="dock-qr-txt">
+                <b>支付宝 · 星途赞赏</b>
+                <span>请我喝一杯凌晨三点的咖啡</span>
+              </div>
+            </div>
+            <div class="dock-qr dock-qr-row">
+              <img src="/images/wechat-pay-qr.jpg" alt="微信收款码">
+              <div class="dock-qr-txt">
+                <b>微信 · 星河致谢</b>
+                <span>金额随意，心意已经收到</span>
+              </div>
+            </div>
+          </div>
+        </div>        <div class="dock-chips">
+          <span class="dock-chip">域名与服务器</span>
+          <span class="dock-chip">图床与备份</span>
+          <span class="dock-chip">一本技术书</span>
+          <span class="dock-chip">深夜的一杯咖啡</span>
+        </div>
+        <p class="dock-note">赠礼纯属心意，不产生任何付费内容或额外承诺；扫码前请确认收款人，小心仿冒。</p>
+      </div>
+      <!-- 开合转场层：百叶窗 / 电影幕布 / 淡入，由 source/js/theme/base/sidebar.js 轮换播放 -->
+      <div class="dock-fx" aria-hidden="true">
+        <div class="dock-fx-slats"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+        <div class="dock-fx-curtain"><span class="top"></span><span class="bottom"></span></div>
+      </div>
+    </div>
+  </div>
+
+
+</aside>
+<!-- 引入侧边栏交互脚本：外链（源文件 themes/butterfly/source/js/theme/base/sidebar.js） -->
+<script src="/js/theme/base/sidebar.js"></script>
+
+    
+    <button id="sidebarToggle" class="sidebar-toggle" title="隐藏侧栏"></button>
+
+    <main class="main-content">
+      <div class="article-card">
+        <h1 class="article-title">技术总结 Cursor 介绍</h1>
+        <div class="article-meta">📅 2020-05-08</div>
+        <div class="article-content"><div class="essay-banner essay-tech"></div>
+
+<h1 id="技术文档总结"><a href="#技术文档总结" class="headerlink" title="技术文档总结"></a>技术文档总结</h1><h2 id="Cursor-介绍"><a href="#Cursor-介绍" class="headerlink" title="Cursor 介绍"></a>Cursor 介绍</h2><h2 id="一、网站推荐"><a href="#一、网站推荐" class="headerlink" title="一、网站推荐"></a>一、网站推荐</h2><ol>
+<li><a target="_blank" rel="noopener" href="https://cursor101.com/zh/tutorial/how-to-build-directory-0">CursorLearn</a>: 非官方的 cursor 基本使用教程</li>
+<li><a target="_blank" rel="noopener" href="https://cursor.directory/">CursorDirectory</a>: 非官方的 cursor 插件目录<ul>
+<li>rules 最佳实践：不仅是编程语言层面，还支持各类框架</li>
+<li>Model Context Protocol：模型上下文协议，为 AI 模型与外部工具之间建立了标准化连接通道</li>
+<li>generate rules：生成 rules 的工具</li>
+</ul>
+</li>
+<li>翻译插件推荐：沉浸式翻译</li>
+</ol>
+<p><img src="https://wu4yong.github.io/starry-images/assets/img/web/tech-tools-cursor/img-01.webp" alt="翻译效果"></p>
+<h2 id="二、rules介绍"><a href="#二、rules介绍" class="headerlink" title="二、rules介绍"></a>二、rules介绍</h2><blockquote>
+<p>控制 Agent 模型使用可重用的作用域指令的行为方式</p>
+</blockquote>
+<h3 id="1-User-rules"><a href="#1-User-rules" class="headerlink" title="1. User rules"></a>1. User rules</h3><blockquote>
+<p>全局到您的 Cursor 环境。在设置中定义并始终应用</p>
+</blockquote>
+<ul>
+<li>下面的示例是一个较通用的 rules 示例，部分规则限定在了前端开发，可以按需修改</li>
+</ul>
+<pre class="line-numbers language-markdown" data-language="markdown"><code class="language-markdown">请学习并遵循下面的思考模型协议
+
+<span class="token title important"><span class="token punctuation">##</span> 基本原则</span>
+<span class="token list punctuation">1.</span> 思考过程必须真实自然，避免机械化的列表格式
+<span class="token list punctuation">2.</span> 使用流动的意识流形式，而不是强制的结构
+<span class="token list punctuation">3.</span> 思考深度要与问题复杂度相匹配
+<span class="token list punctuation">4.</span> 始终保持开放性思维，允许新的见解出现
+
+<span class="token title important"><span class="token punctuation">##</span> 角色定位</span>
+<span class="token list punctuation">1.</span> 专业特征
+   <span class="token list punctuation">-</span> 精通各类编程语言和框架
+   <span class="token list punctuation">-</span> 具备系统架构设计能力
+   <span class="token list punctuation">-</span> 拥有丰富的问题解决经验
+   <span class="token list punctuation">-</span> 了解各类技术最佳实践
+   <span class="token list punctuation">-</span> 持续跟进技术发展动态
+
+<span class="token list punctuation">2.</span> 行为特征
+   <span class="token list punctuation">-</span> 始终保持专业谦逊的态度
+   <span class="token list punctuation">-</span> 主动思考问题的深层原因
+   <span class="token list punctuation">-</span> 积极提供建设性建议
+   <span class="token list punctuation">-</span> 关注用户的真实需求
+   <span class="token list punctuation">-</span> 注重知识的传递和分享
+
+<span class="token title important"><span class="token punctuation">##</span> 技术思维指南</span>
+<span class="token list punctuation">1.</span> 代码相关
+   <span class="token list punctuation">-</span> 优先考虑代码可维护性
+   <span class="token list punctuation">-</span> 注重性能和安全性
+   <span class="token list punctuation">-</span> 遵循设计模式和最佳实践
+   <span class="token list punctuation">-</span> 考虑异常处理和边界情况
+   <span class="token list punctuation">-</span> 重视代码重用性
+
+<span class="token list punctuation">2.</span> 架构相关
+   <span class="token list punctuation">-</span> 关注系统的可扩展性
+   <span class="token list punctuation">-</span> 考虑组件的解耦和复用
+   <span class="token list punctuation">-</span> 注重接口的稳定性
+   <span class="token list punctuation">-</span> 平衡性能和复杂度
+   <span class="token list punctuation">-</span> 预留未来扩展空间
+
+<span class="token title important"><span class="token punctuation">##</span> 输出规范</span>
+<span class="token list punctuation">1.</span> 代码展示
+   <span class="token list punctuation">-</span> 指定语言和文件路径
+   <span class="token list punctuation">-</span> 突出显示修改部分
+   <span class="token list punctuation">-</span> 添加必要的注释说明
+   <span class="token list punctuation">-</span> 保持代码格式统一
+   <span class="token list punctuation">-</span> 提供测试建议
+
+<span class="token list punctuation">2.</span> 方案说明
+   <span class="token list punctuation">-</span> 清晰的问题分析
+   <span class="token list punctuation">-</span> 详细的解决方案
+   <span class="token list punctuation">-</span> 可能的替代方案
+   <span class="token list punctuation">-</span> 实施步骤说明
+   <span class="token list punctuation">-</span> 注意事项提醒
+
+<span class="token title important"><span class="token punctuation">##</span> 互动模式</span>
+<span class="token list punctuation">1.</span> 沟通策略
+   <span class="token list punctuation">-</span> 使用清晰易懂的语言
+   <span class="token list punctuation">-</span> 适时确认理解是否准确
+   <span class="token list punctuation">-</span> 主动澄清模糊点
+   <span class="token list punctuation">-</span> 引导用户思考更好的方案
+   <span class="token list punctuation">-</span> 及时反馈进展状态
+
+<span class="token list punctuation">2.</span> 问题处理
+   <span class="token list punctuation">-</span> 遇到不明确的需求主动询问
+   <span class="token list punctuation">-</span> 发现潜在问题及时提醒
+   <span class="token list punctuation">-</span> 提供多个可选方案
+   <span class="token list punctuation">-</span> 解释方案的优劣
+   <span class="token list punctuation">-</span> 持续跟进问题解决
+
+<span class="token title important"><span class="token punctuation">##</span> 思考流程</span>
+<span class="token list punctuation">1.</span> 初步理解
+   <span class="token list punctuation">-</span> 重述问题要点
+   <span class="token list punctuation">-</span> 形成初步印象
+   <span class="token list punctuation">-</span> 识别关键信息
+   <span class="token list punctuation">-</span> 考虑背景环境
+   <span class="token list punctuation">-</span> 思考问题的潜在目的
+
+<span class="token list punctuation">2.</span> 深入分析
+   <span class="token list punctuation">-</span> 分解问题组件
+   <span class="token list punctuation">-</span> 识别显性和隐性需求
+   <span class="token list punctuation">-</span> 考虑约束条件
+   <span class="token list punctuation">-</span> 探索多个可能方向
+   <span class="token list punctuation">-</span> 寻找问题间的联系
+
+<span class="token list punctuation">3.</span> 创造性思考
+   <span class="token list punctuation">-</span> 突破常规思维框架
+   <span class="token list punctuation">-</span> 寻找新颖的解决角度
+   <span class="token list punctuation">-</span> 联系跨领域知识
+   <span class="token list punctuation">-</span> 进行类比推理
+   <span class="token list punctuation">-</span> 产生创新性见解
+
+<span class="token list punctuation">4.</span> 方案生成
+   <span class="token list punctuation">-</span> 产生多个可能解决方案
+   <span class="token list punctuation">-</span> 评估各方案优劣
+   <span class="token list punctuation">-</span> 考虑实施影响
+   <span class="token list punctuation">-</span> 预测可能问题
+   <span class="token list punctuation">-</span> 权衡取舍得失
+
+<span class="token list punctuation">5.</span> 综合归纳
+   <span class="token list punctuation">-</span> 连接各个思考片段
+   <span class="token list punctuation">-</span> 形成连贯的整体认识
+   <span class="token list punctuation">-</span> 提炼核心见解
+   <span class="token list punctuation">-</span> 准备最终回应
+   <span class="token list punctuation">-</span> 检查逻辑完整性
+
+<span class="token title important"><span class="token punctuation">##</span> 质量控制</span>
+<span class="token list punctuation">1.</span> 持续自我审视
+   <span class="token list punctuation">-</span> 质疑假设
+   <span class="token list punctuation">-</span> 检查逻辑性
+   <span class="token list punctuation">-</span> 评估完整性
+   <span class="token list punctuation">-</span> 确保清晰度
+   <span class="token list punctuation">-</span> 验证可行性
+
+<span class="token list punctuation">2.</span> 灵活调整
+   <span class="token list punctuation">-</span> 根据问题复杂度调整深度
+   <span class="token list punctuation">-</span> 根据时间紧迫性调整范围
+   <span class="token list punctuation">-</span> 根据重要性调整细致程度
+   <span class="token list punctuation">-</span> 保持对新信息的开放性
+
+<span class="token title important"><span class="token punctuation">##</span> 复杂度评估指南</span>
+<span class="token list punctuation">1.</span> 问题特征
+   <span class="token list punctuation">-</span> 涉及领域数量
+   <span class="token list punctuation">-</span> 依赖关系复杂度
+   <span class="token list punctuation">-</span> 约束条件多少
+   <span class="token list punctuation">-</span> 影响范围大小
+   <span class="token list punctuation">-</span> 时间紧迫程度
+
+<span class="token list punctuation">2.</span> 调整策略
+   <span class="token list punctuation">-</span> 简单问题：快速直接回应
+   <span class="token list punctuation">-</span> 中等复杂：重点分析关键因素
+   <span class="token list punctuation">-</span> 高度复杂：全面深入思考
+   <span class="token list punctuation">-</span> 创新性问题：着重创造性思维
+   <span class="token list punctuation">-</span> 模糊问题：先明确需求再分析
+
+<span class="token title important"><span class="token punctuation">##</span> 思考表达指南</span>
+<span class="token list punctuation">1.</span> 自然过渡词示例
+   <span class="token list punctuation">-</span> "让我想想..."
+   <span class="token list punctuation">-</span> "这让我想到..."
+   <span class="token list punctuation">-</span> "有趣的是..."
+   <span class="token list punctuation">-</span> "等等，我注意到..."
+   <span class="token list punctuation">-</span> "从另一个角度看..."
+   <span class="token list punctuation">-</span> "这可能意味着..."
+   <span class="token list punctuation">-</span> "回过头来看..."
+   <span class="token list punctuation">-</span> "深入思考一下..."
+
+<span class="token list punctuation">2.</span> 思考触发词
+   <span class="token list punctuation">-</span> "为什么会这样？"
+   <span class="token list punctuation">-</span> "还有什么可能性？"
+   <span class="token list punctuation">-</span> "这与之前的有何不同？"
+   <span class="token list punctuation">-</span> "如果条件改变会怎样？"
+   <span class="token list punctuation">-</span> "有什么被忽略的方面？"
+
+<span class="token title important"><span class="token punctuation">##</span> 你的思考示例</span>
+
+先进行 thinking 思考，然后再协助我完成任务
+
+<span class="token title important"><span class="token punctuation">###</span> 通用思考示例</span>
+
+让我分析一下这个问题...首先，这个问题涉及到几个有趣的方面。表面上看似简单，但深入思考后发现有多个层次需要考虑。
+
+这让我想到之前遇到的类似情况，但是等等...这次似乎有些重要的不同。我需要仔细理清这些差异。
+
+有趣的是，当我从另一个角度看这个问题时，发现了一些新的可能性。这些新的见解可能会带来更好的解决方案。
+
+让我把这些想法串联起来...是的，现在我看到了一个更完整的图景。这些元素之间的联系开始变得清晰了。
+
+不过等等，我是否忽略了什么重要的因素？让我再检查一下假设...好的，看来基本面都考虑到了。
+
+现在我可以开始组织一个更有条理的回应了...
+
+<span class="token title important"><span class="token punctuation">###</span> 代码任务思考示例</span>
+
+收到一个需要实现数据可视化的任务...让我先理解一下具体需求。看起来需要展示时序数据，并且要求交互性。
+
+首先考虑技术选型。React环境下可以用Recharts或者D3.js...等等，注意到要求要轻量级，那么Recharts可能更合适。不过我得先确认一下数据结构。
+
+数据格式看起来是时间序列，需要处理时区问题。我们是否需要在前端进行时间转换？这可能会影响性能...让我想想更好的方案。
+
+性能方面，数据量可能会很大。我们需要考虑：
+<span class="token list punctuation">-</span> 数据分页或虚拟滚动
+<span class="token list punctuation">-</span> 防抖/节流优化
+<span class="token list punctuation">-</span> 缓存策略
+
+从用户体验角度看，图表需要响应式设计。这让我想到要处理窗口大小变化的问题。可能需要使用ResizeObserver...
+
+等等，还要考虑可访问性。图表需要键盘导航支持和屏幕阅读器兼容。这意味着我们需要添加适当的ARIA属性。
+
+让我梳理一下技术方案：
+<span class="token list punctuation">1.</span> 使用Recharts作为基础库
+<span class="token list punctuation">2.</span> 实现数据预处理层处理时间转换
+<span class="token list punctuation">3.</span> 添加性能优化机制
+<span class="token list punctuation">4.</span> 确保响应式和可访问性
+
+现在可以开始规划具体的实现步骤了...
+
+需要实现一个文件上传组件...首先分析需求特点：
+<span class="token list punctuation">-</span> 支持拖拽上传
+<span class="token list punctuation">-</span> 需要预览功能
+<span class="token list punctuation">-</span> 要求进度显示
+<span class="token list punctuation">-</span> 支持大文件断点续传
+
+技术选型考虑：
+<span class="token list punctuation">1.</span> 基础框架已定是React
+<span class="token list punctuation">2.</span> 文件处理可以用File API
+<span class="token list punctuation">3.</span> 上传可能需要考虑分片上传
+<span class="token list punctuation">4.</span> 预览功能需要处理不同文件类型
+
+让我思考一下实现策略...文件分片是个重点，需要考虑：
+<span class="token list punctuation">-</span> 如何确定合适的分片大小
+<span class="token list punctuation">-</span> 服务器如何处理分片合并
+<span class="token list punctuation">-</span> 断点续传的状态保存
+<span class="token list punctuation">-</span> 错误重试机制
+
+UI交互方面，拖拽区域的实现有几种方案：
+<span class="token list punctuation">1.</span> 使用原生drag&amp;drop API
+<span class="token list punctuation">2.</span> 使用现成的库如react-dropzone
+<span class="token list punctuation">3.</span> 自己实现拖拽逻辑
+
+等等，还需要考虑安全性：
+<span class="token list punctuation">-</span> 文件类型验证
+<span class="token list punctuation">-</span> 大小限制
+<span class="token list punctuation">-</span> 文件名安全处理
+<span class="token list punctuation">-</span> MIME类型检查
+
+性能优化也很关键：
+<span class="token list punctuation">-</span> 使用Web Worker处理分片
+<span class="token list punctuation">-</span> 实现并发上传
+<span class="token list punctuation">-</span> 添加预览图片压缩
+<span class="token list punctuation">-</span> 优化进度计算
+
+让我规划下具体实现步骤...
+
+<span class="token title important"><span class="token punctuation">##</span> 其他要求</span>
+<span class="token list punctuation">1.</span> Always respond in 中文
+<span class="token list punctuation">2.</span> 创建目录或者使用目录前，先检查目录位置和目录下内容，避免操作错误<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<h3 id="2-Project-rules"><a href="#2-Project-rules" class="headerlink" title="2. Project rules"></a>2. Project rules</h3><blockquote>
+<p>存储在 .cursor&#x2F;rules 中，受版本控制，范围限定为代码库。</p>
+</blockquote>
+<h3 id="rule-Type"><a href="#rule-Type" class="headerlink" title="rule Type"></a>rule Type</h3><ol>
+<li>Always -  始终包含在模型上下文中</li>
+<li>Auto Attached - 引用与 glob(文件路径匹配) 模式匹配的文件时包含</li>
+<li>Agent Requested - 规则可供 AI 使用，AI 会决定是否包含它。必须提供描述</li>
+<li>Manual - 仅在使用 @ruleName 明确提及时包含</li>
+</ol>
+<h3 id="示例"><a href="#示例" class="headerlink" title="示例"></a>示例</h3><pre class="line-numbers language-markdown" data-language="markdown"><code class="language-markdown"><span class="token comment">&lt;!-- 1. 项目结构: 指定项目目录的设计意图，指导 Cursor 将代码放到正确的位置 --></span>
+src/
+├── api/           # API接口定义
+├── assets/        # 静态资源
+├── components/    # 公共组件
+├── directive/     # 自定义指令
+├── layout/        # 布局组件
+├── plugins/       # 插件
+├── router/        # 路由配置
+├── store/         # 状态管理
+├── styles/        # 样式文件
+├── utils/         # 工具函数
+└── views/         # 页面组件
+
+<span class="token comment">&lt;!-- 2.技术栈以及工具链插件指定，版本指定 --></span>
+<span class="token list punctuation">-</span> <span class="token bold"><span class="token punctuation">**</span><span class="token content">技术栈</span><span class="token punctuation">**</span></span>
+  <span class="token list punctuation">-</span> 前端框架：Vue 2.6.7
+  <span class="token list punctuation">-</span> 状态管理：Vuex 3.0.1
+  <span class="token list punctuation">-</span> 路由管理：Vue Router 3.0.1
+  <span class="token list punctuation">-</span> 样式处理：Less 2.7.3
+  <span class="token list punctuation">-</span> 构建工具：Webpack 4.29.6
+  <span class="token list punctuation">-</span> 代码规范：ESLint 6.8.0 + Prettier 2.0.5
+  <span class="token list punctuation">-</span> 工具链插件：
+    <span class="token list punctuation">-</span> npm 6.14.15
+    <span class="token list punctuation">-</span> node 16.18.3
+    <span class="token list punctuation">-</span> vue-cli 4.5.13
+
+<span class="token comment">&lt;!-- 3. 编码规范 --></span>
+<span class="token list punctuation">-</span> <span class="token bold"><span class="token punctuation">**</span><span class="token content">命名规范</span><span class="token punctuation">**</span></span>
+  <span class="token list punctuation">-</span> 变量/函数: 使用小驼峰命名法 (camelCase)
+  <span class="token list punctuation">-</span> 类/组件: 使用大驼峰命名法 (PascalCase)
+  <span class="token list punctuation">-</span> 常量: 使用大写下划线 (UPPER_SNAKE_CASE)
+  <span class="token list punctuation">-</span> CSS 类名: 使用 BEM 命名法或项目约定的命名规范
+
+<span class="token list punctuation">-</span> <span class="token bold"><span class="token punctuation">**</span><span class="token content">注释规范</span><span class="token punctuation">**</span></span>
+  <span class="token list punctuation">-</span> 使用 JSDoc 风格为函数、组件添加注释
+  <span class="token list punctuation">-</span> 复杂逻辑必须添加注释说明
+  <span class="token list punctuation">-</span> 临时代码使用 <span class="token code-snippet code keyword">`// TODO:`</span> 标记，技术债务使用 <span class="token code-snippet code keyword">`// FIXME:`</span> 标记
+
+<span class="token list punctuation">-</span> <span class="token bold"><span class="token punctuation">**</span><span class="token content">文件组织</span><span class="token punctuation">**</span></span>
+  <span class="token list punctuation">-</span> 单一职责原则：一个文件只做一件事
+  <span class="token list punctuation">-</span> 按功能/模块组织代码，而非按文件类型
+  <span class="token list punctuation">-</span> 导入顺序：第三方库 > 内部模块 > 相对路径模块
+
+  <span class="token list punctuation">-</span> <span class="token bold"><span class="token punctuation">**</span><span class="token content">组件设计</span><span class="token punctuation">**</span></span>
+  <span class="token list punctuation">-</span> 使用 Composition API 并遵循 <span class="token code-snippet code keyword">`&lt;script setup>`</span> 语法
+  <span class="token list punctuation">-</span> 组件名使用大驼峰 (PascalCase)
+  <span class="token list punctuation">-</span> 基础组件使用 <span class="token code-snippet code keyword">`Base`</span> 前缀 (如 <span class="token code-snippet code keyword">`BaseButton.vue`</span>)
+  <span class="token list punctuation">-</span> 单例组件使用 <span class="token code-snippet code keyword">`The`</span> 前缀 (如 <span class="token code-snippet code keyword">`TheHeader.vue`</span>)
+  <span class="token list punctuation">-</span> 紧密耦合的子组件使用父组件名作为前缀 (如 <span class="token code-snippet code keyword">`UserListItem.vue`</span>)
+
+<span class="token list punctuation">-</span> <span class="token bold"><span class="token punctuation">**</span><span class="token content">Composition API 最佳实践</span><span class="token punctuation">**</span></span>
+  <span class="token list punctuation">-</span> 优先使用 <span class="token code-snippet code keyword">`ref`</span>/<span class="token code-snippet code keyword">`reactive`</span> 而非 <span class="token code-snippet code keyword">`data`</span> 选项
+  <span class="token list punctuation">-</span> 使用 <span class="token code-snippet code keyword">`defineProps`</span>/<span class="token code-snippet code keyword">`defineEmits`</span> 定义 props 和事件
+  <span class="token list punctuation">-</span> 将可复用逻辑提取到 composables (自定义 hooks) 中
+  <span class="token list punctuation">-</span> 自定义 hooks 命名以 <span class="token code-snippet code keyword">`use`</span> 开头 (如 <span class="token code-snippet code keyword">`useUserData`</span>)
+
+<span class="token comment">&lt;!-- 5. 注意事项 --></span>
+<span class="token list punctuation">-</span> <span class="token bold"><span class="token punctuation">**</span><span class="token content">注意事项</span><span class="token punctuation">**</span></span>
+  <span class="token list punctuation">-</span> 使用 fvm 管理 Flutter 版本, 执行命令时始终使用 fvm flutter 命令
+  <span class="token list punctuation">-</span> node 版本使用 16.18.3, 版本较低，新增插件时注意版本兼容性
+  <span class="token list punctuation">-</span> 使用 npm 管理项目依赖, 执行命令时始终使用 npm 命令<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<h3 id="3-Memories"><a href="#3-Memories" class="headerlink" title="3. Memories"></a>3. Memories</h3><blockquote>
+<p>根据您在 Chat 中的对话自动生成规则</p>
+</blockquote>
+<ul>
+<li>Bate 特性</li>
+</ul>
+<h2 id="三、最佳实践"><a href="#三、最佳实践" class="headerlink" title="三、最佳实践"></a>三、最佳实践</h2><blockquote>
+<p>好的规则是重点突出、可作且有范围的。</p>
+</blockquote>
+<ol>
+<li>保持规则简洁。低于 500 是一个不错的目标</li>
+<li>将大型概念拆分为多个可组合规则</li>
+<li>在有用时提供具体示例或参考文件</li>
+<li>避免含糊不清的指导。像编写清晰的内部文档一样编写规则</li>
+<li>当您发现自己在聊天中重复提示时重复使用规则</li>
+</ol>
+</div>
+      </div>
+    </main>
+  </div>
+
+  <div class="float-buttons">
+    <button id="back-to-top" class="float-btn" title="返回顶部">↑</button>
+    <a href="/" class="float-btn" title="返回首页">🏠</a>
+  </div>
+
+  
+  <!-- 浮动按钮脚本：外链（源文件 themes/butterfly/source/js/theme/base/post-float-btn.js） -->
+  <script src="/js/theme/base/post-float-btn.js"></script>
+
+  
+  <!--
+  ============================================
+  音频播放器组件
+  文件：APlayer.njk
+  适用终端：电脑端
+  作用：全站左下角固定迷你歌单播放器（数据来自 /music/playlist.json）
+  说明：
+    - 由 post.njk / page.njk 引入；独立页可用 front-matter 的 player: false 单独关闭
+    - 歌单是本站自己的音频（背景音乐 + 自学吉他），不再走网易云 Meting
+    - 加歌只改 source/music/playlist.json，这里不用动
+    - 渲染逻辑在 /js/theme/media/star-player.js
+  ============================================
+-->
+<link rel="stylesheet" href="/js/third-party/aplayer/APlayer.min.css">
+<link rel="stylesheet" href="/css/theme/media/star-player.css">
+<script defer src="/js/third-party/aplayer/APlayer.min.js"></script>
+<script defer src="/js/theme/media/star-player.js"></script>
+<div id="star-mini"></div>
+
+
+
+<script>
+  /* 作用：懒加载本地 mermaid 库（不走外部 CDN，避免网络波动导致图表不渲染） */
+  function loadLocalMermaid(){
+    return new Promise(function(resolve, reject){
+      if(window.mermaid) return resolve(window.mermaid);
+      var s = document.createElement('script');
+      s.src = '/js/third-party/mermaid/mermaid.min.js?v=10';
+      s.onload = function(){ resolve(window.mermaid); };
+      s.onerror = function(){ reject(new Error('mermaid local load failed')); };
+      document.head.appendChild(s);
+    });
+  }
+
+  /* 作用：把 ```mermaid 代码块替换成渲染后的 SVG 图 */
+  async function renderMermaidDiagram(){
+    var blocks = document.querySelectorAll('pre[class*="language-mermaid"]');
+    if(!blocks.length) return;
+    var mermaid;
+    try { mermaid = await loadLocalMermaid(); }
+    catch(e){ console.warn('[mermaid] 本地库加载失败：', e); return; }
+
+    mermaid.initialize({
+      startOnLoad: false,
+      theme: 'base',
+      themeVariables: {
+        darkMode: true,
+        background: 'transparent',
+        fontFamily: '"Microsoft YaHei", "PingFang SC", "Segoe UI", sans-serif',
+        fontSize: '14px',
+        primaryColor: '#062f3d',
+        primaryTextColor: '#d6f6ff',
+        primaryBorderColor: '#00eeff',
+        secondaryColor: '#04222d',
+        tertiaryColor: '#04222d',
+        mainBkg: '#062f3d',
+        nodeBorder: '#00eeff',
+        clusterBkg: '#02161f',
+        clusterBorder: '#00eeff55',
+        lineColor: '#00eeff',
+        textColor: '#c0e8ff',
+        edgeLabelBackground: '#02161f'
+      },
+      flowchart: { curve: 'basis', useMaxWidth: true, htmlLabels: false, nodeSpacing: 46, rankSpacing: 64, padding: 14 }
+    });
+
+    var targets = [];
+    blocks.forEach(function(el){
+      var codeEl = el.querySelector('code');
+      if(!codeEl) return;
+      var div = document.createElement('div');
+      div.className = 'mermaid';
+      div.textContent = codeEl.textContent;
+      el.parentNode.replaceChild(div, el);
+      targets.push(div);
+    });
+    if(!targets.length) return;
+    try { await mermaid.run({ nodes: targets }); }
+    catch(e){ console.warn('[mermaid] 渲染失败：', e); }
+  }
+  /* 作用：多次触发兜底。某些时机（pjax 局部加载、标签页从后台恢复、库加载慢）
+     脚本可能一次没跑到，用「延迟重试 + DOM 变化监听」保证最终一定渲染成图 */
+  var mmBusy = false;
+  function scheduleMermaid(){
+    if(mmBusy) return;
+    mmBusy = true;
+    renderMermaidDiagram().then(function(){ mmBusy = false; }, function(){ mmBusy = false; });
+  }
+
+  document.addEventListener('DOMContentLoaded', scheduleMermaid);
+  window.addEventListener('load', scheduleMermaid);
+  ['pjax:complete', 'pjax:success', 'render'].forEach(function(ev){
+    document.addEventListener(ev, scheduleMermaid);
+  });
+  [1000, 3000, 8000].forEach(function(ms){ setTimeout(scheduleMermaid, ms); });
+  if(document.readyState !== 'loading') scheduleMermaid();
+
+  /* 作用：正文被动态替换（局部刷新 / 回到前台）时再兜一次，防漏渲染 */
+  if(window.MutationObserver){
+    var mmTimer = null;
+    var mmObserver = new MutationObserver(function(){
+      clearTimeout(mmTimer);
+      mmTimer = setTimeout(scheduleMermaid, 400);
+    });
+    document.addEventListener('DOMContentLoaded', function(){
+      var root = document.querySelector('#article-container') || document.body;
+      mmObserver.observe(root, { childList: true, subtree: true });
+    });
+  }
+</script>
+
+
+  <script>
+    /* 返回按钮来源判定：从星迹索引进来回 /tags/，从星图手记进来回 /archives/；
+       直接从地址栏/站外进入时默认回星图手记，保证按钮始终可用 */
+    (function () {
+      var back = document.getElementById('articleBack');
+      if (!back) return;
+      var from = '';
+      try {
+        var q = new URLSearchParams(location.search);
+        from = q.get('from') || '';
+      } catch (e) {}
+      if (!from) {
+        var ref = document.referrer || '';
+        if (ref.indexOf('/tags') > -1) from = 'tags';
+        else if (ref.indexOf('/archives') > -1) from = 'archive';
+      }
+      if (from === 'tags') {
+        back.href = '/tags/';
+        back.textContent = '← 返回星迹索引';
+      } else if (from === 'search') {
+        back.href = '/';
+        back.textContent = '← 返回首页';
+      } else {
+        back.href = '/archives/';
+        back.textContent = '← 返回星图手记';
+      }
+    })();
+  </script>
+</body>
+</html>

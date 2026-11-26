@@ -1,0 +1,308 @@
+<!--
+  ============================================
+  手机端 · 文章原文页
+  文件：phone/post.njk
+  适用终端：手机端（路由 /phone/p/<slug>/，由 scripts/phone-routes.js 生成）
+  作用：手机阅读单篇文章；单列布局、无侧栏无雷达，替代电脑端 post.njk
+        数据由生成期算好：page.item = { title, dateStr, content, cats, tags }
+  样式依赖：source/css/theme/phone/common.css、source/css/theme/phone/list.css
+  组件依赖：phone/_components/Particles.njk
+  最后修改：2026-11-11
+  ============================================
+-->
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="color-scheme" content="dark">
+  <meta name="theme-color" content="#020817">
+  <!-- 首帧兜底：浏览器默认画布是白的，样式未解析前会闪一下白。这条规则先锁死深空底色 -->
+  <style>html{background-color:#020817}</style>
+  <title>Hadoop（六）运维调优与常见故障 - 时空秘境</title>
+  <!-- 手机端样式：基础 + 列表/正文，外链引入（源文件 source/css/theme/phone/） -->
+  <link rel="stylesheet" href="/css/theme/phone/common.css">
+  <link rel="stylesheet" href="/css/theme/phone/list.css">
+<meta name="generator" content="Hexo 8.1.2"></head>
+<body>
+<div class="mb-shell">
+  <!--
+  ============================================
+  手机端星空粒子组件
+  文件：Particles.njk
+  适用终端：手机端
+  作用：Particles.njk 的手机端副本（nunjucks 子目录 include 取不到上级）
+        参数与电脑端 _components/Particles.njk 保持一致：
+        粒子 95 / 连线 118px / opacity 0.32，外加星座层与零星闪烁层
+  最后修改：2026-11-12
+  ============================================
+--><!-- z-index 必须是 0：负层级会被 body 不透明背景盖住，粒子在跑却看不见 -->
+<div id="particles" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 0; pointer-events: none;"></div>
+<!-- 星座层（与首页同一套：随机零星散布星座图形 + 偶尔闪烁的小星） -->
+<div id="constellations" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 1; pointer-events: none;" aria-hidden="true"></div>
+<script src="/js/particles.min.js"></script>
+<script>
+particlesJS("particles", {
+  particles: {
+    number: {
+      value: 95,
+      density: {
+        enable: true,
+        value_area: 800
+      }
+    },
+    color: {
+      value: "#00eeff"
+    },
+    shape: {
+      type: "circle",
+      stroke: {
+        width: 0,
+        color: "#000000"
+      }
+    },
+    opacity: {
+      value: 0.6,
+      random: true,
+      anim: {
+        enable: true,
+        speed: 0.5,
+        opacity_min: 0.1,
+        sync: false
+      }
+    },
+    size: {
+      value: 3,
+      random: true,
+      anim: {
+        enable: true,
+        speed: 2,
+        size_min: 0.1,
+        sync: false
+      }
+    },
+    line_linked: {
+      enable: true,
+      distance: 118,
+      color: "#00eeff",
+      opacity: 0.32,
+      width: 1
+    },
+    move: {
+      enable: true,
+      speed: 0.8,
+      direction: "none",
+      random: true,
+      straight: false,
+      out_mode: "out",
+      bounce: false,
+      attract: {
+        enable: true,
+        rotateX: 600,
+        rotateY: 1200
+      }
+    }
+  },
+  interactivity: {
+    detect_on: "canvas",
+    events: {
+      onhover: {
+        enable: true,
+        mode: "grab"       // 手指按住时粒子聚集
+      },
+      onclick: {
+        enable: true,
+        mode: "push"       // 点击时产生新粒子
+      },
+      resize: true
+    },
+    modes: {
+      grab: {
+        distance: 200,
+        line_linked: {
+          opacity: 1
+        }
+      },
+      push: {
+        particles_nb: 6
+      }
+    }
+  },
+  retina_detect: true
+});
+</script>
+<!-- 星座 + 零星闪烁层：与电脑端共用同一份绘制脚本 -->
+<script src="/js/theme/home/starfield.js"></script>
+
+
+  <div class="mb-top">
+    <a class="mb-back" href="/phone/">← 返回手机首页</a>
+    <span class="mb-sub" style="margin:0">2023-03-06</span>
+  </div>
+
+  <h1 class="mb-title">Hadoop（六）运维调优与常见故障</h1>
+  <div class="mb-sub">
+    分类：bigdata · hadoop
+     ｜ 标签：Hadoop
+  </div>
+
+  <div class="mb-article"><div class="essay-banner essay-hadoop"></div>
+
+<h1 id="运维调优与常见故障"><a href="#运维调优与常见故障" class="headerlink" title="运维调优与常见故障"></a><strong>运维调优与常见故障</strong></h1><p>集群跑起来之后，问题大多集中在存储效率、磁盘分布、拓扑感知与安全接入这几块。这一篇按”先治数据形态，再治磁盘分布，再谈拓扑与安全”的顺序梳理高频调优点，并给一张常见故障的排查入口。</p>
+<p><img src="https://wu4yong.github.io/starry-images/assets/img/hadoop/hadoop-06-tuning.webp" alt="多块存储介质之间做负载平衡，拓扑按机架分层，安全门禁横贯整个集群"></p>
+<p><em>多块存储介质之间做负载平衡，拓扑按机架分层，安全门禁横贯整个集群</em></p>
+<h2 id="1-1-小文件治理：HDFS-的天敌"><a href="#1-1-小文件治理：HDFS-的天敌" class="headerlink" title="1.1 小文件治理：HDFS 的天敌"></a>1.1 小文件治理：HDFS 的天敌</h2><p>小文件指体积远小于块大小（默认 128MB）的大量文件。它对 HDFS 的伤害不在磁盘容量，而在 NameNode 元数据：每个文件、目录、块在内存里都占一份对象，百万级小文件可以直接把主节点内存撑爆。</p>
+<p>常见治理手段按介入位置分：</p>
+<div class="data-grid data-grid-link-table"><div class="grid-header"><div class="grid-cell">手段</div><div class="grid-cell">做法</div><div class="grid-cell">适用场景</div></div><div class="grid-row"><div class="grid-cell">合并归档</div><div class="grid-cell">用 HAR 归档或序列文件把小文件打包</div><div class="grid-cell">历史冷数据，不再逐条随机改</div></div><div class="grid-row"><div class="grid-cell">源头控制</div><div class="grid-cell">作业输出调大 Reduce 数或合并小文件</div><div class="grid-cell">新产生的数据，从写入端收敛</div></div><div class="grid-row"><div class="grid-cell">计算侧规避</div><div class="grid-cell">Spark 合并小文件、Hive 跑归档任务</div><div class="grid-cell">存量集群定期整理</div></div></div>
+
+<p>判断小文件压力看两个指标：NameNode 内存占用与文件对象数。治理顺序是先堵源头（作业输出合并），再归档存量（HAR &#x2F; 序列文件），不要一上来就扩 NameNode 内存——内存扩上去，瓶颈会转移到 GC 与启动恢复时间。</p>
+<p>HAR 归档的边界要清楚：归档包里仍是一个个原始文件，访问时先查 HAR 索引再取内容，适合不再追加写入的历史数据；经常改写的数据集不要打 HAR，否则每次修改都要重打包。序列文件（SequenceFile）把多条记录拼成一个二进制文件，按 key 读取，适合作为计算链路中间格式。</p>
+<h2 id="1-2-DataNode-磁盘均衡与存储水位"><a href="#1-2-DataNode-磁盘均衡与存储水位" class="headerlink" title="1.2 DataNode 磁盘均衡与存储水位"></a>1.2 DataNode 磁盘均衡与存储水位</h2><p>单机多块磁盘时，新增磁盘或长期写入会造成盘间用量不均：一块盘写满报心跳失败，其他盘还很空。HDFS 提供两类均衡工具：</p>
+<ul>
+<li><strong>集群级均衡（<code>hdfs balancer</code>）</strong>：在节点之间迁移块，让各节点存储使用率趋同</li>
+<li><strong>盘内均衡（<code>hdfs diskbalancer</code>）</strong>：同一台 DataNode 的多块磁盘之间重新分布块</li>
+</ul>
+<pre class="line-numbers language-bash" data-language="bash"><code class="language-bash"><span class="token comment"># 集群级均衡，默认阈值 10%，只在后台迁移副本，不影响在线读写</span>
+hdfs balancer <span class="token parameter variable">-threshold</span> <span class="token number">10</span>
+<span class="token comment"># 盘内均衡，先规划再执行，按节点盘间用量差调整</span>
+hdfs diskbalancer <span class="token parameter variable">-plan</span> node1.example.com
+hdfs diskbalancer <span class="token parameter variable">-execute</span> node1.example.com.plan.json<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<p>均衡任务会占用网络与磁盘 IO，业务高峰期错开跑。日常要盯的是单机磁盘水位与单盘剩余空间，而不是只看集群总容量；总容量充足但单盘写满，节点同样会掉线。</p>
+<p>磁盘选择上，DataNode 本地目录可配多块独立磁盘，HDFS 按目录轮询写块。新增磁盘后老数据不会自动过去，必须跑一次盘内均衡；只加目录不跑均衡，新写入分到新盘，老盘依然紧张。</p>
+<pre class="line-numbers language-properties" data-language="properties"><code class="language-properties"><span class="token comment"># DataNode 本地存储目录，多块磁盘用逗号分隔，目录需提前授权</span>
+<span class="token key attr-name">dfs.datanode.data.dir</span><span class="token punctuation">=</span><span class="token value attr-value">/data1/dn,/data2/dn,/data3/dn</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span></span></code></pre>
+
+<h2 id="1-3-机架感知：让副本贴着拓扑放"><a href="#1-3-机架感知：让副本贴着拓扑放" class="headerlink" title="1.3 机架感知：让副本贴着拓扑放"></a>1.3 机架感知：让副本贴着拓扑放</h2><p>机架感知（Rack Awareness）把机器挂到”机架 → 节点”的拓扑树上，NameNode 按这个拓扑选副本位置。没有拓扑脚本时，所有节点默认属于同一机架，副本保护退化为只防单机故障。</p>
+<p>接入方式是提供一个拓扑解析脚本或 Java 类，把主机名映射成 <code>/rack/node</code> 形式的路径，配置在 <code>net.topology.script.file.name</code>。验证方法是用 <code>hdfs dfsadmin -report</code> 查看每台节点所属机架，确认副本没有扎堆。</p>
+<div class="data-grid data-grid-link-table"><div class="grid-header"><div class="grid-cell">配置点</div><div class="grid-cell">作用</div><div class="grid-cell">不配的后果</div></div><div class="grid-row"><div class="grid-cell">net.topology.script.file.name</div><div class="grid-cell">主机名 → 机架路径映射</div><div class="grid-cell">全部节点归同一机架，副本抗风险能力下降</div></div><div class="grid-row"><div class="grid-cell">副本放置策略</div><div class="grid-cell">按机架分布三份副本</div><div class="grid-cell">同机架堆多份，机架断电丢副本</div></div></div>
+
+<p>机架感知不仅服务于副本放置，YARN 的节点距离判断、读取就近选择也依赖这棵拓扑树。拓扑脚本要返回稳定结果，不能随机输出，否则副本位置会反复漂移。</p>
+<p>实际接入时容易忽略两点：脚本对每台节点都要能解析，新增机器不进拓扑表会被归入默认机架；脚本执行权限与超时要配好，解析卡住会拖慢 NameNode 的副本选择。变更拓扑后建议重新查看副本分布，确认旧副本在后续写入与均衡中逐步调整到位。</p>
+<h2 id="1-4-Kerberos-安全概述"><a href="#1-4-Kerberos-安全概述" class="headerlink" title="1.4 Kerberos 安全概述"></a>1.4 Kerberos 安全概述</h2><p>裸 Hadoop 集群默认不做强身份认证，网络内任何进程都可以提交作业、读写文件。生产集群通常接入 Kerberos 做身份认证，再叠加 Ranger &#x2F; Sentry 做授权。</p>
+<p>Kerberos 在 Hadoop 里的角色分工：</p>
+<ul>
+<li><strong>KDC</strong>：发放票据（Ticket），维护主体（principal）与密钥</li>
+<li><strong>principal</strong>：每个服务与用户一个身份，如 <code>nn/host@REALM</code></li>
+<li><strong>keytab</strong>：保存服务主体密钥的文件，服务用它免交互登录</li>
+<li><strong>票据续期</strong>：长时间运行的任务需要刷新票据，否则凭证过期后任务失败</li>
+</ul>
+<p>接入步骤的主线是：部署 KDC、为各服务与用户建主体、分发 keytab、在 Hadoop 配置里开启 <code>hadoop.security.authentication=kerberos</code>，再逐进程核对票据。安全开启后最常见的问题是主机名与 principal 不匹配、keytab 权限过宽、票据过期未续。</p>
+<p>要区分两个层次：Kerberos 只解决”你是谁”的身份认证，不解决”你能读哪张表”的授权。授权通常交给 Ranger 或 Sentry 这类组件，按用户、组、资源路径配策略。两者叠加之后，作业提交失败先要判断是认证没过（票据问题）还是授权被拒（策略问题），排查路径不同。</p>
+<h2 id="1-5-常见故障排查入口"><a href="#1-5-常见故障排查入口" class="headerlink" title="1.5 常见故障排查入口"></a>1.5 常见故障排查入口</h2><div class="data-grid data-grid-link-table"><div class="grid-header"><div class="grid-cell">现象</div><div class="grid-cell">先查什么</div><div class="grid-cell">常见根因</div></div><div class="grid-row"><div class="grid-cell">NameNode 内存持续上涨</div><div class="grid-cell">文件数、小文件量</div><div class="grid-cell">小文件未治理，元数据对象膨胀</div></div><div class="grid-row"><div class="grid-cell">DataNode 掉线</div><div class="grid-cell">单盘水位、磁盘空间、心跳日志</div><div class="grid-cell">单盘写满或目录权限异常</div></div><div class="grid-row"><div class="grid-cell">作业卡在 ACCEPTED</div><div class="grid-cell">队列余量、Container 配额</div><div class="grid-cell">队列借满或资源上限卡住</div></div><div class="grid-row"><div class="grid-cell">Container 被 kill</div><div class="grid-cell">物理内存占用、堆外使用</div><div class="grid-cell">超内存配额，NM 直接回收</div></div><div class="grid-row"><div class="grid-cell">Shuffle &#x2F; 读写缓慢</div><div class="grid-cell">网络带宽、磁盘 IO、副本分布</div><div class="grid-cell">跨机架流量打满或盘间不均</div></div><div class="grid-row"><div class="grid-cell">认证失败</div><div class="grid-cell">principal、keytab、票据有效期</div><div class="grid-cell">主机名不匹配或票据过期</div></div></div>
+
+<p>排查顺序建议固定：先看 Web UI 与守护进程日志定位阶段，再看资源水位，最后动配置参数。一次只改一类参数，改完观察指标，避免多个变量混在一起无法归因。</p>
+<p>补充几个高频现象的判断点：</p>
+<ul>
+<li>读写突然变慢且集中在某几台节点，先看这些节点磁盘 IO 与网络连接，再查副本是否偏置</li>
+<li>作业频繁失败在同一阶段，对比成功与失败任务的输入大小，优先怀疑数据倾斜</li>
+<li>守护进程启动即退出，先读启动日志里的权限、端口占用与配置解析错误，再谈业务参数</li>
+<li>扩容后集群性能没涨，检查新节点是否注册成功、块是否逐步迁移过去，而不是直接调调度器</li>
+<li>磁盘报错先看 SMART 与坏块标记，硬件层面的故障不要靠多副本长期兜底，坏盘要及时更换</li>
+<li>长期运行的 Streaming 任务或常驻 AM，要确认票据自动续期已配置，否则凭证过期后任务静默失败</li>
+</ul>
+<p>调优的优先级建议固定：先看数据形态（小文件、副本分布），再看资源水位（磁盘、内存、网络），最后才动框架参数。存储层的问题靠调计算参数通常治不好，反过来也一样。</p>
+<h2 id="1-6-官方资料"><a href="#1-6-官方资料" class="headerlink" title="1.6 官方资料"></a>1.6 官方资料</h2><ul>
+<li>归档命令（archive）：<a target="_blank" rel="noopener" href="https://hadoop.apache.org/docs/stable/hadoop-mapreduce-client/hadoop-mapreduce-client-core/MapredCommands.html">https://hadoop.apache.org/docs/stable/hadoop-mapreduce-client/hadoop-mapreduce-client-core/MapredCommands.html</a></li>
+<li>HDFS 均衡工具：<a target="_blank" rel="noopener" href="https://hadoop.apache.org/docs/stable/hadoop-project-dist/hadoop-hdfs/HDFSCommands.html#balancer">https://hadoop.apache.org/docs/stable/hadoop-project-dist/hadoop-hdfs/HDFSCommands.html#balancer</a></li>
+<li>机架感知指南：<a target="_blank" rel="noopener" href="https://hadoop.apache.org/docs/stable/hadoop-project-dist/hadoop-common/RackAwareness.html">https://hadoop.apache.org/docs/stable/hadoop-project-dist/hadoop-common/RackAwareness.html</a></li>
+<li>Hadoop 安全模式：<a target="_blank" rel="noopener" href="https://hadoop.apache.org/docs/stable/hadoop-project-dist/hadoop-common/SecureMode.html">https://hadoop.apache.org/docs/stable/hadoop-project-dist/hadoop-common/SecureMode.html</a></li>
+</ul>
+<h2 id="1-7-清单"><a href="#1-7-清单" class="headerlink" title="1.7 清单"></a>1.7 清单</h2><ol>
+<li>小文件伤的是 NameNode 元数据而不是磁盘容量，先堵源头再归档存量</li>
+<li>集群用 balancer 调节点间分布，盘内用 diskbalancer 调磁盘间分布，避开业务高峰</li>
+<li>机架感知把主机映射成拓扑路径，副本就近放置，脚本结果必须稳定</li>
+<li>Kerberos 解决身份认证，principal 加 keytab 加票据续期是主线，授权另由 Ranger 等承担</li>
+<li>故障排查先定位阶段与日志，再看资源水位，最后改参数，一次只调一类</li>
+<li>日常关注元数据规模、磁盘水位、队列余量、Container 内存与票据有效期这五类指标</li>
+</ol>
+</div>
+
+  <div class="mb-foot">
+    <a href="/phone/">返回手机首页</a>
+    <a href="/phone/tags/">星迹索引</a>
+  </div>
+</div>
+
+
+<script>
+  /* 作用：懒加载本地 mermaid 库；无 mermaid 代码块时不加载 */
+  function loadLocalMermaid(){
+    return new Promise(function(resolve, reject){
+      if(window.mermaid) return resolve(window.mermaid);
+      var s = document.createElement('script');
+      s.src = '/js/third-party/mermaid/mermaid.min.js?v=10';
+      s.onload = function(){ resolve(window.mermaid); };
+      s.onerror = function(){ reject(new Error('mermaid local load failed')); };
+      document.head.appendChild(s);
+    });
+  }
+
+  /* 作用：把 ```mermaid 代码块替换成 SVG 图（手机端字号略小、图可横向滚动） */
+  async function renderMermaidDiagram(){
+    var blocks = document.querySelectorAll('pre[class*="language-mermaid"]');
+    if(!blocks.length) return;
+    var mermaid;
+    try { mermaid = await loadLocalMermaid(); }
+    catch(e){ console.warn('[mermaid] 本地库加载失败：', e); return; }
+
+    mermaid.initialize({
+      startOnLoad: false,
+      theme: 'base',
+      themeVariables: {
+        darkMode: true,
+        background: 'transparent',
+        fontFamily: '"Microsoft YaHei", "PingFang SC", "Segoe UI", sans-serif',
+        fontSize: '12px',
+        primaryColor: '#062f3d',
+        primaryTextColor: '#d6f6ff',
+        primaryBorderColor: '#00eeff',
+        secondaryColor: '#04222d',
+        tertiaryColor: '#04222d',
+        mainBkg: '#062f3d',
+        nodeBorder: '#00eeff',
+        clusterBkg: '#02161f',
+        clusterBorder: '#00eeff55',
+        lineColor: '#00eeff',
+        textColor: '#c0e8ff',
+        edgeLabelBackground: '#02161f'
+      },
+      flowchart: { curve: 'basis', useMaxWidth: false, htmlLabels: false, nodeSpacing: 30, rankSpacing: 40, padding: 10 }
+    });
+
+    var targets = [];
+    blocks.forEach(function(el){
+      var codeEl = el.querySelector('code');
+      if(!codeEl) return;
+      var div = document.createElement('div');
+      div.className = 'mermaid';
+      div.textContent = codeEl.textContent;
+      el.parentNode.replaceChild(div, el);
+      targets.push(div);
+    });
+    if(!targets.length) return;
+    try { await mermaid.run({ nodes: targets }); }
+    catch(e){ console.warn('[mermaid] 渲染失败：', e); }
+  }
+  /* 作用：多次触发兜底（延迟重试 + DOM 变化），防止某次时机没跑到导致图表留在代码块 */
+  var mmBusy = false;
+  function scheduleMermaid(){
+    if(mmBusy) return;
+    mmBusy = true;
+    renderMermaidDiagram().then(function(){ mmBusy = false; }, function(){ mmBusy = false; });
+  }
+  scheduleMermaid();
+  window.addEventListener('load', scheduleMermaid);
+  [1000, 3000, 8000].forEach(function(ms){ setTimeout(scheduleMermaid, ms); });
+  if(document.readyState !== 'loading') scheduleMermaid();
+  if(window.MutationObserver){
+    var mmTimer = null;
+    var mmObserver = new MutationObserver(function(){
+      clearTimeout(mmTimer);
+      mmTimer = setTimeout(scheduleMermaid, 400);
+    });
+    mmObserver.observe(document.querySelector('.mb-article') || document.body, { childList: true, subtree: true });
+  }
+</script>
+</body>
+</html>

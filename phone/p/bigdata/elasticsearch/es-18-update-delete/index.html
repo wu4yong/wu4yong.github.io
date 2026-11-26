@@ -1,0 +1,306 @@
+<!--
+  ============================================
+  手机端 · 文章原文页
+  文件：phone/post.njk
+  适用终端：手机端（路由 /phone/p/<slug>/，由 scripts/phone-routes.js 生成）
+  作用：手机阅读单篇文章；单列布局、无侧栏无雷达，替代电脑端 post.njk
+        数据由生成期算好：page.item = { title, dateStr, content, cats, tags }
+  样式依赖：source/css/theme/phone/common.css、source/css/theme/phone/list.css
+  组件依赖：phone/_components/Particles.njk
+  最后修改：2026-11-11
+  ============================================
+-->
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="color-scheme" content="dark">
+  <meta name="theme-color" content="#020817">
+  <!-- 首帧兜底：浏览器默认画布是白的，样式未解析前会闪一下白。这条规则先锁死深空底色 -->
+  <style>html{background-color:#020817}</style>
+  <title>ES18-更新与删除的语义 - 时空秘境</title>
+  <!-- 手机端样式：基础 + 列表/正文，外链引入（源文件 source/css/theme/phone/） -->
+  <link rel="stylesheet" href="/css/theme/phone/common.css">
+  <link rel="stylesheet" href="/css/theme/phone/list.css">
+<meta name="generator" content="Hexo 8.1.2"></head>
+<body>
+<div class="mb-shell">
+  <!--
+  ============================================
+  手机端星空粒子组件
+  文件：Particles.njk
+  适用终端：手机端
+  作用：Particles.njk 的手机端副本（nunjucks 子目录 include 取不到上级）
+        参数与电脑端 _components/Particles.njk 保持一致：
+        粒子 95 / 连线 118px / opacity 0.32，外加星座层与零星闪烁层
+  最后修改：2026-11-12
+  ============================================
+--><!-- z-index 必须是 0：负层级会被 body 不透明背景盖住，粒子在跑却看不见 -->
+<div id="particles" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 0; pointer-events: none;"></div>
+<!-- 星座层（与首页同一套：随机零星散布星座图形 + 偶尔闪烁的小星） -->
+<div id="constellations" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 1; pointer-events: none;" aria-hidden="true"></div>
+<script src="/js/particles.min.js"></script>
+<script>
+particlesJS("particles", {
+  particles: {
+    number: {
+      value: 95,
+      density: {
+        enable: true,
+        value_area: 800
+      }
+    },
+    color: {
+      value: "#00eeff"
+    },
+    shape: {
+      type: "circle",
+      stroke: {
+        width: 0,
+        color: "#000000"
+      }
+    },
+    opacity: {
+      value: 0.6,
+      random: true,
+      anim: {
+        enable: true,
+        speed: 0.5,
+        opacity_min: 0.1,
+        sync: false
+      }
+    },
+    size: {
+      value: 3,
+      random: true,
+      anim: {
+        enable: true,
+        speed: 2,
+        size_min: 0.1,
+        sync: false
+      }
+    },
+    line_linked: {
+      enable: true,
+      distance: 118,
+      color: "#00eeff",
+      opacity: 0.32,
+      width: 1
+    },
+    move: {
+      enable: true,
+      speed: 0.8,
+      direction: "none",
+      random: true,
+      straight: false,
+      out_mode: "out",
+      bounce: false,
+      attract: {
+        enable: true,
+        rotateX: 600,
+        rotateY: 1200
+      }
+    }
+  },
+  interactivity: {
+    detect_on: "canvas",
+    events: {
+      onhover: {
+        enable: true,
+        mode: "grab"       // 手指按住时粒子聚集
+      },
+      onclick: {
+        enable: true,
+        mode: "push"       // 点击时产生新粒子
+      },
+      resize: true
+    },
+    modes: {
+      grab: {
+        distance: 200,
+        line_linked: {
+          opacity: 1
+        }
+      },
+      push: {
+        particles_nb: 6
+      }
+    }
+  },
+  retina_detect: true
+});
+</script>
+<!-- 星座 + 零星闪烁层：与电脑端共用同一份绘制脚本 -->
+<script src="/js/theme/home/starfield.js"></script>
+
+
+  <div class="mb-top">
+    <a class="mb-back" href="/phone/">← 返回手机首页</a>
+    <span class="mb-sub" style="margin:0">2023-11-16</span>
+  </div>
+
+  <h1 class="mb-title">ES18-更新与删除的语义</h1>
+  <div class="mb-sub">
+    分类：bigdata · elasticsearch
+     ｜ 标签：Elasticsearch · 系统课
+  </div>
+
+  <div class="mb-article"><div class="essay-banner essay-elasticsearch"></div>
+
+<h1 id="更新与删除语义：局部更新、软删除与空间回收"><a href="#更新与删除语义：局部更新、软删除与空间回收" class="headerlink" title="更新与删除语义：局部更新、软删除与空间回收"></a>更新与删除语义：局部更新、软删除与空间回收</h1><p>ES 的「更新」不是原地改字段，而是<strong>读出整条文档、改完、重新索引一遍</strong>；「删除」也不是立刻释放空间，而是先打标记。</p>
+<p>这两个语义决定了：为什么更新比写入贵、为什么删了数据磁盘不降。</p>
+<p><img src="https://wu4yong.github.io/starry-images/assets/img/elasticsearch/es-18-update-delete.svg" alt="更新是重新索引，删除只是打标记：空间什么时候才真正释放"></p>
+<p><em>update 的四步与 delete 延迟到 merge 才回收｜依据 Elasticsearch 官方文档 8.17 自绘</em></p>
+<h2 id="一、学习目标"><a href="#一、学习目标" class="headerlink" title="一、学习目标"></a>一、学习目标</h2><ol>
+<li>说清 <code>_update</code> 的内部实现（读—改—重索引）；</li>
+<li>知道对象合并与数组合并的行为差异；</li>
+<li>说出删除标记与 merge 的关系，解释「磁盘不降」；</li>
+<li>会判断什么时候该用 <code>_delete_by_query</code>、什么时候该用索引级淘汰。</li>
+</ol>
+<h2 id="二、前置知识"><a href="#二、前置知识" class="headerlink" title="二、前置知识"></a>二、前置知识</h2><div class="data-grid data-grid-link-table"><div class="grid-header"><div class="grid-cell">需要掌握</div><div class="grid-cell">到什么程度</div><div class="grid-cell">出处</div></div><div class="grid-row"><div class="grid-cell"><code>_source</code></div><div class="grid-cell">知道它可关闭</div><div class="grid-cell">M1-2</div></div><div class="grid-row"><div class="grid-cell">段与 merge</div><div class="grid-cell">知道删除标记靠合并回收</div><div class="grid-cell">M3-2</div></div></div>
+
+<h2 id="三、理论讲解"><a href="#三、理论讲解" class="headerlink" title="三、理论讲解"></a>三、理论讲解</h2><div class="data-grid data-grid-link-table"><div class="grid-header"><div class="grid-cell">操作</div><div class="grid-cell">内部行为</div><div class="grid-cell">关键限制</div></div><div class="grid-row"><div class="grid-cell"><code>POST /idx/_update/1 { &quot;doc&quot;: {...} }</code></div><div class="grid-cell">读 <code>_source</code> → 合并字段 → 重新索引并打旧版本删除标记</div><div class="grid-cell">必须能有 <code>_source</code></div></div><div class="grid-row"><div class="grid-cell"><code>_update</code> + <code>script</code></div><div class="grid-cell">读 → 执行脚本 → 重索引</div><div class="grid-cell">脚本要幂等才能配 <code>retry_on_conflict</code></div></div><div class="grid-row"><div class="grid-cell"><code>_update</code> + <code>upsert</code></div><div class="grid-cell">不存在则按 upsert 创建</div><div class="grid-cell">首次写入的 mapping 仍受约束</div></div><div class="grid-row"><div class="grid-cell"><code>_delete_by_query</code></div><div class="grid-cell">按查询逐条删除（快照语义）</div><div class="grid-cell">大索引上资源消耗大</div></div><div class="grid-row"><div class="grid-cell"><code>_update_by_query</code></div><div class="grid-cell">按查询逐条读改重索引</div><div class="grid-cell">同上，且会放大段数量</div></div></div>
+
+<p>合并规则官方写明：<strong>对象字段递归合并，数组字段整体替换</strong>。所以 <code>&#123;&quot;tags&quot;:[&quot;a&quot;]&#125;</code> 上加 <code>&#123;&quot;doc&quot;:&#123;&quot;tags&quot;:[&quot;b&quot;]&#125;&#125;</code> 得到 <code>[&quot;b&quot;]</code>，不是 <code>[&quot;a&quot;,&quot;b&quot;]</code>。</p>
+<h2 id="四、原理拆解：删除为什么不释放空间"><a href="#四、原理拆解：删除为什么不释放空间" class="headerlink" title="四、原理拆解：删除为什么不释放空间"></a>四、原理拆解：删除为什么不释放空间</h2><p>Lucene 段是不可变的：文档「删除」只是在 <code>.liv</code>（live docs）里标记该文档无效，检索时会跳过。磁盘上的字节还在，只有 <strong>merge</strong> 把多个段重写成新段时，才真正丢弃被标记的文档。这就是「删了 40% 数据、磁盘只降了一点」的全部原因。</p>
+<h2 id="五、场景说明"><a href="#五、场景说明" class="headerlink" title="五、场景说明"></a>五、场景说明</h2><div class="data-grid data-grid-link-table"><div class="grid-header"><div class="grid-cell">场景</div><div class="grid-cell">建议</div></div><div class="grid-row"><div class="grid-cell">补一个字段&#x2F;改一个值</div><div class="grid-cell"><code>_update</code> + <code>doc</code></div></div><div class="grid-row"><div class="grid-cell">计数、累加、按条件改</div><div class="grid-cell"><code>_update</code> + <code>script</code>（幂等才能开重试）</div></div><div class="grid-row"><div class="grid-cell">按条件批量改字段</div><div class="grid-cell"><code>_update_by_query</code>，控制批量与限速</div></div><div class="grid-row"><div class="grid-cell">清理过期日志</div><div class="grid-cell">用 ILM 按索引淘汰，不要 <code>_delete_by_query</code> 逐条删</div></div><div class="grid-row"><div class="grid-cell">事故后清空某类数据</div><div class="grid-cell"><code>_delete_by_query</code> 可接受，之后在只读时段 forcemerge</div></div></div>
+
+<h2 id="六、实操"><a href="#六、实操" class="headerlink" title="六、实操"></a>六、实操</h2><pre class="line-numbers language-bash" data-language="bash"><code class="language-bash"><span class="token comment"># 局部更新</span>
+<span class="token function">curl</span> <span class="token parameter variable">-X</span> POST <span class="token string">"http://localhost:9200/goods/_update/1"</span> <span class="token parameter variable">-H</span> <span class="token string">'Content-Type: application/json'</span> <span class="token parameter variable">-d</span> <span class="token string">'
+&#123; "doc": &#123; "price": 15, "tags": ["new"] &#125; &#125;'</span>
+
+<span class="token comment"># 脚本更新（把 price 加 1）</span>
+<span class="token function">curl</span> <span class="token parameter variable">-X</span> POST <span class="token string">"http://localhost:9200/goods/_update/1"</span> <span class="token parameter variable">-H</span> <span class="token string">'Content-Type: application/json'</span> <span class="token parameter variable">-d</span> <span class="token string">'
+&#123; "script": &#123; "source": "ctx._source.price += params.inc", "params": &#123; "inc": 1 &#125; &#125; &#125;'</span>
+
+<span class="token comment"># 按条件批量更新</span>
+<span class="token function">curl</span> <span class="token parameter variable">-X</span> POST <span class="token string">"http://localhost:9200/goods/_update_by_query?conflicts=proceed"</span> <span class="token parameter variable">-H</span> <span class="token string">'Content-Type: application/json'</span> <span class="token parameter variable">-d</span> <span class="token string">'
+&#123; "query": &#123; "term": &#123; "on_sale": true &#125; &#125;,
+  "script": &#123; "source": "ctx._source.price *= 0.9" &#125; &#125;'</span>
+
+<span class="token comment"># 按条件删除</span>
+<span class="token function">curl</span> <span class="token parameter variable">-X</span> POST <span class="token string">"http://localhost:9200/goods/_delete_by_query?conflicts=proceed"</span> <span class="token parameter variable">-H</span> <span class="token string">'Content-Type: application/json'</span> <span class="token parameter variable">-d</span> <span class="token string">'
+&#123; "query": &#123; "range": &#123; "created": &#123; "lt": "2023-01-01" &#125; &#125; &#125; &#125;'</span>
+
+<span class="token comment"># 观察删除标记与段</span>
+<span class="token function">curl</span> <span class="token parameter variable">-s</span> <span class="token string">"http://localhost:9200/_cat/segments/goods?v&amp;h=shard,segment,docs.count,size"</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<p>执行完第四条命令后，<code>docs.count</code> 会小于原始总量，但 <code>size</code> 未必同步下降——要等 merge。</p>
+<h2 id="七、常见坑"><a href="#七、常见坑" class="headerlink" title="七、常见坑"></a>七、常见坑</h2><ol>
+<li><strong>关掉 <code>_source</code> 还想用 <code>_update</code></strong>：局部更新依赖原文，官方明确受限。</li>
+<li><strong>以为数组合并</strong>：官方是整体替换，追加要写脚本。</li>
+<li><strong>删除后期待磁盘立刻下降</strong>：要 merge 才回收。</li>
+<li><strong><code>_delete_by_query</code> 当日常清理</strong>：对在线索引压力大，且反复产生删除标记；日志场景用 ILM。</li>
+<li><strong><code>conflicts=proceed</code> 无监控</strong>：并发写造成的版本冲突被静默跳过，数据可能没改到。</li>
+<li><strong><code>_update_by_query</code> 前后不做对比校验</strong>：改错条件会一次性污染大量文档。</li>
+</ol>
+<h2 id="八、课后小结"><a href="#八、课后小结" class="headerlink" title="八、课后小结"></a>八、课后小结</h2><ol>
+<li>更新 &#x3D; 读 + 改 + 重索引，比写入贵。</li>
+<li>对象递归合并、数组整体替换。</li>
+<li>删除是打标记，空间靠 merge 回收。</li>
+<li>批量改&#x2F;删要用 <code>_update_by_query</code> &#x2F; <code>_delete_by_query</code>，并关注冲突与资源。</li>
+<li>时间序列清理优先用 ILM 淘汰索引，而不是逐条删。</li>
+</ol>
+<h2 id="九、思考题"><a href="#九、思考题" class="headerlink" title="九、思考题"></a>九、思考题</h2><ol>
+<li>一天更新同一条文档 1 万次，会发生什么？给出段与磁盘层面的解释。</li>
+<li>为什么数组是整体替换而不是合并？这与「对象递归合并」的设计取舍有关吗？</li>
+<li>一个索引删了 60% 文档，你打算怎么安全地回收空间？列出前置条件与观察指标。</li>
+</ol>
+<h2 id="十、官方资料"><a href="#十、官方资料" class="headerlink" title="十、官方资料"></a>十、官方资料</h2><ul>
+<li>Update API：<a target="_blank" rel="noopener" href="https://www.elastic.co/guide/en/elasticsearch/reference/current/docs-update.html">https://www.elastic.co/guide/en/elasticsearch/reference/current/docs-update.html</a></li>
+<li>Delete API：<a target="_blank" rel="noopener" href="https://www.elastic.co/guide/en/elasticsearch/reference/current/docs-delete.html">https://www.elastic.co/guide/en/elasticsearch/reference/current/docs-delete.html</a></li>
+<li>Update By Query：<a target="_blank" rel="noopener" href="https://www.elastic.co/guide/en/elasticsearch/reference/current/docs-update-by-query.html">https://www.elastic.co/guide/en/elasticsearch/reference/current/docs-update-by-query.html</a></li>
+<li>Delete By Query：<a target="_blank" rel="noopener" href="https://www.elastic.co/guide/en/elasticsearch/reference/current/docs-delete-by-query.html">https://www.elastic.co/guide/en/elasticsearch/reference/current/docs-delete-by-query.html</a></li>
+</ul>
+<p>上一篇：<a href="/2023/11/13/bigdata/elasticsearch/es-17-optimistic-concurrency/">M3-4 乐观并发控制</a> ｜ 下一篇：<a href="/2023/11/19/bigdata/elasticsearch/es-19-reindex-update-by-query/">M3-6 reindex 与 _update_by_query 的在线迁移</a> ｜ <a href="/2023/09/22/bigdata/elasticsearch/es-00-series-index/">总目录</a></p>
+</div>
+
+  <div class="mb-foot">
+    <a href="/phone/">返回手机首页</a>
+    <a href="/phone/tags/">星迹索引</a>
+  </div>
+</div>
+
+
+<script>
+  /* 作用：懒加载本地 mermaid 库；无 mermaid 代码块时不加载 */
+  function loadLocalMermaid(){
+    return new Promise(function(resolve, reject){
+      if(window.mermaid) return resolve(window.mermaid);
+      var s = document.createElement('script');
+      s.src = '/js/third-party/mermaid/mermaid.min.js?v=10';
+      s.onload = function(){ resolve(window.mermaid); };
+      s.onerror = function(){ reject(new Error('mermaid local load failed')); };
+      document.head.appendChild(s);
+    });
+  }
+
+  /* 作用：把 ```mermaid 代码块替换成 SVG 图（手机端字号略小、图可横向滚动） */
+  async function renderMermaidDiagram(){
+    var blocks = document.querySelectorAll('pre[class*="language-mermaid"]');
+    if(!blocks.length) return;
+    var mermaid;
+    try { mermaid = await loadLocalMermaid(); }
+    catch(e){ console.warn('[mermaid] 本地库加载失败：', e); return; }
+
+    mermaid.initialize({
+      startOnLoad: false,
+      theme: 'base',
+      themeVariables: {
+        darkMode: true,
+        background: 'transparent',
+        fontFamily: '"Microsoft YaHei", "PingFang SC", "Segoe UI", sans-serif',
+        fontSize: '12px',
+        primaryColor: '#062f3d',
+        primaryTextColor: '#d6f6ff',
+        primaryBorderColor: '#00eeff',
+        secondaryColor: '#04222d',
+        tertiaryColor: '#04222d',
+        mainBkg: '#062f3d',
+        nodeBorder: '#00eeff',
+        clusterBkg: '#02161f',
+        clusterBorder: '#00eeff55',
+        lineColor: '#00eeff',
+        textColor: '#c0e8ff',
+        edgeLabelBackground: '#02161f'
+      },
+      flowchart: { curve: 'basis', useMaxWidth: false, htmlLabels: false, nodeSpacing: 30, rankSpacing: 40, padding: 10 }
+    });
+
+    var targets = [];
+    blocks.forEach(function(el){
+      var codeEl = el.querySelector('code');
+      if(!codeEl) return;
+      var div = document.createElement('div');
+      div.className = 'mermaid';
+      div.textContent = codeEl.textContent;
+      el.parentNode.replaceChild(div, el);
+      targets.push(div);
+    });
+    if(!targets.length) return;
+    try { await mermaid.run({ nodes: targets }); }
+    catch(e){ console.warn('[mermaid] 渲染失败：', e); }
+  }
+  /* 作用：多次触发兜底（延迟重试 + DOM 变化），防止某次时机没跑到导致图表留在代码块 */
+  var mmBusy = false;
+  function scheduleMermaid(){
+    if(mmBusy) return;
+    mmBusy = true;
+    renderMermaidDiagram().then(function(){ mmBusy = false; }, function(){ mmBusy = false; });
+  }
+  scheduleMermaid();
+  window.addEventListener('load', scheduleMermaid);
+  [1000, 3000, 8000].forEach(function(ms){ setTimeout(scheduleMermaid, ms); });
+  if(document.readyState !== 'loading') scheduleMermaid();
+  if(window.MutationObserver){
+    var mmTimer = null;
+    var mmObserver = new MutationObserver(function(){
+      clearTimeout(mmTimer);
+      mmTimer = setTimeout(scheduleMermaid, 400);
+    });
+    mmObserver.observe(document.querySelector('.mb-article') || document.body, { childList: true, subtree: true });
+  }
+</script>
+</body>
+</html>

@@ -1,0 +1,348 @@
+<!--
+  ============================================
+  手机端 · 文章原文页
+  文件：phone/post.njk
+  适用终端：手机端（路由 /phone/p/<slug>/，由 scripts/phone-routes.js 生成）
+  作用：手机阅读单篇文章；单列布局、无侧栏无雷达，替代电脑端 post.njk
+        数据由生成期算好：page.item = { title, dateStr, content, cats, tags }
+  样式依赖：source/css/theme/phone/common.css、source/css/theme/phone/list.css
+  组件依赖：phone/_components/Particles.njk
+  最后修改：2026-11-11
+  ============================================
+-->
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="color-scheme" content="dark">
+  <meta name="theme-color" content="#020817">
+  <!-- 首帧兜底：浏览器默认画布是白的，样式未解析前会闪一下白。这条规则先锁死深空底色 -->
+  <style>html{background-color:#020817}</style>
+  <title>Spring Cloud（六）Sentinel 流控与熔断降级 - 时空秘境</title>
+  <!-- 手机端样式：基础 + 列表/正文，外链引入（源文件 source/css/theme/phone/） -->
+  <link rel="stylesheet" href="/css/theme/phone/common.css">
+  <link rel="stylesheet" href="/css/theme/phone/list.css">
+<meta name="generator" content="Hexo 8.1.2"></head>
+<body>
+<div class="mb-shell">
+  <!--
+  ============================================
+  手机端星空粒子组件
+  文件：Particles.njk
+  适用终端：手机端
+  作用：Particles.njk 的手机端副本（nunjucks 子目录 include 取不到上级）
+        参数与电脑端 _components/Particles.njk 保持一致：
+        粒子 95 / 连线 118px / opacity 0.32，外加星座层与零星闪烁层
+  最后修改：2026-11-12
+  ============================================
+--><!-- z-index 必须是 0：负层级会被 body 不透明背景盖住，粒子在跑却看不见 -->
+<div id="particles" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 0; pointer-events: none;"></div>
+<!-- 星座层（与首页同一套：随机零星散布星座图形 + 偶尔闪烁的小星） -->
+<div id="constellations" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 1; pointer-events: none;" aria-hidden="true"></div>
+<script src="/js/particles.min.js"></script>
+<script>
+particlesJS("particles", {
+  particles: {
+    number: {
+      value: 95,
+      density: {
+        enable: true,
+        value_area: 800
+      }
+    },
+    color: {
+      value: "#00eeff"
+    },
+    shape: {
+      type: "circle",
+      stroke: {
+        width: 0,
+        color: "#000000"
+      }
+    },
+    opacity: {
+      value: 0.6,
+      random: true,
+      anim: {
+        enable: true,
+        speed: 0.5,
+        opacity_min: 0.1,
+        sync: false
+      }
+    },
+    size: {
+      value: 3,
+      random: true,
+      anim: {
+        enable: true,
+        speed: 2,
+        size_min: 0.1,
+        sync: false
+      }
+    },
+    line_linked: {
+      enable: true,
+      distance: 118,
+      color: "#00eeff",
+      opacity: 0.32,
+      width: 1
+    },
+    move: {
+      enable: true,
+      speed: 0.8,
+      direction: "none",
+      random: true,
+      straight: false,
+      out_mode: "out",
+      bounce: false,
+      attract: {
+        enable: true,
+        rotateX: 600,
+        rotateY: 1200
+      }
+    }
+  },
+  interactivity: {
+    detect_on: "canvas",
+    events: {
+      onhover: {
+        enable: true,
+        mode: "grab"       // 手指按住时粒子聚集
+      },
+      onclick: {
+        enable: true,
+        mode: "push"       // 点击时产生新粒子
+      },
+      resize: true
+    },
+    modes: {
+      grab: {
+        distance: 200,
+        line_linked: {
+          opacity: 1
+        }
+      },
+      push: {
+        particles_nb: 6
+      }
+    }
+  },
+  retina_detect: true
+});
+</script>
+<!-- 星座 + 零星闪烁层：与电脑端共用同一份绘制脚本 -->
+<script src="/js/theme/home/starfield.js"></script>
+
+
+  <div class="mb-top">
+    <a class="mb-back" href="/phone/">← 返回手机首页</a>
+    <span class="mb-sub" style="margin:0">2022-06-08</span>
+  </div>
+
+  <h1 class="mb-title">Spring Cloud（六）Sentinel 流控与熔断降级</h1>
+  <div class="mb-sub">
+    分类：java · springcloud
+     ｜ 标签：SpringCloud
+  </div>
+
+  <div class="mb-article"><div class="essay-banner essay-springcloud"></div>
+
+<h1 id="Sentinel-流控与熔断降级"><a href="#Sentinel-流控与熔断降级" class="headerlink" title="Sentinel 流控与熔断降级"></a><strong>Sentinel 流控与熔断降级</strong></h1><p>一个慢接口能把整条链路拖死：线程池占满、上游等超时、调用方层层堆积。Sentinel 的两件事就是保住系统——<strong>限制进来的流量</strong>（流控），<strong>切掉坏掉的依赖</strong>（熔断 + 降级）。</p>
+<p><img src="https://wu4yong.github.io/starry-images/assets/img/springcloud/springcloud-06-sentinel.webp" alt="流量越过闸门，熔断后就切断并发回兜底"></p>
+<p><em>流量越过闸门，熔断后就切断并发回兜底</em></p>
+<h2 id="1-1-接入"><a href="#1-1-接入" class="headerlink" title="1.1 接入"></a>1.1 接入</h2><pre class="line-numbers language-markup" data-language="markup"><code class="language-markup"><span class="token tag"><span class="token tag"><span class="token punctuation">&lt;</span>dependency</span><span class="token punctuation">></span></span>
+    <span class="token tag"><span class="token tag"><span class="token punctuation">&lt;</span>groupId</span><span class="token punctuation">></span></span>com.alibaba.cloud<span class="token tag"><span class="token tag"><span class="token punctuation">&lt;/</span>groupId</span><span class="token punctuation">></span></span>
+    <span class="token tag"><span class="token tag"><span class="token punctuation">&lt;</span>artifactId</span><span class="token punctuation">></span></span>spring-cloud-starter-alibaba-sentinel<span class="token tag"><span class="token tag"><span class="token punctuation">&lt;/</span>artifactId</span><span class="token punctuation">></span></span>
+<span class="token tag"><span class="token tag"><span class="token punctuation">&lt;/</span>dependency</span><span class="token punctuation">></span></span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span></span></code></pre>
+
+<pre class="line-numbers language-yaml" data-language="yaml"><code class="language-yaml"><span class="token key atrule">spring</span><span class="token punctuation">:</span>
+  <span class="token key atrule">cloud</span><span class="token punctuation">:</span>
+    <span class="token key atrule">sentinel</span><span class="token punctuation">:</span>
+      <span class="token key atrule">transport</span><span class="token punctuation">:</span>
+        <span class="token key atrule">dashboard</span><span class="token punctuation">:</span> 127.0.0.1<span class="token punctuation">:</span><span class="token number">8858</span>      <span class="token comment"># 控制台地址，配了才会被"懒加载"进来</span>
+        <span class="token key atrule">port</span><span class="token punctuation">:</span> <span class="token number">8719</span>                     <span class="token comment"># 客户端与服务端通信端口</span>
+      <span class="token key atrule">eager</span><span class="token punctuation">:</span> <span class="token boolean important">true</span>                      <span class="token comment"># 立即初始化，不懒加载</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<p>启动后访问控制台 <code>http://127.0.0.1:8858</code>（默认账号 <code>sentinel/sentinel</code>），在「簇点链路」里能看到所有被监控的接口。</p>
+<h2 id="1-2-流控规则"><a href="#1-2-流控规则" class="headerlink" title="1.2 流控规则"></a>1.2 流控规则</h2><div class="data-grid data-grid-link-table"><div class="grid-header"><div class="grid-cell">阈值类型</div><div class="grid-cell">含义</div><div class="grid-cell">典型设置</div></div><div class="grid-row"><div class="grid-cell">QPS</div><div class="grid-cell">每秒请求数</div><div class="grid-cell">单机 100</div></div><div class="grid-row"><div class="grid-cell">线程数</div><div class="grid-cell">并发占用线程数</div><div class="grid-cell">单机 10（Tomcat 线程池有限）</div></div><div class="grid-row"><div class="grid-cell">关联资源</div><div class="grid-cell">针对调用方或特定资源</div><div class="grid-cell">按来源 IP 限</div></div></div>
+
+<div class="data-grid data-grid-link-table"><div class="grid-header"><div class="grid-cell">流控模式</div><div class="grid-cell">含义</div><div class="grid-cell">场景</div></div><div class="grid-row"><div class="grid-cell">直接</div><div class="grid-cell">对当前资源限流</div><div class="grid-cell">单个热点接口</div></div><div class="grid-row"><div class="grid-cell">关联</div><div class="grid-cell">A 超过阈值就限 B</div><div class="grid-cell">读接口拖垮写接口</div></div><div class="grid-row"><div class="grid-cell">链路</div><div class="grid-cell">只统计指定入口进来的流量</div><div class="grid-cell">区分 App 与内部调用</div></div></div>
+
+<p>流控效果三选一：</p>
+<div class="data-grid data-grid-link-table"><div class="grid-header"><div class="grid-cell">效果</div><div class="grid-cell">行为</div><div class="grid-cell">适合</div></div><div class="grid-row"><div class="grid-cell">快速失败</div><div class="grid-cell">直接返回 429</div><div class="grid-cell">保护性限流，宁可拒绝</div></div><div class="grid-row"><div class="grid-cell">Warm Up</div><div class="grid-cell">阈值从 1&#x2F;3 逐步涨到设定值</div><div class="grid-cell">冷启动、缓存预热</div></div><div class="grid-row"><div class="grid-cell">排队等待</div><div class="grid-cell">匀速通过（漏桶）</div><div class="grid-cell">必须削峰的批量任务</div></div></div>
+
+<h2 id="1-3-熔断规则"><a href="#1-3-熔断规则" class="headerlink" title="1.3 熔断规则"></a>1.3 熔断规则</h2><p>熔断看的是”坏”，不是”多”：</p>
+<div class="data-grid data-grid-link-table"><div class="grid-header"><div class="grid-cell">慢调用比例</div><div class="grid-cell">统计窗口内慢请求占比超过阈值 → 熔断</div><div class="grid-cell">下游变慢</div></div><div class="grid-row"><div class="grid-cell">异常比例</div><div class="grid-cell">异常数占比超过阈值 → 熔断</div><div class="grid-cell">下游报错</div></div><div class="grid-row"><div class="grid-cell">异常数</div><div class="grid-cell">窗口内异常数超过阈值 → 熔断</div><div class="grid-cell">下游挂了</div></div></div>
+
+<p>关键参数：</p>
+<ul>
+<li><strong>统计时长</strong>（默认 1000ms）</li>
+<li><strong>最小请求数</strong>（默认 5，样本不足不触发，避免误判）</li>
+<li><strong>最大 RT</strong>（超过即算慢调用，如 200ms）</li>
+<li><strong>比例阈值</strong>（如 0.5 表示一半是慢调用就熔断）</li>
+<li><strong>熔断时长</strong>（熔断后多久进入半开探测）</li>
+</ul>
+<h2 id="1-4-代码侧：定义资源与降级"><a href="#1-4-代码侧：定义资源与降级" class="headerlink" title="1.4 代码侧：定义资源与降级"></a>1.4 代码侧：定义资源与降级</h2><pre class="line-numbers language-java" data-language="java"><code class="language-java"><span class="token annotation punctuation">@GetMapping</span><span class="token punctuation">(</span><span class="token string">"/&#123;id&#125;"</span><span class="token punctuation">)</span>
+<span class="token annotation punctuation">@SentinelResource</span><span class="token punctuation">(</span>value <span class="token operator">=</span> <span class="token string">"userById"</span><span class="token punctuation">,</span>
+        blockHandler <span class="token operator">=</span> <span class="token string">"handleBlock"</span><span class="token punctuation">,</span>        <span class="token comment">// 被限流/熔断时走它</span>
+        fallback <span class="token operator">=</span> <span class="token string">"handleFallback"</span><span class="token punctuation">)</span>         <span class="token comment">// 业务异常时走它</span>
+<span class="token keyword">public</span> <span class="token class-name">User</span> <span class="token function">findById</span><span class="token punctuation">(</span><span class="token annotation punctuation">@PathVariable</span> <span class="token class-name">Long</span> id<span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+    <span class="token keyword">if</span> <span class="token punctuation">(</span>id <span class="token operator">==</span> <span class="token number">1</span><span class="token punctuation">)</span> <span class="token keyword">throw</span> <span class="token keyword">new</span> <span class="token class-name">RuntimeException</span><span class="token punctuation">(</span><span class="token string">"测试异常"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token keyword">return</span> userService<span class="token punctuation">.</span><span class="token function">getById</span><span class="token punctuation">(</span>id<span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">&#125;</span>
+
+<span class="token comment">// 签名必须与原方法一致，末尾多一个 BlockException</span>
+<span class="token keyword">public</span> <span class="token class-name">User</span> <span class="token function">handleBlock</span><span class="token punctuation">(</span><span class="token class-name">Long</span> id<span class="token punctuation">,</span> <span class="token class-name">BlockException</span> ex<span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+    <span class="token keyword">return</span> <span class="token keyword">new</span> <span class="token class-name">User</span><span class="token punctuation">(</span>id<span class="token punctuation">,</span> <span class="token string">"限流降级用户"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">&#125;</span>
+
+<span class="token keyword">public</span> <span class="token class-name">User</span> <span class="token function">handleFallback</span><span class="token punctuation">(</span><span class="token class-name">Long</span> id<span class="token punctuation">,</span> <span class="token class-name">Throwable</span> t<span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+    <span class="token keyword">return</span> <span class="token keyword">new</span> <span class="token class-name">User</span><span class="token punctuation">(</span>id<span class="token punctuation">,</span> <span class="token string">"异常降级用户"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">&#125;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<div class="data-grid data-grid-link-table"><div class="grid-header"><div class="grid-cell">回调</div><div class="grid-cell">触发条件</div><div class="grid-cell">签名要求</div></div><div class="grid-row"><div class="grid-cell"><code>blockHandler</code></div><div class="grid-cell">被流控&#x2F;熔断拦截</div><div class="grid-cell">参数一致 + 末尾 <code>BlockException</code></div></div><div class="grid-row"><div class="grid-cell"><code>fallback</code></div><div class="grid-cell">业务抛异常</div><div class="grid-cell">参数一致 + 末尾 <code>Throwable</code></div></div><div class="grid-row"><div class="grid-cell"><code>defaultFallback</code></div><div class="grid-cell">全局兜底</div><div class="grid-cell">无参或单个 <code>Throwable</code></div></div><div class="grid-row"><div class="grid-cell"><code>exceptionsToIgnore</code></div><div class="grid-cell">指定异常不走 fallback</div><div class="grid-cell">数组</div></div></div>
+
+<p><code>fallback</code> 与 <code>blockHandler</code> 同时存在时，限流走 block、业务异常走 fallback，两者不冲突。</p>
+<h2 id="1-5-Feign-整合"><a href="#1-5-Feign-整合" class="headerlink" title="1.5 Feign 整合"></a>1.5 Feign 整合</h2><pre class="line-numbers language-yaml" data-language="yaml"><code class="language-yaml"><span class="token key atrule">feign</span><span class="token punctuation">:</span>
+  <span class="token key atrule">sentinel</span><span class="token punctuation">:</span>
+    <span class="token key atrule">enabled</span><span class="token punctuation">:</span> <span class="token boolean important">true</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span></span></code></pre>
+
+<p>打开后 Feign 调用自动成为 Sentinel 资源，可以在控制台给 Feign 客户端配熔断规则，降级用 <code>fallbackFactory</code>（见第三篇）。</p>
+<h2 id="1-6-规则持久化"><a href="#1-6-规则持久化" class="headerlink" title="1.6 规则持久化"></a>1.6 规则持久化</h2><p>控制台配的规则默认在内存，重启就丢。生产必须持久化到 Nacos：</p>
+<pre class="line-numbers language-markup" data-language="markup"><code class="language-markup"><span class="token tag"><span class="token tag"><span class="token punctuation">&lt;</span>dependency</span><span class="token punctuation">></span></span>
+    <span class="token tag"><span class="token tag"><span class="token punctuation">&lt;</span>groupId</span><span class="token punctuation">></span></span>com.alibaba.csp<span class="token tag"><span class="token tag"><span class="token punctuation">&lt;/</span>groupId</span><span class="token punctuation">></span></span>
+    <span class="token tag"><span class="token tag"><span class="token punctuation">&lt;</span>artifactId</span><span class="token punctuation">></span></span>sentinel-datasource-nacos<span class="token tag"><span class="token tag"><span class="token punctuation">&lt;/</span>artifactId</span><span class="token punctuation">></span></span>
+<span class="token tag"><span class="token tag"><span class="token punctuation">&lt;/</span>dependency</span><span class="token punctuation">></span></span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span></span></code></pre>
+
+<pre class="line-numbers language-yaml" data-language="yaml"><code class="language-yaml"><span class="token key atrule">spring</span><span class="token punctuation">:</span>
+  <span class="token key atrule">cloud</span><span class="token punctuation">:</span>
+    <span class="token key atrule">sentinel</span><span class="token punctuation">:</span>
+      <span class="token key atrule">datasource</span><span class="token punctuation">:</span>
+        <span class="token key atrule">ds1</span><span class="token punctuation">:</span>
+          <span class="token key atrule">nacos</span><span class="token punctuation">:</span>
+            <span class="token key atrule">server-addr</span><span class="token punctuation">:</span> 127.0.0.1<span class="token punctuation">:</span><span class="token number">8848</span>
+            <span class="token key atrule">dataId</span><span class="token punctuation">:</span> user<span class="token punctuation">-</span>service<span class="token punctuation">-</span>sentinel
+            <span class="token key atrule">data-type</span><span class="token punctuation">:</span> json
+            <span class="token key atrule">rule-type</span><span class="token punctuation">:</span> flow<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<pre class="line-numbers language-json" data-language="json"><code class="language-json"><span class="token punctuation">[</span>
+  <span class="token punctuation">&#123;</span>
+    <span class="token property">"resource"</span><span class="token operator">:</span> <span class="token string">"/user/&#123;id&#125;"</span><span class="token punctuation">,</span>
+    <span class="token property">"limitApp"</span><span class="token operator">:</span> <span class="token string">"default"</span><span class="token punctuation">,</span>
+    <span class="token property">"grade"</span><span class="token operator">:</span> <span class="token number">1</span><span class="token punctuation">,</span>
+    <span class="token property">"count"</span><span class="token operator">:</span> <span class="token number">100</span><span class="token punctuation">,</span>
+    <span class="token property">"strategy"</span><span class="token operator">:</span> <span class="token number">0</span><span class="token punctuation">,</span>
+    <span class="token property">"controlBehavior"</span><span class="token operator">:</span> <span class="token number">0</span><span class="token punctuation">,</span>
+    <span class="token property">"clusterMode"</span><span class="token operator">:</span> <span class="token boolean">false</span>
+  <span class="token punctuation">&#125;</span>
+<span class="token punctuation">]</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<p><code>strategy: 0</code> 为直接限流，<code>controlBehavior: 0</code> 为快速失败。</p>
+<h2 id="1-7-阈值怎么定"><a href="#1-7-阈值怎么定" class="headerlink" title="1.7 阈值怎么定"></a>1.7 阈值怎么定</h2><div class="data-grid data-grid-link-table"><div class="grid-header"><div class="grid-cell">依据</div><div class="grid-cell">做法</div><div class="grid-cell">风险</div></div><div class="grid-row"><div class="grid-cell">压测结果</div><div class="grid-cell">单机 QPS 的 70% 作为阈值</div><div class="grid-cell">最稳</div></div><div class="grid-row"><div class="grid-cell">历史峰值</div><div class="grid-cell">观察一周峰值上浮 20%</div><div class="grid-cell">促销会打穿</div></div><div class="grid-row"><div class="grid-cell">Tomcat 线程数</div><div class="grid-cell"><code>max-threads</code> 的 80%</div><div class="grid-cell">粗暴但有效</div></div><div class="grid-row"><div class="grid-cell">拍脑袋</div><div class="grid-cell">随便设 1000</div><div class="grid-cell">等于没设</div></div></div>
+
+<p>熔断的”最小请求数”别设太小，否则一次抖动就熔断，反而放大故障。</p>
+<h2 id="1-8-官方资料"><a href="#1-8-官方资料" class="headerlink" title="1.8 官方资料"></a>1.8 官方资料</h2><ul>
+<li>Sentinel 官方文档：<a target="_blank" rel="noopener" href="https://sentinelguard.io/zh-cn/docs/introduction.html">https://sentinelguard.io/zh-cn/docs/introduction.html</a></li>
+<li>Spring Cloud Alibaba Sentinel：<a target="_blank" rel="noopener" href="https://github.com/alibaba/spring-cloud-alibaba/wiki/Sentinel">https://github.com/alibaba/spring-cloud-alibaba/wiki/Sentinel</a></li>
+<li>注解支持：<a target="_blank" rel="noopener" href="https://sentinelguard.io/zh-cn/docs/annotation-support.html">https://sentinelguard.io/zh-cn/docs/annotation-support.html</a></li>
+</ul>
+<h2 id="1-9-清单"><a href="#1-9-清单" class="headerlink" title="1.9 清单"></a>1.9 清单</h2><ol>
+<li>流控限”进来的量”，熔断看”下游的坏”，两件事不要混用</li>
+<li>快速失败适合保护，排队等待只给必须削峰的批量任务</li>
+<li><code>blockHandler</code> 接限流熔断，<code>fallback</code> 接业务异常，签名都多一个参数</li>
+<li>Feign 打开 <code>feign.sentinel.enabled</code> 后可直接在控制台配规则</li>
+<li>控制台规则默认内存态，生产必须持久化到 Nacos</li>
+<li>阈值按压测的 70% 定，最小请求数别太小</li>
+<li>降级返回兜底对象，保证主链路能继续</li>
+</ol>
+</div>
+
+  <div class="mb-foot">
+    <a href="/phone/">返回手机首页</a>
+    <a href="/phone/tags/">星迹索引</a>
+  </div>
+</div>
+
+
+<script>
+  /* 作用：懒加载本地 mermaid 库；无 mermaid 代码块时不加载 */
+  function loadLocalMermaid(){
+    return new Promise(function(resolve, reject){
+      if(window.mermaid) return resolve(window.mermaid);
+      var s = document.createElement('script');
+      s.src = '/js/third-party/mermaid/mermaid.min.js?v=10';
+      s.onload = function(){ resolve(window.mermaid); };
+      s.onerror = function(){ reject(new Error('mermaid local load failed')); };
+      document.head.appendChild(s);
+    });
+  }
+
+  /* 作用：把 ```mermaid 代码块替换成 SVG 图（手机端字号略小、图可横向滚动） */
+  async function renderMermaidDiagram(){
+    var blocks = document.querySelectorAll('pre[class*="language-mermaid"]');
+    if(!blocks.length) return;
+    var mermaid;
+    try { mermaid = await loadLocalMermaid(); }
+    catch(e){ console.warn('[mermaid] 本地库加载失败：', e); return; }
+
+    mermaid.initialize({
+      startOnLoad: false,
+      theme: 'base',
+      themeVariables: {
+        darkMode: true,
+        background: 'transparent',
+        fontFamily: '"Microsoft YaHei", "PingFang SC", "Segoe UI", sans-serif',
+        fontSize: '12px',
+        primaryColor: '#062f3d',
+        primaryTextColor: '#d6f6ff',
+        primaryBorderColor: '#00eeff',
+        secondaryColor: '#04222d',
+        tertiaryColor: '#04222d',
+        mainBkg: '#062f3d',
+        nodeBorder: '#00eeff',
+        clusterBkg: '#02161f',
+        clusterBorder: '#00eeff55',
+        lineColor: '#00eeff',
+        textColor: '#c0e8ff',
+        edgeLabelBackground: '#02161f'
+      },
+      flowchart: { curve: 'basis', useMaxWidth: false, htmlLabels: false, nodeSpacing: 30, rankSpacing: 40, padding: 10 }
+    });
+
+    var targets = [];
+    blocks.forEach(function(el){
+      var codeEl = el.querySelector('code');
+      if(!codeEl) return;
+      var div = document.createElement('div');
+      div.className = 'mermaid';
+      div.textContent = codeEl.textContent;
+      el.parentNode.replaceChild(div, el);
+      targets.push(div);
+    });
+    if(!targets.length) return;
+    try { await mermaid.run({ nodes: targets }); }
+    catch(e){ console.warn('[mermaid] 渲染失败：', e); }
+  }
+  /* 作用：多次触发兜底（延迟重试 + DOM 变化），防止某次时机没跑到导致图表留在代码块 */
+  var mmBusy = false;
+  function scheduleMermaid(){
+    if(mmBusy) return;
+    mmBusy = true;
+    renderMermaidDiagram().then(function(){ mmBusy = false; }, function(){ mmBusy = false; });
+  }
+  scheduleMermaid();
+  window.addEventListener('load', scheduleMermaid);
+  [1000, 3000, 8000].forEach(function(ms){ setTimeout(scheduleMermaid, ms); });
+  if(document.readyState !== 'loading') scheduleMermaid();
+  if(window.MutationObserver){
+    var mmTimer = null;
+    var mmObserver = new MutationObserver(function(){
+      clearTimeout(mmTimer);
+      mmTimer = setTimeout(scheduleMermaid, 400);
+    });
+    mmObserver.observe(document.querySelector('.mb-article') || document.body, { childList: true, subtree: true });
+  }
+</script>
+</body>
+</html>

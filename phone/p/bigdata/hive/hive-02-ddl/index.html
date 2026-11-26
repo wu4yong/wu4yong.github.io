@@ -1,0 +1,368 @@
+<!--
+  ============================================
+  手机端 · 文章原文页
+  文件：phone/post.njk
+  适用终端：手机端（路由 /phone/p/<slug>/，由 scripts/phone-routes.js 生成）
+  作用：手机阅读单篇文章；单列布局、无侧栏无雷达，替代电脑端 post.njk
+        数据由生成期算好：page.item = { title, dateStr, content, cats, tags }
+  样式依赖：source/css/theme/phone/common.css、source/css/theme/phone/list.css
+  组件依赖：phone/_components/Particles.njk
+  最后修改：2026-11-11
+  ============================================
+-->
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="color-scheme" content="dark">
+  <meta name="theme-color" content="#020817">
+  <!-- 首帧兜底：浏览器默认画布是白的，样式未解析前会闪一下白。这条规则先锁死深空底色 -->
+  <style>html{background-color:#020817}</style>
+  <title>Hive（二）库表与分区分桶 DDL - 时空秘境</title>
+  <!-- 手机端样式：基础 + 列表/正文，外链引入（源文件 source/css/theme/phone/） -->
+  <link rel="stylesheet" href="/css/theme/phone/common.css">
+  <link rel="stylesheet" href="/css/theme/phone/list.css">
+<meta name="generator" content="Hexo 8.1.2"></head>
+<body>
+<div class="mb-shell">
+  <!--
+  ============================================
+  手机端星空粒子组件
+  文件：Particles.njk
+  适用终端：手机端
+  作用：Particles.njk 的手机端副本（nunjucks 子目录 include 取不到上级）
+        参数与电脑端 _components/Particles.njk 保持一致：
+        粒子 95 / 连线 118px / opacity 0.32，外加星座层与零星闪烁层
+  最后修改：2026-11-12
+  ============================================
+--><!-- z-index 必须是 0：负层级会被 body 不透明背景盖住，粒子在跑却看不见 -->
+<div id="particles" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 0; pointer-events: none;"></div>
+<!-- 星座层（与首页同一套：随机零星散布星座图形 + 偶尔闪烁的小星） -->
+<div id="constellations" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 1; pointer-events: none;" aria-hidden="true"></div>
+<script src="/js/particles.min.js"></script>
+<script>
+particlesJS("particles", {
+  particles: {
+    number: {
+      value: 95,
+      density: {
+        enable: true,
+        value_area: 800
+      }
+    },
+    color: {
+      value: "#00eeff"
+    },
+    shape: {
+      type: "circle",
+      stroke: {
+        width: 0,
+        color: "#000000"
+      }
+    },
+    opacity: {
+      value: 0.6,
+      random: true,
+      anim: {
+        enable: true,
+        speed: 0.5,
+        opacity_min: 0.1,
+        sync: false
+      }
+    },
+    size: {
+      value: 3,
+      random: true,
+      anim: {
+        enable: true,
+        speed: 2,
+        size_min: 0.1,
+        sync: false
+      }
+    },
+    line_linked: {
+      enable: true,
+      distance: 118,
+      color: "#00eeff",
+      opacity: 0.32,
+      width: 1
+    },
+    move: {
+      enable: true,
+      speed: 0.8,
+      direction: "none",
+      random: true,
+      straight: false,
+      out_mode: "out",
+      bounce: false,
+      attract: {
+        enable: true,
+        rotateX: 600,
+        rotateY: 1200
+      }
+    }
+  },
+  interactivity: {
+    detect_on: "canvas",
+    events: {
+      onhover: {
+        enable: true,
+        mode: "grab"       // 手指按住时粒子聚集
+      },
+      onclick: {
+        enable: true,
+        mode: "push"       // 点击时产生新粒子
+      },
+      resize: true
+    },
+    modes: {
+      grab: {
+        distance: 200,
+        line_linked: {
+          opacity: 1
+        }
+      },
+      push: {
+        particles_nb: 6
+      }
+    }
+  },
+  retina_detect: true
+});
+</script>
+<!-- 星座 + 零星闪烁层：与电脑端共用同一份绘制脚本 -->
+<script src="/js/theme/home/starfield.js"></script>
+
+
+  <div class="mb-top">
+    <a class="mb-back" href="/phone/">← 返回手机首页</a>
+    <span class="mb-sub" style="margin:0">2023-04-27</span>
+  </div>
+
+  <h1 class="mb-title">Hive（二）库表与分区分桶 DDL</h1>
+  <div class="mb-sub">
+    分类：bigdata · hive
+     ｜ 标签：Hive
+  </div>
+
+  <div class="mb-article"><div class="essay-banner essay-hive"></div>
+
+<h1 id="库表与分区分桶-DDL"><a href="#库表与分区分桶-DDL" class="headerlink" title="库表与分区分桶 DDL"></a><strong>库表与分区分桶 DDL</strong></h1><p>建表语句看着像标准 SQL，但 Hive 里的表直接映射成 HDFS 目录，分区和分桶也不是数据库里的索引概念，而是文件组织方式。这一篇把库表 DDL、分区表、分桶表、SerDe 与常见存储格式串起来，目标是建出来的表既好查又不浪费扫描量。</p>
+<p><img src="https://wu4yong.github.io/starry-images/assets/img/hive/hive-02-ddl.webp" alt="目录树按分区键分层展开，文件按哈希切成固定数量的分桶块，格式层在底部承载数据"></p>
+<p><em>目录树按分区键分层展开，文件按哈希切成固定数量的分桶块，格式层在底部承载数据</em></p>
+<h2 id="1-1-库与表的基础-DDL"><a href="#1-1-库与表的基础-DDL" class="headerlink" title="1.1 库与表的基础 DDL"></a>1.1 库与表的基础 DDL</h2><p>Hive 的库本质上是 Metastore 里的命名空间，对应 HDFS 上的一层目录。建库、建表的常用语句如下：</p>
+<pre class="line-numbers language-sql" data-language="sql"><code class="language-sql"><span class="token comment">-- 建库，LOCATION 指定库目录，不写则用仓库默认路径</span>
+<span class="token keyword">CREATE</span> <span class="token keyword">DATABASE</span> <span class="token keyword">IF</span> <span class="token operator">NOT</span> <span class="token keyword">EXISTS</span> dwd
+  LOCATION <span class="token string">'/warehouse/dwd'</span><span class="token punctuation">;</span>
+
+<span class="token keyword">USE</span> dwd<span class="token punctuation">;</span>
+
+<span class="token comment">-- 基础表：列类型与关系库接近，字符串统一用 STRING，大数用 BIGINT</span>
+<span class="token keyword">CREATE</span> <span class="token keyword">TABLE</span> <span class="token keyword">IF</span> <span class="token operator">NOT</span> <span class="token keyword">EXISTS</span> dwd<span class="token punctuation">.</span>user_login <span class="token punctuation">(</span>
+  user_id   <span class="token keyword">BIGINT</span><span class="token punctuation">,</span>
+  login_ip  STRING<span class="token punctuation">,</span>
+  device    STRING<span class="token punctuation">,</span>
+  login_ts  <span class="token keyword">BIGINT</span>
+<span class="token punctuation">)</span>
+<span class="token keyword">COMMENT</span> <span class="token string">'用户登录明细'</span>
+<span class="token keyword">ROW</span> FORMAT DELIMITED <span class="token keyword">FIELDS</span> <span class="token keyword">TERMINATED</span> <span class="token keyword">BY</span> <span class="token string">','</span>
+STORED <span class="token keyword">AS</span> TEXTFILE<span class="token punctuation">;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<p>查看结构与元信息的常用命令：</p>
+<pre class="line-numbers language-sql" data-language="sql"><code class="language-sql"><span class="token keyword">DESCRIBE</span> FORMATTED dwd<span class="token punctuation">.</span>user_login<span class="token punctuation">;</span>   <span class="token comment">-- 看表位置、SerDe、存储格式</span>
+<span class="token keyword">SHOW</span> PARTITIONS dwd<span class="token punctuation">.</span>user_login<span class="token punctuation">;</span>      <span class="token comment">-- 列出已有分区</span>
+<span class="token keyword">SHOW</span> <span class="token keyword">CREATE</span> <span class="token keyword">TABLE</span> dwd<span class="token punctuation">.</span>user_login<span class="token punctuation">;</span>    <span class="token comment">-- 打印建表语句</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span></span></code></pre>
+
+<div class="data-grid data-grid-link-table"><div class="grid-header"><div class="grid-cell">对象</div><div class="grid-cell">Hive 中的落地</div><div class="grid-cell">注意点</div></div><div class="grid-row"><div class="grid-cell">数据库</div><div class="grid-cell">Metastore 命名空间 + HDFS 目录</div><div class="grid-cell">库目录只决定新表的默认位置</div></div><div class="grid-row"><div class="grid-cell">表</div><div class="grid-cell">一个 HDFS 目录 + Metastore 元数据</div><div class="grid-cell">内部表删数据，外部表只删元数据</div></div><div class="grid-row"><div class="grid-cell">列</div><div class="grid-cell">元数据里的字段定义</div><div class="grid-cell">分区键、分桶键不能与普通列重复定义</div></div></div>
+
+<h2 id="1-2-分区表：把扫描压到目录级别"><a href="#1-2-分区表：把扫描压到目录级别" class="headerlink" title="1.2 分区表：把扫描压到目录级别"></a>1.2 分区表：把扫描压到目录级别</h2><p>分区（Partition）的本质是<strong>目录</strong>：建表时用 <code>PARTITIONED BY</code> 声明分区键，表目录下按分区值再建一层或多层子目录。查询带分区过滤时，引擎直接只扫对应目录，而不是全表扫描，这叫分区裁剪（Partition Pruning）。</p>
+<pre class="line-numbers language-sql" data-language="sql"><code class="language-sql"><span class="token comment">-- 按日期、渠道两级分区：dt 是一级目录，channel 是二级目录</span>
+<span class="token keyword">CREATE</span> EXTERNAL <span class="token keyword">TABLE</span> ods<span class="token punctuation">.</span>access_log <span class="token punctuation">(</span>
+  ip   STRING<span class="token punctuation">,</span>
+  url  STRING<span class="token punctuation">,</span>
+  uid  STRING
+<span class="token punctuation">)</span>
+PARTITIONED <span class="token keyword">BY</span> <span class="token punctuation">(</span>dt STRING<span class="token punctuation">,</span> channel STRING<span class="token punctuation">)</span>
+STORED <span class="token keyword">AS</span> ORC<span class="token punctuation">;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<p>对应的 HDFS 结构：</p>
+<pre class="line-numbers language-text" data-language="text"><code class="language-text">/warehouse/ods/access_log/
+├── dt=2022-01-06/
+│   ├── channel=app/
+│   └── channel=web/
+└── dt=2022-01-07/
+    ├── channel=app/
+    └── channel=web/<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<p>几条硬规则：</p>
+<ul>
+<li>分区键写在 <code>PARTITIONED BY</code> 里，<strong>不能再出现在前面的列定义中</strong>，否则建表就报重复列。</li>
+<li>分区值来自目录名（<code>dt=2022-01-06</code>），不是文件内容里解析出来的。</li>
+<li>外部系统直接往 HDFS 塞目录时，Metastore 并不知道，需要 <code>MSCK REPAIR TABLE</code> 或 <code>ALTER TABLE ADD PARTITION</code> 补登记。</li>
+</ul>
+<pre class="line-numbers language-sql" data-language="sql"><code class="language-sql"><span class="token comment">-- 批量扫描 HDFS 目录，把缺失的分区补进元数据</span>
+MSCK REPAIR <span class="token keyword">TABLE</span> ods<span class="token punctuation">.</span>access_log<span class="token punctuation">;</span>
+
+<span class="token comment">-- 或手动登记单个分区</span>
+<span class="token keyword">ALTER</span> <span class="token keyword">TABLE</span> ods<span class="token punctuation">.</span>access_log
+  <span class="token keyword">ADD</span> <span class="token keyword">PARTITION</span> <span class="token punctuation">(</span>dt<span class="token operator">=</span><span class="token string">'2022-01-06'</span><span class="token punctuation">,</span> channel<span class="token operator">=</span><span class="token string">'app'</span><span class="token punctuation">)</span>
+  LOCATION <span class="token string">'/warehouse/ods/access_log/dt=2022-01-06/channel=app'</span><span class="token punctuation">;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<h2 id="1-3-分桶表：按哈希切成固定数量文件"><a href="#1-3-分桶表：按哈希切成固定数量文件" class="headerlink" title="1.3 分桶表：按哈希切成固定数量文件"></a>1.3 分桶表：按哈希切成固定数量文件</h2><p>分桶（Bucketing）和分区容易被混为一谈，但两者粒度完全不同：<strong>分区是目录，分桶是文件</strong>。<code>CLUSTERED BY</code> 指定分桶列，按列值哈希取模，把数据分散到固定数量的桶文件里。</p>
+<pre class="line-numbers language-sql" data-language="sql"><code class="language-sql"><span class="token comment">-- 按 user_id 哈希，切成 32 个桶文件</span>
+<span class="token keyword">CREATE</span> <span class="token keyword">TABLE</span> dwd<span class="token punctuation">.</span>order_bucket <span class="token punctuation">(</span>
+  order_id  STRING<span class="token punctuation">,</span>
+  user_id   <span class="token keyword">BIGINT</span><span class="token punctuation">,</span>
+  amount    <span class="token keyword">DOUBLE</span>
+<span class="token punctuation">)</span>
+<span class="token keyword">CLUSTERED</span> <span class="token keyword">BY</span> <span class="token punctuation">(</span>user_id<span class="token punctuation">)</span> <span class="token keyword">INTO</span> <span class="token number">32</span> BUCKETS
+STORED <span class="token keyword">AS</span> ORC<span class="token punctuation">;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<p>分桶带来的两个实际用途：</p>
+<ul>
+<li><strong>抽样查询</strong>：开发调试时不用全表跑，取部分桶即可验证逻辑：</li>
+</ul>
+<pre class="line-numbers language-sql" data-language="sql"><code class="language-sql"><span class="token comment">-- 取第 3 个桶，共 16 桶，等价于抽样约 1/16 的数据</span>
+<span class="token keyword">SELECT</span> <span class="token operator">*</span> <span class="token keyword">FROM</span> dwd<span class="token punctuation">.</span>order_bucket
+TABLESAMPLE <span class="token punctuation">(</span>BUCKET <span class="token number">3</span> <span class="token keyword">OUT</span> <span class="token keyword">OF</span> <span class="token number">16</span> <span class="token keyword">ON</span> user_id<span class="token punctuation">)</span><span class="token punctuation">;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span></span></code></pre>
+
+<ul>
+<li><strong>Join 优化</strong>：两表按同一列、相同桶数分桶后，连接时可以按桶对齐，避免全量 shuffle。</li>
+</ul>
+<div class="data-grid data-grid-link-table"><div class="grid-header"><div class="grid-cell">对比项</div><div class="grid-cell">分区</div><div class="grid-cell">分桶</div></div><div class="grid-row"><div class="grid-cell">落地形态</div><div class="grid-cell">HDFS 子目录</div><div class="grid-cell">目录内的固定数量文件</div></div><div class="grid-row"><div class="grid-cell">划分依据</div><div class="grid-cell">分区键的取值（业务日期、地区）</div><div class="grid-cell">分桶列的哈希取模</div></div><div class="grid-row"><div class="grid-cell">数量上限</div><div class="grid-cell">取决于数据维度，可能很多</div><div class="grid-cell">建表时固定，改桶数要重建表</div></div><div class="grid-row"><div class="grid-cell">主要收益</div><div class="grid-cell">扫描裁剪，少读目录</div><div class="grid-cell">抽样与桶级 Join 优化</div></div></div>
+
+<h2 id="1-4-SerDe-与存储格式"><a href="#1-4-SerDe-与存储格式" class="headerlink" title="1.4 SerDe 与存储格式"></a>1.4 SerDe 与存储格式</h2><p>读文件时，引擎要先把字节解析成行和列，这一步由 SerDe（Serializer &#x2F; Deserializer，序列化&#x2F;反序列化器）完成；文件本身怎么组织，则由存储格式决定。</p>
+<div class="data-grid data-grid-link-table"><div class="grid-header"><div class="grid-cell">存储格式</div><div class="grid-cell">典型 SerDe</div><div class="grid-cell">特点</div><div class="grid-cell">适用场景</div></div><div class="grid-row"><div class="grid-cell">TEXTFILE</div><div class="grid-cell">LazySimpleSerDe</div><div class="grid-cell">纯文本，行存，可读性好，体积大</div><div class="grid-cell">原始日志、临时落盘</div></div><div class="grid-row"><div class="grid-cell">ORC</div><div class="grid-cell">OrcSerde</div><div class="grid-cell">列存，带索引与压缩，Hive 生态首选</div><div class="grid-cell">数仓明细与汇总层</div></div><div class="grid-row"><div class="grid-cell">Parquet</div><div class="grid-cell">ParquetHiveSerDe</div><div class="grid-cell">列存，跨引擎兼容性好</div><div class="grid-cell">Hive 与 Spark 共用的数据</div></div><div class="grid-row"><div class="grid-cell">SequenceFile</div><div class="grid-cell">自序列化二进制</div><div class="grid-cell">键值对二进制文件</div><div class="grid-cell">老链路遗留，新表少用</div></div></div>
+
+<p>一个 ORC 外部表的完整定义：</p>
+<pre class="line-numbers language-sql" data-language="sql"><code class="language-sql"><span class="token keyword">CREATE</span> EXTERNAL <span class="token keyword">TABLE</span> dwd<span class="token punctuation">.</span>user_login_orc <span class="token punctuation">(</span>
+  user_id  <span class="token keyword">BIGINT</span><span class="token punctuation">,</span>
+  login_ip STRING<span class="token punctuation">,</span>
+  device   STRING<span class="token punctuation">,</span>
+  login_ts <span class="token keyword">BIGINT</span>
+<span class="token punctuation">)</span>
+PARTITIONED <span class="token keyword">BY</span> <span class="token punctuation">(</span>dt STRING<span class="token punctuation">)</span>
+<span class="token keyword">ROW</span> FORMAT SERDE <span class="token string">'org.apache.hadoop.hive.ql.io.orc.OrcSerde'</span>
+STORED <span class="token keyword">AS</span> ORC
+LOCATION <span class="token string">'/warehouse/dwd/user_login_orc'</span><span class="token punctuation">;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<p>选型结论：<strong>离线数仓默认 ORC，跨引擎共享选 Parquet，原始文本先落 TEXTFILE 再转列存</strong>。行存格式在列裁剪和压缩上天生吃亏，不要在中间层沿用。</p>
+<h2 id="1-5-表属性与常见约束"><a href="#1-5-表属性与常见约束" class="headerlink" title="1.5 表属性与常见约束"></a>1.5 表属性与常见约束</h2><p><code>TBLPROPERTIES</code> 用来挂元信息，常见用途包括注释、数据源标记、压缩与事务属性：</p>
+<pre class="line-numbers language-sql" data-language="sql"><code class="language-sql"><span class="token keyword">ALTER</span> <span class="token keyword">TABLE</span> dwd<span class="token punctuation">.</span>order_bucket <span class="token keyword">SET</span> TBLPROPERTIES <span class="token punctuation">(</span>
+  <span class="token string">'owner'</span> <span class="token operator">=</span> <span class="token string">'dwd-team'</span><span class="token punctuation">,</span>
+  <span class="token string">'etl'</span>   <span class="token operator">=</span> <span class="token string">'daily'</span>
+<span class="token punctuation">)</span><span class="token punctuation">;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span></span></code></pre>
+
+<p>容易踩的点：</p>
+<ul>
+<li><strong>分区键重复定义</strong>：把 <code>dt</code> 同时写进列列表和 <code>PARTITIONED BY</code>，建表直接失败。</li>
+<li><strong>分桶数拍脑袋</strong>：桶数要和文件大小配合，单桶文件过小会退化成小文件问题；桶数不是越多越好。</li>
+<li><strong>直接传文件不登记分区</strong>：外部表目录手动建好后忘了 <code>MSCK REPAIR TABLE</code>，查询结果为空但表看着正常。</li>
+<li><strong>格式混用</strong>：同一表内混入不同 SerDe 的文件，解析会报序列化异常；转格式时整表重建。</li>
+<li><strong>分区键高基数</strong>：用用户 ID 这种高基字段做分区，目录数量失控，元数据会被撑爆，这类字段应该走分桶。</li>
+</ul>
+<h2 id="1-6-官方资料"><a href="#1-6-官方资料" class="headerlink" title="1.6 官方资料"></a>1.6 官方资料</h2><ul>
+<li>LanguageManual DDL：<a target="_blank" rel="noopener" href="https://cwiki.apache.org/confluence/display/Hive/LanguageManual+DDL">https://cwiki.apache.org/confluence/display/Hive/LanguageManual+DDL</a></li>
+<li>Bucketed Tables：<a target="_blank" rel="noopener" href="https://cwiki.apache.org/confluence/display/Hive/LanguageManual+DDL+BucketedTables">https://cwiki.apache.org/confluence/display/Hive/LanguageManual+DDL+BucketedTables</a></li>
+<li>SerDe 说明：<a target="_blank" rel="noopener" href="https://cwiki.apache.org/confluence/display/Hive/SerDe">https://cwiki.apache.org/confluence/display/Hive/SerDe</a></li>
+<li>ORC 格式文档：<a target="_blank" rel="noopener" href="https://orc.apache.org/">https://orc.apache.org/</a></li>
+</ul>
+<h2 id="1-7-清单"><a href="#1-7-清单" class="headerlink" title="1.7 清单"></a>1.7 清单</h2><ol>
+<li>分区是目录，按分区键值建子目录，查询靠分区裁剪少扫数据；分桶是文件，按哈希取模切成固定数量桶</li>
+<li>分区键、分桶键不能与普通列重复定义；外部表手动建目录后要 <code>MSCK REPAIR TABLE</code> 补登记</li>
+<li>分桶支持 <code>TABLESAMPLE</code> 抽样，同列同桶数两表 Join 可按桶对齐</li>
+<li>存储格式：TEXTFILE 行存适合原始日志，ORC 列存适合数仓内部，Parquet 适合跨引擎共享</li>
+<li>分区键选低基业务维度，高基字段走分桶；桶数要结合文件大小评估，避免制造小文件</li>
+<li>表属性用 <code>TBLPROPERTIES</code> 挂载，转存储格式需要整表重建，不能混写</li>
+</ol>
+</div>
+
+  <div class="mb-foot">
+    <a href="/phone/">返回手机首页</a>
+    <a href="/phone/tags/">星迹索引</a>
+  </div>
+</div>
+
+
+<script>
+  /* 作用：懒加载本地 mermaid 库；无 mermaid 代码块时不加载 */
+  function loadLocalMermaid(){
+    return new Promise(function(resolve, reject){
+      if(window.mermaid) return resolve(window.mermaid);
+      var s = document.createElement('script');
+      s.src = '/js/third-party/mermaid/mermaid.min.js?v=10';
+      s.onload = function(){ resolve(window.mermaid); };
+      s.onerror = function(){ reject(new Error('mermaid local load failed')); };
+      document.head.appendChild(s);
+    });
+  }
+
+  /* 作用：把 ```mermaid 代码块替换成 SVG 图（手机端字号略小、图可横向滚动） */
+  async function renderMermaidDiagram(){
+    var blocks = document.querySelectorAll('pre[class*="language-mermaid"]');
+    if(!blocks.length) return;
+    var mermaid;
+    try { mermaid = await loadLocalMermaid(); }
+    catch(e){ console.warn('[mermaid] 本地库加载失败：', e); return; }
+
+    mermaid.initialize({
+      startOnLoad: false,
+      theme: 'base',
+      themeVariables: {
+        darkMode: true,
+        background: 'transparent',
+        fontFamily: '"Microsoft YaHei", "PingFang SC", "Segoe UI", sans-serif',
+        fontSize: '12px',
+        primaryColor: '#062f3d',
+        primaryTextColor: '#d6f6ff',
+        primaryBorderColor: '#00eeff',
+        secondaryColor: '#04222d',
+        tertiaryColor: '#04222d',
+        mainBkg: '#062f3d',
+        nodeBorder: '#00eeff',
+        clusterBkg: '#02161f',
+        clusterBorder: '#00eeff55',
+        lineColor: '#00eeff',
+        textColor: '#c0e8ff',
+        edgeLabelBackground: '#02161f'
+      },
+      flowchart: { curve: 'basis', useMaxWidth: false, htmlLabels: false, nodeSpacing: 30, rankSpacing: 40, padding: 10 }
+    });
+
+    var targets = [];
+    blocks.forEach(function(el){
+      var codeEl = el.querySelector('code');
+      if(!codeEl) return;
+      var div = document.createElement('div');
+      div.className = 'mermaid';
+      div.textContent = codeEl.textContent;
+      el.parentNode.replaceChild(div, el);
+      targets.push(div);
+    });
+    if(!targets.length) return;
+    try { await mermaid.run({ nodes: targets }); }
+    catch(e){ console.warn('[mermaid] 渲染失败：', e); }
+  }
+  /* 作用：多次触发兜底（延迟重试 + DOM 变化），防止某次时机没跑到导致图表留在代码块 */
+  var mmBusy = false;
+  function scheduleMermaid(){
+    if(mmBusy) return;
+    mmBusy = true;
+    renderMermaidDiagram().then(function(){ mmBusy = false; }, function(){ mmBusy = false; });
+  }
+  scheduleMermaid();
+  window.addEventListener('load', scheduleMermaid);
+  [1000, 3000, 8000].forEach(function(ms){ setTimeout(scheduleMermaid, ms); });
+  if(document.readyState !== 'loading') scheduleMermaid();
+  if(window.MutationObserver){
+    var mmTimer = null;
+    var mmObserver = new MutationObserver(function(){
+      clearTimeout(mmTimer);
+      mmTimer = setTimeout(scheduleMermaid, 400);
+    });
+    mmObserver.observe(document.querySelector('.mb-article') || document.body, { childList: true, subtree: true });
+  }
+</script>
+</body>
+</html>

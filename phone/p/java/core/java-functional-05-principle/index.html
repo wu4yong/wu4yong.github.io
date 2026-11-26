@@ -1,0 +1,359 @@
+<!--
+  ============================================
+  手机端 · 文章原文页
+  文件：phone/post.njk
+  适用终端：手机端（路由 /phone/p/<slug>/，由 scripts/phone-routes.js 生成）
+  作用：手机阅读单篇文章；单列布局、无侧栏无雷达，替代电脑端 post.njk
+        数据由生成期算好：page.item = { title, dateStr, content, cats, tags }
+  样式依赖：source/css/theme/phone/common.css、source/css/theme/phone/list.css
+  组件依赖：phone/_components/Particles.njk
+  最后修改：2026-11-11
+  ============================================
+-->
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="color-scheme" content="dark">
+  <meta name="theme-color" content="#020817">
+  <!-- 首帧兜底：浏览器默认画布是白的，样式未解析前会闪一下白。这条规则先锁死深空底色 -->
+  <style>html{background-color:#020817}</style>
+  <title>Java 函数式编程（五）实现原理 - 时空秘境</title>
+  <!-- 手机端样式：基础 + 列表/正文，外链引入（源文件 source/css/theme/phone/） -->
+  <link rel="stylesheet" href="/css/theme/phone/common.css">
+  <link rel="stylesheet" href="/css/theme/phone/list.css">
+<meta name="generator" content="Hexo 8.1.2"></head>
+<body>
+<div class="mb-shell">
+  <!--
+  ============================================
+  手机端星空粒子组件
+  文件：Particles.njk
+  适用终端：手机端
+  作用：Particles.njk 的手机端副本（nunjucks 子目录 include 取不到上级）
+        参数与电脑端 _components/Particles.njk 保持一致：
+        粒子 95 / 连线 118px / opacity 0.32，外加星座层与零星闪烁层
+  最后修改：2026-11-12
+  ============================================
+--><!-- z-index 必须是 0：负层级会被 body 不透明背景盖住，粒子在跑却看不见 -->
+<div id="particles" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 0; pointer-events: none;"></div>
+<!-- 星座层（与首页同一套：随机零星散布星座图形 + 偶尔闪烁的小星） -->
+<div id="constellations" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 1; pointer-events: none;" aria-hidden="true"></div>
+<script src="/js/particles.min.js"></script>
+<script>
+particlesJS("particles", {
+  particles: {
+    number: {
+      value: 95,
+      density: {
+        enable: true,
+        value_area: 800
+      }
+    },
+    color: {
+      value: "#00eeff"
+    },
+    shape: {
+      type: "circle",
+      stroke: {
+        width: 0,
+        color: "#000000"
+      }
+    },
+    opacity: {
+      value: 0.6,
+      random: true,
+      anim: {
+        enable: true,
+        speed: 0.5,
+        opacity_min: 0.1,
+        sync: false
+      }
+    },
+    size: {
+      value: 3,
+      random: true,
+      anim: {
+        enable: true,
+        speed: 2,
+        size_min: 0.1,
+        sync: false
+      }
+    },
+    line_linked: {
+      enable: true,
+      distance: 118,
+      color: "#00eeff",
+      opacity: 0.32,
+      width: 1
+    },
+    move: {
+      enable: true,
+      speed: 0.8,
+      direction: "none",
+      random: true,
+      straight: false,
+      out_mode: "out",
+      bounce: false,
+      attract: {
+        enable: true,
+        rotateX: 600,
+        rotateY: 1200
+      }
+    }
+  },
+  interactivity: {
+    detect_on: "canvas",
+    events: {
+      onhover: {
+        enable: true,
+        mode: "grab"       // 手指按住时粒子聚集
+      },
+      onclick: {
+        enable: true,
+        mode: "push"       // 点击时产生新粒子
+      },
+      resize: true
+    },
+    modes: {
+      grab: {
+        distance: 200,
+        line_linked: {
+          opacity: 1
+        }
+      },
+      push: {
+        particles_nb: 6
+      }
+    }
+  },
+  retina_detect: true
+});
+</script>
+<!-- 星座 + 零星闪烁层：与电脑端共用同一份绘制脚本 -->
+<script src="/js/theme/home/starfield.js"></script>
+
+
+  <div class="mb-top">
+    <a class="mb-back" href="/phone/">← 返回手机首页</a>
+    <span class="mb-sub" style="margin:0">2022-02-06</span>
+  </div>
+
+  <h1 class="mb-title">Java 函数式编程（五）实现原理</h1>
+  <div class="mb-sub">
+    分类：java · core
+     ｜ 标签：Java
+  </div>
+
+  <div class="mb-article"><div class="essay-banner essay-java"></div>
+
+<h1 id="实现原理：字节码、Sink-与切分"><a href="#实现原理：字节码、Sink-与切分" class="headerlink" title="实现原理：字节码、Sink 与切分"></a><strong>实现原理：字节码、Sink 与切分</strong></h1><p>会写之后，值得知道它到底怎么跑。这一篇从 <code>javap</code> 的字节码开始，讲清 Lambda 为什么不是匿名类、方法引用绑的是什么、Stream 的惰性靠什么实现、并行又凭什么叫”可切分”。参考官方文档：<code>LambdaMetafactory</code> <a target="_blank" rel="noopener" href="https://docs.oracle.com/javase/8/docs/api/java/lang/invoke/LambdaMetafactory.html">https://docs.oracle.com/javase/8/docs/api/java/lang/invoke/LambdaMetafactory.html</a>、<code>Spliterator</code> <a target="_blank" rel="noopener" href="https://docs.oracle.com/javase/8/docs/api/java/util/Spliterator.html">https://docs.oracle.com/javase/8/docs/api/java/util/Spliterator.html</a>、<code>java.util.stream</code> 包说明。</p>
+<p><img src="https://wu4yong.github.io/starry-images/assets/img/java/functional/java-functional-05-principle.webp" alt="实现原理的三个现场：invokedynamic、Sink 流水线、ForkJoin 切分树"></p>
+<p><em>实现原理的三个现场：invokedynamic、Sink 流水线、ForkJoin 切分树</em></p>
+<h2 id="1-1-先看字节码：Lambda-长什么样"><a href="#1-1-先看字节码：Lambda-长什么样" class="headerlink" title="1.1 先看字节码：Lambda 长什么样"></a>1.1 先看字节码：Lambda 长什么样</h2><p>写一个最简单的例子，编译后反汇编：</p>
+<pre class="line-numbers language-java" data-language="java"><code class="language-java"><span class="token keyword">public</span> <span class="token keyword">class</span> <span class="token class-name">Demo</span> <span class="token punctuation">&#123;</span>
+    <span class="token keyword">public</span> <span class="token keyword">static</span> <span class="token keyword">void</span> <span class="token function">main</span><span class="token punctuation">(</span><span class="token class-name">String</span><span class="token punctuation">[</span><span class="token punctuation">]</span> args<span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+        <span class="token class-name">Runnable</span> r <span class="token operator">=</span> <span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token operator">-></span> <span class="token class-name">System</span><span class="token punctuation">.</span>out<span class="token punctuation">.</span><span class="token function">println</span><span class="token punctuation">(</span><span class="token string">"hi"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+        r<span class="token punctuation">.</span><span class="token function">run</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token punctuation">&#125;</span>
+<span class="token punctuation">&#125;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<pre class="line-numbers language-bash" data-language="bash"><code class="language-bash">javac Demo.java <span class="token operator">&amp;&amp;</span> javap <span class="token parameter variable">-c</span> <span class="token parameter variable">-p</span> Demo.class<span aria-hidden="true" class="line-numbers-rows"><span></span></span></code></pre>
+
+<p>关键几行（省略无关指令）：</p>
+<pre class="line-numbers language-text" data-language="text"><code class="language-text">0: invokedynamic #2,  0     // InvokeDynamic #0:run:()Ljava/lang/Runnable;
+5: astore_1
+6: aload_1
+7: invokeinterface #3,  1   // InterfaceMethod java/lang/Runnable.run:()V
+
+private static void lambda$main$0();     // 合成方法，Lambda 体在这里<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<p>两件事值得记住：</p>
+<ol>
+<li><strong>Lambda 体被编译成一个 <code>private static</code> 合成方法</strong>（这里是 <code>lambda$main$0</code>）</li>
+<li>调用点是一条 <code>invokedynamic</code>，而不是 <code>new Demo$1</code> 这种匿名类</li>
+</ol>
+<p>所以 Lambda <strong>不产生额外的 class 文件</strong>，这是它比匿名内部类轻的根本原因。</p>
+<h2 id="1-2-invokedynamic-与-LambdaMetafactory"><a href="#1-2-invokedynamic-与-LambdaMetafactory" class="headerlink" title="1.2 invokedynamic 与 LambdaMetafactory"></a>1.2 invokedynamic 与 LambdaMetafactory</h2><p><code>invokedynamic</code> 的语义是”<strong>首次执行时再决定怎么调用</strong>“。引导方法（bootstrap method）由编译器写进常量池，对 Lambda 而言固定是 <code>LambdaMetafactory</code>：</p>
+<pre class="line-numbers language-text" data-language="text"><code class="language-text">BootstrapMethods:
+  0: #55 REF_invokeStatic java/lang/invoke/LambdaMetafactory.metafactory:
+     (Ljava/lang/invoke/MethodHandles$Lookup;Ljava/lang/String;
+      Ljava/lang/invoke/MethodType;Ljava/lang/invoke/MethodType;
+      Ljava/lang/invoke/MethodHandle;Ljava/lang/invoke/MethodType;)
+      Ljava/lang/invoke/CallSite;<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<p><code>metafactory</code> 干的活：<strong>在运行时生成一个实现了目标接口的类</strong>（只在内存里，不落盘），把 <code>apply/run/accept</code> 转发到那个合成方法。</p>
+<div class="data-grid data-grid-link-table"><div class="grid-header"><div class="grid-cell">阶段</div><div class="grid-cell">发生时间</div><div class="grid-cell">做什么</div></div><div class="grid-row"><div class="grid-cell">编译</div><div class="grid-cell"><code>javac</code></div><div class="grid-cell">生成合成方法 + 一条 <code>invokedynamic</code> + 引导方法常量</div></div><div class="grid-row"><div class="grid-cell">首次调用</div><div class="grid-cell">运行时</div><div class="grid-cell">链接：生成代理类、绑定 <code>MethodHandle</code>、生成 <code>CallSite</code></div></div><div class="grid-row"><div class="grid-cell">后续调用</div><div class="grid-cell">运行时</div><div class="grid-cell">直接走缓存的 <code>CallSite</code>，不再链接</div></div></div>
+
+<p>想亲眼看那个代理类，加启动参数即可：</p>
+<pre class="line-numbers language-bash" data-language="bash"><code class="language-bash"><span class="token function">java</span> <span class="token parameter variable">-Djdk.internal.lambda.dumpProxyClasses</span><span class="token operator">=</span>/tmp/dump Demo
+<span class="token comment"># 会看到 /tmp/dump/Demo$$Lambda$1/xxx.class</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span></span></code></pre>
+
+<h2 id="1-3-非捕获-Lambda-会被复用"><a href="#1-3-非捕获-Lambda-会被复用" class="headerlink" title="1.3 非捕获 Lambda 会被复用"></a>1.3 非捕获 Lambda 会被复用</h2><p>这一点和直觉相反：<strong>不捕获任何外部变量的 Lambda，JVM 可以复用同一个实例</strong>。</p>
+<pre class="line-numbers language-java" data-language="java"><code class="language-java"><span class="token class-name">Runnable</span> a <span class="token operator">=</span> <span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token operator">-></span> <span class="token class-name">System</span><span class="token punctuation">.</span>out<span class="token punctuation">.</span><span class="token function">println</span><span class="token punctuation">(</span><span class="token string">"x"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>   <span class="token comment">// 不捕获</span>
+<span class="token class-name">Runnable</span> b <span class="token operator">=</span> <span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token operator">-></span> <span class="token class-name">System</span><span class="token punctuation">.</span>out<span class="token punctuation">.</span><span class="token function">println</span><span class="token punctuation">(</span><span class="token string">"x"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token comment">// a 与 b 可能是同一个对象（实现类被缓存）</span>
+
+<span class="token keyword">int</span> base <span class="token operator">=</span> <span class="token number">1</span><span class="token punctuation">;</span>
+<span class="token class-name">Function</span><span class="token generics"><span class="token punctuation">&lt;</span><span class="token class-name">Integer</span><span class="token punctuation">,</span> <span class="token class-name">Integer</span><span class="token punctuation">></span></span> c <span class="token operator">=</span> x <span class="token operator">-></span> x <span class="token operator">+</span> base<span class="token punctuation">;</span>  <span class="token comment">// 捕获了 base</span>
+<span class="token class-name">Function</span><span class="token generics"><span class="token punctuation">&lt;</span><span class="token class-name">Integer</span><span class="token punctuation">,</span> <span class="token class-name">Integer</span><span class="token punctuation">></span></span> d <span class="token operator">=</span> x <span class="token operator">-></span> x <span class="token operator">+</span> base<span class="token punctuation">;</span>
+<span class="token comment">// c 与 d 一定是不同实例：捕获值不同</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<p>由此带来两个实践结论：</p>
+<ul>
+<li>非捕获 Lambda 没有”每次新建对象”的开销，可以放心在热路径用</li>
+<li>捕获型 Lambda 每次求值都要新建实例，如果放在循环里创建、又要长期持有，就会有分配压力</li>
+</ul>
+<h2 id="1-4-方法引用绑的是什么"><a href="#1-4-方法引用绑的是什么" class="headerlink" title="1.4 方法引用绑的是什么"></a>1.4 方法引用绑的是什么</h2><p><code>String::length</code> 和 <code>s -&gt; s.length()</code> 编译结果类似，但方法引用可以<strong>直接绑定已有方法</strong>，不必生成一个转发用的合成方法：</p>
+<pre class="line-numbers language-java" data-language="java"><code class="language-java"><span class="token class-name">Function</span><span class="token generics"><span class="token punctuation">&lt;</span><span class="token class-name">String</span><span class="token punctuation">,</span> <span class="token class-name">Integer</span><span class="token punctuation">></span></span> f1 <span class="token operator">=</span> <span class="token class-name">String</span><span class="token operator">::</span><span class="token function">length</span><span class="token punctuation">;</span>   <span class="token comment">// 直接绑定</span>
+<span class="token class-name">Function</span><span class="token generics"><span class="token punctuation">&lt;</span><span class="token class-name">String</span><span class="token punctuation">,</span> <span class="token class-name">Integer</span><span class="token punctuation">></span></span> f2 <span class="token operator">=</span> s <span class="token operator">-></span> s<span class="token punctuation">.</span><span class="token function">length</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>  <span class="token comment">// 生成 lambda$... 合成方法</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span></span></code></pre>
+
+<p>绑定之物是 <code>MethodHandle</code>（<code>REF_invokeVirtual java/lang/String.length</code>）。这也解释了方法引用为什么更快一点：<strong>少一层转发</strong>。而 <code>System.out::println</code> 属于”绑定到已存在对象”，会把 <code>System.out</code> 这个接收者一并捕获进 <code>CallSite</code>。</p>
+<h2 id="1-5-闭包捕获：编译成参数，不是字段"><a href="#1-5-闭包捕获：编译成参数，不是字段" class="headerlink" title="1.5 闭包捕获：编译成参数，不是字段"></a>1.5 闭包捕获：编译成参数，不是字段</h2><pre class="line-numbers language-java" data-language="java"><code class="language-java"><span class="token keyword">int</span> base <span class="token operator">=</span> <span class="token number">10</span><span class="token punctuation">;</span>
+<span class="token class-name">Function</span><span class="token generics"><span class="token punctuation">&lt;</span><span class="token class-name">Integer</span><span class="token punctuation">,</span> <span class="token class-name">Integer</span><span class="token punctuation">></span></span> f <span class="token operator">=</span> x <span class="token operator">-></span> x <span class="token operator">+</span> base<span class="token punctuation">;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span></span></code></pre>
+
+<p>对应的合成方法签名是：</p>
+<pre class="line-numbers language-java" data-language="java"><code class="language-java"><span class="token keyword">private</span> <span class="token keyword">static</span> <span class="token class-name">Integer</span> lambda$main$<span class="token function">1</span><span class="token punctuation">(</span><span class="token keyword">int</span> base<span class="token punctuation">,</span> <span class="token class-name">Integer</span> x<span class="token punctuation">)</span> <span class="token punctuation">&#123;</span> <span class="token keyword">return</span> x <span class="token operator">+</span> base<span class="token punctuation">;</span> <span class="token punctuation">&#125;</span><span aria-hidden="true" class="line-numbers-rows"><span></span></span></code></pre>
+
+<p>外层变量 <code>base</code> 变成了<strong>方法的第一个参数</strong>（部分实现会放在合成类的字段里，取决于捕获来源与 JVM 版本，但语义一致：<strong>捕获即复制值</strong>）。这也解释了那条编译规则：捕获的局部变量必须 effectively final——因为复制的是值，后续再改就会”两份不一致”。</p>
+<h2 id="1-6-Stream-的流水线结构"><a href="#1-6-Stream-的流水线结构" class="headerlink" title="1.6 Stream 的流水线结构"></a>1.6 Stream 的流水线结构</h2><p><code>list.stream().filter(...).map(...).collect(...)</code> 在内存里是一条双向链表：</p>
+<div class="data-grid data-grid-link-table"><div class="grid-header"><div class="grid-cell">节点</div><div class="grid-cell">类型</div><div class="grid-cell">职责</div></div><div class="grid-row"><div class="grid-cell">Head</div><div class="grid-cell"><code>ReferencePipeline.Head</code></div><div class="grid-cell">持有源头（集合、Spliterator），提供 <code>spliterator</code></div></div><div class="grid-row"><div class="grid-cell">中间 stage</div><div class="grid-cell"><code>StatelessOp</code> &#x2F; <code>StatefulOp</code></div><div class="grid-cell">记录操作与上游，生成对应 <code>Sink</code></div></div><div class="grid-row"><div class="grid-cell">终止</div><div class="grid-cell"><code>TerminalOp</code></div><div class="grid-cell">触发 <code>evaluate</code>，把 <code>Sink</code> 链串起来灌数据</div></div></div>
+
+<p>核心对象是 <code>Sink</code>（继承 <code>Consumer</code>），三段式协议：</p>
+<pre class="line-numbers language-java" data-language="java"><code class="language-java"><span class="token keyword">interface</span> <span class="token class-name">Sink</span><span class="token generics"><span class="token punctuation">&lt;</span><span class="token class-name">T</span><span class="token punctuation">></span></span> <span class="token keyword">extends</span> <span class="token class-name">Consumer</span><span class="token generics"><span class="token punctuation">&lt;</span><span class="token class-name">T</span><span class="token punctuation">></span></span> <span class="token punctuation">&#123;</span>
+    <span class="token keyword">default</span> <span class="token keyword">void</span> <span class="token function">begin</span><span class="token punctuation">(</span><span class="token keyword">long</span> size<span class="token punctuation">)</span> <span class="token punctuation">&#123;</span> <span class="token punctuation">&#125;</span>
+    <span class="token keyword">void</span> <span class="token function">accept</span><span class="token punctuation">(</span><span class="token class-name">T</span> t<span class="token punctuation">)</span><span class="token punctuation">;</span>              <span class="token comment">// 处理一个元素</span>
+    <span class="token keyword">default</span> <span class="token keyword">void</span> <span class="token function">end</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">&#123;</span> <span class="token punctuation">&#125;</span>
+<span class="token punctuation">&#125;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<p>终止操作触发时，每个 stage 提供一个 <code>Sink</code>，串成 <code>A -&gt; B -&gt; C</code>，然后源头逐个 <code>accept</code> 下去——<strong>数据只走一遍，不是每个操作各遍历一次</strong>。这就是 Stream 与”多次 for 循环”的根本差别。</p>
+<p><code>peek</code> 的实现也由此而来：它只是插入一个”顺手打印再转发”的 <code>Sink</code>，转发没被调用（没有终止操作），打印自然不发生。</p>
+<h2 id="1-7-惰性与短路怎么实现"><a href="#1-7-惰性与短路怎么实现" class="headerlink" title="1.7 惰性与短路怎么实现"></a>1.7 惰性与短路怎么实现</h2><ul>
+<li><strong>惰性</strong>：中间操作只构造 stage，不产生 <code>Sink</code> 链，也没有数据流动</li>
+<li><strong>短路</strong>：<code>limit</code>、<code>findFirst</code>、<code>anyMatch</code> 的 <code>Sink</code> 在处理完所需元素后返回 <code>false</code>（<code>Sink</code> 接口用 <code>boolean</code> 值传递”还要不要继续”），上游据此停止灌数据</li>
+</ul>
+<pre class="line-numbers language-java" data-language="java"><code class="language-java"><span class="token comment">// 只处理前 3 个元素，后面的 map 一次都不会执行</span>
+<span class="token class-name">Stream</span><span class="token punctuation">.</span><span class="token function">of</span><span class="token punctuation">(</span><span class="token number">1</span><span class="token punctuation">,</span> <span class="token number">2</span><span class="token punctuation">,</span> <span class="token number">3</span><span class="token punctuation">,</span> <span class="token number">4</span><span class="token punctuation">,</span> <span class="token number">5</span><span class="token punctuation">)</span>
+      <span class="token punctuation">.</span><span class="token function">map</span><span class="token punctuation">(</span>x <span class="token operator">-></span> <span class="token punctuation">&#123;</span> <span class="token class-name">System</span><span class="token punctuation">.</span>out<span class="token punctuation">.</span><span class="token function">println</span><span class="token punctuation">(</span><span class="token string">"map "</span> <span class="token operator">+</span> x<span class="token punctuation">)</span><span class="token punctuation">;</span> <span class="token keyword">return</span> x<span class="token punctuation">;</span> <span class="token punctuation">&#125;</span><span class="token punctuation">)</span>
+      <span class="token punctuation">.</span><span class="token function">limit</span><span class="token punctuation">(</span><span class="token number">3</span><span class="token punctuation">)</span>
+      <span class="token punctuation">.</span><span class="token function">forEach</span><span class="token punctuation">(</span>x <span class="token operator">-></span> <span class="token punctuation">&#123;</span> <span class="token punctuation">&#125;</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token comment">// 输出：map 1 / map 2 / map 3</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<p>注意 <code>limit</code> 位置：放在 <code>map</code> 之前，<code>map</code> 也只会跑 3 次；放错位置就白算。</p>
+<h2 id="1-8-Spliterator：并行的物理基础"><a href="#1-8-Spliterator：并行的物理基础" class="headerlink" title="1.8 Spliterator：并行的物理基础"></a>1.8 Spliterator：并行的物理基础</h2><p>并行能力来自 <code>Spliterator</code>（splitable iterator），它比 <code>Iterator</code> 多两个方法：</p>
+<pre class="line-numbers language-java" data-language="java"><code class="language-java"><span class="token keyword">boolean</span> <span class="token function">tryAdvance</span><span class="token punctuation">(</span><span class="token class-name">Consumer</span><span class="token generics"><span class="token punctuation">&lt;</span><span class="token operator">?</span> <span class="token keyword">super</span> <span class="token class-name">T</span><span class="token punctuation">></span></span> action<span class="token punctuation">)</span><span class="token punctuation">;</span>   <span class="token comment">// 消费一个</span>
+<span class="token class-name">Spliterator</span><span class="token generics"><span class="token punctuation">&lt;</span><span class="token class-name">T</span><span class="token punctuation">></span></span> <span class="token function">trySplit</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>                        <span class="token comment">// 切一半给自己，一半交出去</span>
+<span class="token keyword">long</span> <span class="token function">estimateSize</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>                              <span class="token comment">// 估算剩余数量</span>
+<span class="token keyword">int</span> <span class="token function">characteristics</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>                            <span class="token comment">// 特征位</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span></span></code></pre>
+
+<div class="data-grid data-grid-link-table"><div class="grid-header"><div class="grid-cell">特征位</div><div class="grid-cell">含义</div><div class="grid-cell">对流水线的影响</div></div><div class="grid-row"><div class="grid-cell"><code>ORDERED</code></div><div class="grid-cell">有序</div><div class="grid-cell">并行 <code>findFirst</code> 更贵</div></div><div class="grid-row"><div class="grid-cell"><code>SORTED</code></div><div class="grid-cell">已排序</div><div class="grid-cell">可省去 <code>sorted</code> 的开销</div></div><div class="grid-row"><div class="grid-cell"><code>DISTINCT</code></div><div class="grid-cell">元素唯一</div><div class="grid-cell"><code>distinct</code> 可被短路优化</div></div><div class="grid-row"><div class="grid-cell"><code>SIZED</code></div><div class="grid-cell">有确切大小</div><div class="grid-cell"><code>count</code> 直接返回，不遍历</div></div><div class="grid-row"><div class="grid-cell"><code>IMMUTABLE</code> &#x2F; <code>CONCURRENT</code></div><div class="grid-cell">不可变 &#x2F; 支持并发</div><div class="grid-cell">决定能否免锁处理</div></div></div>
+
+<p>并行执行时，<code>ForkJoin</code> 用 <code>trySplit</code> 递归对半切，切到阈值以下交给工作线程，最后合并结果。所以：</p>
+<ul>
+<li><code>ArrayList</code> 的 <code>Spliterator</code> 基于数组下标，<code>trySplit</code> 只是算个中点，几乎零成本</li>
+<li><code>LinkedList</code> 只能顺序遍历，切分要走到中点，代价高，<code>parallelStream</code> 常常更慢</li>
+<li><code>Stream.iterate</code> 的 <code>trySplit</code> 在 Java 8 里基本不可用（无法高效切分）</li>
+</ul>
+<p>这就是”并行前先看源”的物理原因，而不是经验之谈。</p>
+<h2 id="1-9-清单"><a href="#1-9-清单" class="headerlink" title="1.9 清单"></a>1.9 清单</h2><ol>
+<li>Lambda 编译成一条 <code>invokedynamic</code> + 一个 <code>private static</code> 合成方法，不产生额外 class</li>
+<li>链接发生在首次调用，之后走 <code>CallSite</code> 缓存，可用 <code>-Djdk.internal.lambda.dumpProxyClasses</code> 观察代理类</li>
+<li>非捕获 Lambda 可能被复用同一实例，捕获型每次求值新建</li>
+<li>方法引用直接绑 <code>MethodHandle</code>，比 Lambda 少一层合成方法转发</li>
+<li>闭包捕获是把外部变量当作合成方法的参数复制进去，所以必须 effectively final</li>
+<li>Stream 是一条 stage 链表 + 一条 <code>Sink</code> 链，数据只走一遍</li>
+<li>惰性 &#x3D; 中间操作只建 stage；短路 &#x3D; <code>Sink</code> 返回”不再需要”</li>
+<li><code>limit</code> 尽量放在 <code>map</code> 之前，让后面的转换少做</li>
+<li>并行靠 <code>Spliterator.trySplit</code> 递归切分，源的切分成本决定并行是否有收益</li>
+</ol>
+</div>
+
+  <div class="mb-foot">
+    <a href="/phone/">返回手机首页</a>
+    <a href="/phone/tags/">星迹索引</a>
+  </div>
+</div>
+
+
+<script>
+  /* 作用：懒加载本地 mermaid 库；无 mermaid 代码块时不加载 */
+  function loadLocalMermaid(){
+    return new Promise(function(resolve, reject){
+      if(window.mermaid) return resolve(window.mermaid);
+      var s = document.createElement('script');
+      s.src = '/js/third-party/mermaid/mermaid.min.js?v=10';
+      s.onload = function(){ resolve(window.mermaid); };
+      s.onerror = function(){ reject(new Error('mermaid local load failed')); };
+      document.head.appendChild(s);
+    });
+  }
+
+  /* 作用：把 ```mermaid 代码块替换成 SVG 图（手机端字号略小、图可横向滚动） */
+  async function renderMermaidDiagram(){
+    var blocks = document.querySelectorAll('pre[class*="language-mermaid"]');
+    if(!blocks.length) return;
+    var mermaid;
+    try { mermaid = await loadLocalMermaid(); }
+    catch(e){ console.warn('[mermaid] 本地库加载失败：', e); return; }
+
+    mermaid.initialize({
+      startOnLoad: false,
+      theme: 'base',
+      themeVariables: {
+        darkMode: true,
+        background: 'transparent',
+        fontFamily: '"Microsoft YaHei", "PingFang SC", "Segoe UI", sans-serif',
+        fontSize: '12px',
+        primaryColor: '#062f3d',
+        primaryTextColor: '#d6f6ff',
+        primaryBorderColor: '#00eeff',
+        secondaryColor: '#04222d',
+        tertiaryColor: '#04222d',
+        mainBkg: '#062f3d',
+        nodeBorder: '#00eeff',
+        clusterBkg: '#02161f',
+        clusterBorder: '#00eeff55',
+        lineColor: '#00eeff',
+        textColor: '#c0e8ff',
+        edgeLabelBackground: '#02161f'
+      },
+      flowchart: { curve: 'basis', useMaxWidth: false, htmlLabels: false, nodeSpacing: 30, rankSpacing: 40, padding: 10 }
+    });
+
+    var targets = [];
+    blocks.forEach(function(el){
+      var codeEl = el.querySelector('code');
+      if(!codeEl) return;
+      var div = document.createElement('div');
+      div.className = 'mermaid';
+      div.textContent = codeEl.textContent;
+      el.parentNode.replaceChild(div, el);
+      targets.push(div);
+    });
+    if(!targets.length) return;
+    try { await mermaid.run({ nodes: targets }); }
+    catch(e){ console.warn('[mermaid] 渲染失败：', e); }
+  }
+  /* 作用：多次触发兜底（延迟重试 + DOM 变化），防止某次时机没跑到导致图表留在代码块 */
+  var mmBusy = false;
+  function scheduleMermaid(){
+    if(mmBusy) return;
+    mmBusy = true;
+    renderMermaidDiagram().then(function(){ mmBusy = false; }, function(){ mmBusy = false; });
+  }
+  scheduleMermaid();
+  window.addEventListener('load', scheduleMermaid);
+  [1000, 3000, 8000].forEach(function(ms){ setTimeout(scheduleMermaid, ms); });
+  if(document.readyState !== 'loading') scheduleMermaid();
+  if(window.MutationObserver){
+    var mmTimer = null;
+    var mmObserver = new MutationObserver(function(){
+      clearTimeout(mmTimer);
+      mmTimer = setTimeout(scheduleMermaid, 400);
+    });
+    mmObserver.observe(document.querySelector('.mb-article') || document.body, { childList: true, subtree: true });
+  }
+</script>
+</body>
+</html>

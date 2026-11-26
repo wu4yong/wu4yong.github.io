@@ -1,0 +1,310 @@
+<!--
+  ============================================
+  手机端 · 文章原文页
+  文件：phone/post.njk
+  适用终端：手机端（路由 /phone/p/<slug>/，由 scripts/phone-routes.js 生成）
+  作用：手机阅读单篇文章；单列布局、无侧栏无雷达，替代电脑端 post.njk
+        数据由生成期算好：page.item = { title, dateStr, content, cats, tags }
+  样式依赖：source/css/theme/phone/common.css、source/css/theme/phone/list.css
+  组件依赖：phone/_components/Particles.njk
+  最后修改：2026-11-11
+  ============================================
+-->
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="color-scheme" content="dark">
+  <meta name="theme-color" content="#020817">
+  <!-- 首帧兜底：浏览器默认画布是白的，样式未解析前会闪一下白。这条规则先锁死深空底色 -->
+  <style>html{background-color:#020817}</style>
+  <title>Kafka（六）顺序、积压与限流 - 时空秘境</title>
+  <!-- 手机端样式：基础 + 列表/正文，外链引入（源文件 source/css/theme/phone/） -->
+  <link rel="stylesheet" href="/css/theme/phone/common.css">
+  <link rel="stylesheet" href="/css/theme/phone/list.css">
+<meta name="generator" content="Hexo 8.1.2"></head>
+<body>
+<div class="mb-shell">
+  <!--
+  ============================================
+  手机端星空粒子组件
+  文件：Particles.njk
+  适用终端：手机端
+  作用：Particles.njk 的手机端副本（nunjucks 子目录 include 取不到上级）
+        参数与电脑端 _components/Particles.njk 保持一致：
+        粒子 95 / 连线 118px / opacity 0.32，外加星座层与零星闪烁层
+  最后修改：2026-11-12
+  ============================================
+--><!-- z-index 必须是 0：负层级会被 body 不透明背景盖住，粒子在跑却看不见 -->
+<div id="particles" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 0; pointer-events: none;"></div>
+<!-- 星座层（与首页同一套：随机零星散布星座图形 + 偶尔闪烁的小星） -->
+<div id="constellations" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 1; pointer-events: none;" aria-hidden="true"></div>
+<script src="/js/particles.min.js"></script>
+<script>
+particlesJS("particles", {
+  particles: {
+    number: {
+      value: 95,
+      density: {
+        enable: true,
+        value_area: 800
+      }
+    },
+    color: {
+      value: "#00eeff"
+    },
+    shape: {
+      type: "circle",
+      stroke: {
+        width: 0,
+        color: "#000000"
+      }
+    },
+    opacity: {
+      value: 0.6,
+      random: true,
+      anim: {
+        enable: true,
+        speed: 0.5,
+        opacity_min: 0.1,
+        sync: false
+      }
+    },
+    size: {
+      value: 3,
+      random: true,
+      anim: {
+        enable: true,
+        speed: 2,
+        size_min: 0.1,
+        sync: false
+      }
+    },
+    line_linked: {
+      enable: true,
+      distance: 118,
+      color: "#00eeff",
+      opacity: 0.32,
+      width: 1
+    },
+    move: {
+      enable: true,
+      speed: 0.8,
+      direction: "none",
+      random: true,
+      straight: false,
+      out_mode: "out",
+      bounce: false,
+      attract: {
+        enable: true,
+        rotateX: 600,
+        rotateY: 1200
+      }
+    }
+  },
+  interactivity: {
+    detect_on: "canvas",
+    events: {
+      onhover: {
+        enable: true,
+        mode: "grab"       // 手指按住时粒子聚集
+      },
+      onclick: {
+        enable: true,
+        mode: "push"       // 点击时产生新粒子
+      },
+      resize: true
+    },
+    modes: {
+      grab: {
+        distance: 200,
+        line_linked: {
+          opacity: 1
+        }
+      },
+      push: {
+        particles_nb: 6
+      }
+    }
+  },
+  retina_detect: true
+});
+</script>
+<!-- 星座 + 零星闪烁层：与电脑端共用同一份绘制脚本 -->
+<script src="/js/theme/home/starfield.js"></script>
+
+
+  <div class="mb-top">
+    <a class="mb-back" href="/phone/">← 返回手机首页</a>
+    <span class="mb-sub" style="margin:0">2023-09-23</span>
+  </div>
+
+  <h1 class="mb-title">Kafka（六）顺序、积压与限流</h1>
+  <div class="mb-sub">
+    分类：bigdata · kafka
+     ｜ 标签：Kafka
+  </div>
+
+  <div class="mb-article"><div class="essay-banner essay-kafka"></div>
+
+<h1 id="顺序、积压与限流"><a href="#顺序、积压与限流" class="headerlink" title="顺序、积压与限流"></a><strong>顺序、积压与限流</strong></h1><p>线上 Kafka 的绝大多数事故不是”写不进去”，而是”读不过来”：消费积压、顺序错乱、重启后重复狂刷。这一篇把这三类问题的判定与处置拆开讲。</p>
+<p><img src="https://wu4yong.github.io/starry-images/assets/img/kafka/kafka-06-reliability.webp" alt="队列一端堆积光球，另一端闸门节流释放"></p>
+<p><em>积压是结果，根因常在处理耗时、分区数与批大小之间</em></p>
+<h2 id="6-1-顺序保证的边界"><a href="#6-1-顺序保证的边界" class="headerlink" title="6.1 顺序保证的边界"></a>6.1 顺序保证的边界</h2><div class="data-grid data-grid-link-table"><div class="grid-header"><div class="grid-cell">层级</div><div class="grid-cell">能保证什么</div><div class="grid-cell">破坏方式</div></div><div class="grid-row"><div class="grid-cell">分区内</div><div class="grid-cell">offset 严格递增</div><div class="grid-cell">无（由写入与拉取顺序决定）</div></div><div class="grid-row"><div class="grid-cell">同 key</div><div class="grid-cell">落同分区因而有序</div><div class="grid-cell">分区数增加、分区器自定义</div></div><div class="grid-row"><div class="grid-cell">全局</div><div class="grid-cell">不存在</div><div class="grid-cell">跨分区读取天然乱序</div></div></div>
+
+<p>要让”同 key 有序”生效，三个条件必须同时满足：生产者用 key 且分区器稳定、分区数不在中途变化、消费端每个分区单线程处理（多线程要按 key 分派固定线程）。</p>
+<h2 id="6-2-积压怎么量化"><a href="#6-2-积压怎么量化" class="headerlink" title="6.2 积压怎么量化"></a>6.2 积压怎么量化</h2><p>先算清楚，再决定动作：</p>
+<pre class="line-numbers language-bash" data-language="bash"><code class="language-bash"><span class="token comment"># 每个分区的积压量（CURRENT-OFFSET 与 LOG-END-OFFSET 的差）</span>
+bin/kafka-consumer-groups.sh <span class="token parameter variable">--describe</span> <span class="token parameter variable">--group</span> order-consumer <span class="token punctuation">\</span>
+  --bootstrap-server localhost:9092<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span></span></code></pre>
+
+<p>再看消费速率，用一段时间的 <code>LOG-END-OFFSET</code> 增量估算。<strong>消化时间 &#x3D; 积压总量 ÷ 净消费速率</strong>。如果这个值超过业务能容忍的窗口，就必须扩容消费者或提升单实例处理能力，而不是等它自己追上。</p>
+<h2 id="6-3-积压的四种根因"><a href="#6-3-积压的四种根因" class="headerlink" title="6.3 积压的四种根因"></a>6.3 积压的四种根因</h2><div class="data-grid data-grid-link-table"><div class="grid-header"><div class="grid-cell">现象</div><div class="grid-cell">根因</div><div class="grid-cell">处置</div></div><div class="grid-row"><div class="grid-cell">消费速率平稳但低于生产</div><div class="grid-cell">生产量真的涨了</div><div class="grid-cell">加分区 + 加消费者</div></div><div class="grid-row"><div class="grid-cell">消费速率剧烈抖动</div><div class="grid-cell">下游依赖慢（DB、HTTP）</div><div class="grid-cell">批量写、异步化、超时收紧</div></div><div class="grid-row"><div class="grid-cell">反复 rebalance</div><div class="grid-cell">单批处理超过 <code>max.poll.interval.ms</code></div><div class="grid-cell">降 <code>max.poll.records</code>、优化处理</div></div><div class="grid-row"><div class="grid-cell">只有少数分区积压</div><div class="grid-cell">key 倾斜（热 key）</div><div class="grid-cell">换 key 或加盐，单分区无法拆</div></div></div>
+
+<p>热 key 是最难处理的一类：分区内有序的要求与”把热 key 拆开”天然冲突。折中方案是两层结构——用复合 key（业务 key + 随机后缀）分散写入，消费端再聚合；代价是顺序变弱，需要业务能接受。</p>
+<h2 id="6-4-限流的两个位置"><a href="#6-4-限流的两个位置" class="headerlink" title="6.4 限流的两个位置"></a>6.4 限流的两个位置</h2><p><strong>生产端限流</strong>：控制发送速率，避免把下游压垮。可用 <code>max.in.flight.requests.per.connection</code> 降并发、<code>linger.ms</code> 调批次，或直接由业务侧用令牌桶控制 send 速率。</p>
+<pre class="line-numbers language-java" data-language="java"><code class="language-java"><span class="token comment">// 简单的令牌桶限流，按每秒允许条数放行</span>
+<span class="token class-name">RateLimiter</span> limiter <span class="token operator">=</span> <span class="token class-name">RateLimiter</span><span class="token punctuation">.</span><span class="token function">create</span><span class="token punctuation">(</span><span class="token number">2000</span><span class="token punctuation">)</span><span class="token punctuation">;</span>   <span class="token comment">// Guava</span>
+<span class="token keyword">while</span> <span class="token punctuation">(</span><span class="token function">hasMore</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+    limiter<span class="token punctuation">.</span><span class="token function">acquire</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    producer<span class="token punctuation">.</span><span class="token function">send</span><span class="token punctuation">(</span>record<span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">&#125;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<p><strong>消费端限流</strong>：<code>max.poll.records</code> 与 <code>fetch.max.bytes</code> 控制单次拉取量。注意拉得多不等于处理得快，处理慢时拉太多反而增加 rebalance 风险。</p>
+<h2 id="6-5-重启后的”重复狂刷”"><a href="#6-5-重启后的”重复狂刷”" class="headerlink" title="6.5 重启后的”重复狂刷”"></a>6.5 重启后的”重复狂刷”</h2><p>消费者重启后，如果位移未提交，会从上次提交点重读，表现为短时间大量重复消息。三种缓解：</p>
+<ul>
+<li>业务侧幂等（最可靠）：以业务主键 + 版本号去重</li>
+<li>缩短提交间隔：<code>auto.commit.interval.ms</code> 调小，代价是提交次数多</li>
+<li><code>commitSync</code> 与业务事务合一：把位移写进业务库，重启时从库读</li>
+</ul>
+<p>第三条是很多团队最终采用的方案，因为它把”读进度”与”业务结果”绑成了一个事实。</p>
+<h2 id="6-6-容易踩的坑"><a href="#6-6-容易踩的坑" class="headerlink" title="6.6 容易踩的坑"></a>6.6 容易踩的坑</h2><ul>
+<li><strong>消费失败就 <code>throw</code> 让整批重试</strong>：一条坏消息反复卡住整个分区，应转死信主题并跳过。</li>
+<li><strong>死信主题没配保留策略</strong>：死信本身也会积压，要配短保留期 + 告警。</li>
+<li><strong>降 <code>max.poll.records</code> 当作万能药</strong>：它只是让单批变小，处理总耗时不变时改善有限。</li>
+<li><strong>扩容消费者超过分区数</strong>：多出的实例分不到分区，扩容无效，必须先加分区。</li>
+</ul>
+<h2 id="6-7-死信队列的落地结构"><a href="#6-7-死信队列的落地结构" class="headerlink" title="6.7 死信队列的落地结构"></a>6.7 死信队列的落地结构</h2><p>坏消息不能无限重试卡住分区，标准做法是”有限重试 + 死信”：</p>
+<pre class="line-numbers language-java" data-language="java"><code class="language-java"><span class="token keyword">for</span> <span class="token punctuation">(</span><span class="token class-name">ConsumerRecord</span><span class="token generics"><span class="token punctuation">&lt;</span><span class="token class-name">String</span><span class="token punctuation">,</span> <span class="token class-name">String</span><span class="token punctuation">></span></span> r <span class="token operator">:</span> records<span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+    <span class="token keyword">try</span> <span class="token punctuation">&#123;</span>
+        <span class="token function">handle</span><span class="token punctuation">(</span>r<span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token punctuation">&#125;</span> <span class="token keyword">catch</span> <span class="token punctuation">(</span><span class="token class-name">RetryableException</span> e<span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+        <span class="token keyword">if</span> <span class="token punctuation">(</span><span class="token operator">++</span><span class="token function">attemptsOf</span><span class="token punctuation">(</span>r<span class="token punctuation">)</span> <span class="token operator">&lt;=</span> <span class="token number">3</span><span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+            producer<span class="token punctuation">.</span><span class="token function">send</span><span class="token punctuation">(</span><span class="token keyword">new</span> <span class="token class-name">ProducerRecord</span><span class="token generics"><span class="token punctuation">&lt;</span><span class="token punctuation">></span></span><span class="token punctuation">(</span><span class="token string">"order-events-retry"</span><span class="token punctuation">,</span> r<span class="token punctuation">.</span><span class="token function">key</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">,</span> r<span class="token punctuation">.</span><span class="token function">value</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+        <span class="token punctuation">&#125;</span> <span class="token keyword">else</span> <span class="token punctuation">&#123;</span>
+            producer<span class="token punctuation">.</span><span class="token function">send</span><span class="token punctuation">(</span><span class="token keyword">new</span> <span class="token class-name">ProducerRecord</span><span class="token generics"><span class="token punctuation">&lt;</span><span class="token punctuation">></span></span><span class="token punctuation">(</span><span class="token string">"order-events-dlq"</span><span class="token punctuation">,</span> r<span class="token punctuation">.</span><span class="token function">key</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">,</span> r<span class="token punctuation">.</span><span class="token function">value</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+        <span class="token punctuation">&#125;</span>
+    <span class="token punctuation">&#125;</span>
+<span class="token punctuation">&#125;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<p>三个配套约束：</p>
+<div class="data-grid data-grid-link-table"><div class="grid-header"><div class="grid-cell">项</div><div class="grid-cell">配置</div><div class="grid-cell">原因</div></div><div class="grid-row"><div class="grid-cell">重试主题保留期</div><div class="grid-cell">短（如 1 天）</div><div class="grid-cell">避免重试数据也堆起来</div></div><div class="grid-row"><div class="grid-cell">死信主题保留期</div><div class="grid-cell">7–30 天</div><div class="grid-cell">供人工查因与回放</div></div><div class="grid-row"><div class="grid-cell">分区数</div><div class="grid-cell">与主主题一致</div><div class="grid-cell">保持同 key 顺序与处理并行度</div></div></div>
+
+<p>重试主题若用”延迟队列”实现退避（Kafka 本身没有延迟消息），常见做法是按退避档位建多个延迟主题，由一个轮询程序到点再投回主主题。</p>
+<h2 id="6-8-官方资料"><a href="#6-8-官方资料" class="headerlink" title="6.8 官方资料"></a>6.8 官方资料</h2><ul>
+<li>消费者组监控（含积压计算）：<a target="_blank" rel="noopener" href="https://kafka.apache.org/documentation/#basic_ops_consumergroup">https://kafka.apache.org/documentation/#basic_ops_consumergroup</a></li>
+<li>消费端配置：<a target="_blank" rel="noopener" href="https://kafka.apache.org/documentation/#consumerconfigs">https://kafka.apache.org/documentation/#consumerconfigs</a></li>
+<li>生产端配置：<a target="_blank" rel="noopener" href="https://kafka.apache.org/documentation/#producerconfigs">https://kafka.apache.org/documentation/#producerconfigs</a></li>
+</ul>
+<h2 id="6-9-清单"><a href="#6-9-清单" class="headerlink" title="6.9 清单"></a>6.9 清单</h2><ol>
+<li>顺序只在分区内成立，同 key 有序需要”稳定分区器 + 分区数不变 + 单线程按 key 处理”</li>
+<li>积压要用 <code>LOG-END-OFFSET - CURRENT-OFFSET</code> 量化，再算消化时间</li>
+<li>积压根因分四类：量涨、下游慢、rebalance、热 key，处置完全不同</li>
+<li>热 key 与强顺序冲突，只能用复合 key 弱化顺序换分散</li>
+<li>生产端与消费端都要能限流，别只控一端</li>
+<li>重启重复消费靠业务幂等消化，或把位移与业务结果同库</li>
+<li>扩容消费者前先看分区数，超过分区数的实例是白加</li>
+<li>坏消息要”有限重试 + 死信”，不能让一条消息卡死整个分区</li>
+<li>死信与重试主题的分区数要与主主题一致，保留期分别按需设短&#x2F;设长</li>
+</ol>
+</div>
+
+  <div class="mb-foot">
+    <a href="/phone/">返回手机首页</a>
+    <a href="/phone/tags/">星迹索引</a>
+  </div>
+</div>
+
+
+<script>
+  /* 作用：懒加载本地 mermaid 库；无 mermaid 代码块时不加载 */
+  function loadLocalMermaid(){
+    return new Promise(function(resolve, reject){
+      if(window.mermaid) return resolve(window.mermaid);
+      var s = document.createElement('script');
+      s.src = '/js/third-party/mermaid/mermaid.min.js?v=10';
+      s.onload = function(){ resolve(window.mermaid); };
+      s.onerror = function(){ reject(new Error('mermaid local load failed')); };
+      document.head.appendChild(s);
+    });
+  }
+
+  /* 作用：把 ```mermaid 代码块替换成 SVG 图（手机端字号略小、图可横向滚动） */
+  async function renderMermaidDiagram(){
+    var blocks = document.querySelectorAll('pre[class*="language-mermaid"]');
+    if(!blocks.length) return;
+    var mermaid;
+    try { mermaid = await loadLocalMermaid(); }
+    catch(e){ console.warn('[mermaid] 本地库加载失败：', e); return; }
+
+    mermaid.initialize({
+      startOnLoad: false,
+      theme: 'base',
+      themeVariables: {
+        darkMode: true,
+        background: 'transparent',
+        fontFamily: '"Microsoft YaHei", "PingFang SC", "Segoe UI", sans-serif',
+        fontSize: '12px',
+        primaryColor: '#062f3d',
+        primaryTextColor: '#d6f6ff',
+        primaryBorderColor: '#00eeff',
+        secondaryColor: '#04222d',
+        tertiaryColor: '#04222d',
+        mainBkg: '#062f3d',
+        nodeBorder: '#00eeff',
+        clusterBkg: '#02161f',
+        clusterBorder: '#00eeff55',
+        lineColor: '#00eeff',
+        textColor: '#c0e8ff',
+        edgeLabelBackground: '#02161f'
+      },
+      flowchart: { curve: 'basis', useMaxWidth: false, htmlLabels: false, nodeSpacing: 30, rankSpacing: 40, padding: 10 }
+    });
+
+    var targets = [];
+    blocks.forEach(function(el){
+      var codeEl = el.querySelector('code');
+      if(!codeEl) return;
+      var div = document.createElement('div');
+      div.className = 'mermaid';
+      div.textContent = codeEl.textContent;
+      el.parentNode.replaceChild(div, el);
+      targets.push(div);
+    });
+    if(!targets.length) return;
+    try { await mermaid.run({ nodes: targets }); }
+    catch(e){ console.warn('[mermaid] 渲染失败：', e); }
+  }
+  /* 作用：多次触发兜底（延迟重试 + DOM 变化），防止某次时机没跑到导致图表留在代码块 */
+  var mmBusy = false;
+  function scheduleMermaid(){
+    if(mmBusy) return;
+    mmBusy = true;
+    renderMermaidDiagram().then(function(){ mmBusy = false; }, function(){ mmBusy = false; });
+  }
+  scheduleMermaid();
+  window.addEventListener('load', scheduleMermaid);
+  [1000, 3000, 8000].forEach(function(ms){ setTimeout(scheduleMermaid, ms); });
+  if(document.readyState !== 'loading') scheduleMermaid();
+  if(window.MutationObserver){
+    var mmTimer = null;
+    var mmObserver = new MutationObserver(function(){
+      clearTimeout(mmTimer);
+      mmTimer = setTimeout(scheduleMermaid, 400);
+    });
+    mmObserver.observe(document.querySelector('.mb-article') || document.body, { childList: true, subtree: true });
+  }
+</script>
+</body>
+</html>

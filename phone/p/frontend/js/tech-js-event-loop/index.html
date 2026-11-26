@@ -1,0 +1,423 @@
+<!--
+  ============================================
+  手机端 · 文章原文页
+  文件：phone/post.njk
+  适用终端：手机端（路由 /phone/p/<slug>/，由 scripts/phone-routes.js 生成）
+  作用：手机阅读单篇文章；单列布局、无侧栏无雷达，替代电脑端 post.njk
+        数据由生成期算好：page.item = { title, dateStr, content, cats, tags }
+  样式依赖：source/css/theme/phone/common.css、source/css/theme/phone/list.css
+  组件依赖：phone/_components/Particles.njk
+  最后修改：2026-11-11
+  ============================================
+-->
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="color-scheme" content="dark">
+  <meta name="theme-color" content="#020817">
+  <!-- 首帧兜底：浏览器默认画布是白的，样式未解析前会闪一下白。这条规则先锁死深空底色 -->
+  <style>html{background-color:#020817}</style>
+  <title>技术总结 事件循环机制 - 时空秘境</title>
+  <!-- 手机端样式：基础 + 列表/正文，外链引入（源文件 source/css/theme/phone/） -->
+  <link rel="stylesheet" href="/css/theme/phone/common.css">
+  <link rel="stylesheet" href="/css/theme/phone/list.css">
+<meta name="generator" content="Hexo 8.1.2"></head>
+<body>
+<div class="mb-shell">
+  <!--
+  ============================================
+  手机端星空粒子组件
+  文件：Particles.njk
+  适用终端：手机端
+  作用：Particles.njk 的手机端副本（nunjucks 子目录 include 取不到上级）
+        参数与电脑端 _components/Particles.njk 保持一致：
+        粒子 95 / 连线 118px / opacity 0.32，外加星座层与零星闪烁层
+  最后修改：2026-11-12
+  ============================================
+--><!-- z-index 必须是 0：负层级会被 body 不透明背景盖住，粒子在跑却看不见 -->
+<div id="particles" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 0; pointer-events: none;"></div>
+<!-- 星座层（与首页同一套：随机零星散布星座图形 + 偶尔闪烁的小星） -->
+<div id="constellations" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 1; pointer-events: none;" aria-hidden="true"></div>
+<script src="/js/particles.min.js"></script>
+<script>
+particlesJS("particles", {
+  particles: {
+    number: {
+      value: 95,
+      density: {
+        enable: true,
+        value_area: 800
+      }
+    },
+    color: {
+      value: "#00eeff"
+    },
+    shape: {
+      type: "circle",
+      stroke: {
+        width: 0,
+        color: "#000000"
+      }
+    },
+    opacity: {
+      value: 0.6,
+      random: true,
+      anim: {
+        enable: true,
+        speed: 0.5,
+        opacity_min: 0.1,
+        sync: false
+      }
+    },
+    size: {
+      value: 3,
+      random: true,
+      anim: {
+        enable: true,
+        speed: 2,
+        size_min: 0.1,
+        sync: false
+      }
+    },
+    line_linked: {
+      enable: true,
+      distance: 118,
+      color: "#00eeff",
+      opacity: 0.32,
+      width: 1
+    },
+    move: {
+      enable: true,
+      speed: 0.8,
+      direction: "none",
+      random: true,
+      straight: false,
+      out_mode: "out",
+      bounce: false,
+      attract: {
+        enable: true,
+        rotateX: 600,
+        rotateY: 1200
+      }
+    }
+  },
+  interactivity: {
+    detect_on: "canvas",
+    events: {
+      onhover: {
+        enable: true,
+        mode: "grab"       // 手指按住时粒子聚集
+      },
+      onclick: {
+        enable: true,
+        mode: "push"       // 点击时产生新粒子
+      },
+      resize: true
+    },
+    modes: {
+      grab: {
+        distance: 200,
+        line_linked: {
+          opacity: 1
+        }
+      },
+      push: {
+        particles_nb: 6
+      }
+    }
+  },
+  retina_detect: true
+});
+</script>
+<!-- 星座 + 零星闪烁层：与电脑端共用同一份绘制脚本 -->
+<script src="/js/theme/home/starfield.js"></script>
+
+
+  <div class="mb-top">
+    <a class="mb-back" href="/phone/">← 返回手机首页</a>
+    <span class="mb-sub" style="margin:0">2019-04-05</span>
+  </div>
+
+  <h1 class="mb-title">技术总结 事件循环机制</h1>
+  <div class="mb-sub">
+    分类：frontend · js
+     ｜ 标签：web
+  </div>
+
+  <div class="mb-article"><div class="essay-banner essay-tech"></div>
+
+<h1 id="技术文档总结"><a href="#技术文档总结" class="headerlink" title="技术文档总结"></a>技术文档总结</h1><h2 id="一文吃透-JS-事件循环：浏览器进程模型、任务队列与异步执行原理"><a href="#一文吃透-JS-事件循环：浏览器进程模型、任务队列与异步执行原理" class="headerlink" title="一文吃透 JS 事件循环：浏览器进程模型、任务队列与异步执行原理"></a>一文吃透 JS 事件循环：浏览器进程模型、任务队列与异步执行原理</h2><h2 id="一、进程和线程"><a href="#一、进程和线程" class="headerlink" title="一、进程和线程"></a>一、进程和线程</h2><p><img src="https://wu4yong.github.io/starry-images/assets/img/web/tech-js-event-loop/img-01.webp" alt="进程和线程示意图"></p>
+<h3 id="1-1-进程"><a href="#1-1-进程" class="headerlink" title="1.1 进程"></a>1.1 进程</h3><p>进程是一个具有一定独立功能的程序在一个数据集合上依次动态执行的过程。是操作系统进行资源分配(内存)和调度(独立运行)的基本单位</p>
+<ol>
+<li>动态性：进程随着程序的执行和运行而动态变化</li>
+<li>独立性：进程与进程之间完全隔离，独立运行。一个进程崩溃不会影响其他进程。</li>
+<li>并发性：多个进程可以在单个处理器上并发执行</li>
+</ol>
+<h3 id="1-2-线程"><a href="#1-2-线程" class="headerlink" title="1.2 线程"></a>1.2 线程</h3><p>是 CPU 任务调度的基本单位</p>
+<ol>
+<li>轻量级：线程是进程中的一个实体，创建和切换的开销更小</li>
+<li>共享资源：同一进程内的多个线程共享进程的资源</li>
+<li>并发性：同一个进程中的多个线程可以并发执行</li>
+</ol>
+<h3 id="1-3-区别"><a href="#1-3-区别" class="headerlink" title="1.3 区别"></a>1.3 区别</h3><ol>
+<li>资源占用：进程拥有独立的内存空间和系统资源，而线程共享同一进程中的资源</li>
+<li>开销大小：进程的创建和销毁开销比线程大</li>
+<li>通信方式：进程间通信需要特定的机制，如管道、消息队列等。线程间通信则可以直接通过共享内存进行</li>
+<li>依赖关系：线程依赖于进程存在。进程是线程的容器</li>
+</ol>
+<h2 id="二、浏览器中的进程与线程"><a href="#二、浏览器中的进程与线程" class="headerlink" title="二、浏览器中的进程与线程"></a>二、浏览器中的进程与线程</h2><ul>
+<li>浏览器从启动到关闭，至少开启四个进程：<code>browser进程</code> <code>GPU进程</code> <code>网络进程</code> <code>渲染进程</code></li>
+<li>当新增其他标签页时，<code>browser进程</code> <code>GPU进程</code> <code>网络进程</code> 进程可以共用。默认每打开一个标签页，就会开启一个 <code>渲染进程</code></li>
+</ul>
+<h3 id="2-1-browser-进程"><a href="#2-1-browser-进程" class="headerlink" title="2.1 browser 进程"></a>2.1 browser 进程</h3><p>负责协调、主控，只有一个</p>
+<ol>
+<li>负责控制浏览器除标签页外的界面。如地址栏、书签、前进后退按钮</li>
+<li>负责创建和销毁其他进程</li>
+</ol>
+<h3 id="2-2-GPU-进程"><a href="#2-2-GPU-进程" class="headerlink" title="2.2 GPU 进程"></a>2.2 GPU 进程</h3><p>负责处理与图形渲染相关的任务</p>
+<ol>
+<li>图形渲染</li>
+<li>动画和过渡</li>
+<li>视频播放和解码等</li>
+</ol>
+<h3 id="2-3-网络进程"><a href="#2-3-网络进程" class="headerlink" title="2.3 网络进程"></a>2.3 网络进程</h3><p>负责处理与网络相关的任务。它主要负责管理和维护网络连接，以及处理所有的网络请求和响应</p>
+<ol>
+<li>管理网络连接</li>
+<li>处理网络请求和响应</li>
+<li>处理 DNS 解析</li>
+<li>处理缓存</li>
+</ol>
+<h3 id="2-4-插件进程"><a href="#2-4-插件进程" class="headerlink" title="2.4 插件进程"></a>2.4 插件进程</h3><p>用于处理浏览器插件的进程（每个插件，就会创建一个进程，避免由于其中一个插件进程的崩溃导致整个浏览器崩溃）</p>
+<h3 id="2-5-渲染进程"><a href="#2-5-渲染进程" class="headerlink" title="2.5 渲染进程"></a>2.5 渲染进程</h3><p>负责将 HTML、CSS 和 JavaScript 转换为可视化的页面。默认情况下，有一个浏览器的 tab 就会创建一个渲染进程。(<code>本文需要介绍的重点</code>)</p>
+<h2 id="三、浏览器中的渲染进程"><a href="#三、浏览器中的渲染进程" class="headerlink" title="三、浏览器中的渲染进程"></a>三、浏览器中的渲染进程</h2><p>页面的渲染，JS 的执行，事件的循环，都在这个进程内进行，浏览器的渲染进程是多线程的。</p>
+<h3 id="3-1-GUI-渲染线程"><a href="#3-1-GUI-渲染线程" class="headerlink" title="3.1 GUI 渲染线程"></a>3.1 GUI 渲染线程</h3><ol>
+<li>负责渲染浏览器界面，解析 HTML、CSS。构建 DOM Tree、CSSOM Tree、Render Tree。页面的布局和绘制</li>
+<li>当界面需要重绘（Repaint)或由于某种操作引发回流(reflow)时，该线程也会执行</li>
+<li>GUI 的更新会被保存在一个队列之中，等到 JS 引擎线程空闲时，GUI 线程就会立即执行</li>
+</ol>
+<h3 id="3-2-JS-引擎线程"><a href="#3-2-JS-引擎线程" class="headerlink" title="3.2 JS 引擎线程"></a>3.2 JS 引擎线程</h3><ol>
+<li>也称为 JS 内核，负责解析 Javascript 脚本，运行代码。最出名的便数 V8 引擎</li>
+<li>JS 引擎一直等待着任务队列中任务的到来，然后加以处理。</li>
+</ol>
+<h3 id="3-3-定时器触发线程"><a href="#3-3-定时器触发线程" class="headerlink" title="3.3 定时器触发线程"></a>3.3 定时器触发线程</h3><ol>
+<li>定时器函数: setInterval 与 setTimeout</li>
+<li>浏览器定时计数器并不是由 JS 引擎计数的（因为 JS 引擎是单线程的, 如果该线程处于阻塞状态就会影响记计时的准确）</li>
+<li>当计时完成后，定时器的函数回调(任务)会被添加到事件队列中，等待 JS 引擎空闲后去执行</li>
+</ol>
+<h3 id="3-4-异步-HTTP-线程"><a href="#3-4-异步-HTTP-线程" class="headerlink" title="3.4 异步 HTTP 线程"></a>3.4 异步 HTTP 线程</h3><ol>
+<li>XMLHttpRequest 在连接后是通过浏览器新开一个线程请求</li>
+<li>当检测到 HTTP 请求的状态发生变化后，HTTP 请求的函数回调(任务)会被添加到事件队列中，等待 JS 引擎空闲后去执行</li>
+</ol>
+<h3 id="3-5-事件触发线程"><a href="#3-5-事件触发线程" class="headerlink" title="3.5 事件触发线程"></a>3.5 事件触发线程</h3><ol>
+<li>用来控制事件循环(Event Loop)的线程</li>
+<li>周期性的检查事件队列中是否存在任务，并主动触发 JS 引擎线程来处理队列中的任务</li>
+</ol>
+<h2 id="四、JS-引擎线程和-GUI-线程的互斥"><a href="#四、JS-引擎线程和-GUI-线程的互斥" class="headerlink" title="四、JS 引擎线程和 GUI 线程的互斥"></a>四、JS 引擎线程和 GUI 线程的互斥</h2><ol>
+<li>由于 JavaScript 是可操纵 DOM 的，如果在修改 DOM 的同时渲染界面（即 JS 引擎线程和 GUI 渲染线程同时运行），那么渲染线程前后获得的元素数据就可能不一致了。因此为了防止渲染出现不可预期的结果，浏览器设置 GUI 渲染线程与 JS 引擎为互斥的关系，当 JS 引擎执行时 GUI 线程会被挂起，</li>
+<li>GUI 更新则会被保存在一个队列中等到 JS 引擎线程空闲时立即被执行。(JS 阻塞页面加载的原因)</li>
+</ol>
+<h3 id="4-1-script-标签放到-body-标签的末尾"><a href="#4-1-script-标签放到-body-标签的末尾" class="headerlink" title="4.1 script 标签放到 body 标签的末尾"></a>4.1 script 标签放到 body 标签的末尾</h3><pre class="line-numbers language-markup" data-language="markup"><code class="language-markup"><span class="token doctype"><span class="token punctuation">&lt;!</span><span class="token doctype-tag">DOCTYPE</span> <span class="token name">html</span><span class="token punctuation">></span></span>
+<span class="token tag"><span class="token tag"><span class="token punctuation">&lt;</span>html</span> <span class="token attr-name">lang</span><span class="token attr-value"><span class="token punctuation attr-equals">=</span><span class="token punctuation">"</span>en<span class="token punctuation">"</span></span><span class="token punctuation">></span></span>
+  <span class="token tag"><span class="token tag"><span class="token punctuation">&lt;</span>head</span><span class="token punctuation">></span></span>
+    <span class="token tag"><span class="token tag"><span class="token punctuation">&lt;</span>meta</span> <span class="token attr-name">charset</span><span class="token attr-value"><span class="token punctuation attr-equals">=</span><span class="token punctuation">"</span>UTF-8<span class="token punctuation">"</span></span> <span class="token punctuation">/></span></span>
+    <span class="token tag"><span class="token tag"><span class="token punctuation">&lt;</span>meta</span> <span class="token attr-name">http-equiv</span><span class="token attr-value"><span class="token punctuation attr-equals">=</span><span class="token punctuation">"</span>X-UA-Compatible<span class="token punctuation">"</span></span> <span class="token attr-name">content</span><span class="token attr-value"><span class="token punctuation attr-equals">=</span><span class="token punctuation">"</span>IE=edge<span class="token punctuation">"</span></span> <span class="token punctuation">/></span></span>
+    <span class="token tag"><span class="token tag"><span class="token punctuation">&lt;</span>meta</span> <span class="token attr-name">name</span><span class="token attr-value"><span class="token punctuation attr-equals">=</span><span class="token punctuation">"</span>viewport<span class="token punctuation">"</span></span> <span class="token attr-name">content</span><span class="token attr-value"><span class="token punctuation attr-equals">=</span><span class="token punctuation">"</span>width=device-width, initial-scale=1.0<span class="token punctuation">"</span></span> <span class="token punctuation">/></span></span>
+    <span class="token tag"><span class="token tag"><span class="token punctuation">&lt;</span>title</span><span class="token punctuation">></span></span>Document<span class="token tag"><span class="token tag"><span class="token punctuation">&lt;/</span>title</span><span class="token punctuation">></span></span>
+  <span class="token tag"><span class="token tag"><span class="token punctuation">&lt;/</span>head</span><span class="token punctuation">></span></span>
+
+  <span class="token tag"><span class="token tag"><span class="token punctuation">&lt;</span>body</span><span class="token punctuation">></span></span>
+    ......
+    <span class="token tag"><span class="token tag"><span class="token punctuation">&lt;</span>script</span> <span class="token attr-name">src</span><span class="token attr-value"><span class="token punctuation attr-equals">=</span><span class="token punctuation">"</span>../xxx/yyy/zzz.js<span class="token punctuation">"</span></span><span class="token punctuation">></span></span><span class="token script"></span><span class="token tag"><span class="token tag"><span class="token punctuation">&lt;/</span>script</span><span class="token punctuation">></span></span>
+  <span class="token tag"><span class="token tag"><span class="token punctuation">&lt;/</span>body</span><span class="token punctuation">></span></span>
+<span class="token tag"><span class="token tag"><span class="token punctuation">&lt;/</span>html</span><span class="token punctuation">></span></span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<ol>
+<li>因为 GUI 线程和 JS 引擎线程是互斥的，所以 JS 代码的加载与执行会阻塞 DOM 的解析与渲染</li>
+<li>为了更好的用户体验(减少白屏的时间，用户能尽早看到页面)。因此需要等到页面的 DOM 标签都解析与渲染完成后，在下载和执行 JS 代码</li>
+</ol>
+<h2 id="五、异步任务与单线程"><a href="#五、异步任务与单线程" class="headerlink" title="五、异步任务与单线程"></a>五、异步任务与单线程</h2><h3 id="5-1-同步任务"><a href="#5-1-同步任务" class="headerlink" title="5.1 同步任务"></a>5.1 同步任务</h3><ol>
+<li>某段程序执行会阻塞其他程序的执行，一定要等上一个任务执行完毕，拿到结果之后，才能执行下一个任务。</li>
+<li>其表现形式为程序的执行顺序依赖程序本身的书写顺序。</li>
+<li>如果在函数 A 返回的时候，调用者就能够得到预期结果(即拿到了预期的返回值或者看到了预期的效果)，那么这个函数就是同步的。</li>
+</ol>
+<h3 id="5-2-异步任务"><a href="#5-2-异步任务" class="headerlink" title="5.2 异步任务"></a>5.2 异步任务</h3><ol>
+<li>某段程序执行不会阻塞其他程序的执行，不必等待上一个任务执行完毕，拿到结果，就能执行下一个任务</li>
+<li>其表现形式为程序的执行顺序不依赖本身的书写顺序。</li>
+<li>如果在函数 A 返回的时候，调用者还不能够得到预期结果，而是需要在将来通过一定的手段(回调函数、通知)得到，那么这个函数就是异步的</li>
+</ol>
+<blockquote>
+<p>单线程的解决方案：因为 JS 引擎是单线程的，所以在处理任务时必然不可能采用同步任务的编程模型。而是采用单线程 + 异步任务的编程模型</p>
+</blockquote>
+<h2 id="六、事件循环机制-Event-Loop"><a href="#六、事件循环机制-Event-Loop" class="headerlink" title="六、事件循环机制(Event Loop)"></a>六、事件循环机制(Event Loop)</h2><h3 id="6-1-宏任务与微任务"><a href="#6-1-宏任务与微任务" class="headerlink" title="6.1 宏任务与微任务"></a>6.1 宏任务与微任务</h3><h3 id="1-宏任务"><a href="#1-宏任务" class="headerlink" title="(1) 宏任务"></a>(1) 宏任务</h3><ol>
+<li>script(执行全局的 JS 代码)</li>
+<li>setTimeout、setInterval</li>
+<li>I&#x2F;O(文件、网络)</li>
+<li>UI 交互事件</li>
+<li>setImmediate(Node.js 环境)</li>
+</ol>
+<h3 id="2-微任务"><a href="#2-微任务" class="headerlink" title="(2) 微任务"></a>(2) 微任务</h3><ol>
+<li>Promise.then、Promise.catch</li>
+<li>DOM 变化</li>
+<li>process.nextTick(Node.js 环境)</li>
+</ol>
+<h3 id="6-2-事件循环机制"><a href="#6-2-事件循环机制" class="headerlink" title="6.2 事件循环机制"></a>6.2 事件循环机制</h3><p><img src="https://wu4yong.github.io/starry-images/assets/img/web/tech-js-event-loop/img-02.webp" alt="事件循环图示"></p>
+<p>图例描述：一次事件循环中最多处理一个宏任务，然后会处理微任务队列中的所有任务， 然后检查 UI 是否需要重新渲染，然后开始下一轮循环</p>
+<ul>
+<li>任务队列：至少具有两个队列，一个宏任务队列，一个微任务队列</li>
+<li>事件循环：是指 JS 引擎线程重复从任务队列中取任务、执行任务的过程。</li>
+</ul>
+<blockquote>
+<p>事件循环的实现至少应该含有一个用于宏任务的队列和一个用于微任务的队列。大部分的实现通常根据任务类型拥有更多的队列，这使得事件循环能够根据任务类型进行优化处理。例如，优先处理键盘和鼠标事件，保证该任务的优先处理</p>
+</blockquote>
+<h3 id="1-代码示例"><a href="#1-代码示例" class="headerlink" title="(1) 代码示例"></a>(1) 代码示例</h3><pre class="line-numbers language-javascript" data-language="javascript"><code class="language-javascript">console<span class="token punctuation">.</span><span class="token function">log</span><span class="token punctuation">(</span><span class="token string">'同步代码1'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+Promise<span class="token punctuation">.</span><span class="token function">resolve</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token function">then</span><span class="token punctuation">(</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token operator">=></span> <span class="token punctuation">&#123;</span>
+  console<span class="token punctuation">.</span><span class="token function">log</span><span class="token punctuation">(</span><span class="token string">"微任务1"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">&#125;</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+<span class="token function">setTimeout</span><span class="token punctuation">(</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token operator">=></span> <span class="token punctuation">&#123;</span>
+  console<span class="token punctuation">.</span><span class="token function">log</span><span class="token punctuation">(</span><span class="token string">"宏任务1"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  Promise<span class="token punctuation">.</span><span class="token function">resolve</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token function">then</span><span class="token punctuation">(</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token operator">=></span> <span class="token punctuation">&#123;</span>
+    console<span class="token punctuation">.</span><span class="token function">log</span><span class="token punctuation">(</span><span class="token string">"微任务2"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token punctuation">&#125;</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  Promise<span class="token punctuation">.</span><span class="token function">resolve</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token function">then</span><span class="token punctuation">(</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token operator">=></span> <span class="token punctuation">&#123;</span>
+    console<span class="token punctuation">.</span><span class="token function">log</span><span class="token punctuation">(</span><span class="token string">"微任务3"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token punctuation">&#125;</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  Promise<span class="token punctuation">.</span><span class="token function">resolve</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token function">then</span><span class="token punctuation">(</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token operator">=></span> <span class="token punctuation">&#123;</span>
+    console<span class="token punctuation">.</span><span class="token function">log</span><span class="token punctuation">(</span><span class="token string">"微任务4"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token punctuation">&#125;</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">&#125;</span><span class="token punctuation">,</span> <span class="token number">1000</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+<span class="token function">setTimeout</span><span class="token punctuation">(</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token operator">=></span> <span class="token punctuation">&#123;</span>
+  console<span class="token punctuation">.</span><span class="token function">log</span><span class="token punctuation">(</span><span class="token string">"宏任务2"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">&#125;</span><span class="token punctuation">,</span> <span class="token number">500</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+<span class="token function">setTimeout</span><span class="token punctuation">(</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token operator">=></span> <span class="token punctuation">&#123;</span>
+  console<span class="token punctuation">.</span><span class="token function">log</span><span class="token punctuation">(</span><span class="token string">"宏任务3"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">&#125;</span><span class="token punctuation">,</span> <span class="token number">1000</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+console<span class="token punctuation">.</span><span class="token function">log</span><span class="token punctuation">(</span><span class="token string">'同步代码2'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+<span class="token comment">// 执行结果</span>
+<span class="token number">1.</span> 同步代码<span class="token number">1</span>
+<span class="token number">2.</span> 同步代码<span class="token number">2</span>
+<span class="token number">3.</span> 微任务<span class="token number">1</span>
+<span class="token number">4.</span> 宏任务<span class="token number">2</span>
+<span class="token number">5.</span> 宏任务<span class="token number">1</span>
+<span class="token number">6.</span> 微任务<span class="token number">2</span>
+<span class="token number">7.</span> 微任务<span class="token number">3</span>
+<span class="token number">8.</span> 微任务<span class="token number">4</span>
+<span class="token number">9.</span> 宏任务<span class="token number">3</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<p><img src="https://wu4yong.github.io/starry-images/assets/img/web/tech-js-event-loop/img-03.webp" alt="事件循环过程"></p>
+<h3 id="2）微任务队列的意义"><a href="#2）微任务队列的意义" class="headerlink" title="(2）微任务队列的意义"></a>(2）微任务队列的意义</h3><ol>
+<li>微任务是<code>更小</code>的任务, 必须在浏览器继续执行其他宏任务之前执行(更轻量、优先级更高)</li>
+<li>能够让浏览器及时处理宏任务中的 DOM 变化，并且可以保证 DOM 变化在浏览器渲染之前完成，如果任务队列只有一个的话，无法将微任务的执行顺序放到下一个宏任务前。</li>
+</ol>
+<h3 id="3-玩转计时器"><a href="#3-玩转计时器" class="headerlink" title="(3) 玩转计时器"></a>(3) 玩转计时器</h3><ol>
+<li>无法确保计时器延迟的时间：只能控制计时器任务何时被添加到队列，但是无法控制计时器任务何时执行。</li>
+<li>计时器提供了一种<code>异步延迟执行代码片段</code>的能力，我们可以利用计时器的这个特性，使用<code>setTimeout(() =&gt; {}, 0)</code>将长时间运行的任务分解成较小的任务。例如，一次性渲染 2000 条数据，可以分解成 10 个任务，每次只渲染 200 条数据。这样在每个小任务执行完成后，都有机会进行页面渲染，而不必非得等到所有的数据都渲染完成后页面才能进行更新。</li>
+</ol>
+<blockquote>
+<p>浏览器尝试每秒 60 次渲染页面(60 帧，平均每 16ms 渲染一帧), 这意味着在理想状态下，单个任务和该任务附属的所有微任务，都应该在 16ms 内完成。可以恰当利用计时器的特性，来对项目内的长时间任务进行拆分</p>
+</blockquote>
+<h3 id="6-3-单线程-异步编程模型的优缺点"><a href="#6-3-单线程-异步编程模型的优缺点" class="headerlink" title="6.3 单线程 + 异步编程模型的优缺点"></a>6.3 单线程 + 异步编程模型的优缺点</h3><h3 id="1-优点"><a href="#1-优点" class="headerlink" title="(1) 优点"></a>(1) 优点</h3><ol>
+<li>适合 I&#x2F;O 密集型应用，因为允许程序在等到 I&#x2F;O 完成时继续执行其他任务(非阻塞 I&#x2F;O)</li>
+<li>简化编程模型，单线程避免了多线程编程中的复杂性。例如，死锁、竞态条件、线程同步等问题</li>
+<li>没有上线程下文切换的开销，在某些场景下可以提供更好的性能</li>
+</ol>
+<h3 id="2-缺点"><a href="#2-缺点" class="headerlink" title="(2) 缺点"></a>(2) 缺点</h3><ol>
+<li>不适合 CPU 密集型应用，需要长时间计算的任务会阻塞后续任务的执行</li>
+<li>无法充分利用多核 CPU 的优势</li>
+<li>异步代码的逻辑理解和调试更复杂，因为代码的执行顺序并不和代码的书写顺序相同</li>
+</ol>
+</div>
+
+  <div class="mb-foot">
+    <a href="/phone/">返回手机首页</a>
+    <a href="/phone/tags/">星迹索引</a>
+  </div>
+</div>
+
+
+<script>
+  /* 作用：懒加载本地 mermaid 库；无 mermaid 代码块时不加载 */
+  function loadLocalMermaid(){
+    return new Promise(function(resolve, reject){
+      if(window.mermaid) return resolve(window.mermaid);
+      var s = document.createElement('script');
+      s.src = '/js/third-party/mermaid/mermaid.min.js?v=10';
+      s.onload = function(){ resolve(window.mermaid); };
+      s.onerror = function(){ reject(new Error('mermaid local load failed')); };
+      document.head.appendChild(s);
+    });
+  }
+
+  /* 作用：把 ```mermaid 代码块替换成 SVG 图（手机端字号略小、图可横向滚动） */
+  async function renderMermaidDiagram(){
+    var blocks = document.querySelectorAll('pre[class*="language-mermaid"]');
+    if(!blocks.length) return;
+    var mermaid;
+    try { mermaid = await loadLocalMermaid(); }
+    catch(e){ console.warn('[mermaid] 本地库加载失败：', e); return; }
+
+    mermaid.initialize({
+      startOnLoad: false,
+      theme: 'base',
+      themeVariables: {
+        darkMode: true,
+        background: 'transparent',
+        fontFamily: '"Microsoft YaHei", "PingFang SC", "Segoe UI", sans-serif',
+        fontSize: '12px',
+        primaryColor: '#062f3d',
+        primaryTextColor: '#d6f6ff',
+        primaryBorderColor: '#00eeff',
+        secondaryColor: '#04222d',
+        tertiaryColor: '#04222d',
+        mainBkg: '#062f3d',
+        nodeBorder: '#00eeff',
+        clusterBkg: '#02161f',
+        clusterBorder: '#00eeff55',
+        lineColor: '#00eeff',
+        textColor: '#c0e8ff',
+        edgeLabelBackground: '#02161f'
+      },
+      flowchart: { curve: 'basis', useMaxWidth: false, htmlLabels: false, nodeSpacing: 30, rankSpacing: 40, padding: 10 }
+    });
+
+    var targets = [];
+    blocks.forEach(function(el){
+      var codeEl = el.querySelector('code');
+      if(!codeEl) return;
+      var div = document.createElement('div');
+      div.className = 'mermaid';
+      div.textContent = codeEl.textContent;
+      el.parentNode.replaceChild(div, el);
+      targets.push(div);
+    });
+    if(!targets.length) return;
+    try { await mermaid.run({ nodes: targets }); }
+    catch(e){ console.warn('[mermaid] 渲染失败：', e); }
+  }
+  /* 作用：多次触发兜底（延迟重试 + DOM 变化），防止某次时机没跑到导致图表留在代码块 */
+  var mmBusy = false;
+  function scheduleMermaid(){
+    if(mmBusy) return;
+    mmBusy = true;
+    renderMermaidDiagram().then(function(){ mmBusy = false; }, function(){ mmBusy = false; });
+  }
+  scheduleMermaid();
+  window.addEventListener('load', scheduleMermaid);
+  [1000, 3000, 8000].forEach(function(ms){ setTimeout(scheduleMermaid, ms); });
+  if(document.readyState !== 'loading') scheduleMermaid();
+  if(window.MutationObserver){
+    var mmTimer = null;
+    var mmObserver = new MutationObserver(function(){
+      clearTimeout(mmTimer);
+      mmTimer = setTimeout(scheduleMermaid, 400);
+    });
+    mmObserver.observe(document.querySelector('.mb-article') || document.body, { childList: true, subtree: true });
+  }
+</script>
+</body>
+</html>

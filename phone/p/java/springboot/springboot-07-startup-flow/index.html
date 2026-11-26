@@ -1,0 +1,336 @@
+<!--
+  ============================================
+  手机端 · 文章原文页
+  文件：phone/post.njk
+  适用终端：手机端（路由 /phone/p/<slug>/，由 scripts/phone-routes.js 生成）
+  作用：手机阅读单篇文章；单列布局、无侧栏无雷达，替代电脑端 post.njk
+        数据由生成期算好：page.item = { title, dateStr, content, cats, tags }
+  样式依赖：source/css/theme/phone/common.css、source/css/theme/phone/list.css
+  组件依赖：phone/_components/Particles.njk
+  最后修改：2026-11-11
+  ============================================
+-->
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="color-scheme" content="dark">
+  <meta name="theme-color" content="#020817">
+  <!-- 首帧兜底：浏览器默认画布是白的，样式未解析前会闪一下白。这条规则先锁死深空底色 -->
+  <style>html{background-color:#020817}</style>
+  <title>Spring Boot（七）内部工作流程 - 时空秘境</title>
+  <!-- 手机端样式：基础 + 列表/正文，外链引入（源文件 source/css/theme/phone/） -->
+  <link rel="stylesheet" href="/css/theme/phone/common.css">
+  <link rel="stylesheet" href="/css/theme/phone/list.css">
+<meta name="generator" content="Hexo 8.1.2"></head>
+<body>
+<div class="mb-shell">
+  <!--
+  ============================================
+  手机端星空粒子组件
+  文件：Particles.njk
+  适用终端：手机端
+  作用：Particles.njk 的手机端副本（nunjucks 子目录 include 取不到上级）
+        参数与电脑端 _components/Particles.njk 保持一致：
+        粒子 95 / 连线 118px / opacity 0.32，外加星座层与零星闪烁层
+  最后修改：2026-11-12
+  ============================================
+--><!-- z-index 必须是 0：负层级会被 body 不透明背景盖住，粒子在跑却看不见 -->
+<div id="particles" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 0; pointer-events: none;"></div>
+<!-- 星座层（与首页同一套：随机零星散布星座图形 + 偶尔闪烁的小星） -->
+<div id="constellations" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 1; pointer-events: none;" aria-hidden="true"></div>
+<script src="/js/particles.min.js"></script>
+<script>
+particlesJS("particles", {
+  particles: {
+    number: {
+      value: 95,
+      density: {
+        enable: true,
+        value_area: 800
+      }
+    },
+    color: {
+      value: "#00eeff"
+    },
+    shape: {
+      type: "circle",
+      stroke: {
+        width: 0,
+        color: "#000000"
+      }
+    },
+    opacity: {
+      value: 0.6,
+      random: true,
+      anim: {
+        enable: true,
+        speed: 0.5,
+        opacity_min: 0.1,
+        sync: false
+      }
+    },
+    size: {
+      value: 3,
+      random: true,
+      anim: {
+        enable: true,
+        speed: 2,
+        size_min: 0.1,
+        sync: false
+      }
+    },
+    line_linked: {
+      enable: true,
+      distance: 118,
+      color: "#00eeff",
+      opacity: 0.32,
+      width: 1
+    },
+    move: {
+      enable: true,
+      speed: 0.8,
+      direction: "none",
+      random: true,
+      straight: false,
+      out_mode: "out",
+      bounce: false,
+      attract: {
+        enable: true,
+        rotateX: 600,
+        rotateY: 1200
+      }
+    }
+  },
+  interactivity: {
+    detect_on: "canvas",
+    events: {
+      onhover: {
+        enable: true,
+        mode: "grab"       // 手指按住时粒子聚集
+      },
+      onclick: {
+        enable: true,
+        mode: "push"       // 点击时产生新粒子
+      },
+      resize: true
+    },
+    modes: {
+      grab: {
+        distance: 200,
+        line_linked: {
+          opacity: 1
+        }
+      },
+      push: {
+        particles_nb: 6
+      }
+    }
+  },
+  retina_detect: true
+});
+</script>
+<!-- 星座 + 零星闪烁层：与电脑端共用同一份绘制脚本 -->
+<script src="/js/theme/home/starfield.js"></script>
+
+
+  <div class="mb-top">
+    <a class="mb-back" href="/phone/">← 返回手机首页</a>
+    <span class="mb-sub" style="margin:0">2022-04-22</span>
+  </div>
+
+  <h1 class="mb-title">Spring Boot（七）内部工作流程</h1>
+  <div class="mb-sub">
+    分类：java · springboot
+     ｜ 标签：SpringBoot
+  </div>
+
+  <div class="mb-article"><div class="essay-banner essay-springboot"></div>
+
+<h1 id="掌握-Spring-Boot-内部工作流程"><a href="#掌握-Spring-Boot-内部工作流程" class="headerlink" title="掌握 Spring Boot 内部工作流程"></a><strong>掌握 Spring Boot 内部工作流程</strong></h1><p><code>SpringApplication.run()</code> 那一行背后有十几个步骤，搞清顺序就能回答很多”为什么”：为什么 <code>@PostConstruct</code> 比 <code>CommandLineRunner</code> 早？为什么 Tomcat 是在 <code>refresh</code> 阶段启动的？为什么监听器能拿到”启动完成”事件？这一篇按源码顺序走一遍。</p>
+<p><img src="https://wu4yong.github.io/starry-images/assets/img/springboot/springboot-07-startup-flow.webp" alt="启动流程的四个关键阶段：环境准备、上下文创建、刷新、事件发布"></p>
+<p><em>启动流程的四个关键阶段：环境准备、上下文创建、刷新、事件发布</em></p>
+<h2 id="1-1-入口：三个构造函数阶段"><a href="#1-1-入口：三个构造函数阶段" class="headerlink" title="1.1 入口：三个构造函数阶段"></a>1.1 入口：三个构造函数阶段</h2><pre class="line-numbers language-java" data-language="java"><code class="language-java"><span class="token keyword">public</span> <span class="token keyword">static</span> <span class="token keyword">void</span> <span class="token function">main</span><span class="token punctuation">(</span><span class="token class-name">String</span><span class="token punctuation">[</span><span class="token punctuation">]</span> args<span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+    <span class="token class-name">SpringApplication</span><span class="token punctuation">.</span><span class="token function">run</span><span class="token punctuation">(</span><span class="token class-name">DemoApplication</span><span class="token punctuation">.</span><span class="token keyword">class</span><span class="token punctuation">,</span> args<span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">&#125;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span></span></code></pre>
+
+<p><code>SpringApplication</code> 实例化时做三件事：</p>
+<div class="data-grid data-grid-link-table"><div class="grid-header"><div class="grid-cell">动作</div><div class="grid-cell">作用</div><div class="grid-cell">影响</div></div><div class="grid-row"><div class="grid-cell"><code>deduceFromClasspath()</code></div><div class="grid-cell">判断应用类型（SERVLET &#x2F; REACTIVE &#x2F; NONE）</div><div class="grid-cell">决定后面创建哪种 <code>ApplicationContext</code></div></div><div class="grid-row"><div class="grid-cell"><code>setInitializers(...)</code></div><div class="grid-cell">加载 <code>ApplicationContextInitializer</code></div><div class="grid-cell">可在 refresh 前加工上下文</div></div><div class="grid-row"><div class="grid-cell"><code>setListeners(...)</code></div><div class="grid-cell">加载 <code>ApplicationListener</code></div><div class="grid-cell">监听启动事件</div></div></div>
+
+<p>这些实现类从 <code>spring.factories</code> 里读出来（<code>SpringApplication</code> 的两个键：<code>ContextFactory</code>、<code>ApplicationContextInitializer</code>、<code>ApplicationListener</code>）。</p>
+<h2 id="1-2-run-的主线"><a href="#1-2-run-的主线" class="headerlink" title="1.2 run() 的主线"></a>1.2 run() 的主线</h2><pre class="line-numbers language-text" data-language="text"><code class="language-text">run(args)
+ ├─ 创建 StopWatch、配置 headless
+ ├─ getRunListeners()                       # 从 spring.factories 取 SpringApplicationRunListener
+ ├─ listeners.starting()                    # 发布 ApplicationStartingEvent
+ ├─ prepareEnvironment()                    # 准备 Environment（读配置、激活 profile）
+ ├─ listeners.environmentPrepared()          # 发布 ApplicationEnvironmentPreparedEvent
+ ├─ printBanner()                           # 打印那个 Spring 启动图
+ ├─ createApplicationContext()              # 反射创建 AnnotationConfigServletWebServerApplicationContext
+ ├─ prepareContext()                        # 设置 environment、注册 primarySources、执行 initializers
+ ├─ listeners.contextPrepared() / contextLoaded()
+ ├─ refreshContext(context)                 # ★ 核心：refresh → 内嵌容器在这里启动
+ ├─ listeners.started()                     # 发布 ApplicationStartedEvent（此时容器已监听端口）
+ ├─ callRunners()                           # 执行 CommandLineRunner / ApplicationRunner
+ └─ listeners.running()                     # 发布 ApplicationReadyEvent（应用可用）<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<div class="data-grid data-grid-link-table"><div class="grid-header"><div class="grid-cell">阶段</div><div class="grid-cell">关键类</div><div class="grid-cell">此时发生了什么</div></div><div class="grid-row"><div class="grid-cell">prepareEnvironment</div><div class="grid-cell"><code>EnvironmentPostProcessor</code></div><div class="grid-cell">加载 <code>application.yml</code>、激活 profile、绑定 <code>@ConfigurationProperties</code> 的数据源</div></div><div class="grid-row"><div class="grid-cell">createApplicationContext</div><div class="grid-cell"><code>ApplicationContextFactory</code></div><div class="grid-cell">决定 Servlet&#x2F;Reactive 上下文</div></div><div class="grid-row"><div class="grid-cell">refreshContext</div><div class="grid-cell"><code>AbstractApplicationContext.refresh()</code></div><div class="grid-cell"><code>invokeBeanFactoryPostProcessors</code> → 注册 Bean 定义 → 实例化单例 → <code>finishRefresh</code> 启动生命周期组件</div></div><div class="grid-row"><div class="grid-cell">callRunners</div><div class="grid-cell"><code>SpringApplication.callRunners</code></div><div class="grid-cell">执行 <code>CommandLineRunner</code>、<code>ApplicationRunner</code></div></div></div>
+
+<h2 id="1-3-refresh-内部：Bean-与容器"><a href="#1-3-refresh-内部：Bean-与容器" class="headerlink" title="1.3 refresh 内部：Bean 与容器"></a>1.3 refresh 内部：Bean 与容器</h2><p><code>refresh</code> 实际调用 <code>AbstractApplicationContext.refresh()</code>，展开后是 Spring 那套经典流程：</p>
+<ol>
+<li><code>prepareRefresh</code>：记录启动时间、初始化占位属性</li>
+<li><code>obtainFreshBeanFactory</code>：拿到 BeanFactory</li>
+<li><code>prepareBeanFactory</code>：注册 <code>ApplicationContext</code> 等可注入对象</li>
+<li><code>postProcessBeanFactory</code>：子类扩展（Servlet 上下文在这里注册 <code>request</code>&#x2F;<code>session</code> 作用域）</li>
+<li><code>invokeBeanFactoryPostProcessors</code>：<strong>处理 <code>@Configuration</code>、<code>@ComponentScan</code>、自动配置</strong></li>
+<li><code>registerBeanPostProcessors</code>：注册 <code>BeanPostProcessor</code>（AOP、<code>@Autowired</code> 注入都靠它）</li>
+<li><code>onRefresh</code>：<strong>Servlet 容器在这里创建并启动 Tomcat</strong></li>
+<li><code>registerListeners</code>：注册监听器</li>
+<li><code>finishBeanFactoryInitialization</code>：<strong>实例化所有非懒加载单例</strong>（你的 <code>@Service</code> 在这一步被创建）</li>
+<li><code>finishRefresh</code>：发布 <code>ContextRefreshedEvent</code>、启动 <code>LifecycleProcessor</code>（<code>SmartLifecycle</code> 组件开始工作）</li>
+</ol>
+<p>所以 Tomcat 启动早于业务 Bean 实例化，但端口真正开始对外服务是在 <code>finishRefresh</code> 之后——这解释了为什么”日志里 Tomcat started 了，但接口还没通”。</p>
+<h2 id="1-4-Bean-的生命周期"><a href="#1-4-Bean-的生命周期" class="headerlink" title="1.4 Bean 的生命周期"></a>1.4 Bean 的生命周期</h2><div class="data-grid data-grid-link-table"><div class="grid-header"><div class="grid-cell">阶段</div><div class="grid-cell">触发</div><div class="grid-cell">典型用法</div></div><div class="grid-row"><div class="grid-cell">实例化</div><div class="grid-cell">构造器</div><div class="grid-cell">依赖注入（构造器注入）</div></div><div class="grid-row"><div class="grid-cell">属性填充</div><div class="grid-cell"><code>@Autowired</code> 字段&#x2F;Setter</div><div class="grid-cell"></div></div><div class="grid-row"><div class="grid-cell">初始化前</div><div class="grid-cell"><code>BeanPostProcessor.postProcessBeforeInitialization</code></div><div class="grid-cell"><code>@PostConstruct</code></div></div><div class="grid-row"><div class="grid-cell">初始化</div><div class="grid-cell"><code>InitializingBean.afterPropertiesSet</code> &#x2F; <code>init-method</code></div><div class="grid-cell">建立连接</div></div><div class="grid-row"><div class="grid-cell">初始化后</div><div class="grid-cell"><code>postProcessAfterInitialization</code></div><div class="grid-cell">AOP 代理生成</div></div><div class="grid-row"><div class="grid-cell">使用</div><div class="grid-cell">—</div><div class="grid-cell"></div></div><div class="grid-row"><div class="grid-cell">销毁</div><div class="grid-cell"><code>@PreDestroy</code> &#x2F; <code>DisposableBean.destroy</code></div><div class="grid-cell">关闭线程池、连接</div></div></div>
+
+<p>顺序记法：<strong>构造 → 注入 → <code>@PostConstruct</code> → <code>afterPropertiesSet</code> → AOP 代理 → 使用 → <code>@PreDestroy</code></strong>。</p>
+<h2 id="1-5-五个扩展点"><a href="#1-5-五个扩展点" class="headerlink" title="1.5 五个扩展点"></a>1.5 五个扩展点</h2><div class="data-grid data-grid-link-table"><div class="grid-header"><div class="grid-cell">扩展点</div><div class="grid-cell">注册方式</div><div class="grid-cell">时机</div></div><div class="grid-row"><div class="grid-cell"><code>ApplicationContextInitializer</code></div><div class="grid-cell"><code>spring.factories</code> 或 <code>springApplication.addInitializers</code></div><div class="grid-cell">refresh 之前，可加工上下文</div></div><div class="grid-row"><div class="grid-cell"><code>ApplicationListener</code></div><div class="grid-cell"><code>spring.factories</code> 或 <code>@Bean</code></div><div class="grid-cell">各阶段事件</div></div><div class="grid-row"><div class="grid-cell"><code>SpringApplicationRunListener</code></div><div class="grid-cell"><code>spring.factories</code></div><div class="grid-cell">全流程钩子（唯一的全局监听）</div></div><div class="grid-row"><div class="grid-cell"><code>CommandLineRunner</code> &#x2F; <code>ApplicationRunner</code></div><div class="grid-cell"><code>@Bean</code></div><div class="grid-cell">容器就绪后、<code>running</code> 事件前</div></div><div class="grid-row"><div class="grid-cell"><code>EnvironmentPostProcessor</code></div><div class="grid-cell"><code>spring.factories</code></div><div class="grid-cell">环境准备阶段，改配置</div></div></div>
+
+<p>最常用的两个：</p>
+<pre class="line-numbers language-java" data-language="java"><code class="language-java"><span class="token annotation punctuation">@Bean</span>
+<span class="token keyword">public</span> <span class="token class-name">CommandLineRunner</span> <span class="token function">warmUp</span><span class="token punctuation">(</span><span class="token class-name">UserMapper</span> mapper<span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+    <span class="token keyword">return</span> args <span class="token operator">-></span> <span class="token punctuation">&#123;</span>
+        <span class="token class-name">System</span><span class="token punctuation">.</span>out<span class="token punctuation">.</span><span class="token function">println</span><span class="token punctuation">(</span><span class="token string">"预热：加载配置、检查连接"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token punctuation">&#125;</span><span class="token punctuation">;</span>
+<span class="token punctuation">&#125;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<pre class="line-numbers language-java" data-language="java"><code class="language-java"><span class="token annotation punctuation">@Component</span>
+<span class="token keyword">public</span> <span class="token keyword">class</span> <span class="token class-name">StartedLogger</span> <span class="token keyword">implements</span> <span class="token class-name">ApplicationListener</span><span class="token generics"><span class="token punctuation">&lt;</span><span class="token class-name">ApplicationReadyEvent</span><span class="token punctuation">></span></span> <span class="token punctuation">&#123;</span>
+    <span class="token annotation punctuation">@Override</span>
+    <span class="token keyword">public</span> <span class="token keyword">void</span> <span class="token function">onApplicationEvent</span><span class="token punctuation">(</span><span class="token class-name">ApplicationReadyEvent</span> event<span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+        <span class="token class-name">System</span><span class="token punctuation">.</span>out<span class="token punctuation">.</span><span class="token function">println</span><span class="token punctuation">(</span><span class="token string">"应用已就绪，可以接流量"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token punctuation">&#125;</span>
+<span class="token punctuation">&#125;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<div class="data-grid data-grid-link-table"><div class="grid-header"><div class="grid-cell">事件</div><div class="grid-cell">触发点</div><div class="grid-cell">容器是否已启动</div></div><div class="grid-row"><div class="grid-cell"><code>ApplicationStartingEvent</code></div><div class="grid-cell">run 最开始</div><div class="grid-cell">否</div></div><div class="grid-row"><div class="grid-cell"><code>ApplicationEnvironmentPreparedEvent</code></div><div class="grid-cell">配置加载完</div><div class="grid-cell">否</div></div><div class="grid-row"><div class="grid-cell"><code>ApplicationContextInitializedEvent</code></div><div class="grid-cell">上下文创建后</div><div class="grid-cell">否</div></div><div class="grid-row"><div class="grid-cell"><code>ApplicationPreparedEvent</code></div><div class="grid-cell">Bean 定义注册完</div><div class="grid-cell">否</div></div><div class="grid-row"><div class="grid-cell"><code>ApplicationStartedEvent</code></div><div class="grid-cell">refresh 之后</div><div class="grid-cell">是（端口已监听）</div></div><div class="grid-row"><div class="grid-cell"><code>ApplicationReadyEvent</code></div><div class="grid-cell">runners 执行完</div><div class="grid-cell">是（可接流量）</div></div><div class="grid-row"><div class="grid-cell"><code>ApplicationFailedEvent</code></div><div class="grid-cell">启动失败</div><div class="grid-cell">—</div></div></div>
+
+<h2 id="1-6-调试启动流程"><a href="#1-6-调试启动流程" class="headerlink" title="1.6 调试启动流程"></a>1.6 调试启动流程</h2><pre class="line-numbers language-bash" data-language="bash"><code class="language-bash"><span class="token comment"># 1. 条件评估报告（看自动配置为什么生效/不生效）</span>
+<span class="token function">java</span> <span class="token parameter variable">-jar</span> demo.jar <span class="token parameter variable">--debug</span>
+
+<span class="token comment"># 2. 打开 Spring 内部日志</span>
+<span class="token function">java</span> <span class="token parameter variable">-jar</span> demo.jar <span class="token parameter variable">--logging.level.org.springframework</span><span class="token operator">=</span>DEBUG
+
+<span class="token comment"># 3. IDE 里断点打在这三处最有效</span>
+<span class="token comment">#   SpringApplication.run</span>
+<span class="token comment">#   AbstractApplicationContext.finishBeanFactoryInitialization</span>
+<span class="token comment">#   ServletWebServerApplicationContext.onRefresh</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<p><code>--debug</code> 输出的 “Condition evaluation report” 会分 Positive &#x2F; Negative matches 两栏，把每个自动配置类的判定条件列出来，是排查”Bean 没装上”的首选手段。</p>
+<h2 id="1-7-实际能用上的三个推论"><a href="#1-7-实际能用上的三个推论" class="headerlink" title="1.7 实际能用上的三个推论"></a>1.7 实际能用上的三个推论</h2><ol>
+<li><strong><code>@PostConstruct</code> 里别做远程调用</strong>：它在 Bean 初始化阶段，一堆 Bean 还没好，失败会直接导致启动失败</li>
+<li><strong>预热逻辑放 <code>CommandLineRunner</code></strong>：此时容器已就绪，但还没接流量（<code>ApplicationStartedEvent</code> 之后、<code>ReadyEvent</code> 之前）</li>
+<li><strong>健康检查依赖 <code>/actuator/health</code></strong>：它就是靠 <code>ApplicationReadyEvent</code> 之后的状态判断，别在 <code>StartedEvent</code> 时就宣布成功</li>
+</ol>
+<h2 id="1-8-官方资料"><a href="#1-8-官方资料" class="headerlink" title="1.8 官方资料"></a>1.8 官方资料</h2><ul>
+<li>启动流程与事件顺序：<a target="_blank" rel="noopener" href="https://docs.spring.io/spring-boot/docs/2.5.0/reference/htmlsingle/#boot-features-application-events-and-listeners">https://docs.spring.io/spring-boot/docs/2.5.0/reference/htmlsingle/#boot-features-application-events-and-listeners</a></li>
+<li><code>SpringApplication</code> 类文档：<a target="_blank" rel="noopener" href="https://docs.spring.io/spring-boot/docs/2.5.0/api/java/org/springframework/boot/SpringApplication.html">https://docs.spring.io/spring-boot/docs/2.5.0/api/java/org/springframework/boot/SpringApplication.html</a></li>
+<li>Spring 容器刷新流程：<a target="_blank" rel="noopener" href="https://docs.spring.io/spring-framework/docs/5.3.x/reference/html/core.html#beans-factory-lifecycle">https://docs.spring.io/spring-framework/docs/5.3.x/reference/html/core.html#beans-factory-lifecycle</a></li>
+</ul>
+<h2 id="1-9-清单"><a href="#1-9-清单" class="headerlink" title="1.9 清单"></a>1.9 清单</h2><ol>
+<li><code>SpringApplication.run</code> 主线：准备环境 → 建上下文 → refresh → 事件 → runners</li>
+<li>Tomcat 在 <code>onRefresh</code> 创建，业务 Bean 在 <code>finishBeanFactoryInitialization</code> 实例化</li>
+<li><code>ApplicationStartedEvent</code> 时端口已监听，<code>ApplicationReadyEvent</code> 时才算可接流量</li>
+<li>Bean 生命周期顺序：构造 → 注入 → <code>@PostConstruct</code> → <code>afterPropertiesSet</code> → AOP → <code>@PreDestroy</code></li>
+<li>五个扩展点里，<code>CommandLineRunner</code> 和 <code>ApplicationListener</code> 最实用</li>
+<li><code>--debug</code> 的条件评估报告是排查自动配置的利器</li>
+<li>预热逻辑放 runner，远程调用别放 <code>@PostConstruct</code></li>
+</ol>
+</div>
+
+  <div class="mb-foot">
+    <a href="/phone/">返回手机首页</a>
+    <a href="/phone/tags/">星迹索引</a>
+  </div>
+</div>
+
+
+<script>
+  /* 作用：懒加载本地 mermaid 库；无 mermaid 代码块时不加载 */
+  function loadLocalMermaid(){
+    return new Promise(function(resolve, reject){
+      if(window.mermaid) return resolve(window.mermaid);
+      var s = document.createElement('script');
+      s.src = '/js/third-party/mermaid/mermaid.min.js?v=10';
+      s.onload = function(){ resolve(window.mermaid); };
+      s.onerror = function(){ reject(new Error('mermaid local load failed')); };
+      document.head.appendChild(s);
+    });
+  }
+
+  /* 作用：把 ```mermaid 代码块替换成 SVG 图（手机端字号略小、图可横向滚动） */
+  async function renderMermaidDiagram(){
+    var blocks = document.querySelectorAll('pre[class*="language-mermaid"]');
+    if(!blocks.length) return;
+    var mermaid;
+    try { mermaid = await loadLocalMermaid(); }
+    catch(e){ console.warn('[mermaid] 本地库加载失败：', e); return; }
+
+    mermaid.initialize({
+      startOnLoad: false,
+      theme: 'base',
+      themeVariables: {
+        darkMode: true,
+        background: 'transparent',
+        fontFamily: '"Microsoft YaHei", "PingFang SC", "Segoe UI", sans-serif',
+        fontSize: '12px',
+        primaryColor: '#062f3d',
+        primaryTextColor: '#d6f6ff',
+        primaryBorderColor: '#00eeff',
+        secondaryColor: '#04222d',
+        tertiaryColor: '#04222d',
+        mainBkg: '#062f3d',
+        nodeBorder: '#00eeff',
+        clusterBkg: '#02161f',
+        clusterBorder: '#00eeff55',
+        lineColor: '#00eeff',
+        textColor: '#c0e8ff',
+        edgeLabelBackground: '#02161f'
+      },
+      flowchart: { curve: 'basis', useMaxWidth: false, htmlLabels: false, nodeSpacing: 30, rankSpacing: 40, padding: 10 }
+    });
+
+    var targets = [];
+    blocks.forEach(function(el){
+      var codeEl = el.querySelector('code');
+      if(!codeEl) return;
+      var div = document.createElement('div');
+      div.className = 'mermaid';
+      div.textContent = codeEl.textContent;
+      el.parentNode.replaceChild(div, el);
+      targets.push(div);
+    });
+    if(!targets.length) return;
+    try { await mermaid.run({ nodes: targets }); }
+    catch(e){ console.warn('[mermaid] 渲染失败：', e); }
+  }
+  /* 作用：多次触发兜底（延迟重试 + DOM 变化），防止某次时机没跑到导致图表留在代码块 */
+  var mmBusy = false;
+  function scheduleMermaid(){
+    if(mmBusy) return;
+    mmBusy = true;
+    renderMermaidDiagram().then(function(){ mmBusy = false; }, function(){ mmBusy = false; });
+  }
+  scheduleMermaid();
+  window.addEventListener('load', scheduleMermaid);
+  [1000, 3000, 8000].forEach(function(ms){ setTimeout(scheduleMermaid, ms); });
+  if(document.readyState !== 'loading') scheduleMermaid();
+  if(window.MutationObserver){
+    var mmTimer = null;
+    var mmObserver = new MutationObserver(function(){
+      clearTimeout(mmTimer);
+      mmTimer = setTimeout(scheduleMermaid, 400);
+    });
+    mmObserver.observe(document.querySelector('.mb-article') || document.body, { childList: true, subtree: true });
+  }
+</script>
+</body>
+</html>

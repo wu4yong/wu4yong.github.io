@@ -1,0 +1,320 @@
+<!--
+  ============================================
+  手机端 · 文章原文页
+  文件：phone/post.njk
+  适用终端：手机端（路由 /phone/p/<slug>/，由 scripts/phone-routes.js 生成）
+  作用：手机阅读单篇文章；单列布局、无侧栏无雷达，替代电脑端 post.njk
+        数据由生成期算好：page.item = { title, dateStr, content, cats, tags }
+  样式依赖：source/css/theme/phone/common.css、source/css/theme/phone/list.css
+  组件依赖：phone/_components/Particles.njk
+  最后修改：2026-11-11
+  ============================================
+-->
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="color-scheme" content="dark">
+  <meta name="theme-color" content="#020817">
+  <!-- 首帧兜底：浏览器默认画布是白的，样式未解析前会闪一下白。这条规则先锁死深空底色 -->
+  <style>html{background-color:#020817}</style>
+  <title>Hadoop（四）MapReduce 原理与 Shuffle - 时空秘境</title>
+  <!-- 手机端样式：基础 + 列表/正文，外链引入（源文件 source/css/theme/phone/） -->
+  <link rel="stylesheet" href="/css/theme/phone/common.css">
+  <link rel="stylesheet" href="/css/theme/phone/list.css">
+<meta name="generator" content="Hexo 8.1.2"></head>
+<body>
+<div class="mb-shell">
+  <!--
+  ============================================
+  手机端星空粒子组件
+  文件：Particles.njk
+  适用终端：手机端
+  作用：Particles.njk 的手机端副本（nunjucks 子目录 include 取不到上级）
+        参数与电脑端 _components/Particles.njk 保持一致：
+        粒子 95 / 连线 118px / opacity 0.32，外加星座层与零星闪烁层
+  最后修改：2026-11-12
+  ============================================
+--><!-- z-index 必须是 0：负层级会被 body 不透明背景盖住，粒子在跑却看不见 -->
+<div id="particles" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 0; pointer-events: none;"></div>
+<!-- 星座层（与首页同一套：随机零星散布星座图形 + 偶尔闪烁的小星） -->
+<div id="constellations" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 1; pointer-events: none;" aria-hidden="true"></div>
+<script src="/js/particles.min.js"></script>
+<script>
+particlesJS("particles", {
+  particles: {
+    number: {
+      value: 95,
+      density: {
+        enable: true,
+        value_area: 800
+      }
+    },
+    color: {
+      value: "#00eeff"
+    },
+    shape: {
+      type: "circle",
+      stroke: {
+        width: 0,
+        color: "#000000"
+      }
+    },
+    opacity: {
+      value: 0.6,
+      random: true,
+      anim: {
+        enable: true,
+        speed: 0.5,
+        opacity_min: 0.1,
+        sync: false
+      }
+    },
+    size: {
+      value: 3,
+      random: true,
+      anim: {
+        enable: true,
+        speed: 2,
+        size_min: 0.1,
+        sync: false
+      }
+    },
+    line_linked: {
+      enable: true,
+      distance: 118,
+      color: "#00eeff",
+      opacity: 0.32,
+      width: 1
+    },
+    move: {
+      enable: true,
+      speed: 0.8,
+      direction: "none",
+      random: true,
+      straight: false,
+      out_mode: "out",
+      bounce: false,
+      attract: {
+        enable: true,
+        rotateX: 600,
+        rotateY: 1200
+      }
+    }
+  },
+  interactivity: {
+    detect_on: "canvas",
+    events: {
+      onhover: {
+        enable: true,
+        mode: "grab"       // 手指按住时粒子聚集
+      },
+      onclick: {
+        enable: true,
+        mode: "push"       // 点击时产生新粒子
+      },
+      resize: true
+    },
+    modes: {
+      grab: {
+        distance: 200,
+        line_linked: {
+          opacity: 1
+        }
+      },
+      push: {
+        particles_nb: 6
+      }
+    }
+  },
+  retina_detect: true
+});
+</script>
+<!-- 星座 + 零星闪烁层：与电脑端共用同一份绘制脚本 -->
+<script src="/js/theme/home/starfield.js"></script>
+
+
+  <div class="mb-top">
+    <a class="mb-back" href="/phone/">← 返回手机首页</a>
+    <span class="mb-sub" style="margin:0">2023-02-22</span>
+  </div>
+
+  <h1 class="mb-title">Hadoop（四）MapReduce 原理与 Shuffle</h1>
+  <div class="mb-sub">
+    分类：bigdata · hadoop
+     ｜ 标签：Hadoop
+  </div>
+
+  <div class="mb-article"><div class="essay-banner essay-hadoop"></div>
+
+<h1 id="MapReduce-原理与-Shuffle"><a href="#MapReduce-原理与-Shuffle" class="headerlink" title="MapReduce 原理与 Shuffle"></a><strong>MapReduce 原理与 Shuffle</strong></h1><p>新项目直接写 MapReduce 的已经不多，但它的两阶段模型和 Shuffle 机制是理解 Spark、Flink 的坐标系：宽依赖就是 Shuffle，stage 边界就是 map&#x2F;reduce 分界。这一篇把从切片到落盘的全链路拆开，重点讲 Shuffle 的磁盘与网络细节。</p>
+<p><img src="https://wu4yong.github.io/starry-images/assets/img/hadoop/hadoop-04-mapreduce.webp" alt="数据流沿多节点分叉成映射分支，再按键值归并汇聚到下游节点"></p>
+<p><em>数据流沿多节点分叉成映射分支，再按键值归并汇聚到下游节点</em></p>
+<h2 id="1-1-全链路概览"><a href="#1-1-全链路概览" class="headerlink" title="1.1 全链路概览"></a>1.1 全链路概览</h2><p>MapReduce 作业可以拆成五个顺序阶段，每个阶段的输入输出都是键值对或文件：</p>
+<div class="data-grid data-grid-link-table"><div class="grid-header"><div class="grid-cell">阶段</div><div class="grid-cell">输入</div><div class="grid-cell">输出</div><div class="grid-cell">关键动作</div></div><div class="grid-row"><div class="grid-cell">Input</div><div class="grid-cell">HDFS 文件</div><div class="grid-cell">InputSplit 切片</div><div class="grid-cell">InputFormat 按块切分</div></div><div class="grid-row"><div class="grid-cell">Map</div><div class="grid-cell">记录</div><div class="grid-cell">中间键值对</div><div class="grid-cell">业务映射逻辑</div></div><div class="grid-row"><div class="grid-cell">Shuffle</div><div class="grid-cell">map 输出</div><div class="grid-cell">按 key 分区排序的数据集</div><div class="grid-cell">分区、排序、落盘、拉取</div></div><div class="grid-row"><div class="grid-cell">Reduce</div><div class="grid-cell">同 key 的值集合</div><div class="grid-cell">结果键值对</div><div class="grid-cell">聚合、连接、去重</div></div><div class="grid-row"><div class="grid-cell">Output</div><div class="grid-cell">结果键值对</div><div class="grid-cell">HDFS part 文件</div><div class="grid-cell">每个 reduce 一个文件</div></div></div>
+
+<p>整体节奏是”先并行铺开算，再按 key 收拢合并”。Map 任务之间互不通信，所有跨节点的数据交换都集中在 Shuffle 段，作业最慢的环节通常也在这里。</p>
+<h2 id="1-2-InputFormat-与-InputSplit"><a href="#1-2-InputFormat-与-InputSplit" class="headerlink" title="1.2 InputFormat 与 InputSplit"></a>1.2 InputFormat 与 InputSplit</h2><p>切片（InputSplit）不等于 HDFS 块，但默认对齐块大小。切片由 <code>InputFormat</code> 生成，决定一个 Map 任务处理哪一段记录：</p>
+<ul>
+<li><code>TextInputFormat</code> 按行读文本，默认一个块对应一个切片</li>
+<li>切片记录的是起始偏移与长度，不是把数据复制一份到内存</li>
+<li>若一条记录跨块，InputFormat 负责跨边界读完整条记录</li>
+</ul>
+<p>切片数直接决定 Map 任务并行度。切片切得过粗，单任务重试代价大、节点空闲时无法补位；切得过细，任务启动与调度开销占比升高。小文件过多时每个文件一个切片，Map 任务数被文件数量撑爆，这是典型的小文件后遗症。</p>
+<h2 id="1-3-Map-阶段"><a href="#1-3-Map-阶段" class="headerlink" title="1.3 Map 阶段"></a>1.3 Map 阶段</h2><p>Map 任务对切片里的每条记录调用一次 <code>map()</code>，输出若干键值对。框架在 Map 侧做两件透明的事：</p>
+<ul>
+<li>输出先写环形内存缓冲区，达到阈值后 spill 到本地磁盘</li>
+<li>落盘前按分区（partition）与 key 排序，为后续拉取做准备</li>
+</ul>
+<p>Map 端的业务代码只关心”一条记录变成什么键值对”，缓冲区大小、spill 阈值、压缩策略都由配置控制。缓冲区默认容量不大，Map 输出量大时频繁 spill，磁盘 IO 直接体现在作业时长上。</p>
+<h2 id="1-4-Shuffle：分区、排序、spill-与-merge"><a href="#1-4-Shuffle：分区、排序、spill-与-merge" class="headerlink" title="1.4 Shuffle：分区、排序、spill 与 merge"></a>1.4 Shuffle：分区、排序、spill 与 merge</h2><p>Shuffle 是 MapReduce 最复杂的一段，分 Map 端与 Reduce 端两侧看：</p>
+<p><strong>Map 端：</strong></p>
+<ol>
+<li>输出写入环形缓冲区，达到 <code>mapreduce.map.sort.spill.percent</code> 阈值开始 spill</li>
+<li>spill 前按 Partitioner 确定分区，再在分区内按 key 排序</li>
+<li>多次 spill 形成多个磁盘文件，最后 merge 成一个已排序的分区文件</li>
+<li>Reduce 端按分区拉取对应文件片段</li>
+</ol>
+<p><strong>Reduce 端：</strong></p>
+<ol>
+<li>复制线程从各 Map 节点拉取属于自己分区的数据</li>
+<li>拉到的数据先放内存，超阈值落盘，多个片段再次 merge 排序</li>
+<li>排序完成后按 key 分组，同一 key 的值交给 <code>reduce()</code> 迭代处理</li>
+</ol>
+<pre class="line-numbers language-properties" data-language="properties"><code class="language-properties"><span class="token comment"># Map 侧环形缓冲区大小，输出量大时适当上调以减少 spill</span>
+<span class="token key attr-name">mapreduce.task.io.sort.mb</span><span class="token punctuation">=</span><span class="token value attr-value">100</span>
+<span class="token comment"># spill 触发阈值，占缓冲区比例</span>
+<span class="token key attr-name">mapreduce.map.sort.spill.percent</span><span class="token punctuation">=</span><span class="token value attr-value">0.80</span>
+<span class="token comment"># Reduce 端同时复制的线程数</span>
+<span class="token key attr-name">mapreduce.reduce.shuffle.parallelcopies</span><span class="token punctuation">=</span><span class="token value attr-value">5</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<p>Shuffle 之所以贵，是因为它同时打满磁盘（spill 与 merge）和网络（跨节点拉取）。排查作业慢时先看 Shuffle 字节数与磁盘等待时间，而不是先怀疑业务逻辑。</p>
+<h2 id="1-5-Combiner-与-Partitioner"><a href="#1-5-Combiner-与-Partitioner" class="headerlink" title="1.5 Combiner 与 Partitioner"></a>1.5 Combiner 与 Partitioner</h2><p><strong>Partitioner</strong> 决定一条 map 输出落到哪个 Reduce。默认 <code>HashPartitioner</code> 用 <code>key.hashCode() % reduceTasks</code> 取模，保证同 key 进同一分区。自定义 Partitioner 可以按业务字段分流，比如按地区把数据送到不同 Reduce。</p>
+<p><strong>Combiner</strong> 是 Map 端的本地预聚合，作用等同于在 Map 节点上先跑一遍 Reduce：</p>
+<ul>
+<li>它在 spill 前对同分区同 key 的值做一次合并，减少 Shuffle 传输量</li>
+<li>不是所有聚合都能加 Combiner：求和、计数可以；求平均、拼接集合这类依赖全量样本的不能随便加</li>
+<li>Combiner 被调用次数不固定，业务逻辑必须对”本地先聚一次”保持幂等</li>
+</ul>
+<div class="data-grid data-grid-link-table"><div class="grid-header"><div class="grid-cell">组件</div><div class="grid-cell">位置</div><div class="grid-cell">作用</div><div class="grid-cell">限制</div></div><div class="grid-row"><div class="grid-cell">Partitioner</div><div class="grid-cell">Map 端落盘前</div><div class="grid-cell">key → Reduce 分区的映射</div><div class="grid-cell">分区数等于 Reduce 任务数</div></div><div class="grid-row"><div class="grid-cell">Combiner</div><div class="grid-cell">Map 端 spill 前</div><div class="grid-cell">本地预聚合，压缩 Shuffle 数据</div><div class="grid-cell">聚合函数需满足可结合性</div></div></div>
+
+<h2 id="1-6-Reduce-与输出"><a href="#1-6-Reduce-与输出" class="headerlink" title="1.6 Reduce 与输出"></a>1.6 Reduce 与输出</h2><p>Reduce 拿到的是已按 key 分组的值迭代器。<code>reduce()</code> 对每个 key 调用一次，输出结果键值对，最终由 <code>OutputFormat</code> 写入 HDFS：</p>
+<ul>
+<li>每个 Reduce 任务生成一个 <code>part-r-xxxxx</code> 文件，文件数等于 Reduce 数</li>
+<li>Reduce 数量影响并行度与输出文件大小，设为 1 等于全量串行聚合</li>
+<li>结果文件直接在 HDFS 上，后续 Hive、Spark 都可以直接读</li>
+</ul>
+<p>Reduce 侧同样有内存到磁盘的 merge 过程。拉取的数据在内存放不下时落盘，多次落盘再合并；Reduce 输入倾斜时，个别任务处理的 key 量远超其他节点，整体进度卡在 99%。</p>
+<h2 id="1-7-几个容易踩的坑"><a href="#1-7-几个容易踩的坑" class="headerlink" title="1.7 几个容易踩的坑"></a>1.7 几个容易踩的坑</h2><ul>
+<li>把 Combiner 当性能开关到处加，求平均类聚合先在本地合并，最终结果直接算错</li>
+<li>Reduce 数固定写死为 1，大作业全部挤在一个节点聚合，倾斜严重</li>
+<li>小文件场景切片数等于文件数，Map 任务成百上千，调度开销压过计算本身</li>
+<li>以为 Shuffle 只走网络，实际 Map 端 spill、Reduce 端 merge 都要读写本地磁盘</li>
+<li>key 类型没有实现 <code>Writable</code> 与正确的 <code>hashCode</code>、<code>equals</code>，分区与分组行为错乱</li>
+<li>只调大 Map 缓冲区，忽略 Reduce 复制线程数与拉取超时，Shuffle 卡在复制阶段</li>
+</ul>
+<h2 id="1-8-官方资料"><a href="#1-8-官方资料" class="headerlink" title="1.8 官方资料"></a>1.8 官方资料</h2><ul>
+<li>MapReduce 教程：<a target="_blank" rel="noopener" href="https://hadoop.apache.org/docs/stable/hadoop-mapreduce-client/hadoop-mapreduce-client-core/MapReduceTutorial.html">https://hadoop.apache.org/docs/stable/hadoop-mapreduce-client/hadoop-mapreduce-client-core/MapReduceTutorial.html</a></li>
+<li>MapReduce 配置参数：<a target="_blank" rel="noopener" href="https://hadoop.apache.org/docs/stable/hadoop-mapreduce-client/hadoop-mapreduce-client-core/mapred-default.xml">https://hadoop.apache.org/docs/stable/hadoop-mapreduce-client/hadoop-mapreduce-client-core/mapred-default.xml</a></li>
+<li>Shuffle 与可插拔排序：<a target="_blank" rel="noopener" href="https://hadoop.apache.org/docs/stable/hadoop-mapreduce-client/hadoop-mapreduce-client-core/PluggableShuffleAndPluggableSort.html">https://hadoop.apache.org/docs/stable/hadoop-mapreduce-client/hadoop-mapreduce-client-core/PluggableShuffleAndPluggableSort.html</a></li>
+<li>MapReduce 命令行：<a target="_blank" rel="noopener" href="https://hadoop.apache.org/docs/stable/hadoop-mapreduce-client/hadoop-mapreduce-client-core/MapredCommands.html">https://hadoop.apache.org/docs/stable/hadoop-mapreduce-client/hadoop-mapreduce-client-core/MapredCommands.html</a></li>
+</ul>
+<h2 id="1-9-清单"><a href="#1-9-清单" class="headerlink" title="1.9 清单"></a>1.9 清单</h2><ol>
+<li>MapReduce 全链路为切片、Map、Shuffle、Reduce、Output 五段</li>
+<li>切片默认对齐 HDFS 块，切片数决定 Map 并行度，小文件会把切片数撑爆</li>
+<li>Shuffle 横跨磁盘与网络：Map 端 spill 排序，Reduce 端复制合并分组</li>
+<li>Partitioner 定分区，Combiner 做本地预聚合，Combiner 要求聚合函数可结合</li>
+<li>Reduce 输出每个任务一个 part 文件，Reduce 数既是并行度也是文件数</li>
+<li>数据倾斜表现为个别 Reduce 长跑、整体进度卡住，先查 key 分布再调参数</li>
+</ol>
+</div>
+
+  <div class="mb-foot">
+    <a href="/phone/">返回手机首页</a>
+    <a href="/phone/tags/">星迹索引</a>
+  </div>
+</div>
+
+
+<script>
+  /* 作用：懒加载本地 mermaid 库；无 mermaid 代码块时不加载 */
+  function loadLocalMermaid(){
+    return new Promise(function(resolve, reject){
+      if(window.mermaid) return resolve(window.mermaid);
+      var s = document.createElement('script');
+      s.src = '/js/third-party/mermaid/mermaid.min.js?v=10';
+      s.onload = function(){ resolve(window.mermaid); };
+      s.onerror = function(){ reject(new Error('mermaid local load failed')); };
+      document.head.appendChild(s);
+    });
+  }
+
+  /* 作用：把 ```mermaid 代码块替换成 SVG 图（手机端字号略小、图可横向滚动） */
+  async function renderMermaidDiagram(){
+    var blocks = document.querySelectorAll('pre[class*="language-mermaid"]');
+    if(!blocks.length) return;
+    var mermaid;
+    try { mermaid = await loadLocalMermaid(); }
+    catch(e){ console.warn('[mermaid] 本地库加载失败：', e); return; }
+
+    mermaid.initialize({
+      startOnLoad: false,
+      theme: 'base',
+      themeVariables: {
+        darkMode: true,
+        background: 'transparent',
+        fontFamily: '"Microsoft YaHei", "PingFang SC", "Segoe UI", sans-serif',
+        fontSize: '12px',
+        primaryColor: '#062f3d',
+        primaryTextColor: '#d6f6ff',
+        primaryBorderColor: '#00eeff',
+        secondaryColor: '#04222d',
+        tertiaryColor: '#04222d',
+        mainBkg: '#062f3d',
+        nodeBorder: '#00eeff',
+        clusterBkg: '#02161f',
+        clusterBorder: '#00eeff55',
+        lineColor: '#00eeff',
+        textColor: '#c0e8ff',
+        edgeLabelBackground: '#02161f'
+      },
+      flowchart: { curve: 'basis', useMaxWidth: false, htmlLabels: false, nodeSpacing: 30, rankSpacing: 40, padding: 10 }
+    });
+
+    var targets = [];
+    blocks.forEach(function(el){
+      var codeEl = el.querySelector('code');
+      if(!codeEl) return;
+      var div = document.createElement('div');
+      div.className = 'mermaid';
+      div.textContent = codeEl.textContent;
+      el.parentNode.replaceChild(div, el);
+      targets.push(div);
+    });
+    if(!targets.length) return;
+    try { await mermaid.run({ nodes: targets }); }
+    catch(e){ console.warn('[mermaid] 渲染失败：', e); }
+  }
+  /* 作用：多次触发兜底（延迟重试 + DOM 变化），防止某次时机没跑到导致图表留在代码块 */
+  var mmBusy = false;
+  function scheduleMermaid(){
+    if(mmBusy) return;
+    mmBusy = true;
+    renderMermaidDiagram().then(function(){ mmBusy = false; }, function(){ mmBusy = false; });
+  }
+  scheduleMermaid();
+  window.addEventListener('load', scheduleMermaid);
+  [1000, 3000, 8000].forEach(function(ms){ setTimeout(scheduleMermaid, ms); });
+  if(document.readyState !== 'loading') scheduleMermaid();
+  if(window.MutationObserver){
+    var mmTimer = null;
+    var mmObserver = new MutationObserver(function(){
+      clearTimeout(mmTimer);
+      mmTimer = setTimeout(scheduleMermaid, 400);
+    });
+    mmObserver.observe(document.querySelector('.mb-article') || document.body, { childList: true, subtree: true });
+  }
+</script>
+</body>
+</html>

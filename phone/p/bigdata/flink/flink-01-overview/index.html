@@ -1,0 +1,310 @@
+<!--
+  ============================================
+  手机端 · 文章原文页
+  文件：phone/post.njk
+  适用终端：手机端（路由 /phone/p/<slug>/，由 scripts/phone-routes.js 生成）
+  作用：手机阅读单篇文章；单列布局、无侧栏无雷达，替代电脑端 post.njk
+        数据由生成期算好：page.item = { title, dateStr, content, cats, tags }
+  样式依赖：source/css/theme/phone/common.css、source/css/theme/phone/list.css
+  组件依赖：phone/_components/Particles.njk
+  最后修改：2026-11-11
+  ============================================
+-->
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="color-scheme" content="dark">
+  <meta name="theme-color" content="#020817">
+  <!-- 首帧兜底：浏览器默认画布是白的，样式未解析前会闪一下白。这条规则先锁死深空底色 -->
+  <style>html{background-color:#020817}</style>
+  <title>Flink（一）架构与时间语义 - 时空秘境</title>
+  <!-- 手机端样式：基础 + 列表/正文，外链引入（源文件 source/css/theme/phone/） -->
+  <link rel="stylesheet" href="/css/theme/phone/common.css">
+  <link rel="stylesheet" href="/css/theme/phone/list.css">
+<meta name="generator" content="Hexo 8.1.2"></head>
+<body>
+<div class="mb-shell">
+  <!--
+  ============================================
+  手机端星空粒子组件
+  文件：Particles.njk
+  适用终端：手机端
+  作用：Particles.njk 的手机端副本（nunjucks 子目录 include 取不到上级）
+        参数与电脑端 _components/Particles.njk 保持一致：
+        粒子 95 / 连线 118px / opacity 0.32，外加星座层与零星闪烁层
+  最后修改：2026-11-12
+  ============================================
+--><!-- z-index 必须是 0：负层级会被 body 不透明背景盖住，粒子在跑却看不见 -->
+<div id="particles" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 0; pointer-events: none;"></div>
+<!-- 星座层（与首页同一套：随机零星散布星座图形 + 偶尔闪烁的小星） -->
+<div id="constellations" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 1; pointer-events: none;" aria-hidden="true"></div>
+<script src="/js/particles.min.js"></script>
+<script>
+particlesJS("particles", {
+  particles: {
+    number: {
+      value: 95,
+      density: {
+        enable: true,
+        value_area: 800
+      }
+    },
+    color: {
+      value: "#00eeff"
+    },
+    shape: {
+      type: "circle",
+      stroke: {
+        width: 0,
+        color: "#000000"
+      }
+    },
+    opacity: {
+      value: 0.6,
+      random: true,
+      anim: {
+        enable: true,
+        speed: 0.5,
+        opacity_min: 0.1,
+        sync: false
+      }
+    },
+    size: {
+      value: 3,
+      random: true,
+      anim: {
+        enable: true,
+        speed: 2,
+        size_min: 0.1,
+        sync: false
+      }
+    },
+    line_linked: {
+      enable: true,
+      distance: 118,
+      color: "#00eeff",
+      opacity: 0.32,
+      width: 1
+    },
+    move: {
+      enable: true,
+      speed: 0.8,
+      direction: "none",
+      random: true,
+      straight: false,
+      out_mode: "out",
+      bounce: false,
+      attract: {
+        enable: true,
+        rotateX: 600,
+        rotateY: 1200
+      }
+    }
+  },
+  interactivity: {
+    detect_on: "canvas",
+    events: {
+      onhover: {
+        enable: true,
+        mode: "grab"       // 手指按住时粒子聚集
+      },
+      onclick: {
+        enable: true,
+        mode: "push"       // 点击时产生新粒子
+      },
+      resize: true
+    },
+    modes: {
+      grab: {
+        distance: 200,
+        line_linked: {
+          opacity: 1
+        }
+      },
+      push: {
+        particles_nb: 6
+      }
+    }
+  },
+  retina_detect: true
+});
+</script>
+<!-- 星座 + 零星闪烁层：与电脑端共用同一份绘制脚本 -->
+<script src="/js/theme/home/starfield.js"></script>
+
+
+  <div class="mb-top">
+    <a class="mb-back" href="/phone/">← 返回手机首页</a>
+    <span class="mb-sub" style="margin:0">2023-07-11</span>
+  </div>
+
+  <h1 class="mb-title">Flink（一）架构与时间语义</h1>
+  <div class="mb-sub">
+    分类：bigdata · flink
+     ｜ 标签：Flink
+  </div>
+
+  <div class="mb-article"><div class="essay-banner essay-flink"></div>
+
+<h1 id="架构与时间语义"><a href="#架构与时间语义" class="headerlink" title="架构与时间语义"></a><strong>架构与时间语义</strong></h1><p>流计算和批计算最根本的差别，是数据”来不完”。一条订单流、一次点击流会一直滚动下去，作业必须边到边算，而不是等全部到齐。Flink 把这种”有状态的流式计算”做成了一套运行时框架，这一篇先把角色分工、资源单位和时间口径讲清楚，后面几篇再展开 API、状态与窗口。</p>
+<p><img src="https://wu4yong.github.io/starry-images/assets/img/flink/flink-01-overview.webp" alt="中央调度节点向后排工作节点分发数据流，每个工作节点内部是一格格并行槽位"></p>
+<p><em>中央调度节点向后排工作节点分发数据流，每个工作节点内部是一格格并行槽位</em></p>
+<h2 id="1-1-Flink-的定位：流批一体"><a href="#1-1-Flink-的定位：流批一体" class="headerlink" title="1.1 Flink 的定位：流批一体"></a>1.1 Flink 的定位：流批一体</h2><p>很多教程把 Flink 讲成”实时计算框架”，这个说法不算错，但漏掉了它现在的主线。从 1.12 起 Flink 把批处理当作流处理的一种特殊情况（有界流），DataStream API 与 Table API 逐步统一，一套作业可以同时跑无界流和有界批。理解 Flink 时建议按这个坐标系：</p>
+<div class="data-grid data-grid-link-table"><div class="grid-header"><div class="grid-cell">概念</div><div class="grid-cell">含义</div><div class="grid-cell">落地形态</div></div><div class="grid-row"><div class="grid-cell">流处理</div><div class="grid-cell">数据无界，逐条到达逐条计算</div><div class="grid-cell">实时指标、实时数仓、实时风控</div></div><div class="grid-row"><div class="grid-cell">批处理</div><div class="grid-cell">数据有界，算完即结束</div><div class="grid-cell">离线补数、T+1 汇总，复用同一套 API</div></div><div class="grid-row"><div class="grid-cell">有状态计算</div><div class="grid-cell">作业记住之前见过的数据</div><div class="grid-cell">计数、去重、窗口聚合、会话拆分</div></div><div class="grid-row"><div class="grid-cell">事件时间</div><div class="grid-cell">以数据自带的时间戳为准</div><div class="grid-cell">乱流、延迟重放都能正确出结果</div></div></div>
+
+<p>和 Storm、Spark Streaming 这类早期框架相比，Flink 的两个硬特点值得记住：<strong>状态内建在运行时里</strong>，而不是靠外部存储拼出来；<strong>故障恢复基于快照</strong>，作业挂掉可以从最近一次一致状态续跑。这两点是后面容错一节的基础。</p>
+<h2 id="1-2-运行时架构：JobManager-与-TaskManager"><a href="#1-2-运行时架构：JobManager-与-TaskManager" class="headerlink" title="1.2 运行时架构：JobManager 与 TaskManager"></a>1.2 运行时架构：JobManager 与 TaskManager</h2><p>一个 Flink 作业跑起来，集群里只有两类常驻进程，外加随作业生成的任务子任务。角色分工如下：</p>
+<div class="data-grid data-grid-link-table"><div class="grid-header"><div class="grid-cell">角色</div><div class="grid-cell">职责</div><div class="grid-cell">数量</div></div><div class="grid-row"><div class="grid-cell">JobManager</div><div class="grid-cell">作业调度、检查点协调、故障恢复、元数据管理</div><div class="grid-cell">每个作业一个（HA 下主备）</div></div><div class="grid-row"><div class="grid-cell">TaskManager</div><div class="grid-cell">提供计算资源槽位，执行算子子任务，上报心跳与状态</div><div class="grid-cell">每个工作节点一个</div></div><div class="grid-row"><div class="grid-cell">SubTask</div><div class="grid-cell">算子的并行实例，真正读写数据的执行单元</div><div class="grid-cell">由并行度决定</div></div><div class="grid-row"><div class="grid-cell">Client</div><div class="grid-cell">解析作业图、提交到集群，本身不参与计算</div><div class="grid-cell">提交流程中短暂存在</div></div></div>
+
+<p>启动顺序是：Client 把用户代码翻译成执行图（ExecutionGraph）提交给 JobManager；JobManager 向 TaskManager 申请资源槽位，把 SubTask 部署进去；SubTask 之间通过网络交换数据，JobManager 定时触发检查点快照。</p>
+<p>JobManager 不碰业务数据，只做协调；真正的吞吐瓶颈几乎都在 TaskManager 这一侧。看集群问题时先分清”调度卡住”还是”计算积压”，方向就不会错。</p>
+<p>TaskManager 的资源在配置文件里按进程声明，槽位数直接决定单机能塞多少 SubTask：</p>
+<pre class="line-numbers language-yaml" data-language="yaml"><code class="language-yaml"><span class="token comment"># taskmanager 配置：槽位与内存一起决定单机可承载的并行度</span>
+<span class="token key atrule">taskmanager</span><span class="token punctuation">:</span>
+  <span class="token key atrule">numberOfTaskSlots</span><span class="token punctuation">:</span> <span class="token number">4</span>          <span class="token comment"># 单机 4 个槽位，等于 4 份计算分片</span>
+  <span class="token key atrule">memory</span><span class="token punctuation">:</span>
+    <span class="token key atrule">process</span><span class="token punctuation">:</span>
+      <span class="token key atrule">size</span><span class="token punctuation">:</span> 2048mb               <span class="token comment"># 进程总内存，按状态规模和批量大小调整</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<p>一个集群能跑多大的并行度，是所有 TaskManager 槽位数之和；提交作业时申请的总槽位超过这个上限，SubTask 就会一直排队等待。</p>
+<h2 id="1-3-并行度、子任务与-Slot"><a href="#1-3-并行度、子任务与-Slot" class="headerlink" title="1.3 并行度、子任务与 Slot"></a>1.3 并行度、子任务与 Slot</h2><p>Flink 里并行的最小单位是 SubTask，并行度（parallelism）就是某个算子起多少个 SubTask。资源的分配单位是 Slot（任务槽），一个 TaskManager 进程把自己的内存切成若干 Slot，每个 Slot 跑一个或多个 SubTask。</p>
+<div class="data-grid data-grid-link-table"><div class="grid-header"><div class="grid-cell">概念</div><div class="grid-cell">是什么</div><div class="grid-cell">关键规则</div></div><div class="grid-row"><div class="grid-cell">并行度</div><div class="grid-cell">算子并行子任务的数量</div><div class="grid-cell">可在代码、提交参数、配置文件三处覆盖</div></div><div class="grid-row"><div class="grid-cell">Slot</div><div class="grid-cell">TaskManager 上的资源分片</div><div class="grid-cell">槽位之间内存隔离，CPU 不隔离</div></div><div class="grid-row"><div class="grid-cell">Slot 共享</div><div class="grid-cell">同一链路不同算子的 SubTask 挤进同一个 Slot</div><div class="grid-cell">默认开启，避免算子之间空占资源</div></div><div class="grid-row"><div class="grid-cell">资源槽位</div><div class="grid-cell">作业需要的总 Slot 数</div><div class="grid-cell">等于链路最大并行度，不是各算子并行度相加</div></div></div>
+
+<p>一段最小可跑的流作业骨架长这样：</p>
+<pre class="line-numbers language-java" data-language="java"><code class="language-java"><span class="token class-name">StreamExecutionEnvironment</span> env <span class="token operator">=</span> <span class="token class-name">StreamExecutionEnvironment</span><span class="token punctuation">.</span><span class="token function">getExecutionEnvironment</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+env<span class="token punctuation">.</span><span class="token function">setParallelism</span><span class="token punctuation">(</span><span class="token number">4</span><span class="token punctuation">)</span><span class="token punctuation">;</span>                       <span class="token comment">// 全局默认并行度</span>
+env<span class="token punctuation">.</span><span class="token function">enableCheckpointing</span><span class="token punctuation">(</span><span class="token number">60_000</span><span class="token punctuation">)</span><span class="token punctuation">;</span>              <span class="token comment">// 每 60 秒做一次快照</span>
+
+env<span class="token punctuation">.</span><span class="token function">addSource</span><span class="token punctuation">(</span><span class="token keyword">new</span> <span class="token class-name">KafkaSource</span><span class="token punctuation">(</span><span class="token punctuation">.</span><span class="token punctuation">.</span><span class="token punctuation">.</span><span class="token punctuation">)</span><span class="token punctuation">)</span>
+   <span class="token punctuation">.</span><span class="token function">keyBy</span><span class="token punctuation">(</span><span class="token class-name">Order</span><span class="token operator">::</span><span class="token function">getUserId</span><span class="token punctuation">)</span>
+   <span class="token punctuation">.</span><span class="token function">process</span><span class="token punctuation">(</span><span class="token keyword">new</span> <span class="token class-name">OrderWindowProcessFunction</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span>
+   <span class="token punctuation">.</span><span class="token function">addSink</span><span class="token punctuation">(</span><span class="token keyword">new</span> <span class="token class-name">KafkaSink</span><span class="token punctuation">(</span><span class="token punctuation">.</span><span class="token punctuation">.</span><span class="token punctuation">.</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+env<span class="token punctuation">.</span><span class="token function">execute</span><span class="token punctuation">(</span><span class="token string">"order-realtime-job"</span><span class="token punctuation">)</span><span class="token punctuation">;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<p>这里要注意一个常见误区：<strong>Slot 共享不是”多任务争抢一份内存”</strong>。共享槽位内各 SubTask 各占自己的托管状态内存，只是把空闲 CPU 时间复用起来；真正需要独占资源的算子（比如状态很大的算子）可以单独禁用共享。</p>
+<h2 id="1-4-三种时间语义"><a href="#1-4-三种时间语义" class="headerlink" title="1.4 三种时间语义"></a>1.4 三种时间语义</h2><p>窗口聚合、会话拆分这类逻辑必须回答一个问题：”按哪个时间算？”Flink 提供三种时间口径：</p>
+<div class="data-grid data-grid-link-table"><div class="grid-header"><div class="grid-cell">时间类型</div><div class="grid-cell">取值依据</div><div class="grid-cell">适用场景</div><div class="grid-cell">主要风险</div></div><div class="grid-row"><div class="grid-cell">事件时间（Event Time）</div><div class="grid-cell">数据自带的时间戳（如业务发生时间）</div><div class="grid-cell">乱序流、重放历史数据、结果可复现</div><div class="grid-cell">需要处理迟到与水位线</div></div><div class="grid-row"><div class="grid-cell">摄入时间（Ingestion Time）</div><div class="grid-cell">数据进入 Flink 的机器时间</div><div class="grid-cell">简单场景，不要求结果可复现</div><div class="grid-cell">重放时结果会变</div></div><div class="grid-row"><div class="grid-cell">处理时间（Processing Time）</div><div class="grid-cell">算子处理到这条数据时的本地时钟</div><div class="grid-cell">低延迟统计、对准确性要求不高</div><div class="grid-cell">受吞吐和排队影响，结果不稳定</div></div></div>
+
+<p>线上实时数仓、指标看板基本都用事件时间：同一份数据重放一遍，窗口边界和结果必须一致。处理时间只适合”看当下流量”这类容忍误差的场景。</p>
+<p>时间特征的设置在 1.13 主线已经简化：默认按事件时间处理，早期教程里的 <code>setStreamTimeCharacteristic(...)</code> 属于旧写法，新项目不要照搬；时间戳和水位线由 Source 或后续 <code>assignTimestampsAndWatermarks</code> 指定。</p>
+<h2 id="1-5-Watermark-只推进事件时间"><a href="#1-5-Watermark-只推进事件时间" class="headerlink" title="1.5 Watermark 只推进事件时间"></a>1.5 Watermark 只推进事件时间</h2><p>水位线（Watermark）是事件时间体系里用来判断”数据该到齐了”的标记。它随数据流一起流动，水位线时间戳 W 表示：”事件时间不晚于 W 的数据，理论上已经到齐”。这里有一条容易被问住的口径：</p>
+<ul>
+<li><strong>Watermark 只推进事件时间，不推进处理时间</strong>。处理时间走的是算子本地时钟，和水位线没有关系。</li>
+<li>水位线是按算子链路上游各自计算的，下游取已收到水位线中的最小值，避免快分区提前关闭窗口。</li>
+<li>水位线可以停顿：上游某个分区长时间不来数据，整条链路的水位线就会卡住，窗口迟迟不触发。</li>
+</ul>
+<p>事件时间和处理时间混用是线上 bug 高发区：窗口按事件时间划，内部定时器却去读处理时间，一旦积压，两边口径对不上，结果就会飘。</p>
+<h2 id="1-6-常见易错点"><a href="#1-6-常见易错点" class="headerlink" title="1.6 常见易错点"></a>1.6 常见易错点</h2><ul>
+<li>把并行度当成”集群机器数”：并行度是 SubTask 数量，可以大于机器数，多个 SubTask 挤在同一台 TaskManager 的不同 Slot 里。</li>
+<li>以为 Slot 数等于算子并行度之和：开启槽位共享后，总 Slot 数取链路最大并行度。</li>
+<li>用处理时间做业务窗口，再拿历史数据回放校验，结果对不上是必然的。</li>
+<li>上游分区数据倾斜时，最慢的那个分区决定整条链路水位线，快分区会被拖住。</li>
+</ul>
+<h2 id="1-7-官方资料"><a href="#1-7-官方资料" class="headerlink" title="1.7 官方资料"></a>1.7 官方资料</h2><ul>
+<li>Apache Flink 官网：<a target="_blank" rel="noopener" href="https://flink.apache.org/">https://flink.apache.org/</a></li>
+<li>集群架构文档：<a target="_blank" rel="noopener" href="https://nightlies.apache.org/flink/flink-docs-release-1.13/docs/concepts/flink-architecture/">https://nightlies.apache.org/flink/flink-docs-release-1.13/docs/concepts/flink-architecture/</a></li>
+<li>事件时间与水位线概念：<a target="_blank" rel="noopener" href="https://nightlies.apache.org/flink/flink-docs-release-1.13/docs/concepts/time/">https://nightlies.apache.org/flink/flink-docs-release-1.13/docs/concepts/time/</a></li>
+<li>并行执行文档：<a target="_blank" rel="noopener" href="https://nightlies.apache.org/flink/flink-docs-release-1.13/docs/concepts/parallelization/">https://nightlies.apache.org/flink/flink-docs-release-1.13/docs/concepts/parallelization/</a></li>
+</ul>
+<h2 id="1-8-清单"><a href="#1-8-清单" class="headerlink" title="1.8 清单"></a>1.8 清单</h2><ol>
+<li>Flink 现在的主线是流批一体，批是有界流，状态与快照内建在运行时里</li>
+<li>运行时只有 JobManager（协调）和 TaskManager（干活）两类进程，SubTask 是真正执行单元</li>
+<li>并行度决定 SubTask 数量，Slot 是资源分片，默认开启槽位共享，总 Slot 取链路最大并行度</li>
+<li>时间口径分事件时间、摄入时间、处理时间；线上可复现的场景用事件时间</li>
+<li>Watermark 只推进事件时间，不推进处理时间；最慢分区决定链路水位线</li>
+<li>混用两种时间口径是窗口结果漂移的常见原因，新项目按 1.13 主线写法，不照搬旧 API</li>
+</ol>
+</div>
+
+  <div class="mb-foot">
+    <a href="/phone/">返回手机首页</a>
+    <a href="/phone/tags/">星迹索引</a>
+  </div>
+</div>
+
+
+<script>
+  /* 作用：懒加载本地 mermaid 库；无 mermaid 代码块时不加载 */
+  function loadLocalMermaid(){
+    return new Promise(function(resolve, reject){
+      if(window.mermaid) return resolve(window.mermaid);
+      var s = document.createElement('script');
+      s.src = '/js/third-party/mermaid/mermaid.min.js?v=10';
+      s.onload = function(){ resolve(window.mermaid); };
+      s.onerror = function(){ reject(new Error('mermaid local load failed')); };
+      document.head.appendChild(s);
+    });
+  }
+
+  /* 作用：把 ```mermaid 代码块替换成 SVG 图（手机端字号略小、图可横向滚动） */
+  async function renderMermaidDiagram(){
+    var blocks = document.querySelectorAll('pre[class*="language-mermaid"]');
+    if(!blocks.length) return;
+    var mermaid;
+    try { mermaid = await loadLocalMermaid(); }
+    catch(e){ console.warn('[mermaid] 本地库加载失败：', e); return; }
+
+    mermaid.initialize({
+      startOnLoad: false,
+      theme: 'base',
+      themeVariables: {
+        darkMode: true,
+        background: 'transparent',
+        fontFamily: '"Microsoft YaHei", "PingFang SC", "Segoe UI", sans-serif',
+        fontSize: '12px',
+        primaryColor: '#062f3d',
+        primaryTextColor: '#d6f6ff',
+        primaryBorderColor: '#00eeff',
+        secondaryColor: '#04222d',
+        tertiaryColor: '#04222d',
+        mainBkg: '#062f3d',
+        nodeBorder: '#00eeff',
+        clusterBkg: '#02161f',
+        clusterBorder: '#00eeff55',
+        lineColor: '#00eeff',
+        textColor: '#c0e8ff',
+        edgeLabelBackground: '#02161f'
+      },
+      flowchart: { curve: 'basis', useMaxWidth: false, htmlLabels: false, nodeSpacing: 30, rankSpacing: 40, padding: 10 }
+    });
+
+    var targets = [];
+    blocks.forEach(function(el){
+      var codeEl = el.querySelector('code');
+      if(!codeEl) return;
+      var div = document.createElement('div');
+      div.className = 'mermaid';
+      div.textContent = codeEl.textContent;
+      el.parentNode.replaceChild(div, el);
+      targets.push(div);
+    });
+    if(!targets.length) return;
+    try { await mermaid.run({ nodes: targets }); }
+    catch(e){ console.warn('[mermaid] 渲染失败：', e); }
+  }
+  /* 作用：多次触发兜底（延迟重试 + DOM 变化），防止某次时机没跑到导致图表留在代码块 */
+  var mmBusy = false;
+  function scheduleMermaid(){
+    if(mmBusy) return;
+    mmBusy = true;
+    renderMermaidDiagram().then(function(){ mmBusy = false; }, function(){ mmBusy = false; });
+  }
+  scheduleMermaid();
+  window.addEventListener('load', scheduleMermaid);
+  [1000, 3000, 8000].forEach(function(ms){ setTimeout(scheduleMermaid, ms); });
+  if(document.readyState !== 'loading') scheduleMermaid();
+  if(window.MutationObserver){
+    var mmTimer = null;
+    var mmObserver = new MutationObserver(function(){
+      clearTimeout(mmTimer);
+      mmTimer = setTimeout(scheduleMermaid, 400);
+    });
+    mmObserver.observe(document.querySelector('.mb-article') || document.body, { childList: true, subtree: true });
+  }
+</script>
+</body>
+</html>

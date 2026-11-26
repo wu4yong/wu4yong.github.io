@@ -1,0 +1,310 @@
+<!--
+  ============================================
+  手机端 · 文章原文页
+  文件：phone/post.njk
+  适用终端：手机端（路由 /phone/p/<slug>/，由 scripts/phone-routes.js 生成）
+  作用：手机阅读单篇文章；单列布局、无侧栏无雷达，替代电脑端 post.njk
+        数据由生成期算好：page.item = { title, dateStr, content, cats, tags }
+  样式依赖：source/css/theme/phone/common.css、source/css/theme/phone/list.css
+  组件依赖：phone/_components/Particles.njk
+  最后修改：2026-11-11
+  ============================================
+-->
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="color-scheme" content="dark">
+  <meta name="theme-color" content="#020817">
+  <!-- 首帧兜底：浏览器默认画布是白的，样式未解析前会闪一下白。这条规则先锁死深空底色 -->
+  <style>html{background-color:#020817}</style>
+  <title>ES30-聚合三层结构 - 时空秘境</title>
+  <!-- 手机端样式：基础 + 列表/正文，外链引入（源文件 source/css/theme/phone/） -->
+  <link rel="stylesheet" href="/css/theme/phone/common.css">
+  <link rel="stylesheet" href="/css/theme/phone/list.css">
+<meta name="generator" content="Hexo 8.1.2"></head>
+<body>
+<div class="mb-shell">
+  <!--
+  ============================================
+  手机端星空粒子组件
+  文件：Particles.njk
+  适用终端：手机端
+  作用：Particles.njk 的手机端副本（nunjucks 子目录 include 取不到上级）
+        参数与电脑端 _components/Particles.njk 保持一致：
+        粒子 95 / 连线 118px / opacity 0.32，外加星座层与零星闪烁层
+  最后修改：2026-11-12
+  ============================================
+--><!-- z-index 必须是 0：负层级会被 body 不透明背景盖住，粒子在跑却看不见 -->
+<div id="particles" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 0; pointer-events: none;"></div>
+<!-- 星座层（与首页同一套：随机零星散布星座图形 + 偶尔闪烁的小星） -->
+<div id="constellations" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 1; pointer-events: none;" aria-hidden="true"></div>
+<script src="/js/particles.min.js"></script>
+<script>
+particlesJS("particles", {
+  particles: {
+    number: {
+      value: 95,
+      density: {
+        enable: true,
+        value_area: 800
+      }
+    },
+    color: {
+      value: "#00eeff"
+    },
+    shape: {
+      type: "circle",
+      stroke: {
+        width: 0,
+        color: "#000000"
+      }
+    },
+    opacity: {
+      value: 0.6,
+      random: true,
+      anim: {
+        enable: true,
+        speed: 0.5,
+        opacity_min: 0.1,
+        sync: false
+      }
+    },
+    size: {
+      value: 3,
+      random: true,
+      anim: {
+        enable: true,
+        speed: 2,
+        size_min: 0.1,
+        sync: false
+      }
+    },
+    line_linked: {
+      enable: true,
+      distance: 118,
+      color: "#00eeff",
+      opacity: 0.32,
+      width: 1
+    },
+    move: {
+      enable: true,
+      speed: 0.8,
+      direction: "none",
+      random: true,
+      straight: false,
+      out_mode: "out",
+      bounce: false,
+      attract: {
+        enable: true,
+        rotateX: 600,
+        rotateY: 1200
+      }
+    }
+  },
+  interactivity: {
+    detect_on: "canvas",
+    events: {
+      onhover: {
+        enable: true,
+        mode: "grab"       // 手指按住时粒子聚集
+      },
+      onclick: {
+        enable: true,
+        mode: "push"       // 点击时产生新粒子
+      },
+      resize: true
+    },
+    modes: {
+      grab: {
+        distance: 200,
+        line_linked: {
+          opacity: 1
+        }
+      },
+      push: {
+        particles_nb: 6
+      }
+    }
+  },
+  retina_detect: true
+});
+</script>
+<!-- 星座 + 零星闪烁层：与电脑端共用同一份绘制脚本 -->
+<script src="/js/theme/home/starfield.js"></script>
+
+
+  <div class="mb-top">
+    <a class="mb-back" href="/phone/">← 返回手机首页</a>
+    <span class="mb-sub" style="margin:0">2023-12-22</span>
+  </div>
+
+  <h1 class="mb-title">ES30-聚合三层结构</h1>
+  <div class="mb-sub">
+    分类：bigdata · elasticsearch
+     ｜ 标签：Elasticsearch · 系统课
+  </div>
+
+  <div class="mb-article"><div class="essay-banner essay-elasticsearch"></div>
+
+<h1 id="聚合三层结构：metric、bucket、pipeline"><a href="#聚合三层结构：metric、bucket、pipeline" class="headerlink" title="聚合三层结构：metric、bucket、pipeline"></a>聚合三层结构：metric、bucket、pipeline</h1><p>聚合（aggregation）和查询用的是同一套数据结构，所以官方敢说「聚合和搜索一样快」。</p>
+<p>但要算对，先得认清三层：<strong>指标（metric）算数、桶（bucket）分组、管道（pipeline）在结果上再算</strong>。</p>
+<!-- 配图 30-1：待生成，放到图床同名路径后启用下面一行 -->
+<blockquote>
+<p><strong>配图 30-1｜提示词</strong>：三层漏斗式结构图。底层一排原始文档小方块；中间左侧是 bucket 分组框（按 brand 分成三个彩色桶），右侧是 metric 图标（avg、sum、cardinality）贴在桶上；顶层是 pipeline 图标（<code>bucket_script</code> 与 <code>bucket_sort</code>）作用在「桶的产出」上，箭头标注「不能直接吃文档，只能吃兄弟聚合的结果」。深色星空背景，青蓝与琥珀。</p>
+</blockquote>
+<h2 id="一、学习目标"><a href="#一、学习目标" class="headerlink" title="一、学习目标"></a>一、学习目标</h2><ol>
+<li>说清 metric &#x2F; bucket &#x2F; pipeline 三层的父子关系；</li>
+<li>会写 <code>size: 0</code> + <code>aggs</code> 的标准结构；</li>
+<li>知道 pipeline 聚合只能引用<strong>兄弟聚合</strong>的结果，不能访问文档；</li>
+<li>会用 <code>filter</code> 子聚合做「分区间统计」。</li>
+</ol>
+<h2 id="二、前置知识"><a href="#二、前置知识" class="headerlink" title="二、前置知识"></a>二、前置知识</h2><div class="data-grid data-grid-link-table"><div class="grid-header"><div class="grid-cell">需要掌握</div><div class="grid-cell">到什么程度</div><div class="grid-cell">出处</div></div><div class="grid-row"><div class="grid-cell">doc_values</div><div class="grid-cell">聚合读列存</div><div class="grid-cell">M4-6</div></div><div class="grid-row"><div class="grid-cell">query 语法</div><div class="grid-cell">会写 bool 过滤</div><div class="grid-cell">M4-4</div></div><div class="grid-row"><div class="grid-cell"><code>size: 0</code></div><div class="grid-cell">聚合时不要文档</div><div class="grid-cell">M4-9</div></div></div>
+
+<h2 id="三、理论讲解"><a href="#三、理论讲解" class="headerlink" title="三、理论讲解"></a>三、理论讲解</h2><div class="data-grid data-grid-link-table"><div class="grid-header"><div class="grid-cell">层</div><div class="grid-cell">作用</div><div class="grid-cell">典型成员</div><div class="grid-cell">输入</div></div><div class="grid-row"><div class="grid-cell">metric（指标）</div><div class="grid-cell">对一组文档算一个数</div><div class="grid-cell"><code>avg</code>、<code>sum</code>、<code>min</code>、<code>max</code>、<code>stats</code>、<code>cardinality</code>、<code>percentiles</code></div><div class="grid-cell">文档的字段值</div></div><div class="grid-row"><div class="grid-cell">bucket（桶）</div><div class="grid-cell">把文档分组，每组一个桶</div><div class="grid-cell"><code>terms</code>、<code>range</code>、<code>date_histogram</code>、<code>histogram</code>、<code>filter</code>、<code>filters</code></div><div class="grid-cell">文档</div></div><div class="grid-row"><div class="grid-cell">pipeline（管道）</div><div class="grid-cell">对<strong>其他聚合的输出</strong>再计算</div><div class="grid-cell"><code>bucket_script</code>、<code>bucket_selector</code>、<code>bucket_sort</code>、<code>derivative</code>、<code>cumulative_sum</code></div><div class="grid-cell">兄弟聚合结果</div></div></div>
+
+<p>嵌套规则：bucket 可以套 bucket（如 <code>terms</code> 里再 <code>date_histogram</code>），metric 挂在任意层级下；pipeline 只能挂在<strong>同级</strong>聚合的父级，通过 <code>buckets_path</code> 引用兄弟名字。</p>
+<h2 id="四、原理拆解：为什么聚合「快」又「贵」"><a href="#四、原理拆解：为什么聚合「快」又「贵」" class="headerlink" title="四、原理拆解：为什么聚合「快」又「贵」"></a>四、原理拆解：为什么聚合「快」又「贵」</h2><p>快，是因为 <code>doc_values</code>：按列读字段值，不用解析 JSON，也不走倒排。</p>
+<p>贵，是因为桶的数量会爆炸：<code>terms</code> 分成 100 组，每组下再 <code>date_histogram</code> 分 30 天，就是 3000 个桶；每个桶还要维护自己的 metric 状态。所以官方设了 <code>search.max_buckets</code>（默认 65536）这道闸，超了就报 <code>too_many_buckets_exception</code>。</p>
+<p>另一个关键点：<code>terms</code> 的计数是<strong>每个分片先各算 Top N，再汇总</strong>，所以 <code>doc_count</code> 可能是「近似值」。返回里的 <code>doc_count_error_upper_bound</code> 就是这个近似误差的上界，<code>sum_other_doc_count</code> 是被截掉的长尾文档数——看这两个数字，就知道结果能不能直接拿去对账。</p>
+<h2 id="五、场景说明"><a href="#五、场景说明" class="headerlink" title="五、场景说明"></a>五、场景说明</h2><div class="data-grid data-grid-link-table"><div class="grid-header"><div class="grid-cell">需求</div><div class="grid-cell">聚合</div></div><div class="grid-row"><div class="grid-cell">总销售额</div><div class="grid-cell"><code>sum</code></div></div><div class="grid-row"><div class="grid-cell">平均客单价</div><div class="grid-cell"><code>avg</code> 或 <code>stats</code></div></div><div class="grid-row"><div class="grid-cell">品牌分布</div><div class="grid-cell"><code>terms</code>（<code>field: brand</code>）</div></div><div class="grid-row"><div class="grid-cell">价格分档</div><div class="grid-cell"><code>range</code> &#x2F; <code>histogram</code></div></div><div class="grid-row"><div class="grid-cell">按月趋势</div><div class="grid-cell"><code>date_histogram</code></div></div><div class="grid-row"><div class="grid-cell">先过滤再统计</div><div class="grid-cell">子聚合 <code>filter</code></div></div><div class="grid-row"><div class="grid-cell">转化率、占比</div><div class="grid-cell"><code>bucket_script</code> + <code>buckets_path</code></div></div><div class="grid-row"><div class="grid-cell">只要前 3 个桶</div><div class="grid-cell"><code>bucket_sort</code></div></div></div>
+
+<h2 id="六、实操"><a href="#六、实操" class="headerlink" title="六、实操"></a>六、实操</h2><pre class="line-numbers language-bash" data-language="bash"><code class="language-bash"><span class="token comment"># 基础结构：不要文档，只要聚合</span>
+<span class="token function">curl</span> <span class="token parameter variable">-s</span> <span class="token parameter variable">-X</span> GET <span class="token string">"http://localhost:9200/goods/_search"</span> <span class="token parameter variable">-H</span> <span class="token string">'Content-Type: application/json'</span> <span class="token parameter variable">-d</span> <span class="token string">'
+&#123; "size": 0,
+  "query": &#123; "term": &#123; "on_sale": true &#125; &#125;,
+  "aggs": &#123;
+    "by_brand": &#123; "terms": &#123; "field": "brand", "size": 10 &#125;,
+      "aggs": &#123; "avg_price": &#123; "avg": &#123; "field": "price" &#125; &#125; &#125; &#125;,
+    "price_bands": &#123; "range": &#123; "field": "price",
+      "ranges": [ &#123; "to": 50 &#125;, &#123; "from": 50, "to": 200 &#125;, &#123; "from": 200 &#125; ] &#125; &#125; &#125; &#125;'</span>
+
+<span class="token comment"># pipeline：算每个品牌的均价占全站均价的比例</span>
+<span class="token function">curl</span> <span class="token parameter variable">-s</span> <span class="token parameter variable">-X</span> GET <span class="token string">"http://localhost:9200/goods/_search"</span> <span class="token parameter variable">-H</span> <span class="token string">'Content-Type: application/json'</span> <span class="token parameter variable">-d</span> <span class="token string">'
+&#123; "size": 0,
+  "aggs": &#123;
+    "all_avg": &#123; "avg": &#123; "field": "price" &#125; &#125;,
+    "by_brand": &#123; "terms": &#123; "field": "brand" &#125;,
+      "aggs": &#123;
+        "b_avg": &#123; "avg": &#123; "field": "price" &#125; &#125;,
+        "ratio": &#123; "bucket_script": &#123; "buckets_path": &#123; "b": "b_avg", "all": "all_avg" &#125;,
+                                     "script": "params.b / params.all" &#125; &#125; &#125; &#125; &#125; &#125;'</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<p><code>buckets_path</code> 里的名字是<strong>聚合名</strong>，不是字段名——写错会直接报 <code>No aggregation found</code>。</p>
+<h2 id="七、常见坑"><a href="#七、常见坑" class="headerlink" title="七、常见坑"></a>七、常见坑</h2><ol>
+<li><strong>忘了 <code>size: 0</code></strong>：白取一堆 <code>_source</code>，聚合结果还混着文档。</li>
+<li><strong>pipeline 引用子级聚合</strong>：只能引兄弟，跨层引用必然失败。</li>
+<li><strong><code>terms</code> 的 <code>doc_count</code> 当精确值</strong>：它是分片 Top N 汇总的近似值。</li>
+<li><strong>桶数超 <code>search.max_buckets</code></strong>：报 <code>too_many_buckets_exception</code>，官方默认 65536。</li>
+<li><strong>对 <code>text</code> 字段聚合</strong>：没有 doc_values，需开 <code>fielddata</code>——官方明确不建议。</li>
+<li><strong><code>date_histogram</code> 空桶期望消失</strong>：<code>min_doc_count</code> 默认 0，会补空桶。</li>
+</ol>
+<h2 id="八、课后小结"><a href="#八、课后小结" class="headerlink" title="八、课后小结"></a>八、课后小结</h2><ol>
+<li>三层：metric 算数、bucket 分组、pipeline 在结果上再算。</li>
+<li>bucket 可嵌套，metric 可挂任意层，pipeline 只认兄弟。</li>
+<li>聚合读 <code>doc_values</code>，所以快；桶数爆炸，所以要设上限。</li>
+<li><code>size: 0</code> 是聚合请求的标配。</li>
+<li>看 <code>doc_count_error_upper_bound</code> 判断 terms 结果可不可信。</li>
+</ol>
+<h2 id="九、思考题"><a href="#九、思考题" class="headerlink" title="九、思考题"></a>九、思考题</h2><ol>
+<li>一个 <code>terms</code> 下挂 <code>date_histogram</code>，10 个品牌 × 31 天，桶数是多少？会不会撞上限？</li>
+<li>为什么 pipeline 聚合不能直接访问文档？它执行在什么阶段？</li>
+<li>「先过滤再统计」用 query 过滤和用子聚合 <code>filter</code>，结果有区别吗？</li>
+</ol>
+<h2 id="十、官方资料"><a href="#十、官方资料" class="headerlink" title="十、官方资料"></a>十、官方资料</h2><ul>
+<li>Aggregations：<a target="_blank" rel="noopener" href="https://www.elastic.co/guide/en/elasticsearch/reference/current/search-aggregations.html">https://www.elastic.co/guide/en/elasticsearch/reference/current/search-aggregations.html</a></li>
+<li>Bucket aggregations：<a target="_blank" rel="noopener" href="https://www.elastic.co/guide/en/elasticsearch/reference/current/search-aggregations-bucket.html">https://www.elastic.co/guide/en/elasticsearch/reference/current/search-aggregations-bucket.html</a></li>
+<li>Pipeline aggregations：<a target="_blank" rel="noopener" href="https://www.elastic.co/guide/en/elasticsearch/reference/current/search-aggregations-pipeline.html">https://www.elastic.co/guide/en/elasticsearch/reference/current/search-aggregations-pipeline.html</a></li>
+</ul>
+<p>上一篇：<a href="/2023/12/19/bigdata/elasticsearch/es-29-search-perf-switches/">M4-9 检索侧性能开关</a> ｜ 下一篇：<a href="/2023/12/25/bigdata/elasticsearch/es-31-bucket-aggs/">M5-2 bucket 聚合的精度与时间轴</a> ｜ <a href="/2023/09/22/bigdata/elasticsearch/es-00-series-index/">总目录</a></p>
+</div>
+
+  <div class="mb-foot">
+    <a href="/phone/">返回手机首页</a>
+    <a href="/phone/tags/">星迹索引</a>
+  </div>
+</div>
+
+
+<script>
+  /* 作用：懒加载本地 mermaid 库；无 mermaid 代码块时不加载 */
+  function loadLocalMermaid(){
+    return new Promise(function(resolve, reject){
+      if(window.mermaid) return resolve(window.mermaid);
+      var s = document.createElement('script');
+      s.src = '/js/third-party/mermaid/mermaid.min.js?v=10';
+      s.onload = function(){ resolve(window.mermaid); };
+      s.onerror = function(){ reject(new Error('mermaid local load failed')); };
+      document.head.appendChild(s);
+    });
+  }
+
+  /* 作用：把 ```mermaid 代码块替换成 SVG 图（手机端字号略小、图可横向滚动） */
+  async function renderMermaidDiagram(){
+    var blocks = document.querySelectorAll('pre[class*="language-mermaid"]');
+    if(!blocks.length) return;
+    var mermaid;
+    try { mermaid = await loadLocalMermaid(); }
+    catch(e){ console.warn('[mermaid] 本地库加载失败：', e); return; }
+
+    mermaid.initialize({
+      startOnLoad: false,
+      theme: 'base',
+      themeVariables: {
+        darkMode: true,
+        background: 'transparent',
+        fontFamily: '"Microsoft YaHei", "PingFang SC", "Segoe UI", sans-serif',
+        fontSize: '12px',
+        primaryColor: '#062f3d',
+        primaryTextColor: '#d6f6ff',
+        primaryBorderColor: '#00eeff',
+        secondaryColor: '#04222d',
+        tertiaryColor: '#04222d',
+        mainBkg: '#062f3d',
+        nodeBorder: '#00eeff',
+        clusterBkg: '#02161f',
+        clusterBorder: '#00eeff55',
+        lineColor: '#00eeff',
+        textColor: '#c0e8ff',
+        edgeLabelBackground: '#02161f'
+      },
+      flowchart: { curve: 'basis', useMaxWidth: false, htmlLabels: false, nodeSpacing: 30, rankSpacing: 40, padding: 10 }
+    });
+
+    var targets = [];
+    blocks.forEach(function(el){
+      var codeEl = el.querySelector('code');
+      if(!codeEl) return;
+      var div = document.createElement('div');
+      div.className = 'mermaid';
+      div.textContent = codeEl.textContent;
+      el.parentNode.replaceChild(div, el);
+      targets.push(div);
+    });
+    if(!targets.length) return;
+    try { await mermaid.run({ nodes: targets }); }
+    catch(e){ console.warn('[mermaid] 渲染失败：', e); }
+  }
+  /* 作用：多次触发兜底（延迟重试 + DOM 变化），防止某次时机没跑到导致图表留在代码块 */
+  var mmBusy = false;
+  function scheduleMermaid(){
+    if(mmBusy) return;
+    mmBusy = true;
+    renderMermaidDiagram().then(function(){ mmBusy = false; }, function(){ mmBusy = false; });
+  }
+  scheduleMermaid();
+  window.addEventListener('load', scheduleMermaid);
+  [1000, 3000, 8000].forEach(function(ms){ setTimeout(scheduleMermaid, ms); });
+  if(document.readyState !== 'loading') scheduleMermaid();
+  if(window.MutationObserver){
+    var mmTimer = null;
+    var mmObserver = new MutationObserver(function(){
+      clearTimeout(mmTimer);
+      mmTimer = setTimeout(scheduleMermaid, 400);
+    });
+    mmObserver.observe(document.querySelector('.mb-article') || document.body, { childList: true, subtree: true });
+  }
+</script>
+</body>
+</html>

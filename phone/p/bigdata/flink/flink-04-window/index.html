@@ -1,0 +1,312 @@
+<!--
+  ============================================
+  手机端 · 文章原文页
+  文件：phone/post.njk
+  适用终端：手机端（路由 /phone/p/<slug>/，由 scripts/phone-routes.js 生成）
+  作用：手机阅读单篇文章；单列布局、无侧栏无雷达，替代电脑端 post.njk
+        数据由生成期算好：page.item = { title, dateStr, content, cats, tags }
+  样式依赖：source/css/theme/phone/common.css、source/css/theme/phone/list.css
+  组件依赖：phone/_components/Particles.njk
+  最后修改：2026-11-11
+  ============================================
+-->
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="color-scheme" content="dark">
+  <meta name="theme-color" content="#020817">
+  <!-- 首帧兜底：浏览器默认画布是白的，样式未解析前会闪一下白。这条规则先锁死深空底色 -->
+  <style>html{background-color:#020817}</style>
+  <title>Flink（四）窗口与水位线 - 时空秘境</title>
+  <!-- 手机端样式：基础 + 列表/正文，外链引入（源文件 source/css/theme/phone/） -->
+  <link rel="stylesheet" href="/css/theme/phone/common.css">
+  <link rel="stylesheet" href="/css/theme/phone/list.css">
+<meta name="generator" content="Hexo 8.1.2"></head>
+<body>
+<div class="mb-shell">
+  <!--
+  ============================================
+  手机端星空粒子组件
+  文件：Particles.njk
+  适用终端：手机端
+  作用：Particles.njk 的手机端副本（nunjucks 子目录 include 取不到上级）
+        参数与电脑端 _components/Particles.njk 保持一致：
+        粒子 95 / 连线 118px / opacity 0.32，外加星座层与零星闪烁层
+  最后修改：2026-11-12
+  ============================================
+--><!-- z-index 必须是 0：负层级会被 body 不透明背景盖住，粒子在跑却看不见 -->
+<div id="particles" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 0; pointer-events: none;"></div>
+<!-- 星座层（与首页同一套：随机零星散布星座图形 + 偶尔闪烁的小星） -->
+<div id="constellations" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 1; pointer-events: none;" aria-hidden="true"></div>
+<script src="/js/particles.min.js"></script>
+<script>
+particlesJS("particles", {
+  particles: {
+    number: {
+      value: 95,
+      density: {
+        enable: true,
+        value_area: 800
+      }
+    },
+    color: {
+      value: "#00eeff"
+    },
+    shape: {
+      type: "circle",
+      stroke: {
+        width: 0,
+        color: "#000000"
+      }
+    },
+    opacity: {
+      value: 0.6,
+      random: true,
+      anim: {
+        enable: true,
+        speed: 0.5,
+        opacity_min: 0.1,
+        sync: false
+      }
+    },
+    size: {
+      value: 3,
+      random: true,
+      anim: {
+        enable: true,
+        speed: 2,
+        size_min: 0.1,
+        sync: false
+      }
+    },
+    line_linked: {
+      enable: true,
+      distance: 118,
+      color: "#00eeff",
+      opacity: 0.32,
+      width: 1
+    },
+    move: {
+      enable: true,
+      speed: 0.8,
+      direction: "none",
+      random: true,
+      straight: false,
+      out_mode: "out",
+      bounce: false,
+      attract: {
+        enable: true,
+        rotateX: 600,
+        rotateY: 1200
+      }
+    }
+  },
+  interactivity: {
+    detect_on: "canvas",
+    events: {
+      onhover: {
+        enable: true,
+        mode: "grab"       // 手指按住时粒子聚集
+      },
+      onclick: {
+        enable: true,
+        mode: "push"       // 点击时产生新粒子
+      },
+      resize: true
+    },
+    modes: {
+      grab: {
+        distance: 200,
+        line_linked: {
+          opacity: 1
+        }
+      },
+      push: {
+        particles_nb: 6
+      }
+    }
+  },
+  retina_detect: true
+});
+</script>
+<!-- 星座 + 零星闪烁层：与电脑端共用同一份绘制脚本 -->
+<script src="/js/theme/home/starfield.js"></script>
+
+
+  <div class="mb-top">
+    <a class="mb-back" href="/phone/">← 返回手机首页</a>
+    <span class="mb-sub" style="margin:0">2023-07-28</span>
+  </div>
+
+  <h1 class="mb-title">Flink（四）窗口与水位线</h1>
+  <div class="mb-sub">
+    分类：bigdata · flink
+     ｜ 标签：Flink
+  </div>
+
+  <div class="mb-article"><div class="essay-banner essay-flink"></div>
+
+<h1 id="窗口与水位线"><a href="#窗口与水位线" class="headerlink" title="窗口与水位线"></a><strong>窗口与水位线</strong></h1><p>无限流没有”最后一条”，想算”每分钟成交额””每半小时在线人数”，必须把流切成一段一段的窗口。窗口怎么划、什么时候算结果、迟到数据怎么办，都靠窗口机制和水位线配合。这一篇把窗口类型、触发时机、水位线策略和迟到兜底讲清楚。</p>
+<p><img src="https://wu4yong.github.io/starry-images/assets/img/flink/flink-04-window.webp" alt="流动时间轴被切成相邻窗口玻璃格，一条波浪形水位线沿轴推进，散落的迟到圆点落在波线之后"></p>
+<p><em>流动时间轴被切成相邻窗口玻璃格，一条波浪形水位线沿轴推进，散落的迟到圆点落在波线之后</em></p>
+<h2 id="1-1-无限流为什么需要窗口"><a href="#1-1-无限流为什么需要窗口" class="headerlink" title="1.1 无限流为什么需要窗口"></a>1.1 无限流为什么需要窗口</h2><p>逐条聚合只能得到全局累计值，业务要的通常是”一段时间内”的统计。窗口把无界流按时间或数量切成有界集合，在这个集合上做 sum、count、avg、分组 TopN。</p>
+<p>窗口逻辑必须解决三件事：<strong>怎么分段</strong>（窗口分配器）、<strong>什么时候触发计算</strong>（触发器）、<strong>迟到数据怎么收</strong>（水位线与宽限）。Flink 的窗口 API 把这三件事拆成可组合的组件，默认实现覆盖了大多数统计场景。</p>
+<h2 id="1-2-窗口类型"><a href="#1-2-窗口类型" class="headerlink" title="1.2 窗口类型"></a>1.2 窗口类型</h2><div class="data-grid data-grid-link-table"><div class="grid-header"><div class="grid-cell">窗口类型</div><div class="grid-cell">分段规则</div><div class="grid-cell">重叠情况</div><div class="grid-cell">典型用途</div></div><div class="grid-row"><div class="grid-cell">滚动窗口 Tumbling</div><div class="grid-cell">固定大小，首尾相接</div><div class="grid-cell">不重叠</div><div class="grid-cell">每分钟计数、每小时汇总</div></div><div class="grid-row"><div class="grid-cell">滑动窗口 Sliding</div><div class="grid-cell">窗口大小 + 滑动步长</div><div class="grid-cell">按步长重叠</div><div class="grid-cell">近 5 分钟滚动指标</div></div><div class="grid-row"><div class="grid-cell">会话窗口 Session</div><div class="grid-cell">按空闲间隔切分，活动连续即同窗口</div><div class="grid-cell">动态边界</div><div class="grid-cell">用户会话拆分</div></div><div class="grid-row"><div class="grid-cell">全局窗口 Global</div><div class="grid-cell">不主动关闭，自定义触发器</div><div class="grid-cell">全部数据归一个窗</div><div class="grid-cell">特殊计数、自研触发</div></div></div>
+
+<p>三种时间窗口的写法：</p>
+<pre class="line-numbers language-java" data-language="java"><code class="language-java"><span class="token comment">// 滚动窗口：每 1 分钟一个段</span>
+orders<span class="token punctuation">.</span><span class="token function">windowAll</span><span class="token punctuation">(</span><span class="token class-name">TumblingEventTimeWindows</span><span class="token punctuation">.</span><span class="token function">of</span><span class="token punctuation">(</span><span class="token class-name">Time</span><span class="token punctuation">.</span><span class="token function">minutes</span><span class="token punctuation">(</span><span class="token number">1</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+<span class="token comment">// 滑动窗口：窗口 10 分钟，每 1 分钟滑一次</span>
+orders<span class="token punctuation">.</span><span class="token function">windowAll</span><span class="token punctuation">(</span><span class="token class-name">SlidingEventTimeWindows</span><span class="token punctuation">.</span><span class="token function">of</span><span class="token punctuation">(</span><span class="token class-name">Time</span><span class="token punctuation">.</span><span class="token function">minutes</span><span class="token punctuation">(</span><span class="token number">10</span><span class="token punctuation">)</span><span class="token punctuation">,</span> <span class="token class-name">Time</span><span class="token punctuation">.</span><span class="token function">minutes</span><span class="token punctuation">(</span><span class="token number">1</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+<span class="token comment">// 会话窗口：两条记录间隔超过 30 秒即断开</span>
+orders<span class="token punctuation">.</span><span class="token function">windowAll</span><span class="token punctuation">(</span><span class="token class-name">EventTimeSessionWindows</span><span class="token punctuation">.</span><span class="token function">withGap</span><span class="token punctuation">(</span><span class="token class-name">Time</span><span class="token punctuation">.</span><span class="token function">seconds</span><span class="token punctuation">(</span><span class="token number">30</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<p>按 key 分组后用 <code>keyBy(...).window(...)</code>，每个 key 独立维护一套窗口；不分组的全局窗口用 <code>windowAll</code>，并行度会被压成 1，大数据量下要避免。</p>
+<p>窗口类名带 <code>EventTime</code> 与 <code>ProcessingTime</code> 后缀，对应上一篇讲的两种时间口径。选事件时间窗口才能配合水位线做乱序与迟到处理；处理时间窗口没有水位线概念，结果随回放变化，不要混用。</p>
+<h2 id="1-3-窗口生命周期与触发"><a href="#1-3-窗口生命周期与触发" class="headerlink" title="1.3 窗口生命周期与触发"></a>1.3 窗口生命周期与触发</h2><p>一个窗口从创建到销毁经历：元素落入 → 窗口状态累积 → 水位线越过窗口结束时间 → 触发计算并输出 → 状态清理。默认触发器在水位线超过窗口末端时触发一次；会话窗口在空闲间隔到期后关闭。</p>
+<p>窗口里存的是聚合状态，不是原始明细。增量聚合（<code>ReduceFunction</code> &#x2F; <code>AggregateFunction</code>）每条数据直接更新状态，内存占用小；全量聚合（<code>ProcessWindowFunction</code>）能拿到窗口内全部元素，适合需要遍历明细的 TopN 场景，两者可以嵌套使用。</p>
+<div class="data-grid data-grid-link-table"><div class="grid-header"><div class="grid-cell">聚合函数</div><div class="grid-cell">特点</div><div class="grid-cell">典型场景</div></div><div class="grid-row"><div class="grid-cell">ReduceFunction</div><div class="grid-cell">逐条折叠，只保留结果值</div><div class="grid-cell">求和、最值、去重计数</div></div><div class="grid-row"><div class="grid-cell">AggregateFunction</div><div class="grid-cell">累加器与输出分离，输入输出可不同类型</div><div class="grid-cell">均值、占比、分组指标</div></div><div class="grid-row"><div class="grid-cell">ProcessWindowFunction</div><div class="grid-cell">拿到全量明细与窗口元信息</div><div class="grid-cell">TopN、遍历窗口内容做排序</div></div></div>
+
+<p>嵌套写法是先做增量聚合压缩状态，再把聚合结果交给 <code>ProcessWindowFunction</code> 补充窗口元信息，兼顾内存占用与表达能力。</p>
+<h2 id="1-4-Watermark-生成策略"><a href="#1-4-Watermark-生成策略" class="headerlink" title="1.4 Watermark 生成策略"></a>1.4 Watermark 生成策略</h2><p>水位线用来回答”这个窗口该到齐了吗”。策略在数据流上指定，负责从记录时间戳生成水位线：</p>
+<pre class="line-numbers language-java" data-language="java"><code class="language-java"><span class="token class-name">WatermarkStrategy</span><span class="token generics"><span class="token punctuation">&lt;</span><span class="token class-name">Order</span><span class="token punctuation">></span></span> strategy <span class="token operator">=</span> <span class="token class-name">WatermarkStrategy</span>
+        <span class="token punctuation">.</span><span class="token generics"><span class="token punctuation">&lt;</span><span class="token class-name">Order</span><span class="token punctuation">></span></span><span class="token function">forBoundedOutOfOrderness</span><span class="token punctuation">(</span><span class="token class-name">Duration</span><span class="token punctuation">.</span><span class="token function">ofSeconds</span><span class="token punctuation">(</span><span class="token number">10</span><span class="token punctuation">)</span><span class="token punctuation">)</span> <span class="token comment">// 容忍 10 秒乱序</span>
+        <span class="token punctuation">.</span><span class="token function">withTimestampAssigner</span><span class="token punctuation">(</span><span class="token punctuation">(</span>order<span class="token punctuation">,</span> recordTimestamp<span class="token punctuation">)</span> <span class="token operator">-></span> order<span class="token punctuation">.</span><span class="token function">getEventTime</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span>
+        <span class="token punctuation">.</span><span class="token function">withIdleness</span><span class="token punctuation">(</span><span class="token class-name">Duration</span><span class="token punctuation">.</span><span class="token function">ofMinutes</span><span class="token punctuation">(</span><span class="token number">1</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>                      <span class="token comment">// 空闲分区不拖住水位线</span>
+
+orders<span class="token punctuation">.</span><span class="token function">assignTimestampsAndWatermarks</span><span class="token punctuation">(</span>strategy<span class="token punctuation">)</span><span class="token punctuation">;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<div class="data-grid data-grid-link-table"><div class="grid-header"><div class="grid-cell">策略</div><div class="grid-cell">假设</div><div class="grid-cell">适用</div></div><div class="grid-row"><div class="grid-cell">forMonotonousTimestamps</div><div class="grid-cell">时间戳单调递增，不乱序</div><div class="grid-cell">日志按时间写入、采集顺序可靠</div></div><div class="grid-row"><div class="grid-cell">forBoundedOutOfOrderness</div><div class="grid-cell">乱序有上界，设最大延迟</div><div class="grid-cell">大多数业务流，平衡结果完整性与延迟</div></div><div class="grid-row"><div class="grid-cell">自定义策略</div><div class="grid-cell">按分区特征推算水位线</div><div class="grid-cell">多源异构、延迟分布不均</div></div></div>
+
+<p>两条口径必须记牢：<strong>水位线只推进事件时间，不推进处理时间</strong>；水位线按分区分别计算，下游取已收到的最小值。某分区长时间空闲会卡住整条链路水位线，<code>withIdleness</code> 就是把长时间无数据的分区从水位线计算里剔除。</p>
+<h2 id="1-5-迟到数据：宽限与侧输出"><a href="#1-5-迟到数据：宽限与侧输出" class="headerlink" title="1.5 迟到数据：宽限与侧输出"></a>1.5 迟到数据：宽限与侧输出</h2><p>水位线越过窗口末端后，晚到的记录就是迟到数据。处理分两层：</p>
+<ul>
+<li><code>allowedLateness</code>：宽限期内迟到数据仍进入窗口，窗口重新计算并补发结果；窗口状态在宽限期内保留，不清理。</li>
+<li>宽限期之后还到的数据，不再进入主窗口，可通过侧输出流（Side Output）单独收集，用于补偿或审计。</li>
+</ul>
+<pre class="line-numbers language-java" data-language="java"><code class="language-java"><span class="token class-name">OutputTag</span><span class="token generics"><span class="token punctuation">&lt;</span><span class="token class-name">Order</span><span class="token punctuation">></span></span> lateTag <span class="token operator">=</span> <span class="token keyword">new</span> <span class="token class-name">OutputTag</span><span class="token generics"><span class="token punctuation">&lt;</span><span class="token class-name">Order</span><span class="token punctuation">></span></span><span class="token punctuation">(</span><span class="token string">"late-order"</span><span class="token punctuation">)</span> <span class="token punctuation">&#123;</span><span class="token punctuation">&#125;</span><span class="token punctuation">;</span>
+
+<span class="token class-name">WindowedStream</span><span class="token generics"><span class="token punctuation">&lt;</span><span class="token class-name">Order</span><span class="token punctuation">,</span> <span class="token class-name">String</span><span class="token punctuation">,</span> <span class="token class-name">TimeWindow</span><span class="token punctuation">></span></span> windowed <span class="token operator">=</span> orders
+        <span class="token punctuation">.</span><span class="token function">keyBy</span><span class="token punctuation">(</span><span class="token class-name">Order</span><span class="token operator">::</span><span class="token function">getUserId</span><span class="token punctuation">)</span>
+        <span class="token punctuation">.</span><span class="token function">window</span><span class="token punctuation">(</span><span class="token class-name">TumblingEventTimeWindows</span><span class="token punctuation">.</span><span class="token function">of</span><span class="token punctuation">(</span><span class="token class-name">Time</span><span class="token punctuation">.</span><span class="token function">minutes</span><span class="token punctuation">(</span><span class="token number">1</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">)</span>
+        <span class="token punctuation">.</span><span class="token function">allowedLateness</span><span class="token punctuation">(</span><span class="token class-name">Time</span><span class="token punctuation">.</span><span class="token function">seconds</span><span class="token punctuation">(</span><span class="token number">30</span><span class="token punctuation">)</span><span class="token punctuation">)</span>
+        <span class="token punctuation">.</span><span class="token function">sideOutputLateData</span><span class="token punctuation">(</span>lateTag<span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+<span class="token class-name">DataStream</span><span class="token generics"><span class="token punctuation">&lt;</span><span class="token class-name">Order</span><span class="token punctuation">></span></span> late <span class="token operator">=</span> windowed<span class="token punctuation">.</span><span class="token function">getSideOutput</span><span class="token punctuation">(</span>lateTag<span class="token punctuation">)</span><span class="token punctuation">;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<p>宽限期不是越长越好：窗口状态保留越久，内存和 RocksDB 压力越大。取值按上游乱序分布的分位数定，尾部极端迟到走侧输出补数，而不是靠无限拉长宽限。</p>
+<h2 id="1-6-常见易错点"><a href="#1-6-常见易错点" class="headerlink" title="1.6 常见易错点"></a>1.6 常见易错点</h2><ul>
+<li>用处理时间划窗口，却按事件时间校验结果，积压后两边对不上。</li>
+<li>上游有分区长期断流，水位线被拖住，窗口迟迟不触发；没配 <code>withIdleness</code> 时尤其明显。</li>
+<li>把 <code>allowedLateness</code> 当”永久兜底”，状态长期不清理，大状态直接拖垮后端。</li>
+<li>全局窗口 <code>windowAll</code> 误用在高并发链路，并行度退化为 1。</li>
+<li>水位线设得太乐观（乱序容忍不足），窗口提前关闭，结果漏掉一批数据。</li>
+</ul>
+<h2 id="1-7-官方资料"><a href="#1-7-官方资料" class="headerlink" title="1.7 官方资料"></a>1.7 官方资料</h2><ul>
+<li>窗口算子文档：<a target="_blank" rel="noopener" href="https://nightlies.apache.org/flink/flink-docs-release-1.13/docs/dev/datastream/operators/windows/">https://nightlies.apache.org/flink/flink-docs-release-1.13/docs/dev/datastream/operators/windows/</a></li>
+<li>水位线策略：<a target="_blank" rel="noopener" href="https://nightlies.apache.org/flink/flink-docs-release-1.13/docs/dev/datastream/event-time/generating_watermarks/">https://nightlies.apache.org/flink/flink-docs-release-1.13/docs/dev/datastream/event-time/generating_watermarks/</a></li>
+<li>迟到数据与侧输出：<a target="_blank" rel="noopener" href="https://nightlies.apache.org/flink/flink-docs-release-1.13/docs/dev/datastream/side_output/">https://nightlies.apache.org/flink/flink-docs-release-1.13/docs/dev/datastream/side_output/</a></li>
+<li>事件时间概念总览：<a target="_blank" rel="noopener" href="https://nightlies.apache.org/flink/flink-docs-release-1.13/docs/concepts/time/">https://nightlies.apache.org/flink/flink-docs-release-1.13/docs/concepts/time/</a></li>
+</ul>
+<h2 id="1-8-清单"><a href="#1-8-清单" class="headerlink" title="1.8 清单"></a>1.8 清单</h2><ol>
+<li>窗口把无限流切成有界集合，解决分段、触发、迟到三件事</li>
+<li>滚动不重叠、滑动按步长重叠、会话按空闲间隔动态切分，全局窗口需自研触发器</li>
+<li>增量聚合省内存，全量聚合拿得到明细，二者可嵌套</li>
+<li>水位线按乱序上界生成，只推进事件时间；空闲分区用 <code>withIdleness</code> 剔除，避免拖住链路</li>
+<li>迟到数据先走 <code>allowedLateness</code> 宽限重算，超宽限进侧输出流做补偿</li>
+<li>宽限期按乱序分位数取值，不能用拉长宽限替代补数链路</li>
+</ol>
+</div>
+
+  <div class="mb-foot">
+    <a href="/phone/">返回手机首页</a>
+    <a href="/phone/tags/">星迹索引</a>
+  </div>
+</div>
+
+
+<script>
+  /* 作用：懒加载本地 mermaid 库；无 mermaid 代码块时不加载 */
+  function loadLocalMermaid(){
+    return new Promise(function(resolve, reject){
+      if(window.mermaid) return resolve(window.mermaid);
+      var s = document.createElement('script');
+      s.src = '/js/third-party/mermaid/mermaid.min.js?v=10';
+      s.onload = function(){ resolve(window.mermaid); };
+      s.onerror = function(){ reject(new Error('mermaid local load failed')); };
+      document.head.appendChild(s);
+    });
+  }
+
+  /* 作用：把 ```mermaid 代码块替换成 SVG 图（手机端字号略小、图可横向滚动） */
+  async function renderMermaidDiagram(){
+    var blocks = document.querySelectorAll('pre[class*="language-mermaid"]');
+    if(!blocks.length) return;
+    var mermaid;
+    try { mermaid = await loadLocalMermaid(); }
+    catch(e){ console.warn('[mermaid] 本地库加载失败：', e); return; }
+
+    mermaid.initialize({
+      startOnLoad: false,
+      theme: 'base',
+      themeVariables: {
+        darkMode: true,
+        background: 'transparent',
+        fontFamily: '"Microsoft YaHei", "PingFang SC", "Segoe UI", sans-serif',
+        fontSize: '12px',
+        primaryColor: '#062f3d',
+        primaryTextColor: '#d6f6ff',
+        primaryBorderColor: '#00eeff',
+        secondaryColor: '#04222d',
+        tertiaryColor: '#04222d',
+        mainBkg: '#062f3d',
+        nodeBorder: '#00eeff',
+        clusterBkg: '#02161f',
+        clusterBorder: '#00eeff55',
+        lineColor: '#00eeff',
+        textColor: '#c0e8ff',
+        edgeLabelBackground: '#02161f'
+      },
+      flowchart: { curve: 'basis', useMaxWidth: false, htmlLabels: false, nodeSpacing: 30, rankSpacing: 40, padding: 10 }
+    });
+
+    var targets = [];
+    blocks.forEach(function(el){
+      var codeEl = el.querySelector('code');
+      if(!codeEl) return;
+      var div = document.createElement('div');
+      div.className = 'mermaid';
+      div.textContent = codeEl.textContent;
+      el.parentNode.replaceChild(div, el);
+      targets.push(div);
+    });
+    if(!targets.length) return;
+    try { await mermaid.run({ nodes: targets }); }
+    catch(e){ console.warn('[mermaid] 渲染失败：', e); }
+  }
+  /* 作用：多次触发兜底（延迟重试 + DOM 变化），防止某次时机没跑到导致图表留在代码块 */
+  var mmBusy = false;
+  function scheduleMermaid(){
+    if(mmBusy) return;
+    mmBusy = true;
+    renderMermaidDiagram().then(function(){ mmBusy = false; }, function(){ mmBusy = false; });
+  }
+  scheduleMermaid();
+  window.addEventListener('load', scheduleMermaid);
+  [1000, 3000, 8000].forEach(function(ms){ setTimeout(scheduleMermaid, ms); });
+  if(document.readyState !== 'loading') scheduleMermaid();
+  if(window.MutationObserver){
+    var mmTimer = null;
+    var mmObserver = new MutationObserver(function(){
+      clearTimeout(mmTimer);
+      mmTimer = setTimeout(scheduleMermaid, 400);
+    });
+    mmObserver.observe(document.querySelector('.mb-article') || document.body, { childList: true, subtree: true });
+  }
+</script>
+</body>
+</html>

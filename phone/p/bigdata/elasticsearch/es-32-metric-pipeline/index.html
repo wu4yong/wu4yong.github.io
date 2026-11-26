@@ -1,0 +1,311 @@
+<!--
+  ============================================
+  手机端 · 文章原文页
+  文件：phone/post.njk
+  适用终端：手机端（路由 /phone/p/<slug>/，由 scripts/phone-routes.js 生成）
+  作用：手机阅读单篇文章；单列布局、无侧栏无雷达，替代电脑端 post.njk
+        数据由生成期算好：page.item = { title, dateStr, content, cats, tags }
+  样式依赖：source/css/theme/phone/common.css、source/css/theme/phone/list.css
+  组件依赖：phone/_components/Particles.njk
+  最后修改：2026-11-11
+  ============================================
+-->
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="color-scheme" content="dark">
+  <meta name="theme-color" content="#020817">
+  <!-- 首帧兜底：浏览器默认画布是白的，样式未解析前会闪一下白。这条规则先锁死深空底色 -->
+  <style>html{background-color:#020817}</style>
+  <title>ES32-metric 与 pipeline 聚合 - 时空秘境</title>
+  <!-- 手机端样式：基础 + 列表/正文，外链引入（源文件 source/css/theme/phone/） -->
+  <link rel="stylesheet" href="/css/theme/phone/common.css">
+  <link rel="stylesheet" href="/css/theme/phone/list.css">
+<meta name="generator" content="Hexo 8.1.2"></head>
+<body>
+<div class="mb-shell">
+  <!--
+  ============================================
+  手机端星空粒子组件
+  文件：Particles.njk
+  适用终端：手机端
+  作用：Particles.njk 的手机端副本（nunjucks 子目录 include 取不到上级）
+        参数与电脑端 _components/Particles.njk 保持一致：
+        粒子 95 / 连线 118px / opacity 0.32，外加星座层与零星闪烁层
+  最后修改：2026-11-12
+  ============================================
+--><!-- z-index 必须是 0：负层级会被 body 不透明背景盖住，粒子在跑却看不见 -->
+<div id="particles" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 0; pointer-events: none;"></div>
+<!-- 星座层（与首页同一套：随机零星散布星座图形 + 偶尔闪烁的小星） -->
+<div id="constellations" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 1; pointer-events: none;" aria-hidden="true"></div>
+<script src="/js/particles.min.js"></script>
+<script>
+particlesJS("particles", {
+  particles: {
+    number: {
+      value: 95,
+      density: {
+        enable: true,
+        value_area: 800
+      }
+    },
+    color: {
+      value: "#00eeff"
+    },
+    shape: {
+      type: "circle",
+      stroke: {
+        width: 0,
+        color: "#000000"
+      }
+    },
+    opacity: {
+      value: 0.6,
+      random: true,
+      anim: {
+        enable: true,
+        speed: 0.5,
+        opacity_min: 0.1,
+        sync: false
+      }
+    },
+    size: {
+      value: 3,
+      random: true,
+      anim: {
+        enable: true,
+        speed: 2,
+        size_min: 0.1,
+        sync: false
+      }
+    },
+    line_linked: {
+      enable: true,
+      distance: 118,
+      color: "#00eeff",
+      opacity: 0.32,
+      width: 1
+    },
+    move: {
+      enable: true,
+      speed: 0.8,
+      direction: "none",
+      random: true,
+      straight: false,
+      out_mode: "out",
+      bounce: false,
+      attract: {
+        enable: true,
+        rotateX: 600,
+        rotateY: 1200
+      }
+    }
+  },
+  interactivity: {
+    detect_on: "canvas",
+    events: {
+      onhover: {
+        enable: true,
+        mode: "grab"       // 手指按住时粒子聚集
+      },
+      onclick: {
+        enable: true,
+        mode: "push"       // 点击时产生新粒子
+      },
+      resize: true
+    },
+    modes: {
+      grab: {
+        distance: 200,
+        line_linked: {
+          opacity: 1
+        }
+      },
+      push: {
+        particles_nb: 6
+      }
+    }
+  },
+  retina_detect: true
+});
+</script>
+<!-- 星座 + 零星闪烁层：与电脑端共用同一份绘制脚本 -->
+<script src="/js/theme/home/starfield.js"></script>
+
+
+  <div class="mb-top">
+    <a class="mb-back" href="/phone/">← 返回手机首页</a>
+    <span class="mb-sub" style="margin:0">2023-12-28</span>
+  </div>
+
+  <h1 class="mb-title">ES32-metric 与 pipeline 聚合</h1>
+  <div class="mb-sub">
+    分类：bigdata · elasticsearch
+     ｜ 标签：Elasticsearch · 系统课
+  </div>
+
+  <div class="mb-article"><div class="essay-banner essay-elasticsearch"></div>
+
+<h1 id="metric-与-pipeline-聚合：近似指标、占比与排序截断"><a href="#metric-与-pipeline-聚合：近似指标、占比与排序截断" class="headerlink" title="metric 与 pipeline 聚合：近似指标、占比与排序截断"></a>metric 与 pipeline 聚合：近似指标、占比与排序截断</h1><p>平均数、去重数、百分位——三个看起来最普通的统计</p>
+<p>前两个在分布式下都是<strong>近似值</strong>，只有你知道它们近似到什么程度，报表才敢上线。</p>
+<!-- 配图 32-1：待生成，放到图床同名路径后启用下面一行 -->
+<blockquote>
+<p><strong>配图 32-1｜提示词</strong>：上半部分三个仪表盘并排：<code>avg</code>（精确，绿勾）、<code>cardinality</code>（标 <code>precision_threshold=3000</code>，旁边一个误差百分比条）、<code>percentiles</code>（标 TDigest 草图，误差棒）；下半部分 pipeline 流水线：<code>by_brand</code> 桶阵列 → <code>bucket_selector</code> 过滤掉小桶 → <code>bucket_sort</code> 排序截断 → 输出前 3 名。深色星空背景，青蓝与琥珀。</p>
+</blockquote>
+<h2 id="一、学习目标"><a href="#一、学习目标" class="headerlink" title="一、学习目标"></a>一、学习目标</h2><ol>
+<li>分清哪些 metric 精确、哪些近似，以及近似开关在哪；</li>
+<li>会用 <code>percentiles</code>、<code>cardinality</code>、<code>stats</code>；</li>
+<li>会用 <code>bucket_script</code> &#x2F; <code>bucket_selector</code> &#x2F; <code>bucket_sort</code> 做占比与截断；</li>
+<li>知道 <code>gap_policy</code> 的含义。</li>
+</ol>
+<h2 id="二、前置知识"><a href="#二、前置知识" class="headerlink" title="二、前置知识"></a>二、前置知识</h2><div class="data-grid data-grid-link-table"><div class="grid-header"><div class="grid-cell">需要掌握</div><div class="grid-cell">到什么程度</div><div class="grid-cell">出处</div></div><div class="grid-row"><div class="grid-cell">三层结构</div><div class="grid-cell">知道 pipeline 引用兄弟</div><div class="grid-cell">M5-1</div></div><div class="grid-row"><div class="grid-cell">bucket 聚合</div><div class="grid-cell">知道桶是什么</div><div class="grid-cell">M5-2</div></div></div>
+
+<h2 id="三、理论讲解"><a href="#三、理论讲解" class="headerlink" title="三、理论讲解"></a>三、理论讲解</h2><div class="data-grid data-grid-link-table"><div class="grid-header"><div class="grid-cell">指标</div><div class="grid-cell">精确性</div><div class="grid-cell">关键参数</div><div class="grid-cell">说明</div></div><div class="grid-row"><div class="grid-cell"><code>avg</code>&#x2F;<code>sum</code>&#x2F;<code>min</code>&#x2F;<code>max</code></div><div class="grid-cell">精确</div><div class="grid-cell">—</div><div class="grid-cell">可跨分片直接合并</div></div><div class="grid-row"><div class="grid-cell"><code>value_count</code></div><div class="grid-cell">精确</div><div class="grid-cell">—</div><div class="grid-cell">统计值的个数</div></div><div class="grid-row"><div class="grid-cell"><code>stats</code>&#x2F;<code>extended_stats</code></div><div class="grid-cell">精确</div><div class="grid-cell">—</div><div class="grid-cell">一次给 count&#x2F;min&#x2F;max&#x2F;avg&#x2F;sum（扩展版加方差）</div></div><div class="grid-row"><div class="grid-cell"><code>cardinality</code></div><div class="grid-cell">近似</div><div class="grid-cell"><code>precision_threshold</code>（默认 3000，上限 40000）</div><div class="grid-cell">HyperLogLog++</div></div><div class="grid-row"><div class="grid-cell"><code>percentiles</code></div><div class="grid-cell">近似</div><div class="grid-cell"><code>percents</code>（默认 1&#x2F;5&#x2F;25&#x2F;50&#x2F;75&#x2F;95&#x2F;99）、<code>keyed</code></div><div class="grid-cell">TDigest 草图</div></div><div class="grid-row"><div class="grid-cell"><code>top_hits</code></div><div class="grid-cell">—</div><div class="grid-cell"><code>size</code>、<code>sort</code></div><div class="grid-cell">每个桶里取原始文档</div></div></div>
+
+<p>pipeline 常用四种：<code>bucket_script</code>（按公式算）、<code>bucket_selector</code>（按条件删桶）、<code>bucket_sort</code>（排序并截断）、<code>derivative</code> &#x2F; <code>cumulative_sum</code>（差分与累计）。<code>gap_policy</code> 默认 <code>skip</code>（遇到空桶跳过），另一值是 <code>insert_zeros</code>。</p>
+<h2 id="四、原理拆解：为什么去重计数必须近似"><a href="#四、原理拆解：为什么去重计数必须近似" class="headerlink" title="四、原理拆解：为什么去重计数必须近似"></a>四、原理拆解：为什么去重计数必须近似</h2><p>精确去重要把每个不同的值都记下来，基数上百万时内存直接崩。HyperLogLog 用固定大小的寄存器做概率估算：<code>precision_threshold</code> 越大，精度越高、内存越大；官方给的上限是 40000，超过部分精度不再提升。默认 3000 意味着「基数远大于 3000 时误差约在个位数百分比」。</p>
+<p><code>percentiles</code> 用 TDigest 草图，误差集中在尾部；P99 这种极端分位数在数据量小或不均衡时波动明显。要精确分位数，只能把全部值取回本地算——这是工程取舍。</p>
+<p>顺带说一个实用技巧：<code>bucket_sort</code> 是「官方支持的 Top N 截断」，比先取回 100 个桶再自己排序省得多。</p>
+<h2 id="五、场景说明"><a href="#五、场景说明" class="headerlink" title="五、场景说明"></a>五、场景说明</h2><div class="data-grid data-grid-link-table"><div class="grid-header"><div class="grid-cell">需求</div><div class="grid-cell">做法</div></div><div class="grid-row"><div class="grid-cell">平均客单价</div><div class="grid-cell"><code>avg</code></div></div><div class="grid-row"><div class="grid-cell">订单金额分布</div><div class="grid-cell"><code>percentiles</code>（看 P50&#x2F;P95）</div></div><div class="grid-row"><div class="grid-cell">UV 估算</div><div class="grid-cell"><code>cardinality</code>（明确告诉业务是估算）</div></div><div class="grid-row"><div class="grid-cell">每个品牌前 3 商品</div><div class="grid-cell"><code>terms</code> + <code>top_hits</code></div></div><div class="grid-row"><div class="grid-cell">各品牌均价占总均价比例</div><div class="grid-cell"><code>bucket_script</code></div></div><div class="grid-row"><div class="grid-cell">过滤掉订单数 &lt; 10 的品牌</div><div class="grid-cell"><code>bucket_selector</code></div></div><div class="grid-row"><div class="grid-cell">按销售额取前 5 品牌</div><div class="grid-cell"><code>bucket_sort</code></div></div></div>
+
+<h2 id="六、实操"><a href="#六、实操" class="headerlink" title="六、实操"></a>六、实操</h2><pre class="line-numbers language-bash" data-language="bash"><code class="language-bash"><span class="token comment"># 精确 + 近似指标混合</span>
+<span class="token function">curl</span> <span class="token parameter variable">-s</span> <span class="token parameter variable">-X</span> GET <span class="token string">"http://localhost:9200/orders/_search"</span> <span class="token parameter variable">-H</span> <span class="token string">'Content-Type: application/json'</span> <span class="token parameter variable">-d</span> <span class="token string">'
+&#123; "size": 0, "aggs": &#123;
+    "amount_stats": &#123; "extended_stats": &#123; "field": "amount" &#125; &#125;,
+    "amount_pct":  &#123; "percentiles": &#123; "field": "amount", "percents": [50, 90, 99] &#125; &#125;,
+    "uv":          &#123; "cardinality": &#123; "field": "user_id", "precision_threshold": 1000 &#125; &#125; &#125; &#125;'</span>
+
+<span class="token comment"># bucket_sort：按销售额取前 5</span>
+<span class="token function">curl</span> <span class="token parameter variable">-s</span> <span class="token parameter variable">-X</span> GET <span class="token string">"http://localhost:9200/goods/_search"</span> <span class="token parameter variable">-H</span> <span class="token string">'Content-Type: application/json'</span> <span class="token parameter variable">-d</span> <span class="token string">'
+&#123; "size": 0, "aggs": &#123;
+    "by_brand": &#123; "terms": &#123; "field": "brand", "size": 100 &#125;,
+      "aggs": &#123; "sales": &#123; "sum": &#123; "field": "amount" &#125; &#125;,
+                "top5": &#123; "bucket_sort": &#123; "sort": [ &#123; "sales": &#123; "order": "desc" &#125; &#125; ], "size": 5 &#125; &#125; &#125; &#125; &#125; &#125;'</span>
+
+<span class="token comment"># bucket_selector：过滤小桶</span>
+<span class="token function">curl</span> <span class="token parameter variable">-s</span> <span class="token parameter variable">-X</span> GET <span class="token string">"http://localhost:9200/goods/_search"</span> <span class="token parameter variable">-H</span> <span class="token string">'Content-Type: application/json'</span> <span class="token parameter variable">-d</span> <span class="token string">'
+&#123; "size": 0, "aggs": &#123;
+    "by_brand": &#123; "terms": &#123; "field": "brand", "size": 100 &#125;,
+      "aggs": &#123; "cnt": &#123; "value_count": &#123; "field": "sku" &#125; &#125;,
+                "keep": &#123; "bucket_selector": &#123; "buckets_path": &#123; "c": "cnt" &#125;, "script": "params.c >= 10" &#125; &#125; &#125; &#125; &#125; &#125;'</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<p><code>bucket_selector</code> 的脚本必须返回布尔值，返回数字会被当成「真值」而悄悄放行——这是很难查的一类错。</p>
+<h2 id="七、常见坑"><a href="#七、常见坑" class="headerlink" title="七、常见坑"></a>七、常见坑</h2><ol>
+<li><strong><code>cardinality</code> 当精确 UV</strong>：默认 <code>precision_threshold</code> 3000，结果本身带误差。</li>
+<li><strong><code>percentiles</code> 在小样本上算 P99</strong>：尾部波动极大，业务会质疑数据。</li>
+<li><strong><code>bucket_selector</code> 脚本返回数字</strong>：语义上要求布尔，写 <code>params.c &gt;= 10</code> 而不是 <code>params.c</code>。</li>
+<li><strong><code>bucket_sort</code> 与 <code>terms.size</code> 混淆</strong>：前者截断桶，后者限制候选，两者要配合。</li>
+<li><strong><code>gap_policy</code> 不设就做累计</strong>：空桶被 <code>skip</code> 掉，累计曲线会「跳档」。</li>
+<li><strong><code>top_hits</code> 取太多</strong>：每个桶都带原始文档，响应体会很大。</li>
+</ol>
+<h2 id="八、课后小结"><a href="#八、课后小结" class="headerlink" title="八、课后小结"></a>八、课后小结</h2><ol>
+<li><code>avg</code>&#x2F;<code>sum</code>&#x2F;<code>min</code>&#x2F;<code>max</code>&#x2F;<code>value_count</code>&#x2F;<code>stats</code> 精确；<code>cardinality</code>&#x2F;<code>percentiles</code> 近似。</li>
+<li><code>precision_threshold</code> 默认 3000、上限 40000。</li>
+<li>pipeline 四种：算、筛、排、差分&#x2F;累计。</li>
+<li><code>buckets_path</code> 写聚合名，不写字段名。</li>
+<li><code>bucket_sort</code> 是官方推荐的 Top N 截断方式。</li>
+</ol>
+<h2 id="九、思考题"><a href="#九、思考题" class="headerlink" title="九、思考题"></a>九、思考题</h2><ol>
+<li>业务要「精确 UV」，你会用什么方案替代 <code>cardinality</code>？代价是什么？</li>
+<li><code>bucket_sort</code> 截断到 5 个桶后，<code>hits.total</code> 会变吗？为什么？</li>
+<li><code>gap_policy: skip</code> 在做「日环比」时会带来什么异常？怎么规避？</li>
+</ol>
+<h2 id="十、官方资料"><a href="#十、官方资料" class="headerlink" title="十、官方资料"></a>十、官方资料</h2><ul>
+<li>Metrics：<a target="_blank" rel="noopener" href="https://www.elastic.co/guide/en/elasticsearch/reference/current/search-aggregations-metrics.html">https://www.elastic.co/guide/en/elasticsearch/reference/current/search-aggregations-metrics.html</a></li>
+<li>Cardinality：<a target="_blank" rel="noopener" href="https://www.elastic.co/guide/en/elasticsearch/reference/current/search-aggregations-metrics-cardinality-aggregation.html">https://www.elastic.co/guide/en/elasticsearch/reference/current/search-aggregations-metrics-cardinality-aggregation.html</a></li>
+<li>Percentiles：<a target="_blank" rel="noopener" href="https://www.elastic.co/guide/en/elasticsearch/reference/current/search-aggregations-metrics-percentile-aggregation.html">https://www.elastic.co/guide/en/elasticsearch/reference/current/search-aggregations-metrics-percentile-aggregation.html</a></li>
+<li>Bucket sort：<a target="_blank" rel="noopener" href="https://www.elastic.co/guide/en/elasticsearch/reference/current/search-aggregations-pipeline-bucket-sort-aggregation.html">https://www.elastic.co/guide/en/elasticsearch/reference/current/search-aggregations-pipeline-bucket-sort-aggregation.html</a></li>
+</ul>
+<p>上一篇：<a href="/2023/12/25/bigdata/elasticsearch/es-31-bucket-aggs/">M5-2 bucket 聚合的精度与时间轴</a> ｜ 下一篇：<a href="/2023/12/31/bigdata/elasticsearch/es-33-agg-performance/">M5-4 聚合的内存与性能</a> ｜ <a href="/2023/09/22/bigdata/elasticsearch/es-00-series-index/">总目录</a></p>
+</div>
+
+  <div class="mb-foot">
+    <a href="/phone/">返回手机首页</a>
+    <a href="/phone/tags/">星迹索引</a>
+  </div>
+</div>
+
+
+<script>
+  /* 作用：懒加载本地 mermaid 库；无 mermaid 代码块时不加载 */
+  function loadLocalMermaid(){
+    return new Promise(function(resolve, reject){
+      if(window.mermaid) return resolve(window.mermaid);
+      var s = document.createElement('script');
+      s.src = '/js/third-party/mermaid/mermaid.min.js?v=10';
+      s.onload = function(){ resolve(window.mermaid); };
+      s.onerror = function(){ reject(new Error('mermaid local load failed')); };
+      document.head.appendChild(s);
+    });
+  }
+
+  /* 作用：把 ```mermaid 代码块替换成 SVG 图（手机端字号略小、图可横向滚动） */
+  async function renderMermaidDiagram(){
+    var blocks = document.querySelectorAll('pre[class*="language-mermaid"]');
+    if(!blocks.length) return;
+    var mermaid;
+    try { mermaid = await loadLocalMermaid(); }
+    catch(e){ console.warn('[mermaid] 本地库加载失败：', e); return; }
+
+    mermaid.initialize({
+      startOnLoad: false,
+      theme: 'base',
+      themeVariables: {
+        darkMode: true,
+        background: 'transparent',
+        fontFamily: '"Microsoft YaHei", "PingFang SC", "Segoe UI", sans-serif',
+        fontSize: '12px',
+        primaryColor: '#062f3d',
+        primaryTextColor: '#d6f6ff',
+        primaryBorderColor: '#00eeff',
+        secondaryColor: '#04222d',
+        tertiaryColor: '#04222d',
+        mainBkg: '#062f3d',
+        nodeBorder: '#00eeff',
+        clusterBkg: '#02161f',
+        clusterBorder: '#00eeff55',
+        lineColor: '#00eeff',
+        textColor: '#c0e8ff',
+        edgeLabelBackground: '#02161f'
+      },
+      flowchart: { curve: 'basis', useMaxWidth: false, htmlLabels: false, nodeSpacing: 30, rankSpacing: 40, padding: 10 }
+    });
+
+    var targets = [];
+    blocks.forEach(function(el){
+      var codeEl = el.querySelector('code');
+      if(!codeEl) return;
+      var div = document.createElement('div');
+      div.className = 'mermaid';
+      div.textContent = codeEl.textContent;
+      el.parentNode.replaceChild(div, el);
+      targets.push(div);
+    });
+    if(!targets.length) return;
+    try { await mermaid.run({ nodes: targets }); }
+    catch(e){ console.warn('[mermaid] 渲染失败：', e); }
+  }
+  /* 作用：多次触发兜底（延迟重试 + DOM 变化），防止某次时机没跑到导致图表留在代码块 */
+  var mmBusy = false;
+  function scheduleMermaid(){
+    if(mmBusy) return;
+    mmBusy = true;
+    renderMermaidDiagram().then(function(){ mmBusy = false; }, function(){ mmBusy = false; });
+  }
+  scheduleMermaid();
+  window.addEventListener('load', scheduleMermaid);
+  [1000, 3000, 8000].forEach(function(ms){ setTimeout(scheduleMermaid, ms); });
+  if(document.readyState !== 'loading') scheduleMermaid();
+  if(window.MutationObserver){
+    var mmTimer = null;
+    var mmObserver = new MutationObserver(function(){
+      clearTimeout(mmTimer);
+      mmTimer = setTimeout(scheduleMermaid, 400);
+    });
+    mmObserver.observe(document.querySelector('.mb-article') || document.body, { childList: true, subtree: true });
+  }
+</script>
+</body>
+</html>

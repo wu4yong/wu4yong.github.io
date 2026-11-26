@@ -1,0 +1,322 @@
+<!--
+  ============================================
+  手机端 · 文章原文页
+  文件：phone/post.njk
+  适用终端：手机端（路由 /phone/p/<slug>/，由 scripts/phone-routes.js 生成）
+  作用：手机阅读单篇文章；单列布局、无侧栏无雷达，替代电脑端 post.njk
+        数据由生成期算好：page.item = { title, dateStr, content, cats, tags }
+  样式依赖：source/css/theme/phone/common.css、source/css/theme/phone/list.css
+  组件依赖：phone/_components/Particles.njk
+  最后修改：2026-11-11
+  ============================================
+-->
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="color-scheme" content="dark">
+  <meta name="theme-color" content="#020817">
+  <!-- 首帧兜底：浏览器默认画布是白的，样式未解析前会闪一下白。这条规则先锁死深空底色 -->
+  <style>html{background-color:#020817}</style>
+  <title>MyBatis-Plus（四）分页插件与拦截器体系 - 时空秘境</title>
+  <!-- 手机端样式：基础 + 列表/正文，外链引入（源文件 source/css/theme/phone/） -->
+  <link rel="stylesheet" href="/css/theme/phone/common.css">
+  <link rel="stylesheet" href="/css/theme/phone/list.css">
+<meta name="generator" content="Hexo 8.1.2"></head>
+<body>
+<div class="mb-shell">
+  <!--
+  ============================================
+  手机端星空粒子组件
+  文件：Particles.njk
+  适用终端：手机端
+  作用：Particles.njk 的手机端副本（nunjucks 子目录 include 取不到上级）
+        参数与电脑端 _components/Particles.njk 保持一致：
+        粒子 95 / 连线 118px / opacity 0.32，外加星座层与零星闪烁层
+  最后修改：2026-11-12
+  ============================================
+--><!-- z-index 必须是 0：负层级会被 body 不透明背景盖住，粒子在跑却看不见 -->
+<div id="particles" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 0; pointer-events: none;"></div>
+<!-- 星座层（与首页同一套：随机零星散布星座图形 + 偶尔闪烁的小星） -->
+<div id="constellations" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 1; pointer-events: none;" aria-hidden="true"></div>
+<script src="/js/particles.min.js"></script>
+<script>
+particlesJS("particles", {
+  particles: {
+    number: {
+      value: 95,
+      density: {
+        enable: true,
+        value_area: 800
+      }
+    },
+    color: {
+      value: "#00eeff"
+    },
+    shape: {
+      type: "circle",
+      stroke: {
+        width: 0,
+        color: "#000000"
+      }
+    },
+    opacity: {
+      value: 0.6,
+      random: true,
+      anim: {
+        enable: true,
+        speed: 0.5,
+        opacity_min: 0.1,
+        sync: false
+      }
+    },
+    size: {
+      value: 3,
+      random: true,
+      anim: {
+        enable: true,
+        speed: 2,
+        size_min: 0.1,
+        sync: false
+      }
+    },
+    line_linked: {
+      enable: true,
+      distance: 118,
+      color: "#00eeff",
+      opacity: 0.32,
+      width: 1
+    },
+    move: {
+      enable: true,
+      speed: 0.8,
+      direction: "none",
+      random: true,
+      straight: false,
+      out_mode: "out",
+      bounce: false,
+      attract: {
+        enable: true,
+        rotateX: 600,
+        rotateY: 1200
+      }
+    }
+  },
+  interactivity: {
+    detect_on: "canvas",
+    events: {
+      onhover: {
+        enable: true,
+        mode: "grab"       // 手指按住时粒子聚集
+      },
+      onclick: {
+        enable: true,
+        mode: "push"       // 点击时产生新粒子
+      },
+      resize: true
+    },
+    modes: {
+      grab: {
+        distance: 200,
+        line_linked: {
+          opacity: 1
+        }
+      },
+      push: {
+        particles_nb: 6
+      }
+    }
+  },
+  retina_detect: true
+});
+</script>
+<!-- 星座 + 零星闪烁层：与电脑端共用同一份绘制脚本 -->
+<script src="/js/theme/home/starfield.js"></script>
+
+
+  <div class="mb-top">
+    <a class="mb-back" href="/phone/">← 返回手机首页</a>
+    <span class="mb-sub" style="margin:0">2022-07-24</span>
+  </div>
+
+  <h1 class="mb-title">MyBatis-Plus（四）分页插件与拦截器体系</h1>
+  <div class="mb-sub">
+    分类：java · mybatisplus
+     ｜ 标签：MyBatisPlus
+  </div>
+
+  <div class="mb-article"><div class="essay-banner essay-mybatisplus"></div>
+
+<h1 id="分页插件与拦截器体系"><a href="#分页插件与拦截器体系" class="headerlink" title="分页插件与拦截器体系"></a><strong>分页插件与拦截器体系</strong></h1><p>3.4.0 之后所有插件都挂在 <code>MybatisPlusInterceptor</code> 下，分页只是其中一个 <code>InnerInterceptor</code>。顺序挂错，分页与多租户&#x2F;乐观锁就会互相踩。</p>
+<p><img src="https://wu4yong.github.io/starry-images/assets/img/mybatisplus/mybatisplus-04-pagination.webp" alt="拦截层把数据流切成整齐的页"></p>
+<p><em>拦截层把数据流切成整齐的页</em></p>
+<h2 id="1-1-注册-MybatisPlusInterceptor"><a href="#1-1-注册-MybatisPlusInterceptor" class="headerlink" title="1.1 注册 MybatisPlusInterceptor"></a>1.1 注册 MybatisPlusInterceptor</h2><pre class="line-numbers language-java" data-language="java"><code class="language-java"><span class="token annotation punctuation">@Configuration</span>
+<span class="token annotation punctuation">@MapperScan</span><span class="token punctuation">(</span><span class="token string">"cn.demo.mapper"</span><span class="token punctuation">)</span>
+<span class="token keyword">public</span> <span class="token keyword">class</span> <span class="token class-name">MybatisPlusConfig</span> <span class="token punctuation">&#123;</span>
+
+    <span class="token annotation punctuation">@Bean</span>
+    <span class="token keyword">public</span> <span class="token class-name">MybatisPlusInterceptor</span> <span class="token function">mybatisPlusInterceptor</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+        <span class="token class-name">MybatisPlusInterceptor</span> interceptor <span class="token operator">=</span> <span class="token keyword">new</span> <span class="token class-name">MybatisPlusInterceptor</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+        interceptor<span class="token punctuation">.</span><span class="token function">addInnerInterceptor</span><span class="token punctuation">(</span><span class="token keyword">new</span> <span class="token class-name">PaginationInnerInterceptor</span><span class="token punctuation">(</span><span class="token class-name">DbType</span><span class="token punctuation">.</span><span class="token constant">MYSQL</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+        <span class="token keyword">return</span> interceptor<span class="token punctuation">;</span>
+    <span class="token punctuation">&#125;</span>
+<span class="token punctuation">&#125;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<div class="data-grid data-grid-link-table"><div class="grid-header"><div class="grid-cell">要点</div><div class="grid-cell">说明</div></div><div class="grid-row"><div class="grid-cell"><code>DbType.MYSQL</code></div><div class="grid-cell">显式指定方言，避免每次分页都去探测数据库类型</div></div><div class="grid-row"><div class="grid-cell">只能注册一次</div><div class="grid-cell">一个 <code>MybatisPlusInterceptor</code> 里加多个 <code>InnerInterceptor</code></div></div><div class="grid-row"><div class="grid-cell">3.4.0+</div><div class="grid-cell">老版本 <code>PaginationInterceptor</code> 已废弃</div></div></div>
+
+<h2 id="1-2-分页参数"><a href="#1-2-分页参数" class="headerlink" title="1.2 分页参数"></a>1.2 分页参数</h2><pre class="line-numbers language-java" data-language="java"><code class="language-java"><span class="token class-name">PaginationInnerInterceptor</span> p <span class="token operator">=</span> <span class="token keyword">new</span> <span class="token class-name">PaginationInnerInterceptor</span><span class="token punctuation">(</span><span class="token class-name">DbType</span><span class="token punctuation">.</span><span class="token constant">MYSQL</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+p<span class="token punctuation">.</span><span class="token function">setMaxLimit</span><span class="token punctuation">(</span><span class="token number">500L</span><span class="token punctuation">)</span><span class="token punctuation">;</span>     <span class="token comment">// 单页最大条数，防止 pageSize=10000</span>
+p<span class="token punctuation">.</span><span class="token function">setOverflow</span><span class="token punctuation">(</span><span class="token boolean">true</span><span class="token punctuation">)</span><span class="token punctuation">;</span>     <span class="token comment">// 超过最大页回到首页</span>
+p<span class="token punctuation">.</span><span class="token function">setOptimizeJoin</span><span class="token punctuation">(</span><span class="token boolean">true</span><span class="token punctuation">)</span><span class="token punctuation">;</span> <span class="token comment">// count 时优化 join</span>
+interceptor<span class="token punctuation">.</span><span class="token function">addInnerInterceptor</span><span class="token punctuation">(</span>p<span class="token punctuation">)</span><span class="token punctuation">;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<div class="data-grid data-grid-link-table"><div class="grid-header"><div class="grid-cell">参数</div><div class="grid-cell">默认</div><div class="grid-cell">作用</div></div><div class="grid-row"><div class="grid-cell"><code>maxLimit</code></div><div class="grid-cell">无</div><div class="grid-cell">限制 <code>size</code>，防拖库</div></div><div class="grid-row"><div class="grid-cell"><code>overflow</code></div><div class="grid-cell">false</div><div class="grid-cell">页码越界是否回首页</div></div><div class="grid-row"><div class="grid-cell"><code>optimizeJoin</code></div><div class="grid-cell">true</div><div class="grid-cell">count 时裁掉不影响计数的 join</div></div><div class="grid-row"><div class="grid-cell"><code>optimizeCountSql</code></div><div class="grid-cell">true</div><div class="grid-cell">自动优化 count 语句</div></div></div>
+
+<p>生产必须设 <code>maxLimit</code>：<code>pageSize=100000</code> 一次能把数据库打满。</p>
+<h2 id="1-3-用法"><a href="#1-3-用法" class="headerlink" title="1.3 用法"></a>1.3 用法</h2><pre class="line-numbers language-java" data-language="java"><code class="language-java"><span class="token class-name">Page</span><span class="token generics"><span class="token punctuation">&lt;</span><span class="token class-name">User</span><span class="token punctuation">></span></span> page <span class="token operator">=</span> <span class="token keyword">new</span> <span class="token class-name">Page</span><span class="token generics"><span class="token punctuation">&lt;</span><span class="token punctuation">></span></span><span class="token punctuation">(</span><span class="token number">1</span><span class="token punctuation">,</span> <span class="token number">10</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token class-name">Page</span><span class="token generics"><span class="token punctuation">&lt;</span><span class="token class-name">User</span><span class="token punctuation">></span></span> result <span class="token operator">=</span> userMapper<span class="token punctuation">.</span><span class="token function">selectPage</span><span class="token punctuation">(</span>page<span class="token punctuation">,</span> <span class="token class-name">Wrappers</span><span class="token punctuation">.</span><span class="token generics"><span class="token punctuation">&lt;</span><span class="token class-name">User</span><span class="token punctuation">></span></span><span class="token function">lambdaQuery</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+        <span class="token punctuation">.</span><span class="token function">eq</span><span class="token punctuation">(</span><span class="token class-name">User</span><span class="token operator">::</span><span class="token function">getStatus</span><span class="token punctuation">,</span> <span class="token string">"ACTIVE"</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+result<span class="token punctuation">.</span><span class="token function">getRecords</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>      <span class="token comment">// 当前页</span>
+result<span class="token punctuation">.</span><span class="token function">getTotal</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>        <span class="token comment">// 总数</span>
+result<span class="token punctuation">.</span><span class="token function">getPages</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>        <span class="token comment">// 总页数</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<div class="data-grid data-grid-link-table"><div class="grid-header"><div class="grid-cell">构造方式</div><div class="grid-cell">是否查 total</div><div class="grid-cell">场景</div></div><div class="grid-row"><div class="grid-cell"><code>new Page&lt;&gt;(current, size)</code></div><div class="grid-cell">查</div><div class="grid-cell">普通列表</div></div><div class="grid-row"><div class="grid-cell"><code>new Page&lt;&gt;(current, size, false)</code></div><div class="grid-cell">不查</div><div class="grid-cell">无限滚动、已知总数</div></div><div class="grid-row"><div class="grid-cell"><code>new Page&lt;&gt;(current, size, true)</code></div><div class="grid-cell">查</div><div class="grid-cell">默认</div></div></div>
+
+<p><code>Page</code> 传给 Mapper 时<strong>必须是第一个参数</strong>，否则插件不生效——这是”分页没生效、返回全表”的头号原因。</p>
+<h2 id="1-4-多插件顺序（官方明确要求）"><a href="#1-4-多插件顺序（官方明确要求）" class="headerlink" title="1.4 多插件顺序（官方明确要求）"></a>1.4 多插件顺序（官方明确要求）</h2><pre class="line-numbers language-java" data-language="java"><code class="language-java">interceptor<span class="token punctuation">.</span><span class="token function">addInnerInterceptor</span><span class="token punctuation">(</span><span class="token keyword">new</span> <span class="token class-name">TenantLineInnerInterceptor</span><span class="token punctuation">(</span>handler<span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>    <span class="token comment">// 多租户</span>
+interceptor<span class="token punctuation">.</span><span class="token function">addInnerInterceptor</span><span class="token punctuation">(</span><span class="token keyword">new</span> <span class="token class-name">DynamicTableNameInnerInterceptor</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>      <span class="token comment">// 动态表名</span>
+interceptor<span class="token punctuation">.</span><span class="token function">addInnerInterceptor</span><span class="token punctuation">(</span><span class="token keyword">new</span> <span class="token class-name">PaginationInnerInterceptor</span><span class="token punctuation">(</span><span class="token class-name">DbType</span><span class="token punctuation">.</span><span class="token constant">MYSQL</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span><span class="token comment">// 分页</span>
+interceptor<span class="token punctuation">.</span><span class="token function">addInnerInterceptor</span><span class="token punctuation">(</span><span class="token keyword">new</span> <span class="token class-name">OptimisticLockerInnerInterceptor</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>      <span class="token comment">// 乐观锁</span>
+interceptor<span class="token punctuation">.</span><span class="token function">addInnerInterceptor</span><span class="token punctuation">(</span><span class="token keyword">new</span> <span class="token class-name">BlockAttackInnerInterceptor</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>           <span class="token comment">// 防全表更新删除</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<div class="data-grid data-grid-link-table"><div class="grid-header"><div class="grid-cell">顺序</div><div class="grid-cell">插件</div><div class="grid-cell">理由</div></div><div class="grid-row"><div class="grid-cell">1</div><div class="grid-cell">多租户 &#x2F; 动态表名</div><div class="grid-cell">先改 SQL 的表与条件</div></div><div class="grid-row"><div class="grid-cell">2</div><div class="grid-cell">分页 &#x2F; 乐观锁</div><div class="grid-cell">基于已改好的 SQL 做分页与版本</div></div><div class="grid-row"><div class="grid-cell">3</div><div class="grid-cell">SQL 规范 &#x2F; 防全表</div><div class="grid-cell">对最终 SQL 做安全校验</div></div></div>
+
+<p>官方原话：<strong>对 SQL 做单次改造的优先放入，不做 SQL 改造的最后放入</strong>。顺序错了典型症状是”多租户没加到 count 里、total 翻倍”。</p>
+<h2 id="1-5-忽略拦截"><a href="#1-5-忽略拦截" class="headerlink" title="1.5 忽略拦截"></a>1.5 忽略拦截</h2><pre class="line-numbers language-java" data-language="java"><code class="language-java"><span class="token annotation punctuation">@InterceptorIgnore</span><span class="token punctuation">(</span>tenantLine <span class="token operator">=</span> <span class="token string">"true"</span><span class="token punctuation">)</span>
+<span class="token class-name">List</span><span class="token generics"><span class="token punctuation">&lt;</span><span class="token class-name">User</span><span class="token punctuation">></span></span> <span class="token function">selectAllAcrossTenant</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span></span></code></pre>
+
+<div class="data-grid data-grid-link-table"><div class="grid-header"><div class="grid-cell">注解属性</div><div class="grid-cell">对应插件</div></div><div class="grid-row"><div class="grid-cell"><code>tenantLine</code></div><div class="grid-cell">多租户</div></div><div class="grid-row"><div class="grid-cell"><code>dynamicTableName</code></div><div class="grid-cell">动态表名</div></div><div class="grid-row"><div class="grid-cell"><code>blockAttack</code></div><div class="grid-cell">防全表更新删除</div></div><div class="grid-row"><div class="grid-cell"><code>illegalSql</code></div><div class="grid-cell">SQL 规范校验</div></div></div>
+
+<p>3.5.3+ 还支持代码级忽略（优先级高于注解），用完必须 <code>clear</code>：</p>
+<pre class="line-numbers language-java" data-language="java"><code class="language-java"><span class="token class-name">InterceptorIgnoreHelper</span><span class="token punctuation">.</span><span class="token function">handle</span><span class="token punctuation">(</span><span class="token class-name">IgnoreStrategy</span><span class="token punctuation">.</span><span class="token function">builder</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token function">tenantLine</span><span class="token punctuation">(</span><span class="token boolean">true</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token function">build</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token keyword">try</span> <span class="token punctuation">&#123;</span>
+    <span class="token comment">// 跨租户统计</span>
+<span class="token punctuation">&#125;</span> <span class="token keyword">finally</span> <span class="token punctuation">&#123;</span>
+    <span class="token class-name">InterceptorIgnoreHelper</span><span class="token punctuation">.</span><span class="token function">clearIgnoreStrategy</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">&#125;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<h2 id="1-6-与-PageHelper-的冲突"><a href="#1-6-与-PageHelper-的冲突" class="headerlink" title="1.6 与 PageHelper 的冲突"></a>1.6 与 PageHelper 的冲突</h2><div class="data-grid data-grid-link-table"><div class="grid-header"><div class="grid-cell">方案</div><div class="grid-cell">是否可共存</div><div class="grid-cell">建议</div></div><div class="grid-row"><div class="grid-cell">MyBatis-Plus 分页</div><div class="grid-cell">独立</div><div class="grid-cell">全站统一用它</div></div><div class="grid-row"><div class="grid-cell">PageHelper</div><div class="grid-cell">与 MP 分页混用会冲突</div><div class="grid-cell">别混</div></div><div class="grid-row"><div class="grid-cell">两者都引</div><div class="grid-cell">有可能两条分页逻辑都触发</div><div class="grid-cell">移除其一</div></div></div>
+
+<p><code>PageHelper.startPage()</code> 依赖 <code>ThreadLocal</code>，与 MP 的 <code>Page</code> 参数机制完全不同，混用会出现”分页了两次”。</p>
+<h2 id="1-7-常见坑"><a href="#1-7-常见坑" class="headerlink" title="1.7 常见坑"></a>1.7 常见坑</h2><ol>
+<li><code>Page</code> 不是第一个参数 → 插件不介入，返回全表</li>
+<li>忘了注册 <code>MybatisPlusInterceptor</code> → <code>selectPage</code> 退化为普通查询</li>
+<li>多个 <code>MybatisPlusInterceptor</code> Bean → 只有最后一个生效</li>
+<li><code>maxLimit</code> 没设 → 前端传 <code>size=100000</code> 直接拖库</li>
+<li>count 语句写错（<code>select distinct ...</code>）→ 总数不准，用 <code>optimizeCountSql</code> 或自定义 <code>count</code> 方法</li>
+</ol>
+<h2 id="1-8-官方资料"><a href="#1-8-官方资料" class="headerlink" title="1.8 官方资料"></a>1.8 官方资料</h2><ul>
+<li>分页插件：<a target="_blank" rel="noopener" href="https://baomidou.com/pages/97710a/">https://baomidou.com/pages/97710a/</a></li>
+<li>插件主体与顺序：<a target="_blank" rel="noopener" href="https://baomidou.com/pages/2976a3/">https://baomidou.com/pages/2976a3/</a></li>
+</ul>
+<h2 id="1-9-清单"><a href="#1-9-清单" class="headerlink" title="1.9 清单"></a>1.9 清单</h2><ol>
+<li>3.4.0+ 只用 <code>MybatisPlusInterceptor</code> + <code>PaginationInnerInterceptor</code></li>
+<li>显式传 <code>DbType</code>，并设 <code>maxLimit</code></li>
+<li><code>Page</code> 必须是 Mapper 方法的第一个参数</li>
+<li>多插件顺序：租户&#x2F;动态表名 → 分页&#x2F;乐观锁 → 防全表&#x2F;SQL 规范</li>
+<li>跨租户查询用 <code>@InterceptorIgnore</code> 或 <code>IgnoreStrategy</code>，用完清理</li>
+<li>不要与 PageHelper 混用</li>
+<li>不需要总数时传 <code>searchCount=false</code>，省一次 count</li>
+</ol>
+</div>
+
+  <div class="mb-foot">
+    <a href="/phone/">返回手机首页</a>
+    <a href="/phone/tags/">星迹索引</a>
+  </div>
+</div>
+
+
+<script>
+  /* 作用：懒加载本地 mermaid 库；无 mermaid 代码块时不加载 */
+  function loadLocalMermaid(){
+    return new Promise(function(resolve, reject){
+      if(window.mermaid) return resolve(window.mermaid);
+      var s = document.createElement('script');
+      s.src = '/js/third-party/mermaid/mermaid.min.js?v=10';
+      s.onload = function(){ resolve(window.mermaid); };
+      s.onerror = function(){ reject(new Error('mermaid local load failed')); };
+      document.head.appendChild(s);
+    });
+  }
+
+  /* 作用：把 ```mermaid 代码块替换成 SVG 图（手机端字号略小、图可横向滚动） */
+  async function renderMermaidDiagram(){
+    var blocks = document.querySelectorAll('pre[class*="language-mermaid"]');
+    if(!blocks.length) return;
+    var mermaid;
+    try { mermaid = await loadLocalMermaid(); }
+    catch(e){ console.warn('[mermaid] 本地库加载失败：', e); return; }
+
+    mermaid.initialize({
+      startOnLoad: false,
+      theme: 'base',
+      themeVariables: {
+        darkMode: true,
+        background: 'transparent',
+        fontFamily: '"Microsoft YaHei", "PingFang SC", "Segoe UI", sans-serif',
+        fontSize: '12px',
+        primaryColor: '#062f3d',
+        primaryTextColor: '#d6f6ff',
+        primaryBorderColor: '#00eeff',
+        secondaryColor: '#04222d',
+        tertiaryColor: '#04222d',
+        mainBkg: '#062f3d',
+        nodeBorder: '#00eeff',
+        clusterBkg: '#02161f',
+        clusterBorder: '#00eeff55',
+        lineColor: '#00eeff',
+        textColor: '#c0e8ff',
+        edgeLabelBackground: '#02161f'
+      },
+      flowchart: { curve: 'basis', useMaxWidth: false, htmlLabels: false, nodeSpacing: 30, rankSpacing: 40, padding: 10 }
+    });
+
+    var targets = [];
+    blocks.forEach(function(el){
+      var codeEl = el.querySelector('code');
+      if(!codeEl) return;
+      var div = document.createElement('div');
+      div.className = 'mermaid';
+      div.textContent = codeEl.textContent;
+      el.parentNode.replaceChild(div, el);
+      targets.push(div);
+    });
+    if(!targets.length) return;
+    try { await mermaid.run({ nodes: targets }); }
+    catch(e){ console.warn('[mermaid] 渲染失败：', e); }
+  }
+  /* 作用：多次触发兜底（延迟重试 + DOM 变化），防止某次时机没跑到导致图表留在代码块 */
+  var mmBusy = false;
+  function scheduleMermaid(){
+    if(mmBusy) return;
+    mmBusy = true;
+    renderMermaidDiagram().then(function(){ mmBusy = false; }, function(){ mmBusy = false; });
+  }
+  scheduleMermaid();
+  window.addEventListener('load', scheduleMermaid);
+  [1000, 3000, 8000].forEach(function(ms){ setTimeout(scheduleMermaid, ms); });
+  if(document.readyState !== 'loading') scheduleMermaid();
+  if(window.MutationObserver){
+    var mmTimer = null;
+    var mmObserver = new MutationObserver(function(){
+      clearTimeout(mmTimer);
+      mmTimer = setTimeout(scheduleMermaid, 400);
+    });
+    mmObserver.observe(document.querySelector('.mb-article') || document.body, { childList: true, subtree: true });
+  }
+</script>
+</body>
+</html>

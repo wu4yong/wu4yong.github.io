@@ -1,0 +1,310 @@
+<!--
+  ============================================
+  手机端 · 文章原文页
+  文件：phone/post.njk
+  适用终端：手机端（路由 /phone/p/<slug>/，由 scripts/phone-routes.js 生成）
+  作用：手机阅读单篇文章；单列布局、无侧栏无雷达，替代电脑端 post.njk
+        数据由生成期算好：page.item = { title, dateStr, content, cats, tags }
+  样式依赖：source/css/theme/phone/common.css、source/css/theme/phone/list.css
+  组件依赖：phone/_components/Particles.njk
+  最后修改：2026-11-11
+  ============================================
+-->
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="color-scheme" content="dark">
+  <meta name="theme-color" content="#020817">
+  <!-- 首帧兜底：浏览器默认画布是白的，样式未解析前会闪一下白。这条规则先锁死深空底色 -->
+  <style>html{background-color:#020817}</style>
+  <title>HBase（六）集群运维与调优 - 时空秘境</title>
+  <!-- 手机端样式：基础 + 列表/正文，外链引入（源文件 source/css/theme/phone/） -->
+  <link rel="stylesheet" href="/css/theme/phone/common.css">
+  <link rel="stylesheet" href="/css/theme/phone/list.css">
+<meta name="generator" content="Hexo 8.1.2"></head>
+<body>
+<div class="mb-shell">
+  <!--
+  ============================================
+  手机端星空粒子组件
+  文件：Particles.njk
+  适用终端：手机端
+  作用：Particles.njk 的手机端副本（nunjucks 子目录 include 取不到上级）
+        参数与电脑端 _components/Particles.njk 保持一致：
+        粒子 95 / 连线 118px / opacity 0.32，外加星座层与零星闪烁层
+  最后修改：2026-11-12
+  ============================================
+--><!-- z-index 必须是 0：负层级会被 body 不透明背景盖住，粒子在跑却看不见 -->
+<div id="particles" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 0; pointer-events: none;"></div>
+<!-- 星座层（与首页同一套：随机零星散布星座图形 + 偶尔闪烁的小星） -->
+<div id="constellations" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 1; pointer-events: none;" aria-hidden="true"></div>
+<script src="/js/particles.min.js"></script>
+<script>
+particlesJS("particles", {
+  particles: {
+    number: {
+      value: 95,
+      density: {
+        enable: true,
+        value_area: 800
+      }
+    },
+    color: {
+      value: "#00eeff"
+    },
+    shape: {
+      type: "circle",
+      stroke: {
+        width: 0,
+        color: "#000000"
+      }
+    },
+    opacity: {
+      value: 0.6,
+      random: true,
+      anim: {
+        enable: true,
+        speed: 0.5,
+        opacity_min: 0.1,
+        sync: false
+      }
+    },
+    size: {
+      value: 3,
+      random: true,
+      anim: {
+        enable: true,
+        speed: 2,
+        size_min: 0.1,
+        sync: false
+      }
+    },
+    line_linked: {
+      enable: true,
+      distance: 118,
+      color: "#00eeff",
+      opacity: 0.32,
+      width: 1
+    },
+    move: {
+      enable: true,
+      speed: 0.8,
+      direction: "none",
+      random: true,
+      straight: false,
+      out_mode: "out",
+      bounce: false,
+      attract: {
+        enable: true,
+        rotateX: 600,
+        rotateY: 1200
+      }
+    }
+  },
+  interactivity: {
+    detect_on: "canvas",
+    events: {
+      onhover: {
+        enable: true,
+        mode: "grab"       // 手指按住时粒子聚集
+      },
+      onclick: {
+        enable: true,
+        mode: "push"       // 点击时产生新粒子
+      },
+      resize: true
+    },
+    modes: {
+      grab: {
+        distance: 200,
+        line_linked: {
+          opacity: 1
+        }
+      },
+      push: {
+        particles_nb: 6
+      }
+    }
+  },
+  retina_detect: true
+});
+</script>
+<!-- 星座 + 零星闪烁层：与电脑端共用同一份绘制脚本 -->
+<script src="/js/theme/home/starfield.js"></script>
+
+
+  <div class="mb-top">
+    <a class="mb-back" href="/phone/">← 返回手机首页</a>
+    <span class="mb-sub" style="margin:0">2023-04-15</span>
+  </div>
+
+  <h1 class="mb-title">HBase（六）集群运维与调优</h1>
+  <div class="mb-sub">
+    分类：bigdata · hbase
+     ｜ 标签：HBase
+  </div>
+
+  <div class="mb-article"><div class="essay-banner essay-hbase"></div>
+
+<h1 id="集群运维与调优"><a href="#集群运维与调优" class="headerlink" title="集群运维与调优"></a><strong>集群运维与调优</strong></h1><p>最后一篇从开发视角切到运维视角：RegionServer 堆内存怎么分、MemStore 和 BlockCache 各占多少、压缩算法怎么选、TTL 和版本数怎么配，以及出了问题按什么路径排查。调优没有万能参数，这一篇给的是判断顺序和边界条件，具体数值要结合压测和业务读写比例定。</p>
+<p><img src="https://wu4yong.github.io/starry-images/assets/img/hbase/hbase-06-tuning.webp" alt="内存分区与存储压缩带协同工作，监控仪表板上各节点负载保持均衡"></p>
+<p><em>内存分区与存储压缩带协同工作，监控仪表板上各节点负载保持均衡</em></p>
+<h2 id="1-1-调优先看读写比例"><a href="#1-1-调优先看读写比例" class="headerlink" title="1.1 调优先看读写比例"></a>1.1 调优先看读写比例</h2><p>HBase 的资源争用主要发生在内存：写要 MemStore，读要 BlockCache，两者都从 RegionServer 堆里切。调优的第一步不是改参数，而是判断集群是<strong>写多读少</strong>还是<strong>读多写少</strong>，再决定内存往哪边偏：</p>
+<div class="data-grid data-grid-link-table"><div class="grid-header"><div class="grid-cell">业务类型</div><div class="grid-cell">内存倾向</div><div class="grid-cell">主要风险</div></div><div class="grid-row"><div class="grid-cell">写多读少</div><div class="grid-cell">提高 MemStore 占比，关注 flush 与 compaction</div><div class="grid-cell">内存刷盘跟不上，WAL 积压</div></div><div class="grid-row"><div class="grid-cell">读多写少</div><div class="grid-cell">提高 BlockCache 占比，关注缓存命中</div><div class="grid-cell">缓存不足，请求反复打磁盘</div></div><div class="grid-row"><div class="grid-cell">均衡读写</div><div class="grid-cell">MemStore 与 BlockCache 各取稳妥比例</div><div class="grid-cell">两边都不突出，靠分区打散热点</div></div></div>
+
+<p>脱离读写比例调参数，是运维最常见的起点错误。</p>
+<h2 id="1-2-堆内存与-MemStore-BlockCache-配比"><a href="#1-2-堆内存与-MemStore-BlockCache-配比" class="headerlink" title="1.2 堆内存与 MemStore &#x2F; BlockCache 配比"></a>1.2 堆内存与 MemStore &#x2F; BlockCache 配比</h2><p>RegionServer 堆内存由 JVM <code>-Xmx</code> 指定，堆内部分给写缓冲（MemStore）和读缓存（BlockCache）。两组核心配置控制全局上限：</p>
+<div class="data-grid data-grid-link-table"><div class="grid-header"><div class="grid-cell">配置项</div><div class="grid-cell">作用</div><div class="grid-cell">调整思路</div></div><div class="grid-row"><div class="grid-cell">hbase.regionserver.global.memstore.size</div><div class="grid-cell">堆内 MemStore 总占比上限</div><div class="grid-cell">写多上调，读多下调，避免堆被写缓冲占满</div></div><div class="grid-row"><div class="grid-cell">hbase.regionserver.blockcache.size</div><div class="grid-cell">堆内 BlockCache 总占比上限</div><div class="grid-cell">读多上调；大堆场景可配合堆外 BucketCache</div></div></div>
+
+<p>一组常见的配置片段（值仅为示例基线，需按压测调整）：</p>
+<pre class="line-numbers language-properties" data-language="properties"><code class="language-properties"><span class="token comment"># RegionServer 堆内存由 JVM 启动参数 -Xmx 控制，这里只列 HBase 侧配比</span>
+<span class="token comment"># 写缓冲占堆比例：写多可适当上调，注意给系统和其他开销留余量</span>
+<span class="token key attr-name">hbase.regionserver.global.memstore.size</span><span class="token punctuation">=</span><span class="token value attr-value">0.4</span>
+<span class="token comment"># 读缓存占堆比例：与 MemStore 之和不宜顶满堆，防止碎片与元数据挤占</span>
+<span class="token key attr-name">hbase.regionserver.blockcache.size</span><span class="token punctuation">=</span><span class="token value attr-value">0.4</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<p>几条边界经验：</p>
+<ul>
+<li>MemStore 与 BlockCache 占比之和不要顶到 1，堆里还要留给元数据、RPC 缓冲和临时对象</li>
+<li>堆不是越大越好：过大的堆会让单次 GC 停顿变长，RegionServer 长时间 Full GC 会被 ZooKeeper 判死</li>
+<li>高读吞吐集群推荐把块缓存放到堆外 BucketCache，减少堆内压力，具体按版本文档配置</li>
+</ul>
+<h2 id="1-3-压缩算法选择"><a href="#1-3-压缩算法选择" class="headerlink" title="1.3 压缩算法选择"></a>1.3 压缩算法选择</h2><p>HFile 在块级别压缩，压缩比例换 CPU。常用算法各有取舍：</p>
+<div class="data-grid data-grid-link-table"><div class="grid-header"><div class="grid-cell">算法</div><div class="grid-cell">压缩比</div><div class="grid-cell">解压速度</div><div class="grid-cell">适用场景</div></div><div class="grid-row"><div class="grid-cell">Snappy</div><div class="grid-cell">中等</div><div class="grid-cell">快</div><div class="grid-cell">在线读写为主，吞吐优先</div></div><div class="grid-row"><div class="grid-cell">LZ4</div><div class="grid-cell">中等</div><div class="grid-cell">很快</div><div class="grid-cell">读多写少，解压延迟敏感</div></div><div class="grid-row"><div class="grid-cell">GZIP</div><div class="grid-cell">高</div><div class="grid-cell">慢</div><div class="grid-cell">冷数据、归档存储，磁盘空间优先</div></div></div>
+
+<p>选型判断：热数据在线服务用 Snappy 或 LZ4，换解压速度；长期不访问的冷数据用 GZIP，换存储成本。压缩在建表时按列族配置，不同列族可以用不同算法。</p>
+<h2 id="1-4-TTL-与版本数"><a href="#1-4-TTL-与版本数" class="headerlink" title="1.4 TTL 与版本数"></a>1.4 TTL 与版本数</h2><p>数据不清理会无限堆积，compaction 越来越重。两张表上的生命周期参数要在建表时想清楚：</p>
+<div class="data-grid data-grid-link-table"><div class="grid-header"><div class="grid-cell">参数</div><div class="grid-cell">控制什么</div><div class="grid-cell">不配的后果</div></div><div class="grid-row"><div class="grid-cell">TTL（Time To Live）</div><div class="grid-cell">Cell 存活秒数，过期版本在 compaction 时清除</div><div class="grid-cell">历史数据永久留存，磁盘持续增长</div></div><div class="grid-row"><div class="grid-cell">MAX_VERSIONS</div><div class="grid-cell">每个单元格保留的最大版本数</div><div class="grid-cell">旧版本全部保留，读放大与存储都上升</div></div></div>
+
+<pre class="line-numbers language-properties" data-language="properties"><code class="language-properties"><span class="token comment"># 列族级别生命周期参数，建表时通过 schema 声明</span>
+<span class="token comment"># 示例：info 列族保留 30 天、最多 3 个版本</span>
+<span class="token comment"># TTL=2592000，VERSIONS=3</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span></span></code></pre>
+
+<p>注意 TTL 过期数据不是立刻物理删除，要等 Major Compaction 重写文件时才清除；只靠 TTL 不做 compaction 规划，磁盘占用不会自己掉下来。</p>
+<h2 id="1-5-常见故障排查路径"><a href="#1-5-常见故障排查路径" class="headerlink" title="1.5 常见故障排查路径"></a>1.5 常见故障排查路径</h2><p>出问题先定位是单 Region、单机还是全局问题，再顺着链路往下查：</p>
+<div class="data-grid data-grid-link-table"><div class="grid-header"><div class="grid-cell">现象</div><div class="grid-cell">先看什么</div><div class="grid-cell">常见原因</div></div><div class="grid-row"><div class="grid-cell">单 RegionServer 压力高</div><div class="grid-cell">该节点 Region 分布、GC 日志</div><div class="grid-cell">热点 Region 集中在本机，或堆配置过小</div></div><div class="grid-row"><div class="grid-cell">写入延迟抖动</div><div class="grid-cell">WAL 增长、flush 队列、compaction 队列</div><div class="grid-cell">内存刷盘跟不上，后台 compaction 占用 IO</div></div><div class="grid-row"><div class="grid-cell">查询变慢</div><div class="grid-cell">BlockCache 命中率、BloomFilter 状态</div><div class="grid-cell">缓存不足，大量请求回磁盘</div></div><div class="grid-row"><div class="grid-cell">Region 长时间不可用</div><div class="grid-cell">HMaster 状态、RegionServer 日志</div><div class="grid-cell">分裂卡住、WAL 重放失败或节点掉线</div></div></div>
+
+<p>排查顺序建议：先看 HMaster Web UI 上的 Region 分布与请求量，再抓 RegionServer 的 GC 日志确认是否长停顿，最后核对 WAL、flush 和 compaction 队列。不要一上来就调参数，先把瓶颈定位到读写哪一段。</p>
+<h2 id="1-6-调优检查清单"><a href="#1-6-调优检查清单" class="headerlink" title="1.6 调优检查清单"></a>1.6 调优检查清单</h2><p>上线或扩容前过一遍下面几项：</p>
+<ul>
+<li>读写比例明确，MemStore 与 BlockCache 配比与之匹配</li>
+<li>堆大小控制在 GC 可接受范围，没有靠堆扩容掩盖问题</li>
+<li>热冷数据分列族，压缩算法与数据温度对应</li>
+<li>每张表评估过 TTL 与版本数，compaction 周期避开业务高峰</li>
+<li>热点 Region 已通过 RowKey 设计或预分区打散，不靠自动分裂硬扛</li>
+<li>监控覆盖请求量、延迟、缓存命中率、WAL 长度、compaction 队列</li>
+</ul>
+<h2 id="1-7-容易踩的坑"><a href="#1-7-容易踩的坑" class="headerlink" title="1.7 容易踩的坑"></a>1.7 容易踩的坑</h2><ul>
+<li>把堆内存无脑调大：大堆 GC 停顿更长，反而增加 RegionServer 被判死的概率</li>
+<li>MemStore 和 BlockCache 占比之和顶满：元数据与临时对象没有空间，容易触发频繁 GC</li>
+<li>只配 TTL 不排 compaction：过期版本要等 Major 重写才清除，磁盘不会自动释放</li>
+<li>所有列族用同一种压缩：热数据和冷数据应分开选型</li>
+<li>看到慢查询就加缓存：先确认是不是 RowKey 设计导致的大范围扫描，缓存救不了扫描代价</li>
+</ul>
+<h2 id="1-8-官方资料"><a href="#1-8-官方资料" class="headerlink" title="1.8 官方资料"></a>1.8 官方资料</h2><ul>
+<li>Apache HBase 官网：<a target="_blank" rel="noopener" href="https://hbase.apache.org/">https://hbase.apache.org/</a></li>
+<li>HBase 性能调优指南：<a target="_blank" rel="noopener" href="https://hbase.apache.org/book.html#perf.configurations">https://hbase.apache.org/book.html#perf.configurations</a></li>
+<li>HBase 压缩配置：<a target="_blank" rel="noopener" href="https://hbase.apache.org/book.html#compression">https://hbase.apache.org/book.html#compression</a></li>
+<li>HBase 版本与 TTL：<a target="_blank" rel="noopener" href="https://hbase.apache.org/book.html#versions">https://hbase.apache.org/book.html#versions</a></li>
+</ul>
+<h2 id="1-9-清单"><a href="#1-9-清单" class="headerlink" title="1.9 清单"></a>1.9 清单</h2><ol>
+<li>调优先判断读写比例，再决定内存向 MemStore 还是 BlockCache 倾斜</li>
+<li>堆内 MemStore 与 BlockCache 占比之和不要顶满堆，大堆会拉长 GC 停顿</li>
+<li>热数据用 Snappy &#x2F; LZ4 换速度，冷数据用 GZIP 换压缩比，按列族配置</li>
+<li>TTL 控制存活时间，MAX_VERSIONS 控制保留版本数，过期数据要等 compaction 物理清除</li>
+<li>排查按 UI 分布 → GC 日志 → WAL &#x2F; flush &#x2F; compaction 队列的顺序定位</li>
+<li>上线前核对读写配比、堆大小、压缩分层、生命周期参数、热点打散与监控覆盖</li>
+<li>缓存和参数救不了 RowKey 设计缺陷，扫描层面的问题先回到主键建模</li>
+</ol>
+</div>
+
+  <div class="mb-foot">
+    <a href="/phone/">返回手机首页</a>
+    <a href="/phone/tags/">星迹索引</a>
+  </div>
+</div>
+
+
+<script>
+  /* 作用：懒加载本地 mermaid 库；无 mermaid 代码块时不加载 */
+  function loadLocalMermaid(){
+    return new Promise(function(resolve, reject){
+      if(window.mermaid) return resolve(window.mermaid);
+      var s = document.createElement('script');
+      s.src = '/js/third-party/mermaid/mermaid.min.js?v=10';
+      s.onload = function(){ resolve(window.mermaid); };
+      s.onerror = function(){ reject(new Error('mermaid local load failed')); };
+      document.head.appendChild(s);
+    });
+  }
+
+  /* 作用：把 ```mermaid 代码块替换成 SVG 图（手机端字号略小、图可横向滚动） */
+  async function renderMermaidDiagram(){
+    var blocks = document.querySelectorAll('pre[class*="language-mermaid"]');
+    if(!blocks.length) return;
+    var mermaid;
+    try { mermaid = await loadLocalMermaid(); }
+    catch(e){ console.warn('[mermaid] 本地库加载失败：', e); return; }
+
+    mermaid.initialize({
+      startOnLoad: false,
+      theme: 'base',
+      themeVariables: {
+        darkMode: true,
+        background: 'transparent',
+        fontFamily: '"Microsoft YaHei", "PingFang SC", "Segoe UI", sans-serif',
+        fontSize: '12px',
+        primaryColor: '#062f3d',
+        primaryTextColor: '#d6f6ff',
+        primaryBorderColor: '#00eeff',
+        secondaryColor: '#04222d',
+        tertiaryColor: '#04222d',
+        mainBkg: '#062f3d',
+        nodeBorder: '#00eeff',
+        clusterBkg: '#02161f',
+        clusterBorder: '#00eeff55',
+        lineColor: '#00eeff',
+        textColor: '#c0e8ff',
+        edgeLabelBackground: '#02161f'
+      },
+      flowchart: { curve: 'basis', useMaxWidth: false, htmlLabels: false, nodeSpacing: 30, rankSpacing: 40, padding: 10 }
+    });
+
+    var targets = [];
+    blocks.forEach(function(el){
+      var codeEl = el.querySelector('code');
+      if(!codeEl) return;
+      var div = document.createElement('div');
+      div.className = 'mermaid';
+      div.textContent = codeEl.textContent;
+      el.parentNode.replaceChild(div, el);
+      targets.push(div);
+    });
+    if(!targets.length) return;
+    try { await mermaid.run({ nodes: targets }); }
+    catch(e){ console.warn('[mermaid] 渲染失败：', e); }
+  }
+  /* 作用：多次触发兜底（延迟重试 + DOM 变化），防止某次时机没跑到导致图表留在代码块 */
+  var mmBusy = false;
+  function scheduleMermaid(){
+    if(mmBusy) return;
+    mmBusy = true;
+    renderMermaidDiagram().then(function(){ mmBusy = false; }, function(){ mmBusy = false; });
+  }
+  scheduleMermaid();
+  window.addEventListener('load', scheduleMermaid);
+  [1000, 3000, 8000].forEach(function(ms){ setTimeout(scheduleMermaid, ms); });
+  if(document.readyState !== 'loading') scheduleMermaid();
+  if(window.MutationObserver){
+    var mmTimer = null;
+    var mmObserver = new MutationObserver(function(){
+      clearTimeout(mmTimer);
+      mmTimer = setTimeout(scheduleMermaid, 400);
+    });
+    mmObserver.observe(document.querySelector('.mb-article') || document.body, { childList: true, subtree: true });
+  }
+</script>
+</body>
+</html>

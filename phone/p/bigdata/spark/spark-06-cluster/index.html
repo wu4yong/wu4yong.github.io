@@ -1,0 +1,307 @@
+<!--
+  ============================================
+  手机端 · 文章原文页
+  文件：phone/post.njk
+  适用终端：手机端（路由 /phone/p/<slug>/，由 scripts/phone-routes.js 生成）
+  作用：手机阅读单篇文章；单列布局、无侧栏无雷达，替代电脑端 post.njk
+        数据由生成期算好：page.item = { title, dateStr, content, cats, tags }
+  样式依赖：source/css/theme/phone/common.css、source/css/theme/phone/list.css
+  组件依赖：phone/_components/Particles.njk
+  最后修改：2026-11-11
+  ============================================
+-->
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="color-scheme" content="dark">
+  <meta name="theme-color" content="#020817">
+  <!-- 首帧兜底：浏览器默认画布是白的，样式未解析前会闪一下白。这条规则先锁死深空底色 -->
+  <style>html{background-color:#020817}</style>
+  <title>Spark（六）部署模式与提交 - 时空秘境</title>
+  <!-- 手机端样式：基础 + 列表/正文，外链引入（源文件 source/css/theme/phone/） -->
+  <link rel="stylesheet" href="/css/theme/phone/common.css">
+  <link rel="stylesheet" href="/css/theme/phone/list.css">
+<meta name="generator" content="Hexo 8.1.2"></head>
+<body>
+<div class="mb-shell">
+  <!--
+  ============================================
+  手机端星空粒子组件
+  文件：Particles.njk
+  适用终端：手机端
+  作用：Particles.njk 的手机端副本（nunjucks 子目录 include 取不到上级）
+        参数与电脑端 _components/Particles.njk 保持一致：
+        粒子 95 / 连线 118px / opacity 0.32，外加星座层与零星闪烁层
+  最后修改：2026-11-12
+  ============================================
+--><!-- z-index 必须是 0：负层级会被 body 不透明背景盖住，粒子在跑却看不见 -->
+<div id="particles" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 0; pointer-events: none;"></div>
+<!-- 星座层（与首页同一套：随机零星散布星座图形 + 偶尔闪烁的小星） -->
+<div id="constellations" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 1; pointer-events: none;" aria-hidden="true"></div>
+<script src="/js/particles.min.js"></script>
+<script>
+particlesJS("particles", {
+  particles: {
+    number: {
+      value: 95,
+      density: {
+        enable: true,
+        value_area: 800
+      }
+    },
+    color: {
+      value: "#00eeff"
+    },
+    shape: {
+      type: "circle",
+      stroke: {
+        width: 0,
+        color: "#000000"
+      }
+    },
+    opacity: {
+      value: 0.6,
+      random: true,
+      anim: {
+        enable: true,
+        speed: 0.5,
+        opacity_min: 0.1,
+        sync: false
+      }
+    },
+    size: {
+      value: 3,
+      random: true,
+      anim: {
+        enable: true,
+        speed: 2,
+        size_min: 0.1,
+        sync: false
+      }
+    },
+    line_linked: {
+      enable: true,
+      distance: 118,
+      color: "#00eeff",
+      opacity: 0.32,
+      width: 1
+    },
+    move: {
+      enable: true,
+      speed: 0.8,
+      direction: "none",
+      random: true,
+      straight: false,
+      out_mode: "out",
+      bounce: false,
+      attract: {
+        enable: true,
+        rotateX: 600,
+        rotateY: 1200
+      }
+    }
+  },
+  interactivity: {
+    detect_on: "canvas",
+    events: {
+      onhover: {
+        enable: true,
+        mode: "grab"       // 手指按住时粒子聚集
+      },
+      onclick: {
+        enable: true,
+        mode: "push"       // 点击时产生新粒子
+      },
+      resize: true
+    },
+    modes: {
+      grab: {
+        distance: 200,
+        line_linked: {
+          opacity: 1
+        }
+      },
+      push: {
+        particles_nb: 6
+      }
+    }
+  },
+  retina_detect: true
+});
+</script>
+<!-- 星座 + 零星闪烁层：与电脑端共用同一份绘制脚本 -->
+<script src="/js/theme/home/starfield.js"></script>
+
+
+  <div class="mb-top">
+    <a class="mb-back" href="/phone/">← 返回手机首页</a>
+    <span class="mb-sub" style="margin:0">2023-06-23</span>
+  </div>
+
+  <h1 class="mb-title">Spark（六）部署模式与提交</h1>
+  <div class="mb-sub">
+    分类：bigdata · spark
+     ｜ 标签：Spark
+  </div>
+
+  <div class="mb-article"><div class="essay-banner essay-spark"></div>
+
+<h1 id="部署模式与提交"><a href="#部署模式与提交" class="headerlink" title="部署模式与提交"></a><strong>部署模式与提交</strong></h1><p>同一套 Spark 程序，在笔记本上跑、在自有集群跑、挂到 YARN 或 Kubernetes 上跑，代码基本不动，变的是资源从哪来、Driver 住在哪、Executor 怎么拉起。这一篇梳理 local、standalone、YARN、Kubernetes 四种模式的取舍，<code>spark-submit</code> 真正要关心的参数，以及动态资源分配怎么配。</p>
+<p><img src="https://wu4yong.github.io/starry-images/assets/img/spark/spark-06-cluster.webp" alt="提交入口向不同资源管理器申请容器，工作节点上的执行器按分配并行跑任务"></p>
+<p><em>提交入口向不同资源管理器申请容器，工作节点上的执行器按分配并行跑任务</em></p>
+<h2 id="1-1-四种部署模式怎么选"><a href="#1-1-四种部署模式怎么选" class="headerlink" title="1.1 四种部署模式怎么选"></a>1.1 四种部署模式怎么选</h2><div class="data-grid data-grid-link-table"><div class="grid-header"><div class="grid-cell">模式</div><div class="grid-cell">资源来源</div><div class="grid-cell">适用场景</div><div class="grid-cell">特点</div></div><div class="grid-row"><div class="grid-cell">local</div><div class="grid-cell">本机多核线程</div><div class="grid-cell">本地开发、调试、小数据验证</div><div class="grid-cell">不申请外部集群，<code>master=local[*]</code></div></div><div class="grid-row"><div class="grid-cell">standalone</div><div class="grid-cell">Spark 自带集群管理器</div><div class="grid-cell">自有物理机集群</div><div class="grid-cell">部署简单，调度能力弱于 YARN</div></div><div class="grid-row"><div class="grid-cell">YARN</div><div class="grid-cell">Hadoop 集群资源管理器</div><div class="grid-cell">与 Hive&#x2F;HDFS 共存的大数据集群</div><div class="grid-cell">生产主流，复用队列与资源配额</div></div><div class="grid-row"><div class="grid-cell">Kubernetes</div><div class="grid-cell">K8s 容器编排</div><div class="grid-cell">云原生环境、容器化作业平台</div><div class="grid-cell">镜像打包，弹性伸缩，与云生态打通</div></div></div>
+
+<p>选型先看现有基础设施：已经有 Hadoop 集群就走 YARN，作业已经跑在 K8s 平台上就用 K8s，standalone 更多出现在教材和小规模隔离环境。local 模式只存在于开发阶段，不应该出现在生产脚本里。</p>
+<p>无论哪种模式，Driver 与 Executor 都需要能互相通信：YARN&#x2F;K8s 由集群网络保证，standalone 要注意节点间端口互通，local 则回环即可。网络不通时表现为作业卡在申请资源阶段，日志里反复出现连接超时，不是代码问题。</p>
+<h2 id="1-2-spark-submit-关键参数"><a href="#1-2-spark-submit-关键参数" class="headerlink" title="1.2 spark-submit 关键参数"></a>1.2 spark-submit 关键参数</h2><p>提交命令的参数分三组：作业信息、资源配置、运行配置。常用项如下：</p>
+<div class="data-grid data-grid-link-table"><div class="grid-header"><div class="grid-cell">参数</div><div class="grid-cell">作用</div><div class="grid-cell">说明</div></div><div class="grid-row"><div class="grid-cell"><code>--class</code></div><div class="grid-cell">主类全限定名</div><div class="grid-cell">打包成 fat jar 时必填</div></div><div class="grid-row"><div class="grid-cell"><code>--master</code></div><div class="grid-cell">集群管理器地址</div><div class="grid-cell"><code>local[*]</code> &#x2F; <code>spark://</code> &#x2F; <code>yarn</code> &#x2F; <code>k8s://</code></div></div><div class="grid-row"><div class="grid-cell"><code>--deploy-mode</code></div><div class="grid-cell">Driver 位置</div><div class="grid-cell"><code>client</code> 或 <code>cluster</code></div></div><div class="grid-row"><div class="grid-cell"><code>--executor-memory</code></div><div class="grid-cell">单 Executor 堆内存</div><div class="grid-cell">如 <code>4g</code></div></div><div class="grid-row"><div class="grid-cell"><code>--executor-cores</code></div><div class="grid-cell">单 Executor 线程数</div><div class="grid-cell">与队列规格配合</div></div><div class="grid-row"><div class="grid-cell"><code>--num-executors</code></div><div class="grid-cell">Executor 数量</div><div class="grid-cell">静态分配下直接给定</div></div><div class="grid-row"><div class="grid-cell"><code>--conf</code></div><div class="grid-cell">任意 Spark 配置项</div><div class="grid-cell">覆盖默认值，格式 <code>key=value</code></div></div><div class="grid-row"><div class="grid-cell"><code>--jars</code></div><div class="grid-cell">额外依赖包</div><div class="grid-cell">驱动与 Executor 都需可见的第三方包</div></div></div>
+
+<h2 id="1-3-client-与-cluster：Driver-住在哪"><a href="#1-3-client-与-cluster：Driver-住在哪" class="headerlink" title="1.3 client 与 cluster：Driver 住在哪"></a>1.3 client 与 cluster：Driver 住在哪</h2><div class="data-grid data-grid-link-table"><div class="grid-header"><div class="grid-cell">模式</div><div class="grid-cell">Driver 位置</div><div class="grid-cell">适用</div><div class="grid-cell">注意</div></div><div class="grid-row"><div class="grid-cell">client</div><div class="grid-cell">提交命令所在机器</div><div class="grid-cell">本地调试、需要直看日志</div><div class="grid-cell">提交机关了作业就挂，不适合长作业</div></div><div class="grid-row"><div class="grid-cell">cluster</div><div class="grid-cell">集群内某个节点容器里</div><div class="grid-cell">生产长作业、定时任务</div><div class="grid-cell">Driver 日志要到集群 UI 或容器日志里查</div></div></div>
+
+<p>YARN 上 <code>--deploy-mode cluster</code> 时，ApplicationMaster 容器里跑 Driver，客户端提交完可以退出；<code>client</code> 模式下 Driver 留在提交机，AM 只负责申请 Executor。生产调度平台跑的批处理任务基本都是 cluster 模式；交互式查询、临时排障才用 client。</p>
+<h2 id="1-4-动态资源分配"><a href="#1-4-动态资源分配" class="headerlink" title="1.4 动态资源分配"></a>1.4 动态资源分配</h2><p>静态分配在作业启动时一次性领走固定数量的 Executor，任务忙闲不均时容易浪费。<strong>动态资源分配（dynamic allocation）</strong> 按负载伸缩：空闲 Executor 被回收，积压时再补领，配合 shuffle 服务延长 Executor 存活，避免 shuffle 输出丢失。</p>
+<pre class="line-numbers language-properties" data-language="properties"><code class="language-properties"><span class="token comment"># spark-defaults.conf 或 --conf 传入</span>
+<span class="token key attr-name">spark.dynamicAllocation.enabled</span> <span class="token value attr-value">true</span>
+<span class="token key attr-name">spark.dynamicAllocation.minExecutors</span> <span class="token value attr-value">2</span>
+<span class="token key attr-name">spark.dynamicAllocation.maxExecutors</span> <span class="token value attr-value">20</span>
+<span class="token key attr-name">spark.dynamicAllocation.executorIdleTimeout</span> <span class="token value attr-value">60s</span>
+<span class="token key attr-name">spark.shuffle.service.enabled</span> <span class="token value attr-value">true     # 外部 shuffle 服务，Executor 被回收后 shuffle 文件仍可取</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<p>要点：动态分配依赖集群提供外部 shuffle 服务（YARN 上是 NodeManager 侧的 shuffle service），只开客户端开关不开服务，Executor 一被回收下游就拿不到 shuffle 数据。Executor 初始数量由 <code>spark.dynamicAllocation.initialExecutors</code> 控制。</p>
+<p>动态分配最适合批次间忙闲差异大的调度作业：早高峰批次多领 Executor，闲时回收给队列里其他作业。如果整条流水线都是稳态高负载，静态固定数量反而更可控，避免伸缩抖动。</p>
+<p>Executor 规格搭配有个常见平衡：单 Executor 核数过多会共享同一堆内存，线程争抢内存与 CPU；核数偏少、Executor 数量偏多则调度开销上升。一般单 Executor 4–8 核，堆内存按每核 1–2GB 估算，再按队列可分配总额反推 Executor 数量。</p>
+<p>提交前还要确认作业包与依赖在集群可达位置：HDFS、对象存储或镜像内均可，避免依赖提交机本地磁盘。多模块项目把公共依赖打成单独 jar 通过 <code>--jars</code> 分发，主 jar 只放业务代码，便于排障和复用。</p>
+<h2 id="1-5-一个生产提交示例"><a href="#1-5-一个生产提交示例" class="headerlink" title="1.5 一个生产提交示例"></a>1.5 一个生产提交示例</h2><p>下面是 YARN cluster 模式的典型提交命令，队列、内存、核数按集群规格替换：</p>
+<pre class="line-numbers language-bash" data-language="bash"><code class="language-bash">spark-submit <span class="token punctuation">\</span>
+  <span class="token parameter variable">--class</span> com.starry.bigdata.OrderReportJob <span class="token punctuation">\</span>
+  <span class="token parameter variable">--master</span> <span class="token function">yarn</span> <span class="token punctuation">\</span>
+  --deploy-mode cluster <span class="token punctuation">\</span>
+  <span class="token parameter variable">--queue</span> bigdata <span class="token punctuation">\</span>
+  --executor-memory 4g <span class="token punctuation">\</span>
+  --executor-cores <span class="token number">4</span> <span class="token punctuation">\</span>
+  --num-executors <span class="token number">10</span> <span class="token punctuation">\</span>
+  <span class="token parameter variable">--conf</span> <span class="token assign-left variable">spark.sql.shuffle.partitions</span><span class="token operator">=</span><span class="token number">200</span> <span class="token punctuation">\</span>
+  <span class="token parameter variable">--conf</span> <span class="token assign-left variable">spark.serializer</span><span class="token operator">=</span>org.apache.spark.serializer.KryoSerializer <span class="token punctuation">\</span>
+  <span class="token parameter variable">--jars</span> hdfs:///libs/udf-functions.jar <span class="token punctuation">\</span>
+  hdfs:///apps/starry-bigdata-job.jar <span class="token punctuation">\</span>
+  <span class="token parameter variable">--date</span> <span class="token number">2022</span>-02-24<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<p>作业参数（<code>--date</code> 之后的部分）传给主类 <code>main</code> 方法，不被 <code>spark-submit</code> 解析。<code>--jars</code> 里的包会随任务分发到 Executor 工作目录，避免各节点手工摆包。</p>
+<p>跑 YARN 模式前要让提交机认得 Hadoop 集群：配置 <code>HADOOP_CONF_DIR</code> 指向 <code>hadoop-conf</code> 目录，<code>spark-submit</code> 才能读到 ResourceManager 地址和队列信息；缺这个环境变量时，作业报找不到 YARN 配置，而不是代码错误。K8s 模式则需要 <code>KUBECONFIG</code> 或 API 地址，镜像里带上 Spark 发行版与作业包。</p>
+<h2 id="1-6-容易踩的坑"><a href="#1-6-容易踩的坑" class="headerlink" title="1.6 容易踩的坑"></a>1.6 容易踩的坑</h2><ul>
+<li>client 模式把长作业挂在登录机上，登录机重启或会话断开，作业直接失败</li>
+<li>提交脚本里残留 <code>--master local[*]</code>，上集群后不申请 YARN 资源，只在提交机上跑</li>
+<li>动态分配开了但没配外部 shuffle 服务，Executor 回收后 shuffle 拉取失败</li>
+<li>把大量第三方依赖塞进 fat jar，包体积膨胀，分发耗时拉长</li>
+<li>资源参数和队列规格不匹配，申请的内存超过队列上限，作业在 AM 阶段就被拒绝</li>
+<li>cluster 模式下 Driver 日志不在提交机本地，直接翻控制台看不到异常栈，需要到 YARN UI 或容器日志里取</li>
+<li>作业包只放在提交机本地路径，Executor 节点读不到，任务启动时报类找不到或 jar 缺失</li>
+</ul>
+<h2 id="1-7-官方资料"><a href="#1-7-官方资料" class="headerlink" title="1.7 官方资料"></a>1.7 官方资料</h2><ul>
+<li>集群概览：<a target="_blank" rel="noopener" href="https://spark.apache.org/docs/latest/cluster-overview.html">https://spark.apache.org/docs/latest/cluster-overview.html</a></li>
+<li>应用提交指南：<a target="_blank" rel="noopener" href="https://spark.apache.org/docs/latest/submitting-applications.html">https://spark.apache.org/docs/latest/submitting-applications.html</a></li>
+<li>在 YARN 上运行：<a target="_blank" rel="noopener" href="https://spark.apache.org/docs/latest/running-on-yarn.html">https://spark.apache.org/docs/latest/running-on-yarn.html</a></li>
+<li>在 Kubernetes 上运行：<a target="_blank" rel="noopener" href="https://spark.apache.org/docs/latest/running-on-kubernetes.html">https://spark.apache.org/docs/latest/running-on-kubernetes.html</a></li>
+</ul>
+<h2 id="1-8-清单"><a href="#1-8-清单" class="headerlink" title="1.8 清单"></a>1.8 清单</h2><ol>
+<li>四种模式：local 开发、standalone 小集群、YARN 大数据生产、K8s 云原生，按基础设施选型</li>
+<li>提交参数三组：作业信息（<code>--class</code>）、资源（内存&#x2F;核数&#x2F;Executor 数）、配置（<code>--conf</code>）</li>
+<li>client 的 Driver 在提交机，cluster 的 Driver 在集群容器内；生产长作业用 cluster</li>
+<li>动态分配按负载伸缩，必须配合外部 shuffle 服务，否则回收 Executor 会丢 shuffle 输出</li>
+<li>作业业务参数放在 jar 包之后，<code>spark-submit</code> 不解析这一段</li>
+<li>常见事故：local 残留、client 挂长作业、队列超规格被拒、fat jar 过胖</li>
+<li>集群模式排障先取 YARN&#x2F;K8s 上的 Driver 日志，不要在提交机本地找异常栈</li>
+<li>提交机配置 <code>HADOOP_CONF_DIR</code>，否则 YARN 模式读不到集群地址与队列</li>
+</ol>
+</div>
+
+  <div class="mb-foot">
+    <a href="/phone/">返回手机首页</a>
+    <a href="/phone/tags/">星迹索引</a>
+  </div>
+</div>
+
+
+<script>
+  /* 作用：懒加载本地 mermaid 库；无 mermaid 代码块时不加载 */
+  function loadLocalMermaid(){
+    return new Promise(function(resolve, reject){
+      if(window.mermaid) return resolve(window.mermaid);
+      var s = document.createElement('script');
+      s.src = '/js/third-party/mermaid/mermaid.min.js?v=10';
+      s.onload = function(){ resolve(window.mermaid); };
+      s.onerror = function(){ reject(new Error('mermaid local load failed')); };
+      document.head.appendChild(s);
+    });
+  }
+
+  /* 作用：把 ```mermaid 代码块替换成 SVG 图（手机端字号略小、图可横向滚动） */
+  async function renderMermaidDiagram(){
+    var blocks = document.querySelectorAll('pre[class*="language-mermaid"]');
+    if(!blocks.length) return;
+    var mermaid;
+    try { mermaid = await loadLocalMermaid(); }
+    catch(e){ console.warn('[mermaid] 本地库加载失败：', e); return; }
+
+    mermaid.initialize({
+      startOnLoad: false,
+      theme: 'base',
+      themeVariables: {
+        darkMode: true,
+        background: 'transparent',
+        fontFamily: '"Microsoft YaHei", "PingFang SC", "Segoe UI", sans-serif',
+        fontSize: '12px',
+        primaryColor: '#062f3d',
+        primaryTextColor: '#d6f6ff',
+        primaryBorderColor: '#00eeff',
+        secondaryColor: '#04222d',
+        tertiaryColor: '#04222d',
+        mainBkg: '#062f3d',
+        nodeBorder: '#00eeff',
+        clusterBkg: '#02161f',
+        clusterBorder: '#00eeff55',
+        lineColor: '#00eeff',
+        textColor: '#c0e8ff',
+        edgeLabelBackground: '#02161f'
+      },
+      flowchart: { curve: 'basis', useMaxWidth: false, htmlLabels: false, nodeSpacing: 30, rankSpacing: 40, padding: 10 }
+    });
+
+    var targets = [];
+    blocks.forEach(function(el){
+      var codeEl = el.querySelector('code');
+      if(!codeEl) return;
+      var div = document.createElement('div');
+      div.className = 'mermaid';
+      div.textContent = codeEl.textContent;
+      el.parentNode.replaceChild(div, el);
+      targets.push(div);
+    });
+    if(!targets.length) return;
+    try { await mermaid.run({ nodes: targets }); }
+    catch(e){ console.warn('[mermaid] 渲染失败：', e); }
+  }
+  /* 作用：多次触发兜底（延迟重试 + DOM 变化），防止某次时机没跑到导致图表留在代码块 */
+  var mmBusy = false;
+  function scheduleMermaid(){
+    if(mmBusy) return;
+    mmBusy = true;
+    renderMermaidDiagram().then(function(){ mmBusy = false; }, function(){ mmBusy = false; });
+  }
+  scheduleMermaid();
+  window.addEventListener('load', scheduleMermaid);
+  [1000, 3000, 8000].forEach(function(ms){ setTimeout(scheduleMermaid, ms); });
+  if(document.readyState !== 'loading') scheduleMermaid();
+  if(window.MutationObserver){
+    var mmTimer = null;
+    var mmObserver = new MutationObserver(function(){
+      clearTimeout(mmTimer);
+      mmTimer = setTimeout(scheduleMermaid, 400);
+    });
+    mmObserver.observe(document.querySelector('.mb-article') || document.body, { childList: true, subtree: true });
+  }
+</script>
+</body>
+</html>

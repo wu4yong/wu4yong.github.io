@@ -1,0 +1,349 @@
+<!--
+  ============================================
+  手机端 · 文章原文页
+  文件：phone/post.njk
+  适用终端：手机端（路由 /phone/p/<slug>/，由 scripts/phone-routes.js 生成）
+  作用：手机阅读单篇文章；单列布局、无侧栏无雷达，替代电脑端 post.njk
+        数据由生成期算好：page.item = { title, dateStr, content, cats, tags }
+  样式依赖：source/css/theme/phone/common.css、source/css/theme/phone/list.css
+  组件依赖：phone/_components/Particles.njk
+  最后修改：2026-11-11
+  ============================================
+-->
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="color-scheme" content="dark">
+  <meta name="theme-color" content="#020817">
+  <!-- 首帧兜底：浏览器默认画布是白的，样式未解析前会闪一下白。这条规则先锁死深空底色 -->
+  <style>html{background-color:#020817}</style>
+  <title>Hive（三）数据加载与导出 - 时空秘境</title>
+  <!-- 手机端样式：基础 + 列表/正文，外链引入（源文件 source/css/theme/phone/） -->
+  <link rel="stylesheet" href="/css/theme/phone/common.css">
+  <link rel="stylesheet" href="/css/theme/phone/list.css">
+<meta name="generator" content="Hexo 8.1.2"></head>
+<body>
+<div class="mb-shell">
+  <!--
+  ============================================
+  手机端星空粒子组件
+  文件：Particles.njk
+  适用终端：手机端
+  作用：Particles.njk 的手机端副本（nunjucks 子目录 include 取不到上级）
+        参数与电脑端 _components/Particles.njk 保持一致：
+        粒子 95 / 连线 118px / opacity 0.32，外加星座层与零星闪烁层
+  最后修改：2026-11-12
+  ============================================
+--><!-- z-index 必须是 0：负层级会被 body 不透明背景盖住，粒子在跑却看不见 -->
+<div id="particles" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 0; pointer-events: none;"></div>
+<!-- 星座层（与首页同一套：随机零星散布星座图形 + 偶尔闪烁的小星） -->
+<div id="constellations" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 1; pointer-events: none;" aria-hidden="true"></div>
+<script src="/js/particles.min.js"></script>
+<script>
+particlesJS("particles", {
+  particles: {
+    number: {
+      value: 95,
+      density: {
+        enable: true,
+        value_area: 800
+      }
+    },
+    color: {
+      value: "#00eeff"
+    },
+    shape: {
+      type: "circle",
+      stroke: {
+        width: 0,
+        color: "#000000"
+      }
+    },
+    opacity: {
+      value: 0.6,
+      random: true,
+      anim: {
+        enable: true,
+        speed: 0.5,
+        opacity_min: 0.1,
+        sync: false
+      }
+    },
+    size: {
+      value: 3,
+      random: true,
+      anim: {
+        enable: true,
+        speed: 2,
+        size_min: 0.1,
+        sync: false
+      }
+    },
+    line_linked: {
+      enable: true,
+      distance: 118,
+      color: "#00eeff",
+      opacity: 0.32,
+      width: 1
+    },
+    move: {
+      enable: true,
+      speed: 0.8,
+      direction: "none",
+      random: true,
+      straight: false,
+      out_mode: "out",
+      bounce: false,
+      attract: {
+        enable: true,
+        rotateX: 600,
+        rotateY: 1200
+      }
+    }
+  },
+  interactivity: {
+    detect_on: "canvas",
+    events: {
+      onhover: {
+        enable: true,
+        mode: "grab"       // 手指按住时粒子聚集
+      },
+      onclick: {
+        enable: true,
+        mode: "push"       // 点击时产生新粒子
+      },
+      resize: true
+    },
+    modes: {
+      grab: {
+        distance: 200,
+        line_linked: {
+          opacity: 1
+        }
+      },
+      push: {
+        particles_nb: 6
+      }
+    }
+  },
+  retina_detect: true
+});
+</script>
+<!-- 星座 + 零星闪烁层：与电脑端共用同一份绘制脚本 -->
+<script src="/js/theme/home/starfield.js"></script>
+
+
+  <div class="mb-top">
+    <a class="mb-back" href="/phone/">← 返回手机首页</a>
+    <span class="mb-sub" style="margin:0">2023-05-02</span>
+  </div>
+
+  <h1 class="mb-title">Hive（三）数据加载与导出</h1>
+  <div class="mb-sub">
+    分类：bigdata · hive
+     ｜ 标签：Hive
+  </div>
+
+  <div class="mb-article"><div class="essay-banner essay-hive"></div>
+
+<h1 id="数据加载与导出"><a href="#数据加载与导出" class="headerlink" title="数据加载与导出"></a><strong>数据加载与导出</strong></h1><p>表建好了，数据怎么进去、结果怎么出来，是日常 ETL 最频繁的操作。Hive 没有关系库那种随手 <code>INSERT VALUES</code> 的用法，数据入口主要是 <code>LOAD DATA</code> 和 <code>INSERT</code>，跨表迁移走 <code>EXPORT/IMPORT</code>。这一篇把每条语句的来源、去向和覆盖语义讲清楚，避免一批数据被覆盖或搬错位置。</p>
+<p><img src="https://wu4yong.github.io/starry-images/assets/img/hive/hive-03-dml.webp" alt="数据流从本地与分布式存储两侧汇入表目录，结果沿分区树写出，迁移通道单独把元数据与文件打包带走"></p>
+<p><em>数据流从本地与分布式存储两侧汇入表目录，结果沿分区树写出，迁移通道单独把元数据与文件打包带走</em></p>
+<h2 id="1-1-数据加载：LOAD-DATA"><a href="#1-1-数据加载：LOAD-DATA" class="headerlink" title="1.1 数据加载：LOAD DATA"></a>1.1 数据加载：LOAD DATA</h2><p><code>LOAD DATA</code> 是最直接的入库方式，它本身不做格式校验之外的转换，核心是把文件放进表目录。语法上分本地路径与 HDFS 路径两种来源：</p>
+<pre class="line-numbers language-sql" data-language="sql"><code class="language-sql"><span class="token comment">-- 从客户端本地文件系统加载，文件被复制到表目录</span>
+<span class="token keyword">LOAD</span> <span class="token keyword">DATA</span> <span class="token keyword">LOCAL</span> INPATH <span class="token string">'/tmp/access.log'</span>
+OVERWRITE <span class="token keyword">INTO</span> <span class="token keyword">TABLE</span> ods<span class="token punctuation">.</span>access_log
+<span class="token keyword">PARTITION</span> <span class="token punctuation">(</span>dt<span class="token operator">=</span><span class="token string">'2022-01-06'</span><span class="token punctuation">,</span> channel<span class="token operator">=</span><span class="token string">'app'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+<span class="token comment">-- 从 HDFS 路径加载，原文件被移动到表目录（不是复制）</span>
+<span class="token keyword">LOAD</span> <span class="token keyword">DATA</span> INPATH <span class="token string">'/staging/access/2022-01-06/'</span>
+OVERWRITE <span class="token keyword">INTO</span> <span class="token keyword">TABLE</span> ods<span class="token punctuation">.</span>access_log
+<span class="token keyword">PARTITION</span> <span class="token punctuation">(</span>dt<span class="token operator">=</span><span class="token string">'2022-01-06'</span><span class="token punctuation">,</span> channel<span class="token operator">=</span><span class="token string">'app'</span><span class="token punctuation">)</span><span class="token punctuation">;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<div class="data-grid data-grid-link-table"><div class="grid-header"><div class="grid-cell">对比项</div><div class="grid-cell"><code>LOAD DATA LOCAL INPATH</code></div><div class="grid-cell"><code>LOAD DATA INPATH</code></div></div><div class="grid-row"><div class="grid-cell">来源</div><div class="grid-cell">客户端所在机器的本地磁盘</div><div class="grid-cell">HDFS 上的路径</div></div><div class="grid-row"><div class="grid-cell">动作</div><div class="grid-cell">复制文件到表目录</div><div class="grid-cell">移动文件到表目录，原路径消失</div></div><div class="grid-row"><div class="grid-cell">适用</div><div class="grid-cell">小批量手工上传</div><div class="grid-cell">调度任务把落地文件搬入数仓</div></div></div>
+
+<p><code>OVERWRITE</code> 决定冲突语义：带上它会先清掉目标表或目标分区已有数据再写入；不带则是追加。加载到分区表时，分区在语句里显式指定，属于静态分区。</p>
+<h2 id="1-2-结果写出：INSERT-OVERWRITE-与-INSERT-INTO"><a href="#1-2-结果写出：INSERT-OVERWRITE-与-INSERT-INTO" class="headerlink" title="1.2 结果写出：INSERT OVERWRITE 与 INSERT INTO"></a>1.2 结果写出：INSERT OVERWRITE 与 INSERT INTO</h2><p><code>INSERT</code> 把查询结果落到表或分区，分覆盖与追加两种语义：</p>
+<pre class="line-numbers language-sql" data-language="sql"><code class="language-sql"><span class="token comment">-- 覆盖写入整表：重跑任务时先清空旧结果</span>
+<span class="token keyword">INSERT</span> OVERWRITE <span class="token keyword">TABLE</span> dwd<span class="token punctuation">.</span>order_daily
+<span class="token keyword">SELECT</span> dt<span class="token punctuation">,</span> channel<span class="token punctuation">,</span> <span class="token function">COUNT</span><span class="token punctuation">(</span><span class="token operator">*</span><span class="token punctuation">)</span> <span class="token keyword">AS</span> pv<span class="token punctuation">,</span> <span class="token function">SUM</span><span class="token punctuation">(</span>amount<span class="token punctuation">)</span> <span class="token keyword">AS</span> gmv
+<span class="token keyword">FROM</span> ods<span class="token punctuation">.</span>access_log
+<span class="token keyword">GROUP</span> <span class="token keyword">BY</span> dt<span class="token punctuation">,</span> channel<span class="token punctuation">;</span>
+
+<span class="token comment">-- 追加写入：保留已有数据，只新增一批</span>
+<span class="token keyword">INSERT</span> <span class="token keyword">INTO</span> <span class="token keyword">TABLE</span> dwd<span class="token punctuation">.</span>order_daily
+<span class="token keyword">SELECT</span> dt<span class="token punctuation">,</span> channel<span class="token punctuation">,</span> <span class="token function">COUNT</span><span class="token punctuation">(</span><span class="token operator">*</span><span class="token punctuation">)</span> <span class="token keyword">AS</span> pv<span class="token punctuation">,</span> <span class="token function">SUM</span><span class="token punctuation">(</span>amount<span class="token punctuation">)</span> <span class="token keyword">AS</span> gmv
+<span class="token keyword">FROM</span> ods<span class="token punctuation">.</span>access_log
+<span class="token keyword">WHERE</span> dt <span class="token operator">=</span> <span class="token string">'2022-01-06'</span>
+<span class="token keyword">GROUP</span> <span class="token keyword">BY</span> dt<span class="token punctuation">,</span> channel<span class="token punctuation">;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<p>Hive 还支持一次扫描、多表插入（Multi-Insert），避免同一份源数据被重复读取：</p>
+<pre class="line-numbers language-sql" data-language="sql"><code class="language-sql"><span class="token keyword">FROM</span> ods<span class="token punctuation">.</span>access_log
+<span class="token keyword">INSERT</span> OVERWRITE <span class="token keyword">TABLE</span> dwd<span class="token punctuation">.</span>login_app
+  <span class="token keyword">SELECT</span> user_id<span class="token punctuation">,</span> login_ip<span class="token punctuation">,</span> device <span class="token keyword">WHERE</span> channel <span class="token operator">=</span> <span class="token string">'app'</span>
+<span class="token keyword">INSERT</span> OVERWRITE <span class="token keyword">TABLE</span> dwd<span class="token punctuation">.</span>login_web
+  <span class="token keyword">SELECT</span> user_id<span class="token punctuation">,</span> login_ip<span class="token punctuation">,</span> device <span class="token keyword">WHERE</span> channel <span class="token operator">=</span> <span class="token string">'web'</span><span class="token punctuation">;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<div class="data-grid data-grid-link-table"><div class="grid-header"><div class="grid-cell">语句</div><div class="grid-cell">目标语义</div><div class="grid-cell">典型用途</div></div><div class="grid-row"><div class="grid-cell">INSERT OVERWRITE</div><div class="grid-cell">清空目标表&#x2F;分区后写入</div><div class="grid-cell">每日全量重跑的汇总层</div></div><div class="grid-row"><div class="grid-cell">INSERT INTO</div><div class="grid-cell">保留已有数据追加</div><div class="grid-cell">增量批次、累积明细表</div></div><div class="grid-row"><div class="grid-cell">Multi-Insert</div><div class="grid-cell">一次扫描分流到多张表</div><div class="grid-cell">降低重复读源表的成本</div></div></div>
+
+<h2 id="1-3-动态分区：按查询结果自动落目录"><a href="#1-3-动态分区：按查询结果自动落目录" class="headerlink" title="1.3 动态分区：按查询结果自动落目录"></a>1.3 动态分区：按查询结果自动落目录</h2><p>上一篇的分区在 <code>LOAD</code> 语句里手写死，叫静态分区；如果分区值来自查询结果本身，就需要动态分区。写入时引擎按结果行的分区列值自动创建对应目录。</p>
+<pre class="line-numbers language-sql" data-language="sql"><code class="language-sql"><span class="token comment">-- 分区列 dt、channel 来自 SELECT 结果，不在语句里指定固定值</span>
+<span class="token keyword">INSERT</span> OVERWRITE <span class="token keyword">TABLE</span> dwd<span class="token punctuation">.</span>access_daily
+<span class="token keyword">PARTITION</span> <span class="token punctuation">(</span>dt<span class="token punctuation">,</span> channel<span class="token punctuation">)</span>
+<span class="token keyword">SELECT</span> ip<span class="token punctuation">,</span> url<span class="token punctuation">,</span> uid<span class="token punctuation">,</span> dt<span class="token punctuation">,</span> channel
+<span class="token keyword">FROM</span> ods<span class="token punctuation">.</span>access_log
+<span class="token keyword">WHERE</span> dt <span class="token operator">>=</span> <span class="token string">'2022-01-06'</span><span class="token punctuation">;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<p>动态分区必须打开相应配置，否则语句直接报错（<code>hive-site.xml</code> 或会话级 <code>SET</code>）：</p>
+<pre class="line-numbers language-properties" data-language="properties"><code class="language-properties"><span class="token comment"># 开启动态分区，默认关闭</span>
+<span class="token key attr-name">hive.exec.dynamic.partition</span><span class="token punctuation">=</span><span class="token value attr-value">true</span>
+<span class="token comment"># 分区模式：strict 要求至少一个静态分区，none/nonstrict 才允许全动态</span>
+<span class="token key attr-name">hive.exec.dynamic.partition.mode</span><span class="token punctuation">=</span><span class="token value attr-value">nonstrict</span>
+<span class="token comment"># 单语句可创建的最大动态分区数，防止一次任务刷出海量目录</span>
+<span class="token key attr-name">hive.exec.max.dynamic.partitions</span><span class="token punctuation">=</span><span class="token value attr-value">2000</span>
+<span class="token comment"># 每个节点可创建的动态分区数</span>
+<span class="token key attr-name">hive.exec.max.dynamic.partitions.pernode</span><span class="token punctuation">=</span><span class="token value attr-value">100</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<p>两条容易混淆的规则：</p>
+<ul>
+<li><strong>默认模式是 strict</strong>：只写动态分区、没有任何静态分区列时会被拦下，必须显式改成 <code>nonstrict</code>。</li>
+<li><strong>动态分区列必须放在 SELECT 列表最后</strong>，顺序与 <code>PARTITION (...)</code> 声明一一对应，位置错位会导致分区值串行。</li>
+</ul>
+<h2 id="1-4-跨表迁移：EXPORT-与-IMPORT"><a href="#1-4-跨表迁移：EXPORT-与-IMPORT" class="headerlink" title="1.4 跨表迁移：EXPORT 与 IMPORT"></a>1.4 跨表迁移：EXPORT 与 IMPORT</h2><p><code>EXPORT</code> 把表或分区的数据文件连同元数据一起导出到 HDFS 目录，<code>IMPORT</code> 再还原回来，这是跨集群搬 Hive 表的标准方式：</p>
+<pre class="line-numbers language-sql" data-language="sql"><code class="language-sql"><span class="token comment">-- 导出整表：数据与表结构元信息打包到指定目录</span>
+EXPORT <span class="token keyword">TABLE</span> dwd<span class="token punctuation">.</span>order_daily
+<span class="token keyword">TO</span> <span class="token string">'/backup/dwd/order_daily'</span><span class="token punctuation">;</span>
+
+<span class="token comment">-- 只导出某个分区</span>
+EXPORT <span class="token keyword">TABLE</span> ods<span class="token punctuation">.</span>access_log
+<span class="token keyword">PARTITION</span> <span class="token punctuation">(</span>dt<span class="token operator">=</span><span class="token string">'2022-01-06'</span><span class="token punctuation">)</span>
+<span class="token keyword">TO</span> <span class="token string">'/backup/ods/access_log/dt=2022-01-06'</span><span class="token punctuation">;</span>
+
+<span class="token comment">-- 导入到新集群，表不存在则按元数据重建</span>
+<span class="token keyword">IMPORT</span> <span class="token keyword">TABLE</span> dwd<span class="token punctuation">.</span>order_daily
+<span class="token keyword">FROM</span> <span class="token string">'/backup/dwd/order_daily'</span><span class="token punctuation">;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<div class="data-grid data-grid-link-table"><div class="grid-header"><div class="grid-cell">方式</div><div class="grid-cell">携带内容</div><div class="grid-cell">适合场景</div></div><div class="grid-row"><div class="grid-cell">LOAD DATA</div><div class="grid-cell">只搬文件</div><div class="grid-cell">文件进入已有表</div></div><div class="grid-row"><div class="grid-cell">INSERT SELECT</div><div class="grid-cell">数据经查询转换后落表</div><div class="grid-cell">ETL 清洗与汇总</div></div><div class="grid-row"><div class="grid-cell">EXPORT &#x2F; IMPORT</div><div class="grid-cell">文件 + 元数据</div><div class="grid-cell">跨集群迁移、备份恢复</div></div></div>
+
+<p>注意 <code>EXPORT</code> 出来的目录里除了数据文件，还有一份元数据描述（<code>_metadata</code>），不能只挑数据文件拷走，否则导入时缺少表结构信息。</p>
+<h2 id="1-5-导出到外部"><a href="#1-5-导出到外部" class="headerlink" title="1.5 导出到外部"></a>1.5 导出到外部</h2><p>查询结果要落到 HDFS 文本或给下游文件消费时，常用两种方式：</p>
+<pre class="line-numbers language-sql" data-language="sql"><code class="language-sql"><span class="token comment">-- 导出查询结果到 HDFS 目录，每个 reducer 一个文件</span>
+<span class="token keyword">INSERT</span> OVERWRITE DIRECTORY <span class="token string">'/export/order_daily'</span>
+<span class="token keyword">ROW</span> FORMAT DELIMITED <span class="token keyword">FIELDS</span> <span class="token keyword">TERMINATED</span> <span class="token keyword">BY</span> <span class="token string">','</span>
+<span class="token keyword">SELECT</span> dt<span class="token punctuation">,</span> channel<span class="token punctuation">,</span> pv<span class="token punctuation">,</span> gmv <span class="token keyword">FROM</span> dwd<span class="token punctuation">.</span>order_daily<span class="token punctuation">;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span></span></code></pre>
+
+<p>命令行层面还可以用 <code>hive -e &quot;SELECT ...&quot; &gt; result.csv</code> 把标准输出重定向到本地文件，适合小结果集；大结果集走目录导出，避免客户端成为瓶颈。</p>
+<h2 id="1-6-容易踩的坑"><a href="#1-6-容易踩的坑" class="headerlink" title="1.6 容易踩的坑"></a>1.6 容易踩的坑</h2><ul>
+<li><strong><code>LOAD DATA INPATH</code> 是移动不是复制</strong>：原 HDFS 路径会消失，调度重跑时找不到 staging 文件属于正常语义，不要当成丢数据。</li>
+<li><strong>漏写 <code>OVERWRITE</code> 导致重复堆积</strong>：汇总层重跑任务必须用 <code>INSERT OVERWRITE</code>，否则旧结果和新结果混在同一分区。</li>
+<li><strong>动态分区没开配置</strong>：默认关闭且为 strict，全动态写入会直接失败；上线前先确认会话与 <code>hive-site.xml</code> 两套配置。</li>
+<li><strong>分区列顺序错位</strong>：SELECT 末尾的分区列与 <code>PARTITION</code> 声明顺序不一致，会出现分区值串列且不容易一眼看出。</li>
+<li><strong>动态分区刷爆目录</strong>：高基字段做分区键时，一次任务可能创建上万目录，元数据与 NameNode 都会承压，要限制分区数或改分桶。</li>
+<li><strong>只拷数据文件不拷元数据</strong>：跨集群迁移只搬 <code>EXPORT</code> 目录里的文件，丢掉 <code>_metadata</code>，<code>IMPORT</code> 无法还原表结构。</li>
+</ul>
+<h2 id="1-7-官方资料"><a href="#1-7-官方资料" class="headerlink" title="1.7 官方资料"></a>1.7 官方资料</h2><ul>
+<li>LanguageManual DML：<a target="_blank" rel="noopener" href="https://cwiki.apache.org/confluence/display/Hive/LanguageManual+DML">https://cwiki.apache.org/confluence/display/Hive/LanguageManual+DML</a></li>
+<li>LOAD DATA 语句：<a target="_blank" rel="noopener" href="https://cwiki.apache.org/confluence/display/Hive/LanguageManual+DML#LanguageManualDML-Loadingdataintoatabele">https://cwiki.apache.org/confluence/display/Hive/LanguageManual+DML#LanguageManualDML-Loadingdataintoatabele</a></li>
+<li>Import &#x2F; Export 说明：<a target="_blank" rel="noopener" href="https://cwiki.apache.org/confluence/display/Hive/LanguageManual+ImportExport">https://cwiki.apache.org/confluence/display/Hive/LanguageManual+ImportExport</a></li>
+<li>动态分区配置：<a target="_blank" rel="noopener" href="https://cwiki.apache.org/confluence/display/Hive/Configuration+Properties">https://cwiki.apache.org/confluence/display/Hive/Configuration+Properties</a></li>
+</ul>
+<h2 id="1-8-清单"><a href="#1-8-清单" class="headerlink" title="1.8 清单"></a>1.8 清单</h2><ol>
+<li><code>LOAD DATA LOCAL</code> 复制本地文件，<code>LOAD DATA INPATH</code> 移动 HDFS 文件；<code>OVERWRITE</code> 先清目标再写入</li>
+<li><code>INSERT OVERWRITE</code> 用于全量重跑，<code>INSERT INTO</code> 用于增量追加；Multi-Insert 一次扫描分流多张表</li>
+<li>动态分区需要 <code>hive.exec.dynamic.partition=true</code>，模式设为 <code>nonstrict</code>，分区列放在 SELECT 末尾且顺序对应</li>
+<li><code>EXPORT/IMPORT</code> 同时搬运数据文件与元数据，是跨集群迁移的标准方式，不能只拷数据文件</li>
+<li>大结果集导出到 HDFS 目录，小结果集用命令行重定向；分区数量要在参数里设上限</li>
+<li>汇总层重跑务必覆盖写，动态分区避免高基字段，防止目录与小文件失控</li>
+</ol>
+</div>
+
+  <div class="mb-foot">
+    <a href="/phone/">返回手机首页</a>
+    <a href="/phone/tags/">星迹索引</a>
+  </div>
+</div>
+
+
+<script>
+  /* 作用：懒加载本地 mermaid 库；无 mermaid 代码块时不加载 */
+  function loadLocalMermaid(){
+    return new Promise(function(resolve, reject){
+      if(window.mermaid) return resolve(window.mermaid);
+      var s = document.createElement('script');
+      s.src = '/js/third-party/mermaid/mermaid.min.js?v=10';
+      s.onload = function(){ resolve(window.mermaid); };
+      s.onerror = function(){ reject(new Error('mermaid local load failed')); };
+      document.head.appendChild(s);
+    });
+  }
+
+  /* 作用：把 ```mermaid 代码块替换成 SVG 图（手机端字号略小、图可横向滚动） */
+  async function renderMermaidDiagram(){
+    var blocks = document.querySelectorAll('pre[class*="language-mermaid"]');
+    if(!blocks.length) return;
+    var mermaid;
+    try { mermaid = await loadLocalMermaid(); }
+    catch(e){ console.warn('[mermaid] 本地库加载失败：', e); return; }
+
+    mermaid.initialize({
+      startOnLoad: false,
+      theme: 'base',
+      themeVariables: {
+        darkMode: true,
+        background: 'transparent',
+        fontFamily: '"Microsoft YaHei", "PingFang SC", "Segoe UI", sans-serif',
+        fontSize: '12px',
+        primaryColor: '#062f3d',
+        primaryTextColor: '#d6f6ff',
+        primaryBorderColor: '#00eeff',
+        secondaryColor: '#04222d',
+        tertiaryColor: '#04222d',
+        mainBkg: '#062f3d',
+        nodeBorder: '#00eeff',
+        clusterBkg: '#02161f',
+        clusterBorder: '#00eeff55',
+        lineColor: '#00eeff',
+        textColor: '#c0e8ff',
+        edgeLabelBackground: '#02161f'
+      },
+      flowchart: { curve: 'basis', useMaxWidth: false, htmlLabels: false, nodeSpacing: 30, rankSpacing: 40, padding: 10 }
+    });
+
+    var targets = [];
+    blocks.forEach(function(el){
+      var codeEl = el.querySelector('code');
+      if(!codeEl) return;
+      var div = document.createElement('div');
+      div.className = 'mermaid';
+      div.textContent = codeEl.textContent;
+      el.parentNode.replaceChild(div, el);
+      targets.push(div);
+    });
+    if(!targets.length) return;
+    try { await mermaid.run({ nodes: targets }); }
+    catch(e){ console.warn('[mermaid] 渲染失败：', e); }
+  }
+  /* 作用：多次触发兜底（延迟重试 + DOM 变化），防止某次时机没跑到导致图表留在代码块 */
+  var mmBusy = false;
+  function scheduleMermaid(){
+    if(mmBusy) return;
+    mmBusy = true;
+    renderMermaidDiagram().then(function(){ mmBusy = false; }, function(){ mmBusy = false; });
+  }
+  scheduleMermaid();
+  window.addEventListener('load', scheduleMermaid);
+  [1000, 3000, 8000].forEach(function(ms){ setTimeout(scheduleMermaid, ms); });
+  if(document.readyState !== 'loading') scheduleMermaid();
+  if(window.MutationObserver){
+    var mmTimer = null;
+    var mmObserver = new MutationObserver(function(){
+      clearTimeout(mmTimer);
+      mmTimer = setTimeout(scheduleMermaid, 400);
+    });
+    mmObserver.observe(document.querySelector('.mb-article') || document.body, { childList: true, subtree: true });
+  }
+</script>
+</body>
+</html>

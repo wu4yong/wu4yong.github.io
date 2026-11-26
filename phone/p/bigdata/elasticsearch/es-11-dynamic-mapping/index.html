@@ -1,0 +1,319 @@
+<!--
+  ============================================
+  手机端 · 文章原文页
+  文件：phone/post.njk
+  适用终端：手机端（路由 /phone/p/<slug>/，由 scripts/phone-routes.js 生成）
+  作用：手机阅读单篇文章；单列布局、无侧栏无雷达，替代电脑端 post.njk
+        数据由生成期算好：page.item = { title, dateStr, content, cats, tags }
+  样式依赖：source/css/theme/phone/common.css、source/css/theme/phone/list.css
+  组件依赖：phone/_components/Particles.njk
+  最后修改：2026-11-11
+  ============================================
+-->
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="color-scheme" content="dark">
+  <meta name="theme-color" content="#020817">
+  <!-- 首帧兜底：浏览器默认画布是白的，样式未解析前会闪一下白。这条规则先锁死深空底色 -->
+  <style>html{background-color:#020817}</style>
+  <title>ES11-dynamic mapping 与 strict 模式 - 时空秘境</title>
+  <!-- 手机端样式：基础 + 列表/正文，外链引入（源文件 source/css/theme/phone/） -->
+  <link rel="stylesheet" href="/css/theme/phone/common.css">
+  <link rel="stylesheet" href="/css/theme/phone/list.css">
+<meta name="generator" content="Hexo 8.1.2"></head>
+<body>
+<div class="mb-shell">
+  <!--
+  ============================================
+  手机端星空粒子组件
+  文件：Particles.njk
+  适用终端：手机端
+  作用：Particles.njk 的手机端副本（nunjucks 子目录 include 取不到上级）
+        参数与电脑端 _components/Particles.njk 保持一致：
+        粒子 95 / 连线 118px / opacity 0.32，外加星座层与零星闪烁层
+  最后修改：2026-11-12
+  ============================================
+--><!-- z-index 必须是 0：负层级会被 body 不透明背景盖住，粒子在跑却看不见 -->
+<div id="particles" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 0; pointer-events: none;"></div>
+<!-- 星座层（与首页同一套：随机零星散布星座图形 + 偶尔闪烁的小星） -->
+<div id="constellations" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 1; pointer-events: none;" aria-hidden="true"></div>
+<script src="/js/particles.min.js"></script>
+<script>
+particlesJS("particles", {
+  particles: {
+    number: {
+      value: 95,
+      density: {
+        enable: true,
+        value_area: 800
+      }
+    },
+    color: {
+      value: "#00eeff"
+    },
+    shape: {
+      type: "circle",
+      stroke: {
+        width: 0,
+        color: "#000000"
+      }
+    },
+    opacity: {
+      value: 0.6,
+      random: true,
+      anim: {
+        enable: true,
+        speed: 0.5,
+        opacity_min: 0.1,
+        sync: false
+      }
+    },
+    size: {
+      value: 3,
+      random: true,
+      anim: {
+        enable: true,
+        speed: 2,
+        size_min: 0.1,
+        sync: false
+      }
+    },
+    line_linked: {
+      enable: true,
+      distance: 118,
+      color: "#00eeff",
+      opacity: 0.32,
+      width: 1
+    },
+    move: {
+      enable: true,
+      speed: 0.8,
+      direction: "none",
+      random: true,
+      straight: false,
+      out_mode: "out",
+      bounce: false,
+      attract: {
+        enable: true,
+        rotateX: 600,
+        rotateY: 1200
+      }
+    }
+  },
+  interactivity: {
+    detect_on: "canvas",
+    events: {
+      onhover: {
+        enable: true,
+        mode: "grab"       // 手指按住时粒子聚集
+      },
+      onclick: {
+        enable: true,
+        mode: "push"       // 点击时产生新粒子
+      },
+      resize: true
+    },
+    modes: {
+      grab: {
+        distance: 200,
+        line_linked: {
+          opacity: 1
+        }
+      },
+      push: {
+        particles_nb: 6
+      }
+    }
+  },
+  retina_detect: true
+});
+</script>
+<!-- 星座 + 零星闪烁层：与电脑端共用同一份绘制脚本 -->
+<script src="/js/theme/home/starfield.js"></script>
+
+
+  <div class="mb-top">
+    <a class="mb-back" href="/phone/">← 返回手机首页</a>
+    <span class="mb-sub" style="margin:0">2023-10-26</span>
+  </div>
+
+  <h1 class="mb-title">ES11-dynamic mapping 与 strict 模式</h1>
+  <div class="mb-sub">
+    分类：bigdata · elasticsearch
+     ｜ 标签：Elasticsearch · 系统课
+  </div>
+
+  <div class="mb-article"><div class="essay-banner essay-elasticsearch"></div>
+
+<h1 id="dynamic-mapping-与-strict-模式：让结构失控之前先关上闸门"><a href="#dynamic-mapping-与-strict-模式：让结构失控之前先关上闸门" class="headerlink" title="dynamic mapping 与 strict 模式：让结构失控之前先关上闸门"></a>dynamic mapping 与 strict 模式：让结构失控之前先关上闸门</h1><p>动态映射让「先写数据、后想结构」成为可能，也是生产事故的高发区：字段无限增长、日期被乱识别、类型一旦定死只能重建。</p>
+<p>官方对它的态度很明确——<strong>能快速起步，但可能给出次优结果，生产建议显式映射</strong>。这一讲讲怎么把它变成可控的自动化。</p>
+<p><img src="https://wu4yong.github.io/starry-images/assets/img/elasticsearch/es-11-dynamic-mapping.svg" alt="dynamic 的三档闸门：true 自动推断、false 放行不索引、strict 直接报错"></p>
+<p><em>dynamic 的三种取值分别如何处理未声明字段｜依据 Elasticsearch 官方文档 8.17 自绘</em></p>
+<h2 id="一、学习目标"><a href="#一、学习目标" class="headerlink" title="一、学习目标"></a>一、学习目标</h2><ol>
+<li>说出 <code>dynamic</code> 三个取值各自的行为差异；</li>
+<li>知道官方默认的动态推断规则（字符串、日期、数字）；</li>
+<li>会用 <code>dynamic_templates</code> 把某类字段批量定型；</li>
+<li>说清 <code>strict</code> 上线后会发生什么，以及字段上限在哪。</li>
+</ol>
+<h2 id="二、前置知识"><a href="#二、前置知识" class="headerlink" title="二、前置知识"></a>二、前置知识</h2><div class="data-grid data-grid-link-table"><div class="grid-header"><div class="grid-cell">需要掌握</div><div class="grid-cell">到什么程度</div><div class="grid-cell">出处</div></div><div class="grid-row"><div class="grid-cell">mapping 索引级唯一</div><div class="grid-cell">知道类型不可改</div><div class="grid-cell">M1-2</div></div><div class="grid-row"><div class="grid-cell">字段类型</div><div class="grid-cell">知道 text&#x2F;keyword&#x2F;date 差别</div><div class="grid-cell">M2-2</div></div></div>
+
+<h2 id="三、理论讲解"><a href="#三、理论讲解" class="headerlink" title="三、理论讲解"></a>三、理论讲解</h2><div class="data-grid data-grid-link-table"><div class="grid-header"><div class="grid-cell"><code>dynamic</code> 取值</div><div class="grid-cell">新字段的处理</div><div class="grid-cell">能否被搜索</div><div class="grid-cell">典型用途</div></div><div class="grid-row"><div class="grid-cell"><code>true</code>（默认）</div><div class="grid-cell">自动推断类型并加入 mapping</div><div class="grid-cell">能</div><div class="grid-cell">快速原型</div></div><div class="grid-row"><div class="grid-cell"><code>false</code></div><div class="grid-cell">忽略，不加入 mapping（仍在 <code>_source</code>）</div><div class="grid-cell">不能</div><div class="grid-cell">允许脏字段但不污染结构</div></div><div class="grid-row"><div class="grid-cell"><code>strict</code></div><div class="grid-cell">直接抛异常，写入失败</div><div class="grid-cell">—</div><div class="grid-cell">生产硬约束</div></div><div class="grid-row"><div class="grid-cell"><code>runtime</code></div><div class="grid-cell">作为 runtime field 加入 mapping</div><div class="grid-cell">能（查询期计算）</div><div class="grid-cell">只读扩展字段</div></div></div>
+
+<p>官方默认推断规则（写第一条文档时自动生效）：</p>
+<div class="data-grid data-grid-link-table"><div class="grid-header"><div class="grid-cell">JSON 值</div><div class="grid-cell">默认映射</div><div class="grid-cell">说明</div></div><div class="grid-row"><div class="grid-cell">字符串（看起来像日期）</div><div class="grid-cell"><code>date</code></div><div class="grid-cell"><code>date_detection</code> 默认开启</div></div><div class="grid-row"><div class="grid-cell">字符串（其它）</div><div class="grid-cell"><code>text</code> + <code>.keyword</code> 子字段</div><div class="grid-cell">子字段带 <code>ignore_above</code> 限制</div></div><div class="grid-row"><div class="grid-cell">数字</div><div class="grid-cell"><code>long</code>&#x2F;<code>float</code> 等</div><div class="grid-cell"><code>numeric_detection</code> 默认<strong>关闭</strong>，纯数字字符串不会变数值</div></div><div class="grid-row"><div class="grid-cell">布尔</div><div class="grid-cell"><code>boolean</code></div><div class="grid-cell">—</div></div><div class="grid-row"><div class="grid-cell">对象</div><div class="grid-cell"><code>object</code></div><div class="grid-cell">递归推断子字段</div></div></div>
+
+<p><code>dynamic_templates</code> 就是把这套规则改成你想要的：按「字段名匹配」或「匹配映射类型」批量指定结构，官方按声明顺序匹配，命中即停。</p>
+<h2 id="四、原理拆解：两条最贵的失控路径"><a href="#四、原理拆解：两条最贵的失控路径" class="headerlink" title="四、原理拆解：两条最贵的失控路径"></a>四、原理拆解：两条最贵的失控路径</h2><p><strong>① 字段爆炸</strong>：每个新字段名都会往 mapping 里加一条，官方有 <code>index.mapping.total_fields.limit</code>（默认 1000）兜底，撞上就是「写不进去」。埋点类数据里 <code>attrs.xxx</code> 这种开放键值对，几天就能撞穿。</p>
+<p><strong>② 类型锁死</strong>：第一条文档把 <code>price</code> 写成 <code>89</code>（long），第二条写成 <code>89.9</code>（double），官方直接拒绝——类型不会「自动放宽」。这就是为什么生产必须显式声明。</p>
+<p><code>strict</code> 是最后一道闸门：任何未声明字段的写入都会被拒绝。代价是「上游加字段 → 写入全挂」，所以它必须配「变更流程」一起用，不能裸上。</p>
+<h2 id="五、场景说明"><a href="#五、场景说明" class="headerlink" title="五、场景说明"></a>五、场景说明</h2><div class="data-grid data-grid-link-table"><div class="grid-header"><div class="grid-cell">场景</div><div class="grid-cell">建议</div></div><div class="grid-row"><div class="grid-cell">自建检索、结构稳定</div><div class="grid-cell"><code>dynamic: strict</code> + 完整显式 mapping</div></div><div class="grid-row"><div class="grid-cell">第三方数据接入、字段可能变化</div><div class="grid-cell"><code>dynamic: false</code>，配合 <code>flattened</code> 收纳扩展属性</div></div><div class="grid-row"><div class="grid-cell">埋点&#x2F;日志的扩展属性</div><div class="grid-cell">单独字段用 <code>flattened</code>，整体 <code>strict</code></div></div><div class="grid-row"><div class="grid-cell">过渡期（结构还在变）</div><div class="grid-cell"><code>dynamic: true</code>，但用模板约束关键字段</div></div></div>
+
+<h2 id="六、实操"><a href="#六、实操" class="headerlink" title="六、实操"></a>六、实操</h2><pre class="line-numbers language-bash" data-language="bash"><code class="language-bash"><span class="token function">curl</span> <span class="token parameter variable">-X</span> PUT <span class="token string">"http://localhost:9200/events"</span> <span class="token parameter variable">-H</span> <span class="token string">'Content-Type: application/json'</span> <span class="token parameter variable">-d</span> <span class="token string">'
+&#123;
+  "mappings": &#123;
+    "dynamic": "strict",
+    "dynamic_templates": [
+      &#123; "strings_as_keyword": &#123; "match_mapping_type": "string",
+                                "mapping": &#123; "type": "keyword", "ignore_above": 256 &#125; &#125; &#125;,
+      &#123; "attrs_as_flattened": &#123; "path_match": "attrs.*",
+                                "mapping": &#123; "type": "flattened" &#125; &#125; &#125;
+    ],
+    "properties": &#123;
+      "event":     &#123; "type": "keyword" &#125;,
+      "ts":        &#123; "type": "date" &#125;,
+      "message":   &#123; "type": "text" &#125;,
+      "attrs":     &#123; "type": "flattened" &#125;
+    &#125;
+  &#125;
+&#125;'</span>
+
+<span class="token comment"># 合法写入</span>
+<span class="token function">curl</span> <span class="token parameter variable">-X</span> PUT <span class="token string">"http://localhost:9200/events/_doc/1"</span> <span class="token parameter variable">-H</span> <span class="token string">'Content-Type: application/json'</span> <span class="token parameter variable">-d</span> <span class="token string">'
+&#123; "event": "login", "ts": "2023-10-26T09:00:00Z", "message": "user logged in",
+  "attrs": &#123; "channel": "web", "region": "cn-south" &#125; &#125;'</span>
+
+<span class="token comment"># 非法写入：未声明字段，strict 会拒绝（预期 400）</span>
+<span class="token function">curl</span> <span class="token parameter variable">-X</span> PUT <span class="token string">"http://localhost:9200/events/_doc/2"</span> <span class="token parameter variable">-H</span> <span class="token string">'Content-Type: application/json'</span> <span class="token parameter variable">-d</span> <span class="token string">'
+&#123; "event": "logout", "ts": "2023-10-26T09:05:00Z", "unknown_field": "x" &#125;'</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<p>第 3 条预期返回 <code>strict_dynamic_mapping_exception</code>。这条报错在生产里出现，通常意味着「上游偷偷加字段」，是好事——它把问题暴露在写入侧，而不是三个月后的检索精度。</p>
+<h2 id="七、常见坑"><a href="#七、常见坑" class="headerlink" title="七、常见坑"></a>七、常见坑</h2><ol>
+<li><strong>生产用 <code>dynamic: true</code> 图省事</strong>：字段爆炸与类型锁死两个坑都开着。</li>
+<li><strong>以为 <code>dynamic: false</code> 的字段能搜</strong>：不加入 mapping 就不建倒排，搜不到（但 <code>_source</code> 里还在）。</li>
+<li><strong><code>strict</code> 裸上无变更流程</strong>：上游加一个字段，整条写入链路挂掉。</li>
+<li><strong>数字写成字符串被 <code>keyword</code> 处理</strong>：<code>numeric_detection</code> 默认关闭，<code>&quot;89&quot;</code> 会被当字符串。</li>
+<li><strong>日期自动识别误判</strong>：像 <code>&quot;2023/10/26&quot;</code> 这类值会被识别成 <code>date</code>，之后写 <code>&quot;v1.2&quot;</code> 就冲突。</li>
+<li><strong><code>dynamic_templates</code> 顺序写反</strong>：官方按顺序匹配、首个命中生效，宽泛规则放前面会吃掉后面的精细规则。</li>
+</ol>
+<h2 id="八、课后小结"><a href="#八、课后小结" class="headerlink" title="八、课后小结"></a>八、课后小结</h2><ol>
+<li><code>dynamic</code> 四态：<code>true</code> 自动推断、<code>false</code> 忽略、<code>strict</code> 拒绝、<code>runtime</code> 查询期字段。</li>
+<li>官方默认：字符串→<code>text</code>+<code>.keyword</code>，像日期的字符串→<code>date</code>，纯数字字符串不变数值。</li>
+<li>生产首选显式 mapping，<code>strict</code> 必须配变更流程。</li>
+<li><code>dynamic_templates</code> 按声明顺序匹配，命中即停。</li>
+<li>字段上限 <code>total_fields.limit</code> 默认 1000，开放键值对要用 <code>flattened</code> 收纳。</li>
+</ol>
+<h2 id="九、思考题"><a href="#九、思考题" class="headerlink" title="九、思考题"></a>九、思考题</h2><ol>
+<li>上游业务方坚持「随时能加字段、不能改代码」，你会给 <code>false</code> 还是 <code>strict</code>？说明代价与保底方案。</li>
+<li><code>numeric_detection</code> 官方默认关闭，如果打开会带来什么风险？</li>
+<li>一个索引已有 800 个字段，还剩 200 个额度，你会怎么规划才能不撞上限？</li>
+</ol>
+<h2 id="十、官方资料"><a href="#十、官方资料" class="headerlink" title="十、官方资料"></a>十、官方资料</h2><ul>
+<li>Dynamic mapping：<a target="_blank" rel="noopener" href="https://www.elastic.co/guide/en/elasticsearch/reference/current/dynamic-mapping.html">https://www.elastic.co/guide/en/elasticsearch/reference/current/dynamic-mapping.html</a></li>
+<li>Dynamic field mapping：<a target="_blank" rel="noopener" href="https://www.elastic.co/guide/en/elasticsearch/reference/current/dynamic-field-mapping.html">https://www.elastic.co/guide/en/elasticsearch/reference/current/dynamic-field-mapping.html</a></li>
+<li>Dynamic templates：<a target="_blank" rel="noopener" href="https://www.elastic.co/guide/en/elasticsearch/reference/current/dynamic-templates.html">https://www.elastic.co/guide/en/elasticsearch/reference/current/dynamic-templates.html</a></li>
+<li>Mapping 限制：<a target="_blank" rel="noopener" href="https://www.elastic.co/guide/en/elasticsearch/reference/current/mapping.html#mapping-limit-settings">https://www.elastic.co/guide/en/elasticsearch/reference/current/mapping.html#mapping-limit-settings</a></li>
+</ul>
+<p>上一篇：<a href="/2023/10/23/bigdata/elasticsearch/es-10-explicit-mapping/">M2-5 显式 mapping 写法</a> ｜ 下一篇：<a href="/2023/10/29/bigdata/elasticsearch/es-12-mapping-changes/">M2-7 改 mapping 的边界</a> ｜ <a href="/2023/09/22/bigdata/elasticsearch/es-00-series-index/">总目录</a></p>
+</div>
+
+  <div class="mb-foot">
+    <a href="/phone/">返回手机首页</a>
+    <a href="/phone/tags/">星迹索引</a>
+  </div>
+</div>
+
+
+<script>
+  /* 作用：懒加载本地 mermaid 库；无 mermaid 代码块时不加载 */
+  function loadLocalMermaid(){
+    return new Promise(function(resolve, reject){
+      if(window.mermaid) return resolve(window.mermaid);
+      var s = document.createElement('script');
+      s.src = '/js/third-party/mermaid/mermaid.min.js?v=10';
+      s.onload = function(){ resolve(window.mermaid); };
+      s.onerror = function(){ reject(new Error('mermaid local load failed')); };
+      document.head.appendChild(s);
+    });
+  }
+
+  /* 作用：把 ```mermaid 代码块替换成 SVG 图（手机端字号略小、图可横向滚动） */
+  async function renderMermaidDiagram(){
+    var blocks = document.querySelectorAll('pre[class*="language-mermaid"]');
+    if(!blocks.length) return;
+    var mermaid;
+    try { mermaid = await loadLocalMermaid(); }
+    catch(e){ console.warn('[mermaid] 本地库加载失败：', e); return; }
+
+    mermaid.initialize({
+      startOnLoad: false,
+      theme: 'base',
+      themeVariables: {
+        darkMode: true,
+        background: 'transparent',
+        fontFamily: '"Microsoft YaHei", "PingFang SC", "Segoe UI", sans-serif',
+        fontSize: '12px',
+        primaryColor: '#062f3d',
+        primaryTextColor: '#d6f6ff',
+        primaryBorderColor: '#00eeff',
+        secondaryColor: '#04222d',
+        tertiaryColor: '#04222d',
+        mainBkg: '#062f3d',
+        nodeBorder: '#00eeff',
+        clusterBkg: '#02161f',
+        clusterBorder: '#00eeff55',
+        lineColor: '#00eeff',
+        textColor: '#c0e8ff',
+        edgeLabelBackground: '#02161f'
+      },
+      flowchart: { curve: 'basis', useMaxWidth: false, htmlLabels: false, nodeSpacing: 30, rankSpacing: 40, padding: 10 }
+    });
+
+    var targets = [];
+    blocks.forEach(function(el){
+      var codeEl = el.querySelector('code');
+      if(!codeEl) return;
+      var div = document.createElement('div');
+      div.className = 'mermaid';
+      div.textContent = codeEl.textContent;
+      el.parentNode.replaceChild(div, el);
+      targets.push(div);
+    });
+    if(!targets.length) return;
+    try { await mermaid.run({ nodes: targets }); }
+    catch(e){ console.warn('[mermaid] 渲染失败：', e); }
+  }
+  /* 作用：多次触发兜底（延迟重试 + DOM 变化），防止某次时机没跑到导致图表留在代码块 */
+  var mmBusy = false;
+  function scheduleMermaid(){
+    if(mmBusy) return;
+    mmBusy = true;
+    renderMermaidDiagram().then(function(){ mmBusy = false; }, function(){ mmBusy = false; });
+  }
+  scheduleMermaid();
+  window.addEventListener('load', scheduleMermaid);
+  [1000, 3000, 8000].forEach(function(ms){ setTimeout(scheduleMermaid, ms); });
+  if(document.readyState !== 'loading') scheduleMermaid();
+  if(window.MutationObserver){
+    var mmTimer = null;
+    var mmObserver = new MutationObserver(function(){
+      clearTimeout(mmTimer);
+      mmTimer = setTimeout(scheduleMermaid, 400);
+    });
+    mmObserver.observe(document.querySelector('.mb-article') || document.body, { childList: true, subtree: true });
+  }
+</script>
+</body>
+</html>

@@ -1,0 +1,318 @@
+<!--
+  ============================================
+  手机端 · 文章原文页
+  文件：phone/post.njk
+  适用终端：手机端（路由 /phone/p/<slug>/，由 scripts/phone-routes.js 生成）
+  作用：手机阅读单篇文章；单列布局、无侧栏无雷达，替代电脑端 post.njk
+        数据由生成期算好：page.item = { title, dateStr, content, cats, tags }
+  样式依赖：source/css/theme/phone/common.css、source/css/theme/phone/list.css
+  组件依赖：phone/_components/Particles.njk
+  最后修改：2026-11-11
+  ============================================
+-->
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="color-scheme" content="dark">
+  <meta name="theme-color" content="#020817">
+  <!-- 首帧兜底：浏览器默认画布是白的，样式未解析前会闪一下白。这条规则先锁死深空底色 -->
+  <style>html{background-color:#020817}</style>
+  <title>Spring Session（一）集群会话共享落地 Redis - 时空秘境</title>
+  <!-- 手机端样式：基础 + 列表/正文，外链引入（源文件 source/css/theme/phone/） -->
+  <link rel="stylesheet" href="/css/theme/phone/common.css">
+  <link rel="stylesheet" href="/css/theme/phone/list.css">
+<meta name="generator" content="Hexo 8.1.2"></head>
+<body>
+<div class="mb-shell">
+  <!--
+  ============================================
+  手机端星空粒子组件
+  文件：Particles.njk
+  适用终端：手机端
+  作用：Particles.njk 的手机端副本（nunjucks 子目录 include 取不到上级）
+        参数与电脑端 _components/Particles.njk 保持一致：
+        粒子 95 / 连线 118px / opacity 0.32，外加星座层与零星闪烁层
+  最后修改：2026-11-12
+  ============================================
+--><!-- z-index 必须是 0：负层级会被 body 不透明背景盖住，粒子在跑却看不见 -->
+<div id="particles" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 0; pointer-events: none;"></div>
+<!-- 星座层（与首页同一套：随机零星散布星座图形 + 偶尔闪烁的小星） -->
+<div id="constellations" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 1; pointer-events: none;" aria-hidden="true"></div>
+<script src="/js/particles.min.js"></script>
+<script>
+particlesJS("particles", {
+  particles: {
+    number: {
+      value: 95,
+      density: {
+        enable: true,
+        value_area: 800
+      }
+    },
+    color: {
+      value: "#00eeff"
+    },
+    shape: {
+      type: "circle",
+      stroke: {
+        width: 0,
+        color: "#000000"
+      }
+    },
+    opacity: {
+      value: 0.6,
+      random: true,
+      anim: {
+        enable: true,
+        speed: 0.5,
+        opacity_min: 0.1,
+        sync: false
+      }
+    },
+    size: {
+      value: 3,
+      random: true,
+      anim: {
+        enable: true,
+        speed: 2,
+        size_min: 0.1,
+        sync: false
+      }
+    },
+    line_linked: {
+      enable: true,
+      distance: 118,
+      color: "#00eeff",
+      opacity: 0.32,
+      width: 1
+    },
+    move: {
+      enable: true,
+      speed: 0.8,
+      direction: "none",
+      random: true,
+      straight: false,
+      out_mode: "out",
+      bounce: false,
+      attract: {
+        enable: true,
+        rotateX: 600,
+        rotateY: 1200
+      }
+    }
+  },
+  interactivity: {
+    detect_on: "canvas",
+    events: {
+      onhover: {
+        enable: true,
+        mode: "grab"       // 手指按住时粒子聚集
+      },
+      onclick: {
+        enable: true,
+        mode: "push"       // 点击时产生新粒子
+      },
+      resize: true
+    },
+    modes: {
+      grab: {
+        distance: 200,
+        line_linked: {
+          opacity: 1
+        }
+      },
+      push: {
+        particles_nb: 6
+      }
+    }
+  },
+  retina_detect: true
+});
+</script>
+<!-- 星座 + 零星闪烁层：与电脑端共用同一份绘制脚本 -->
+<script src="/js/theme/home/starfield.js"></script>
+
+
+  <div class="mb-top">
+    <a class="mb-back" href="/phone/">← 返回手机首页</a>
+    <span class="mb-sub" style="margin:0">2022-09-25</span>
+  </div>
+
+  <h1 class="mb-title">Spring Session（一）集群会话共享落地 Redis</h1>
+  <div class="mb-sub">
+    分类：java · springsession
+     ｜ 标签：SpringSession
+  </div>
+
+  <div class="mb-article"><div class="essay-banner essay-springsession"></div>
+
+<h1 id="集群会话共享：把-Session-放进-Redis"><a href="#集群会话共享：把-Session-放进-Redis" class="headerlink" title="集群会话共享：把 Session 放进 Redis"></a><strong>集群会话共享：把 Session 放进 Redis</strong></h1><p>单机时 <code>HttpSession</code> 存在 Tomcat 内存里，扩到两台就出问题：负载均衡把第二次请求打到另一台，用户就”掉登录”。Spring Session 的思路很直接——<strong>把 Session 从容器内存里搬到外部存储</strong>。</p>
+<p><img src="https://wu4yong.github.io/starry-images/assets/img/springsession/springsession-01-redis.webp" alt="多台服务器共享同一份会话数据"></p>
+<p><em>多台服务器共享同一份会话数据</em></p>
+<h2 id="1-1-引入与开启"><a href="#1-1-引入与开启" class="headerlink" title="1.1 引入与开启"></a>1.1 引入与开启</h2><pre class="line-numbers language-markup" data-language="markup"><code class="language-markup"><span class="token tag"><span class="token tag"><span class="token punctuation">&lt;</span>dependency</span><span class="token punctuation">></span></span>
+    <span class="token tag"><span class="token tag"><span class="token punctuation">&lt;</span>groupId</span><span class="token punctuation">></span></span>org.springframework.session<span class="token tag"><span class="token tag"><span class="token punctuation">&lt;/</span>groupId</span><span class="token punctuation">></span></span>
+    <span class="token tag"><span class="token tag"><span class="token punctuation">&lt;</span>artifactId</span><span class="token punctuation">></span></span>spring-session-data-redis<span class="token tag"><span class="token tag"><span class="token punctuation">&lt;/</span>artifactId</span><span class="token punctuation">></span></span>
+<span class="token tag"><span class="token tag"><span class="token punctuation">&lt;/</span>dependency</span><span class="token punctuation">></span></span>
+<span class="token tag"><span class="token tag"><span class="token punctuation">&lt;</span>dependency</span><span class="token punctuation">></span></span>
+    <span class="token tag"><span class="token tag"><span class="token punctuation">&lt;</span>groupId</span><span class="token punctuation">></span></span>org.springframework.boot<span class="token tag"><span class="token tag"><span class="token punctuation">&lt;/</span>groupId</span><span class="token punctuation">></span></span>
+    <span class="token tag"><span class="token tag"><span class="token punctuation">&lt;</span>artifactId</span><span class="token punctuation">></span></span>spring-boot-starter-data-redis<span class="token tag"><span class="token tag"><span class="token punctuation">&lt;/</span>artifactId</span><span class="token punctuation">></span></span>
+<span class="token tag"><span class="token tag"><span class="token punctuation">&lt;/</span>dependency</span><span class="token punctuation">></span></span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<pre class="line-numbers language-yaml" data-language="yaml"><code class="language-yaml"><span class="token key atrule">spring</span><span class="token punctuation">:</span>
+  <span class="token key atrule">session</span><span class="token punctuation">:</span>
+    <span class="token key atrule">store-type</span><span class="token punctuation">:</span> redis
+    <span class="token key atrule">timeout</span><span class="token punctuation">:</span> 30m
+    <span class="token key atrule">redis</span><span class="token punctuation">:</span>
+      <span class="token key atrule">namespace</span><span class="token punctuation">:</span> <span class="token string">"session:demo"</span>
+      <span class="token key atrule">flush-mode</span><span class="token punctuation">:</span> on_save
+  <span class="token key atrule">redis</span><span class="token punctuation">:</span>
+    <span class="token key atrule">host</span><span class="token punctuation">:</span> 127.0.0.1
+    <span class="token key atrule">port</span><span class="token punctuation">:</span> <span class="token number">6379</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<p>2.x 起 starter 会自动装配 <code>RedisIndexedSessionRepository</code>，无需手写 <code>@EnableRedisHttpSession</code>。若用 1.x 或自定义，加注解：</p>
+<pre class="line-numbers language-java" data-language="java"><code class="language-java"><span class="token annotation punctuation">@EnableRedisHttpSession</span><span class="token punctuation">(</span>maxInactiveIntervalInSeconds <span class="token operator">=</span> <span class="token number">1800</span><span class="token punctuation">)</span><span aria-hidden="true" class="line-numbers-rows"><span></span></span></code></pre>
+
+<h2 id="1-2-它到底改了什么"><a href="#1-2-它到底改了什么" class="headerlink" title="1.2 它到底改了什么"></a>1.2 它到底改了什么</h2><div class="data-grid data-grid-link-table"><div class="grid-header"><div class="grid-cell">层次</div><div class="grid-cell">原生 Session</div><div class="grid-cell">Spring Session</div></div><div class="grid-row"><div class="grid-cell">存储位置</div><div class="grid-cell">Tomcat 堆内</div><div class="grid-cell">Redis</div></div><div class="grid-row"><div class="grid-cell">Cookie</div><div class="grid-cell"><code>JSESSIONID</code></div><div class="grid-cell"><code>SESSION</code>（可配）</div></div><div class="grid-row"><div class="grid-cell">会话 ID 生成</div><div class="grid-cell">容器</div><div class="grid-cell"><code>DefaultSessionIdResolver</code></div></div><div class="grid-row"><div class="grid-cell">读写方式</div><div class="grid-cell">每次请求整体读写</div><div class="grid-cell">按属性差量写入</div></div><div class="grid-row"><div class="grid-cell">集群一致</div><div class="grid-cell">需粘性会话</div><div class="grid-cell">天然共享</div></div></div>
+
+<p>关键价值不只是”共享”，还有<strong>差量更新</strong>：原生 Session 每次请求结束都要把整个对象序列化写回，属性多时很重；Spring Session 只写有变化的属性。</p>
+<h2 id="1-3-Cookie-名与域"><a href="#1-3-Cookie-名与域" class="headerlink" title="1.3 Cookie 名与域"></a>1.3 Cookie 名与域</h2><pre class="line-numbers language-yaml" data-language="yaml"><code class="language-yaml"><span class="token key atrule">server</span><span class="token punctuation">:</span>
+  <span class="token key atrule">servlet</span><span class="token punctuation">:</span>
+    <span class="token key atrule">session</span><span class="token punctuation">:</span>
+      <span class="token key atrule">cookie</span><span class="token punctuation">:</span>
+        <span class="token key atrule">name</span><span class="token punctuation">:</span> SESSION
+        <span class="token key atrule">domain</span><span class="token punctuation">:</span> .example.com
+        <span class="token key atrule">path</span><span class="token punctuation">:</span> /
+        <span class="token key atrule">http-only</span><span class="token punctuation">:</span> <span class="token boolean important">true</span>
+        <span class="token key atrule">secure</span><span class="token punctuation">:</span> <span class="token boolean important">true</span>
+        <span class="token key atrule">same-site</span><span class="token punctuation">:</span> Lax<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<div class="data-grid data-grid-link-table"><div class="grid-header"><div class="grid-cell">配置</div><div class="grid-cell">作用</div><div class="grid-cell">坑</div></div><div class="grid-row"><div class="grid-cell"><code>name</code></div><div class="grid-cell">Cookie 名</div><div class="grid-cell">与旧系统不同名会导致”登录态丢失”</div></div><div class="grid-row"><div class="grid-cell"><code>domain</code></div><div class="grid-cell">跨子域共享</div><div class="grid-cell">别写死 IP</div></div><div class="grid-row"><div class="grid-cell"><code>secure</code></div><div class="grid-cell">仅 HTTPS</div><div class="grid-cell">本地 http 调试要关掉</div></div><div class="grid-row"><div class="grid-cell"><code>same-site</code></div><div class="grid-cell">跨站策略</div><div class="grid-cell">前后端不同站时需 <code>None</code> + <code>secure</code></div></div></div>
+
+<p>前后端分离 + 跨域时，”登录后仍 401” 往往是 <code>same-site</code> 与 <code>secure</code> 组合不对，而不是 Session 没存上。</p>
+<h2 id="1-4-存什么、别存什么"><a href="#1-4-存什么、别存什么" class="headerlink" title="1.4 存什么、别存什么"></a>1.4 存什么、别存什么</h2><pre class="line-numbers language-java" data-language="java"><code class="language-java">session<span class="token punctuation">.</span><span class="token function">setAttribute</span><span class="token punctuation">(</span><span class="token string">"userId"</span><span class="token punctuation">,</span> <span class="token number">1001L</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+session<span class="token punctuation">.</span><span class="token function">setAttribute</span><span class="token punctuation">(</span><span class="token string">"username"</span><span class="token punctuation">,</span> <span class="token string">"jack"</span><span class="token punctuation">)</span><span class="token punctuation">;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span></span></code></pre>
+
+<div class="data-grid data-grid-link-table"><div class="grid-header"><div class="grid-cell">类型</div><div class="grid-cell">能否存</div><div class="grid-cell">说明</div></div><div class="grid-row"><div class="grid-cell">基本类型 &#x2F; String</div><div class="grid-cell">能</div><div class="grid-cell">首选</div></div><div class="grid-row"><div class="grid-cell">可序列化 POJO</div><div class="grid-cell">能</div><div class="grid-cell">必须实现 <code>Serializable</code>（默认 JDK 序列化）</div></div><div class="grid-row"><div class="grid-cell">Spring Bean &#x2F; 连接</div><div class="grid-cell">不能</div><div class="grid-cell">序列化失败</div></div><div class="grid-row"><div class="grid-cell">大对象（&gt;100KB）</div><div class="grid-cell">谨慎</div><div class="grid-cell">Redis 单 value 过大影响性能</div></div><div class="grid-row"><div class="grid-cell">密码&#x2F;token 明文</div><div class="grid-cell">不建议</div><div class="grid-cell">会被落盘</div></div></div>
+
+<p>推荐方案：Session 里只放 <code>userId</code>，其余信息按需查缓存。这能避免”改用户资料后 Session 里还是旧值”。</p>
+<h2 id="1-5-Redis-里的结构"><a href="#1-5-Redis-里的结构" class="headerlink" title="1.5 Redis 里的结构"></a>1.5 Redis 里的结构</h2><pre class="line-numbers language-bash" data-language="bash"><code class="language-bash"><span class="token comment"># 会话主数据（hash）</span>
+HGETALL spring:session:session:demo:sessions:xxxx
+
+<span class="token comment"># 过期索引（zset，按过期时间排序，用于清理）</span>
+ZRANGE spring:session:session:demo:expirations <span class="token number">0</span> <span class="token number">10</span>
+
+<span class="token comment"># 属性名索引（set，按属性名可查）</span>
+SMEMBERS spring:session:session:demo:sessions:attrName<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<div class="data-grid data-grid-link-table"><div class="grid-header"><div class="grid-cell">键</div><div class="grid-cell">类型</div><div class="grid-cell">作用</div></div><div class="grid-row"><div class="grid-cell"><code>sessions:&lt;id&gt;</code></div><div class="grid-cell">hash</div><div class="grid-cell">会话属性 + 创建&#x2F;最后访问时间</div></div><div class="grid-row"><div class="grid-cell"><code>expirations</code></div><div class="grid-cell">zset</div><div class="grid-cell">过期调度，<code>SessionExpiredEvent</code> 靠它</div></div><div class="grid-row"><div class="grid-cell"><code>sessions:attrName</code></div><div class="grid-cell">set</div><div class="grid-cell">按属性名查会话</div></div><div class="grid-row"><div class="grid-cell"><code>principals:&lt;user&gt;</code></div><div class="grid-cell">set</div><div class="grid-cell">按登录用户查会话（并发控制用）</div></div></div>
+
+<p>多环境共用一套 Redis 时，<code>namespace</code> 必须区分，否则 dev 的会话会顶掉 prod。</p>
+<h2 id="1-6-与网关-负载均衡的关系"><a href="#1-6-与网关-负载均衡的关系" class="headerlink" title="1.6 与网关&#x2F;负载均衡的关系"></a>1.6 与网关&#x2F;负载均衡的关系</h2><div class="data-grid data-grid-link-table"><div class="grid-header"><div class="grid-cell">部署方式</div><div class="grid-cell">是否需要会话共享</div><div class="grid-cell">说明</div></div><div class="grid-row"><div class="grid-cell">单机</div><div class="grid-cell">不需要</div><div class="grid-cell"></div></div><div class="grid-row"><div class="grid-cell">多机 + 无粘性</div><div class="grid-cell">必须</div><div class="grid-cell">否则每次请求都可能掉登录</div></div><div class="grid-row"><div class="grid-cell">多机 + 粘性会话</div><div class="grid-cell">可选</div><div class="grid-cell">节点故障仍会掉</div></div><div class="grid-row"><div class="grid-cell">Gateway 统一入口</div><div class="grid-cell">需要</div><div class="grid-cell">网关不保存会话</div></div></div>
+
+<p>粘性会话（<code>ip_hash</code>）只是”把问题概率降低”，节点重启&#x2F;扩缩容照样掉，不是解决方案。</p>
+<h2 id="1-7-官方资料"><a href="#1-7-官方资料" class="headerlink" title="1.7 官方资料"></a>1.7 官方资料</h2><ul>
+<li>Spring Session：<a target="_blank" rel="noopener" href="https://docs.spring.io/spring-session/docs/2.5.x/reference/html/">https://docs.spring.io/spring-session/docs/2.5.x/reference/html/</a></li>
+<li>Redis 存储实现：<a target="_blank" rel="noopener" href="https://docs.spring.io/spring-session/docs/2.5.x/reference/html/redis.html">https://docs.spring.io/spring-session/docs/2.5.x/reference/html/redis.html</a></li>
+<li>Servlet 会话规范：<a target="_blank" rel="noopener" href="https://jakarta.ee/specifications/servlet/">https://jakarta.ee/specifications/servlet/</a></li>
+</ul>
+<h2 id="1-8-清单"><a href="#1-8-清单" class="headerlink" title="1.8 清单"></a>1.8 清单</h2><ol>
+<li>Session 共享靠外部存储，不是靠负载均衡粘性</li>
+<li>Spring Boot 2.x 引入 starter 即自动装配，不必手写 <code>@EnableRedisHttpSession</code></li>
+<li><code>namespace</code> 必须按环境区分，避免互相覆盖</li>
+<li>Session 里只放 ID 等轻量数据，别放 Bean 和大对象</li>
+<li>跨站场景 <code>same-site</code> 与 <code>secure</code> 必须配对正确</li>
+<li>Redis 里是 hash + zset + set 三套索引，过期靠 zset 调度</li>
+<li>粘性会话不能替代会话共享，节点故障一律掉线</li>
+</ol>
+</div>
+
+  <div class="mb-foot">
+    <a href="/phone/">返回手机首页</a>
+    <a href="/phone/tags/">星迹索引</a>
+  </div>
+</div>
+
+
+<script>
+  /* 作用：懒加载本地 mermaid 库；无 mermaid 代码块时不加载 */
+  function loadLocalMermaid(){
+    return new Promise(function(resolve, reject){
+      if(window.mermaid) return resolve(window.mermaid);
+      var s = document.createElement('script');
+      s.src = '/js/third-party/mermaid/mermaid.min.js?v=10';
+      s.onload = function(){ resolve(window.mermaid); };
+      s.onerror = function(){ reject(new Error('mermaid local load failed')); };
+      document.head.appendChild(s);
+    });
+  }
+
+  /* 作用：把 ```mermaid 代码块替换成 SVG 图（手机端字号略小、图可横向滚动） */
+  async function renderMermaidDiagram(){
+    var blocks = document.querySelectorAll('pre[class*="language-mermaid"]');
+    if(!blocks.length) return;
+    var mermaid;
+    try { mermaid = await loadLocalMermaid(); }
+    catch(e){ console.warn('[mermaid] 本地库加载失败：', e); return; }
+
+    mermaid.initialize({
+      startOnLoad: false,
+      theme: 'base',
+      themeVariables: {
+        darkMode: true,
+        background: 'transparent',
+        fontFamily: '"Microsoft YaHei", "PingFang SC", "Segoe UI", sans-serif',
+        fontSize: '12px',
+        primaryColor: '#062f3d',
+        primaryTextColor: '#d6f6ff',
+        primaryBorderColor: '#00eeff',
+        secondaryColor: '#04222d',
+        tertiaryColor: '#04222d',
+        mainBkg: '#062f3d',
+        nodeBorder: '#00eeff',
+        clusterBkg: '#02161f',
+        clusterBorder: '#00eeff55',
+        lineColor: '#00eeff',
+        textColor: '#c0e8ff',
+        edgeLabelBackground: '#02161f'
+      },
+      flowchart: { curve: 'basis', useMaxWidth: false, htmlLabels: false, nodeSpacing: 30, rankSpacing: 40, padding: 10 }
+    });
+
+    var targets = [];
+    blocks.forEach(function(el){
+      var codeEl = el.querySelector('code');
+      if(!codeEl) return;
+      var div = document.createElement('div');
+      div.className = 'mermaid';
+      div.textContent = codeEl.textContent;
+      el.parentNode.replaceChild(div, el);
+      targets.push(div);
+    });
+    if(!targets.length) return;
+    try { await mermaid.run({ nodes: targets }); }
+    catch(e){ console.warn('[mermaid] 渲染失败：', e); }
+  }
+  /* 作用：多次触发兜底（延迟重试 + DOM 变化），防止某次时机没跑到导致图表留在代码块 */
+  var mmBusy = false;
+  function scheduleMermaid(){
+    if(mmBusy) return;
+    mmBusy = true;
+    renderMermaidDiagram().then(function(){ mmBusy = false; }, function(){ mmBusy = false; });
+  }
+  scheduleMermaid();
+  window.addEventListener('load', scheduleMermaid);
+  [1000, 3000, 8000].forEach(function(ms){ setTimeout(scheduleMermaid, ms); });
+  if(document.readyState !== 'loading') scheduleMermaid();
+  if(window.MutationObserver){
+    var mmTimer = null;
+    var mmObserver = new MutationObserver(function(){
+      clearTimeout(mmTimer);
+      mmTimer = setTimeout(scheduleMermaid, 400);
+    });
+    mmObserver.observe(document.querySelector('.mb-article') || document.body, { childList: true, subtree: true });
+  }
+</script>
+</body>
+</html>
