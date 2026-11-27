@@ -143,7 +143,7 @@ particlesJS("particles", {
   <h1 class="mb-title">redis-TRACKING</h1>
   <div class="mb-sub">
     分类：database · redis
-     ｜ 标签：系统课 · Redis · 缓存
+     ｜ 标签：Redis · 缓存 · 系统课
   </div>
 
   <div class="mb-article"><div class="essay-banner essay-database"></div>
@@ -203,6 +203,8 @@ particlesJS("particles", {
 <li>重连后应主动清空&#x2F;重建本地缓存，而不是继续用重连前的副本；</li>
 <li>对「绝不能旧」的数据，不要放本地缓存。</li>
 </ul>
+<p><img src="https://wu4yong.github.io/starry-images/assets/img/redis/rd-45b-tracking.svg" alt="默认追踪、广播订阅与一次失效的推送路径"></p>
+<p><em>两种模式的内存与消息取舍、GET→变更→RESP3 push→删本地副本→回源五步，以及断线不补发与 REDIRECT 的关系｜依据 Client-side caching 与 CLIENT TRACKING 文档自绘</em></p>
 <h2 id="五、场景说明"><a href="#五、场景说明" class="headerlink" title="五、场景说明"></a>五、场景说明</h2><ol>
 <li><strong>微服务内的热点配置</strong>：默认模式 + 短 TTL，读多写少；</li>
 <li><strong>用户维度数据</strong>（订单列表头、个人资料）：广播模式按 <code>user:</code> 前缀订阅；</li>
@@ -242,6 +244,62 @@ OK
 <span class="token number">127.0</span>.0.1:637<span class="token operator"><span class="token file-descriptor important">9</span>></span> CLIENT TRACKING ON REDIRECT <span class="token operator">&lt;</span>subscriber-client-id<span class="token operator">></span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
 
 <p>关键提醒：连接池场景下，<code>GET</code> 与「接收 push」往往不是同一条连接，所以要理解 <code>REDIRECT</code>；否则会出现「开了 tracking 但收不到失效」的现象。</p>
+<h3 id="Java-侧怎么落地：Lettuce-开-RESP3-容器收失效"><a href="#Java-侧怎么落地：Lettuce-开-RESP3-容器收失效" class="headerlink" title="Java 侧怎么落地：Lettuce 开 RESP3 + 容器收失效"></a>Java 侧怎么落地：Lettuce 开 RESP3 + 容器收失效</h3><p>Spring Data Redis 没有 tracking 的一等 API，做法是「底层命令开 tracking + 容器订阅失效频道」。</p>
+<ol>
+<li><strong>pom</strong>：Redis 客户端用默认的 Lettuce（支持 RESP3），本地缓存用 Caffeine。</li>
+</ol>
+<pre class="line-numbers language-markup" data-language="markup"><code class="language-markup"><span class="token tag"><span class="token tag"><span class="token punctuation">&lt;</span>dependency</span><span class="token punctuation">></span></span>
+  <span class="token tag"><span class="token tag"><span class="token punctuation">&lt;</span>groupId</span><span class="token punctuation">></span></span>org.springframework.boot<span class="token tag"><span class="token tag"><span class="token punctuation">&lt;/</span>groupId</span><span class="token punctuation">></span></span>
+  <span class="token tag"><span class="token tag"><span class="token punctuation">&lt;</span>artifactId</span><span class="token punctuation">></span></span>spring-boot-starter-data-redis<span class="token tag"><span class="token tag"><span class="token punctuation">&lt;/</span>artifactId</span><span class="token punctuation">></span></span>
+<span class="token tag"><span class="token tag"><span class="token punctuation">&lt;/</span>dependency</span><span class="token punctuation">></span></span>
+<span class="token tag"><span class="token tag"><span class="token punctuation">&lt;</span>dependency</span><span class="token punctuation">></span></span>
+  <span class="token tag"><span class="token tag"><span class="token punctuation">&lt;</span>groupId</span><span class="token punctuation">></span></span>org.springframework.boot<span class="token tag"><span class="token tag"><span class="token punctuation">&lt;/</span>groupId</span><span class="token punctuation">></span></span>
+  <span class="token tag"><span class="token tag"><span class="token punctuation">&lt;</span>artifactId</span><span class="token punctuation">></span></span>spring-boot-starter-cache<span class="token tag"><span class="token tag"><span class="token punctuation">&lt;/</span>artifactId</span><span class="token punctuation">></span></span>
+<span class="token tag"><span class="token tag"><span class="token punctuation">&lt;/</span>dependency</span><span class="token punctuation">></span></span>
+<span class="token tag"><span class="token tag"><span class="token punctuation">&lt;</span>dependency</span><span class="token punctuation">></span></span>
+  <span class="token tag"><span class="token tag"><span class="token punctuation">&lt;</span>groupId</span><span class="token punctuation">></span></span>com.github.ben-manes.caffeine<span class="token tag"><span class="token tag"><span class="token punctuation">&lt;/</span>groupId</span><span class="token punctuation">></span></span>
+  <span class="token tag"><span class="token tag"><span class="token punctuation">&lt;</span>artifactId</span><span class="token punctuation">></span></span>caffeine<span class="token tag"><span class="token tag"><span class="token punctuation">&lt;/</span>artifactId</span><span class="token punctuation">></span></span>
+<span class="token tag"><span class="token tag"><span class="token punctuation">&lt;/</span>dependency</span><span class="token punctuation">></span></span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<ol start="2">
+<li><strong>application.yml</strong>：连接池与超时先配好，tracking 的两个前提是「同一实例」与「有名字的连接」：</li>
+</ol>
+<pre class="line-numbers language-yaml" data-language="yaml"><code class="language-yaml"><span class="token key atrule">spring</span><span class="token punctuation">:</span>
+  <span class="token key atrule">data</span><span class="token punctuation">:</span>
+    <span class="token key atrule">redis</span><span class="token punctuation">:</span>
+      <span class="token key atrule">host</span><span class="token punctuation">:</span> 10.0.0.11
+      <span class="token key atrule">client-name</span><span class="token punctuation">:</span> order<span class="token punctuation">-</span>svc
+      <span class="token key atrule">timeout</span><span class="token punctuation">:</span> 500ms
+      <span class="token key atrule">lettuce</span><span class="token punctuation">:</span>
+        <span class="token key atrule">pool</span><span class="token punctuation">:</span>
+          <span class="token key atrule">max-active</span><span class="token punctuation">:</span> <span class="token number">32</span>
+          <span class="token key atrule">max-wait</span><span class="token punctuation">:</span> 200ms<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<ol start="3">
+<li><strong>打开 RESP3</strong>（不切协议收不到 out-of-band 的 push）：</li>
+</ol>
+<pre class="line-numbers language-java" data-language="java"><code class="language-java"><span class="token annotation punctuation">@Bean</span>
+<span class="token class-name">LettuceClientConfigurationBuilderCustomizer</span> <span class="token function">resp3</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+    <span class="token keyword">return</span> b <span class="token operator">-></span> b<span class="token punctuation">.</span><span class="token function">clientOptions</span><span class="token punctuation">(</span><span class="token class-name">ClientOptions</span><span class="token punctuation">.</span><span class="token function">builder</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+            <span class="token punctuation">.</span><span class="token function">protocolVersion</span><span class="token punctuation">(</span><span class="token class-name">ClientOptions<span class="token punctuation">.</span>ProtocolVersion</span><span class="token punctuation">.</span><span class="token constant">RESP3</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token function">build</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">&#125;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<ol start="4">
+<li><strong>让专门的监听连接开 tracking，并用 REDIRECT 把失效指给它</strong>：先取监听连接的 <code>CLIENT ID</code>，再对业务连接执行</li>
+</ol>
+<pre class="line-numbers language-bash" data-language="bash"><code class="language-bash">CLIENT TRACKING ON REDIRECT <span class="token operator">&lt;</span>listener-client-id<span class="token operator">></span><span aria-hidden="true" class="line-numbers-rows"><span></span></span></code></pre>
+
+<p>（连接池里 <code>GET</code> 用的连接和收 push 的连接通常不是同一条，不配 <code>REDIRECT</code> 就会「开了却收不到」。）</p>
+<ol start="5">
+<li><strong>容器订阅 <code>__redis__:invalidate</code></strong>，收到就把本地 Caffeine 里的对应副本删掉：</li>
+</ol>
+<pre class="line-numbers language-java" data-language="java"><code class="language-java">container<span class="token punctuation">.</span><span class="token function">addMessageListener</span><span class="token punctuation">(</span><span class="token punctuation">(</span>msg<span class="token punctuation">,</span> ch<span class="token punctuation">)</span> <span class="token operator">-></span> <span class="token punctuation">&#123;</span>
+    <span class="token keyword">for</span> <span class="token punctuation">(</span><span class="token class-name">Object</span> k <span class="token operator">:</span> <span class="token punctuation">(</span><span class="token class-name">List</span><span class="token generics"><span class="token punctuation">&lt;</span><span class="token operator">?</span><span class="token punctuation">></span></span><span class="token punctuation">)</span> msg<span class="token punctuation">.</span><span class="token function">getBody</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span> l1<span class="token punctuation">.</span><span class="token function">evict</span><span class="token punctuation">(</span><span class="token class-name">String</span><span class="token punctuation">.</span><span class="token function">valueOf</span><span class="token punctuation">(</span>k<span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">&#125;</span><span class="token punctuation">,</span> <span class="token keyword">new</span> <span class="token class-name">ChannelTopic</span><span class="token punctuation">(</span><span class="token string">"__redis__:invalidate"</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span></span></code></pre>
+
+<ol start="6">
+<li><strong>兜底仍然靠 TTL</strong>：本地缓存 1～5 秒 <code>expireAfterWrite</code>，重连后主动清空；对「绝不能旧」的数据（余额、库存）不要放本地，tracking 只解决「更快发现变化」。</li>
+</ol>
 <h2 id="七、常见坑（官方明确说明的限制）"><a href="#七、常见坑（官方明确说明的限制）" class="headerlink" title="七、常见坑（官方明确说明的限制）"></a>七、常见坑（官方明确说明的限制）</h2><ol>
 <li><strong>用 RESP2 客户端开 tracking</strong>。收不到真正的 out-of-band 推送，行为依赖实现，容易「看起来开了但没生效」。</li>
 <li><strong>以为失效消息可靠</strong>。官方明示断线期间不补发，本地副本必须靠 TTL 兜底。</li>
@@ -264,11 +322,21 @@ OK
 <li>需要 RESP3，连接池场景注意 <code>REDIRECT</code>。</li>
 </ul>
 <h2 id="九、思考题"><a href="#九、思考题" class="headerlink" title="九、思考题"></a>九、思考题</h2><ol>
-<li>默认模式下，服务端要为「读过 100 万个不同 key 的一条连接」付出什么代价？</li>
-<li>广播模式订阅 <code>PREFIX user:</code> 时，一个 10 万用户的库会产生多少推送？怎么评估？</li>
-<li>断线 10 秒期间有 30 次变更，重连后客户端怎么保证数据正确？</li>
-<li>为什么需要 <code>REDIRECT</code>？不用它会出现什么现象？</li>
-<li>用 tracking 替代自建 Pub&#x2F;Sub 广播，收益与风险各是什么？</li>
+<li><p>默认模式下，服务端要为「读过 100 万个不同 key 的一条连接」付出什么代价？</p>
+<p><strong>参考回答</strong>：要为这条连接维护一份追踪表，内存随「被追踪 key 数」线性增长（每条记录数十字节量级，100 万条约几十 MB），且每次相关 key 变更都要查表并推送。这个量级不该用默认模式，应改成 <code>BCAST PREFIX</code> 按前缀订阅。</p>
+</li>
+<li><p>广播模式订阅 <code>PREFIX user:</code> 时，一个 10 万用户的库会产生多少推送？怎么评估？</p>
+<p><strong>参考回答</strong>：推送量与「该前缀下的写次数（含过期删除）」成正比，与「谁读过」无关。评估不要看 key 总数，要看写频率：该前缀每秒 500 次写，就是每个订阅连接每秒 500 条 push，×实例数即网卡与客户端 CPU 的压力。写越密集越不适合宽前缀。</p>
+</li>
+<li><p>断线 10 秒期间有 30 次变更，重连后客户端怎么保证数据正确？</p>
+<p><strong>参考回答</strong>：官方明确断线期间的失效不补发，所以客户端收不到这 30 条。正确做法是重连后立刻清空本地缓存（全部视为失效）再重建，并用短 TTL 限制最坏窗口；不能靠「等消息补齐」。</p>
+</li>
+<li><p>为什么需要 <code>REDIRECT</code>？不用它会出现什么现象？</p>
+<p><strong>参考回答</strong>：连接池里执行 <code>GET</code> 的连接与「能收 push 的连接」往往不是同一条，失效消息会推到那条读连接上，而它已归还池中被别的请求复用。不配 <code>REDIRECT</code> 的典型现象是：<code>CLIENT TRACKINGINFO</code> 显示 on，但本地缓存永远不刷新。</p>
+</li>
+<li><p>用 tracking 替代自建 Pub&#x2F;Sub 广播，收益与风险各是什么？</p>
+<p><strong>参考回答</strong>：收益是失效由数据变更自动产生、粒度到 key，不用自己设计频道、管理各实例订阅关系，也避免了「改了库忘了发消息」。风险是依赖 RESP3 客户端、消息不保证送达（断线丢）、连接池要配 <code>REDIRECT</code>，并且它只加快发现变化，不是一致性协议。</p>
+</li>
 </ol>
 <h2 id="十、官方资料"><a href="#十、官方资料" class="headerlink" title="十、官方资料"></a>十、官方资料</h2><ul>
 <li>Client-side caching（机制、两种模式与「不保证送达」说明）：<a target="_blank" rel="noopener" href="https://redis.io/docs/latest/develop/clients/client-side-caching/">https://redis.io/docs/latest/develop/clients/client-side-caching/</a></li>

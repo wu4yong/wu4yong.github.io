@@ -143,7 +143,7 @@ particlesJS("particles", {
   <h1 class="mb-title">redis-Sentinel 切换</h1>
   <div class="mb-sub">
     分类：database · redis
-     ｜ 标签：系统课 · Redis · 高可用
+     ｜ 标签：Redis · 系统课 · 高可用
   </div>
 
   <div class="mb-article"><div class="essay-banner essay-database"></div>
@@ -195,6 +195,8 @@ particlesJS("particles", {
 <h3 id="3-切换期的三类风险"><a href="#3-切换期的三类风险" class="headerlink" title="3. 切换期的三类风险"></a>3. 切换期的三类风险</h3><div class="data-grid data-grid-link-table"><div class="grid-header"><div class="grid-cell">风险</div><div class="grid-cell">原因</div><div class="grid-cell">应对</div></div><div class="grid-row"><div class="grid-cell">丢最后一段写入</div><div class="grid-cell">异步复制，新主 offset 比旧主小</div><div class="grid-cell">业务侧可补偿；关键数据不能只靠 Sentinel</div></div><div class="grid-row"><div class="grid-cell">连接全断</div><div class="grid-cell">主库地址变了，旧连接全部失效</div><div class="grid-cell">连接池重建 + 短重试 + 熔断</div></div><div class="grid-row"><div class="grid-cell">脑裂</div><div class="grid-cell">旧主未死但网络分区，仍在接收写</div><div class="grid-cell"><code>min-replicas-to-write</code> 保护；分区恢复后人工核对</div></div></div>
 
 <p>「脑裂」这条要特别说明：如果旧主与多数 Sentinel 失去联系，但客户端还能连上它，旧主会<strong>继续接受写入</strong>。等分区恢复，Sentinel 把旧主降级为从库，这段写入会被全量同步<strong>覆盖掉</strong>——数据静默丢失。<code>min-replicas-to-write 1</code> 能在一定程度上阻止这种写入（因为没有健康从库就拒绝写）。</p>
+<p><img src="https://wu4yong.github.io/starry-images/assets/img/redis/rd-21b-failover.svg" alt="故障转移六步与客户端三件事"></p>
+<p><em>确认 odown → 领导者执行 → 挑新主 → 改配置 → 广播 → 旧主归队，客户端三件事与切换期三类风险｜依据 Redis 7.4 Sentinel 文档自绘</em></p>
 <h2 id="五、场景说明"><a href="#五、场景说明" class="headerlink" title="五、场景说明"></a>五、场景说明</h2><ol>
 <li><strong>Spring Boot + Lettuce&#x2F;Jedis</strong>：用 Sentinel 模式（配置 master 名 + Sentinel 列表），不要手写 IP；</li>
 <li><strong>Go（go-redis）</strong>：<code>NewFailoverClient</code> 支持 Sentinel，自动订阅切换；</li>
@@ -252,6 +254,37 @@ OK
 <span class="token comment"># &#125;)</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
 
 <p>客户端用 Sentinel 模式的核心差别只有一句：<strong>地址是「主库名字」而不是「IP:端口」</strong>，解析交给 Sentinel 客户端库。</p>
+<h3 id="Java-侧怎么落地：把切换窗口「接住」，而不是抛给用户"><a href="#Java-侧怎么落地：把切换窗口「接住」，而不是抛给用户" class="headerlink" title="Java 侧怎么落地：把切换窗口「接住」，而不是抛给用户"></a>Java 侧怎么落地：把切换窗口「接住」，而不是抛给用户</h3><p>上一讲把 Sentinel 接进来；这一讲要处理的是切换那几十秒里发生什么。Java 侧三件事：<strong>有限重试 + 幂等 + 熔断</strong>。</p>
+<ol>
+<li><p><strong>依赖不变</strong>，Sentinel 解析由 Lettuce 完成（yml 见 RD20），这里只管重试策略。</p>
+</li>
+<li><p><strong>重试必须限定次数与总时长</strong>：切换窗口可能几十秒，无限重试会把线程池与连接池一起耗死。</p>
+</li>
+</ol>
+<pre class="line-numbers language-java" data-language="java"><code class="language-java"><span class="token class-name">RetryTemplate</span> retry <span class="token operator">=</span> <span class="token class-name">RetryTemplate</span><span class="token punctuation">.</span><span class="token function">builder</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+        <span class="token punctuation">.</span><span class="token function">maxAttempts</span><span class="token punctuation">(</span><span class="token number">3</span><span class="token punctuation">)</span>
+        <span class="token punctuation">.</span><span class="token function">exponentialBackoff</span><span class="token punctuation">(</span><span class="token number">200</span><span class="token punctuation">,</span> <span class="token number">1.5</span><span class="token punctuation">,</span> <span class="token number">2000</span><span class="token punctuation">,</span> <span class="token number">5000</span><span class="token punctuation">)</span>   <span class="token comment">// 总上限约 5s</span>
+        <span class="token punctuation">.</span><span class="token function">retryOn</span><span class="token punctuation">(</span><span class="token class-name">RedisConnectionFailureException</span><span class="token punctuation">.</span><span class="token keyword">class</span><span class="token punctuation">)</span>
+        <span class="token punctuation">.</span><span class="token function">build</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<ol start="3">
+<li><strong>只对「可重试」命令开重试</strong>：<code>GET</code>&#x2F;<code>SET</code> 可以，<code>INCR</code>&#x2F;<code>LPUSH</code>&#x2F;<code>DECRBY</code> 重试会重复计算；写多 key 的操作要么带幂等键，要么不重试直接失败。</li>
+</ol>
+<pre class="line-numbers language-java" data-language="java"><code class="language-java"><span class="token class-name">String</span> key <span class="token operator">=</span> <span class="token string">"order:"</span> <span class="token operator">+</span> orderId <span class="token operator">+</span> <span class="token string">":paid"</span><span class="token punctuation">;</span>
+redisTemplate<span class="token punctuation">.</span><span class="token function">execute</span><span class="token punctuation">(</span><span class="token punctuation">(</span><span class="token class-name">RedisCallback</span><span class="token generics"><span class="token punctuation">&lt;</span><span class="token class-name">Boolean</span><span class="token punctuation">></span></span><span class="token punctuation">)</span> c <span class="token operator">-></span>
+        c<span class="token punctuation">.</span><span class="token function">stringCommands</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token function">set</span><span class="token punctuation">(</span>key<span class="token punctuation">.</span><span class="token function">getBytes</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">,</span> <span class="token string">"1"</span><span class="token punctuation">.</span><span class="token function">getBytes</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">,</span> <span class="token class-name">Expiration</span><span class="token punctuation">.</span><span class="token function">seconds</span><span class="token punctuation">(</span><span class="token number">60</span><span class="token punctuation">)</span><span class="token punctuation">,</span>
+                <span class="token class-name">SetOption</span><span class="token punctuation">.</span><span class="token function">ifAbsent</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>       <span class="token comment">// 用 SET NX 天然幂等，重试安全</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span></span></code></pre>
+
+<ol start="4">
+<li><strong>加熔断，别让切换变成雪崩</strong>：连续失败达到阈值就打开熔断，读走本地缓存&#x2F;回源，写进延迟队列；Sentinel 侧恢复（<code>get-master-addr-by-name</code> 返回新地址且可写）后再半开。</li>
+</ol>
+<pre class="line-numbers language-java" data-language="java"><code class="language-java"><span class="token keyword">if</span> <span class="token punctuation">(</span>circuitBreaker<span class="token punctuation">.</span><span class="token function">isOpen</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+    <span class="token keyword">return</span> localCache<span class="token punctuation">.</span><span class="token function">get</span><span class="token punctuation">(</span>key<span class="token punctuation">)</span><span class="token punctuation">;</span>     <span class="token comment">// 降级读</span>
+<span class="token punctuation">&#125;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span></span></code></pre>
+
+<ol start="5">
+<li><strong>演练时把 RTO 量出来</strong>：在 <code>SENTINEL FAILOVER</code> 前后各打一条时间点，统计「首个失败请求 → 首个成功请求」的间隔，这个数才是业务要容忍的停机窗口。经验值：同机房 3 Sentinel + 客户端自带解析，通常在 5～15 秒内收敛；如果超过 30 秒，先查客户端是否真的在重新解析地址。</li>
+</ol>
 <h2 id="七、常见坑（官方明确说明的限制）"><a href="#七、常见坑（官方明确说明的限制）" class="headerlink" title="七、常见坑（官方明确说明的限制）"></a>七、常见坑（官方明确说明的限制）</h2><ol>
 <li><strong>只实现「查地址」，没实现「订阅通知」</strong>。切换后老连接池还在打旧主，直到连接报错才重建——这段时间全部请求失败。</li>
 <li><strong>订阅连接断了不重连</strong>。Pub&#x2F;Sub 连接没保活，切换通知永远收不到。</li>
@@ -275,11 +308,21 @@ OK
 <li>演练要用真实断网测 RTO，而不是只看 Sentinel 日志。</li>
 </ul>
 <h2 id="九、思考题"><a href="#九、思考题" class="headerlink" title="九、思考题"></a>九、思考题</h2><ol>
-<li>客户端实现了「查地址」但没订阅通知，切换后会发生什么？问题会在什么时候暴露？</li>
-<li><code>+switch-master</code> 消息里两个 IP 分别是谁？解析错位会导致什么后果？</li>
-<li>旧主恢复后为什么可能丢掉自己的写入？这与「异步复制」有什么关系？</li>
-<li>脑裂期间旧主还能接受写，怎么用配置把这种写入挡掉？挡掉之后业务会看到什么错误？</li>
-<li>你的系统允许「30 秒内写不可用」，客户端重试应该怎么设计才既不打死新主、又能尽快恢复？</li>
+<li><p>客户端实现了「查地址」但没订阅通知，切换后会发生什么？问题会在什么时候暴露？</p>
+<p><strong>参考回答</strong>：切换后旧连接池还在打旧主（已降级为从库，写入报 <code>READONLY</code> 或直接连不上），直到连接报错并触发重建才会去重查地址。暴露时刻通常是「切换后第一批写请求」——用户侧看到下单失败，而不是监控立刻报警。</p>
+</li>
+<li><p><code>+switch-master</code> 消息里两个 IP 分别是谁？解析错位会导致什么后果？</p>
+<p><strong>参考回答</strong>：格式是 <code>mymaster &lt;old-ip&gt; &lt;old-port&gt; &lt;new-ip&gt; &lt;new-port&gt;</code>，前一个是旧主、后一个是新主。解析错位会把旧主当成新主继续连，等于没切换——所有写入打到已被降级的节点上。</p>
+</li>
+<li><p>旧主恢复后为什么可能丢掉自己的写入？这与「异步复制」有什么关系？</p>
+<p><strong>参考回答</strong>：旧主在分区期间可能仍在接收写（客户端还能连它），但这些写入没同步给新主。分区恢复后 Sentinel 把它 <code>REPLICAOF</code> 到新主，全量同步会<strong>覆盖</strong>本地数据，那段多出来的写入就没了；根因是异步复制不保证旧主与新主的数据顺序一致。</p>
+</li>
+<li><p>脑裂期间旧主还能接受写，怎么用配置把这种写入挡掉？挡掉之后业务会看到什么错误？</p>
+<p><strong>参考回答</strong>：配 <code>min-replicas-to-write 1</code> + <code>min-replicas-max-lag 10</code>，让「没有健康从库」的主库拒绝写。业务会收到 <code>NOREPLICAS Not enough good replicas to write</code>——它是保护生效的信号，客户端应据此降级而不是当普通业务失败重试。</p>
+</li>
+<li><p>你的系统允许「30 秒内写不可用」，客户端重试应该怎么设计才既不打死新主、又能尽快恢复？</p>
+<p><strong>参考回答</strong>：有限重试（3 次、总时长 ≤5 秒、指数退避）+ 熔断（连续失败即打开，不再打库）+ 恢复探测（半开只放少量请求探活）。关键是<strong>重试次数与并发都要小</strong>：新主刚上任正在补同步，大量并发重试会把它压垮；超过 30 秒仍不可用就该走人工，而不是继续加大重试。</p>
+</li>
 </ol>
 <h2 id="十、官方资料"><a href="#十、官方资料" class="headerlink" title="十、官方资料"></a>十、官方资料</h2><ul>
 <li>Sentinel（客户端接入与 <code>+switch-master</code>）：<a target="_blank" rel="noopener" href="https://redis.io/docs/latest/operate/oss_and_stack/management/sentinel/">https://redis.io/docs/latest/operate/oss_and_stack/management/sentinel/</a></li>

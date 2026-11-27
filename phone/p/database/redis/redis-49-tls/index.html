@@ -143,7 +143,7 @@ particlesJS("particles", {
   <h1 class="mb-title">redis-TLS</h1>
   <div class="mb-sub">
     分类：database · redis
-     ｜ 标签：系统课 · Redis · 安全
+     ｜ 标签：Redis · 系统课 · 安全
   </div>
 
   <div class="mb-article"><div class="essay-banner essay-database"></div>
@@ -189,6 +189,8 @@ tls-cluster yes       # 集群总线（bus 端口）也走 TLS<span aria-hidden=
 <li>轮换流程演练过（新证书 + 重启或 <code>CONFIG SET</code> 热加载）；</li>
 <li>客户端信任链（CA）也同步更新，别只换服务端。</li>
 </ul>
+<p><img src="https://wu4yong.github.io/starry-images/assets/img/redis/rd-49b-tls.svg" alt="TLS 三段校验与五条加固"></p>
+<p><em>客户端&#x2F;服务端双向证书校验的三段、<code>port 0</code> + 证书三件套、replication&#x2F;cluster 两个必开开关，以及加固动作的有效性排序｜依据 TLS 支持与安全总览文档自绘</em></p>
 <h2 id="五、场景说明"><a href="#五、场景说明" class="headerlink" title="五、场景说明"></a>五、场景说明</h2><ol>
 <li><strong>跨机房&#x2F;跨 VPC 访问</strong>：必须 TLS，链路上可能经过不可控网络；</li>
 <li><strong>云托管 Redis</strong>：多数云厂商默认要求 TLS，且要求客户端证书；</li>
@@ -230,6 +232,45 @@ $ openssl x509 <span class="token parameter variable">-in</span> /etc/redis/tls/
 <span class="token number">127.0</span>.0.1:637<span class="token operator"><span class="token file-descriptor important">9</span>></span> FLUSHALL
 <span class="token punctuation">(</span>error<span class="token punctuation">)</span> NOPERM this user has no permissions to run the <span class="token string">'flushall'</span> <span class="token builtin class-name">command</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
 
+<h3 id="Java-侧怎么落地：客户端证书与信任链"><a href="#Java-侧怎么落地：客户端证书与信任链" class="headerlink" title="Java 侧怎么落地：客户端证书与信任链"></a>Java 侧怎么落地：客户端证书与信任链</h3><ol>
+<li><strong>pom 只引 starter</strong>，Lettuce 原生支持 TLS，不需要额外驱动。</li>
+</ol>
+<pre class="line-numbers language-markup" data-language="markup"><code class="language-markup"><span class="token tag"><span class="token tag"><span class="token punctuation">&lt;</span>dependency</span><span class="token punctuation">></span></span>
+  <span class="token tag"><span class="token tag"><span class="token punctuation">&lt;</span>groupId</span><span class="token punctuation">></span></span>org.springframework.boot<span class="token tag"><span class="token tag"><span class="token punctuation">&lt;/</span>groupId</span><span class="token punctuation">></span></span>
+  <span class="token tag"><span class="token tag"><span class="token punctuation">&lt;</span>artifactId</span><span class="token punctuation">></span></span>spring-boot-starter-data-redis<span class="token tag"><span class="token tag"><span class="token punctuation">&lt;/</span>artifactId</span><span class="token punctuation">></span></span>
+<span class="token tag"><span class="token tag"><span class="token punctuation">&lt;/</span>dependency</span><span class="token punctuation">></span></span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span></span></code></pre>
+
+<ol start="2">
+<li><strong>Spring Boot 3.x 直接在 yml 开 TLS</strong>（2.x 需自定义 <code>LettuceClientConfigurationBuilderCustomizer</code>）：</li>
+</ol>
+<pre class="line-numbers language-yaml" data-language="yaml"><code class="language-yaml"><span class="token key atrule">spring</span><span class="token punctuation">:</span>
+  <span class="token key atrule">data</span><span class="token punctuation">:</span>
+    <span class="token key atrule">redis</span><span class="token punctuation">:</span>
+      <span class="token key atrule">host</span><span class="token punctuation">:</span> 10.0.1.10
+      <span class="token key atrule">port</span><span class="token punctuation">:</span> <span class="token number">6379</span>
+      <span class="token key atrule">ssl</span><span class="token punctuation">:</span>
+        <span class="token key atrule">enabled</span><span class="token punctuation">:</span> <span class="token boolean important">true</span>
+        <span class="token key atrule">bundle</span><span class="token punctuation">:</span> redis<span class="token punctuation">-</span>client      <span class="token comment"># 指向 ssl bundle 的信任链与客户端证书</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<ol start="3">
+<li><strong>双向认证时把 keyManager 一起配上</strong>：只配 truststore（校验服务端）不配 keystore（证明自己），在 <code>tls-auth-clients yes</code> 的服务端会直接握手失败。</li>
+</ol>
+<pre class="line-numbers language-yaml" data-language="yaml"><code class="language-yaml"><span class="token key atrule">spring</span><span class="token punctuation">:</span>
+  <span class="token key atrule">ssl</span><span class="token punctuation">:</span>
+    <span class="token key atrule">bundle</span><span class="token punctuation">:</span>
+      <span class="token key atrule">jks</span><span class="token punctuation">:</span>
+        <span class="token key atrule">redis-client</span><span class="token punctuation">:</span>
+          <span class="token key atrule">truststore</span><span class="token punctuation">:</span> <span class="token punctuation">&#123;</span> <span class="token key atrule">location</span><span class="token punctuation">:</span> classpath<span class="token punctuation">:</span>redis<span class="token punctuation">-</span>ca.p12<span class="token punctuation">,</span> <span class="token key atrule">password</span><span class="token punctuation">:</span> $<span class="token punctuation">&#123;</span>CA_PWD<span class="token punctuation">&#125;</span> <span class="token punctuation">&#125;</span>
+          <span class="token key atrule">keystore</span><span class="token punctuation">:</span>   <span class="token punctuation">&#123;</span> <span class="token key atrule">location</span><span class="token punctuation">:</span> classpath<span class="token punctuation">:</span>client.p12<span class="token punctuation">,</span>  <span class="token key atrule">password</span><span class="token punctuation">:</span> $<span class="token punctuation">&#123;</span>KEY_PWD<span class="token punctuation">&#125;</span> <span class="token punctuation">&#125;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<ol start="4">
+<li><p><strong>证书轮换要有顺序</strong>：先让客户端信任新 CA（信任链同时含新旧 CA）→ 换服务端证书 → 再撤旧 CA。顺序反了就是「全站握手失败」。</p>
+</li>
+<li><p><strong>验证手段</strong>：<code>openssl s_client -connect host:6379 -CAfile ca.crt</code> 看握手与证书链；服务端 <code>CLIENT LIST</code> 看 <code>flags</code>；应用侧启动即做一次 <code>PING</code> 自检，失败快速退出而不是半可用。</p>
+</li>
+<li><p><strong>证书有效期进监控</strong>：定时 <code>openssl x509 -noout -enddate</code> 或 blackbox_exporter 探针，提前 30 天告警；到期前一天才发现的，基本都是这种事。</p>
+</li>
+</ol>
 <h2 id="七、常见坑（官方明确说明的限制）"><a href="#七、常见坑（官方明确说明的限制）" class="headerlink" title="七、常见坑（官方明确说明的限制）"></a>七、常见坑（官方明确说明的限制）</h2><ol>
 <li><strong>以为 <code>protected-mode</code> 是万能防线</strong>。官方明确：只有在「无密码且无 bind」时才限制为回环地址。</li>
 <li><strong><code>bind 0.0.0.0</code> + 空密码 + 公网 IP</strong>。这是被入侵的标准配方。</li>
@@ -252,11 +293,21 @@ $ openssl x509 <span class="token parameter variable">-in</span> /etc/redis/tls/
 <li>证书有效期必须进监控。</li>
 </ul>
 <h2 id="九、思考题"><a href="#九、思考题" class="headerlink" title="九、思考题"></a>九、思考题</h2><ol>
-<li>只配了服务端证书、没开 <code>tls-auth-clients</code>，攻击者还能做什么？</li>
-<li>为什么 <code>bind 0.0.0.0</code> 之后 <code>protected-mode</code> 就不管用了？</li>
-<li><code>tls-replication</code> 漏配会出现什么现象？怎么和网络故障区分？</li>
-<li>证书轮换时，客户端要同步改什么？</li>
-<li>如果只能用一条措施保护 Redis，你会选网络隔离还是 ACL？为什么？</li>
+<li><p>只配了服务端证书、没开 <code>tls-auth-clients</code>，攻击者还能做什么？</p>
+<p><strong>参考回答</strong>：链路上看不见内容，但任何能连到该端口的人都能完成握手并直接发命令——等于「防窃听不防冒用」。他仍能用弱密码&#x2F;未授权账号跑 <code>KEYS</code>、<code>FLUSHALL</code>，所以必须叠加 ACL&#x2F;密码，或开 <code>tls-auth-clients yes</code> 做双向认证。</p>
+</li>
+<li><p>为什么 <code>bind 0.0.0.0</code> 之后 <code>protected-mode</code> 就不管用了？</p>
+<p><strong>参考回答</strong>：官方给的生效前提是「没有设置密码 且 没有配置 bind 地址」。写了 <code>bind 0.0.0.0</code> 就视为管理员明确指定了监听范围，保护模式不再把连接限制到回环地址，于是它不再是防线。</p>
+</li>
+<li><p><code>tls-replication</code> 漏配会出现什么现象？怎么和网络故障区分？</p>
+<p><strong>参考回答</strong>：客户端 <code>PING</code> 正常，但从库 <code>INFO replication</code> 里 <code>master_link_status:down</code>，日志出现 <code>Unable to connect to MASTER</code>&#x2F;TLS 握手错误。区分方法：网络故障时 TCP 都连不上（<code>telnet host 6379</code> 失败），而漏配 TLS 时 TCP 能连、<code>redis-cli --tls</code> 能连、只有复制链路握手失败。</p>
+</li>
+<li><p>证书轮换时，客户端要同步改什么？</p>
+<p><strong>参考回答</strong>：① 信任链（truststore&#x2F;CA，新 CA 要提前加入）；② 双向认证时的客户端证书与私钥（keystore）；③ 配置&#x2F;连接串里的证书路径与密码。只换服务端不同步 CA，客户端会集体握手失败——这类故障排查成本最高。</p>
+</li>
+<li><p>如果只能用一条措施保护 Redis，你会选网络隔离还是 ACL？为什么？</p>
+<p><strong>参考回答</strong>：选网络隔离（安全组&#x2F;防火墙只放应用网段）。它从源头消除绝大多数「公网暴露被扫到」的入侵路径，不依赖应用配置正确，也不怕密码泄露；ACL 是第二层，防的是「已经能连进来的人」能干多少事，两者叠加才完整。</p>
+</li>
 </ol>
 <h2 id="十、官方资料"><a href="#十、官方资料" class="headerlink" title="十、官方资料"></a>十、官方资料</h2><ul>
 <li>TLS 支持（证书配置、<code>tls-auth-clients</code>、<code>tls-replication</code>）：<a target="_blank" rel="noopener" href="https://redis.io/docs/latest/operate/oss_and_stack/management/security/encryption/">https://redis.io/docs/latest/operate/oss_and_stack/management/security/encryption/</a></li>

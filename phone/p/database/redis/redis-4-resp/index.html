@@ -143,7 +143,7 @@ particlesJS("particles", {
   <h1 class="mb-title">redis-RESP 协议</h1>
   <div class="mb-sub">
     分类：database · redis
-     ｜ 标签：系统课 · Redis · 缓存
+     ｜ 标签：Redis · 缓存 · 系统课
   </div>
 
   <div class="mb-article"><div class="essay-banner essay-database"></div>
@@ -169,6 +169,8 @@ $4\r\nname\r\n      ← 长度 4
 $6\r\nredis7\r\n    ← 长度 6<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span></span></code></pre>
 
 <p>为什么用「长度前缀」而不是「换行分隔」？因为值里可能本身就含 <code>\r\n</code>（比如一段 JSON 或二进制），长度前缀让解析器无需转义——这是 binary safe 的实现代价。</p>
+<p><img src="https://wu4yong.github.io/starry-images/assets/img/redis/rd-04b-resp.svg" alt="RESP 请求帧与五种响应类型"></p>
+<p><em>一帧请求的字节结构、五种前缀的语义，以及 RESP3 与 RESP2 的差别｜依据 Redis 7.4 protocol-spec 自绘</em></p>
 <h3 id="2-五种响应类型（RESP2）"><a href="#2-五种响应类型（RESP2）" class="headerlink" title="2. 五种响应类型（RESP2）"></a>2. 五种响应类型（RESP2）</h3><div class="data-grid data-grid-link-table"><div class="grid-header"><div class="grid-cell">前缀</div><div class="grid-cell">类型</div><div class="grid-cell">示例</div><div class="grid-cell">语义</div></div><div class="grid-row"><div class="grid-cell"><code>+</code></div><div class="grid-cell">Simple string</div><div class="grid-cell"><code>+OK</code></div><div class="grid-cell">状态短语，不携带数据</div></div><div class="grid-row"><div class="grid-cell"><code>-</code></div><div class="grid-cell">Error</div><div class="grid-cell"><code>-ERR unknown command</code></div><div class="grid-cell">错误，客户端要识别成一个异常</div></div><div class="grid-row"><div class="grid-cell"><code>:</code></div><div class="grid-cell">Integer</div><div class="grid-cell"><code>:1000</code></div><div class="grid-cell">整数，<code>INCR</code> 返回值就是它</div></div><div class="grid-row"><div class="grid-cell"><code>$</code></div><div class="grid-cell">Bulk string</div><div class="grid-cell"><code>$6\r\nredis7\r\n</code></div><div class="grid-cell">二进制安全字符串；<code>$-1</code> 表示 nil</div></div><div class="grid-row"><div class="grid-cell"><code>*</code></div><div class="grid-cell">Array</div><div class="grid-cell"><code>*2\r\n$3\r\nfoo\r\n...</code></div><div class="grid-cell">数组；<code>*-1</code> 表示 nil 数组</div></div></div>
 
 <p>一个常被忽略的点：<strong><code>GET</code> 一个不存在的 key 返回的是 <code>$-1</code> 空 bulk，不是错误</strong>。这正是「缓存未命中」在协议层的表现，M7 讲缓存穿透时会回到这里。</p>
@@ -211,6 +213,57 @@ cfg<span class="token punctuation">.</span><span class="token function">setMaxWa
 cfg<span class="token punctuation">.</span><span class="token function">setTestOnBorrow</span><span class="token punctuation">(</span><span class="token boolean">false</span><span class="token punctuation">)</span><span class="token punctuation">;</span> <span class="token comment">// 每次借出都 PING 会额外增加一次往返</span>
 <span class="token class-name">JedisPool</span> pool <span class="token operator">=</span> <span class="token keyword">new</span> <span class="token class-name">JedisPool</span><span class="token punctuation">(</span>cfg<span class="token punctuation">,</span> <span class="token string">"127.0.0.1"</span><span class="token punctuation">,</span> <span class="token number">6379</span><span class="token punctuation">,</span> <span class="token number">1000</span><span class="token punctuation">,</span> <span class="token string">"S3cretForClass"</span><span class="token punctuation">)</span><span class="token punctuation">;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
 
+<h3 id="Spring-Boot-落地：Lettuce、序列化与-RESP3-的四个关键动作"><a href="#Spring-Boot-落地：Lettuce、序列化与-RESP3-的四个关键动作" class="headerlink" title="Spring Boot 落地：Lettuce、序列化与 RESP3 的四个关键动作"></a>Spring Boot 落地：Lettuce、序列化与 RESP3 的四个关键动作</h3><p>同一份协议，在 Spring Boot 里有四个容易踩的点，按顺序做一遍就够。</p>
+<ol>
+<li><strong>选客户端</strong>：Boot 默认 Lettuce（Netty、连接线程安全）；要用 Jedis 必须显式排除 <code>lettuce-core</code> 再引 <code>jedis</code>，否则两个客户端同时存在会各自建连。</li>
+</ol>
+<pre class="line-numbers language-markup" data-language="markup"><code class="language-markup"><span class="token tag"><span class="token tag"><span class="token punctuation">&lt;</span>dependency</span><span class="token punctuation">></span></span>
+  <span class="token tag"><span class="token tag"><span class="token punctuation">&lt;</span>groupId</span><span class="token punctuation">></span></span>org.springframework.boot<span class="token tag"><span class="token tag"><span class="token punctuation">&lt;/</span>groupId</span><span class="token punctuation">></span></span>
+  <span class="token tag"><span class="token tag"><span class="token punctuation">&lt;</span>artifactId</span><span class="token punctuation">></span></span>spring-boot-starter-data-redis<span class="token tag"><span class="token tag"><span class="token punctuation">&lt;/</span>artifactId</span><span class="token punctuation">></span></span>
+  <span class="token tag"><span class="token tag"><span class="token punctuation">&lt;</span>exclusions</span><span class="token punctuation">></span></span>
+    <span class="token tag"><span class="token tag"><span class="token punctuation">&lt;</span>exclusion</span><span class="token punctuation">></span></span>
+      <span class="token tag"><span class="token tag"><span class="token punctuation">&lt;</span>groupId</span><span class="token punctuation">></span></span>io.lettuce<span class="token tag"><span class="token tag"><span class="token punctuation">&lt;/</span>groupId</span><span class="token punctuation">></span></span>
+      <span class="token tag"><span class="token tag"><span class="token punctuation">&lt;</span>artifactId</span><span class="token punctuation">></span></span>lettuce-core<span class="token tag"><span class="token tag"><span class="token punctuation">&lt;/</span>artifactId</span><span class="token punctuation">></span></span>
+    <span class="token tag"><span class="token tag"><span class="token punctuation">&lt;/</span>exclusion</span><span class="token punctuation">></span></span>
+  <span class="token tag"><span class="token tag"><span class="token punctuation">&lt;/</span>exclusions</span><span class="token punctuation">></span></span>
+<span class="token tag"><span class="token tag"><span class="token punctuation">&lt;/</span>dependency</span><span class="token punctuation">></span></span>
+<span class="token comment">&lt;!-- 二选一：保留 Lettuce 就不要下面这段，切 Jedis 才加 --></span>
+<span class="token tag"><span class="token tag"><span class="token punctuation">&lt;</span>dependency</span><span class="token punctuation">></span></span>
+  <span class="token tag"><span class="token tag"><span class="token punctuation">&lt;</span>groupId</span><span class="token punctuation">></span></span>redis.clients<span class="token tag"><span class="token tag"><span class="token punctuation">&lt;/</span>groupId</span><span class="token punctuation">></span></span>
+  <span class="token tag"><span class="token tag"><span class="token punctuation">&lt;</span>artifactId</span><span class="token punctuation">></span></span>jedis<span class="token tag"><span class="token tag"><span class="token punctuation">&lt;/</span>artifactId</span><span class="token punctuation">></span></span>
+<span class="token tag"><span class="token tag"><span class="token punctuation">&lt;/</span>dependency</span><span class="token punctuation">></span></span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<ol start="2">
+<li><strong>换掉默认的 JDK 序列化</strong>：默认 <code>RedisTemplate</code> 用 JDK 序列化，<code>redis-cli</code> 里 <code>GET</code> 出来是一堆二进制；换成 <code>StringRedisSerializer</code> + <code>GenericJackson2JsonRedisSerializer</code>，协议层看到的才是可读字符。</li>
+</ol>
+<pre class="line-numbers language-java" data-language="java"><code class="language-java"><span class="token annotation punctuation">@Bean</span>
+<span class="token class-name">RedisTemplate</span><span class="token generics"><span class="token punctuation">&lt;</span><span class="token class-name">String</span><span class="token punctuation">,</span> <span class="token class-name">Object</span><span class="token punctuation">></span></span> <span class="token function">redisTemplate</span><span class="token punctuation">(</span><span class="token class-name">RedisConnectionFactory</span> f<span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+    <span class="token class-name">RedisTemplate</span><span class="token generics"><span class="token punctuation">&lt;</span><span class="token class-name">String</span><span class="token punctuation">,</span> <span class="token class-name">Object</span><span class="token punctuation">></span></span> t <span class="token operator">=</span> <span class="token keyword">new</span> <span class="token class-name">RedisTemplate</span><span class="token generics"><span class="token punctuation">&lt;</span><span class="token punctuation">></span></span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    t<span class="token punctuation">.</span><span class="token function">setConnectionFactory</span><span class="token punctuation">(</span>f<span class="token punctuation">)</span><span class="token punctuation">;</span>
+    t<span class="token punctuation">.</span><span class="token function">setKeySerializer</span><span class="token punctuation">(</span><span class="token keyword">new</span> <span class="token class-name">StringRedisSerializer</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    t<span class="token punctuation">.</span><span class="token function">setHashKeySerializer</span><span class="token punctuation">(</span><span class="token keyword">new</span> <span class="token class-name">StringRedisSerializer</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    t<span class="token punctuation">.</span><span class="token function">setValueSerializer</span><span class="token punctuation">(</span><span class="token keyword">new</span> <span class="token class-name">GenericJackson2JsonRedisSerializer</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>   <span class="token comment">// 需 jackson-databind</span>
+    t<span class="token punctuation">.</span><span class="token function">afterPropertiesSet</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token keyword">return</span> t<span class="token punctuation">;</span>
+<span class="token punctuation">&#125;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<ol start="3">
+<li><strong>把超时和池参数写进 yml</strong>（Lettuce 默认共享一条连接，池参数只在 <code>shareNativeConnection=false</code> 或多连接场景生效，别以为配了就一定用上）：</li>
+</ol>
+<pre class="line-numbers language-yaml" data-language="yaml"><code class="language-yaml"><span class="token key atrule">spring</span><span class="token punctuation">:</span>
+  <span class="token key atrule">data</span><span class="token punctuation">:</span>
+    <span class="token key atrule">redis</span><span class="token punctuation">:</span>
+      <span class="token key atrule">host</span><span class="token punctuation">:</span> 127.0.0.1
+      <span class="token key atrule">port</span><span class="token punctuation">:</span> <span class="token number">6379</span>
+      <span class="token key atrule">timeout</span><span class="token punctuation">:</span> 2s                 <span class="token comment"># 命令往返上限，对应服务端 slow 判定之外的最后一道网</span>
+      <span class="token key atrule">lettuce</span><span class="token punctuation">:</span>
+        <span class="token key atrule">shutdown-timeout</span><span class="token punctuation">:</span> 100ms
+        <span class="token key atrule">pool</span><span class="token punctuation">:</span> <span class="token punctuation">&#123;</span> <span class="token key atrule">max-active</span><span class="token punctuation">:</span> <span class="token number">16</span><span class="token punctuation">,</span> <span class="token key atrule">max-idle</span><span class="token punctuation">:</span> <span class="token number">8</span><span class="token punctuation">,</span> <span class="token key atrule">min-idle</span><span class="token punctuation">:</span> <span class="token number">2</span> <span class="token punctuation">&#125;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<ol start="4">
+<li><strong>要收 RESP3 的 push（客户端缓存&#x2F;键空间通知）才切协议</strong>：<code>RedisStandaloneConfiguration</code> 不支持 <code>HELLO</code>，需要自定义 <code>ClientOptions</code> 或用 <code>RedisClient.connect</code> 后 <code>hello(3)</code>；只是普通读写就别切，避免上线后类型映射变化（<code>CONFIG GET</code> 直接变 map）。</li>
+</ol>
+<p>验证方式仍是最土的一条：应用里 <code>execute</code> 一次 <code>INFO server</code> 打印 <code>redis_version</code> 与 <code>resp</code> 字段，确认握手结果与你以为的一致。</p>
 <h2 id="七、常见坑（官方明确说明的限制）"><a href="#七、常见坑（官方明确说明的限制）" class="headerlink" title="七、常见坑（官方明确说明的限制）"></a>七、常见坑（官方明确说明的限制）</h2><ol>
 <li><strong><code>*</code> 数组的长度必须准确</strong>。长度写错，服务端会按声明长度解析，剩下的字节被当成新命令，出现「响应错位」这种极难查的现象。</li>
 <li><strong><code>$</code> 后面的长度是字节数不是字符数</strong>。中文 key 用 <code>strlen</code> 算，别按字符数数，否则解析失败。</li>
@@ -229,9 +282,15 @@ cfg<span class="token punctuation">.</span><span class="token function">setTestO
 <li>选客户端的三个判断点：线程安全、是否异步、连接池是否可控。</li>
 </ul>
 <h2 id="九、思考题"><a href="#九、思考题" class="headerlink" title="九、思考题"></a>九、思考题</h2><ol>
-<li>用 <code>nc</code> 发 <code>*3\r\n$3\r\nGET\r\n$4\r\nname\r\n</code>（少一个元素）会发生什么？为什么这种错位在生产上很难定位？</li>
-<li>为什么 <code>GET</code> 不存在 key 返回空 bulk，而 <code>INCR</code> 一个不存在的 key 却直接当成 0 自增成功？两者对「不存在」的处理策略差异，对业务代码意味着什么？</li>
-<li>一个 Spring 应用用 Jedis 单例注入到多线程 Controller，压测时偶发 <code>ERR Protocol error</code>，根因是什么？</li>
+<li><p>用 <code>nc</code> 发 <code>*3\r\n$3\r\nGET\r\n$4\r\nname\r\n</code>（少一个元素）会发生什么？为什么这种错位在生产上很难定位？</p>
+<p><strong>参考回答</strong>：服务端按 <code>*3</code> 去读三个元素，实际只有两个 bulk，读完后它认为一帧还没结束，会<strong>继续等下一条数据</strong>；随后到来的第一条真实命令的前半段被当成这一帧的第三个参数，从此刻起请求与响应整体错位。难定位是因为错位发生在连接级别：报错信息往往指向后一条无辜的命令，日志里也看不到你写错的那一帧。</p>
+</li>
+<li><p>为什么 <code>GET</code> 不存在 key 返回空 bulk，而 <code>INCR</code> 一个不存在的 key 却直接当成 0 自增成功？两者对「不存在」的处理策略差异，对业务代码意味着什么？</p>
+<p><strong>参考回答</strong>：<code>GET</code> 把「不存在」当作<strong>数据缺失</strong>（返回 nil bulk），<code>INCR</code> 把「不存在」当作<strong>初始值 0</strong>（官方语义就是「key 不存在时按 0 处理」）。对业务代码意味着：读路径必须显式判空并走缓存未命中逻辑；计数类命令天然完成初始化，不能用「返回 null」推断 key 不存在。</p>
+</li>
+<li><p>一个 Spring 应用用 Jedis 单例注入到多线程 Controller，压测时偶发 <code>ERR Protocol error</code>，根因是什么？</p>
+<p><strong>参考回答</strong>：<code>Jedis</code> 实例<strong>不是线程安全的</strong>——多个线程在同一条 socket 上交错写帧、读响应，服务端收到的帧顺序被打乱，响应被别的线程读走，于是报 <code>ERR Protocol error</code> 或读到别人的返回值。修法：用 <code>JedisPool</code> 每线程 borrow &#x2F; return，或换 Lettuce（连接线程安全）并在业务层做无共享封装。</p>
+</li>
 </ol>
 <h2 id="十、官方资料"><a href="#十、官方资料" class="headerlink" title="十、官方资料"></a>十、官方资料</h2><ul>
 <li>Redis serialization protocol specification（RESP2 &#x2F; RESP3 类型全集）：<a target="_blank" rel="noopener" href="https://redis.io/docs/latest/develop/reference/protocol-spec/">https://redis.io/docs/latest/develop/reference/protocol-spec/</a></li>

@@ -143,7 +143,7 @@ particlesJS("particles", {
   <h1 class="mb-title">redis-容量规划</h1>
   <div class="mb-sub">
     分类：database · redis
-     ｜ 标签：系统课 · Redis · 运维
+     ｜ 标签：Redis · 系统课 · 运维
   </div>
 
   <div class="mb-article"><div class="essay-banner essay-database"></div>
@@ -190,6 +190,8 @@ particlesJS("particles", {
 <li><strong>单实例内存 10–16GB 上限</strong>：RDB fork 的 COW 成本、全量同步的传输量、故障恢复时间都随内存线性上升。超过这个量级，应该分片而不是继续加内存。</li>
 <li><strong>余量 ≥ 30%</strong>：要同时覆盖「碎片率 1.5」「fork 期间写放大」「复制缓冲区增长」。只留 10% 的实例，在大促写入高峰时就会开始淘汰或写失败。</li>
 </ul>
+<p><img src="https://wu4yong.github.io/starry-images/assets/img/redis/rd-51b-capacity.svg" alt="容量估算三步与两条红线"></p>
+<p><em>抽样→放大→留余量的估算链、复制缓冲&#x2F;客户端缓冲&#x2F;fork COW 三类漏算，以及单实例上限与 30% 余量两条红线｜依据 Memory optimization 与 MEMORY USAGE 文档自绘</em></p>
 <h2 id="五、场景说明"><a href="#五、场景说明" class="headerlink" title="五、场景说明"></a>五、场景说明</h2><ol>
 <li><strong>新业务上线</strong>：先按「日均 key 数 × 增长系数」估，再压测验证；</li>
 <li><strong>大促扩容</strong>：按峰值 QPS 与峰值 key 数重算，不按平均值；</li>
@@ -236,6 +238,54 @@ $ redis-benchmark <span class="token parameter variable">-h</span> <span class="
 <span class="token number">127.0</span>.0.1:637<span class="token operator"><span class="token file-descriptor important">9</span>></span> INFO persistence
 <span class="token comment"># rdb_last_bgsave_time_sec / aof_rewrite_in_progress</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
 
+<h3 id="Java-侧怎么落地：抽样估算脚本-容量护栏"><a href="#Java-侧怎么落地：抽样估算脚本-容量护栏" class="headerlink" title="Java 侧怎么落地：抽样估算脚本 + 容量护栏"></a>Java 侧怎么落地：抽样估算脚本 + 容量护栏</h3><ol>
+<li><strong>pom 只引 starter</strong>，估算用 <code>SCAN</code> + <code>MEMORY USAGE</code>，不需要额外依赖。</li>
+</ol>
+<pre class="line-numbers language-markup" data-language="markup"><code class="language-markup"><span class="token tag"><span class="token tag"><span class="token punctuation">&lt;</span>dependency</span><span class="token punctuation">></span></span>
+  <span class="token tag"><span class="token tag"><span class="token punctuation">&lt;</span>groupId</span><span class="token punctuation">></span></span>org.springframework.boot<span class="token tag"><span class="token tag"><span class="token punctuation">&lt;/</span>groupId</span><span class="token punctuation">></span></span>
+  <span class="token tag"><span class="token tag"><span class="token punctuation">&lt;</span>artifactId</span><span class="token punctuation">></span></span>spring-boot-starter-data-redis<span class="token tag"><span class="token tag"><span class="token punctuation">&lt;/</span>artifactId</span><span class="token punctuation">></span></span>
+<span class="token tag"><span class="token tag"><span class="token punctuation">&lt;/</span>dependency</span><span class="token punctuation">></span></span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span></span></code></pre>
+
+<ol start="2">
+<li><strong>application.yml</strong>：把「容量护栏」做成配置，方便按环境调：</li>
+</ol>
+<pre class="line-numbers language-yaml" data-language="yaml"><code class="language-yaml"><span class="token key atrule">capacity</span><span class="token punctuation">:</span>
+  <span class="token key atrule">sample-size</span><span class="token punctuation">:</span> <span class="token number">500</span>        <span class="token comment"># 抽样 key 数</span>
+  <span class="token key atrule">safety-factor</span><span class="token punctuation">:</span> <span class="token number">1.1</span>      <span class="token comment"># 结构开销系数</span>
+  <span class="token key atrule">max-memory-gb</span><span class="token punctuation">:</span> <span class="token number">16</span>       <span class="token comment"># 单实例红线</span>
+  <span class="token key atrule">headroom-ratio</span><span class="token punctuation">:</span> <span class="token number">0.3</span>     <span class="token comment"># 必须留的余量</span>
+<span class="token key atrule">spring</span><span class="token punctuation">:</span>
+  <span class="token key atrule">data</span><span class="token punctuation">:</span>
+    <span class="token key atrule">redis</span><span class="token punctuation">:</span>
+      <span class="token key atrule">timeout</span><span class="token punctuation">:</span> 300ms<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<ol start="3">
+<li><strong>抽样要按前缀分层</strong>，不能只扫前 500 个 key——<code>SCAN</code> 顺序与数据分布无关，前 500 个往往集中在同一前缀：</li>
+</ol>
+<pre class="line-numbers language-java" data-language="java"><code class="language-java">cursor <span class="token operator">=</span> redis<span class="token punctuation">.</span><span class="token function">scan</span><span class="token punctuation">(</span><span class="token class-name">ScanOptions</span><span class="token punctuation">.</span><span class="token function">scanOptions</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token function">match</span><span class="token punctuation">(</span>prefix <span class="token operator">+</span> <span class="token string">"*"</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token function">count</span><span class="token punctuation">(</span><span class="token number">1000</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token function">build</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token keyword">while</span> <span class="token punctuation">(</span>cursor<span class="token punctuation">.</span><span class="token function">hasNext</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token operator">&amp;&amp;</span> n <span class="token operator">&lt;</span> sampleSize<span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+    <span class="token class-name">String</span> k <span class="token operator">=</span> cursor<span class="token punctuation">.</span><span class="token function">next</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token class-name">Long</span> bytes <span class="token operator">=</span> <span class="token punctuation">(</span><span class="token class-name">Long</span><span class="token punctuation">)</span> redis<span class="token punctuation">.</span><span class="token function">execute</span><span class="token punctuation">(</span><span class="token punctuation">(</span><span class="token class-name">RedisCallback</span><span class="token generics"><span class="token punctuation">&lt;</span><span class="token class-name">Object</span><span class="token punctuation">></span></span><span class="token punctuation">)</span> c <span class="token operator">-></span>
+            c<span class="token punctuation">.</span><span class="token function">execute</span><span class="token punctuation">(</span><span class="token string">"MEMORY"</span><span class="token punctuation">.</span><span class="token function">getBytes</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">,</span> <span class="token string">"USAGE"</span><span class="token punctuation">.</span><span class="token function">getBytes</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">,</span>
+                      k<span class="token punctuation">.</span><span class="token function">getBytes</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">,</span> <span class="token string">"SAMPLES"</span><span class="token punctuation">.</span><span class="token function">getBytes</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">,</span> <span class="token string">"5"</span><span class="token punctuation">.</span><span class="token function">getBytes</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    sum <span class="token operator">+=</span> bytes<span class="token punctuation">;</span> n<span class="token operator">++</span><span class="token punctuation">;</span>
+<span class="token punctuation">&#125;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<ol start="4">
+<li><strong>放大与留余量在一处算清</strong>，输出「估算值 + 建议规格」而不是一个裸数字：</li>
+</ol>
+<pre class="line-numbers language-java" data-language="java"><code class="language-java"><span class="token keyword">long</span> estimate <span class="token operator">=</span> <span class="token class-name">Math</span><span class="token punctuation">.</span><span class="token function">round</span><span class="token punctuation">(</span>sum <span class="token operator">/</span> n <span class="token operator">*</span> totalKeys <span class="token operator">*</span> safetyFactor<span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token keyword">long</span> suggested <span class="token operator">=</span> <span class="token class-name">Math</span><span class="token punctuation">.</span><span class="token function">round</span><span class="token punctuation">(</span>estimate <span class="token operator">/</span> <span class="token punctuation">(</span><span class="token number">1</span> <span class="token operator">-</span> headroomRatio<span class="token punctuation">)</span> <span class="token operator">/</span> <span class="token number">1024.0</span> <span class="token operator">/</span> <span class="token number">1024</span> <span class="token operator">/</span> <span class="token number">1024</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+log<span class="token punctuation">.</span><span class="token function">info</span><span class="token punctuation">(</span><span class="token string">"est=&#123;&#125;MB suggested=&#123;&#125;GB"</span><span class="token punctuation">,</span> estimate <span class="token operator">/</span> <span class="token number">1048576</span><span class="token punctuation">,</span> suggested<span class="token punctuation">)</span><span class="token punctuation">;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span></span></code></pre>
+
+<ol start="5">
+<li><p><strong>服务端参数要跟估算对齐</strong>：<code>maxmemory</code> 取「估算 × (1+余量)」而不是等于物理内存；<code>repl-backlog-size</code> 按「写入速率 × 允许断线秒数」给，默认 1mb 在写入大的库上根本不够。</p>
+</li>
+<li><p><strong>把估算做成定期任务</strong>：每天跑一次抽样，把「估算&#x2F;实际 <code>used_memory</code>」的比值与 <code>evicted_keys</code> 一起上报，容量趋势比单点数字更有用。</p>
+</li>
+<li><p><strong>压测阶段要跑真实 value</strong>：用生产采样的真实 JSON 体量造数据，否则 <code>MEMORY USAGE</code> 的抽平均值会低估 30% 以上。</p>
+</li>
+</ol>
 <h2 id="七、常见坑（官方明确说明的限制）"><a href="#七、常见坑（官方明确说明的限制）" class="headerlink" title="七、常见坑（官方明确说明的限制）"></a>七、常见坑（官方明确说明的限制）</h2><ol>
 <li><strong>用平均 QPS 算容量</strong>。峰值通常是平均的 3–10 倍，按平均规划必然不够。</li>
 <li><strong>压测用假数据</strong>（10 字节 value）。带宽、序列化、淘汰压力全被低估。</li>
@@ -258,11 +308,21 @@ $ redis-benchmark <span class="token parameter variable">-h</span> <span class="
 <li>单实例 10–16GB、余量 ≥ 30%，超出就分片。</li>
 </ul>
 <h2 id="九、思考题"><a href="#九、思考题" class="headerlink" title="九、思考题"></a>九、思考题</h2><ol>
-<li><code>MEMORY USAGE</code> 抽样 500 个 key 得到平均 320 字节，key 总数 120 万，估算总内存是多少？还要加什么？</li>
-<li>为什么压测只压读会低估风险？</li>
-<li><code>used_memory</code> 70% 但 <code>evicted_keys</code> 在涨，可能是什么原因？</li>
-<li>fork 期间的写放大最多会占多少内存？怎么验证？</li>
-<li>一个 24GB 的实例你会怎么处理？直接扩到 48GB 还是分片？理由？</li>
+<li><p><code>MEMORY USAGE</code> 抽样 500 个 key 得到平均 320 字节，key 总数 120 万，估算总内存是多少？还要加什么？</p>
+<p><strong>参考回答</strong>：320 B × 120 万 ≈ 384 MB，再乘 1.1 的字典&#x2F;对象结构开销约 422 MB。还要加复制缓冲区、客户端缓冲区、碎片（1.3～1.5 倍）与 fork 期间 COW 的峰值放大，所以实际申请规格应明显大于这个数。</p>
+</li>
+<li><p>为什么压测只压读会低估风险？</p>
+<p><strong>参考回答</strong>：读不产生写放大：既不会触发 <code>BGSAVE</code>&#x2F;AOF 重写，也不会有主从复制流量与 COW 复制页。只压读会得到漂亮的 P99，却完全测不出 fork 尖刺、AOF fsync 抖动和淘汰带来的延迟——而这些恰恰是线上主要的风险来源。</p>
+</li>
+<li><p><code>used_memory</code> 70% 但 <code>evicted_keys</code> 在涨，可能是什么原因？</p>
+<p><strong>参考回答</strong>：说明 <code>maxmemory</code> 定得比物理内存低（70% 是相对 <code>maxmemory</code> 还是 <code>total_system_memory</code> 要看口径），或者淘汰是按 <code>maxmemory-policy</code> 在接近上限时提前触发、且写入集中在少数大 key 上。也可能是有实例与其他进程共享内存。先确认分母，再看是哪些 key 被淘汰。</p>
+</li>
+<li><p>fork 期间的写放大最多会占多少内存？怎么验证？</p>
+<p><strong>参考回答</strong>：最坏情况接近「fork 期间被修改的全部页」，经验值是稳态数据的 1.2～2 倍；验证方法是 <code>INFO</code> 里 <code>rdb_last_cow_size</code>&#x2F;<code>aof_rewrites</code> 期间的 COW 统计，对比重写前后的 <code>used_memory</code> 峰值，并在压测中记录 fork 延迟与 P99。</p>
+</li>
+<li><p>一个 24GB 的实例你会怎么处理？直接扩到 48GB 还是分片？理由？</p>
+<p><strong>参考回答</strong>：分片。单实例超过 10～16 GB 后，fork 的 COW 成本、全量同步传输量、故障恢复时间都随内存近似线性上升，扩到 48 GB 只是把风险放大；按业务前缀分片后单实例控制在红线内，故障影响面也从「全站」缩到「一部分 key」。</p>
+</li>
 </ol>
 <h2 id="十、官方资料"><a href="#十、官方资料" class="headerlink" title="十、官方资料"></a>十、官方资料</h2><ul>
 <li>Memory optimization（编码与内存占用建议）：<a target="_blank" rel="noopener" href="https://redis.io/docs/latest/develop/reference/optimization/">https://redis.io/docs/latest/develop/reference/optimization/</a></li>

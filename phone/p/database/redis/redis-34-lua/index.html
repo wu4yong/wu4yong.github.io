@@ -143,7 +143,7 @@ particlesJS("particles", {
   <h1 class="mb-title">redis-Lua 脚本</h1>
   <div class="mb-sub">
     分类：database · redis
-     ｜ 标签：系统课 · Redis · 脚本
+     ｜ 标签：Redis · 系统课 · 脚本
   </div>
 
   <div class="mb-article"><div class="essay-banner essay-database"></div>
@@ -203,6 +203,8 @@ EVALSHA e0e1f9fabfc9d4800c877a703b823ac0578ff8db <span class="token number">1</s
 <p>把 key 写死在脚本里，在单机看不出问题，上 Cluster 会直接报「脚本里的 key 不在同一个槽」或路由错误。</p>
 <h3 id="5-脚本的复制策略"><a href="#5-脚本的复制策略" class="headerlink" title="5. 脚本的复制策略"></a>5. 脚本的复制策略</h3><p>7.0 起默认<strong>按效果复制</strong>（effects replication）：主库执行脚本，把脚本产生的写命令传给从库与 AOF，而不是把整个脚本体发过去。好处是确定性——从库不需要重新执行脚本，避免随机函数、时间函数导致的不一致。</p>
 <p>这也解释了为什么官方要求脚本「必须是确定的」：同样的输入必须产生同样的写效果，否则主从会分叉。</p>
+<p><img src="https://wu4yong.github.io/starry-images/assets/img/redis/rd-34b-lua.svg" alt="EVAL 路径与原子性边界"></p>
+<p><em>EVAL 的完整路径、原子性四条说法的真伪、KEYS&#x2F;ARGV 的硬规则与 7.0+ 的效果复制｜依据 Programmatic usage 文档与 lua-time-limit 自绘</em></p>
 <h2 id="五、场景说明"><a href="#五、场景说明" class="headerlink" title="五、场景说明"></a>五、场景说明</h2><ol>
 <li><strong>库存扣减</strong>：<code>if stock &gt; 0 then DECR ...</code>，条件判断 + 写在一个脚本里；</li>
 <li><strong>限流</strong>：按 key 做滑动窗口计数（RD46 会展开）；</li>
@@ -261,6 +263,43 @@ OK
 <span class="token comment"># 若脚本已经写过数据：</span>
 <span class="token comment"># (error) UNKILLABLE Sorry the script already executed write commands against the dataset.</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
 
+<h3 id="Java-侧怎么落地：脚本放-resources，走-EVALSHA"><a href="#Java-侧怎么落地：脚本放-resources，走-EVALSHA" class="headerlink" title="Java 侧怎么落地：脚本放 resources，走 EVALSHA"></a>Java 侧怎么落地：脚本放 resources，走 EVALSHA</h3><p>Spring Data Redis 的 <code>DefaultRedisScript</code> 默认会走 <code>EVALSHA</code>，并在 <code>NOSCRIPT</code> 时自动回退 <code>EVAL</code>——但前提是脚本与 KEYS 传对了。</p>
+<ol>
+<li><strong>pom 只引 starter</strong>，不需要额外 Lua 依赖。</li>
+</ol>
+<pre class="line-numbers language-markup" data-language="markup"><code class="language-markup"><span class="token tag"><span class="token tag"><span class="token punctuation">&lt;</span>dependency</span><span class="token punctuation">></span></span>
+  <span class="token tag"><span class="token tag"><span class="token punctuation">&lt;</span>groupId</span><span class="token punctuation">></span></span>org.springframework.boot<span class="token tag"><span class="token tag"><span class="token punctuation">&lt;/</span>groupId</span><span class="token punctuation">></span></span>
+  <span class="token tag"><span class="token tag"><span class="token punctuation">&lt;</span>artifactId</span><span class="token punctuation">></span></span>spring-boot-starter-data-redis<span class="token tag"><span class="token tag"><span class="token punctuation">&lt;/</span>artifactId</span><span class="token punctuation">></span></span>
+<span class="token tag"><span class="token tag"><span class="token punctuation">&lt;/</span>dependency</span><span class="token punctuation">></span></span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span></span></code></pre>
+
+<ol start="2">
+<li><strong>脚本放 <code>resources/scripts/</code>，启动时加载一次</strong>，别每次请求拼字符串（拼字符串既浪费又容易把 key 拼进脚本）：</li>
+</ol>
+<pre class="line-numbers language-java" data-language="java"><code class="language-java"><span class="token annotation punctuation">@Bean</span>
+<span class="token keyword">public</span> <span class="token class-name">DefaultRedisScript</span><span class="token generics"><span class="token punctuation">&lt;</span><span class="token class-name">Long</span><span class="token punctuation">></span></span> <span class="token function">decrScript</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+    <span class="token class-name">DefaultRedisScript</span><span class="token generics"><span class="token punctuation">&lt;</span><span class="token class-name">Long</span><span class="token punctuation">></span></span> s <span class="token operator">=</span> <span class="token keyword">new</span> <span class="token class-name">DefaultRedisScript</span><span class="token generics"><span class="token punctuation">&lt;</span><span class="token punctuation">></span></span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    s<span class="token punctuation">.</span><span class="token function">setLocation</span><span class="token punctuation">(</span><span class="token keyword">new</span> <span class="token class-name">ClassPathResource</span><span class="token punctuation">(</span><span class="token string">"scripts/decr_and_check.lua"</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    s<span class="token punctuation">.</span><span class="token function">setResultType</span><span class="token punctuation">(</span><span class="token class-name">Long</span><span class="token punctuation">.</span><span class="token keyword">class</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token keyword">return</span> s<span class="token punctuation">;</span>                       <span class="token comment">// 内部会 SCRIPT LOAD 并走 EVALSHA</span>
+<span class="token punctuation">&#125;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<ol start="3">
+<li><strong>KEYS 与 ARGV 严格分开传</strong>，key 一律放进 <code>keys</code> 参数：</li>
+</ol>
+<pre class="line-numbers language-java" data-language="java"><code class="language-java"><span class="token comment">// scripts/decr_and_check.lua</span>
+<span class="token comment">// local v = tonumber(redis.call('GET', KEYS[1]) or '0')</span>
+<span class="token comment">// if v - tonumber(ARGV[1]) &lt; 0 then return -1 end</span>
+<span class="token comment">// return redis.call('DECRBY', KEYS[1], ARGV[1])</span>
+<span class="token class-name">Long</span> left <span class="token operator">=</span> stringRedisTemplate<span class="token punctuation">.</span><span class="token function">execute</span><span class="token punctuation">(</span><span class="token function">decrScript</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">,</span> <span class="token class-name">List</span><span class="token punctuation">.</span><span class="token function">of</span><span class="token punctuation">(</span><span class="token string">"stock:1001"</span><span class="token punctuation">)</span><span class="token punctuation">,</span> <span class="token string">"1"</span><span class="token punctuation">)</span><span class="token punctuation">;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<ol start="4">
+<li><p><strong>Cluster 下所有 key 必须同槽</strong>：<code>List.of(&quot;&#123;cart:1001&#125;:items&quot;, &quot;&#123;cart:1001&#125;:amount&quot;)</code>，否则服务端报跨槽。</p>
+</li>
+<li><p><strong>给脚本设上限</strong>：脚本里禁止全量遍历、禁止跑几十万次的循环；超 <code>lua-time-limit</code>（默认 5 秒）其他客户端会收到 <code>BUSY</code>，此时只能等或 <code>SCRIPT KILL</code>（未写过数据才允许）。</p>
+</li>
+<li><p><strong>主从切换&#x2F;重启后缓存会丢</strong>：<code>NOSCRIPT</code> 是常态，靠客户端回退；自研客户端务必自己实现回退逻辑。</p>
+</li>
+</ol>
 <h2 id="七、常见坑（官方明确说明的限制）"><a href="#七、常见坑（官方明确说明的限制）" class="headerlink" title="七、常见坑（官方明确说明的限制）"></a>七、常见坑（官方明确说明的限制）</h2><ol>
 <li><strong>以为脚本能回滚</strong>。中途报错，之前的写保留；要「要么全成」得业务自己设计补偿。</li>
 <li><strong>脚本里把 key 写成常量</strong>。Cluster 下会路由失败或同槽校验失败，必须通过 <code>KEYS</code> 传。</li>
@@ -284,11 +323,21 @@ OK
 <li>7.0 起按效果复制，脚本必须确定性。</li>
 </ul>
 <h2 id="九、思考题"><a href="#九、思考题" class="headerlink" title="九、思考题"></a>九、思考题</h2><ol>
-<li>「脚本是原子的」具体保证什么？不保证什么？各举一个例子。</li>
-<li>为什么所有 key 必须通过 <code>KEYS</code> 传入？把 key 拼进脚本在 Cluster 下会怎样？</li>
-<li><code>EVALSHA</code> 返回 <code>NOSCRIPT</code> 时，客户端应该怎么做？为什么不能直接报错给用户？</li>
-<li>脚本跑到一半写了数据，此时能 <code>SCRIPT KILL</code> 吗？为什么官方不允许？</li>
-<li>为什么脚本必须确定性？不确定的脚本在「效果复制」下会引发什么问题？</li>
+<li><p>「脚本是原子的」具体保证什么？不保证什么？各举一个例子。</p>
+<p><strong>参考回答</strong>：保证执行期间不插入其他命令——例如 <code>GET</code> 后 <code>INCR</code>，读到的值与写之前一致。不保证回滚：脚本里第一条写成功、第二条报错，第一条已经生效；也不保证不阻塞：跑 2 秒的脚本会让实例停 2 秒。</p>
+</li>
+<li><p>为什么所有 key 必须通过 <code>KEYS</code> 传入？把 key 拼进脚本在 Cluster 下会怎样？</p>
+<p><strong>参考回答</strong>：服务端要靠 KEYS 计算槽、校验同槽并路由，复制&#x2F;迁移时也要能重写 key。key 拼进脚本体时服务端不知道真实 key，Cluster 下会报跨槽错误或路由到错误节点。</p>
+</li>
+<li><p><code>EVALSHA</code> 返回 <code>NOSCRIPT</code> 时，客户端应该怎么做？为什么不能直接报错给用户？</p>
+<p><strong>参考回答</strong>：捕获 <code>NOSCRIPT</code> 后用 <code>EVAL</code> 重发一次（多数 SDK 内置此回退）。不能直接报错：它只说明脚本缓存丢了（重启、<code>SCRIPT FLUSH</code>、主从切换），不是业务失败，回退后本可成功。</p>
+</li>
+<li><p>脚本跑到一半写了数据，此时能 <code>SCRIPT KILL</code> 吗？为什么官方不允许？</p>
+<p><strong>参考回答</strong>：不能。<code>SCRIPT KILL</code> 只对还没产生写效果的脚本有效；已经写过数据的脚本被强杀会留下半完成状态，破坏原子性承诺与主从一致，此时只能等它跑完（或 <code>SHUTDOWN NOSAVE</code> 级操作）。</p>
+</li>
+<li><p>为什么脚本必须确定性？不确定的脚本在「效果复制」下会引发什么问题？</p>
+<p><strong>参考回答</strong>：确定性指同样输入必产生同样写效果。效果复制下主库把产生的写命令传给从库&#x2F;AOF，本身能规避分叉；但脚本若依赖 <code>TIME</code>&#x2F;<code>RANDOM</code>&#x2F;<code>SPOP</code>，同一脚本多次执行结果漂移，在旧脚本复制模式或改造后重放时会与从库分叉，所以官方仍要求把随机值作为 ARGV 传入。</p>
+</li>
 </ol>
 <h2 id="十、官方资料"><a href="#十、官方资料" class="headerlink" title="十、官方资料"></a>十、官方资料</h2><ul>
 <li>Programmatic 章节（EVAL 与原子性）：<a target="_blank" rel="noopener" href="https://redis.io/docs/latest/develop/programmability/eval-intro/">https://redis.io/docs/latest/develop/programmability/eval-intro/</a></li>

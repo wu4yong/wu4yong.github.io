@@ -143,7 +143,7 @@ particlesJS("particles", {
   <h1 class="mb-title">redis-Hash</h1>
   <div class="mb-sub">
     分类：database · redis
-     ｜ 标签：系统课 · Redis · 数据结构
+     ｜ 标签：Redis · 系统课 · 数据结构
   </div>
 
   <div class="mb-article"><div class="essay-banner essay-database"></div>
@@ -196,6 +196,8 @@ hash-max-listpack-value 64        # 单字段/单值字节数上限<span aria-hi
 <p>语义要点：过期到点的字段在逻辑上「不存在」——<code>HGET</code> 返回 nil、<code>HLEN</code> 不计、<code>HKEYS</code> 不列，但内存空间要等后续操作或主动清理才真正回收。别指望它像独立 key 一样被淘汰策略立刻扫到。</p>
 <h3 id="4-复杂度清单"><a href="#4-复杂度清单" class="headerlink" title="4. 复杂度清单"></a>4. 复杂度清单</h3><div class="data-grid data-grid-link-table"><div class="grid-header"><div class="grid-cell">命令</div><div class="grid-cell">复杂度</div><div class="grid-cell">说明</div></div><div class="grid-row"><div class="grid-cell"><code>HSET</code> &#x2F; <code>HGET</code> &#x2F; <code>HDEL</code></div><div class="grid-cell">O(1)</div><div class="grid-cell">字段级操作</div></div><div class="grid-row"><div class="grid-cell"><code>HMGET</code></div><div class="grid-cell">O(N)，N &#x3D; 请求字段数</div><div class="grid-cell">一次往返取多个字段</div></div><div class="grid-row"><div class="grid-cell"><code>HGETALL</code> &#x2F; <code>HKEYS</code> &#x2F; <code>HVALS</code></div><div class="grid-cell">O(N)，N &#x3D; 全部字段</div><div class="grid-cell"><strong>大 Hash 上是事故级操作</strong></div></div><div class="grid-row"><div class="grid-cell"><code>HINCRBY</code> &#x2F; <code>HINCRBYFLOAT</code></div><div class="grid-cell">O(1)</div><div class="grid-cell">字段级原子计数</div></div><div class="grid-row"><div class="grid-cell"><code>HSCAN</code></div><div class="grid-cell">每次 O(1) 摊销</div><div class="grid-cell">游标分批遍历，替代 <code>HGETALL</code></div></div><div class="grid-row"><div class="grid-cell"><code>HRANDFIELD</code></div><div class="grid-cell">O(1)（带 count 时 O(N)）</div><div class="grid-cell">6.2 新增，随机取字段</div></div></div>
 
+<p><img src="https://wu4yong.github.io/starry-images/assets/img/redis/rd-07b-hash.svg" alt="Hash 的两层 dict、命令复杂度与字段级过期"></p>
+<p><em>两层 dict 与编码转换、常用命令的复杂度、7.4 字段级过期和取舍边界｜依据 Redis 7.4 Hashes &#x2F; HEXPIRE 自绘</em></p>
 <h2 id="五、场景说明"><a href="#五、场景说明" class="headerlink" title="五、场景说明"></a>五、场景说明</h2><ol>
 <li><strong>对象缓存</strong>：<code>HSET user:1 name 阿勇 age 30 vip 1</code> + <code>EXPIRE user:1 3600</code>，改昵称只发一条 <code>HSET</code>；</li>
 <li><strong>购物车</strong>：<code>HINCRBY cart:u1 sku:100 2</code>，同一 SKU 数量累加是原子的；</li>
@@ -270,6 +272,34 @@ hash-max-listpack-value 64        # 单字段/单值字节数上限<span aria-hi
 <span class="token number">1</span><span class="token punctuation">)</span> <span class="token string">"abc"</span>                     <span class="token comment"># 返回旧值，同时把 token1 的 TTL 设为 30 秒</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
 
 <p><code>HEXPIRE</code> 的返回值是「每个字段一个状态码」，多字段时是一个数组——这一点和 <code>EXPIRE</code> 只返回一个整数完全不同，写代码时不能沿用旧判断。</p>
+<h3 id="Java-侧怎么落地：对象缓存与购物车"><a href="#Java-侧怎么落地：对象缓存与购物车" class="headerlink" title="Java 侧怎么落地：对象缓存与购物车"></a>Java 侧怎么落地：对象缓存与购物车</h3><p>Hash 在 Spring Boot 里用 <code>opsForHash()</code>，但默认的 <code>RedisTemplate</code> 会把 field 与 value 都做 JDK 序列化，命令行里全是乱码。所以要么用 <code>StringRedisTemplate</code> 自己序列化 JSON，要么配一个 <code>HashKeySerializer</code> &#x2F; <code>HashValueSerializer</code>。</p>
+<ol>
+<li><strong>配一个专门给 Hash 用的模板</strong>（key 与 field 用字符串，value 用 JSON）：</li>
+</ol>
+<pre class="line-numbers language-java" data-language="java"><code class="language-java"><span class="token annotation punctuation">@Bean</span>
+<span class="token class-name">RedisTemplate</span><span class="token generics"><span class="token punctuation">&lt;</span><span class="token class-name">String</span><span class="token punctuation">,</span> <span class="token class-name">Object</span><span class="token punctuation">></span></span> <span class="token function">hashTemplate</span><span class="token punctuation">(</span><span class="token class-name">RedisConnectionFactory</span> f<span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+    <span class="token class-name">RedisTemplate</span><span class="token generics"><span class="token punctuation">&lt;</span><span class="token class-name">String</span><span class="token punctuation">,</span> <span class="token class-name">Object</span><span class="token punctuation">></span></span> t <span class="token operator">=</span> <span class="token keyword">new</span> <span class="token class-name">RedisTemplate</span><span class="token generics"><span class="token punctuation">&lt;</span><span class="token punctuation">></span></span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    t<span class="token punctuation">.</span><span class="token function">setConnectionFactory</span><span class="token punctuation">(</span>f<span class="token punctuation">)</span><span class="token punctuation">;</span>
+    t<span class="token punctuation">.</span><span class="token function">setKeySerializer</span><span class="token punctuation">(</span><span class="token keyword">new</span> <span class="token class-name">StringRedisSerializer</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    t<span class="token punctuation">.</span><span class="token function">setHashKeySerializer</span><span class="token punctuation">(</span><span class="token keyword">new</span> <span class="token class-name">StringRedisSerializer</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>     <span class="token comment">// field 必须可读</span>
+    t<span class="token punctuation">.</span><span class="token function">setHashValueSerializer</span><span class="token punctuation">(</span><span class="token keyword">new</span> <span class="token class-name">GenericJackson2JsonRedisSerializer</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    t<span class="token punctuation">.</span><span class="token function">afterPropertiesSet</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token keyword">return</span> t<span class="token punctuation">;</span>
+<span class="token punctuation">&#125;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<ol start="2">
+<li><strong>改一个字段就只发一条命令</strong>，不要整对象读改写：</li>
+</ol>
+<pre class="line-numbers language-java" data-language="java"><code class="language-java">hashTemplate<span class="token punctuation">.</span><span class="token function">opsForHash</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token function">put</span><span class="token punctuation">(</span><span class="token string">"user:1"</span><span class="token punctuation">,</span> <span class="token string">"name"</span><span class="token punctuation">,</span> <span class="token string">"阿勇"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>       <span class="token comment">// HSET</span>
+hashTemplate<span class="token punctuation">.</span><span class="token function">opsForHash</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token function">increment</span><span class="token punctuation">(</span><span class="token string">"cart:u1"</span><span class="token punctuation">,</span> <span class="token string">"sku100"</span><span class="token punctuation">,</span> <span class="token number">2</span><span class="token punctuation">)</span><span class="token punctuation">;</span>   <span class="token comment">// HINCRBY，字段值必须是整数</span>
+<span class="token class-name">Map</span><span class="token generics"><span class="token punctuation">&lt;</span><span class="token class-name">Object</span><span class="token punctuation">,</span> <span class="token class-name">Object</span><span class="token punctuation">></span></span> all <span class="token operator">=</span> hashTemplate<span class="token punctuation">.</span><span class="token function">opsForHash</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token function">entries</span><span class="token punctuation">(</span><span class="token string">"user:1"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>  <span class="token comment">// HGETALL，注意 O(N)</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span></span></code></pre>
+
+<ol start="3">
+<li><p><strong>遍历一律用 <code>Cursor</code></strong>，<code>opsForHash().scan(key, ScanOptions.scanOptions().count(100).build())</code> 对应 <code>HSCAN</code>，用完必须 <code>close()</code>；<code>entries()</code> 就是 <code>HGETALL</code>，大 Hash 上等于事故。</p>
+</li>
+<li><p><strong>字段级过期只能在 7.4+ 用</strong>，Spring Data Redis 3.2+ 才有 <code>hexpire</code> 封装；低版本要么用原生 <code>RedisCallback</code> 直接发命令，要么退回「整 key 过期 + 拆 key」。</p>
+</li>
+</ol>
 <h2 id="七、常见坑（官方明确说明的限制）"><a href="#七、常见坑（官方明确说明的限制）" class="headerlink" title="七、常见坑（官方明确说明的限制）"></a>七、常见坑（官方明确说明的限制）</h2><ol>
 <li><strong><code>HGETALL</code> 是 O(N)</strong>。字段几千以上就会明显阻塞主线程，字段几万直接是事故。读全量请用 <code>HSCAN</code> 分批，或改成按需 <code>HMGET</code>。</li>
 <li><strong>编码降级不可逆</strong>。一旦超过 <code>hash-max-listpack-entries</code> 或单值超 64 字节，就永久变成 hashtable，内存占用会显著上涨。大量「本来很小」的 Hash 被一个超长字段（比如塞了个 base64 图片）整体拖降级，是典型翻车现场。</li>
@@ -291,11 +321,21 @@ hash-max-listpack-value 64        # 单字段/单值字节数上限<span aria-hi
 <li><code>HDEL</code> 删空后 key 会消失，后续过期设置要重新判断存在性。</li>
 </ul>
 <h2 id="九、思考题"><a href="#九、思考题" class="headerlink" title="九、思考题"></a>九、思考题</h2><ol>
-<li>同一个用户资料，用 String 存 JSON 和用 Hash 存字段，在「并发更新不同字段」时差在哪里？举一个 String 方案会丢更新的具体时序。</li>
-<li>一个本该很小的 Hash，因为某个字段存了 200 字节的 token 而整体变成 hashtable。内存大概会涨多少倍？怎么在不改数据的前提下救回来？</li>
-<li><code>HGETALL</code> 与 <code>HSCAN</code> 遍历，都能拿到全部字段。前者什么时候可以用，什么时候绝对不能用？</li>
-<li>7.4 的字段级过期，字段过期后「逻辑不存在但内存未回收」。这对 <code>HLEN</code> 的返回值有什么影响？对内存监控有什么影响？</li>
-<li>设计一个「购物车」Hash，字段是 SKU，值是数量。用户清空购物车后 key 会怎样？<code>EXPIRE</code> 放在什么时候设最合适？</li>
+<li><p>同一个用户资料，用 String 存 JSON 和用 Hash 存字段，在「并发更新不同字段」时差在哪里？举一个 String 方案会丢更新的具体时序。</p>
+<p><strong>参考回答</strong>：Hash 的 <code>HSET user:1 name xxx</code> 只改一个字段，不碰别人；String 存 JSON 必须「读出来 → 反序列化 → 改 → 序列化 → 写回」。丢更新的时序：A 与 B 同时 <code>GET</code> 到 <code>&#123;name:old, age:30&#125;</code>，A 改成 name&#x3D;new 写回，B 改成 age&#x3D;31 写回时带的是旧的 name，<strong>A 的修改被覆盖</strong>。</p>
+</li>
+<li><p>一个本该很小的 Hash 因为某个字段存了 200 字节的 token 而整体变成 hashtable。内存大概会涨多少倍？怎么在不改数据的前提下救回来？</p>
+<p><strong>参考回答</strong>：listpack 是连续紧凑存储，hashtable 每个字段都要 dictEntry + 指针 + 可能重复的 key，通常涨 2–5 倍（取决于字段数与键长），上不封顶。救法只有一条：<strong>把超长字段挪出去</strong>（单独存一个 key 或缩短&#x2F;编码后存），再重写这个 Hash；编码转换不可逆，只能删 key 重建。</p>
+</li>
+<li><p><code>HGETALL</code> 与 <code>HSCAN</code> 遍历，都能拿到全部字段。前者什么时候可以用，什么时候绝对不能用？</p>
+<p><strong>参考回答</strong>：字段数确定且很小（几十个以内）、并且确实需要一次性拿全时才用 <code>HGETALL</code>；字段数不确定、可能上千，或位于线上热路径时绝对不能用——<code>HGETALL</code> 是 O(N) 且同步阻塞主线程，一次调用就能把整个实例拖住。此时用 <code>HSCAN</code> 游标分批 + <code>COUNT</code>。</p>
+</li>
+<li><p>7.4 的字段级过期，字段过期后「逻辑不存在但内存未回收」。这对 <code>HLEN</code> 的返回值有什么影响？对内存监控有什么影响？</p>
+<p><strong>参考回答</strong>：<code>HLEN</code> 只统计逻辑存在的字段，过期字段不计数——于是会出现「<code>HLEN</code> 很小但 <code>MEMORY USAGE</code> 很大」的错位。内存监控不能只看字段数，要看 <code>MEMORY USAGE key</code> 与 <code>INFO memory</code>；而逻辑过期的字段要等被访问或主动清理才真正释放。</p>
+</li>
+<li><p>设计一个「购物车」Hash，字段是 SKU，值是数量。用户清空购物车后 key 会怎样？<code>EXPIRE</code> 放在什么时候设最合适？</p>
+<p><strong>参考回答</strong>：<code>HDEL</code> 删掉最后一个字段时，key 会被自动删除，此时再 <code>EXPIRE</code> 返回 0（key 不存在）。所以 <code>EXPIRE</code> 应该在<strong>每次 <code>HINCRBY</code> &#x2F; <code>HSET</code> 之后统一补一次</strong>（或用 <code>HINCRBY</code> 后判断是否需要续期），不要指望「先建 key 再删空」还能保留过期时间。</p>
+</li>
 </ol>
 <h2 id="十、官方资料"><a href="#十、官方资料" class="headerlink" title="十、官方资料"></a>十、官方资料</h2><ul>
 <li>Hashes（类型定义、2^32-1 上限、典型用法）：<a target="_blank" rel="noopener" href="https://redis.io/docs/latest/develop/data-types/hashes/">https://redis.io/docs/latest/develop/data-types/hashes/</a></li>

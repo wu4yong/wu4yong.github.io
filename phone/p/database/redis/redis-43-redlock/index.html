@@ -143,7 +143,7 @@ particlesJS("particles", {
   <h1 class="mb-title">redis-Redlock</h1>
   <div class="mb-sub">
     分类：database · redis
-     ｜ 标签：系统课 · Redis · 分布式
+     ｜ 标签：Redis · 系统课 · 分布式
   </div>
 
   <div class="mb-article"><div class="essay-banner essay-database"></div>
@@ -200,6 +200,8 @@ particlesJS("particles", {
 <h3 id="4-正确的用法：按锁的用途选"><a href="#4-正确的用法：按锁的用途选" class="headerlink" title="4. 正确的用法：按锁的用途选"></a>4. 正确的用法：按锁的用途选</h3><div class="data-grid data-grid-link-table"><div class="grid-header"><div class="grid-cell">锁的用途</div><div class="grid-cell">后果如果失效</div><div class="grid-cell">建议方案</div></div><div class="grid-row"><div class="grid-cell">效率锁（防重复劳动）</div><div class="grid-cell">多做一次工作，无数据损坏</div><div class="grid-cell">单节点 <code>SET NX PX</code> + 幂等</div></div><div class="grid-row"><div class="grid-cell">正确性锁（资金、库存）</div><div class="grid-cell">数据错乱、资损</div><div class="grid-cell">数据库行锁&#x2F;事务、或带 fencing token 的方案</div></div></div>
 
 <p><strong>fencing token</strong>（防伪令牌）的思路：锁服务每次授予锁时返回一个单调递增的编号，写入存储时带上编号，存储侧只接受「编号比上次大」的写。这样即使锁失效、两个客户端同时持有，后到的旧编号写会被存储拒绝。</p>
+<p><img src="https://wu4yong.github.io/starry-images/assets/img/redis/rd-43b-redlock.svg" alt="Redlock 五步、三条物理事实与 fencing token"></p>
+<p><em>取时→顺序加锁→多数判定→失败全删→扣除耗时的五步顺序、时钟漂移&#x2F;网络延迟&#x2F;进程停顿三条物理事实，以及 fencing token 的写入校验｜依据 Distributed Locks 文档与 Kleppmann 争论要点自绘</em></p>
 <h2 id="五、场景说明"><a href="#五、场景说明" class="headerlink" title="五、场景说明"></a>五、场景说明</h2><ol>
 <li><strong>定时任务防重</strong>：效率锁，单节点足够，不需要 Redlock；</li>
 <li><strong>多机房同一任务互斥</strong>：可用 Redlock 降低单机房故障导致的重复执行；</li>
@@ -231,6 +233,45 @@ if ok &gt;&#x3D; N&#x2F;2+1 and now_ms() - t1 &lt; validity:
 else:
     for node in nodes: unlockScript(node, key, token)<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
 
+<h3 id="Java-侧怎么落地：先判断你到底需不需要-Redlock"><a href="#Java-侧怎么落地：先判断你到底需不需要-Redlock" class="headerlink" title="Java 侧怎么落地：先判断你到底需不需要 Redlock"></a>Java 侧怎么落地：先判断你到底需不需要 Redlock</h3><p>官方文档本身写着「不保证正确性」，所以落地顺序应该是「先确认场景，再选实现」。</p>
+<ol>
+<li><p><strong>判断场景</strong>：定时任务防重、缓存重建这类<strong>效率锁</strong>，单节点 <code>RLock</code> 足够，不要上 Redlock；库存、余额、券核销这类<strong>正确性锁</strong>，锁只做削峰，真正防线是存储侧条件更新。</p>
+</li>
+<li><p><strong>确需多节点容错时，pom 仍用 Redisson starter</strong>，但要给每个节点各建一个客户端（节点之间必须是独立 master，不能互为主从）：</p>
+</li>
+</ol>
+<pre class="line-numbers language-markup" data-language="markup"><code class="language-markup"><span class="token tag"><span class="token tag"><span class="token punctuation">&lt;</span>dependency</span><span class="token punctuation">></span></span>
+  <span class="token tag"><span class="token tag"><span class="token punctuation">&lt;</span>groupId</span><span class="token punctuation">></span></span>org.redisson<span class="token tag"><span class="token tag"><span class="token punctuation">&lt;/</span>groupId</span><span class="token punctuation">></span></span>
+  <span class="token tag"><span class="token tag"><span class="token punctuation">&lt;</span>artifactId</span><span class="token punctuation">></span></span>redisson-spring-boot-starter<span class="token tag"><span class="token tag"><span class="token punctuation">&lt;/</span>artifactId</span><span class="token punctuation">></span></span>
+  <span class="token tag"><span class="token tag"><span class="token punctuation">&lt;</span>version</span><span class="token punctuation">></span></span>3.27.2<span class="token tag"><span class="token tag"><span class="token punctuation">&lt;/</span>version</span><span class="token punctuation">></span></span>
+<span class="token tag"><span class="token tag"><span class="token punctuation">&lt;/</span>dependency</span><span class="token punctuation">></span></span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<ol start="3">
+<li><strong>配置文件里三个独立节点</strong>（<code>redisson-a.yml</code> &#x2F; <code>b</code> &#x2F; <code>c</code>，各自 <code>singleServerConfig</code>，<code>timeout</code> 设 50～100 ms，与算法里的单节点超时一致）：</li>
+</ol>
+<pre class="line-numbers language-yaml" data-language="yaml"><code class="language-yaml"><span class="token key atrule">singleServerConfig</span><span class="token punctuation">:</span>
+  <span class="token key atrule">address</span><span class="token punctuation">:</span> <span class="token string">"redis://10.0.0.11:6379"</span>
+  <span class="token key atrule">timeout</span><span class="token punctuation">:</span> <span class="token number">50</span>
+  <span class="token key atrule">connectionMinimumIdleSize</span><span class="token punctuation">:</span> <span class="token number">4</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span></span></code></pre>
+
+<ol start="4">
+<li><strong>按顺序、按节点组合加锁</strong>，Redisson 3.x 的 <code>RedissonRedLock</code> 就是「顺序 + 多数 + 失败全删 + 扣耗时」的实现（4.x 已标注 deprecated，官方文档也不推荐它做主防线）：</li>
+</ol>
+<pre class="line-numbers language-java" data-language="java"><code class="language-java"><span class="token class-name">RLock</span> l1 <span class="token operator">=</span> clientA<span class="token punctuation">.</span><span class="token function">getLock</span><span class="token punctuation">(</span><span class="token string">"lock:job:daily"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token class-name">RLock</span> l2 <span class="token operator">=</span> clientB<span class="token punctuation">.</span><span class="token function">getLock</span><span class="token punctuation">(</span><span class="token string">"lock:job:daily"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token class-name">RLock</span> l3 <span class="token operator">=</span> clientC<span class="token punctuation">.</span><span class="token function">getLock</span><span class="token punctuation">(</span><span class="token string">"lock:job:daily"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token class-name">RedissonRedLock</span> red <span class="token operator">=</span> <span class="token keyword">new</span> <span class="token class-name">RedissonRedLock</span><span class="token punctuation">(</span>l1<span class="token punctuation">,</span> l2<span class="token punctuation">,</span> l3<span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token keyword">boolean</span> ok <span class="token operator">=</span> red<span class="token punctuation">.</span><span class="token function">tryLock</span><span class="token punctuation">(</span><span class="token number">3</span><span class="token punctuation">,</span> <span class="token number">10</span><span class="token punctuation">,</span> <span class="token class-name">TimeUnit</span><span class="token punctuation">.</span><span class="token constant">SECONDS</span><span class="token punctuation">)</span><span class="token punctuation">;</span>   <span class="token comment">// 显式 leaseTime，自己扣加锁耗时</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<ol start="5">
+<li><p><strong>有效窗口自己扣</strong>：拿到的 leaseTime 不是「可安全工作时长」，要减去加锁耗时并留余量（工程上再留 20%），业务按扣完的值规划，而不是按配置值。</p>
+</li>
+<li><p><strong>正确性场景补 fencing token</strong>：锁服务侧 <code>INCR fence:order:1001</code> 拿单调编号，带入写库条件，让存储只接受更大的编号：</p>
+</li>
+</ol>
+<pre class="line-numbers language-sql" data-language="sql"><code class="language-sql"><span class="token keyword">UPDATE</span> stock <span class="token keyword">SET</span> qty <span class="token operator">=</span> qty <span class="token operator">-</span> <span class="token number">1</span><span class="token punctuation">,</span> fence <span class="token operator">=</span> ?
+ <span class="token keyword">WHERE</span> id <span class="token operator">=</span> ? <span class="token operator">AND</span> fence <span class="token operator">&lt;</span> ?      <span class="token comment">-- 旧编号的迟到写直接被拒绝</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span></span></code></pre>
+
 <h2 id="七、常见坑（官方明确说明的限制）"><a href="#七、常见坑（官方明确说明的限制）" class="headerlink" title="七、常见坑（官方明确说明的限制）"></a>七、常见坑（官方明确说明的限制）</h2><ol>
 <li><strong>把 N 个节点做成主从关系</strong>。Redlock 要求节点<strong>相互独立</strong>，否则「多数」失去意义。</li>
 <li><strong>并发向 N 个节点加锁</strong>。总耗时无法判断，<code>validity</code> 扣除失效。</li>
@@ -251,11 +292,21 @@ else:
 <li>官方文档已如实写明前提与局限，选型要以这些前提为准。</li>
 </ul>
 <h2 id="九、思考题"><a href="#九、思考题" class="headerlink" title="九、思考题"></a>九、思考题</h2><ol>
-<li>为什么 Redlock 必须「顺序」而不是「并发」向 N 个节点加锁？</li>
-<li>加锁花了 3 秒、validity 是 10 秒，实际可用多久？为什么要扣？</li>
-<li>GC 停顿 12 秒后醒来，你手里的锁还有效吗？会发生什么？</li>
-<li>fencing token 是怎么防住「两个持有者」的？存储侧要做什么判断？</li>
-<li>你的项目里哪些锁是效率锁、哪些是正确性锁？列出来对照选型表。</li>
+<li><p>为什么 Redlock 必须「顺序」而不是「并发」向 N 个节点加锁？</p>
+<p><strong>参考回答</strong>：并发加锁的总耗时不可知，你就无法判断「是不是在 validity 内拿到了多数」，扣耗时这一步失去意义；顺序加锁每步有 50 ms 超时，最坏总耗时可控，失败清理也有确定的顺序。并发还会让失败回滚互相干扰。</p>
+</li>
+<li><p>加锁花了 3 秒、validity 是 10 秒，实际可用多久？为什么要扣？</p>
+<p><strong>参考回答</strong>：约 7 秒（10 − 3），工程上再留 20% 余量则约 5～6 秒。因为加锁本身已经消耗了有效期，业务若按 10 秒规划，做完之前锁就可能已过期并易主。</p>
+</li>
+<li><p>GC 停顿 12 秒后醒来，你手里的锁还有效吗？会发生什么？</p>
+<p><strong>参考回答</strong>：无效，锁早已过期并被别人持有，你手里的只是本地变量引用。继续写就是「两个持有者」并发写，可能出现旧值覆盖新值；只有存储侧有条件更新或 fencing token 才能挡住这次迟到写。</p>
+</li>
+<li><p>fencing token 是怎么防住「两个持有者」的？存储侧要做什么判断？</p>
+<p><strong>参考回答</strong>：锁服务每次授予锁返回一个单调递增编号，客户端写时带上；存储侧记录已接受的最大编号，只接受「更大编号」的写，于是后到的旧编号写直接被拒绝。判断是原子的比较更新，如 <code>UPDATE ... WHERE fence &lt; ?</code>。</p>
+</li>
+<li><p>你的项目里哪些锁是效率锁、哪些是正确性锁？列出来对照选型表。</p>
+<p><strong>参考回答</strong>：效率锁——定时任务防重、缓存重建互斥、报表生成、消息去重（多跑一次只是浪费）。正确性锁——库存扣减、余额变动、订单状态流转、券核销、名额抢占（错一次就资损）。前者单节点 <code>RLock</code> 足够；后者必须靠数据库条件更新&#x2F;fencing，锁只做流量削峰。</p>
+</li>
 </ol>
 <h2 id="十、官方资料"><a href="#十、官方资料" class="headerlink" title="十、官方资料"></a>十、官方资料</h2><ul>
 <li>Distributed Locks（Redlock 算法与已知局限，官方原文）：<a target="_blank" rel="noopener" href="https://redis.io/docs/latest/develop/clients/patterns/distributed-locks/">https://redis.io/docs/latest/develop/clients/patterns/distributed-locks/</a></li>

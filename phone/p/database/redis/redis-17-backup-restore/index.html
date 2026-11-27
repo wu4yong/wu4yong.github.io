@@ -143,7 +143,7 @@ particlesJS("particles", {
   <h1 class="mb-title">redis-备份与恢复</h1>
   <div class="mb-sub">
     分类：database · redis
-     ｜ 标签：系统课 · Redis · 运维
+     ｜ 标签：Redis · 系统课 · 运维
   </div>
 
   <div class="mb-article"><div class="essay-banner essay-database"></div>
@@ -210,6 +210,8 @@ particlesJS("particles", {
 <h3 id="3-迁移：四种手段的适用边界"><a href="#3-迁移：四种手段的适用边界" class="headerlink" title="3. 迁移：四种手段的适用边界"></a>3. 迁移：四种手段的适用边界</h3><div class="data-grid data-grid-link-table"><div class="grid-header"><div class="grid-cell">场景</div><div class="grid-cell">手段</div><div class="grid-cell">风险与前提</div></div><div class="grid-row"><div class="grid-cell">同版本、可停机</div><div class="grid-cell">拷 RDB &#x2F; AOF 文件</div><div class="grid-cell">最简单，停机时间 &#x3D; 数据量&#x2F;磁盘速度</div></div><div class="grid-row"><div class="grid-cell">不停机、同版本</div><div class="grid-cell"><code>REPLICAOF host port</code> 建从库 → 提升为主</div><div class="grid-cell">需要目标空库；切换要改客户端地址</div></div><div class="grid-row"><div class="grid-cell">跨版本升级</div><div class="grid-cell">先建从库并升级从库，验证后切换</div><div class="grid-cell">版本兼容要以官方兼容说明为准，禁止跳跃式升级后直接切</div></div><div class="grid-row"><div class="grid-cell">单机 ↔ Cluster</div><div class="grid-cell"><code>MIGRATE</code> &#x2F; <code>DUMP</code> + <code>RESTORE</code>，或重放业务数据</div><div class="grid-cell">Cluster 只支持 0 号库；<code>MIGRATE</code> 按 key 搬，大 key 会卡住</div></div></div>
 
 <p><code>REPLICAOF</code> 是最常用的「不停机搬家」：新实例先当从库同步全量（这一步走的就是 RDB），再 <code>REPLICAOF NO ONE</code> 提升为主。整个过程几乎不影响线上读，代价是同步期间的网络与磁盘带宽。</p>
+<p><img src="https://wu4yong.github.io/starry-images/assets/img/redis/rd-17b-backup.svg" alt="备份、恢复与迁移的三条路径"></p>
+<p><em>备份（副本 + 校验 + 清单）、恢复（停服 → 放文件 → 启动 → 比对）、迁移四法的适用边界，以及三种失败检查点｜依据 Redis 7.4 Persistence &#x2F; REPLICAOF &#x2F; MIGRATE 文档自绘</em></p>
 <h2 id="五、场景说明"><a href="#五、场景说明" class="headerlink" title="五、场景说明"></a>五、场景说明</h2><ol>
 <li><strong>每日冷备</strong>：副本上 <code>BGSAVE</code> → 拷 RDB 到对象存储，保留 7–30 天；</li>
 <li><strong>AOF 增量更可靠时的备份</strong>：每天拷一次 <code>appendonlydir</code>，频率可以低但必须整目录；</li>
@@ -280,6 +282,57 @@ OK
 OK<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
 
 <p><code>master_link_status: up</code> 是切换前的硬性检查点：<code>down</code> 表示全量同步还没完成，此时切主会丢掉同步期间的写入。</p>
+<h3 id="Java-侧怎么落地：把「换库」做成配置项，而不是改代码"><a href="#Java-侧怎么落地：把「换库」做成配置项，而不是改代码" class="headerlink" title="Java 侧怎么落地：把「换库」做成配置项，而不是改代码"></a>Java 侧怎么落地：把「换库」做成配置项，而不是改代码</h3><p>备份恢复、迁移切主都意味着<strong>连接地址会变</strong>。应用侧要做好三件事：地址可配、重连可恢复、恢复后能自检。</p>
+<ol>
+<li><strong>依赖不变</strong>，<code>spring-boot-starter-data-redis</code> 一个就够；关键是别把 host 写死在代码或镜像里。</li>
+</ol>
+<pre class="line-numbers language-markup" data-language="markup"><code class="language-markup"><span class="token tag"><span class="token tag"><span class="token punctuation">&lt;</span>dependency</span><span class="token punctuation">></span></span>
+    <span class="token tag"><span class="token tag"><span class="token punctuation">&lt;</span>groupId</span><span class="token punctuation">></span></span>org.springframework.boot<span class="token tag"><span class="token tag"><span class="token punctuation">&lt;/</span>groupId</span><span class="token punctuation">></span></span>
+    <span class="token tag"><span class="token tag"><span class="token punctuation">&lt;</span>artifactId</span><span class="token punctuation">></span></span>spring-boot-starter-data-redis<span class="token tag"><span class="token tag"><span class="token punctuation">&lt;/</span>artifactId</span><span class="token punctuation">></span></span>
+<span class="token tag"><span class="token tag"><span class="token punctuation">&lt;/</span>dependency</span><span class="token punctuation">></span></span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span></span></code></pre>
+
+<ol start="2">
+<li><strong>地址走环境变量&#x2F;配置中心</strong>，切换时只改变量、不重新构建。</li>
+</ol>
+<pre class="line-numbers language-yaml" data-language="yaml"><code class="language-yaml"><span class="token key atrule">spring</span><span class="token punctuation">:</span>
+  <span class="token key atrule">data</span><span class="token punctuation">:</span>
+    <span class="token key atrule">redis</span><span class="token punctuation">:</span>
+      <span class="token key atrule">host</span><span class="token punctuation">:</span> $<span class="token punctuation">&#123;</span>REDIS_HOST<span class="token punctuation">:</span>10.0.0.5<span class="token punctuation">&#125;</span>
+      <span class="token key atrule">port</span><span class="token punctuation">:</span> $<span class="token punctuation">&#123;</span>REDIS_PORT<span class="token punctuation">:</span><span class="token number">6379</span><span class="token punctuation">&#125;</span>
+      <span class="token key atrule">password</span><span class="token punctuation">:</span> $<span class="token punctuation">&#123;</span>REDIS_PASS<span class="token punctuation">&#125;</span>
+      <span class="token key atrule">timeout</span><span class="token punctuation">:</span> 3s
+      <span class="token key atrule">lettuce</span><span class="token punctuation">:</span>
+        <span class="token key atrule">pool</span><span class="token punctuation">:</span>
+          <span class="token key atrule">max-active</span><span class="token punctuation">:</span> <span class="token number">32</span>
+          <span class="token key atrule">max-wait</span><span class="token punctuation">:</span> 2s
+        <span class="token key atrule">shutdown-timeout</span><span class="token punctuation">:</span> 200ms<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<ol start="3">
+<li><strong>切换窗口要能扛住短暂不可用</strong>：恢复期间连接必然断，Lettuce 会重连，但业务线程拿到的是异常。对读路径可降级到本地缓存&#x2F;回源，对写路径<strong>不要盲目重试</strong>（恢复后的实例可能是旧快照，重试写会把旧数据再覆盖一遍）。</li>
+</ol>
+<pre class="line-numbers language-java" data-language="java"><code class="language-java"><span class="token keyword">try</span> <span class="token punctuation">&#123;</span>
+    redis<span class="token punctuation">.</span><span class="token function">opsForValue</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token function">set</span><span class="token punctuation">(</span>key<span class="token punctuation">,</span> value<span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">&#125;</span> <span class="token keyword">catch</span> <span class="token punctuation">(</span><span class="token class-name">RedisConnectionFailureException</span> e<span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+    metrics<span class="token punctuation">.</span><span class="token function">counter</span><span class="token punctuation">(</span><span class="token string">"redis.switch.window.write_failed"</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token function">increment</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token keyword">throw</span> <span class="token keyword">new</span> <span class="token class-name">SwitchWindowException</span><span class="token punctuation">(</span><span class="token string">"redis unavailable during restore"</span><span class="token punctuation">,</span> e<span class="token punctuation">)</span><span class="token punctuation">;</span>  <span class="token comment">// 交给上层排队，不自动重试</span>
+<span class="token punctuation">&#125;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<ol start="4">
+<li><strong>恢复后自检再放量</strong>：用一个启动钩子核对数据量，避免「服务起来了但库是空的」。</li>
+</ol>
+<pre class="line-numbers language-java" data-language="java"><code class="language-java"><span class="token annotation punctuation">@Bean</span>
+<span class="token class-name">ApplicationRunner</span> <span class="token function">redisRecoverCheck</span><span class="token punctuation">(</span><span class="token class-name">StringRedisTemplate</span> redis<span class="token punctuation">,</span>
+                                     <span class="token annotation punctuation">@Value</span><span class="token punctuation">(</span><span class="token string">"$&#123;redis.expected-dbsize:0&#125;"</span><span class="token punctuation">)</span> <span class="token keyword">long</span> expected<span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+    <span class="token keyword">return</span> args <span class="token operator">-></span> <span class="token punctuation">&#123;</span>
+        <span class="token keyword">long</span> actual <span class="token operator">=</span> redis<span class="token punctuation">.</span><span class="token function">execute</span><span class="token punctuation">(</span><span class="token punctuation">(</span><span class="token class-name">RedisCallback</span><span class="token generics"><span class="token punctuation">&lt;</span><span class="token class-name">Long</span><span class="token punctuation">></span></span><span class="token punctuation">)</span> c <span class="token operator">-></span> c<span class="token punctuation">.</span><span class="token function">dbSize</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+        <span class="token keyword">if</span> <span class="token punctuation">(</span>expected <span class="token operator">></span> <span class="token number">0</span> <span class="token operator">&amp;&amp;</span> actual <span class="token operator">&lt;</span> expected <span class="token operator">*</span> <span class="token number">0.99</span><span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+            log<span class="token punctuation">.</span><span class="token function">error</span><span class="token punctuation">(</span><span class="token string">"redis recover check failed: actual=&#123;&#125;, expected=&#123;&#125;"</span><span class="token punctuation">,</span> actual<span class="token punctuation">,</span> expected<span class="token punctuation">)</span><span class="token punctuation">;</span>
+            metrics<span class="token punctuation">.</span><span class="token function">counter</span><span class="token punctuation">(</span><span class="token string">"redis.recover.check.failed"</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token function">increment</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+        <span class="token punctuation">&#125;</span>
+    <span class="token punctuation">&#125;</span><span class="token punctuation">;</span>
+<span class="token punctuation">&#125;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<p>演练才是这套东西的验收：把生产备份恢复到隔离环境，改一个 <code>REDIS_HOST</code> 指向它，跑通读写再确认——没有实测 RTO 的备份方案不算方案。</p>
 <h2 id="七、常见坑（官方明确说明的限制）"><a href="#七、常见坑（官方明确说明的限制）" class="headerlink" title="七、常见坑（官方明确说明的限制）"></a>七、常见坑（官方明确说明的限制）</h2><ol>
 <li><strong>不要在主节点上拷「正在跑 bgsave 时」的文件</strong>。要等 <code>rdb_bgsave_in_progress: 0</code>；否则可能拿到旧快照而以为是最新。</li>
 <li><strong>AOF 备份必须整目录</strong>。<code>appendonlydir</code> 里的 <code>manifest</code> 决定加载顺序，缺任何文件都可能加载失败或数据残缺。</li>
@@ -304,11 +357,21 @@ OK<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><
 <li>演练是备份的一部分：没有 RTO&#x2F;RPO 实测的备份，不可信。</li>
 </ul>
 <h2 id="九、思考题"><a href="#九、思考题" class="headerlink" title="九、思考题"></a>九、思考题</h2><ol>
-<li>为什么官方建议在副本上做备份？在主节点上多做一次 <code>BGSAVE</code> 的真实代价是什么？</li>
-<li>恢复后 <code>DBSIZE</code> 比备份清单少了 3 万条，最可能的原因是哪三种？各自的检查点在哪？</li>
-<li><code>REPLICAOF</code> 建从库时，目标实例上原有的数据会怎样？如果你不想丢，该换什么做法？</li>
-<li><code>redis-check-aof --fix</code> 修复后能启动，但业务发现少了 20 分钟数据。这 20 分钟去哪了？</li>
-<li>一次「磁盘满了导致 AOF 写失败」的事故后，你要改哪三处配置或流程，避免下次重演？</li>
+<li><p>为什么官方建议在副本上做备份？在主节点上多做一次 <code>BGSAVE</code> 的真实代价是什么？</p>
+<p><strong>参考回答</strong>：<code>BGSAVE</code> 要 <code>fork</code>，写量大时 CoW 额外内存可能接近数据量的一半以上，同时占磁盘 IO 与 CPU；这会直接抬高主节点的写延迟。放到副本上做，主节点只承担复制，代价转移到了不接写请求的机器上。</p>
+</li>
+<li><p>恢复后 <code>DBSIZE</code> 比备份清单少了 3 万条，最可能的原因是哪三种？各自的检查点在哪？</p>
+<p><strong>参考回答</strong>：① 加载的是更旧的文件——查 <code>dir</code>&#x2F;<code>dbfilename</code> 与备份清单的时间戳；② 实际加载了 AOF 而不是你以为的 RDB——查 <code>appendonly</code>；③ 从节点过期未同步&#x2F;淘汰策略不同——比对 <code>INFO keyspace</code> 与 <code>maxmemory-policy</code>。先看启动日志那行 <code>DB loaded from ...</code> 就能砍掉一半可能。</p>
+</li>
+<li><p><code>REPLICAOF</code> 建从库时，目标实例上原有的数据会怎样？如果你不想丢，该换什么做法？</p>
+<p><strong>参考回答</strong>：会被<strong>清空并全量覆盖</strong>（先 flush 再加载主库 RDB）。不想丢就把旧数据先 <code>BGSAVE</code> 备份，或改用 <code>MIGRATE</code>&#x2F;<code>DUMP</code>+<code>RESTORE</code> 按 key 定向搬迁，而不是把有数据的实例挂成从库。</p>
+</li>
+<li><p><code>redis-check-aof --fix</code> 修复后能启动，但业务发现少了 20 分钟数据。这 20 分钟去哪了？</p>
+<p><strong>参考回答</strong>：被 <code>--fix</code> 截掉了。它从尾部往前找到最后一个完整命令，之后的所有命令直接丢弃——那 20 分钟就是「文件末尾不完整的那一段」，属于磁盘写满&#x2F;掉电时没落盘的部分。</p>
+</li>
+<li><p>一次「磁盘满了导致 AOF 写失败」的事故后，你要改哪三处配置或流程，避免下次重演？</p>
+<p><strong>参考回答</strong>：① 磁盘水位告警（如 80% 预警、90% 阻断写入），并按「AOF × 2」预留重写空间；② <code>maxmemory</code> 之外单独监控数据盘，别只看内存；③ 把 <code>no-appendfsync-on-rewrite</code>、<code>stop-writes-on-bgsave-error</code> 的取舍写成明确策略，并加到演练用例里。</p>
+</li>
 </ol>
 <h2 id="十、官方资料"><a href="#十、官方资料" class="headerlink" title="十、官方资料"></a>十、官方资料</h2><ul>
 <li>Persistence（备份与恢复的官方步骤、副本备份建议）：<a target="_blank" rel="noopener" href="https://redis.io/docs/latest/operate/oss_and_stack/management/persistence/">https://redis.io/docs/latest/operate/oss_and_stack/management/persistence/</a></li>

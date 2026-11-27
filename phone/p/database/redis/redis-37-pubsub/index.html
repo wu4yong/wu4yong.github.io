@@ -143,7 +143,7 @@ particlesJS("particles", {
   <h1 class="mb-title">redis-Pub/Sub</h1>
   <div class="mb-sub">
     分类：database · redis
-     ｜ 标签：系统课 · Redis · 消息
+     ｜ 标签：Redis · 系统课 · 消息
   </div>
 
   <div class="mb-article"><div class="essay-banner essay-database"></div>
@@ -196,6 +196,8 @@ particlesJS("particles", {
 <li>每个节点都要处理一遍，即使上面没有订阅者；</li>
 <li>7.0 的 <code>SSUBSCRIBE</code>（分片订阅）把消息限定在某个槽所在的节点，大幅降低开销。</li>
 </ul>
+<p><img src="https://wu4yong.github.io/starry-images/assets/img/redis/rd-37b-pubsub.svg" alt="PUBLISH 的分发路径"></p>
+<p><em>PUBLISH 经频道表分发到各订阅连接、离线订阅者直接丢弃，以及至多一次的四种失败场景｜依据 Pub&#x2F;Sub 文档与 client-output-buffer-limit pubsub 自绘</em></p>
 <h2 id="五、场景说明"><a href="#五、场景说明" class="headerlink" title="五、场景说明"></a>五、场景说明</h2><ol>
 <li><strong>配置变更通知</strong>：一个实例改了配置，广播给所有服务节点刷新本地缓存；</li>
 <li><strong>在线状态广播</strong>：配合 Stream 做「尽力而为」的实时推送；</li>
@@ -247,6 +249,37 @@ Reading messages<span class="token punctuation">..</span>.
 <span class="token number">127.0</span>.0.1:637<span class="token operator"><span class="token file-descriptor important">9</span>></span> SSUBSCRIBE orders
 <span class="token number">127.0</span>.0.1:637<span class="token operator"><span class="token file-descriptor important">9</span>></span> SPUBLISH orders <span class="token string">"created"</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
 
+<h3 id="Java-侧怎么落地：订阅要用容器托住长连接"><a href="#Java-侧怎么落地：订阅要用容器托住长连接" class="headerlink" title="Java 侧怎么落地：订阅要用容器托住长连接"></a>Java 侧怎么落地：订阅要用容器托住长连接</h3><p>订阅是<strong>连接状态</strong>，所以 Java 侧不能临时 <code>subscribe</code> 一下就返回——必须有一个容器持有连接、自动重连并重订阅。</p>
+<ol>
+<li><strong>pom 只引 starter</strong>，Spring Data Redis 自带 <code>RedisMessageListenerContainer</code>。</li>
+</ol>
+<pre class="line-numbers language-markup" data-language="markup"><code class="language-markup"><span class="token tag"><span class="token tag"><span class="token punctuation">&lt;</span>dependency</span><span class="token punctuation">></span></span>
+  <span class="token tag"><span class="token tag"><span class="token punctuation">&lt;</span>groupId</span><span class="token punctuation">></span></span>org.springframework.boot<span class="token tag"><span class="token tag"><span class="token punctuation">&lt;/</span>groupId</span><span class="token punctuation">></span></span>
+  <span class="token tag"><span class="token tag"><span class="token punctuation">&lt;</span>artifactId</span><span class="token punctuation">></span></span>spring-boot-starter-data-redis<span class="token tag"><span class="token tag"><span class="token punctuation">&lt;/</span>artifactId</span><span class="token punctuation">></span></span>
+<span class="token tag"><span class="token tag"><span class="token punctuation">&lt;/</span>dependency</span><span class="token punctuation">></span></span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span></span></code></pre>
+
+<ol start="2">
+<li><strong>容器 + 独立线程池</strong>：容器负责长连接与断线重连（重连后自动重新订阅），线程池不要和业务线程池共用，否则一条慢消息会拖垮全部订阅：</li>
+</ol>
+<pre class="line-numbers language-java" data-language="java"><code class="language-java"><span class="token annotation punctuation">@Bean</span>
+<span class="token class-name">RedisMessageListenerContainer</span> <span class="token function">listenerContainer</span><span class="token punctuation">(</span><span class="token class-name">RedisConnectionFactory</span> f<span class="token punctuation">,</span> <span class="token class-name">MessageListener</span> l<span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+    <span class="token class-name">RedisMessageListenerContainer</span> c <span class="token operator">=</span> <span class="token keyword">new</span> <span class="token class-name">RedisMessageListenerContainer</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    c<span class="token punctuation">.</span><span class="token function">setConnectionFactory</span><span class="token punctuation">(</span>f<span class="token punctuation">)</span><span class="token punctuation">;</span>
+    c<span class="token punctuation">.</span><span class="token function">addMessageListener</span><span class="token punctuation">(</span>l<span class="token punctuation">,</span> <span class="token keyword">new</span> <span class="token class-name">ChannelTopic</span><span class="token punctuation">(</span><span class="token string">"news.sports"</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>   <span class="token comment">// 尽量用精确频道</span>
+    c<span class="token punctuation">.</span><span class="token function">setTaskExecutor</span><span class="token punctuation">(</span><span class="token class-name">Executors</span><span class="token punctuation">.</span><span class="token function">newFixedThreadPool</span><span class="token punctuation">(</span><span class="token number">4</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token keyword">return</span> c<span class="token punctuation">;</span>
+<span class="token punctuation">&#125;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<ol start="3">
+<li><p><strong>消费侧必须自己幂等</strong>：<code>PUBLISH</code> 是至多一次，反过来也可能重复（重连、订阅重叠），消息体带上业务 ID + 时间戳，消费侧按 ID 去重。</p>
+</li>
+<li><p><strong>加「最后一条消息时间」监控</strong>：连上了但半开连接时，容器不会立刻发现；超过 N 分钟没收到任何消息就告警，必要时主动重连。</p>
+</li>
+<li><p><strong>关键链路别用 Pub&#x2F;Sub 承载</strong>：订单、扣款这类不能丢的，改走 Stream 消费组（RD38）或外部 MQ；Pub&#x2F;Sub 只做「丢了也无所谓」的通知（配置变更、在线状态）。</p>
+</li>
+<li><p><strong>Cluster 下用 <code>SSUBSCRIBE</code>（7.0+）</strong>：普通 <code>SUBSCRIBE</code> 会把消息广播到所有节点，节点一多开销成倍；分片订阅只走槽归属节点。</p>
+</li>
+</ol>
 <h2 id="七、常见坑（官方明确说明的限制）"><a href="#七、常见坑（官方明确说明的限制）" class="headerlink" title="七、常见坑（官方明确说明的限制）"></a>七、常见坑（官方明确说明的限制）</h2><ol>
 <li><strong>把 Pub&#x2F;Sub 当消息队列</strong>。没有持久化、没有确认、没有重投，业务一抖动就丢消息。</li>
 <li><strong>以为 <code>PUBLISH</code> 返回 1 就是「送达了」</strong>。它只表示「当时有一个订阅者」，不代表对方业务处理成功。</li>
@@ -270,11 +303,21 @@ Reading messages<span class="token punctuation">..</span>.
 <li>不允许丢消息的场景必须换 Stream 消费组。</li>
 </ul>
 <h2 id="九、思考题"><a href="#九、思考题" class="headerlink" title="九、思考题"></a>九、思考题</h2><ol>
-<li>为什么 <code>PUBLISH</code> 返回 0 时不报错？这个设计对业务有什么风险？</li>
-<li>「至多一次」与「至少一次」的差别在哪？各举一个适合的业务。</li>
-<li>为什么订阅必须用长连接？用连接池会发生什么？</li>
-<li>100 个模式订阅、每秒 1 万条消息，发布路径会发生什么？</li>
-<li>Cluster 有 20 个节点，一条 <code>PUBLISH</code> 会经过几次网络传输？<code>SSUBSCRIBE</code> 能省掉什么？</li>
+<li><p>为什么 <code>PUBLISH</code> 返回 0 时不报错？这个设计对业务有什么风险？</p>
+<p><strong>参考回答</strong>：没有订阅者是正常状态而不是错误，所以返回 0。风险是业务把 <code>PUBLISH</code> 当可靠投递：没人订阅时消息静默丢弃，日志与监控都显示「发布成功」，数据丢了却没有告警。要么监控订阅者数，要么关键链路换 Stream。</p>
+</li>
+<li><p>「至多一次」与「至少一次」的差别在哪？各举一个适合的业务。</p>
+<p><strong>参考回答</strong>：至多一次 &#x3D; 可能丢、绝不重；至少一次 &#x3D; 不丢、可能重（要靠幂等消化）。适合至多一次：配置变更通知、在线状态广播、埋点采样；适合至少一次：订单创建事件、扣款通知（用 Stream 消费组）。</p>
+</li>
+<li><p>为什么订阅必须用长连接？用连接池会发生什么？</p>
+<p><strong>参考回答</strong>：<code>SUBSCRIBE</code> 是连接状态，订阅后该连接进入订阅模式、只能执行少数命令。连接池的短连接归还后订阅关系就失效，或被下一个使用者「串台」，结果是消息丢失或投给错误业务。</p>
+</li>
+<li><p>100 个模式订阅、每秒 1 万条消息，发布路径会发生什么？</p>
+<p><strong>参考回答</strong>：每条消息都要与 100 个模式逐个 glob 匹配，1 万条&#x2F;秒 &#x3D; 100 万次匹配&#x2F;秒，且全在主线程；发布延迟上升、CPU 飙高，严重时拖慢所有命令。应减少模式数量、改用精确频道，或迁到 <code>SSUBSCRIBE</code>。</p>
+</li>
+<li><p>Cluster 有 20 个节点，一条 <code>PUBLISH</code> 会经过几次网络传输？<code>SSUBSCRIBE</code> 能省掉什么？</p>
+<p><strong>参考回答</strong>：默认要广播到全部 20 个节点，即约 20 份节点间转发（每节点再投给本地订阅者）。<code>SSUBSCRIBE</code> 只把消息送到槽归属节点，省掉其余 19 份转发，开销与节点数解耦。</p>
+</li>
 </ol>
 <h2 id="十、官方资料"><a href="#十、官方资料" class="headerlink" title="十、官方资料"></a>十、官方资料</h2><ul>
 <li>Pub&#x2F;Sub（语义与订阅模式）：<a target="_blank" rel="noopener" href="https://redis.io/docs/latest/develop/interact/pubsub/">https://redis.io/docs/latest/develop/interact/pubsub/</a></li>

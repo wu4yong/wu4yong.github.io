@@ -143,7 +143,7 @@ particlesJS("particles", {
   <h1 class="mb-title">redis-配置体系</h1>
   <div class="mb-sub">
     分类：database · redis
-     ｜ 标签：系统课 · Redis · 缓存
+     ｜ 标签：Redis · 缓存 · 系统课
   </div>
 
   <div class="mb-article"><div class="essay-banner essay-database"></div>
@@ -183,6 +183,8 @@ particlesJS("particles", {
 <li><code>CONFIG RESETSTAT</code>：重置 <code>INFO stats</code> 里的统计计数器，和配置无关，排障时常用。</li>
 </ul>
 <p>理清这条链就能避开绝大部分坑：<code>SET</code> 生效但不持久，重启回退；<code>REWRITE</code> 持久但没版本管理就是灾难。</p>
+<p><img src="https://wu4yong.github.io/starry-images/assets/img/redis/rd-03b-config.svg" alt="配置的三个入口与生效路径"></p>
+<p><em>文件、CONFIG SET、CONFIG REWRITE 三者的生效范围，以及能改与不能改的边界｜依据 Redis 7.4 CONFIG 命令文档自绘</em></p>
 <h2 id="五、场景说明"><a href="#五、场景说明" class="headerlink" title="五、场景说明"></a>五、场景说明</h2><ul>
 <li>线上临时调整 <code>maxmemory</code> 压测内存水位：<code>CONFIG SET</code> 验证 → 观察 → <code>CONFIG REWRITE</code> 落盘（注意它要求有配置文件）；</li>
 <li>参数调优实验：先在从节点或测试实例上 <code>SET</code>，比对 <code>INFO memory</code> 前后变化；</li>
@@ -211,6 +213,46 @@ OK
 <span class="token comment">#   (error) ERR The server is running without a config file</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
 
 <p>验证「重启丢配置」这件事，最稳的做法是做一次演练：<code>CONFIG SET</code> 一个非默认值 → <code>SHUTDOWN</code> → 重启 → <code>CONFIG GET</code> 看它是否回到文件里的值。这个动作在 M3 的恢复演练里还会用到。</p>
+<h3 id="Java-侧怎么落地：把配置口径固化到工程"><a href="#Java-侧怎么落地：把配置口径固化到工程" class="headerlink" title="Java 侧怎么落地：把配置口径固化到工程"></a>Java 侧怎么落地：把配置口径固化到工程</h3><p>命令行调完参数，真正上线要落进 Java 工程，分三块，别混在一起写。</p>
+<ol>
+<li><strong>连接层配置交给 Spring Boot</strong>（<code>spring.data.redis.*</code>），只放「怎么连」：地址、密码、db、超时、池参数。这部分<strong>由应用启动时读 yml</strong>，不依赖服务端的 <code>CONFIG REWRITE</code>。</li>
+</ol>
+<pre class="line-numbers language-yaml" data-language="yaml"><code class="language-yaml"><span class="token key atrule">spring</span><span class="token punctuation">:</span>
+  <span class="token key atrule">data</span><span class="token punctuation">:</span>
+    <span class="token key atrule">redis</span><span class="token punctuation">:</span>
+      <span class="token key atrule">host</span><span class="token punctuation">:</span> redis.prod.internal
+      <span class="token key atrule">port</span><span class="token punctuation">:</span> <span class="token number">6379</span>
+      <span class="token key atrule">password</span><span class="token punctuation">:</span> $<span class="token punctuation">&#123;</span>REDIS_PASSWORD<span class="token punctuation">&#125;</span>   <span class="token comment"># 从环境变量/配置中心注入，别写死在仓库里</span>
+      <span class="token key atrule">database</span><span class="token punctuation">:</span> <span class="token number">0</span>
+      <span class="token key atrule">timeout</span><span class="token punctuation">:</span> 3s
+      <span class="token key atrule">lettuce</span><span class="token punctuation">:</span>
+        <span class="token key atrule">pool</span><span class="token punctuation">:</span> <span class="token punctuation">&#123;</span> <span class="token key atrule">max-active</span><span class="token punctuation">:</span> <span class="token number">32</span><span class="token punctuation">,</span> <span class="token key atrule">max-idle</span><span class="token punctuation">:</span> <span class="token number">16</span><span class="token punctuation">,</span> <span class="token key atrule">min-idle</span><span class="token punctuation">:</span> <span class="token number">4</span><span class="token punctuation">,</span> <span class="token key atrule">max-wait</span><span class="token punctuation">:</span> 1s <span class="token punctuation">&#125;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<ol start="2">
+<li><p><strong>服务端参数做成「可审计的 ops 脚本」</strong>，而不是手工敲 <code>CONFIG SET</code>：把要改的项写进一个 <code>config/redis-tuning.conf</code>，用 <code>include</code> 挂进主配置，改完走 git + 发布流程；临时验证再用 <code>CONFIG SET</code> + <code>CONFIG REWRITE</code>，两步必须成对出现。</p>
+</li>
+<li><p><strong>在 Java 里加一次「配置基线自检」</strong>，开机时比对关键项，避免「以为配了其实没配」：</p>
+</li>
+</ol>
+<pre class="line-numbers language-java" data-language="java"><code class="language-java"><span class="token annotation punctuation">@Component</span>
+<span class="token keyword">class</span> <span class="token class-name">RedisConfigGuard</span> <span class="token punctuation">&#123;</span>
+  <span class="token annotation punctuation">@PostConstruct</span>
+  <span class="token keyword">void</span> <span class="token function">check</span><span class="token punctuation">(</span><span class="token class-name">StringRedisTemplate</span> tpl<span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+    <span class="token class-name">Map</span><span class="token generics"><span class="token punctuation">&lt;</span><span class="token class-name">String</span><span class="token punctuation">,</span> <span class="token class-name">String</span><span class="token punctuation">></span></span> cfg <span class="token operator">=</span> tpl<span class="token punctuation">.</span><span class="token function">execute</span><span class="token punctuation">(</span><span class="token punctuation">(</span><span class="token class-name">RedisCallback</span><span class="token generics"><span class="token punctuation">&lt;</span><span class="token class-name">Map</span><span class="token punctuation">&lt;</span><span class="token class-name">String</span><span class="token punctuation">,</span> <span class="token class-name">String</span><span class="token punctuation">></span><span class="token punctuation">></span></span><span class="token punctuation">)</span> conn <span class="token operator">-></span> <span class="token punctuation">&#123;</span>
+      <span class="token class-name">Properties</span> raw <span class="token operator">=</span> conn<span class="token punctuation">.</span><span class="token function">serverCommands</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token function">getConfig</span><span class="token punctuation">(</span><span class="token string">"maxmemory*"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>   <span class="token comment">// 等价 CONFIG GET maxmemory*</span>
+      <span class="token class-name">Map</span><span class="token generics"><span class="token punctuation">&lt;</span><span class="token class-name">String</span><span class="token punctuation">,</span> <span class="token class-name">String</span><span class="token punctuation">></span></span> m <span class="token operator">=</span> <span class="token keyword">new</span> <span class="token class-name">HashMap</span><span class="token generics"><span class="token punctuation">&lt;</span><span class="token punctuation">></span></span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+      raw<span class="token punctuation">.</span><span class="token function">forEach</span><span class="token punctuation">(</span><span class="token punctuation">(</span>k<span class="token punctuation">,</span> v<span class="token punctuation">)</span> <span class="token operator">-></span> m<span class="token punctuation">.</span><span class="token function">put</span><span class="token punctuation">(</span><span class="token class-name">String</span><span class="token punctuation">.</span><span class="token function">valueOf</span><span class="token punctuation">(</span>k<span class="token punctuation">)</span><span class="token punctuation">,</span> <span class="token class-name">String</span><span class="token punctuation">.</span><span class="token function">valueOf</span><span class="token punctuation">(</span>v<span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+      <span class="token keyword">return</span> m<span class="token punctuation">;</span>
+    <span class="token punctuation">&#125;</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token class-name">String</span> maxMemory <span class="token operator">=</span> cfg <span class="token operator">==</span> <span class="token keyword">null</span> <span class="token operator">?</span> <span class="token keyword">null</span> <span class="token operator">:</span> cfg<span class="token punctuation">.</span><span class="token function">get</span><span class="token punctuation">(</span><span class="token string">"maxmemory"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token class-name">String</span> policy <span class="token operator">=</span> cfg <span class="token operator">==</span> <span class="token keyword">null</span> <span class="token operator">?</span> <span class="token keyword">null</span> <span class="token operator">:</span> cfg<span class="token punctuation">.</span><span class="token function">get</span><span class="token punctuation">(</span><span class="token string">"maxmemory-policy"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token keyword">if</span> <span class="token punctuation">(</span><span class="token string">"0"</span><span class="token punctuation">.</span><span class="token function">equals</span><span class="token punctuation">(</span>maxMemory<span class="token punctuation">)</span> <span class="token operator">||</span> <span class="token string">"noeviction"</span><span class="token punctuation">.</span><span class="token function">equals</span><span class="token punctuation">(</span>policy<span class="token punctuation">)</span><span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+      log<span class="token punctuation">.</span><span class="token function">warn</span><span class="token punctuation">(</span><span class="token string">"maxmemory=&#123;&#125; policy=&#123;&#125;，写满内存会返回 OOM 错误 → 核对 ops 配置"</span><span class="token punctuation">,</span> maxMemory<span class="token punctuation">,</span> policy<span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token punctuation">&#125;</span>
+  <span class="token punctuation">&#125;</span>
+<span class="token punctuation">&#125;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<p>这段代码的价值不在逻辑复杂，而在<strong>它把「评审清单」变成了启动期断言</strong>：<code>maxmemory</code>、<code>maxmemory-policy</code>、<code>appendonly</code> 三项只要和团队口径不一致，日志里立刻有痕迹。生产上建议只告警不阻断，测试环境可以 fail-fast。</p>
 <h2 id="七、常见坑（官方明确说明的限制）"><a href="#七、常见坑（官方明确说明的限制）" class="headerlink" title="七、常见坑（官方明确说明的限制）"></a>七、常见坑（官方明确说明的限制）</h2><ol>
 <li><strong><code>CONFIG REWRITE</code> 要求启动时指定了配置文件</strong>，否则直接返回 <code>ERR The server is running without a config file</code>。容器里用 <code>redis-server</code> 裸启动再想 REWRITE，一定踩这个。</li>
 <li><strong>并非所有参数都能运行时修改</strong>。官方在 <code>CONFIG SET</code> 文档里说明只有一部分参数支持动态设置，其余修改会返回错误、只能改文件后重启。判断方法只有一条：查官方命令页，别靠经验猜。</li>
@@ -229,9 +271,15 @@ OK
 <li>调优三步：SET 验证 → REWRITE 落盘 → git 记录。</li>
 </ul>
 <h2 id="九、思考题"><a href="#九、思考题" class="headerlink" title="九、思考题"></a>九、思考题</h2><ol>
-<li>线上一个实例 <code>maxmemory</code> 从 0 改成了 4gb，但没有 <code>REWRITE</code>，两天后一次发布重启，会发生什么？如何在不重启的前提下确认它已经持久化？</li>
-<li>为什么 <code>CONFIG REWRITE</code> 要设计成「重写整个文件」而不是「在原位改一行」？这个设计带来了什么运维要求？</li>
-<li>你拿到一份别人交接的 <code>redis.conf</code>，只有 40 行，<code>maxmemory</code>、<code>save</code>、<code>appendonly</code> 都没写。这些参数此刻的实际值是多少，依据是什么？</li>
+<li><p>线上一个实例 <code>maxmemory</code> 从 0 改成了 4gb，但没有 <code>REWRITE</code>，两天后一次发布重启，会发生什么？如何在不重启的前提下确认它已经持久化？</p>
+<p><strong>参考回答</strong>：重启后 <code>maxmemory</code> 退回配置文件里的值（文件里是 <code>0</code> 就是 <code>0</code>），<strong>限制消失</strong>：内存继续涨，<code>noeviction</code> 下写命令开始报 OOM，或有被 OOM Killer 杀掉的风险。<code>CONFIG GET</code> 读到的是内存值，不能当持久化证据；不重启只能看配置文件本身，<code>CONFIG GET dir</code> 定位文件后再 <code>grep -n &#39;^maxmemory&#39; &lt;那个 conf&gt;</code>。</p>
+</li>
+<li><p>为什么 <code>CONFIG REWRITE</code> 要设计成「重写整个文件」而不是「在原位改一行」？这个设计带来了什么运维要求？</p>
+<p><strong>参考回答</strong>：配置允许 <code>include</code>、注释、任意书写顺序，<strong>原位改一行无法可靠定位</strong>，参数可能写在 include 的子文件里。整文件重写的代价是注释与格式不可恢复，于是运维要求变成：配置文件进 git、由模板生成、人工注释另存，绝不把线上 <code>redis.conf</code> 当唯一副本。</p>
+</li>
+<li><p>你拿到一份别人交接的 <code>redis.conf</code>，只有 40 行，<code>maxmemory</code>、<code>save</code>、<code>appendonly</code> 都没写。这些参数此刻的实际值是多少，依据是什么？</p>
+<p><strong>参考回答</strong>：全部取<strong>内置默认值</strong>——<code>maxmemory 0</code>（不限制）、<code>save</code> 有默认保存点（如 3600 1 &#x2F; 300 100 &#x2F; 60 10000）、<code>appendonly no</code>。依据是官方示例里这些项被注释掉，注释掉即不生效，回落到编译默认值；要确认就读运行值 <code>CONFIG GET maxmemory save appendonly</code>。</p>
+</li>
 </ol>
 <h2 id="十、官方资料"><a href="#十、官方资料" class="headerlink" title="十、官方资料"></a>十、官方资料</h2><ul>
 <li>配置与 include 指令说明：<a target="_blank" rel="noopener" href="https://redis.io/docs/latest/operate/oss_and_stack/management/config/">https://redis.io/docs/latest/operate/oss_and_stack/management/config/</a></li>

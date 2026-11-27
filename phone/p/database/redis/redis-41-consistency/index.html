@@ -143,7 +143,7 @@ particlesJS("particles", {
   <h1 class="mb-title">redis-缓存一致性</h1>
   <div class="mb-sub">
     分类：database · redis
-     ｜ 标签：系统课 · Redis · 缓存
+     ｜ 标签：Redis · 缓存 · 系统课
   </div>
 
   <div class="mb-article"><div class="essay-banner essay-database"></div>
@@ -192,6 +192,8 @@ T4: 下一次读 → 未命中 → 查库 → 新值回填<span aria-hidden="tru
 <li>两个并发写者「改缓存」的到达顺序可能与「写库」的顺序相反，缓存被旧值覆盖。</li>
 </ol>
 <p>删掉之后，值由「下一次读」重新加载，天然按库的顺序收敛。</p>
+<p><img src="https://wu4yong.github.io/starry-images/assets/img/redis/rd-41b-consistency.svg" alt="两种删除顺序的时间线对比"></p>
+<p><em>先删缓存导致的旧值回填时间线、先更库再删缓存的残余窗口，以及四种收窄手段的代价｜依据 Redis 7.4 · 缓存一致性工程实践自绘</em></p>
 <h2 id="五、场景说明"><a href="#五、场景说明" class="headerlink" title="五、场景说明"></a>五、场景说明</h2><ol>
 <li><strong>用户资料</strong>：最终一致秒级可接受，先更库再删缓存 + 失败重试；</li>
 <li><strong>商品价格</strong>：要求读最新，用 Write-Through 或关键读绕过缓存；</li>
@@ -222,6 +224,46 @@ T4: 下一次读 → 未命中 → 查库 → 新值回填<span aria-hidden="tru
 <span class="token number">127.0</span>.0.1:637<span class="token operator"><span class="token file-descriptor important">9</span>></span> PUBLISH cache:invalidate <span class="token string">"user:1001"</span>
 <span class="token punctuation">(</span>integer<span class="token punctuation">)</span> <span class="token number">2</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
 
+<h3 id="Java-侧怎么落地：删缓存必须挂在事务提交之后"><a href="#Java-侧怎么落地：删缓存必须挂在事务提交之后" class="headerlink" title="Java 侧怎么落地：删缓存必须挂在事务提交之后"></a>Java 侧怎么落地：删缓存必须挂在事务提交之后</h3><ol>
+<li><strong>pom</strong>：Redis 客户端 + 事务&#x2F;数据访问层；跨实例失效广播用 Pub&#x2F;Sub 即可。</li>
+</ol>
+<pre class="line-numbers language-markup" data-language="markup"><code class="language-markup"><span class="token tag"><span class="token tag"><span class="token punctuation">&lt;</span>dependency</span><span class="token punctuation">></span></span>
+  <span class="token tag"><span class="token tag"><span class="token punctuation">&lt;</span>groupId</span><span class="token punctuation">></span></span>org.springframework.boot<span class="token tag"><span class="token tag"><span class="token punctuation">&lt;/</span>groupId</span><span class="token punctuation">></span></span>
+  <span class="token tag"><span class="token tag"><span class="token punctuation">&lt;</span>artifactId</span><span class="token punctuation">></span></span>spring-boot-starter-data-redis<span class="token tag"><span class="token tag"><span class="token punctuation">&lt;/</span>artifactId</span><span class="token punctuation">></span></span>
+<span class="token tag"><span class="token tag"><span class="token punctuation">&lt;/</span>dependency</span><span class="token punctuation">></span></span>
+<span class="token tag"><span class="token tag"><span class="token punctuation">&lt;</span>dependency</span><span class="token punctuation">></span></span>
+  <span class="token tag"><span class="token tag"><span class="token punctuation">&lt;</span>groupId</span><span class="token punctuation">></span></span>org.springframework.boot<span class="token tag"><span class="token tag"><span class="token punctuation">&lt;/</span>groupId</span><span class="token punctuation">></span></span>
+  <span class="token tag"><span class="token tag"><span class="token punctuation">&lt;</span>artifactId</span><span class="token punctuation">></span></span>spring-boot-starter-jdbc<span class="token tag"><span class="token tag"><span class="token punctuation">&lt;/</span>artifactId</span><span class="token punctuation">></span></span>
+<span class="token tag"><span class="token tag"><span class="token punctuation">&lt;/</span>dependency</span><span class="token punctuation">></span></span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<ol start="2">
+<li><strong>最常见的错误：在事务里删缓存</strong>。事务未提交时删缓存，别的请求会读到库里还没提交的旧值再回填，等于主动制造不一致。改成 <code>afterCommit</code> 再删：</li>
+</ol>
+<pre class="line-numbers language-java" data-language="java"><code class="language-java"><span class="token annotation punctuation">@Transactional</span>
+<span class="token keyword">public</span> <span class="token keyword">void</span> <span class="token function">update</span><span class="token punctuation">(</span><span class="token keyword">long</span> id<span class="token punctuation">,</span> <span class="token class-name">Item</span> it<span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+    repo<span class="token punctuation">.</span><span class="token function">save</span><span class="token punctuation">(</span>it<span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token class-name">TransactionSynchronizationManager</span><span class="token punctuation">.</span><span class="token function">registerSynchronization</span><span class="token punctuation">(</span>
+        <span class="token keyword">new</span> <span class="token class-name">TransactionSynchronization</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+            <span class="token annotation punctuation">@Override</span> <span class="token keyword">public</span> <span class="token keyword">void</span> <span class="token function">afterCommit</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">&#123;</span> redis<span class="token punctuation">.</span><span class="token function">delete</span><span class="token punctuation">(</span><span class="token string">"item:"</span> <span class="token operator">+</span> id<span class="token punctuation">)</span><span class="token punctuation">;</span> <span class="token punctuation">&#125;</span>  <span class="token comment">// 提交后才删</span>
+        <span class="token punctuation">&#125;</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">&#125;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<ol start="3">
+<li><strong>延迟双删</strong>交给调度线程，Δt 取「一次读请求最大耗时」的 1.5～2 倍：</li>
+</ol>
+<pre class="line-numbers language-java" data-language="java"><code class="language-java">scheduler<span class="token punctuation">.</span><span class="token function">schedule</span><span class="token punctuation">(</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token operator">-></span> redis<span class="token punctuation">.</span><span class="token function">delete</span><span class="token punctuation">(</span><span class="token string">"item:"</span> <span class="token operator">+</span> id<span class="token punctuation">)</span><span class="token punctuation">,</span> <span class="token number">300</span><span class="token punctuation">,</span> <span class="token class-name">TimeUnit</span><span class="token punctuation">.</span><span class="token constant">MILLISECONDS</span><span class="token punctuation">)</span><span class="token punctuation">;</span><span aria-hidden="true" class="line-numbers-rows"><span></span></span></code></pre>
+
+<ol start="4">
+<li><p><strong>删失败要重试</strong>：本地捕获异常 → <code>RPUSH cache:del:retry item:1001</code> → 独立线程 <code>BRPOP</code> 消费，指数退避 + 最大次数，超限落库告警。</p>
+</li>
+<li><p><strong>多实例 L1 要广播失效</strong>（微服务里每个实例都有自己的本地缓存）：</p>
+</li>
+</ol>
+<pre class="line-numbers language-java" data-language="java"><code class="language-java">redis<span class="token punctuation">.</span><span class="token function">convertAndSend</span><span class="token punctuation">(</span><span class="token string">"cache:invalidate"</span><span class="token punctuation">,</span> <span class="token string">"item:"</span> <span class="token operator">+</span> id<span class="token punctuation">)</span><span class="token punctuation">;</span>   <span class="token comment">// 各实例订阅后删本地</span><span aria-hidden="true" class="line-numbers-rows"><span></span></span></code></pre>
+
+<ol start="6">
+<li><strong>要覆盖应用之外的写</strong>（DBA 手工 SQL、别的服务），只能订阅 binlog：canal&#x2F;Debezium 把变更事件投到 MQ，消费端按「表 + 主键」删缓存，并做幂等与顺序控制。代价是多一条链路、延迟百毫秒级。</li>
+</ol>
 <h2 id="七、常见坑（官方明确说明的限制）"><a href="#七、常见坑（官方明确说明的限制）" class="headerlink" title="七、常见坑（官方明确说明的限制）"></a>七、常见坑（官方明确说明的限制）</h2><ol>
 <li><strong>「先删缓存再更库」当成标准做法</strong>。它在并发读下会把旧值长期写回缓存，是四种顺序里最差的一种。</li>
 <li><strong>延迟双删的 Δt 拍脑袋</strong>。Δt 小于一次读请求耗时，第二次删除起不到作用；Δt 太大又拖长不一致窗口。</li>
@@ -243,11 +285,21 @@ T4: 下一次读 → 未命中 → 查库 → 新值回填<span aria-hidden="tru
 <li>强一致的读不要进缓存，这是取舍不是缺陷。</li>
 </ul>
 <h2 id="九、思考题"><a href="#九、思考题" class="headerlink" title="九、思考题"></a>九、思考题</h2><ol>
-<li>画出「先删缓存再更库」出错的那条并发时间线，标出旧值被回填的时刻。</li>
-<li>延迟双删的 Δt 应该怎么估算？给出你项目的具体数字与理由。</li>
-<li>为什么「订阅 binlog 删缓存」能覆盖应用之外的写？它的代价是什么？</li>
-<li>如果一个 key 既被写者删、又被读者回填，你还能用什么手段保证收敛？</li>
-<li>你的业务里，哪些读可以接受 1 秒旧值、哪些一秒都不行？列个清单。</li>
+<li><p>画出「先删缓存再更库」出错的那条并发时间线，标出旧值被回填的时刻。</p>
+<p><strong>参考回答</strong>：T1 写者 <code>DEL cache</code>；T2 读者 <code>GET</code> 未命中，查库拿到旧值；<strong>T3 读者 <code>SET cache</code>（旧值）——回填点就在这里</strong>；T4 写者 <code>UPDATE db</code>。之后没有任何事件再去纠正缓存，旧值一直留到 TTL 到期，所以它是「长期不一致」而不只是短暂。</p>
+</li>
+<li><p>延迟双删的 Δt 应该怎么估算？给出你项目的具体数字与理由。</p>
+<p><strong>参考回答</strong>：Δt 要大于「一次读请求的最大耗时」——读库 + 序列化 + 回填的总时间，通常取 P99 的 1.5～2 倍。例：读 P99 &#x3D; 120 ms → Δt &#x3D; 200～300 ms。太小第二次删除删不到迟到回填，太大则拖长不一致窗口还白占线程。</p>
+</li>
+<li><p>为什么「订阅 binlog 删缓存」能覆盖应用之外的写？它的代价是什么？</p>
+<p><strong>参考回答</strong>：因为事件源是数据库自身的 binlog，手工 SQL、其他服务、DBA 脚本产生的写都会留下事件，不依赖业务代码自觉。代价是多一条链路（canal&#x2F;Debezium 部署与位点维护）、延迟百毫秒级，还要处理重复投递与顺序问题。</p>
+</li>
+<li><p>如果一个 key 既被写者删、又被读者回填，你还能用什么手段保证收敛？</p>
+<p><strong>参考回答</strong>：把版本号&#x2F;更新时间写进缓存值，回填时比对版本、旧版本不回填；加短 TTL 兜底；用 binlog 事件做最后纠偏；或延迟双删 + 删除重试。单靠「删一次」不可能收敛，必须有第二道纠正机制。</p>
+</li>
+<li><p>你的业务里，哪些读可以接受 1 秒旧值、哪些一秒都不行？列个清单。</p>
+<p><strong>参考回答</strong>：可接受：商品标题&#x2F;描述、推荐位、榜单、字典与配置、用户昵称头像。不可接受：库存可售数、价格与优惠、余额与积分、订单状态、支付结果、权限与风控名单——这些要么读主库，要么走条件更新。</p>
+</li>
 </ol>
 <h2 id="十、官方资料"><a href="#十、官方资料" class="headerlink" title="十、官方资料"></a>十、官方资料</h2><ul>
 <li>Lua 脚本与原子性（<code>EVAL</code> 的原子语义）：<a target="_blank" rel="noopener" href="https://redis.io/docs/latest/develop/interact/programmability/eval-intro/">https://redis.io/docs/latest/develop/interact/programmability/eval-intro/</a></li>

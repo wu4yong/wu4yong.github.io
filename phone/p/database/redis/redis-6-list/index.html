@@ -143,7 +143,7 @@ particlesJS("particles", {
   <h1 class="mb-title">redis-List</h1>
   <div class="mb-sub">
     分类：database · redis
-     ｜ 标签：系统课 · Redis · 数据结构
+     ｜ 标签：Redis · 系统课 · 数据结构
   </div>
 
   <div class="mb-article"><div class="essay-banner essay-database"></div>
@@ -197,6 +197,8 @@ particlesJS("particles", {
 <li>中间插入&#x2F;删除只影响所在节点。</li>
 </ul>
 <p>代价是：<strong>按下标访问仍然要沿着链表数节点</strong>，<code>LINDEX k 1000000</code> 依旧是慢操作。<code>LRANGE</code> 大区间同理。</p>
+<p><img src="https://wu4yong.github.io/starry-images/assets/img/redis/rd-06b-list.svg" alt="List 的三种形态、索引边界与可靠队列缺口"></p>
+<p><em>命令组合出的三种语义、索引与阻塞的边界，以及 List 做不了可靠队列的原因｜依据 Redis 7.4 Lists &#x2F; BLPOP 自绘</em></p>
 <h2 id="五、场景说明"><a href="#五、场景说明" class="headerlink" title="五、场景说明"></a>五、场景说明</h2><p>官方配方里 List 的位置：</p>
 <ol>
 <li><strong>轻量任务队列</strong>：生产者 <code>RPUSH job:queue &#123;...&#125;</code>，消费者 <code>BLPOP job:queue 5</code>；</li>
@@ -260,6 +262,30 @@ OK
 <span class="token number">127.0</span>.0.1:637<span class="token operator"><span class="token file-descriptor important">9</span>></span> LREM nums <span class="token number">2</span> <span class="token number">1</span>
 <span class="token punctuation">(</span>integer<span class="token punctuation">)</span> <span class="token number">2</span>                  <span class="token comment"># 从头往尾删掉 2 个 "1"</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
 
+<h3 id="Java-侧怎么落地：把-List-当轻量队列的三个关键点"><a href="#Java-侧怎么落地：把-List-当轻量队列的三个关键点" class="headerlink" title="Java 侧怎么落地：把 List 当轻量队列的三个关键点"></a>Java 侧怎么落地：把 List 当轻量队列的三个关键点</h3><p>轻量队列在 Spring Boot 里不需要额外依赖，<code>StringRedisTemplate</code> 的 <code>opsForList()</code> 就是 List 操作。</p>
+<ol>
+<li><strong>生产端用 <code>rightPush</code> 而不是 <code>leftPushAll</code></strong>，和命令行 <code>RPUSH</code> 对齐，顺序才符合直觉；要限制长度，同一个调用里用 <code>trim</code>：</li>
+</ol>
+<pre class="line-numbers language-java" data-language="java"><code class="language-java"><span class="token annotation punctuation">@Service</span> <span class="token annotation punctuation">@RequiredArgsConstructor</span>
+<span class="token keyword">class</span> <span class="token class-name">JobProducer</span> <span class="token punctuation">&#123;</span>
+    <span class="token keyword">private</span> <span class="token keyword">final</span> <span class="token class-name">StringRedisTemplate</span> tpl<span class="token punctuation">;</span>
+    <span class="token keyword">void</span> <span class="token function">submit</span><span class="token punctuation">(</span><span class="token class-name">String</span> payload<span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+        tpl<span class="token punctuation">.</span><span class="token function">opsForList</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token function">rightPush</span><span class="token punctuation">(</span><span class="token string">"job:queue"</span><span class="token punctuation">,</span> payload<span class="token punctuation">)</span><span class="token punctuation">;</span>
+        tpl<span class="token punctuation">.</span><span class="token function">opsForList</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token function">trim</span><span class="token punctuation">(</span><span class="token string">"job:queue"</span><span class="token punctuation">,</span> <span class="token operator">-</span><span class="token number">1000</span><span class="token punctuation">,</span> <span class="token operator">-</span><span class="token number">1</span><span class="token punctuation">)</span><span class="token punctuation">;</span>   <span class="token comment">// LTRIM，只留最近 1000 条</span>
+    <span class="token punctuation">&#125;</span>
+<span class="token punctuation">&#125;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<ol start="2">
+<li><strong>消费端用 <code>leftPop(key, timeout)</code> 对应 <code>BLPOP</code></strong>，注意它是一个<strong>阻塞调用</strong>，必须放在独立线程池里，不能占 Web 请求线程：</li>
+</ol>
+<pre class="line-numbers language-java" data-language="java"><code class="language-java"><span class="token class-name">String</span> job <span class="token operator">=</span> tpl<span class="token punctuation">.</span><span class="token function">opsForList</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token function">leftPop</span><span class="token punctuation">(</span><span class="token string">"job:queue"</span><span class="token punctuation">,</span> <span class="token class-name">Duration</span><span class="token punctuation">.</span><span class="token function">ofSeconds</span><span class="token punctuation">(</span><span class="token number">5</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>  <span class="token comment">// null = 超时</span><span aria-hidden="true" class="line-numbers-rows"><span></span></span></code></pre>
+
+<ol start="3">
+<li><p><strong>要可靠一点，用 <code>rightPopAndLeftPush</code></strong>（对应 <code>LMOVE src dst RIGHT LEFT</code>），把消息搬到 <code>job:doing</code>，处理成功再 <code>remove</code> 从 doing 里删；这不是完整 ack，但进程崩溃后 doing 里的消息能人工捞回。真正需要 ack + pending 时换 Stream（RD38）。</p>
+</li>
+<li><p><strong>配置上别忘了连接池与超时</strong>：阻塞消费意味着长连接，<code>lettuce.pool.max-active</code> 要按消费者线程数配；<code>spring.data.redis.timeout</code> 不要小于阻塞时长，否则客户端会先超时断开。</p>
+</li>
+</ol>
 <h2 id="七、常见坑（官方明确说明的限制）"><a href="#七、常见坑（官方明确说明的限制）" class="headerlink" title="七、常见坑（官方明确说明的限制）"></a>七、常见坑（官方明确说明的限制）</h2><ol>
 <li><strong><code>LPUSH</code> 多值顺序是反的</strong>：<code>LPUSH k a b c</code> 结果 <code>c b a</code>。批量入队请用 <code>RPUSH</code>，或用 <code>LPUSH</code> 但接受逆序。</li>
 <li><strong><code>BLPOP</code> 的 timeout 是「秒」，<code>0</code> 是永久阻塞</strong>，不是「0 秒」。误传 0 会让消费者线程永远挂住——这是线上「消费线程消失」最常见的根因。</li>
@@ -283,11 +309,21 @@ OK
 <li>容量上限 2^32-1，删除大 List 用 <code>UNLINK</code>，控增长用 <code>LTRIM</code>。</li>
 </ul>
 <h2 id="九、思考题"><a href="#九、思考题" class="headerlink" title="九、思考题"></a>九、思考题</h2><ol>
-<li>用 <code>LPUSH</code> + <code>RPOP</code> 做队列，为什么很多人第一次写就把消息顺序搞反了？把命令和结果各写一遍验证。</li>
-<li><code>BLPOP k 0</code> 的消费者在生产环境「消失」了，日志没有报错。可能是哪几种原因？</li>
-<li>为什么 Redis 规定「事务里的阻塞命令不阻塞」？如果强行允许，会出现什么后果？</li>
-<li><code>LTRIM feed -100 -1</code> 与 <code>LTRIM feed 0 99</code> 在 feed 只有 50 条时，结果是否相同？为什么？</li>
-<li>「可靠队列」的经典做法是 <code>LMOVE</code> 到处理中队列再删。这套做法在进程崩溃、消息重复投递两种故障下分别会发生什么？</li>
+<li><p>用 <code>LPUSH</code> + <code>RPOP</code> 做队列，为什么很多人第一次写就把消息顺序搞反了？把命令和结果各写一遍验证。</p>
+<p><strong>参考回答</strong>：因为 <code>LPUSH</code> 是<strong>逐个插到头部</strong>，<code>LPUSH q a b c</code> 得到的是 <code>c b a</code>；于是 <code>LPUSH + RPOP</code> 先弹出的其实是最后写进去的 <code>c</code>，成了 LIFO。想要 FIFO，要么 <code>RPUSH</code> 进 + <code>LPOP</code> 出，要么 <code>LPUSH</code> 进 + <code>RPOP</code> 出并且接受「写入顺序与消费顺序相反」这个前提。</p>
+</li>
+<li><p><code>BLPOP k 0</code> 的消费者在生产环境「消失」了，日志没有报错。可能是哪几种原因？</p>
+<p><strong>参考回答</strong>：① <code>timeout</code> 传了 <code>0</code>，它表示<strong>永久阻塞</strong>，消费者确实在等，只是永远等不到数据；② 连接被中间件（LB &#x2F; 防火墙 &#x2F; 云 NAT）的空闲超时静默断开，客户端没感知；③ 阻塞命令跑在事务里，直接返回 <code>nil</code>，循环没写退出条件；④ 消费线程池被占满，看日志像「没动静」。排查入口是 <code>CLIENT LIST</code> 看连接状态与 <code>INFO clients</code>。</p>
+</li>
+<li><p>为什么 Redis 规定「事务里的阻塞命令不阻塞」？如果强行允许，会出现什么后果？</p>
+<p><strong>参考回答</strong>：<code>MULTI</code>&#x2F;<code>EXEC</code> 期间服务端要连续执行整批命令且不处理其他客户端请求；一旦在中间真的阻塞等待，<strong>整个实例就停在那里</strong>，所有其他客户端一起挂住。所以官方规定：事务里遇到无法立即执行的阻塞命令，直接返回 <code>nil</code>。</p>
+</li>
+<li><p><code>LTRIM feed -100 -1</code> 与 <code>LTRIM feed 0 99</code> 在 feed 只有 50 条时，结果是否相同？为什么？</p>
+<p><strong>参考回答</strong>：结果相同，都是「保留全部 50 条」。负数下标从尾部算，<code>-100</code> 在只有 50 条时等价于越界到 0，所以 <code>-100 -1</code> 覆盖全部；<code>0 99</code> 同样覆盖 0..49。差别在<strong>语义意图</strong>：<code>-100 -1</code> 表达「只留最近 100 条」且在数据增长时依然正确，<code>0 99</code> 表达「留前 100 条」，一旦变成 <code>RPUSH</code> 追加就会把最新的裁掉。</p>
+</li>
+<li><p>「可靠队列」的经典做法是 <code>LMOVE</code> 到处理中队列再删。这套做法在进程崩溃、消息重复投递两种故障下分别会发生什么？</p>
+<p><strong>参考回答</strong>：崩溃时消息留在 <code>job:doing</code>，不会丢，但要靠人工或定时任务扫 <code>doing</code> 重新投递——<strong>没有自动重试</strong>。重复投递时因为 <code>LMOVE</code> 是原子搬移，同一个消息不会同时出现在两个队列，但处理成功却删失败（或删之前崩溃）会导致重放，所以业务必须幂等。真要「自动重试 + pending 统计」，用 Stream 消费组。</p>
+</li>
 </ol>
 <h2 id="十、官方资料"><a href="#十、官方资料" class="headerlink" title="十、官方资料"></a>十、官方资料</h2><ul>
 <li>Lists（类型定义、2^32-1 上限、典型用法）：<a target="_blank" rel="noopener" href="https://redis.io/docs/latest/develop/data-types/lists/">https://redis.io/docs/latest/develop/data-types/lists/</a></li>

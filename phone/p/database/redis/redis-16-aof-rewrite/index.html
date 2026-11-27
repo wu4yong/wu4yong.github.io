@@ -143,7 +143,7 @@ particlesJS("particles", {
   <h1 class="mb-title">redis-AOF 重写</h1>
   <div class="mb-sub">
     分类：database · redis
-     ｜ 标签：系统课 · Redis · 持久化
+     ｜ 标签：Redis · 系统课 · 持久化
   </div>
 
   <div class="mb-article"><div class="essay-banner essay-database"></div>
@@ -207,6 +207,8 @@ auto-aof-rewrite-min-size 64mb       # 且总体积超过 64 MB<span aria-hidden
 <li>相比「纯命令重放几十亿条」，恢复时间从「分钟级」降到「秒级」；</li>
 <li>代价：AOF 文件开头不再是可读文本，<code>cat</code> 看不到命令，也不能手工编辑；排查要理解这个结构。</li>
 </ul>
+<p><img src="https://wu4yong.github.io/starry-images/assets/img/redis/rd-16b-rewrite.svg" alt="重写的双写结构与多文件 AOF"></p>
+<p><em>fork → 子进程写新文件 → 主进程双写 → 合并缓冲 → rename 的五步，两个触发阈值，以及 7.0 目录三件套｜依据 Redis 7.4 Persistence &#x2F; BGREWRITEAOF 文档自绘</em></p>
 <h2 id="五、场景说明"><a href="#五、场景说明" class="headerlink" title="五、场景说明"></a>五、场景说明</h2><ol>
 <li><strong>写量大且长期运行的实例</strong>：AOF 会持续膨胀，必须让自动重写生效（默认配置即可，别乱调大 <code>min-size</code>）；</li>
 <li><strong>重启恢复时间敏感</strong>：开混合持久化，把「重放几千万条命令」变成「加载快照 + 少量增量」；</li>
@@ -259,6 +261,33 @@ $ <span class="token function">cat</span> /var/lib/redis/appendonlydir/appendonl
 <span class="token comment"># rdb_bgsave_in_progress:1</span>
 <span class="token comment"># aof_rewrite_in_progress:1      # 两者并发，内存风险最高</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
 
+<h3 id="Java-侧怎么落地：应用不触发重写，但要能扛住-fork-卡顿"><a href="#Java-侧怎么落地：应用不触发重写，但要能扛住-fork-卡顿" class="headerlink" title="Java 侧怎么落地：应用不触发重写，但要能扛住 fork 卡顿"></a>Java 侧怎么落地：应用不触发重写，但要能扛住 fork 卡顿</h3><p>重写是服务端动作，Java 侧的关键是「别被重写打挂」。</p>
+<ol>
+<li><p><strong>依赖面不变</strong>，还是 <code>spring-boot-starter-data-redis</code>；重写不需要任何客户端配置，但它会让单次命令延迟抖动几百毫秒甚至数秒。</p>
+</li>
+<li><p><strong>命令超时要大于 fork 抖动</strong>：Lettuce 默认 60s 命令超时看着够，但如果你的业务自己设了 1s 超时，重写期间会集中报 <code>RedisCommandTimeoutException</code>，看起来像「Redis 挂了」。</p>
+</li>
+</ol>
+<pre class="line-numbers language-yaml" data-language="yaml"><code class="language-yaml"><span class="token key atrule">spring</span><span class="token punctuation">:</span>
+  <span class="token key atrule">data</span><span class="token punctuation">:</span>
+    <span class="token key atrule">redis</span><span class="token punctuation">:</span>
+      <span class="token key atrule">timeout</span><span class="token punctuation">:</span> 3s                 <span class="token comment"># 不要 1s：fork 抖动期会被误杀</span>
+      <span class="token key atrule">lettuce</span><span class="token punctuation">:</span>
+        <span class="token key atrule">shutdown-timeout</span><span class="token punctuation">:</span> 200ms<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<ol start="3">
+<li><p><strong>重试只对幂等命令开</strong>：<code>SET</code>、<code>GET</code> 可重试，<code>INCR</code>、<code>LPUSH</code> 重试会重复计数；超时后先判命令是否可能已执行。</p>
+</li>
+<li><p><strong>把重写状态做成指标，避免「发布即高峰」</strong>：发布&#x2F;重启脚本先查 <code>aof_rewrite_in_progress</code>，为 1 就等，别在这时叠加批量写。</p>
+</li>
+</ol>
+<pre class="line-numbers language-java" data-language="java"><code class="language-java"><span class="token keyword">boolean</span> rewriting <span class="token operator">=</span> info<span class="token punctuation">.</span><span class="token function">contains</span><span class="token punctuation">(</span><span class="token string">"aof_rewrite_in_progress:1"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token keyword">if</span> <span class="token punctuation">(</span>rewriting<span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+    log<span class="token punctuation">.</span><span class="token function">warn</span><span class="token punctuation">(</span><span class="token string">"AOF rewrite in progress, postpone warmup batch"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    metrics<span class="token punctuation">.</span><span class="token function">counter</span><span class="token punctuation">(</span><span class="token string">"redis.aof.rewrite.blocked_warmup"</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token function">increment</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">&#125;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<p>顺手提醒：备份脚本里那句 <code>BGSAVE</code> 与 <code>BGREWRITEAOF</code> 要互斥——同一实例上并发两个 fork，是 CoW 内存最容易翻倍的时刻。</p>
 <h2 id="七、常见坑（官方明确说明的限制）"><a href="#七、常见坑（官方明确说明的限制）" class="headerlink" title="七、常见坑（官方明确说明的限制）"></a>七、常见坑（官方明确说明的限制）</h2><ol>
 <li><strong>重写也要 <code>fork</code></strong>，同样有 CoW 内存放大的问题。数据 40 GB 的实例，重写期间额外内存可能接近总量的一半以上，<code>maxmemory</code> 必须留余量。</li>
 <li><strong>重写期间新旧文件并存</strong>：磁盘占用会短暂翻倍（旧 AOF + 新 AOF）。磁盘剩余空间不足时重写失败，<code>aof_last_bgrewriteaof_status</code> 会变成 <code>err</code>。</li>
@@ -282,11 +311,21 @@ $ <span class="token function">cat</span> /var/lib/redis/appendonlydir/appendonl
 <li>重写要 fork，CoW 与磁盘翻倍是必须预留的资源。</li>
 </ul>
 <h2 id="九、思考题"><a href="#九、思考题" class="headerlink" title="九、思考题"></a>九、思考题</h2><ol>
-<li>一个 key 被 <code>INCR</code> 一千万次，重写后 AOF 里还剩几条命令？为什么？</li>
-<li>重写期间主进程写入的命令，如果子进程写完时还没合并进新文件就崩溃了，数据会丢吗？</li>
-<li>为什么 7.0 的多文件 AOF 能省掉「重写缓冲区」？它的增量写到哪去了？</li>
-<li>磁盘只剩 30%、AOF 800 MB，这时自动重写会发生什么？该在监控上加哪条告警？</li>
-<li>同时执行 <code>BGSAVE</code> 与 <code>BGREWRITEAOF</code>，内存与磁盘各会发生什么？为什么这是危险组合？</li>
+<li><p>一个 key 被 <code>INCR</code> 一千万次，重写后 AOF 里还剩几条命令？为什么？</p>
+<p><strong>参考回答</strong>：只剩 <strong>1 条</strong>，形如 <code>SET k &lt;当前值&gt;</code>（或 <code>INCRBY k &lt;n&gt;</code> 这类等价的单条）。重写读的是内存里的最终状态，不是历史命令，所以千万次增量被折叠成一次赋值。</p>
+</li>
+<li><p>重写期间主进程写入的命令，如果子进程写完时还没合并进新文件就崩溃了，数据会丢吗？</p>
+<p><strong>参考回答</strong>：不会丢。重写期间这些命令同时写进了<strong>旧 AOF 文件</strong>（旧文件仍然完整可用），崩溃后重启加载的还是旧文件，只丢「最后一次 fsync 之后的窗口」，与重写无关。</p>
+</li>
+<li><p>为什么 7.0 的多文件 AOF 能省掉「重写缓冲区」？它的增量写到哪去了？</p>
+<p><strong>参考回答</strong>：因为基线（base）与增量（incr）被拆成了两个文件。重写只重写 base，新写入继续追加到 <code>incr.aof</code>，不再需要把增量攒在内存里的 <code>aof_rewrite_buf</code>——省掉的是那块可能涨到几百 MB 的内存。</p>
+</li>
+<li><p>磁盘只剩 30%、AOF 800 MB，这时自动重写会发生什么？该在监控上加哪条告警？</p>
+<p><strong>参考回答</strong>：重写期间新旧文件并存，需要约 1.6 GB 空间；剩余不足就写失败，<code>aof_last_bgrewriteaof_status</code> 变 <code>err</code>，AOF 继续膨胀直到磁盘写满（随后触发 <code>MISCONF</code> 拒绝写）。告警应加「<code>aof_last_bgrewriteaof_status != ok</code>」+「磁盘剩余 &lt; 2×AOF 体积」。</p>
+</li>
+<li><p>同时执行 <code>BGSAVE</code> 与 <code>BGREWRITEAOF</code>，内存与磁盘各会发生什么？为什么这是危险组合？</p>
+<p><strong>参考回答</strong>：内存上两个子进程各自触发 CoW，额外占用可能接近数据量的两倍；磁盘上要同时容纳「旧 AOF + 新 AOF + 新 RDB」，IO 也被两份全量写争抢。所以这是最接近 OOM 与磁盘写满的时刻，运维脚本里必须互斥。</p>
+</li>
 </ol>
 <h2 id="十、官方资料"><a href="#十、官方资料" class="headerlink" title="十、官方资料"></a>十、官方资料</h2><ul>
 <li>Persistence（AOF 重写与混合持久化）：<a target="_blank" rel="noopener" href="https://redis.io/docs/latest/operate/oss_and_stack/management/persistence/">https://redis.io/docs/latest/operate/oss_and_stack/management/persistence/</a></li>

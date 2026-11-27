@@ -143,7 +143,7 @@ particlesJS("particles", {
   <h1 class="mb-title">redis-限流</h1>
   <div class="mb-sub">
     分类：database · redis
-     ｜ 标签：系统课 · Redis · 限流
+     ｜ 标签：Redis · 系统课 · 限流
   </div>
 
   <div class="mb-article"><div class="essay-banner essay-database"></div>
@@ -201,6 +201,8 @@ ZCARD rl:&#123;uid&#125;                 # 窗口内的数量<span aria-hidden="
 <li><strong>下游资源侧</strong>：数据库连接池上限、线程池上限——这才是最后一道硬约束。</li>
 </ul>
 <p>限流不是「让请求变少」，而是「让超出部分以确定的代价被拒绝」。</p>
+<p><img src="https://wu4yong.github.io/starry-images/assets/img/redis/rd-46b-rate-limit.svg" alt="三种限流算法与集群放大"></p>
+<p><em>固定窗口的 2 倍临界、滑动窗口的成员成本、令牌桶的两个参数，以及分片限流的总量放大与三层限流位置｜依据 INCR &#x2F; EXPIRE &#x2F; ZADD &#x2F; EVAL 文档自绘</em></p>
 <h2 id="五、场景说明"><a href="#五、场景说明" class="headerlink" title="五、场景说明"></a>五、场景说明</h2><ol>
 <li><strong>登录&#x2F;短信验证码</strong>：固定窗口按手机号，粗粒度够用；</li>
 <li><strong>API 配额</strong>：滑动窗口按用户，要求精确；</li>
@@ -238,6 +240,48 @@ ZCARD rl:&#123;uid&#125;                 # 窗口内的数量<span aria-hidden="
 <span class="token number">127.0</span>.0.1:637<span class="token operator"><span class="token file-descriptor important">9</span>></span> CLUSTER KEYSLOT rl:<span class="token punctuation">&#123;</span>global<span class="token punctuation">&#125;</span>:api
 <span class="token punctuation">(</span>integer<span class="token punctuation">)</span> <span class="token number">12345</span>               <span class="token comment"># 所有带 &#123;global&#125; 的 key 落在同一个槽</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
 
+<h3 id="Java-侧怎么落地：一段-Lua-一个可配阈值"><a href="#Java-侧怎么落地：一段-Lua-一个可配阈值" class="headerlink" title="Java 侧怎么落地：一段 Lua + 一个可配阈值"></a>Java 侧怎么落地：一段 Lua + 一个可配阈值</h3><ol>
+<li><strong>pom 只引 starter</strong>，限流用 <code>DefaultRedisScript</code> 执行 Lua，不需要额外的限流框架。</li>
+</ol>
+<pre class="line-numbers language-markup" data-language="markup"><code class="language-markup"><span class="token tag"><span class="token tag"><span class="token punctuation">&lt;</span>dependency</span><span class="token punctuation">></span></span>
+  <span class="token tag"><span class="token tag"><span class="token punctuation">&lt;</span>groupId</span><span class="token punctuation">></span></span>org.springframework.boot<span class="token tag"><span class="token tag"><span class="token punctuation">&lt;/</span>groupId</span><span class="token punctuation">></span></span>
+  <span class="token tag"><span class="token tag"><span class="token punctuation">&lt;</span>artifactId</span><span class="token punctuation">></span></span>spring-boot-starter-data-redis<span class="token tag"><span class="token tag"><span class="token punctuation">&lt;/</span>artifactId</span><span class="token punctuation">></span></span>
+<span class="token tag"><span class="token tag"><span class="token punctuation">&lt;/</span>dependency</span><span class="token punctuation">></span></span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span></span></code></pre>
+
+<ol start="2">
+<li><strong>application.yml</strong>：阈值不写死在代码里，放配置（可接 Nacos&#x2F;Apollo 热更新）：</li>
+</ol>
+<pre class="line-numbers language-yaml" data-language="yaml"><code class="language-yaml"><span class="token key atrule">ratelimit</span><span class="token punctuation">:</span>
+  <span class="token key atrule">api</span><span class="token punctuation">:</span>
+    <span class="token key atrule">capacity</span><span class="token punctuation">:</span> <span class="token number">100</span>        <span class="token comment"># 突发上限</span>
+    <span class="token key atrule">rate</span><span class="token punctuation">:</span> <span class="token number">1.6</span>            <span class="token comment"># 每秒补令牌</span>
+  <span class="token key atrule">redis-key-prefix</span><span class="token punctuation">:</span> <span class="token key atrule">rl</span><span class="token punctuation">:</span>
+<span class="token key atrule">spring</span><span class="token punctuation">:</span>
+  <span class="token key atrule">data</span><span class="token punctuation">:</span>
+    <span class="token key atrule">redis</span><span class="token punctuation">:</span>
+      <span class="token key atrule">timeout</span><span class="token punctuation">:</span> 300ms<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<ol start="3">
+<li><strong>固定窗口也要用 Lua 合并 <code>INCR</code> + <code>EXPIRE</code></strong>，别分两次往返（第二次之前进程挂了，计数就永不清零）：</li>
+</ol>
+<pre class="line-numbers language-lua" data-language="lua"><code class="language-lua"><span class="token keyword">local</span> c <span class="token operator">=</span> redis<span class="token punctuation">.</span><span class="token function">call</span><span class="token punctuation">(</span><span class="token string">'INCR'</span><span class="token punctuation">,</span> KEYS<span class="token punctuation">[</span><span class="token number">1</span><span class="token punctuation">]</span><span class="token punctuation">)</span>
+<span class="token keyword">if</span> c <span class="token operator">==</span> <span class="token number">1</span> <span class="token keyword">then</span> redis<span class="token punctuation">.</span><span class="token function">call</span><span class="token punctuation">(</span><span class="token string">'PEXPIRE'</span><span class="token punctuation">,</span> KEYS<span class="token punctuation">[</span><span class="token number">1</span><span class="token punctuation">]</span><span class="token punctuation">,</span> ARGV<span class="token punctuation">[</span><span class="token number">1</span><span class="token punctuation">]</span><span class="token punctuation">)</span> <span class="token keyword">end</span>
+<span class="token keyword">if</span> c <span class="token operator">></span> <span class="token function">tonumber</span><span class="token punctuation">(</span>ARGV<span class="token punctuation">[</span><span class="token number">2</span><span class="token punctuation">]</span><span class="token punctuation">)</span> <span class="token keyword">then</span> <span class="token keyword">return</span> <span class="token number">0</span> <span class="token keyword">else</span> <span class="token keyword">return</span> <span class="token number">1</span> <span class="token keyword">end</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span></span></code></pre>
+
+<ol start="4">
+<li><strong>令牌桶脚本</strong>返回 1&#x2F;0，两个字段 tokens 与 last，注意首次访问要初始化并把 <code>last</code> 写回：</li>
+</ol>
+<pre class="line-numbers language-java" data-language="java"><code class="language-java"><span class="token class-name">DefaultRedisScript</span><span class="token generics"><span class="token punctuation">&lt;</span><span class="token class-name">Long</span><span class="token punctuation">></span></span> script <span class="token operator">=</span> <span class="token keyword">new</span> <span class="token class-name">DefaultRedisScript</span><span class="token generics"><span class="token punctuation">&lt;</span><span class="token punctuation">></span></span><span class="token punctuation">(</span><span class="token constant">LUA</span><span class="token punctuation">,</span> <span class="token class-name">Long</span><span class="token punctuation">.</span><span class="token keyword">class</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token class-name">Long</span> ok <span class="token operator">=</span> redis<span class="token punctuation">.</span><span class="token function">execute</span><span class="token punctuation">(</span>script<span class="token punctuation">,</span> <span class="token class-name">List</span><span class="token punctuation">.</span><span class="token function">of</span><span class="token punctuation">(</span><span class="token string">"rl:token:"</span> <span class="token operator">+</span> uid<span class="token punctuation">)</span><span class="token punctuation">,</span>
+        <span class="token class-name">String</span><span class="token punctuation">.</span><span class="token function">valueOf</span><span class="token punctuation">(</span><span class="token class-name">System</span><span class="token punctuation">.</span><span class="token function">currentTimeMillis</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">,</span> <span class="token string">"1.6"</span><span class="token punctuation">,</span> <span class="token string">"100"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token keyword">if</span> <span class="token punctuation">(</span>ok <span class="token operator">==</span> <span class="token keyword">null</span> <span class="token operator">||</span> ok <span class="token operator">==</span> <span class="token number">0</span><span class="token punctuation">)</span> <span class="token keyword">throw</span> <span class="token keyword">new</span> <span class="token class-name">RateLimitedException</span><span class="token punctuation">(</span>uid<span class="token punctuation">)</span><span class="token punctuation">;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span></span></code></pre>
+
+<ol start="5">
+<li><p><strong>微服务里所有实例必须共享同一 Redis</strong>，key 用「业务前缀 + 用户维度 + 动作」，例如 <code>rl:sms:{uid}</code>；集群要全局阈值就用 hash tag 把同类 key 收进同槽。</p>
+</li>
+<li><p><strong>Redis 异常要有兜底</strong>：<code>try/catch</code> 后切本地 <code>RateLimiter</code>（Guava&#x2F;Resilience4j）按单机阈值继续限，不要直接 fail-open 全放行，也不要 fail-close 全拒绝。</p>
+</li>
+</ol>
 <h2 id="七、常见坑（官方明确说明的限制）"><a href="#七、常见坑（官方明确说明的限制）" class="headerlink" title="七、常见坑（官方明确说明的限制）"></a>七、常见坑（官方明确说明的限制）</h2><ol>
 <li><strong>先 <code>GET</code> 再 <code>INCR</code></strong>。两个命令之间可插入其他请求，高并发下会放过超额流量；限流判定必须原子。</li>
 <li><strong><code>INCR</code> 后忘记 <code>EXPIRE</code></strong>。计数永远不清零，用户被永久限流；<code>EXPIRE</code> 也要在「第一次 INCR」时设置（或用 Lua 合并）。</li>
@@ -260,11 +304,21 @@ ZCARD rl:&#123;uid&#125;                 # 窗口内的数量<span aria-hidden="
 <li>阈值必须可动态调整。</li>
 </ul>
 <h2 id="九、思考题"><a href="#九、思考题" class="headerlink" title="九、思考题"></a>九、思考题</h2><ol>
-<li>固定窗口的临界问题，具体发生在哪两个时刻？怎么用滑动窗口消除？</li>
-<li>10 万 QPS 用滑动窗口限流，1 分钟窗口需要多少内存？你估算的依据是什么？</li>
-<li>令牌桶的 <code>rate</code> 与 <code>capacity</code> 分别控制什么？秒杀场景怎么设？</li>
-<li>集群里 3 个主节点、单节点阈值 100，全局最多通过多少？业务能接受吗？</li>
-<li>为什么限流的最后一道防线是「连接池上限」而不是「Redis 计数」？</li>
+<li><p>固定窗口的临界问题，具体发生在哪两个时刻？怎么用滑动窗口消除？</p>
+<p><strong>参考回答</strong>：发生在窗口边界两侧，例如 12:00:58～12:00:59 与 12:01:00～12:01:01：两个自然分钟各放 100 次，2 秒内通过了 200 次。滑动窗口改成「最近 60 秒内的真实请求数」，窗口随时间滑动，就不会有跨边界的双倍放行。</p>
+</li>
+<li><p>10 万 QPS 用滑动窗口限流，1 分钟窗口需要多少内存？你估算的依据是什么？</p>
+<p><strong>参考回答</strong>：成员数 &#x3D; QPS × 窗口秒数 &#x3D; 10 万 × 60 &#x3D; 600 万条 ZSet 成员。单成员含 member、score 与跳表&#x2F;字典开销，约 80～120 字节，合计约 500～700 MB，还没算复制与 AOF。结论是这个量级不该用 ZSet 滑动窗口，挡全站入口只能用固定窗口或令牌桶。</p>
+</li>
+<li><p>令牌桶的 <code>rate</code> 与 <code>capacity</code> 分别控制什么？秒杀场景怎么设？</p>
+<p><strong>参考回答</strong>：<code>rate</code> 控制稳态速率（每秒补多少令牌），<code>capacity</code> 控制允许的瞬时突发（桶的深度）。秒杀时 <code>capacity</code> 取「单机瞬时能扛的并发」（如 500），<code>rate</code> 取「后端稳态处理能力」（如 100&#x2F;s），再配合队列削峰，避免放进来又全部排队超时。</p>
+</li>
+<li><p>集群里 3 个主节点、单节点阈值 100，全局最多通过多少？业务能接受吗？</p>
+<p><strong>参考回答</strong>：按 key 分片时总量在 100～300 之间（取决于 key 分布），最坏接近 300。如果业务定义是「全局 100&#x2F;分钟」，这不可接受；要么用 hash tag 把限流 key 收到同槽做全局计数（代价是热点集中），要么接受「按节点阈值」并把目标改成「保护单节点」。</p>
+</li>
+<li><p>为什么限流的最后一道防线是「连接池上限」而不是「Redis 计数」？</p>
+<p><strong>参考回答</strong>：Redis 计数是预估：客户端超时、脚本执行失败、流量绕过该 key（别的入口&#x2F;直连）、分片放大，都会让实际并发超过阈值。连接池上限是物理约束，超过就排队或快速失败，数据库不会被压垮；限流只是提前削峰，不能当成硬保护。</p>
+</li>
 </ol>
 <h2 id="十、官方资料"><a href="#十、官方资料" class="headerlink" title="十、官方资料"></a>十、官方资料</h2><ul>
 <li>INCR（原子递增与「不存在视为 0」）：<a target="_blank" rel="noopener" href="https://redis.io/docs/latest/commands/incr/">https://redis.io/docs/latest/commands/incr/</a></li>

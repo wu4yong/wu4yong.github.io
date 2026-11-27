@@ -143,7 +143,7 @@ particlesJS("particles", {
   <h1 class="mb-title">redis-内存碎片</h1>
   <div class="mb-sub">
     分类：database · redis
-     ｜ 标签：系统课 · Redis · 运维 · 内存
+     ｜ 标签：Redis · 系统课 · 运维 · 内存
   </div>
 
   <div class="mb-article"><div class="essay-banner essay-database"></div>
@@ -196,6 +196,8 @@ active-defrag-max-scan-fields 1000      # 单个大对象最多扫描多少字�
 <li>内存已经贴近 <code>maxmemory</code>，整理期间的额外开销可能触发淘汰。</li>
 </ul>
 <p>这些情况的标准处置是<strong>主从切换到新实例</strong>（RD19&#x2F;RD21 的机制），而不是硬重启。</p>
+<p><img src="https://wu4yong.github.io/starry-images/assets/img/redis/rd-31b-fragmentation.svg" alt="内存口径、碎片来源与 activedefrag"></p>
+<p><em>三个内存口径的对比、碎片四个来源、activedefrag 四组参数与「该切主而不是整理」的三种情况｜依据 INFO memory 与 redis.conf 自绘</em></p>
 <h2 id="五、场景说明"><a href="#五、场景说明" class="headerlink" title="五、场景说明"></a>五、场景说明</h2><ol>
 <li><strong>长跑实例</strong>（几个月不重启）：碎片率缓慢爬升，适合开 <code>activedefrag</code>；</li>
 <li><strong>大量短生命周期 key</strong>（验证码、会话）：增删频繁，碎片最明显；</li>
@@ -244,6 +246,31 @@ $ <span class="token function">free</span> <span class="token parameter variable
 <span class="token number">127.0</span>.0.1:637<span class="token operator"><span class="token file-descriptor important">9</span>></span> CONFIG SET activedefrag no
 OK<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
 
+<h3 id="Java-侧怎么落地：碎片是客户端写出来的"><a href="#Java-侧怎么落地：碎片是客户端写出来的" class="headerlink" title="Java 侧怎么落地：碎片是客户端写出来的"></a>Java 侧怎么落地：碎片是客户端写出来的</h3><p>碎片几乎都来自「value 反复变大变小、大小混布」，所以 Java 侧最有效的动作是<strong>让 value 尺寸稳定</strong>，而不是等运维去整理。</p>
+<ol>
+<li><p><strong>pom 只引 starter</strong>，关键在序列化器与 value 尺寸治理。</p>
+</li>
+<li><p><strong>同一类 key 的 value 长度尽量固定</strong>。用 Jackson 全量序列化对象时，字段增删会让 value 忽大忽小，反复 realloc 直接制造空洞；对高频写的 key，宁可拆成几个定长字段存 Hash。</p>
+</li>
+</ol>
+<pre class="line-numbers language-java" data-language="java"><code class="language-java"><span class="token comment">// 反例：整个对象一把梭，字段增删就让 value 从 80B 跳到 300B</span>
+<span class="token comment">// 正例：拆成小字段，单个 value 长度稳定</span>
+stringRedisTemplate<span class="token punctuation">.</span><span class="token function">opsForHash</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token function">putAll</span><span class="token punctuation">(</span><span class="token string">"cfg:app"</span><span class="token punctuation">,</span> <span class="token class-name">Map</span><span class="token punctuation">.</span><span class="token function">of</span><span class="token punctuation">(</span><span class="token string">"v"</span><span class="token punctuation">,</span> <span class="token string">"3"</span><span class="token punctuation">,</span> <span class="token string">"ttl"</span><span class="token punctuation">,</span> <span class="token string">"3600"</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span></span></code></pre>
+
+<ol start="3">
+<li><p><strong>避免「先写大再改小」</strong>：SDS 缩短不释放（RD26），大 value 缩水后内存仍占着。要么重建 key，要么一开始就别写大。</p>
+</li>
+<li><p><strong>批量导入按批提交</strong>（见 RD27），避免一次性申请大量不同尺寸的块，让 jemalloc 的 size class 分布更整齐。</p>
+</li>
+<li><p><strong>把内存指标接进监控</strong>：Spring Boot Actuator + Micrometer 定时抓 <code>INFO memory</code>，把 <code>mem_fragmentation_ratio</code> 打成指标，超过 1.5 告警——比事后 <code>MEMORY DOCTOR</code> 猜要早得多。</p>
+</li>
+</ol>
+<pre class="line-numbers language-java" data-language="java"><code class="language-java"><span class="token class-name">String</span> info <span class="token operator">=</span> stringRedisTemplate<span class="token punctuation">.</span><span class="token function">execute</span><span class="token punctuation">(</span><span class="token punctuation">(</span><span class="token class-name">RedisCallback</span><span class="token generics"><span class="token punctuation">&lt;</span><span class="token class-name">String</span><span class="token punctuation">></span></span><span class="token punctuation">)</span> c <span class="token operator">-></span> <span class="token keyword">new</span> <span class="token class-name">String</span><span class="token punctuation">(</span>c<span class="token punctuation">.</span><span class="token function">info</span><span class="token punctuation">(</span><span class="token string">"memory"</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token comment">// 解析 mem_fragmentation_ratio / used_memory_rss / used_memory_peak 上报</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span></span></code></pre>
+
+<ol start="6">
+<li><strong>容器部署必须留余量</strong>：<code>maxmemory</code> 不要等于容器 limit（见本文常见坑第 5 条），Java 侧改不了这一点，但要在交付清单里写死。</li>
+</ol>
 <h2 id="七、常见坑（官方明确说明的限制）"><a href="#七、常见坑（官方明确说明的限制）" class="headerlink" title="七、常见坑（官方明确说明的限制）"></a>七、常见坑（官方明确说明的限制）</h2><ol>
 <li><strong>ratio 1.4 就重启</strong>。官方口径是「略大于 1 正常」，1.4 属于可接受，先看趋势与峰值。</li>
 <li><strong>把 rss 当泄漏</strong>。rss 包含碎片、分配器元数据、CoW 页；判断泄漏要看 <code>used_memory</code> 的长期趋势，而不是 rss。</li>
@@ -267,11 +294,21 @@ OK<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><
 <li>容量规划按 <code>used_memory_peak</code>，容器按 rss 计费。</li>
 </ul>
 <h2 id="九、思考题"><a href="#九、思考题" class="headerlink" title="九、思考题"></a>九、思考题</h2><ol>
-<li><code>used_memory</code> 12.5G、rss 17.6G，这 5G 差额由哪几部分组成？</li>
-<li>为什么 ratio 小于 1 比大于 1.5 更危险？怎么确认是否发生了 swap？</li>
-<li><code>activedefrag</code> 开着，但 ratio 一直不降，可能是哪三种原因？</li>
-<li>为什么「大 Hash 的碎片整理不动」？<code>active-defrag-max-scan-fields</code> 起了什么作用？</li>
-<li>容器环境里 <code>maxmemory 8gb</code>、容器 limit 8GiB，会发生什么？该怎么配？</li>
+<li><p><code>used_memory</code> 12.5G、rss 17.6G，这 5G 差额由哪几部分组成？</p>
+<p><strong>参考回答</strong>：jemalloc 按 size class 分配的块内浪费、散落在各 page 的空洞（拼不回连续大块还给 OS）、大小对象混布造成的 page 切碎、SDS 惰性释放未归还的空间，以及 fork&#x2F;CoW 遗留下来的页与分配器元数据。</p>
+</li>
+<li><p>为什么 ratio 小于 1 比大于 1.5 更危险？怎么确认是否发生了 swap？</p>
+<p><strong>参考回答</strong>：ratio &lt; 1 说明 <code>used_memory</code> 已大于 rss，即部分内存被换到磁盘：访问会触发缺页，延迟从微秒级跳到毫秒级，且会连锁放大。确认方式：<code>/proc/&lt;pid&gt;/smaps</code> 里看 Swap 字段、<code>vmstat</code> 的 si&#x2F;so、<code>MEMORY DOCTOR</code> 的提示。</p>
+</li>
+<li><p><code>activedefrag</code> 开着，但 ratio 一直不降，可能是哪三种原因？</p>
+<p><strong>参考回答</strong>：①碎片主要来自单个超大对象（如 2GB Hash），整理搬不动；②整理门槛没达到——碎片量不足 <code>active-defrag-ignore-bytes</code> 或碎片率低于 <code>threshold-lower</code>；③CPU 被业务吃满，<code>cycle-max</code> 给不出整理时间，或已贴近 <code>maxmemory</code>、整理腾挪又触发淘汰。</p>
+</li>
+<li><p>为什么「大 Hash 的碎片整理不动」？<code>active-defrag-max-scan-fields</code> 起了什么作用？</p>
+<p><strong>参考回答</strong>：大 Hash 是 hashtable + 千万个 SDS，整理要逐字段搬迁，且受 <code>active-defrag-max-scan-fields</code>（默认 1000）限制——单轮只扫有限字段，几千万字段的 Hash 需要极多轮才能搬完，实际等同搬不动。</p>
+</li>
+<li><p>容器环境里 <code>maxmemory 8gb</code>、容器 limit 8GiB，会发生什么？该怎么配？</p>
+<p><strong>参考回答</strong>：8gb 是十进制 8×10⁹≈7.45GiB，看起来留了余量；但 rss 通常大于 used（碎片）、fork 期间 CoW 翻倍、客户端输出缓冲也算进程内存，很容易触顶被 OOM killer 杀掉。配法：<code>maxmemory</code> 取 limit 的 60%～70%（如 5～6gb），设好淘汰策略，并留出 fork 与复制缓冲的空间。</p>
+</li>
 </ol>
 <h2 id="十、官方资料"><a href="#十、官方资料" class="headerlink" title="十、官方资料"></a>十、官方资料</h2><ul>
 <li>Memory optimization（碎片率与 activedefrag）：<a target="_blank" rel="noopener" href="https://redis.io/docs/latest/operate/oss_and_stack/management/optimization/memory-optimization/">https://redis.io/docs/latest/operate/oss_and_stack/management/optimization/memory-optimization/</a></li>

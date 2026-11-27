@@ -143,7 +143,7 @@ particlesJS("particles", {
   <h1 class="mb-title">redis-Pipeline</h1>
   <div class="mb-sub">
     分类：database · redis
-     ｜ 标签：系统课 · Redis · 性能
+     ｜ 标签：Redis · 系统课 · 性能
   </div>
 
   <div class="mb-article"><div class="essay-banner essay-database"></div>
@@ -197,6 +197,8 @@ N 条命令串行执行（T_exec × N）
 <li>按<strong>耗时</strong>：一批的预期执行时间不要超过几十毫秒，否则会明显抬高其他客户端延迟。</li>
 </ul>
 <p>高并发下还要注意：Pipeline 会把「N 条命令」变成一个「大请求」，服务端要一次性读完再逐条执行，<strong>大请求会占用主线程更久</strong>，所以别把 10 万条塞进一个管道。</p>
+<p><img src="https://wu4yong.github.io/starry-images/assets/img/redis/rd-36b-pipeline.svg" alt="Pipeline 的时间账"></p>
+<p><em>逐条发送与 Pipeline 的时间构成对比、批量命令与管道的三种方式、分批的三个约束｜依据 Pipelining 文档与 MGET&#x2F;MULTI 命令页自绘</em></p>
 <h2 id="五、场景说明"><a href="#五、场景说明" class="headerlink" title="五、场景说明"></a>五、场景说明</h2><ol>
 <li><strong>数据导入</strong>：把 CSV 批量灌库，Pipeline 是最直接的手段；</li>
 <li><strong>批量写缓存</strong>：一次预热几千个 key，分 1000 条一批；</li>
@@ -238,6 +240,42 @@ OK
 <span class="token comment"># → B 可能读到「执行到一半」的中间状态，这是允许的</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
 
 <p>第 6 步是关键实验：它不是「偶发问题」，而是<strong>官方明确不保证</strong>的行为。</p>
+<h3 id="Java-侧怎么落地：executePipelined-的四个要点"><a href="#Java-侧怎么落地：executePipelined-的四个要点" class="headerlink" title="Java 侧怎么落地：executePipelined 的四个要点"></a>Java 侧怎么落地：executePipelined 的四个要点</h3><ol>
+<li><strong>pom 只引 starter</strong>，管道是客户端行为，不需要额外依赖。</li>
+</ol>
+<pre class="line-numbers language-markup" data-language="markup"><code class="language-markup"><span class="token tag"><span class="token tag"><span class="token punctuation">&lt;</span>dependency</span><span class="token punctuation">></span></span>
+  <span class="token tag"><span class="token tag"><span class="token punctuation">&lt;</span>groupId</span><span class="token punctuation">></span></span>org.springframework.boot<span class="token tag"><span class="token tag"><span class="token punctuation">&lt;/</span>groupId</span><span class="token punctuation">></span></span>
+  <span class="token tag"><span class="token tag"><span class="token punctuation">&lt;</span>artifactId</span><span class="token punctuation">></span></span>spring-boot-starter-data-redis<span class="token tag"><span class="token tag"><span class="token punctuation">&lt;/</span>artifactId</span><span class="token punctuation">></span></span>
+<span class="token tag"><span class="token tag"><span class="token punctuation">&lt;/</span>dependency</span><span class="token punctuation">></span></span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span></span></code></pre>
+
+<ol start="2">
+<li><strong>用 <code>executePipelined</code>，回调里只发命令、不读结果</strong>（回调的返回值必须是 null，结果由框架按顺序收集）：</li>
+</ol>
+<pre class="line-numbers language-java" data-language="java"><code class="language-java"><span class="token class-name">List</span><span class="token generics"><span class="token punctuation">&lt;</span><span class="token class-name">Object</span><span class="token punctuation">></span></span> res <span class="token operator">=</span> stringRedisTemplate<span class="token punctuation">.</span><span class="token function">executePipelined</span><span class="token punctuation">(</span><span class="token punctuation">(</span><span class="token class-name">RedisCallback</span><span class="token generics"><span class="token punctuation">&lt;</span><span class="token class-name">Object</span><span class="token punctuation">></span></span><span class="token punctuation">)</span> conn <span class="token operator">-></span> <span class="token punctuation">&#123;</span>
+    <span class="token keyword">for</span> <span class="token punctuation">(</span><span class="token class-name">String</span> k <span class="token operator">:</span> keys<span class="token punctuation">)</span> conn<span class="token punctuation">.</span><span class="token function">get</span><span class="token punctuation">(</span>k<span class="token punctuation">.</span><span class="token function">getBytes</span><span class="token punctuation">(</span><span class="token class-name">StandardCharsets</span><span class="token punctuation">.</span><span class="token constant">UTF_8</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token keyword">return</span> <span class="token keyword">null</span><span class="token punctuation">;</span>                       <span class="token comment">// 千万不要在这里 get 结果</span>
+<span class="token punctuation">&#125;</span><span class="token punctuation">)</span><span class="token punctuation">;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span></span></code></pre>
+
+<ol start="3">
+<li><p><strong>先比较「能不能用批量命令」</strong>：同类型同结构优先 <code>MGET</code>&#x2F;<code>MSET</code>&#x2F;<code>HMGET</code>，一条命令比 100 条 GET 省的是命令调度与协议开销；管道只解决 RTT。</p>
+</li>
+<li><p><strong>分批</strong>：500–1000 条一批，或按字节切（<code>maxBytes / avgValueSize</code>），一批的预期执行时间控制在几十毫秒内。</p>
+</li>
+</ol>
+<pre class="line-numbers language-java" data-language="java"><code class="language-java"><span class="token keyword">for</span> <span class="token punctuation">(</span><span class="token class-name">List</span><span class="token generics"><span class="token punctuation">&lt;</span><span class="token class-name">String</span><span class="token punctuation">></span></span> batch <span class="token operator">:</span> <span class="token function">partition</span><span class="token punctuation">(</span>keys<span class="token punctuation">,</span> <span class="token number">800</span><span class="token punctuation">)</span><span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+    <span class="token class-name">List</span><span class="token generics"><span class="token punctuation">&lt;</span><span class="token class-name">Object</span><span class="token punctuation">></span></span> r <span class="token operator">=</span> stringRedisTemplate<span class="token punctuation">.</span><span class="token function">executePipelined</span><span class="token punctuation">(</span><span class="token punctuation">(</span><span class="token class-name">RedisCallback</span><span class="token generics"><span class="token punctuation">&lt;</span><span class="token class-name">Object</span><span class="token punctuation">></span></span><span class="token punctuation">)</span> conn <span class="token operator">-></span> <span class="token punctuation">&#123;</span>
+        batch<span class="token punctuation">.</span><span class="token function">forEach</span><span class="token punctuation">(</span>k <span class="token operator">-></span> conn<span class="token punctuation">.</span><span class="token function">get</span><span class="token punctuation">(</span>k<span class="token punctuation">.</span><span class="token function">getBytes</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+        <span class="token keyword">return</span> <span class="token keyword">null</span><span class="token punctuation">;</span>
+    <span class="token punctuation">&#125;</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token function">handle</span><span class="token punctuation">(</span>batch<span class="token punctuation">,</span> r<span class="token punctuation">)</span><span class="token punctuation">;</span>                  <span class="token comment">// 逐条判断，某条失败不影响其他</span>
+<span class="token punctuation">&#125;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<ol start="5">
+<li><p><strong>管道里禁止阻塞命令</strong>（<code>BRPOP</code>&#x2F;<code>BLPOP</code>）：它会让整条连接在服务端挂起到超时，管道里后面的命令都发不出去。</p>
+</li>
+<li><p><strong>Cluster 下按节点分组</strong>：管道不是一个连接发全部，而是按 key 所在节点拆分；带多 key 的命令仍要同槽（hash tag），否则 <code>CROSSSLOT</code>。</p>
+</li>
+</ol>
 <h2 id="七、常见坑（官方明确说明的限制）"><a href="#七、常见坑（官方明确说明的限制）" class="headerlink" title="七、常见坑（官方明确说明的限制）"></a>七、常见坑（官方明确说明的限制）</h2><ol>
 <li><strong>以为 Pipeline 提升的是服务端性能</strong>。服务端执行时间一分没少，省的是 RTT。</li>
 <li><strong>以为 Pipeline 有原子性</strong>。中间可能插入其他客户端的命令；要原子请包 <code>MULTI</code> 或用 Lua。</li>
@@ -261,11 +299,21 @@ OK
 <li>Cluster 下需要按节点拆分管道。</li>
 </ul>
 <h2 id="九、思考题"><a href="#九、思考题" class="headerlink" title="九、思考题"></a>九、思考题</h2><ol>
-<li>1ms RTT、1000 条命令，逐条与 Pipeline 的时间差是多少？如果 RTT 是 0.1ms 呢？</li>
-<li>为什么 100 个 <code>GET</code> 打包，不如 1 个 <code>MGET</code>？省掉的具体是什么开销？</li>
-<li>Pipeline 里放一条 <code>BRPOP</code> 会发生什么？为什么？</li>
-<li>Cluster 下把 1000 个不同槽的 key 塞进一个管道，客户端会遇到什么？怎么改？</li>
-<li>你的导入任务要灌 500 万条数据，批大小怎么定？给出三个约束条件。</li>
+<li><p>1ms RTT、1000 条命令，逐条与 Pipeline 的时间差是多少？如果 RTT 是 0.1ms 呢？</p>
+<p><strong>参考回答</strong>：1ms RTT 时，逐条 ≈ 1000×(1ms+exec)，管道 ≈ 1ms+1000×exec，差约 999ms（接近 1 秒）。RTT 0.1ms 时差约 99.9ms，收益小一个数量级——管道省的就是 <code>N×RTT</code> 里的 <code>(N-1)</code> 份。</p>
+</li>
+<li><p>为什么 100 个 <code>GET</code> 打包，不如 1 个 <code>MGET</code>？省掉的具体是什么开销？</p>
+<p><strong>参考回答</strong>：<code>MGET</code> 是一条命令，服务端一次遍历完成；省掉的是 100 次命令调度（事件循环的读&#x2F;解析&#x2F;执行&#x2F;写回复各 100 轮）、100 份协议头，以及客户端 100 次回复解析。管道只是把 RTT 压成一次，命令数不变。</p>
+</li>
+<li><p>Pipeline 里放一条 <code>BRPOP</code> 会发生什么？为什么？</p>
+<p><strong>参考回答</strong>：整条连接会在服务端进入阻塞态直到超时（或来数据），管道里它之后的命令都排在后面发不出去，客户端表现为「管道卡住」。所以阻塞命令必须单独用一条连接。</p>
+</li>
+<li><p>Cluster 下把 1000 个不同槽的 key 塞进一个管道，客户端会遇到什么？怎么改？</p>
+<p><strong>参考回答</strong>：管道会被按节点拆分重发，出现大量 <code>MOVED</code> 跟进；带多 key 的单条命令还会 <code>CROSSSLOT</code> 失败。改法：按槽&#x2F;节点分组各发一条管道，或用 hash tag 把相关 key 收进同一槽。</p>
+</li>
+<li><p>你的导入任务要灌 500 万条数据，批大小怎么定？给出三个约束条件。</p>
+<p><strong>参考回答</strong>：①条数：500–1000 条&#x2F;批，保证一批在主线程上跑完只用几毫秒；②字节：单批请求体控制在几 MB 内（大 value 时按字节算而不是条数）；③耗时：一批预期执行不超过几十毫秒，否则抬高其他客户端延迟。另外失败重试必须幂等，且避开业务高峰。</p>
+</li>
 </ol>
 <h2 id="十、官方资料"><a href="#十、官方资料" class="headerlink" title="十、官方资料"></a>十、官方资料</h2><ul>
 <li>Pipelining（RTT 与批量发送的原文说明）：<a target="_blank" rel="noopener" href="https://redis.io/docs/latest/develop/using-commands/pipelining/">https://redis.io/docs/latest/develop/using-commands/pipelining/</a></li>

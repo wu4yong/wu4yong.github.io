@@ -143,7 +143,7 @@ particlesJS("particles", {
   <h1 class="mb-title">redis-监控与告警</h1>
   <div class="mb-sub">
     分类：database · redis
-     ｜ 标签：系统课 · Redis · 运维
+     ｜ 标签：Redis · 系统课 · 运维
   </div>
 
   <div class="mb-article"><div class="essay-banner essay-database"></div>
@@ -194,6 +194,8 @@ LATENCY HISTORY &lt;event&gt;           # 某事件的时间序列
 LATENCY RESET                     # 清空，用于重置基准<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span></span></code></pre>
 
 <p>常见事件：<code>fork</code>（RDB&#x2F;AOF 重写）、<code>aof-fsync-always</code>、<code>command</code>、<code>expire-cycle</code>。看到 <code>fork</code> 事件频繁且延迟高，就该考虑内存规模（RD51）。</p>
+<p><img src="https://wu4yong.github.io/starry-images/assets/img/redis/rd-50b-monitor.svg" alt="监控四组指标与三类衍生指标"></p>
+<p><em>内存&#x2F;连接&#x2F;性能&#x2F;复制四组字段与判读阈值、命中率等三个必须自己算的衍生指标，以及延迟监控默认关闭这件事｜依据 INFO、LATENCY 与延迟排查文档自绘</em></p>
 <h2 id="五、场景说明"><a href="#五、场景说明" class="headerlink" title="五、场景说明"></a>五、场景说明</h2><ol>
 <li><strong>新上线实例</strong>：先开 <code>latency-monitor-threshold</code> 与慢日志，再谈业务指标；</li>
 <li><strong>主从架构</strong>：<code>master_link_status</code> 与 <code>master_last_io_seconds_ago</code> 必须进告警；</li>
@@ -250,6 +252,54 @@ OK
 <span class="token comment"># 5. 内存告警的判据（脚本里算比例）</span>
 <span class="token comment"># 若 used_memory/maxmemory >= 0.8 → 告警；>= 0.95 → 严重</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
 
+<h3 id="Java-侧怎么落地：Actuator-定时采集-INFO"><a href="#Java-侧怎么落地：Actuator-定时采集-INFO" class="headerlink" title="Java 侧怎么落地：Actuator + 定时采集 INFO"></a>Java 侧怎么落地：Actuator + 定时采集 INFO</h3><ol>
+<li><strong>pom</strong>：Actuator 出指标，Prometheus 做存储与告警源。</li>
+</ol>
+<pre class="line-numbers language-markup" data-language="markup"><code class="language-markup"><span class="token tag"><span class="token tag"><span class="token punctuation">&lt;</span>dependency</span><span class="token punctuation">></span></span>
+  <span class="token tag"><span class="token tag"><span class="token punctuation">&lt;</span>groupId</span><span class="token punctuation">></span></span>org.springframework.boot<span class="token tag"><span class="token tag"><span class="token punctuation">&lt;/</span>groupId</span><span class="token punctuation">></span></span>
+  <span class="token tag"><span class="token tag"><span class="token punctuation">&lt;</span>artifactId</span><span class="token punctuation">></span></span>spring-boot-starter-actuator<span class="token tag"><span class="token tag"><span class="token punctuation">&lt;/</span>artifactId</span><span class="token punctuation">></span></span>
+<span class="token tag"><span class="token tag"><span class="token punctuation">&lt;/</span>dependency</span><span class="token punctuation">></span></span>
+<span class="token tag"><span class="token tag"><span class="token punctuation">&lt;</span>dependency</span><span class="token punctuation">></span></span>
+  <span class="token tag"><span class="token tag"><span class="token punctuation">&lt;</span>groupId</span><span class="token punctuation">></span></span>io.micrometer<span class="token tag"><span class="token tag"><span class="token punctuation">&lt;/</span>groupId</span><span class="token punctuation">></span></span>
+  <span class="token tag"><span class="token tag"><span class="token punctuation">&lt;</span>artifactId</span><span class="token punctuation">></span></span>micrometer-registry-prometheus<span class="token tag"><span class="token tag"><span class="token punctuation">&lt;/</span>artifactId</span><span class="token punctuation">></span></span>
+<span class="token tag"><span class="token tag"><span class="token punctuation">&lt;/</span>dependency</span><span class="token punctuation">></span></span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<ol start="2">
+<li><strong>application.yml</strong>：只暴露需要的端点，采集间隔别太密（INFO 本身有成本）：</li>
+</ol>
+<pre class="line-numbers language-yaml" data-language="yaml"><code class="language-yaml"><span class="token key atrule">management</span><span class="token punctuation">:</span>
+  <span class="token key atrule">endpoints.web.exposure.include</span><span class="token punctuation">:</span> health<span class="token punctuation">,</span>info<span class="token punctuation">,</span>prometheus
+  <span class="token key atrule">endpoint.health.show-details</span><span class="token punctuation">:</span> never
+<span class="token key atrule">redis-monitor</span><span class="token punctuation">:</span>
+  <span class="token key atrule">interval</span><span class="token punctuation">:</span> 30s          <span class="token comment"># 采集间隔</span>
+  <span class="token key atrule">memory-threshold</span><span class="token punctuation">:</span> <span class="token number">0.8</span>  <span class="token comment"># 与告警规则对齐，放配置不写死</span>
+<span class="token key atrule">spring</span><span class="token punctuation">:</span>
+  <span class="token key atrule">data</span><span class="token punctuation">:</span>
+    <span class="token key atrule">redis</span><span class="token punctuation">:</span>
+      <span class="token key atrule">timeout</span><span class="token punctuation">:</span> 300ms<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<ol start="3">
+<li><strong>定时任务里取 INFO，不要再拼字符串</strong>：<code>RedisConnection.info()</code> 直接返回带结构的 <code>Properties</code>，按段取值：</li>
+</ol>
+<pre class="line-numbers language-java" data-language="java"><code class="language-java"><span class="token class-name">Properties</span> p <span class="token operator">=</span> connection<span class="token punctuation">.</span><span class="token function">info</span><span class="token punctuation">(</span><span class="token string">"memory"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token keyword">long</span> used <span class="token operator">=</span> <span class="token class-name">Long</span><span class="token punctuation">.</span><span class="token function">parseLong</span><span class="token punctuation">(</span>p<span class="token punctuation">.</span><span class="token function">getProperty</span><span class="token punctuation">(</span><span class="token string">"used_memory"</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token keyword">long</span> max  <span class="token operator">=</span> <span class="token class-name">Long</span><span class="token punctuation">.</span><span class="token function">parseLong</span><span class="token punctuation">(</span>p<span class="token punctuation">.</span><span class="token function">getProperty</span><span class="token punctuation">(</span><span class="token string">"maxmemory"</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token keyword">double</span> ratio <span class="token operator">=</span> max <span class="token operator">></span> <span class="token number">0</span> <span class="token operator">?</span> <span class="token punctuation">(</span><span class="token keyword">double</span><span class="token punctuation">)</span> used <span class="token operator">/</span> max <span class="token operator">:</span> <span class="token number">0</span><span class="token punctuation">;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span></span></code></pre>
+
+<ol start="4">
+<li><strong>注册成 Gauge，让告警规则在监控侧统一配</strong>（不要在每个服务里写 if 判断）：</li>
+</ol>
+<pre class="line-numbers language-java" data-language="java"><code class="language-java"><span class="token class-name">Gauge</span><span class="token punctuation">.</span><span class="token function">builder</span><span class="token punctuation">(</span><span class="token string">"redis_memory_used_ratio"</span><span class="token punctuation">,</span> <span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token operator">-></span> ratio<span class="token punctuation">)</span>
+     <span class="token punctuation">.</span><span class="token function">tag</span><span class="token punctuation">(</span><span class="token string">"instance"</span><span class="token punctuation">,</span> host<span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token function">register</span><span class="token punctuation">(</span>meterRegistry<span class="token punctuation">)</span><span class="token punctuation">;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span></span></code></pre>
+
+<ol start="5">
+<li><p><strong>派生指标自己在应用里算</strong>：<code>keyspace_hits</code> &#x2F; <code>keyspace_misses</code> 增量相除得命中率；<code>commandstats</code> 里取 <code>usec_per_call</code>；复制看 <code>master_link_status</code>，只要不是 <code>up</code> 就按异常上报。</p>
+</li>
+<li><p><strong>延迟监控要显式打开</strong>：启动时 <code>CONFIG SET latency-monitor-threshold 100</code>（或写进 <code>redis.conf</code>），再用 <code>LATENCY LATEST</code> 取事件与最大耗时——它默认关闭，不开就永远查不到 fork 与 fsync 的尖刺。</p>
+</li>
+<li><p><strong>采集本身要隔离</strong>：独立线程 + 独立连接 + 短超时，采集失败只记日志不抛给业务；用业务连接池跑 INFO，Redis 卡顿时会把业务一起拖住。</p>
+</li>
+</ol>
 <h2 id="七、常见坑（官方明确说明的限制）"><a href="#七、常见坑（官方明确说明的限制）" class="headerlink" title="七、常见坑（官方明确说明的限制）"></a>七、常见坑（官方明确说明的限制）</h2><ol>
 <li><strong><code>latency-monitor-threshold</code> 保持 0</strong>。默认关闭，不设置就永远不会记录慢事件。</li>
 <li><strong>采集全量 <code>INFO</code></strong>。大实例上 <code>INFO</code> 有成本；应按段采集并降低频率。</li>
@@ -272,11 +322,21 @@ OK
 <li>阈值要有基线，别照抄。</li>
 </ul>
 <h2 id="九、思考题"><a href="#九、思考题" class="headerlink" title="九、思考题"></a>九、思考题</h2><ol>
-<li><code>used_memory</code> 到 80% 时你会先做什么，为什么不是先扩容？</li>
-<li><code>keyspace_misses</code> 增长但命中率没掉，说明什么？</li>
-<li><code>master_last_io_seconds_ago</code> 持续增大，故障链条是怎样的？</li>
-<li><code>fork</code> 延迟 400ms，对线上 P99 有什么影响？</li>
-<li>如果只能上三条告警，你选哪三条？给出理由。</li>
+<li><p><code>used_memory</code> 到 80% 时你会先做什么，为什么不是先扩容？</p>
+<p><strong>参考回答</strong>：先看结构，不动容量：<code>evicted_keys</code> 是否增长、<code>maxmemory-policy</code> 是否合理、有没有无 TTL 的大 key、过期是否集中在同一时段。80% 常常是「该淘汰的没淘汰」而不是「真的不够」，先扩容会把内存问题变成成本问题，并掩盖 TTL 设计缺陷。</p>
+</li>
+<li><p><code>keyspace_misses</code> 增长但命中率没掉，说明什么？</p>
+<p><strong>参考回答</strong>：说明读总量一起涨了。命中率是比值，hits 与 misses 同比例增长时比值不变，但回源 QPS 已经同比上升——要盯的是「回源压力」绝对值，而不是命中率这个比率。</p>
+</li>
+<li><p><code>master_last_io_seconds_ago</code> 持续增大，故障链条是怎样的？</p>
+<p><strong>参考回答</strong>：主库长时间没有向从库发送数据 → 网络抖动或主库阻塞 → 从库判定超时 → <code>master_link_status:down</code> → 主库积压写入超出 <code>repl-backlog</code> 或被踢出 backlog → 从库重连只能 <code>PSYNC</code> 全量 → 带宽与磁盘被打满，延迟进一步恶化。所以这个字段是「即将全量同步」的早期信号。</p>
+</li>
+<li><p><code>fork</code> 延迟 400ms，对线上 P99 有什么影响？</p>
+<p><strong>参考回答</strong>：fork 期间主线程被阻塞，这 400ms 内所有命令排队，P99 会出现一个明显尖刺（400ms 量级），若此时正好有超时设置较短的客户端，还会连带出现超时重试与连接重建。评估要看「尖刺频率 × 单次时长」是否已经把 P99 顶到 SLA 之外。</p>
+</li>
+<li><p>如果只能上三条告警，你选哪三条？给出理由。</p>
+<p><strong>参考回答</strong>：① <code>used_memory/maxmemory</code> 持续 ≥ 80%（决定是否会写失败或开始淘汰）；② <code>master_link_status</code> 非 up 或 <code>master_last_io</code> 持续增大（决定数据是否还同步、是否会全量）；③ <code>rejected_connections</code> 增长或出现 OOM 错误（决定请求是否已经开始被拒）。三条分别对应「容量、数据、可用」三个不可回退的边界。</p>
+</li>
 </ol>
 <h2 id="十、官方资料"><a href="#十、官方资料" class="headerlink" title="十、官方资料"></a>十、官方资料</h2><ul>
 <li>INFO（各分组字段说明）：<a target="_blank" rel="noopener" href="https://redis.io/docs/latest/commands/info/">https://redis.io/docs/latest/commands/info/</a></li>

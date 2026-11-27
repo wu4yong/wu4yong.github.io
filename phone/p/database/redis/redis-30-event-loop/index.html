@@ -143,7 +143,7 @@ particlesJS("particles", {
   <h1 class="mb-title">redis-事件循环</h1>
   <div class="mb-sub">
     分类：database · redis
-     ｜ 标签：系统课 · Redis · 性能 · 底层原理
+     ｜ 标签：Redis · 系统课 · 性能 · 底层原理
   </div>
 
   <div class="mb-article"><div class="essay-banner essay-database"></div>
@@ -198,6 +198,8 @@ aeApiPoll (epoll_wait) ← 等待可读&#x2F;可写的 fd，超时由最近的�
 <li><strong>CPU 一般不是瓶颈</strong>：内存操作极快，瓶颈通常在网络带宽、内存容量、慢命令；</li>
 <li><strong>加线程解决不了真问题</strong>：真问题是「单条命令太慢」（大 key、<code>KEYS *</code>、大范围 <code>ZRANGE</code>），多线程只会让多个慢命令一起慢。</li>
 </ul>
+<p><img src="https://wu4yong.github.io/starry-images/assets/img/redis/rd-30b-event-loop.svg" alt="事件循环与 io-threads 的边界"></p>
+<p><em>事件循环一圈的四个阶段、io-threads 能做与不能做的事情，以及单线程的三条底气｜依据 ae.c、server.c 与 redis.conf io-threads 注释自绘</em></p>
 <h2 id="五、场景说明"><a href="#五、场景说明" class="headerlink" title="五、场景说明"></a>五、场景说明</h2><ol>
 <li><strong>高 QPS 小命令</strong>（GET&#x2F;SET 为主）：开 <code>io-threads</code> 有收益，主线程不再被协议解析占满；</li>
 <li><strong>大 value 传输</strong>：网络写是瓶颈，多线程写回复能提升吞吐；</li>
@@ -237,6 +239,47 @@ $ redis-benchmark <span class="token parameter variable">-h</span> <span class="
 <span class="token comment"># cmdstat_get:calls=...,usec=...,usec_per_call=...</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
 
 <p>第 5 步是这一讲最重要的实验：它证明「<code>io-threads</code> 提高的是 IO 吞吐，不是命令执行能力」。</p>
+<h3 id="Java-侧怎么落地：别让客户端堵住那条单线程"><a href="#Java-侧怎么落地：别让客户端堵住那条单线程" class="headerlink" title="Java 侧怎么落地：别让客户端堵住那条单线程"></a>Java 侧怎么落地：别让客户端堵住那条单线程</h3><p>执行是单线程的，所以 Java 侧要做的是「少发慢命令、别排长队」，而不是「多开线程压上去」。</p>
+<ol>
+<li><strong>pom 只引 starter</strong>，客户端用 Lettuce（Spring Boot 2.x 起默认），它是 Netty 驱动、连接可共享，适合并发。</li>
+</ol>
+<pre class="line-numbers language-markup" data-language="markup"><code class="language-markup"><span class="token tag"><span class="token tag"><span class="token punctuation">&lt;</span>dependency</span><span class="token punctuation">></span></span>
+  <span class="token tag"><span class="token tag"><span class="token punctuation">&lt;</span>groupId</span><span class="token punctuation">></span></span>org.springframework.boot<span class="token tag"><span class="token tag"><span class="token punctuation">&lt;/</span>groupId</span><span class="token punctuation">></span></span>
+  <span class="token tag"><span class="token tag"><span class="token punctuation">&lt;</span>artifactId</span><span class="token punctuation">></span></span>spring-boot-starter-data-redis<span class="token tag"><span class="token tag"><span class="token punctuation">&lt;/</span>artifactId</span><span class="token punctuation">></span></span>
+<span class="token tag"><span class="token tag"><span class="token punctuation">&lt;/</span>dependency</span><span class="token punctuation">></span></span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span></span></code></pre>
+
+<ol start="2">
+<li><strong>连接池要配，命令超时必须设</strong>。池太小会让线程在客户端排队（慢日志里看不到），命令超时能防止一次慢命令拖死整个请求线程：</li>
+</ol>
+<pre class="line-numbers language-yaml" data-language="yaml"><code class="language-yaml"><span class="token key atrule">spring</span><span class="token punctuation">:</span>
+  <span class="token key atrule">data</span><span class="token punctuation">:</span>
+    <span class="token key atrule">redis</span><span class="token punctuation">:</span>
+      <span class="token key atrule">timeout</span><span class="token punctuation">:</span> 200ms                 <span class="token comment"># 命令级超时，别留 0（无限等）</span>
+      <span class="token key atrule">lettuce</span><span class="token punctuation">:</span>
+        <span class="token key atrule">pool</span><span class="token punctuation">:</span>
+          <span class="token key atrule">max-active</span><span class="token punctuation">:</span> <span class="token number">32</span>             <span class="token comment"># 按并发线程数配，不是越大越好</span>
+          <span class="token key atrule">max-wait</span><span class="token punctuation">:</span> 100ms            <span class="token comment"># 拿不到连接立刻失败，别无限阻塞</span>
+          <span class="token key atrule">min-idle</span><span class="token punctuation">:</span> <span class="token number">8</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<ol start="3">
+<li><strong>禁止在生产发「执行阶段很重」的命令</strong>：<code>KEYS *</code>、大 <code>ZRANGE</code>、<code>HGETALL</code> 十万字段、<code>SMEMBERS</code> 大集合——它们占的是单线程的执行时间，pool 开再大也没用。</li>
+</ol>
+<pre class="line-numbers language-java" data-language="java"><code class="language-java"><span class="token comment">// 反例：KEYS 在生产禁用</span>
+<span class="token comment">// Set&lt;String> keys = redis.keys("user:*");</span>
+<span class="token comment">// 正例：游标遍历，分批处理</span>
+<span class="token class-name">ScanOptions</span> opt <span class="token operator">=</span> <span class="token class-name">ScanOptions</span><span class="token punctuation">.</span><span class="token function">scanOptions</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token function">count</span><span class="token punctuation">(</span><span class="token number">500</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token function">match</span><span class="token punctuation">(</span><span class="token string">"user:*"</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token function">build</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span></span></code></pre>
+
+<ol start="4">
+<li><strong>批量操作用 pipeline</strong>，把 N 次 RTT 压成 1 次：这也直接降低主线程的 epoll 唤醒次数。</li>
+</ol>
+<pre class="line-numbers language-java" data-language="java"><code class="language-java"><span class="token class-name">List</span><span class="token generics"><span class="token punctuation">&lt;</span><span class="token class-name">Object</span><span class="token punctuation">></span></span> res <span class="token operator">=</span> stringRedisTemplate<span class="token punctuation">.</span><span class="token function">executePipelined</span><span class="token punctuation">(</span><span class="token punctuation">(</span><span class="token class-name">RedisCallback</span><span class="token generics"><span class="token punctuation">&lt;</span><span class="token class-name">Object</span><span class="token punctuation">></span></span><span class="token punctuation">)</span> conn <span class="token operator">-></span> <span class="token punctuation">&#123;</span>
+    <span class="token keyword">for</span> <span class="token punctuation">(</span><span class="token class-name">String</span> k <span class="token operator">:</span> keys<span class="token punctuation">)</span> conn<span class="token punctuation">.</span><span class="token function">get</span><span class="token punctuation">(</span>k<span class="token punctuation">.</span><span class="token function">getBytes</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token keyword">return</span> <span class="token keyword">null</span><span class="token punctuation">;</span>
+<span class="token punctuation">&#125;</span><span class="token punctuation">)</span><span class="token punctuation">;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span></span></code></pre>
+
+<ol start="5">
+<li><strong>微服务里统一连接参数</strong>：把 pool、timeout 放配置中心，避免某服务把 <code>timeout</code> 写成 0，一个慢命令把线程池占满后雪崩。</li>
+</ol>
 <h2 id="七、常见坑（官方明确说明的限制）"><a href="#七、常见坑（官方明确说明的限制）" class="headerlink" title="七、常见坑（官方明确说明的限制）"></a>七、常见坑（官方明确说明的限制）</h2><ol>
 <li><strong>以为开了 <code>io-threads</code> 就是「多线程 Redis」</strong>。命令执行仍是单线程，语义完全不变。</li>
 <li><strong>把 <code>io-threads</code> 开得很大</strong>。超过核数只增加切换与竞争开销，官方建议一般不超过 8。</li>
@@ -260,11 +303,21 @@ $ redis-benchmark <span class="token parameter variable">-h</span> <span class="
 <li>开 <code>io-threads</code> 要看 P99，不只看 QPS。</li>
 </ul>
 <h2 id="九、思考题"><a href="#九、思考题" class="headerlink" title="九、思考题"></a>九、思考题</h2><ol>
-<li>单线程为什么能扛十万 QPS？请从「多路复用 + 内存操作 + 无锁」三点各说一句。</li>
-<li><code>io-threads</code> 开了 8，一条 <code>KEYS *</code> 会变快吗？为什么？</li>
-<li>为什么说「原子性天然成立」？如果命令改成多线程执行，<code>INCR</code> 会出什么问题？</li>
-<li><code>serverCron</code> 里的过期清理被慢命令延后，会带来什么业务影响？</li>
-<li>你的实例 CPU 使用率 60%、QPS 已打满、平均延迟 1ms、P99 30ms，该不该开 <code>io-threads</code>？判断依据是什么？</li>
+<li><p>单线程为什么能扛十万 QPS？请从「多路复用 + 内存操作 + 无锁」三点各说一句。</p>
+<p><strong>参考回答</strong>：多路复用——epoll 让一个线程同时盯上万个 fd，省掉「一连接一线程」的切换与内存；内存操作——命令在内存里执行，没有磁盘 IO 与解析开销，单条路径极短；无锁——串行执行天然原子，没有锁竞争与临界区。真实十万 QPS 通常是 pipeline 或多实例叠加的结果，单连接 RTT 仍是瓶颈。</p>
+</li>
+<li><p><code>io-threads</code> 开了 8，一条 <code>KEYS *</code> 会变快吗？为什么？</p>
+<p><strong>参考回答</strong>：不会。io-threads 只并行「读 socket、解析 RESP、组装写回复」，命令执行仍是单线程；<code>KEYS *</code> 的耗时全在遍历键空间这一步。</p>
+</li>
+<li><p>为什么说「原子性天然成立」？如果命令改成多线程执行，<code>INCR</code> 会出什么问题？</p>
+<p><strong>参考回答</strong>：因为执行永远串行，命令之间没有插入点。改成多线程后，<code>INCR</code> 的「读—加—写」三步可能被其他线程插入，两个线程都读到 10 都写成 11，产生丢失更新。</p>
+</li>
+<li><p><code>serverCron</code> 里的过期清理被慢命令延后，会带来什么业务影响？</p>
+<p><strong>参考回答</strong>：过期 key 继续占内存、继续被读到（逻辑上已过期但仍有值），内存上涨甚至触发淘汰；同时 rehash 推进、统计刷新也一起延后，监控数据会失真。</p>
+</li>
+<li><p>你的实例 CPU 使用率 60%、QPS 已打满、平均延迟 1ms、P99 30ms，该不该开 <code>io-threads</code>？判断依据是什么？</p>
+<p><strong>参考回答</strong>：先别开。CPU 才 60%，说明瓶颈不在网络 IO 的 CPU 开销；P99 30ms 与均值 1ms 的巨大差距，更像慢命令&#x2F;大 key&#x2F;客户端排队。判断依据：看 <code>INFO cpu</code> 里是否主要耗在 IO、带宽是否打满、<code>SLOWLOG</code>&#x2F;<code>LATENCY</code> 是否有周期事件；只有「带宽打满 + IO 吃满 CPU」才值得开。</p>
+</li>
 </ol>
 <h2 id="十、官方资料"><a href="#十、官方资料" class="headerlink" title="十、官方资料"></a>十、官方资料</h2><ul>
 <li>Latency 与 IO 多线程说明：<a target="_blank" rel="noopener" href="https://redis.io/docs/latest/operate/oss_and_stack/management/optimization/latency/">https://redis.io/docs/latest/operate/oss_and_stack/management/optimization/latency/</a></li>

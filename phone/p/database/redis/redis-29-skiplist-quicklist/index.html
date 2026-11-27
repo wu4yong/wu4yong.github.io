@@ -143,7 +143,7 @@ particlesJS("particles", {
   <h1 class="mb-title">redis-skiplist 与 quicklist</h1>
   <div class="mb-sub">
     分类：database · redis
-     ｜ 标签：系统课 · Redis · 底层原理
+     ｜ 标签：Redis · 系统课 · 底层原理
   </div>
 
   <div class="mb-article"><div class="essay-banner essay-database"></div>
@@ -200,6 +200,8 @@ particlesJS("particles", {
 <li>节点太大 → 单节点内插入要搬移大量数据，<code>LINSERT</code> 变慢，且大 listpack 释放时会造成延迟毛刺；</li>
 <li>节点太小 → 退化成「纯双向链表」，每个元素都有两个指针，内存暴涨。</li>
 </ul>
+<p><img src="https://wu4yong.github.io/starry-images/assets/img/redis/rd-29b-skiplist.svg" alt="skiplist 与 ZSet 双结构"></p>
+<p><em>skiplist 的分层前向指针与晋升概率、ZSet 的 dict + skiplist 双结构、quicklist 的节点策略｜依据 t_zset.c 与 quicklist.c 自绘</em></p>
 <h2 id="五、场景说明"><a href="#五、场景说明" class="headerlink" title="五、场景说明"></a>五、场景说明</h2><ol>
 <li><strong>排行榜</strong>：ZSet 的典型用法，<code>ZREVRANGE</code> 走 skiplist，几百万成员仍然很快；</li>
 <li><strong>延迟队列</strong>：score 存时间戳，<code>ZRANGEBYSCORE 0 now</code> 取到期任务，靠的就是 skiplist 的范围查询；</li>
@@ -258,6 +260,49 @@ OK                            <span class="token comment"># 改为每节点 8KB<
 <span class="token punctuation">(</span>integer<span class="token punctuation">)</span> <span class="token number">500</span>
 <span class="token number">127.0</span>.0.1:637<span class="token operator"><span class="token file-descriptor important">9</span>></span> MEMORY USAGE q2<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
 
+<h3 id="Java-侧怎么落地：排行榜与延迟队列"><a href="#Java-侧怎么落地：排行榜与延迟队列" class="headerlink" title="Java 侧怎么落地：排行榜与延迟队列"></a>Java 侧怎么落地：排行榜与延迟队列</h3><p>这两个结构在 Java 侧最常被用在「排行榜」和「延迟队列」，写法上有几个必须守的点。</p>
+<ol>
+<li><strong>pom 只引 starter</strong>，ZSet 与 List 都不需要额外依赖。</li>
+</ol>
+<pre class="line-numbers language-markup" data-language="markup"><code class="language-markup"><span class="token tag"><span class="token tag"><span class="token punctuation">&lt;</span>dependency</span><span class="token punctuation">></span></span>
+  <span class="token tag"><span class="token tag"><span class="token punctuation">&lt;</span>groupId</span><span class="token punctuation">></span></span>org.springframework.boot<span class="token tag"><span class="token tag"><span class="token punctuation">&lt;/</span>groupId</span><span class="token punctuation">></span></span>
+  <span class="token tag"><span class="token tag"><span class="token punctuation">&lt;</span>artifactId</span><span class="token punctuation">></span></span>spring-boot-starter-data-redis<span class="token tag"><span class="token tag"><span class="token punctuation">&lt;/</span>artifactId</span><span class="token punctuation">></span></span>
+<span class="token tag"><span class="token tag"><span class="token punctuation">&lt;/</span>dependency</span><span class="token punctuation">></span></span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span></span></code></pre>
+
+<ol start="2">
+<li><strong>排行榜分页取，绝不用 <code>ZRANGE 0 -1</code></strong>：</li>
+</ol>
+<pre class="line-numbers language-java" data-language="java"><code class="language-java"><span class="token comment">// 第 1 页：前 100 名，带分数</span>
+<span class="token class-name">Set</span><span class="token generics"><span class="token punctuation">&lt;</span><span class="token class-name">TypedTuple</span><span class="token punctuation">&lt;</span><span class="token class-name">String</span><span class="token punctuation">></span><span class="token punctuation">></span></span> top <span class="token operator">=</span> stringRedisTemplate<span class="token punctuation">.</span><span class="token function">opsForZSet</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+        <span class="token punctuation">.</span><span class="token function">reverseRangeWithScores</span><span class="token punctuation">(</span><span class="token string">"rank:daily"</span><span class="token punctuation">,</span> <span class="token number">0</span><span class="token punctuation">,</span> <span class="token number">99</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token comment">// 我排第几：ZRANK 靠 span，O(log N)</span>
+<span class="token class-name">Long</span> myRank <span class="token operator">=</span> stringRedisTemplate<span class="token punctuation">.</span><span class="token function">opsForZSet</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token function">reverseRank</span><span class="token punctuation">(</span><span class="token string">"rank:daily"</span><span class="token punctuation">,</span> <span class="token string">"u1001"</span><span class="token punctuation">)</span><span class="token punctuation">;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<ol start="3">
+<li><strong>同分排序要保持确定</strong>：<code>ZADD</code> 的 score 用「业务分 + 时间戳微调」这类组合值，否则同分时依赖 member 字典序，榜单会跳。</li>
+</ol>
+<pre class="line-numbers language-java" data-language="java"><code class="language-java"><span class="token keyword">double</span> score <span class="token operator">=</span> points <span class="token operator">*</span> <span class="token number">1_000_000</span> <span class="token operator">+</span> <span class="token punctuation">(</span><span class="token number">1_000_000</span> <span class="token operator">-</span> <span class="token class-name">System</span><span class="token punctuation">.</span><span class="token function">currentTimeMillis</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token operator">%</span> <span class="token number">1_000_000</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+stringRedisTemplate<span class="token punctuation">.</span><span class="token function">opsForZSet</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token function">add</span><span class="token punctuation">(</span><span class="token string">"rank:daily"</span><span class="token punctuation">,</span> <span class="token string">"u1001"</span><span class="token punctuation">,</span> score<span class="token punctuation">)</span><span class="token punctuation">;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span></span></code></pre>
+
+<ol start="4">
+<li><strong>延迟队列必须「取 + 删」原子化</strong>，否则多消费者会重复执行同一条任务——用 Lua 一步做完：</li>
+</ol>
+<pre class="line-numbers language-java" data-language="java"><code class="language-java"><span class="token keyword">private</span> <span class="token keyword">static</span> <span class="token keyword">final</span> <span class="token class-name">String</span> <span class="token constant">POP_DUE</span> <span class="token operator">=</span> <span class="token triple-quoted-string string">"""
+local due = redis.call('ZRANGEBYSCORE', KEYS[1], '-inf', ARGV[1], 'LIMIT', 0, ARGV[2])
+if #due == 0 then return &#123;&#125; end
+for i, m in ipairs(due) do redis.call('ZREM', KEYS[1], m) end
+return due
+"""</span><span class="token punctuation">;</span>
+<span class="token class-name">List</span><span class="token generics"><span class="token punctuation">&lt;</span><span class="token class-name">String</span><span class="token punctuation">></span></span> tasks <span class="token operator">=</span> stringRedisTemplate<span class="token punctuation">.</span><span class="token function">execute</span><span class="token punctuation">(</span>
+        <span class="token keyword">new</span> <span class="token class-name">DefaultRedisScript</span><span class="token generics"><span class="token punctuation">&lt;</span><span class="token punctuation">></span></span><span class="token punctuation">(</span><span class="token constant">POP_DUE</span><span class="token punctuation">,</span> <span class="token class-name">List</span><span class="token punctuation">.</span><span class="token keyword">class</span><span class="token punctuation">)</span><span class="token punctuation">,</span>
+        <span class="token class-name">List</span><span class="token punctuation">.</span><span class="token function">of</span><span class="token punctuation">(</span><span class="token string">"delay:jobs"</span><span class="token punctuation">)</span><span class="token punctuation">,</span> <span class="token class-name">String</span><span class="token punctuation">.</span><span class="token function">valueOf</span><span class="token punctuation">(</span><span class="token class-name">System</span><span class="token punctuation">.</span><span class="token function">currentTimeMillis</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">,</span> <span class="token string">"50"</span><span class="token punctuation">)</span><span class="token punctuation">;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<ol start="5">
+<li><p><strong>处理失败要回补</strong>：任务 ZREM 成功后进程崩溃就等于丢了，所以消费侧要做「先写处理中集合、成功再删、超时回补 ZADD」的对账。</p>
+</li>
+<li><p><strong>List 做队列时注意节点大小</strong>：<code>list-max-listpack-size</code> 默认 128，<code>LPUSH</code>&#x2F;<code>BRPOP</code> 是两端进出，节点大小只影响单次释放成本，别把大对象塞进 List。</p>
+</li>
+</ol>
 <h2 id="七、常见坑（官方明确说明的限制）"><a href="#七、常见坑（官方明确说明的限制）" class="headerlink" title="七、常见坑（官方明确说明的限制）"></a>七、常见坑（官方明确说明的限制）</h2><ol>
 <li><strong>以为 ZSet 内存是「两份数据」</strong>。member 字符串是共享的，翻倍的是指针与 score 结构。</li>
 <li><strong>用 ZSet 存超长 member</strong>。member 超过 64 字节会退出 <code>listpack</code>（RD28），并且 skiplist 每个节点都带指针与 span，内存显著上升。</li>
@@ -281,11 +326,21 @@ OK                            <span class="token comment"># 改为每节点 8KB<
 <li>大 member、大节点是内存与延迟的两个常见坑。</li>
 </ul>
 <h2 id="九、思考题"><a href="#九、思考题" class="headerlink" title="九、思考题"></a>九、思考题</h2><ol>
-<li>skiplist 的 <code>span</code> 字段解决了什么问题？如果没有它，<code>ZRANK</code> 会变成什么复杂度？</li>
-<li>为什么 ZSet 不「只保留 skiplist」？只保留它会失去什么？</li>
-<li><code>list-max-listpack-size</code> 从 128 改成 1，内存与 <code>LINSERT</code> 性能分别怎么变？</li>
-<li>一个 500 万元素的 ZSet，<code>ZRANGE 0 -1</code> 会发生什么？正确做法是什么？</li>
-<li>用 ZSet 做延迟队列，多个消费者同时 <code>ZRANGEBYSCORE</code> 同一条任务会怎样？如何保证只被取一次？</li>
+<li><p>skiplist 的 <code>span</code> 字段解决了什么问题？如果没有它，<code>ZRANK</code> 会变成什么复杂度？</p>
+<p><strong>参考回答</strong>：<code>span</code> 记录「到下一个同层节点跨过了多少个底层节点」，下降时累加即可得到排名，所以 <code>ZRANK</code> 是 O(log N)。没有它就只能沿第 0 层挨个数，退化成 O(N)。</p>
+</li>
+<li><p>为什么 ZSet 不「只保留 skiplist」？只保留它会失去什么？</p>
+<p><strong>参考回答</strong>：会失去 O(1) 的 <code>ZSCORE</code>&#x2F;<code>ZADD</code> 定位。skiplist 按 score 有序，<code>member → score</code> 是反查，只能全扫；dict 才让「按成员取分」变成常数时间。</p>
+</li>
+<li><p><code>list-max-listpack-size</code> 从 128 改成 1，内存与 <code>LINSERT</code> 性能分别怎么变？</p>
+<p><strong>参考回答</strong>：内存明显上涨——每个元素都变成独立节点，多两个指针加节点头，等于退化成纯双向链表；<code>LINSERT</code> 定位是 O(1)，但节点数暴增后 CPU 缓存不友好、释放也慢，整体更差。</p>
+</li>
+<li><p>一个 500 万元素的 ZSet，<code>ZRANGE 0 -1</code> 会发生什么？正确做法是什么？</p>
+<p><strong>参考回答</strong>：一次性构造 500 万元素的回复，主线程被阻塞、网络与内存被打满，客户端可能直接 OOM。正确做法是分页 <code>ZRANGE start stop</code>（如每页 1000）或 <code>ZSCAN</code> 游标遍历，放到后台任务里做。</p>
+</li>
+<li><p>用 ZSet 做延迟队列，多个消费者同时 <code>ZRANGEBYSCORE</code> 同一条任务会怎样？如何保证只被取一次？</p>
+<p><strong>参考回答</strong>：都会读到同一条，任务被重复执行。保证唯一的方式是把「取」和「删」合成一个原子操作：用 Lua 脚本执行 <code>ZRANGEBYSCORE</code> + <code>ZREM</code>，谁 <code>ZREM</code> 返回 1 谁才有权处理；再配合「处理中超时回补」兜住崩溃场景。</p>
+</li>
 </ol>
 <h2 id="十、官方资料"><a href="#十、官方资料" class="headerlink" title="十、官方资料"></a>十、官方资料</h2><ul>
 <li>t_zset.c（ZSet 双结构与 skiplist 常量）：<a target="_blank" rel="noopener" href="https://github.com/redis/redis/blob/7.4/src/t_zset.c">https://github.com/redis/redis/blob/7.4/src/t_zset.c</a></li>

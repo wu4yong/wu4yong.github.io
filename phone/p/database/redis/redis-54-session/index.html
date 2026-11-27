@@ -143,7 +143,7 @@ particlesJS("particles", {
   <h1 class="mb-title">redis-会话存储</h1>
   <div class="mb-sub">
     分类：database · redis
-     ｜ 标签：系统课 · Redis · 实战
+     ｜ 标签：Redis · 系统课 · 实战
   </div>
 
   <div class="mb-article"><div class="essay-banner essay-database"></div>
@@ -199,6 +199,8 @@ EXPIRE session:&#123;sid&#125; 1800    # 30 分钟无操作即失效<span aria-h
 <div class="data-grid data-grid-link-table"><div class="grid-header"><div class="grid-cell">策略</div><div class="grid-cell">行为</div><div class="grid-cell">代价</div></div><div class="grid-row"><div class="grid-cell">全部跳登录</div><div class="grid-cell">立刻要求重新认证</div><div class="grid-cell">用户体验断崖，可能压垮登录接口</div></div><div class="grid-row"><div class="grid-cell">只读接口放行</div><div class="grid-cell">无会话时降级为匿名</div><div class="grid-cell">权限判断必须另有兜底</div></div><div class="grid-row"><div class="grid-cell">本地短期缓存</div><div class="grid-cell">进程内保留最近会话</div><div class="grid-cell">多实例不一致（RD44）</div></div></div>
 
 <p>选哪一种，必须在设计阶段定，而不是故障当天现场决定。</p>
+<p><img src="https://wu4yong.github.io/starry-images/assets/img/redis/rd-54b-session.svg" alt="会话对象结构与续期、降级策略"></p>
+<p><em>一个 HASH 承载一个会话（sid 不可猜、字段同生共死）、剩余 TTL 小于 1&#x2F;3 才续期的写放大取舍，以及 Redis 故障时的三种降级代价｜依据 HSET、EXPIRE 与惰性删除机制自绘</em></p>
 <h2 id="五、场景说明"><a href="#五、场景说明" class="headerlink" title="五、场景说明"></a>五、场景说明</h2><ol>
 <li><strong>后台管理系统</strong>：会话量小、要求「改权限立刻生效」，Redis 会话是最合适的；</li>
 <li><strong>App 登录态</strong>：sid 长期有效 + 定期刷新，注意「续期策略」别写成每次请求都写；</li>
@@ -244,6 +246,52 @@ EXPIRE session:&#123;sid&#125; 1800    # 30 分钟无操作即失效<span aria-h
 <span class="token number">127.0</span>.0.1:637<span class="token operator"><span class="token file-descriptor important">9</span>></span> DBSIZE
 <span class="token number">127.0</span>.0.1:637<span class="token operator"><span class="token file-descriptor important">9</span>></span> INFO keyspace<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
 
+<h3 id="Java-侧怎么落地：Spring-Session-Redis-或自建-HASH"><a href="#Java-侧怎么落地：Spring-Session-Redis-或自建-HASH" class="headerlink" title="Java 侧怎么落地：Spring Session Redis 或自建 HASH"></a>Java 侧怎么落地：Spring Session Redis 或自建 HASH</h3><ol>
+<li><strong>pom</strong>：直接用 Spring Session 的 Redis 实现，省掉自己写续期逻辑。</li>
+</ol>
+<pre class="line-numbers language-markup" data-language="markup"><code class="language-markup"><span class="token tag"><span class="token tag"><span class="token punctuation">&lt;</span>dependency</span><span class="token punctuation">></span></span>
+  <span class="token tag"><span class="token tag"><span class="token punctuation">&lt;</span>groupId</span><span class="token punctuation">></span></span>org.springframework.boot<span class="token tag"><span class="token tag"><span class="token punctuation">&lt;/</span>groupId</span><span class="token punctuation">></span></span>
+  <span class="token tag"><span class="token tag"><span class="token punctuation">&lt;</span>artifactId</span><span class="token punctuation">></span></span>spring-boot-starter-data-redis<span class="token tag"><span class="token tag"><span class="token punctuation">&lt;/</span>artifactId</span><span class="token punctuation">></span></span>
+<span class="token tag"><span class="token tag"><span class="token punctuation">&lt;/</span>dependency</span><span class="token punctuation">></span></span>
+<span class="token tag"><span class="token tag"><span class="token punctuation">&lt;</span>dependency</span><span class="token punctuation">></span></span>
+  <span class="token tag"><span class="token tag"><span class="token punctuation">&lt;</span>groupId</span><span class="token punctuation">></span></span>org.springframework.session<span class="token tag"><span class="token tag"><span class="token punctuation">&lt;/</span>groupId</span><span class="token punctuation">></span></span>
+  <span class="token tag"><span class="token tag"><span class="token punctuation">&lt;</span>artifactId</span><span class="token punctuation">></span></span>spring-session-data-redis<span class="token tag"><span class="token tag"><span class="token punctuation">&lt;/</span>artifactId</span><span class="token punctuation">></span></span>
+<span class="token tag"><span class="token tag"><span class="token punctuation">&lt;/</span>dependency</span><span class="token punctuation">></span></span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<ol start="2">
+<li><strong>application.yml</strong>：超时是业务语义（30 分钟无操作），<code>flush-mode</code> 决定什么时候真正写 Redis：</li>
+</ol>
+<pre class="line-numbers language-yaml" data-language="yaml"><code class="language-yaml"><span class="token key atrule">spring</span><span class="token punctuation">:</span>
+  <span class="token key atrule">session</span><span class="token punctuation">:</span>
+    <span class="token key atrule">store-type</span><span class="token punctuation">:</span> redis
+    <span class="token key atrule">timeout</span><span class="token punctuation">:</span> 30m
+    <span class="token key atrule">redis</span><span class="token punctuation">:</span>
+      <span class="token key atrule">namespace</span><span class="token punctuation">:</span> app<span class="token punctuation">:</span>session     <span class="token comment"># 多应用共用实例时隔离</span>
+      <span class="token key atrule">flush-mode</span><span class="token punctuation">:</span> on_save       <span class="token comment"># 请求结束时一次写入，避免每改一次就往返</span>
+  <span class="token key atrule">data</span><span class="token punctuation">:</span>
+    <span class="token key atrule">redis</span><span class="token punctuation">:</span>
+      <span class="token key atrule">timeout</span><span class="token punctuation">:</span> 300ms<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<ol start="3">
+<li><strong>要自己的 key 结构就自建 HASH</strong>（同一会话的字段必须同生共死，别拆成多个 key）：</li>
+</ol>
+<pre class="line-numbers language-java" data-language="java"><code class="language-java"><span class="token class-name">String</span> sid <span class="token operator">=</span> <span class="token class-name">RandomStringUtils</span><span class="token punctuation">.</span><span class="token function">random</span><span class="token punctuation">(</span><span class="token number">32</span><span class="token punctuation">,</span> <span class="token boolean">true</span><span class="token punctuation">,</span> <span class="token boolean">true</span><span class="token punctuation">)</span><span class="token punctuation">;</span>   <span class="token comment">// ≥32 字节，不可猜</span>
+<span class="token class-name">String</span> key <span class="token operator">=</span> <span class="token string">"session:"</span> <span class="token operator">+</span> sid<span class="token punctuation">;</span>
+redis<span class="token punctuation">.</span><span class="token function">opsForHash</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token function">putAll</span><span class="token punctuation">(</span>key<span class="token punctuation">,</span> <span class="token class-name">Map</span><span class="token punctuation">.</span><span class="token function">of</span><span class="token punctuation">(</span><span class="token string">"uid"</span><span class="token punctuation">,</span> <span class="token string">"1001"</span><span class="token punctuation">,</span> <span class="token string">"role"</span><span class="token punctuation">,</span> <span class="token string">"admin"</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+redis<span class="token punctuation">.</span><span class="token function">expire</span><span class="token punctuation">(</span>key<span class="token punctuation">,</span> <span class="token class-name">Duration</span><span class="token punctuation">.</span><span class="token function">ofMinutes</span><span class="token punctuation">(</span><span class="token number">30</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span></span></code></pre>
+
+<ol start="4">
+<li><strong>读取顺序固定：先 <code>HGETALL</code> 判存在，再 <code>TTL</code> 判剩余</strong>；只有剩余小于阈值（如 1&#x2F;3）才 <code>EXPIRE</code> 重置，避免每个请求都产生一次写：</li>
+</ol>
+<pre class="line-numbers language-java" data-language="java"><code class="language-java"><span class="token class-name">Long</span> ttl <span class="token operator">=</span> redis<span class="token punctuation">.</span><span class="token function">getExpire</span><span class="token punctuation">(</span>key<span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token keyword">if</span> <span class="token punctuation">(</span>ttl <span class="token operator">!=</span> <span class="token keyword">null</span> <span class="token operator">&amp;&amp;</span> ttl <span class="token operator">>=</span> <span class="token number">0</span> <span class="token operator">&amp;&amp;</span> ttl <span class="token operator">&lt;</span> <span class="token number">600</span><span class="token punctuation">)</span> redis<span class="token punctuation">.</span><span class="token function">expire</span><span class="token punctuation">(</span>key<span class="token punctuation">,</span> <span class="token class-name">Duration</span><span class="token punctuation">.</span><span class="token function">ofMinutes</span><span class="token punctuation">(</span><span class="token number">30</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span></span></code></pre>
+
+<ol start="5">
+<li><p><strong>撤销与踢人</strong>：登出 <code>DEL session:&#123;sid&#125;</code>；单用户多端用 <code>uid → sids</code> 的 SET 记录在线的 sid，登录新端时把旧 sid 逐个 <code>DEL</code>。别用 <code>KEYS session:*</code> 按用户扫。</p>
+</li>
+<li><p><strong>降级要在代码里预置</strong>：Spring Session 抛 <code>RedisConnectionFailureException</code> 时，按既定策略走（全跳登录 &#x2F; 只读放行 &#x2F; 本地 Caffeine 兜 1～5 分钟），并保证多实例下不依赖本地缓存的强一致。</p>
+</li>
+</ol>
 <h2 id="七、常见坑（官方明确说明的限制）"><a href="#七、常见坑（官方明确说明的限制）" class="headerlink" title="七、常见坑（官方明确说明的限制）"></a>七、常见坑（官方明确说明的限制）</h2><ol>
 <li><strong>sid 用可预测的值</strong>。自增 ID 或手机号做 sid，等于把会话交给攻击者枚举。</li>
 <li><strong>只存 uid 不存角色&#x2F;权限</strong>。每次请求都去查库，会话的价值就只剩「是否登录」。</li>
@@ -266,11 +314,21 @@ EXPIRE session:&#123;sid&#125; 1800    # 30 分钟无操作即失效<span aria-h
 <li>降级策略在设计阶段就要定。</li>
 </ul>
 <h2 id="九、思考题"><a href="#九、思考题" class="headerlink" title="九、思考题"></a>九、思考题</h2><ol>
-<li>会话里为什么建议存 role 而不只是 uid？</li>
-<li>「剩余 TTL 小于 1&#x2F;3 才续期」相比每次续期，省下了什么？</li>
-<li>一个用户三个端登录，你要怎么实现「登录新端踢掉旧端」？</li>
-<li>Redis 故障导致会话全丢，你的系统会怎样？给出三条降级动作。</li>
-<li>会话量 5000 万、平均 300 字节，需要多少内存？要不要分片？</li>
+<li><p>会话里为什么建议存 role 而不只是 uid？</p>
+<p><strong>参考回答</strong>：每请求都要做权限判断，只存 uid 就得回源查用户表，把会话的价值（少一次查库）抵消掉。存 role 是把「鉴权所需的结论」缓存下来；缺点是角色变更要同步刷新会话（改权限时更新或删除对应 sid），这是可接受的取舍。</p>
+</li>
+<li><p>「剩余 TTL 小于 1&#x2F;3 才续期」相比每次续期，省下了什么？</p>
+<p><strong>参考回答</strong>：省掉大部分写操作与随之而来的复制、AOF 开销。每次请求都 <code>EXPIRE</code> 意味着 QPS 级的写放大（还有主从与持久化成本），而 30 分钟会话在 1&#x2F;3 阈值下最多每 20 分钟写一次；代价是最坏情况下会话会提前一点失效，用一次读换多次写。</p>
+</li>
+<li><p>一个用户三个端登录，你要怎么实现「登录新端踢掉旧端」？</p>
+<p><strong>参考回答</strong>：为每个端分配独立 sid（不共用），并用 <code>uid → sids</code> 的 SET 维护该用户所有在线会话。登录新端时写入新 sid、把集合里的旧 sid 逐个 <code>DEL</code>（或只保留最近一个）；被踢端的下一次请求因 <code>HGETALL</code> 为空而跳登录。</p>
+</li>
+<li><p>Redis 故障导致会话全丢，你的系统会怎样？给出三条降级动作。</p>
+<p><strong>参考回答</strong>：全丢等于所有用户被登出，且登录接口会被瞬时打满。三条动作：① 全部跳登录（并给登录接口限流与排队）；② 只读接口降级为匿名放行，权限判断用兜底规则；③ 本地短期缓存最近会话顶几分钟，接受多实例不一致。</p>
+</li>
+<li><p>会话量 5000 万、平均 300 字节，需要多少内存？要不要分片？</p>
+<p><strong>参考回答</strong>：5000 万 × 300 B ≈ 15 GB（还没算 HASH 与 key 的额外开销，实际约 18～20 GB），已经超过单实例 10～16 GB 的容量红线。必须分片（按 uid 哈希或用 hash tag 分组），同时把 TTL 与「按用户维度批量撤销」设计好，否则分片后踢人需要跨节点遍历。</p>
+</li>
 </ol>
 <h2 id="十、官方资料"><a href="#十、官方资料" class="headerlink" title="十、官方资料"></a>十、官方资料</h2><ul>
 <li>HSET &#x2F; HGETALL：<a target="_blank" rel="noopener" href="https://redis.io/docs/latest/commands/hset/">https://redis.io/docs/latest/commands/hset/</a></li>

@@ -143,7 +143,7 @@ particlesJS("particles", {
   <h1 class="mb-title">redis-Set</h1>
   <div class="mb-sub">
     分类：database · redis
-     ｜ 标签：系统课 · Redis · 数据结构
+     ｜ 标签：Redis · 系统课 · 数据结构
   </div>
 
   <div class="mb-article"><div class="essay-banner essay-database"></div>
@@ -191,6 +191,8 @@ particlesJS("particles", {
 <h3 id="4-复杂度与风险"><a href="#4-复杂度与风险" class="headerlink" title="4. 复杂度与风险"></a>4. 复杂度与风险</h3><div class="data-grid data-grid-link-table"><div class="grid-header"><div class="grid-cell">命令</div><div class="grid-cell">复杂度</div><div class="grid-cell">风险点</div></div><div class="grid-row"><div class="grid-cell"><code>SADD</code> &#x2F; <code>SREM</code> &#x2F; <code>SISMEMBER</code></div><div class="grid-cell">O(1)</div><div class="grid-cell">无</div></div><div class="grid-row"><div class="grid-cell"><code>SMISMEMBER</code></div><div class="grid-cell">O(N)，N &#x3D; 成员数</div><div class="grid-cell">6.2 新增，批量判断</div></div><div class="grid-row"><div class="grid-cell"><code>SCARD</code></div><div class="grid-cell">O(1)</div><div class="grid-cell">无</div></div><div class="grid-row"><div class="grid-cell"><code>SMEMBERS</code></div><div class="grid-cell">O(N)</div><div class="grid-cell">大集合直接阻塞，改用 <code>SSCAN</code></div></div><div class="grid-row"><div class="grid-cell"><code>SINTER</code> &#x2F; <code>SUNION</code> &#x2F; <code>SDIFF</code></div><div class="grid-cell">O(N)，最坏 O(N*M)</div><div class="grid-cell">大集合运算是事故级</div></div><div class="grid-row"><div class="grid-cell"><code>SPOP count</code></div><div class="grid-cell">O(N)，N &#x3D; 弹出数</div><div class="grid-cell">一次弹出过多会阻塞</div></div><div class="grid-row"><div class="grid-cell"><code>SRANDMEMBER</code></div><div class="grid-cell">不带 count 为 O(1)</div><div class="grid-cell">带负 count 可返回重复成员</div></div></div>
 
 <p><code>SPOP</code> 与 <code>SRANDMEMBER</code> 的区别必须记牢：<strong><code>SPOP</code> 会删除成员，<code>SRANDMEMBER</code> 只读不删</strong>；<code>SRANDMEMBER</code> 传负数 count 表示「允许重复」，用于抽样放回的场景。</p>
+<p><img src="https://wu4yong.github.io/starry-images/assets/img/redis/rd-08b-set.svg" alt="Set 的三种运算、编码三段与两个高危动作"></p>
+<p><em>SADD 到集合运算的路径、intset→listpack→hashtable 的编码演进、随机取值的两种语义｜依据 Redis 7.4 Sets 自绘</em></p>
 <h2 id="五、场景说明"><a href="#五、场景说明" class="headerlink" title="五、场景说明"></a>五、场景说明</h2><ol>
 <li><strong>去重名单</strong>：<code>SADD article:1001:likers uid</code>，天然幂等，<code>SCARD</code> 即点赞数（注意这不是 UV 精确统计的唯一方案，超大基数用 HLL 更省）；</li>
 <li><strong>标签&#x2F;关系</strong>：<code>SADD user:1:follows uid2 uid3</code>，共同关注 &#x3D; <code>SINTER</code>；</li>
@@ -277,6 +279,22 @@ particlesJS("particles", {
 <span class="token number">1</span><span class="token punctuation">)</span> <span class="token string">"set-max-intset-entries"</span>
 <span class="token number">2</span><span class="token punctuation">)</span> <span class="token string">"512"</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
 
+<h3 id="Java-侧怎么落地：去重名单、共同关注与抽奖"><a href="#Java-侧怎么落地：去重名单、共同关注与抽奖" class="headerlink" title="Java 侧怎么落地：去重名单、共同关注与抽奖"></a>Java 侧怎么落地：去重名单、共同关注与抽奖</h3><p>Set 在 Spring Boot 里用 <code>opsForSet()</code>，四个动作覆盖了绝大多数业务：加、判存在、算集合、抽。</p>
+<ol>
+<li><strong>加成员天然幂等</strong>，重复调用返回 0，可以直接用返回值判断「是不是新用户」：</li>
+</ol>
+<pre class="line-numbers language-java" data-language="java"><code class="language-java"><span class="token class-name">Long</span> added <span class="token operator">=</span> tpl<span class="token punctuation">.</span><span class="token function">opsForSet</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token function">add</span><span class="token punctuation">(</span><span class="token string">"article:1001:likers"</span><span class="token punctuation">,</span> uid<span class="token punctuation">)</span><span class="token punctuation">;</span>   <span class="token comment">// SADD，0 = 已存在</span>
+<span class="token class-name">Boolean</span> liked <span class="token operator">=</span> tpl<span class="token punctuation">.</span><span class="token function">opsForSet</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token function">isMember</span><span class="token punctuation">(</span><span class="token string">"article:1001:likers"</span><span class="token punctuation">,</span> uid<span class="token punctuation">)</span><span class="token punctuation">;</span> <span class="token comment">// SISMEMBER</span>
+<span class="token class-name">Long</span> total <span class="token operator">=</span> tpl<span class="token punctuation">.</span><span class="token function">opsForSet</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token function">size</span><span class="token punctuation">(</span><span class="token string">"article:1001:likers"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>       <span class="token comment">// SCARD，不要用 members().size()</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span></span></code></pre>
+
+<ol start="2">
+<li><p><strong>集合运算直接用 API</strong>：<code>intersect(k1, k2)</code> &#x2F; <code>union(...)</code> &#x2F; <code>difference(k1, k2)</code>，注意 <code>difference</code> <strong>参数有序</strong>，与 <code>SDIFF</code> 一致；要缓存结果就用 <code>intersectAndStore</code>，对应 <code>SINTERSTORE</code>。</p>
+</li>
+<li><p><strong>抽奖用 <code>randomMembers</code> 与 <code>pop</code></strong>：<code>randomMembers(key, 3)</code> 对应 <code>SRANDMEMBER key 3</code>（三个<strong>不重复</strong>、不删）；要「放回抽样」（允许重复）时 Spring Data Redis 没有对应 API，直接发原生命令 <code>SRANDMEMBER key -3</code>；<code>pop(key, 1)</code> 对应 <code>SPOP</code>，<strong>抽中即移除</strong>，做「每人只中一次」用它。</p>
+</li>
+<li><p><strong>遍历不要用 <code>members()</code></strong>：它是 <code>SMEMBERS</code>，大集合直接阻塞；用 <code>scan(key, ScanOptions...)</code> 拿 <code>Cursor</code> 分批读，并记得 <code>close()</code>。</p>
+</li>
+</ol>
 <h2 id="七、常见坑（官方明确说明的限制）"><a href="#七、常见坑（官方明确说明的限制）" class="headerlink" title="七、常见坑（官方明确说明的限制）"></a>七、常见坑（官方明确说明的限制）</h2><ol>
 <li><strong><code>SMEMBERS</code> 是 O(N)</strong>。集合上万成员时就会阻塞主线程，遍历请用 <code>SSCAN</code>；「我要全部成员」和「我要遍历全部成员」是两种需求，后者不该用 <code>SMEMBERS</code>。</li>
 <li><strong><code>SDIFF</code> 参数有序</strong>，<code>SDIFF A B ≠ SDIFF B A</code>。写「差集」时务必确认方向，这是最容易出逻辑错误的一条。</li>
@@ -299,11 +317,21 @@ particlesJS("particles", {
 <li><code>SMEMBERS</code> 与大集合运算都是 O(N)，线上必须用 <code>SSCAN</code> 与预计算替代。</li>
 </ul>
 <h2 id="九、思考题"><a href="#九、思考题" class="headerlink" title="九、思考题"></a>九、思考题</h2><ol>
-<li>「共同关注」用 <code>SINTER</code>，「他关注但我没关注」用哪个命令？为什么参数顺序不能反？</li>
-<li>点赞人数用 <code>SCARD</code> 得到，和用 HLL 的 <code>PFCOUNT</code> 得到，差别在哪？什么规模下你会选哪个？</li>
-<li>一个 Set 存的是用户 ID，本来是 intset，某天有人写进了一个空字符串成员。内存和 CPU 各会发生什么变化？怎么避免？</li>
-<li>两个各有 100 万成员的集合求交集，主线程会被占多久？有哪三种降低影响的做法？</li>
-<li><code>SPOP</code> 与 <code>SRANDMEMBER</code> 在抽奖场景里分别对应什么规则？「每人只能中一次」该用哪个？</li>
+<li><p>「共同关注」用 <code>SINTER</code>，「他关注但我没关注」用哪个命令？为什么参数顺序不能反？</p>
+<p><strong>参考回答</strong>：「他关注但我没关注」用 <code>SDIFF follows:him follows:me</code>。<code>SDIFF</code> 的语义是「属于第一个，且不在后面任何一个里」，天然单向，所以 <code>SDIFF A B ≠ SDIFF B A</code>；参数写反就是把「他没关注」和「我没关注」搞混。</p>
+</li>
+<li><p>点赞人数用 <code>SCARD</code> 得到，和用 HLL 的 <code>PFCOUNT</code> 得到，差别在哪？什么规模下你会选哪个？</p>
+<p><strong>参考回答</strong>：<code>SCARD</code> 是<strong>精确值</strong>，代价是每个成员真实占内存（百万级就是几十 MB 起）；<code>PFCOUNT</code> 是<strong>估算值</strong>，官方标称标准误差 0.81%，但一个 HLL 只有 12 KB 左右。判据：需要精确数值且基数在十万以内用 Set；只关心量级、基数百万以上用 HLL。</p>
+</li>
+<li><p>一个 Set 存的是用户 ID，本来是 intset，某天有人写进了一个空字符串成员。内存和 CPU 各会发生什么变化？怎么避免？</p>
+<p><strong>参考回答</strong>：intset 立刻降级成 listpack（7.2+）或 hashtable（旧版本），且<strong>不可逆</strong>；内存从「一个紧凑整数数组」变成「带字符串结构与指针」，通常翻几倍，CPU 也失去二分查找的优势。避免办法：写入侧做类型校验（只允许数字串），或用单独的 key 存放非数字成员。</p>
+</li>
+<li><p>两个各有 100 万成员的集合求交集，主线程会被占多久？有哪三种降低影响的做法？</p>
+<p><strong>参考回答</strong>：具体耗时取决于机器与编码，通常是<strong>几十毫秒到几百毫秒量级</strong>，而 Redis 是全实例串行的，这段时间所有请求都在排队。三种做法：① <code>SINTERSTORE</code> 预计算 + TTL 缓存结果，线上只读；② <code>SINTERCARD ... LIMIT n</code> 只判断「有没有超过阈值」，命中即停；③ 把集合拆成 hash tag 分片，或放到从节点&#x2F;离线任务上算。</p>
+</li>
+<li><p><code>SPOP</code> 与 <code>SRANDMEMBER</code> 在抽奖场景里分别对应什么规则？「每人只能中一次」该用哪个？</p>
+<p><strong>参考回答</strong>：<code>SRANDMEMBER</code> 是<strong>放回抽样</strong>：抽完成员还在池里，适合「展示推荐位」；<code>SPOP</code> 是<strong>不放回</strong>：抽中即从池里移除，天然保证不重复中奖。所以「每人只能中一次」要用 <code>SPOP</code>（或用 Set 记录已中奖名单 + <code>SISMEMBER</code> 判重）。</p>
+</li>
 </ol>
 <h2 id="十、官方资料"><a href="#十、官方资料" class="headerlink" title="十、官方资料"></a>十、官方资料</h2><ul>
 <li>Sets（类型定义、2^32-1 上限、典型用法）：<a target="_blank" rel="noopener" href="https://redis.io/docs/latest/develop/data-types/sets/">https://redis.io/docs/latest/develop/data-types/sets/</a></li>

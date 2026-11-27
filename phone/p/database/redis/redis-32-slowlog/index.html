@@ -143,7 +143,7 @@ particlesJS("particles", {
   <h1 class="mb-title">redis-慢查询诊断</h1>
   <div class="mb-sub">
     分类：database · redis
-     ｜ 标签：系统课 · Redis · 性能 · 排障
+     ｜ 标签：Redis · 系统课 · 性能 · 排障
   </div>
 
   <div class="mb-article"><div class="essay-banner essay-database"></div>
@@ -199,6 +199,8 @@ slowlog-max-len 128              # 环形队列，最多保留 128 条<span aria
 <li>输出内容可能包含敏感数据（密码、手机号），要按合规要求处理。</li>
 </ul>
 <p>正确用法：<strong>只在已定位到时间窗口后，抓 10–30 秒</strong>，配合 <code>CLIENT LIST</code> 找到来源 IP&#x2F;连接名。长时间开启等于给自己制造一次故障。</p>
+<p><img src="https://wu4yong.github.io/starry-images/assets/img/redis/rd-32b-slowlog.svg" alt="慢查询的三层观测"></p>
+<p><em>SLOWLOG、LATENCY、MONITOR 各自记什么&#x2F;盲区在哪&#x2F;怎么配，以及三种症状该查哪一层｜依据 SLOWLOG、LATENCY、MONITOR 文档与 redis.conf 参数自绘</em></p>
 <h2 id="五、场景说明"><a href="#五、场景说明" class="headerlink" title="五、场景说明"></a>五、场景说明</h2><ol>
 <li><strong>偶发 P99 毛刺</strong>：先看 <code>LATENCY LATEST</code> 有没有 <code>fork</code>&#x2F;<code>aof-write</code>，再看 <code>SLOWLOG</code>；</li>
 <li><strong>某个接口固定慢</strong>：<code>SLOWLOG GET 10</code> 直接看命令与参数，通常能一眼看出大 key；</li>
@@ -265,6 +267,44 @@ $ <span class="token function">timeout</span> <span class="token number">15</spa
 <span class="token comment"># id=12 addr=10.0.0.8:51234 name=order-svc cmd=hgetall</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
 
 <p>第 8 步的 <code>timeout</code> 是必须的——这是防「忘记关 MONITOR 把自己拖死」的唯一保险。</p>
+<h3 id="Java-侧怎么落地：把慢命令拦在应用层"><a href="#Java-侧怎么落地：把慢命令拦在应用层" class="headerlink" title="Java 侧怎么落地：把慢命令拦在应用层"></a>Java 侧怎么落地：把慢命令拦在应用层</h3><p>慢查询在 Java 侧有两种来源：发了重命令，或者根本没慢在 Redis（慢在网络与池）。落地要做的是<strong>可观测 + 不给慢命令机会</strong>。</p>
+<ol>
+<li><strong>pom 引 starter + 监控</strong>，用 Micrometer 把 Redis 客户端指标接进 Prometheus：</li>
+</ol>
+<pre class="line-numbers language-markup" data-language="markup"><code class="language-markup"><span class="token tag"><span class="token tag"><span class="token punctuation">&lt;</span>dependency</span><span class="token punctuation">></span></span>
+  <span class="token tag"><span class="token tag"><span class="token punctuation">&lt;</span>groupId</span><span class="token punctuation">></span></span>org.springframework.boot<span class="token tag"><span class="token tag"><span class="token punctuation">&lt;/</span>groupId</span><span class="token punctuation">></span></span>
+  <span class="token tag"><span class="token tag"><span class="token punctuation">&lt;</span>artifactId</span><span class="token punctuation">></span></span>spring-boot-starter-actuator<span class="token tag"><span class="token tag"><span class="token punctuation">&lt;/</span>artifactId</span><span class="token punctuation">></span></span>
+<span class="token tag"><span class="token tag"><span class="token punctuation">&lt;/</span>dependency</span><span class="token punctuation">></span></span>
+<span class="token tag"><span class="token tag"><span class="token punctuation">&lt;</span>dependency</span><span class="token punctuation">></span></span>
+  <span class="token tag"><span class="token tag"><span class="token punctuation">&lt;</span>groupId</span><span class="token punctuation">></span></span>io.micrometer<span class="token tag"><span class="token tag"><span class="token punctuation">&lt;/</span>groupId</span><span class="token punctuation">></span></span>
+  <span class="token tag"><span class="token tag"><span class="token punctuation">&lt;</span>artifactId</span><span class="token punctuation">></span></span>micrometer-registry-prometheus<span class="token tag"><span class="token tag"><span class="token punctuation">&lt;/</span>artifactId</span><span class="token punctuation">></span></span>
+<span class="token tag"><span class="token tag"><span class="token punctuation">&lt;/</span>dependency</span><span class="token punctuation">></span></span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<ol start="2">
+<li><strong>命令超时与重试策略要分开</strong>：读操作可以短超时 + 有限重试，写操作短超时 + 不重试（避免重复写），别用一刀切的全局超时。</li>
+</ol>
+<pre class="line-numbers language-yaml" data-language="yaml"><code class="language-yaml"><span class="token key atrule">spring</span><span class="token punctuation">:</span>
+  <span class="token key atrule">data</span><span class="token punctuation">:</span>
+    <span class="token key atrule">redis</span><span class="token punctuation">:</span>
+      <span class="token key atrule">timeout</span><span class="token punctuation">:</span> 200ms
+      <span class="token key atrule">lettuce</span><span class="token punctuation">:</span>
+        <span class="token key atrule">pool</span><span class="token punctuation">:</span>
+          <span class="token key atrule">max-active</span><span class="token punctuation">:</span> <span class="token number">32</span>
+          <span class="token key atrule">max-wait</span><span class="token punctuation">:</span> 100ms<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<ol start="3">
+<li><strong>在应用侧给命令计时并分桶</strong>：把「客户端耗时」和「Redis 报的耗时」分开记，两者差得大就是网络&#x2F;池问题，而不是慢命令。</li>
+</ol>
+<pre class="line-numbers language-java" data-language="java"><code class="language-java"><span class="token keyword">long</span> t0 <span class="token operator">=</span> <span class="token class-name">System</span><span class="token punctuation">.</span><span class="token function">nanoTime</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token keyword">try</span> <span class="token punctuation">&#123;</span> <span class="token keyword">return</span> stringRedisTemplate<span class="token punctuation">.</span><span class="token function">opsForValue</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token function">get</span><span class="token punctuation">(</span>key<span class="token punctuation">)</span><span class="token punctuation">;</span> <span class="token punctuation">&#125;</span>
+<span class="token keyword">finally</span> <span class="token punctuation">&#123;</span> timer<span class="token punctuation">.</span><span class="token function">record</span><span class="token punctuation">(</span><span class="token class-name">System</span><span class="token punctuation">.</span><span class="token function">nanoTime</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token operator">-</span> t0<span class="token punctuation">,</span> <span class="token class-name">TimeUnit</span><span class="token punctuation">.</span><span class="token constant">NANOSECONDS</span><span class="token punctuation">)</span><span class="token punctuation">;</span> <span class="token punctuation">&#125;</span>   <span class="token comment">// 打 P50/P99</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span></span></code></pre>
+
+<ol start="4">
+<li><p><strong>定时把 <code>SLOWLOG GET</code> 落库</strong>（环形 128 条会被覆盖），并在阈值上留余量：<code>slowlog-log-slower-than</code> 用 10000 微秒（10ms），不要写 10（那是 10 微秒，等于全量记录）。</p>
+</li>
+<li><p><strong>重命令用替代写法</strong>：<code>KEYS</code>→<code>SCAN</code>，大集合遍历→分批，<code>HGETALL</code> 十万字段→<code>HSCAN</code>；Lua 脚本要限制执行时长，别在里面做范围遍历。</p>
+</li>
+</ol>
 <h2 id="七、常见坑（官方明确说明的限制）"><a href="#七、常见坑（官方明确说明的限制）" class="headerlink" title="七、常见坑（官方明确说明的限制）"></a>七、常见坑（官方明确说明的限制）</h2><ol>
 <li><strong>以为 <code>SLOWLOG</code> 能抓所有慢</strong>。它不含网络与排队，客户端慢但服务端不慢时它一无所获。</li>
 <li><strong><code>slowlog-log-slower-than</code> 用毫秒</strong>。单位是<strong>微秒</strong>，写 <code>10</code> 实际是 10 微秒，会把所有命令都记下来并放大开销。</li>
@@ -287,11 +327,21 @@ $ <span class="token function">timeout</span> <span class="token number">15</spa
 <li>周期性毛刺优先怀疑 <code>fork</code> 与 <code>aof-write</code>，不是命令。</li>
 </ul>
 <h2 id="九、思考题"><a href="#九、思考题" class="headerlink" title="九、思考题"></a>九、思考题</h2><ol>
-<li>客户端反馈「接口偶尔 200ms」，<code>SLOWLOG</code> 里只有 3ms 的记录，问题可能在哪？下一步查什么？</li>
-<li><code>slowlog-log-slower-than 10</code> 与 <code>10</code> 毫秒的直觉差了多少倍？会造成什么后果？</li>
-<li>为什么 <code>fork</code> 和 <code>aof-write</code> 不会出现在慢日志里？它们属于哪一层的观测？</li>
-<li><code>LATENCY DOCTOR</code> 提示 fork 耗时 48ms，你会怎么降低这个值？</li>
-<li>用 <code>MONITOR</code> 抓流量时，为什么必须先限定时间窗口？除了性能还有什么风险？</li>
+<li><p>客户端反馈「接口偶尔 200ms」，<code>SLOWLOG</code> 里只有 3ms 的记录，问题可能在哪？下一步查什么？</p>
+<p><strong>参考回答</strong>：慢在命令之外——网络 RTT、连接池排队（池满 max-wait）、客户端 GC&#x2F;线程调度、代理或 TLS。下一步：<code>CLIENT LIST</code> 看连接数与 qbuf、抓包看 RTT、看应用侧 GC 日志、用 <code>LATENCY</code> 看 fork&#x2F;aof-write 是否周期性出现。</p>
+</li>
+<li><p><code>slowlog-log-slower-than 10</code> 与 <code>10</code> 毫秒的直觉差了多少倍？会造成什么后果？</p>
+<p><strong>参考回答</strong>：单位是微秒，写 10 就是 10 微秒，比 10 毫秒严 1000 倍。后果：几乎每条命令都被记录，128 条的环形队列瞬间被填满、真正慢的命令被淹没，同时增加格式化与内存开销。</p>
+</li>
+<li><p>为什么 <code>fork</code> 和 <code>aof-write</code> 不会出现在慢日志里？它们属于哪一层的观测？</p>
+<p><strong>参考回答</strong>：SLOWLOG 只统计「命令执行」耗时，fork 是进程操作、aof-write 是写盘动作，都不是命令。它们属于 LATENCY 的事件模型（<code>fork</code>、<code>aof-write</code>），阈值用 <code>latency-monitor-threshold</code>（毫秒）。</p>
+</li>
+<li><p><code>LATENCY DOCTOR</code> 提示 fork 耗时 48ms，你会怎么降低这个值？</p>
+<p><strong>参考回答</strong>：三条：减小单实例内存（拆实例，fork 与页表大小成正比）、关闭透明大页 THP（避免逐页拆分）、把 BGSAVE&#x2F;AOF 重写错峰到低峰并降低写入速率以减少 CoW。</p>
+</li>
+<li><p>用 <code>MONITOR</code> 抓流量时，为什么必须先限定时间窗口？除了性能还有什么风险？</p>
+<p><strong>参考回答</strong>：性能上每条命令都要服务端格式化并推送，十万 QPS 就是十万行&#x2F;秒，可能把实例与监控端一起拖垮。另一个风险是内容泄露：命令参数里常有密码、手机号、token，<code>MONITOR</code> 输出必须按合规要求脱敏与限期保存。</p>
+</li>
 </ol>
 <h2 id="十、官方资料"><a href="#十、官方资料" class="headerlink" title="十、官方资料"></a>十、官方资料</h2><ul>
 <li>SLOWLOG GET（执行耗时定义与字段）：<a target="_blank" rel="noopener" href="https://redis.io/docs/latest/commands/slowlog-get/">https://redis.io/docs/latest/commands/slowlog-get/</a></li>

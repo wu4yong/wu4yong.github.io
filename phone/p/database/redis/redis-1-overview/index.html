@@ -143,7 +143,7 @@ particlesJS("particles", {
   <h1 class="mb-title">redis-能力边界</h1>
   <div class="mb-sub">
     分类：database · redis
-     ｜ 标签：系统课 · Redis · 缓存
+     ｜ 标签：Redis · 缓存 · 系统课
   </div>
 
   <div class="mb-article"><div class="essay-banner essay-database"></div>
@@ -188,6 +188,8 @@ particlesJS("particles", {
 <p>—— <a target="_blank" rel="noopener" href="https://redis.io/docs/latest/develop/get-started/faq/">https://redis.io/docs/latest/develop/get-started/faq/</a></p>
 </blockquote>
 <p>这两件事经常被混为一谈，必须分清：<strong>IO 多线程 ≠ 命令并发执行</strong>。</p>
+<p><img src="https://wu4yong.github.io/starry-images/assets/img/redis/rd-01b-journey.svg" alt="命令的四站旅程与单线程边界"></p>
+<p><em>命令从客户端到 keyspace 的四站，以及 io-threads 究竟加速了哪一段｜依据 Redis 7.4 Get started &#x2F; FAQ 自绘</em></p>
 <h3 id="2-逻辑库：默认-16-个"><a href="#2-逻辑库：默认-16-个" class="headerlink" title="2. 逻辑库：默认 16 个"></a>2. 逻辑库：默认 16 个</h3><p><code>databases 16</code> 是默认配置，于是有了 0–15 号库，<code>SELECT 1</code> 切库。要注意三点官方约束：</p>
 <ul>
 <li>集群模式下<strong>只有 0 号库</strong>可用，<code>SELECT</code> 会报错；</li>
@@ -242,6 +244,49 @@ OK
 <span class="token punctuation">(</span>integer<span class="token punctuation">)</span> <span class="token number">0</span>           <span class="token comment"># 换库了，键空间是独立的</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
 
 <p><code>TTL</code> 的三种返回值是官方定义，必须记住：<code>-2</code> 表示 key 不存在，<code>-1</code> 表示存在但无过期时间，正整数是剩余秒数。</p>
+<h3 id="Java-侧怎么落地：Spring-Boot-接入的四步"><a href="#Java-侧怎么落地：Spring-Boot-接入的四步" class="headerlink" title="Java 侧怎么落地：Spring Boot 接入的四步"></a>Java 侧怎么落地：Spring Boot 接入的四步</h3><p>命令行验证完，把它接进一个 Java 工程，只需要四步，代码不用写全，关键是知道「改哪里」。</p>
+<ol>
+<li><p><strong>建工程，选 Boot 版本</strong>：Spring Boot 2.7.x 或 3.x 都能用，JDK 8 &#x2F; 17 均可；Boot 3 要求 JDK 17。</p>
+</li>
+<li><p><strong>pom 里只加一个 starter</strong>（这一步决定了客户端是 Lettuce，Spring Boot 默认装配）：</p>
+</li>
+</ol>
+<pre class="line-numbers language-markup" data-language="markup"><code class="language-markup"><span class="token tag"><span class="token tag"><span class="token punctuation">&lt;</span>dependency</span><span class="token punctuation">></span></span>
+  <span class="token tag"><span class="token tag"><span class="token punctuation">&lt;</span>groupId</span><span class="token punctuation">></span></span>org.springframework.boot<span class="token tag"><span class="token tag"><span class="token punctuation">&lt;/</span>groupId</span><span class="token punctuation">></span></span>
+  <span class="token tag"><span class="token tag"><span class="token punctuation">&lt;</span>artifactId</span><span class="token punctuation">></span></span>spring-boot-starter-data-redis<span class="token tag"><span class="token tag"><span class="token punctuation">&lt;/</span>artifactId</span><span class="token punctuation">></span></span>
+<span class="token tag"><span class="token tag"><span class="token punctuation">&lt;/</span>dependency</span><span class="token punctuation">></span></span>
+<span class="token comment">&lt;!-- 需要连接池参数时再加 commons-pool2，否则 lettuce.pool 配置不生效 --></span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<ol start="3">
+<li><strong>application.yml 配连接</strong>（这几个键是 Boot 3 的写法，Boot 2.7 是 <code>spring.redis.*</code>，改名是升级时最常见的坑）：</li>
+</ol>
+<pre class="line-numbers language-yaml" data-language="yaml"><code class="language-yaml"><span class="token key atrule">spring</span><span class="token punctuation">:</span>
+  <span class="token key atrule">data</span><span class="token punctuation">:</span>
+    <span class="token key atrule">redis</span><span class="token punctuation">:</span>
+      <span class="token key atrule">host</span><span class="token punctuation">:</span> 127.0.0.1
+      <span class="token key atrule">port</span><span class="token punctuation">:</span> <span class="token number">6379</span>
+      <span class="token key atrule">password</span><span class="token punctuation">:</span> S3cretForClass   <span class="token comment"># 服务端 requirepass 配了就必须写，否则 NOAUTH</span>
+      <span class="token key atrule">database</span><span class="token punctuation">:</span> <span class="token number">0</span>                <span class="token comment"># 对应 SELECT 0；集群模式只能是 0</span>
+      <span class="token key atrule">timeout</span><span class="token punctuation">:</span> 2s                <span class="token comment"># 一次往返的上限，不是空闲断连时间</span>
+      <span class="token key atrule">lettuce</span><span class="token punctuation">:</span>
+        <span class="token key atrule">pool</span><span class="token punctuation">:</span>
+          <span class="token key atrule">max-active</span><span class="token punctuation">:</span> <span class="token number">16</span>
+          <span class="token key atrule">max-idle</span><span class="token punctuation">:</span> <span class="token number">8</span>
+          <span class="token key atrule">min-idle</span><span class="token punctuation">:</span> <span class="token number">2</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<ol start="4">
+<li><strong>注入模板并验证闭环</strong>：<code>StringRedisTemplate</code> 的 key&#x2F;value 都用 UTF-8 字符串，避免 JDK 序列化在 redis-cli 里看到乱码；用一个 <code>ApplicationRunner</code> 打印 PING 与一次带 TTL 的写入即可完成自检。</li>
+</ol>
+<pre class="line-numbers language-java" data-language="java"><code class="language-java"><span class="token annotation punctuation">@Bean</span>
+<span class="token class-name">ApplicationRunner</span> <span class="token function">selfCheck</span><span class="token punctuation">(</span><span class="token class-name">StringRedisTemplate</span> tpl<span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+    <span class="token keyword">return</span> args <span class="token operator">-></span> <span class="token punctuation">&#123;</span>
+        tpl<span class="token punctuation">.</span><span class="token function">opsForValue</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token function">set</span><span class="token punctuation">(</span><span class="token string">"session:abc"</span><span class="token punctuation">,</span> <span class="token string">"uid=1"</span><span class="token punctuation">,</span> <span class="token class-name">Duration</span><span class="token punctuation">.</span><span class="token function">ofSeconds</span><span class="token punctuation">(</span><span class="token number">60</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span> <span class="token comment">// 等价 SET ... EX 60</span>
+        log<span class="token punctuation">.</span><span class="token function">info</span><span class="token punctuation">(</span><span class="token string">"ping=&#123;&#125;, ttl=&#123;&#125;"</span><span class="token punctuation">,</span> tpl<span class="token punctuation">.</span><span class="token function">getConnectionFactory</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token function">getConnection</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token function">ping</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">,</span> tpl<span class="token punctuation">.</span><span class="token function">getExpire</span><span class="token punctuation">(</span><span class="token string">"session:abc"</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+        tpl<span class="token punctuation">.</span><span class="token function">delete</span><span class="token punctuation">(</span><span class="token string">"session:abc"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token punctuation">&#125;</span><span class="token punctuation">;</span>
+<span class="token punctuation">&#125;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<p>三个必须记住的对应关系：<code>Duration.ofSeconds(60)</code> ↔ <code>EX 60</code>；<code>getExpire</code> 返回 <code>-2</code>&#x2F;<code>-1</code> 与命令行一致；<strong>不要用 <code>keys(&quot;*&quot;)</code></strong>（<code>RedisTemplate.keys</code> 就是 <code>KEYS</code>），批量扫描用 <code>scan</code>。</p>
 <h2 id="七、常见坑（官方明确说明的限制）"><a href="#七、常见坑（官方明确说明的限制）" class="headerlink" title="七、常见坑（官方明确说明的限制）"></a>七、常见坑（官方明确说明的限制）</h2><ol>
 <li><strong><code>KEYS *</code> 在生产上是事故级操作</strong>。官方对 <code>KEYS</code> 的说明是 O(N) 扫描全部键，会阻塞主线程；官方明确建议用 <code>SCAN</code> 做增量迭代。</li>
 <li><strong>一个慢命令会卡住所有客户端</strong>。因为是单线程执行，<code>KEYS</code>、大 key 的 <code>HGETALL</code>、<code>SMEMBERS</code>、<code>DEL</code> 大集合都会阻塞。官方在 <code>DEL</code> 文档里专门推荐用 <code>UNLINK</code>（异步释放）。</li>
@@ -261,10 +306,18 @@ OK
 <li>别把「能当数据库」读成「能当强一致主库」。</li>
 </ul>
 <h2 id="九、思考题"><a href="#九、思考题" class="headerlink" title="九、思考题"></a>九、思考题</h2><ol>
-<li>你的业务要存一个 300 MB 的商品快照做缓存，单 key 上限 512 MB 没超，为什么这仍然是个坏设计？</li>
-<li>如果一个 key 上挂了 TTL，但客户端始终在读它，这个 key 到了过期时间会不会立刻消失？为什么？</li>
-<li>为什么说「单线程」既是 Redis 快的来源，也是它最容易被打挂的原因？这两面各举一个具体命令。</li>
-<li>8.0 的许可证变化，对「公司内部系统用 Redis 做缓存」和「把 Redis 打包进对外销售的软件」分别意味着什么？</li>
+<li><p>你的业务要存一个 300 MB 的商品快照做缓存，单 key 上限 512 MB 没超，为什么这仍然是个坏设计？</p>
+<p><strong>参考回答</strong>：问题不在「超没超 512 MB」，而在<strong>单线程处理它的一次读写就够阻塞所有人</strong>——网络传输、序列化、过期删除都是整块操作；同时它让主从同步、迁移、扩容都被一个大对象拖住。正确做法是拆分粒度（如按字段存 Hash）或把快照放对象存储，Redis 只留索引。</p>
+</li>
+<li><p>如果一个 key 上挂了 TTL，但客户端始终在读它，这个 key 到了过期时间会不会立刻消失？为什么？</p>
+<p><strong>参考回答</strong>：不会立刻消失。官方是<strong>惰性删除 + 定期抽样删除</strong>：到期后 key 仍可能短暂存在，直到被访问或被抽样命中才真正删除；所以「过期」不等于「准时消失」，业务不能依赖 TTL 做精确时点控制。</p>
+</li>
+<li><p>为什么说「单线程」既是 Redis 快的来源，也是它最容易被打挂的原因？这两面各举一个具体命令。</p>
+<p><strong>参考回答</strong>：快的一面是数据在内存、命令串行无锁竞争、无上下文切换，<code>GET</code>&#x2F;<code>SET</code> 就是一次哈希查表。挂的一面是任何 O(N) 命令都会独占主线程：<code>KEYS *</code> 全库扫描，<code>DEL</code> 一个百万元素的集合同步释放，都会让其他客户端排队。</p>
+</li>
+<li><p>8.0 的许可证变化，对「公司内部系统用 Redis 做缓存」和「把 Redis 打包进对外销售的软件」分别意味着什么？</p>
+<p><strong>参考回答</strong>：内部当缓存用，AGPL 的义务主要落在「向第三方分发 &#x2F; 提供网络服务」上，内部自用通常不触发，但仍建议法务确认；把 Redis 打包进对外销售的软件属于分发，必须遵守 AGPLv3（或购买商业许可），不能继续按 BSD 时代的方式闭源分发。</p>
+</li>
 </ol>
 <h2 id="十、官方资料"><a href="#十、官方资料" class="headerlink" title="十、官方资料"></a>十、官方资料</h2><ul>
 <li>Get started（官方定位与三种角色）：<a target="_blank" rel="noopener" href="https://redis.io/docs/latest/get-started/">https://redis.io/docs/latest/get-started/</a></li>

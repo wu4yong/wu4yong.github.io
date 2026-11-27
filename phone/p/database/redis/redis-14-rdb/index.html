@@ -143,7 +143,7 @@ particlesJS("particles", {
   <h1 class="mb-title">redis-RDB 快照</h1>
   <div class="mb-sub">
     分类：database · redis
-     ｜ 标签：系统课 · Redis · 持久化
+     ｜ 标签：Redis · 系统课 · 持久化
   </div>
 
   <div class="mb-article"><div class="essay-banner essay-database"></div>
@@ -207,6 +207,8 @@ particlesJS("particles", {
 <li>最坏情况下的丢失窗口 &#x3D; 最大间隔（<code>save</code> 配置里最长的那条，或你手动 <code>BGSAVE</code> 的间隔）。</li>
 </ul>
 <p>这就是「RDB 天然不保证 RPO&#x3D;0」。它适合「能接受几分钟丢失」的场景（缓存重建、可重放的派生数据），不适合账务、订单这类「丢一条就是事故」的数据——那需要 AOF（下一讲）。</p>
+<p><img src="https://wu4yong.github.io/starry-images/assets/img/redis/rd-14b-rdb.svg" alt="RDB 的三步写入、四类触发与 CoW 代价"></p>
+<p><em>fork → 子进程写临时文件 → rename 的三步，四类触发方式，以及 CoW 与 fork 阻塞的代价｜依据 Redis 7.4 Persistence &#x2F; INFO 文档自绘</em></p>
 <h2 id="五、场景说明"><a href="#五、场景说明" class="headerlink" title="五、场景说明"></a>五、场景说明</h2><ol>
 <li><strong>缓存层的兜底</strong>：宕机后从 RDB 快速恢复大部分缓存，剩余靠回源，恢复速度最快；</li>
 <li><strong>定期冷备</strong>：每天低峰 <code>BGSAVE</code>，把 <code>dump.rdb</code> 传到对象存储；</li>
@@ -254,6 +256,24 @@ $ redis-check-rdb /var/lib/redis/dump.rdb
 <span class="token comment"># (error) MISCONF Redis is configured to save RDB snapshots, but it's currently unable to persist to disk.</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
 
 <p>最后那条 <code>MISCONF</code> 错误是<strong>可观测的保护机制</strong>：它逼你修磁盘问题，而不是让服务「看起来很健康但数据不落盘」。要么修好 <code>dir</code> 权限，要么确认「确实不需要 RDB」后把该配置设为 <code>no</code>。</p>
+<h3 id="Java-侧怎么落地：应用不参与，但四件事必须做到"><a href="#Java-侧怎么落地：应用不参与，但四件事必须做到" class="headerlink" title="Java 侧怎么落地：应用不参与，但四件事必须做到"></a>Java 侧怎么落地：应用不参与，但四件事必须做到</h3><p>RDB 是服务端行为，Java 侧没有 API 可调，但下面四件事决定「快照能不能安全跑」。</p>
+<ol>
+<li><p><strong>配置留在服务端模板里</strong>：<code>save</code> 策略、<code>dir</code>、<code>dbfilename</code> 写进 <code>redis.conf</code> 并纳入 git；不要用 <code>CONFIG SET dir</code> 在线改——集群&#x2F;容器里容易出现「一半节点写新目录、一半还写旧目录」。</p>
+</li>
+<li><p><strong>应用侧算清内存余量</strong>：<code>maxmemory</code> 要给 CoW 留空间。把「数据量 × 1.2～2 倍」写进容量评估，别按物理内存的 90% 设 <code>maxmemory</code>（RD51 详讲）。</p>
+</li>
+<li><p><strong>监控 MISCONF 错误而不是等业务反馈</strong>：写命令报 <code>MISCONF Redis is configured to save RDB snapshots...</code> 时，客户端应该<strong>保留原始错误</strong>并单独打点，因为这时候业务侧通常只看到「写失败率升高」，很难联想到磁盘。</p>
+</li>
+</ol>
+<pre class="line-numbers language-java" data-language="java"><code class="language-java"><span class="token keyword">catch</span> <span class="token punctuation">(</span><span class="token class-name">RedisSystemException</span> e<span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+    <span class="token keyword">if</span> <span class="token punctuation">(</span>e<span class="token punctuation">.</span><span class="token function">getMessage</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token operator">!=</span> <span class="token keyword">null</span> <span class="token operator">&amp;&amp;</span> e<span class="token punctuation">.</span><span class="token function">getMessage</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token function">contains</span><span class="token punctuation">(</span><span class="token string">"MISCONF"</span><span class="token punctuation">)</span><span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+        metrics<span class="token punctuation">.</span><span class="token function">counter</span><span class="token punctuation">(</span><span class="token string">"redis.persist.misconf"</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token function">increment</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>   <span class="token comment">// 直接告警到运维</span>
+    <span class="token punctuation">&#125;</span>
+<span class="token punctuation">&#125;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<ol start="4">
+<li><strong>停机&#x2F;发布流程要「等人恢复」</strong>：<code>SHUTDOWN</code> 带 <code>save</code> 会先落盘；容器 <code>docker stop</code> 的 grace period 太短会直接 SIGKILL 杀掉主进程，最后一次快照不会完成。所以在 K8s 里给 Redis 留足 <code>terminationGracePeriodSeconds</code>。</li>
+</ol>
 <h2 id="七、常见坑（官方明确说明的限制）"><a href="#七、常见坑（官方明确说明的限制）" class="headerlink" title="七、常见坑（官方明确说明的限制）"></a>七、常见坑（官方明确说明的限制）</h2><ol>
 <li><strong><code>SAVE</code> 会阻塞全部客户端</strong>。它在主线程完成整个写盘过程，数据量越大卡得越久。线上只用 <code>BGSAVE</code>。</li>
 <li><strong>快照期间内存可能接近翻倍</strong>。CoW 复制的页数与写入量相关，<code>maxmemory</code> 需要给这部分留余量，否则会被 OOM Killer 干掉。</li>
@@ -277,11 +297,21 @@ $ redis-check-rdb /var/lib/redis/dump.rdb
 <li><code>stop-writes-on-bgsave-error yes</code> 会让写失败，这是保护不是缺陷。</li>
 </ul>
 <h2 id="九、思考题"><a href="#九、思考题" class="headerlink" title="九、思考题"></a>九、思考题</h2><ol>
-<li><code>fork</code> 之后父子进程「共享内存」，为什么子进程写文件时不会看到主进程后来的改动？靠的机制叫什么？</li>
-<li>一次 <code>BGSAVE</code> 期间主进程写了 10 GB 数据，CoW 内存大约会是多少？这对 <code>maxmemory</code> 设置意味着什么？</li>
-<li>一台机器 64 GB 内存、数据 40 GB、<code>maxmemory</code> 设了 45 GB，跑 <code>BGSAVE</code> 时会发生什么？</li>
-<li>为什么线上推荐在<strong>从节点</strong>上做备份，而不是主节点？</li>
-<li>「RDB 恢复比 AOF 快」这句话对不对？为什么？</li>
+<li><p><code>fork</code> 之后父子进程「共享内存」，为什么子进程写文件时不会看到主进程后来的改动？靠的机制叫什么？</p>
+<p><strong>参考回答</strong>：靠<strong>写时复制（Copy-on-Write）</strong>。<code>fork</code> 后父子共享物理页且页表标为只读，主进程一旦要改某页，内核先复制一份给它、原页留给子进程读。于是子进程看到的是 fork 那一刻的固定视图，快照因此是「时间点」快照。</p>
+</li>
+<li><p>一次 <code>BGSAVE</code> 期间主进程写了 10 GB 数据，CoW 内存大约会是多少？这对 <code>maxmemory</code> 设置意味着什么？</p>
+<p><strong>参考回答</strong>：CoW 额外内存 ≈ 被改写的页数，最坏情况接近被写入的数据量，即约 <strong>10 GB</strong>（现实中通常少一些，因为一页里可能被多次改写只复制一次）。这意味着 <code>maxmemory</code> 必须留出与「快照期间写入量」相当的余量，否则会被 OOM Killer 杀掉。</p>
+</li>
+<li><p>一台机器 64 GB 内存、数据 40 GB、<code>maxmemory</code> 设了 45 GB，跑 <code>BGSAVE</code> 时会发生什么？</p>
+<p><strong>参考回答</strong>：fork 后主进程继续写入触发 CoW，额外内存最坏接近 40 GB，45 + 40 远超 64 GB，<strong>很可能被系统 OOM Killer 杀掉</strong>，或者触发 swap 把实例拖到卡死。正确做法是 <code>maxmemory</code> 设在 35 GB 以下（留出 CoW 与碎片余量），或把快照放到从节点&#x2F;独立机器上做。</p>
+</li>
+<li><p>为什么线上推荐在<strong>从节点</strong>上做备份，而不是主节点？</p>
+<p><strong>参考回答</strong>：备份动作（<code>BGSAVE</code>&#x2F;<code>SCP</code>&#x2F;压缩上传）会消耗 CPU、磁盘 IO 与 CoW 内存，放在从节点上就不会影响主节点的读写延迟与内存水位；主节点只承担复制，从节点出问题也不影响写入入口。</p>
+</li>
+<li><p>「RDB 恢复比 AOF 快」这句话对不对？为什么？</p>
+<p><strong>参考回答</strong>：基本对。RDB 是把内存镜像<strong>直接按格式读入</strong>，恢复速度取决于数据量与磁盘吞吐；AOF 需要<strong>逐条重放命令</strong>（还要解析协议），同样的数据量通常慢数倍。但要注意 7.0 的混合持久化（AOF 里嵌 RDB 前缀）会兼顾两者：启动先加载 RDB 部分，快得多。</p>
+</li>
 </ol>
 <h2 id="十、官方资料"><a href="#十、官方资料" class="headerlink" title="十、官方资料"></a>十、官方资料</h2><ul>
 <li>Persistence（RDB 的定义、优缺点、配置项）：<a target="_blank" rel="noopener" href="https://redis.io/docs/latest/operate/oss_and_stack/management/persistence/">https://redis.io/docs/latest/operate/oss_and_stack/management/persistence/</a></li>

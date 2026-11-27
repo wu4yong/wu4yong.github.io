@@ -143,7 +143,7 @@ particlesJS("particles", {
   <h1 class="mb-title">redis-分布式锁</h1>
   <div class="mb-sub">
     分类：database · redis
-     ｜ 标签：系统课 · Redis · 分布式
+     ｜ 标签：Redis · 系统课 · 分布式
   </div>
 
   <div class="mb-article"><div class="essay-banner essay-database"></div>
@@ -217,6 +217,8 @@ end<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span>
 <li><strong>获取失败要退避重试</strong>（几十毫秒随机），否则大量线程同时抢锁会产生惊群；</li>
 <li><strong>业务里加版本号或幂等键</strong>，因为锁失效后仍可能并发写，最后一道防线是业务自己。</li>
 </ul>
+<p><img src="https://wu4yong.github.io/starry-images/assets/img/redis/rd-42b-distlock.svg" alt="SET NX PX、token 误删与原子解锁"></p>
+<p><em>SETNX + EXPIRE 的死锁路径、一条 SET NX PX 消除中间态、A 超时后误删 B 的锁的时间线，以及 Lua 比对解锁｜依据 Redis 7.4 · SET 与 EVAL 文档自绘</em></p>
 <h2 id="五、场景说明"><a href="#五、场景说明" class="headerlink" title="五、场景说明"></a>五、场景说明</h2><ol>
 <li><strong>定时任务防重</strong>：同一任务只允许一个实例执行（效率锁）；</li>
 <li><strong>缓存重建互斥</strong>：RD40 的击穿解法；</li>
@@ -254,6 +256,45 @@ OK                             <span class="token comment"># 成功</span>
     sleep(rand(20,80)ms)
 throw TimeoutException<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span></span></code></pre>
 
+<h3 id="Java-侧怎么落地：Redisson-只是把三条规矩封装了"><a href="#Java-侧怎么落地：Redisson-只是把三条规矩封装了" class="headerlink" title="Java 侧怎么落地：Redisson 只是把三条规矩封装了"></a>Java 侧怎么落地：Redisson 只是把三条规矩封装了</h3><ol>
+<li><strong>pom 换成 Redisson starter</strong>：它自带 Spring Boot 自动配置，锁的看门狗、Lua 解锁、可重入都由它实现，比手写 <code>SET NX PX</code> + <code>EVAL</code> 省事且不易写错。</li>
+</ol>
+<pre class="line-numbers language-markup" data-language="markup"><code class="language-markup"><span class="token tag"><span class="token tag"><span class="token punctuation">&lt;</span>dependency</span><span class="token punctuation">></span></span>
+  <span class="token tag"><span class="token tag"><span class="token punctuation">&lt;</span>groupId</span><span class="token punctuation">></span></span>org.redisson<span class="token tag"><span class="token tag"><span class="token punctuation">&lt;/</span>groupId</span><span class="token punctuation">></span></span>
+  <span class="token tag"><span class="token tag"><span class="token punctuation">&lt;</span>artifactId</span><span class="token punctuation">></span></span>redisson-spring-boot-starter<span class="token tag"><span class="token tag"><span class="token punctuation">&lt;/</span>artifactId</span><span class="token punctuation">></span></span>
+  <span class="token tag"><span class="token tag"><span class="token punctuation">&lt;</span>version</span><span class="token punctuation">></span></span>3.27.2<span class="token tag"><span class="token tag"><span class="token punctuation">&lt;/</span>version</span><span class="token punctuation">></span></span>
+<span class="token tag"><span class="token tag"><span class="token punctuation">&lt;/</span>dependency</span><span class="token punctuation">></span></span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<ol start="2">
+<li><strong>application.yml 指向同一套 Redis</strong>（微服务多实例必须连同一个集群，否则锁根本不在一个命名空间）：</li>
+</ol>
+<pre class="line-numbers language-yaml" data-language="yaml"><code class="language-yaml"><span class="token key atrule">spring</span><span class="token punctuation">:</span>
+  <span class="token key atrule">data</span><span class="token punctuation">:</span>
+    <span class="token key atrule">redis</span><span class="token punctuation">:</span>
+      <span class="token key atrule">host</span><span class="token punctuation">:</span> 10.0.0.11
+      <span class="token key atrule">port</span><span class="token punctuation">:</span> <span class="token number">6379</span>
+      <span class="token key atrule">timeout</span><span class="token punctuation">:</span> 1s
+      <span class="token key atrule">lettuce</span><span class="token punctuation">:</span>
+        <span class="token key atrule">pool</span><span class="token punctuation">:</span>
+          <span class="token key atrule">max-active</span><span class="token punctuation">:</span> <span class="token number">64</span>
+          <span class="token key atrule">max-wait</span><span class="token punctuation">:</span> 500ms<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<ol start="3">
+<li><strong>加锁用 <code>tryLock</code>，不要 <code>lock()</code></strong>：<code>lock()</code> 会无限等待，一次锁泄漏就能把线程池拖死。<code>leaseTime</code> 传 -1 才启用看门狗自动续期：</li>
+</ol>
+<pre class="line-numbers language-java" data-language="java"><code class="language-java"><span class="token class-name">RLock</span> lock <span class="token operator">=</span> redisson<span class="token punctuation">.</span><span class="token function">getLock</span><span class="token punctuation">(</span><span class="token string">"lock:order:"</span> <span class="token operator">+</span> orderId<span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token keyword">boolean</span> ok <span class="token operator">=</span> lock<span class="token punctuation">.</span><span class="token function">tryLock</span><span class="token punctuation">(</span><span class="token number">3</span><span class="token punctuation">,</span> <span class="token operator">-</span><span class="token number">1</span><span class="token punctuation">,</span> <span class="token class-name">TimeUnit</span><span class="token punctuation">.</span><span class="token constant">SECONDS</span><span class="token punctuation">)</span><span class="token punctuation">;</span>   <span class="token comment">// 最多等 3s，看门狗续期</span>
+<span class="token keyword">if</span> <span class="token punctuation">(</span><span class="token operator">!</span>ok<span class="token punctuation">)</span> <span class="token keyword">throw</span> <span class="token keyword">new</span> <span class="token class-name">BizBusyException</span><span class="token punctuation">(</span>orderId<span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token keyword">try</span> <span class="token punctuation">&#123;</span> <span class="token function">doWork</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span> <span class="token punctuation">&#125;</span> <span class="token keyword">finally</span> <span class="token punctuation">&#123;</span> <span class="token keyword">if</span> <span class="token punctuation">(</span>lock<span class="token punctuation">.</span><span class="token function">isHeldByCurrentThread</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span> lock<span class="token punctuation">.</span><span class="token function">unlock</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span> <span class="token punctuation">&#125;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span></span></code></pre>
+
+<ol start="4">
+<li><p><strong>显式 leaseTime 就别指望看门狗</strong>：<code>tryLock(3, 30, SECONDS)</code> 表示 30 秒后必定释放，无论业务是否做完——这正是「GC 停顿超过 PX 就双写」的来源。要么给足余量，要么用默认看门狗并保证 <code>unlock</code> 一定执行。</p>
+</li>
+<li><p><strong>锁内禁止长耗时 IO 与大批量 GC</strong>：一次 Full GC 就可能超过 PX。长任务拆成小段，或在处理前 <code>lock.isHeldByCurrentThread()</code> 之外再加业务版本号校验。</p>
+</li>
+<li><p><strong>微服务侧三件配套</strong>：锁 key 带业务前缀避免跨服务撞名；获取失败走 20～80 ms 随机退避重试而不是自旋；写库必须有幂等键或 <code>WHERE version = ?</code> 条件更新——锁失效后仍可能并发写，最后一道防线在数据库。</p>
+</li>
+</ol>
 <h2 id="七、常见坑（官方明确说明的限制）"><a href="#七、常见坑（官方明确说明的限制）" class="headerlink" title="七、常见坑（官方明确说明的限制）"></a>七、常见坑（官方明确说明的限制）</h2><ol>
 <li><strong><code>SETNX</code> + <code>EXPIRE</code> 两步</strong>。中间崩溃就是永久死锁，这是最经典的一类线上事故。</li>
 <li><strong>不加过期时间</strong>。持锁进程被 kill 后，锁永不释放；<code>SET</code> 不带 <code>EX</code>&#x2F;<code>PX</code> 时官方不会自动过期。</li>
@@ -276,11 +317,21 @@ throw TimeoutException<span aria-hidden="true" class="line-numbers-rows"><span><
 <li>业务侧还要幂等与版本号，锁不是最后一道防线。</li>
 </ul>
 <h2 id="九、思考题"><a href="#九、思考题" class="headerlink" title="九、思考题"></a>九、思考题</h2><ol>
-<li>为什么 <code>SETNX</code> + <code>EXPIRE</code> 会死锁？画出崩溃发生在哪一行。</li>
-<li>锁的 PX 应该怎么定？给出你项目的公式与一个具体数值。</li>
-<li><code>GET</code> + <code>DEL</code> 两步解锁，误删别人锁的窗口有多大？由什么决定？</li>
-<li>业务超时后锁已过期，你还在写库，这时最坏的结果是什么？怎么防？</li>
-<li>主库写完锁后立刻宕机，从库升主，锁还在吗？这会导致什么？</li>
+<li><p>为什么 <code>SETNX</code> + <code>EXPIRE</code> 会死锁？画出崩溃发生在哪一行。</p>
+<p><strong>参考回答</strong>：崩溃点在 <code>SETNX</code> 成功之后、<code>EXPIRE</code> 执行之前这两行之间：锁已经存在但没有过期时间，进程一死就永远没人删。后续请求全部 <code>SETNX</code> 失败，业务整体卡死，只能人工 <code>DEL</code>。</p>
+</li>
+<li><p>锁的 PX 应该怎么定？给出你项目的公式与一个具体数值。</p>
+<p><strong>参考回答</strong>：公式 &#x3D; 业务最长耗时 P99 × 2 ～ 3 + 网络余量。例：扣减业务 P99 &#x3D; 200 ms → PX &#x3D; 600～1000 ms；用看门狗续期时可先给 30 s 基准值，由续期维持。定太短业务没做完锁就没了，定太长进程崩溃后要等很久才恢复。</p>
+</li>
+<li><p><code>GET</code> + <code>DEL</code> 两步解锁，误删别人锁的窗口有多大？由什么决定？</p>
+<p><strong>参考回答</strong>：窗口 &#x3D; <code>GET</code> 返回到 <code>DEL</code> 到达服务端之间的时间，即一次 RTT 加客户端处理（正常零点几毫秒，遇到 GC&#x2F;网络抖动可到几十毫秒）。能否误删取决于「这段时间里锁是否过期且被别人抢到」，所以由锁的剩余有效期、RTT 与客户端停顿共同决定。</p>
+</li>
+<li><p>业务超时后锁已过期，你还在写库，这时最坏的结果是什么？怎么防？</p>
+<p><strong>参考回答</strong>：最坏是两个写者同时写同一行，产生覆盖写、超卖或状态回退，而你以为自己独占。防法：写库带条件（版本号&#x2F;<code>WHERE stock &gt;= n</code>）、业务幂等键、把长任务拆小并用看门狗续期、关键路径不要只依赖锁。</p>
+</li>
+<li><p>主库写完锁后立刻宕机，从库升主，锁还在吗？这会导致什么？</p>
+<p><strong>参考回答</strong>：不在。锁的写入还没异步复制过去，从库升主后这把锁不存在，另一个客户端可以立刻抢到，形成「两个持有者」并发写。这就是 Redis 锁在主从异步复制下不保证强一致的根源，正确性场景要靠存储侧条件更新或 fencing token（下一讲）。</p>
+</li>
 </ol>
 <h2 id="十、官方资料"><a href="#十、官方资料" class="headerlink" title="十、官方资料"></a>十、官方资料</h2><ul>
 <li>SET（<code>NX</code>&#x2F;<code>PX</code>&#x2F;<code>EXAT</code> 选项定义）：<a target="_blank" rel="noopener" href="https://redis.io/docs/latest/commands/set/">https://redis.io/docs/latest/commands/set/</a></li>

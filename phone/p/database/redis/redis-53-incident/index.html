@@ -143,7 +143,7 @@ particlesJS("particles", {
   <h1 class="mb-title">redis-故障剧本</h1>
   <div class="mb-sub">
     分类：database · redis
-     ｜ 标签：系统课 · Redis · 运维
+     ｜ 标签：Redis · 系统课 · 运维
   </div>
 
   <div class="mb-article"><div class="essay-banner essay-database"></div>
@@ -187,6 +187,8 @@ particlesJS("particles", {
 <li>监控：<code>used_memory/maxmemory</code> 在 80% 时告警，5 分钟内连续两次触发即电话通知；</li>
 <li>代码：给 20 个未设 TTL 的业务 key 补上过期时间。</li>
 </ul>
+<p><img src="https://wu4yong.github.io/starry-images/assets/img/redis/rd-53b-incident.svg" alt="生产故障三步曲与五类故障处置"></p>
+<p><em>止血→定位→复盘不可颠倒的顺序、五类故障的「先做什么 &#x2F; 忌什么」、两个高频误操作，以及复盘要落成参数与监控动作｜依据 Eviction、Replication 与 Cluster spec 自绘</em></p>
 <h2 id="五、场景说明"><a href="#五、场景说明" class="headerlink" title="五、场景说明"></a>五、场景说明</h2><ol>
 <li><strong>大促前</strong>：把五类故障的止血动作提前配置成开关，故障时一键执行；</li>
 <li><strong>主从切换窗口</strong>：客户端要能识别新主库（哨兵&#x2F;集群客户端自动发现）；</li>
@@ -238,6 +240,54 @@ $ redis-cli <span class="token parameter variable">--cluster</span> check <span 
 <span class="token comment"># 止血：临时扩上限；随后查客户端是否漏还连接</span>
 <span class="token number">127.0</span>.0.1:637<span class="token operator"><span class="token file-descriptor important">9</span>></span> CLIENT LIST<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
 
+<h3 id="Java-侧怎么落地：客户端的故障防护"><a href="#Java-侧怎么落地：客户端的故障防护" class="headerlink" title="Java 侧怎么落地：客户端的故障防护"></a>Java 侧怎么落地：客户端的故障防护</h3><ol>
+<li><strong>pom</strong>：熔断与限流用 Resilience4j，Actuator 用于探活与指标暴露。</li>
+</ol>
+<pre class="line-numbers language-markup" data-language="markup"><code class="language-markup"><span class="token tag"><span class="token tag"><span class="token punctuation">&lt;</span>dependency</span><span class="token punctuation">></span></span>
+  <span class="token tag"><span class="token tag"><span class="token punctuation">&lt;</span>groupId</span><span class="token punctuation">></span></span>org.springframework.boot<span class="token tag"><span class="token tag"><span class="token punctuation">&lt;/</span>groupId</span><span class="token punctuation">></span></span>
+  <span class="token tag"><span class="token tag"><span class="token punctuation">&lt;</span>artifactId</span><span class="token punctuation">></span></span>spring-boot-starter-actuator<span class="token tag"><span class="token tag"><span class="token punctuation">&lt;/</span>artifactId</span><span class="token punctuation">></span></span>
+<span class="token tag"><span class="token tag"><span class="token punctuation">&lt;/</span>dependency</span><span class="token punctuation">></span></span>
+<span class="token tag"><span class="token tag"><span class="token punctuation">&lt;</span>dependency</span><span class="token punctuation">></span></span>
+  <span class="token tag"><span class="token tag"><span class="token punctuation">&lt;</span>groupId</span><span class="token punctuation">></span></span>io.github.resilience4j<span class="token tag"><span class="token tag"><span class="token punctuation">&lt;/</span>groupId</span><span class="token punctuation">></span></span>
+  <span class="token tag"><span class="token tag"><span class="token punctuation">&lt;</span>artifactId</span><span class="token punctuation">></span></span>resilience4j-spring-boot3<span class="token tag"><span class="token tag"><span class="token punctuation">&lt;/</span>artifactId</span><span class="token punctuation">></span></span>
+  <span class="token tag"><span class="token tag"><span class="token punctuation">&lt;</span>version</span><span class="token punctuation">></span></span>2.2.0<span class="token tag"><span class="token tag"><span class="token punctuation">&lt;/</span>version</span><span class="token punctuation">></span></span>
+<span class="token tag"><span class="token tag"><span class="token punctuation">&lt;/</span>dependency</span><span class="token punctuation">></span></span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<ol start="2">
+<li><strong>application.yml</strong>：超时必须短于接口 SLA，否则 Redis 卡顿会等比放大到业务线程：</li>
+</ol>
+<pre class="line-numbers language-yaml" data-language="yaml"><code class="language-yaml"><span class="token key atrule">spring</span><span class="token punctuation">:</span>
+  <span class="token key atrule">data</span><span class="token punctuation">:</span>
+    <span class="token key atrule">redis</span><span class="token punctuation">:</span>
+      <span class="token key atrule">timeout</span><span class="token punctuation">:</span> 300ms
+      <span class="token key atrule">lettuce</span><span class="token punctuation">:</span>
+        <span class="token key atrule">pool</span><span class="token punctuation">:</span>
+          <span class="token key atrule">max-active</span><span class="token punctuation">:</span> <span class="token number">64</span>
+          <span class="token key atrule">max-wait</span><span class="token punctuation">:</span> 100ms        <span class="token comment"># 拿不到连接快速失败，别无限排队</span>
+          <span class="token key atrule">time-between-eviction-runs</span><span class="token punctuation">:</span> 30s
+<span class="token key atrule">resilience4j</span><span class="token punctuation">:</span>
+  <span class="token key atrule">circuitbreaker.instances.redis</span><span class="token punctuation">:</span>
+    <span class="token key atrule">failure-rate-threshold</span><span class="token punctuation">:</span> <span class="token number">50</span>
+    <span class="token key atrule">slow-call-duration-threshold</span><span class="token punctuation">:</span> 200ms
+    <span class="token key atrule">wait-duration-in-open-state</span><span class="token punctuation">:</span> 10s
+  <span class="token key atrule">bulkhead.instances.redis</span><span class="token punctuation">:</span>
+    <span class="token key atrule">max-concurrent-calls</span><span class="token punctuation">:</span> <span class="token number">80</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<ol start="3">
+<li><strong>缓存访问统一包一层熔断 + 舱壁</strong>，打开状态直接走库或返回默认值，不让 <code>RedisConnectionFailureException</code> 冒到接口：</li>
+</ol>
+<pre class="line-numbers language-java" data-language="java"><code class="language-java"><span class="token annotation punctuation">@CircuitBreaker</span><span class="token punctuation">(</span>name <span class="token operator">=</span> <span class="token string">"redis"</span><span class="token punctuation">,</span> fallbackMethod <span class="token operator">=</span> <span class="token string">"fromDb"</span><span class="token punctuation">)</span>
+<span class="token annotation punctuation">@Bulkhead</span><span class="token punctuation">(</span>name <span class="token operator">=</span> <span class="token string">"redis"</span><span class="token punctuation">)</span>
+<span class="token keyword">public</span> <span class="token class-name">Item</span> <span class="token function">get</span><span class="token punctuation">(</span><span class="token keyword">long</span> id<span class="token punctuation">)</span> <span class="token punctuation">&#123;</span> <span class="token keyword">return</span> cache<span class="token punctuation">.</span><span class="token function">get</span><span class="token punctuation">(</span>id<span class="token punctuation">)</span><span class="token punctuation">;</span> <span class="token punctuation">&#125;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span></span></code></pre>
+
+<ol start="4">
+<li><p><strong>降级开关做成运行时读</strong>（配置中心 &#x2F; <code>@RefreshScope</code>）：<code>cache.read-bypass</code>、<code>cache.write-bypass</code> 两个开关分开，先关写（保护 Redis）再关读。</p>
+</li>
+<li><p><strong>探活别用业务连接池</strong>：<code>management.health.redis.enabled: true</code> 的默认探针在 Redis 卡顿时会一起超时，导致实例被判不健康而摘流量；改独立连接 + 短超时，或干脆只看复制与关键命令的自检结果。</p>
+</li>
+<li><p><strong>故障期的日志要能定位</strong>：把异常统一转成带 <code>key 前缀</code>、<code>命令名</code>、<code>耗时</code> 的告警指标（Micrometer Counter），别只在日志里刷 <code>Timeout</code>——事后复盘靠的是这组计数。</p>
+</li>
+</ol>
 <h2 id="七、常见坑（官方明确说明的限制）"><a href="#七、常见坑（官方明确说明的限制）" class="headerlink" title="七、常见坑（官方明确说明的限制）"></a>七、常见坑（官方明确说明的限制）</h2><ol>
 <li><strong>先定位再止血</strong>。故障持续时间越长损失越大，止血动作应先于根因分析。</li>
 <li><strong>故障中执行 <code>KEYS</code></strong>。O(N) 且阻塞，会让已经过载的实例更慢（官方明确生产禁用）。</li>
@@ -260,11 +310,21 @@ $ redis-cli <span class="token parameter variable">--cluster</span> check <span 
 <li>延迟突增看 <code>SLOWLOG</code>&#x2F;<code>LATENCY</code>&#x2F;fork，连接耗尽先扩上限再查泄漏。</li>
 </ul>
 <h2 id="九、思考题"><a href="#九、思考题" class="headerlink" title="九、思考题"></a>九、思考题</h2><ol>
-<li>为什么止血必须先于定位？举一个「先定位」导致损失扩大的例子。</li>
-<li>从库重启为什么可能触发全量同步？<code>repl-backlog</code> 在这里起什么作用？</li>
-<li><code>CLUSTERDOWN</code> 与「所有节点都挂了」有什么区别？</li>
-<li>延迟突增时，你怎么区分是 AOF fsync、fork 还是慢命令？</li>
-<li>给「内存满」写一份不超过五条动作的值班手册。</li>
+<li><p>为什么止血必须先于定位？举一个「先定位」导致损失扩大的例子。</p>
+<p><strong>参考回答</strong>：故障期间每分钟损失随流量累积，而定位需要时间和工具；先止血能把「正在扩大的部分」切断，让后面的诊断在可控状态下进行。反例：大促中 Redis 延迟飙升，值班同学花 20 分钟逐个节点抓 <code>SLOWLOG</code> 找根因，没有限流也没降级，请求积压到把数据库和线程池一起打满，小故障演变成全站不可用。</p>
+</li>
+<li><p>从库重启为什么可能触发全量同步？<code>repl-backlog</code> 在这里起什么作用？</p>
+<p><strong>参考回答</strong>：从库重启会丢掉内存中的复制偏移量，重连时用 <code>PSYNC</code> 带上自己记得的 offset；主库只有在 <code>repl-backlog</code> 里还留有该 offset 之后的增量时才能回 <code>+CONTINUE</code>，否则只能全量。所以 backlog 太小或从库停机超过「backlog 覆盖的时长」，重启就等于触发一次全量同步。</p>
+</li>
+<li><p><code>CLUSTERDOWN</code> 与「所有节点都挂了」有什么区别？</p>
+<p><strong>参考回答</strong>：<code>CLUSTERDOWN</code> 是「集群认为某些槽没有可用主节点」的自我保护状态，往往只是少数节点失联或被判定 <code>fail</code>，其余节点还活着但拒绝服务。它不等于所有节点宕机；急着重启单个节点可能扩大失联范围，正确做法是 <code>redis-cli --cluster check</code> 看槽与节点状态。</p>
+</li>
+<li><p>延迟突增时，你怎么区分是 AOF fsync、fork 还是慢命令？</p>
+<p><strong>参考回答</strong>：看时间点与事件类型：<code>LATENCY LATEST</code> 里有 <code>fork</code>、<code>aof-fsync-always</code>、<code>command</code> 等事件及各自最大耗时；<code>INFO persistence</code> 看 <code>rdb_last_bgsave_time</code> 与 <code>aof_rewrite</code> 是否正在进行；<code>SLOWLOG</code> 里出现业务命令则指向慢命令或大 key。三者同时可交叉验证：fork 引起的尖刺是周期性的、fsync 与写入量相关、慢命令跟随具体 key。</p>
+</li>
+<li><p>给「内存满」写一份不超过五条动作的值班手册。</p>
+<p><strong>参考回答</strong>：① 确认现象：<code>INFO memory</code> 的 <code>used_memory/maxmemory</code>、<code>evicted_keys</code>、是否出现 <code>OOM command not allowed</code>；② 立刻扩 <code>maxmemory</code> 或临时调 <code>maxmemory-policy</code> 止血（读通常仍可用，别当成实例已挂）；③ 禁 <code>FLUSHALL</code>&#x2F;<code>KEYS</code>；④ 捞大 key 与无 TTL key（<code>--bigkeys</code>、<code>SCAN</code> + <code>TTL</code>）并限期补过期；⑤ 复盘落到参数、监控与代码三处动作。</p>
+</li>
 </ol>
 <h2 id="十、官方资料"><a href="#十、官方资料" class="headerlink" title="十、官方资料"></a>十、官方资料</h2><ul>
 <li>Eviction（<code>noeviction</code> 与 OOM 错误行为）：<a target="_blank" rel="noopener" href="https://redis.io/docs/latest/develop/reference/eviction/">https://redis.io/docs/latest/develop/reference/eviction/</a></li>

@@ -143,7 +143,7 @@ particlesJS("particles", {
   <h1 class="mb-title">redis-高可用选型</h1>
   <div class="mb-sub">
     分类：database · redis
-     ｜ 标签：系统课 · Redis · 高可用 · 架构
+     ｜ 标签：Redis · 系统课 · 高可用 · 架构
   </div>
 
   <div class="mb-article"><div class="essay-banner essay-database"></div>
@@ -200,6 +200,8 @@ particlesJS("particles", {
 <li><strong>单机</strong>：没有隐性成本，但也没有任何容错。</li>
 </ul>
 <p>把这些成本写进技术方案，比「我们上了 Cluster 所以高可用」更可信。</p>
+<p><img src="https://wu4yong.github.io/starry-images/assets/img/redis/rd-25b-ha-choice.svg" alt="四种形态与决策三问"></p>
+<p><em>四种形态在容量、写入、故障、成本四维上的对比，以及按优先级问的三问与隐性成本｜依据 Redis 7.4 Scaling &#x2F; Sentinel 文档自绘</em></p>
 <h2 id="五、场景说明"><a href="#五、场景说明" class="headerlink" title="五、场景说明"></a>五、场景说明</h2><ol>
 <li><strong>缓存 + 中小数据量 + 读多写少</strong>：主从或 Sentinel，简单可靠；</li>
 <li><strong>单主写入顶到瓶颈（QPS 高、带宽满）</strong>：Cluster，且必须接受跨槽限制；</li>
@@ -236,6 +238,65 @@ particlesJS("particles", {
 <span class="token comment"># 2) 单主 QPS 4.5 万，未打满 → 写入不需要水平扩展</span>
 <span class="token comment"># 3) 允许 30 秒内切换完成 → Sentinel 3 节点足够</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
 
+<h3 id="Java-侧怎么落地：一套代码切三种形态"><a href="#Java-侧怎么落地：一套代码切三种形态" class="headerlink" title="Java 侧怎么落地：一套代码切三种形态"></a>Java 侧怎么落地：一套代码切三种形态</h3><p>选型结论不该落成一堆 if 分支，而是落成「连接工厂 + 配置档」两件事。</p>
+<ol>
+<li><strong>pom 只引一个 starter</strong>。Spring Data Redis 自带 Lettuce，Sentinel 与 Cluster 都由它驱动，不要再额外挂 Jedis 的 Cluster 客户端。</li>
+</ol>
+<pre class="line-numbers language-markup" data-language="markup"><code class="language-markup"><span class="token tag"><span class="token tag"><span class="token punctuation">&lt;</span>dependency</span><span class="token punctuation">></span></span>
+  <span class="token tag"><span class="token tag"><span class="token punctuation">&lt;</span>groupId</span><span class="token punctuation">></span></span>org.springframework.boot<span class="token tag"><span class="token tag"><span class="token punctuation">&lt;/</span>groupId</span><span class="token punctuation">></span></span>
+  <span class="token tag"><span class="token tag"><span class="token punctuation">&lt;</span>artifactId</span><span class="token punctuation">></span></span>spring-boot-starter-data-redis<span class="token tag"><span class="token tag"><span class="token punctuation">&lt;/</span>artifactId</span><span class="token punctuation">></span></span>
+<span class="token tag"><span class="token tag"><span class="token punctuation">&lt;/</span>dependency</span><span class="token punctuation">></span></span>
+<span class="token tag"><span class="token tag"><span class="token punctuation">&lt;</span>dependency</span><span class="token punctuation">></span></span>
+  <span class="token tag"><span class="token tag"><span class="token punctuation">&lt;</span>groupId</span><span class="token punctuation">></span></span>org.apache.commons<span class="token tag"><span class="token tag"><span class="token punctuation">&lt;/</span>groupId</span><span class="token punctuation">></span></span>
+  <span class="token tag"><span class="token tag"><span class="token punctuation">&lt;</span>artifactId</span><span class="token punctuation">></span></span>commons-pool2<span class="token tag"><span class="token tag"><span class="token punctuation">&lt;/</span>artifactId</span><span class="token punctuation">></span></span>
+<span class="token tag"><span class="token tag"><span class="token punctuation">&lt;/</span>dependency</span><span class="token punctuation">></span></span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<ol start="2">
+<li><strong>形态相关的连接参数拆到 profile</strong>。公共项留在 <code>application.yml</code>，形态项各写一份：</li>
+</ol>
+<pre class="line-numbers language-yaml" data-language="yaml"><code class="language-yaml"><span class="token comment"># application-sentinel.yml</span>
+<span class="token key atrule">spring</span><span class="token punctuation">:</span>
+  <span class="token key atrule">data</span><span class="token punctuation">:</span>
+    <span class="token key atrule">redis</span><span class="token punctuation">:</span>
+      <span class="token key atrule">sentinel</span><span class="token punctuation">:</span>
+        <span class="token key atrule">master</span><span class="token punctuation">:</span> mymaster        <span class="token comment"># 必须与 sentinel.conf 中监控的名字一致</span>
+        <span class="token key atrule">nodes</span><span class="token punctuation">:</span> 10.0.0.11<span class="token punctuation">:</span><span class="token number">26379</span><span class="token punctuation">,</span>10.0.0.12<span class="token punctuation">:</span><span class="token number">26379</span><span class="token punctuation">,</span>10.0.0.13<span class="token punctuation">:</span><span class="token number">26379</span>
+      <span class="token key atrule">lettuce</span><span class="token punctuation">:</span>
+        <span class="token key atrule">pool</span><span class="token punctuation">:</span>
+          <span class="token key atrule">max-active</span><span class="token punctuation">:</span> <span class="token number">32</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<pre class="line-numbers language-yaml" data-language="yaml"><code class="language-yaml"><span class="token comment"># application-cluster.yml</span>
+<span class="token key atrule">spring</span><span class="token punctuation">:</span>
+  <span class="token key atrule">data</span><span class="token punctuation">:</span>
+    <span class="token key atrule">redis</span><span class="token punctuation">:</span>
+      <span class="token key atrule">cluster</span><span class="token punctuation">:</span>
+        <span class="token key atrule">nodes</span><span class="token punctuation">:</span> 10.0.0.21<span class="token punctuation">:</span><span class="token number">6379</span><span class="token punctuation">,</span>10.0.0.22<span class="token punctuation">:</span><span class="token number">6379</span><span class="token punctuation">,</span>10.0.0.23<span class="token punctuation">:</span><span class="token number">6379</span>
+        <span class="token key atrule">max-redirects</span><span class="token punctuation">:</span> <span class="token number">3</span>        <span class="token comment"># 跟随 MOVED/ASK 的上限</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<ol start="3">
+<li><strong>切换形态只改启动参数</strong>：<code>--spring.profiles.active=sentinel</code> 或 <code>cluster</code>。业务代码只注入 <code>StringRedisTemplate</code>，不在代码里判断形态。</li>
+</ol>
+<pre class="line-numbers language-java" data-language="java"><code class="language-java"><span class="token annotation punctuation">@Service</span>
+<span class="token keyword">public</span> <span class="token keyword">class</span> <span class="token class-name">CacheService</span> <span class="token punctuation">&#123;</span>
+    <span class="token keyword">private</span> <span class="token keyword">final</span> <span class="token class-name">StringRedisTemplate</span> redis<span class="token punctuation">;</span>   <span class="token comment">// 形态变了，这里一个字都不改</span>
+    <span class="token keyword">public</span> <span class="token class-name">CacheService</span><span class="token punctuation">(</span><span class="token class-name">StringRedisTemplate</span> redis<span class="token punctuation">)</span> <span class="token punctuation">&#123;</span> <span class="token keyword">this</span><span class="token punctuation">.</span>redis <span class="token operator">=</span> redis<span class="token punctuation">;</span> <span class="token punctuation">&#125;</span>
+<span class="token punctuation">&#125;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<ol start="4">
+<li><p><strong>微服务里别各写一份</strong>。连接参数放配置中心&#x2F;Nacos 统一下发，各服务只保留 profile 名，避免十个服务十份 Sentinel 地址，切一次主库要改十处。</p>
+</li>
+<li><p><strong>把「形态自检」写成启动断言</strong>，防止灰度时还连着旧形态：</p>
+</li>
+</ol>
+<pre class="line-numbers language-java" data-language="java"><code class="language-java"><span class="token annotation punctuation">@Test</span>
+<span class="token keyword">void</span> <span class="token function">shapeShouldMatchProfile</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+    <span class="token class-name">String</span> info <span class="token operator">=</span> redis<span class="token punctuation">.</span><span class="token function">execute</span><span class="token punctuation">(</span><span class="token punctuation">(</span><span class="token class-name"><span class="token namespace">org<span class="token punctuation">.</span>springframework<span class="token punctuation">.</span>data<span class="token punctuation">.</span>redis<span class="token punctuation">.</span>core<span class="token punctuation">.</span></span>RedisCallback</span><span class="token generics"><span class="token punctuation">&lt;</span><span class="token class-name">String</span><span class="token punctuation">></span></span><span class="token punctuation">)</span> c <span class="token operator">-></span> <span class="token keyword">new</span> <span class="token class-name">String</span><span class="token punctuation">(</span>c<span class="token punctuation">.</span><span class="token function">info</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token function">assertTrue</span><span class="token punctuation">(</span>info<span class="token punctuation">.</span><span class="token function">contains</span><span class="token punctuation">(</span><span class="token string">"cluster_enabled:1"</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>   <span class="token comment">// Sentinel/主从应为 0</span>
+<span class="token punctuation">&#125;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<ol start="6">
+<li><strong>验证</strong>：Sentinel 形态看 <code>SENTINEL masters</code> 的 <code>flags</code>；Cluster 形态看客户端日志是否出现 <code>MOVED</code> 重定向——出现即说明在正确跟随，出现重定向风暴则说明槽表缓存没刷新。</li>
+</ol>
 <h2 id="七、常见坑（官方明确说明的限制）"><a href="#七、常见坑（官方明确说明的限制）" class="headerlink" title="七、常见坑（官方明确说明的限制）"></a>七、常见坑（官方明确说明的限制）</h2><ol>
 <li><strong>「数据大就上 Cluster」</strong>。容量不是 Cluster 的唯一理由，写入才是；数据大而写不多时，Sentinel + 多从库更省心。</li>
 <li><strong>「上了 Cluster 就高可用」</strong>。Cluster 只解决节点级可用性，业务层的多 key、事务、客户端改造都要自己做。</li>
@@ -259,11 +320,21 @@ particlesJS("particles", {
 <li>切换必须演练，异步复制的丢数据窗口必须业务侧兜。</li>
 </ul>
 <h2 id="九、思考题"><a href="#九、思考题" class="headerlink" title="九、思考题"></a>九、思考题</h2><ol>
-<li>数据 300 GB、写入只有 8000 QPS，你会选 Sentinel 还是 Cluster？给出三条理由。</li>
-<li>「数据大就必须 Cluster」错在哪？什么指标才是 Cluster 的判据？</li>
-<li>Sentinel 形态下主库 QPS 打满，加三个从库有用吗？为什么？</li>
-<li>为什么 Cluster 里不需要再部署 Sentinel？如果强行一起上会发生什么？</li>
-<li>三种形态都会丢数据，那「高可用」这个词到底保证了什么？请用一句话精确表述。</li>
+<li><p>数据 300 GB、写入只有 8000 QPS，你会选 Sentinel 还是 Cluster？给出三条理由。</p>
+<p><strong>参考回答</strong>：选 Sentinel（配大内存机 + 多从库）。三条理由：①装得下——300 GB 用 512 GB 机型加副本仍有余量；②写得动——8000 QPS 远低于单主能力，没有水平扩展的必要；③运维成本——Cluster 的跨槽改造、迁槽、客户端重定向全省掉了。</p>
+</li>
+<li><p>「数据大就必须 Cluster」错在哪？什么指标才是 Cluster 的判据？</p>
+<p><strong>参考回答</strong>：错在把「容量」当成 Cluster 的唯一理由，容量可以靠更大机型、按业务拆实例解决。Cluster 的硬判据是<strong>单主写入顶不住</strong>：写入 QPS 打满、复制带宽打满，或单机内存已无法再扩。</p>
+</li>
+<li><p>Sentinel 形态下主库 QPS 打满，加三个从库有用吗？为什么？</p>
+<p><strong>参考回答</strong>：没用。从库只分担读，写仍然落在唯一主库；主库写打满要从写入侧解决——拆业务、异步化、批量合并，最终才是 Cluster 分片。</p>
+</li>
+<li><p>为什么 Cluster 里不需要再部署 Sentinel？如果强行一起上会发生什么？</p>
+<p><strong>参考回答</strong>：Cluster 自带基于 gossip + 多数票的故障转移，Sentinel 是另一套独立的主从认知。两套同时跑会出现「Sentinel 认为的主」与「集群选出的主」不一致，触发双主或反复切换，写入错乱。</p>
+</li>
+<li><p>三种形态都会丢数据，那「高可用」这个词到底保证了什么？请用一句话精确表述。</p>
+<p><strong>参考回答</strong>：高可用保证的是「服务在可接受的时间内重新可用」，不保证「不丢数据」；数据不丢要靠持久化（AOF everysec&#x2F;always）+ 业务侧幂等补偿。</p>
+</li>
 </ol>
 <h2 id="十、官方资料"><a href="#十、官方资料" class="headerlink" title="十、官方资料"></a>十、官方资料</h2><ul>
 <li>Sentinel（可用性方案定位）：<a target="_blank" rel="noopener" href="https://redis.io/docs/latest/operate/oss_and_stack/management/sentinel/">https://redis.io/docs/latest/operate/oss_and_stack/management/sentinel/</a></li>

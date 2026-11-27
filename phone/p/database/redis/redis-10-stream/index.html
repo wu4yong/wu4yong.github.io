@@ -143,7 +143,7 @@ particlesJS("particles", {
   <h1 class="mb-title">redis-Stream</h1>
   <div class="mb-sub">
     分类：database · redis
-     ｜ 标签：系统课 · Redis · 消息队列
+     ｜ 标签：Redis · 系统课 · 消息队列
   </div>
 
   <div class="mb-article"><div class="essay-banner essay-database"></div>
@@ -199,6 +199,8 @@ XACK stream g1 <span class="token operator">&lt;</span>ID<span class="token oper
 <li><strong>接手要靠命令</strong>：<code>XPENDING</code> 查看积压，<code>XCLAIM</code> 手工认领，<code>XAUTOCLAIM</code>（6.2+）批量自动认领；</li>
 <li><strong><code>XACK</code> 只影响 PEL，不删除条目</strong>。所以「ack 完空间就释放」是错的——容量要靠 <code>XTRIM</code> &#x2F; <code>XDEL</code>。</li>
 </ol>
+<p><img src="https://wu4yong.github.io/starry-images/assets/img/redis/rd-10b-stream.svg" alt="Stream 的追加日志、消费组与 PEL"></p>
+<p><em>XADD → XREAD → XREADGROUP → XACK 的五步路径，三种消息结构的语义差别，以及 PEL 与容量分离的关系｜依据 Redis 7.4 Streams &#x2F; XACK 文档自绘</em></p>
 <h2 id="五、场景说明"><a href="#五、场景说明" class="headerlink" title="五、场景说明"></a>五、场景说明</h2><ol>
 <li><strong>事件流&#x2F;操作日志</strong>：<code>XADD events * type order.created id 1001</code>，下游多个服务各建一个组消费（订单服务、风控服务、数据服务互不干扰）；</li>
 <li><strong>可靠任务队列</strong>：<code>XREADGROUP</code> 领任务 + 处理完 <code>XACK</code>，崩溃后 <code>XAUTOCLAIM</code> 接手；</li>
@@ -279,6 +281,39 @@ OK
 <span class="token number">127.0</span>.0.1:637<span class="token operator"><span class="token file-descriptor important">9</span>></span> XADD orders MAXLEN ~ <span class="token number">100</span> * <span class="token builtin class-name">type</span> closed <span class="token function">id</span> <span class="token number">1002</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
 
 <p><code>MAXLEN ~</code> 是近似截断（按节点整块裁剪，更省 CPU），官方允许这种「略微超一点」的取舍。精确上限用 <code>MAXLEN =</code>。</p>
+<h3 id="Java-侧怎么落地：用-Spring-Data-Redis-的-Stream-监听容器"><a href="#Java-侧怎么落地：用-Spring-Data-Redis-的-Stream-监听容器" class="headerlink" title="Java 侧怎么落地：用 Spring Data Redis 的 Stream 监听容器"></a>Java 侧怎么落地：用 Spring Data Redis 的 Stream 监听容器</h3><p>Spring Boot 里消费 Stream 不用自己写 <code>XREADGROUP</code> 循环，官方 starter 提供了 <code>StreamMessageListenerContainer</code>，它内部就是「领消息 → 处理 → <code>XACK</code>（配 <code>RECORD</code> 或 <code>AUTO</code> 确认模式）」的封装。</p>
+<ol>
+<li><strong>建容器</strong>：需要一个专用 <code>RedisConnectionFactory</code>，容器是<strong>单线程轮询</strong>的，按消费者数量配线程池。</li>
+</ol>
+<pre class="line-numbers language-java" data-language="java"><code class="language-java"><span class="token annotation punctuation">@Bean</span><span class="token punctuation">(</span>destroyMethod <span class="token operator">=</span> <span class="token string">"destroy"</span><span class="token punctuation">)</span>
+<span class="token class-name">StreamMessageListenerContainer</span><span class="token generics"><span class="token punctuation">&lt;</span><span class="token class-name">String</span><span class="token punctuation">,</span> <span class="token class-name">MapRecord</span><span class="token punctuation">&lt;</span><span class="token class-name">String</span><span class="token punctuation">,</span> <span class="token class-name">String</span><span class="token punctuation">,</span> <span class="token class-name">String</span><span class="token punctuation">></span><span class="token punctuation">></span></span> <span class="token function">container</span><span class="token punctuation">(</span>
+        <span class="token class-name">RedisConnectionFactory</span> factory<span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+    <span class="token keyword">var</span> options <span class="token operator">=</span> <span class="token class-name">StreamMessageListenerContainer
+            <span class="token punctuation">.</span>StreamMessageListenerContainerOptions</span><span class="token punctuation">.</span><span class="token function">builder</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+            <span class="token punctuation">.</span><span class="token function">pollTimeout</span><span class="token punctuation">(</span><span class="token class-name">Duration</span><span class="token punctuation">.</span><span class="token function">ofSeconds</span><span class="token punctuation">(</span><span class="token number">2</span><span class="token punctuation">)</span><span class="token punctuation">)</span>      <span class="token comment">// 对应 XREADGROUP BLOCK 的轮询间隔</span>
+            <span class="token punctuation">.</span><span class="token function">batchSize</span><span class="token punctuation">(</span><span class="token number">10</span><span class="token punctuation">)</span>                            <span class="token comment">// 一次 COUNT 10</span>
+            <span class="token punctuation">.</span><span class="token function">build</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token keyword">var</span> c <span class="token operator">=</span> <span class="token class-name">StreamMessageListenerContainer</span><span class="token punctuation">.</span><span class="token function">create</span><span class="token punctuation">(</span>factory<span class="token punctuation">,</span> options<span class="token punctuation">)</span><span class="token punctuation">;</span>
+    c<span class="token punctuation">.</span><span class="token function">start</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token keyword">return</span> c<span class="token punctuation">;</span>
+<span class="token punctuation">&#125;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<ol start="2">
+<li><strong>注册监听器时要指定 group 与 consumer 名</strong>，<code>&gt;</code> 语义由容器自动使用；组不存在会报错，需要在启动时 <code>XGROUP CREATE ... MKSTREAM</code>（或调用 <code>opsForStream().createGroup</code>）。</li>
+</ol>
+<pre class="line-numbers language-java" data-language="java"><code class="language-java">container<span class="token punctuation">.</span><span class="token function">receive</span><span class="token punctuation">(</span><span class="token class-name">Consumer</span><span class="token punctuation">.</span><span class="token function">from</span><span class="token punctuation">(</span><span class="token string">"g1"</span><span class="token punctuation">,</span> <span class="token string">"c1"</span><span class="token punctuation">)</span><span class="token punctuation">,</span>
+        <span class="token class-name">StreamOffset</span><span class="token punctuation">.</span><span class="token function">create</span><span class="token punctuation">(</span><span class="token string">"orders"</span><span class="token punctuation">,</span> <span class="token class-name">ReadOffset</span><span class="token punctuation">.</span><span class="token function">lastConsumed</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">,</span>
+        msg <span class="token operator">-></span> <span class="token punctuation">&#123;</span>
+            <span class="token function">handle</span><span class="token punctuation">(</span>msg<span class="token punctuation">.</span><span class="token function">getValue</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>                  <span class="token comment">// 业务处理</span>
+            tpl<span class="token punctuation">.</span><span class="token function">opsForStream</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token function">acknowledge</span><span class="token punctuation">(</span><span class="token string">"g1"</span><span class="token punctuation">,</span> msg<span class="token punctuation">)</span><span class="token punctuation">;</span>   <span class="token comment">// 手动 XACK，等价于 MANUAL 模式</span>
+        <span class="token punctuation">&#125;</span><span class="token punctuation">)</span><span class="token punctuation">;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<ol start="3">
+<li><p><strong>别忘自动认领</strong>：消费者崩溃后 PEL 里的消息没人管，Spring Data Redis 没有内建 <code>XAUTOCLAIM</code>，要自己起定时任务调 <code>opsForStream().claim(...)</code>（或 <code>XAUTOCLAIM</code> 原生命令），并把超过阈值时长的 pending 消息重新投递。</p>
+</li>
+<li><p><strong>容量必须在代码侧做</strong>：<code>XADD</code> 时带 <code>MAXLEN</code>（API 里用 <code>StreamRecords</code> + <code>XAddOptions.maxLen(...)</code>），否则「只 ack 不截断」会让 Stream 涨到 GB 级。</p>
+</li>
+</ol>
 <h2 id="七、常见坑（官方明确说明的限制）"><a href="#七、常见坑（官方明确说明的限制）" class="headerlink" title="七、常见坑（官方明确说明的限制）"></a>七、常见坑（官方明确说明的限制）</h2><ol>
 <li><strong>ack 不等于删除</strong>。消息留在 Stream 里直到 <code>XTRIM</code> &#x2F; <code>XDEL</code>。不做截断的 Stream 会无限增长，这是线上最典型的事故——发布几个月后单个 key 涨到几 GB。</li>
 <li><strong><code>BLOCK</code> 的单位是毫秒</strong>。<code>XREAD BLOCK 0</code> 是永久阻塞，<code>BLOCK 5</code> 是 5 毫秒（不是 5 秒）。与 <code>BLPOP</code> 的秒级语义混用会得到完全错误的行为。</li>
@@ -302,11 +337,21 @@ OK
 <li><code>BLOCK</code> 单位是毫秒，<code>$</code> 与 <code>0</code> 语义相反，这两处最易出错。</li>
 </ul>
 <h2 id="九、思考题"><a href="#九、思考题" class="headerlink" title="九、思考题"></a>九、思考题</h2><ol>
-<li>Pub&#x2F;Sub、List、Stream 三者做「订单事件通知」，分别会丢消息吗？为什么？</li>
-<li>一个消费组两个消费者，c1 领了消息后卡住 10 分钟没 ack。此时 <code>XPENDING</code> 会看到什么？c2 怎么接手？</li>
-<li>为什么「ack 完就没空间问题」是错的？如果业务每天 100 万条、每条 200 字节，不做截断一个月会占多少内存？</li>
-<li><code>XREADGROUP GROUP g c 0 STREAMS s</code> 与 <code>... &gt; STREAMS s</code> 分别在读什么？什么时候必须用 <code>0</code>？</li>
-<li>at-least-once 意味着可能重复消费。你的任务处理器需要哪一层幂等保护？举一个不加幂等会出事的例子。</li>
+<li><p>Pub&#x2F;Sub、List、Stream 三者做「订单事件通知」，分别会丢消息吗？为什么？</p>
+<p><strong>参考回答</strong>：Pub&#x2F;Sub 丢——它是广播，订阅者不在线时那条消息根本没有接收方，也没有任何存储；List 会丢——<code>RPOP</code> 取走就从列表删除，消费者在处理途中崩溃这条就没了；Stream 不丢——条目留在日志里，消费进度用 PEL 记录，没 ack 就能被别人认领重投，只要你不删就一直在。</p>
+</li>
+<li><p>一个消费组两个消费者，c1 领了消息后卡住 10 分钟没 ack。此时 <code>XPENDING</code> 会看到什么？c2 怎么接手？</p>
+<p><strong>参考回答</strong>：<code>XPENDING orders g1</code> 会显示 pending 数量、最小&#x2F;最大 ID，以及每条消息的「消费者 + 空闲时间」（<code>XPENDING ... - + 10</code> 可看明细），能看到这条挂在 c1 名下且 idle 已经 10 分钟。c2 接手有两条路径：<code>XCLAIM</code> 逐条认领（指定 <code>MIN-IDLE-TIME</code>），或 6.2+ 的 <code>XAUTOCLAIM</code> 按 idle 阈值批量认领。</p>
+</li>
+<li><p>为什么「ack 完就没空间问题」是错的？如果业务每天 100 万条、每条 200 字节，不做截断一个月会占多少内存？</p>
+<p><strong>参考回答</strong>：<code>XACK</code> 只把条目从 PEL 移除，<strong>条目本身还在 Stream 里</strong>，容量只由 <code>XTRIM</code>&#x2F;<code>XDEL</code> 决定。按每天 100 万条 × 200 字节算，30 天约 6 GB 原始数据，加上 radix tree 的索引开销实际更高——发布几个月不做截断，单 key 涨到几 GB 是常态。</p>
+</li>
+<li><p><code>XREADGROUP GROUP g c 0 STREAMS s</code> 与 <code>... &gt; STREAMS s</code> 分别在读什么？什么时候必须用 <code>0</code>？</p>
+<p><strong>参考回答</strong>：<code>&gt;</code> 读「组内从未投递过的新消息」，<code>0</code> 读「<strong>自己</strong> PEL 里的历史消息」（即自己领了但没 ack 的）。必须用 <code>0</code> 的时机是：消费者重启后先把自己上次没处理完的积压捞出来处理，然后再用 <code>&gt;</code> 领新的。</p>
+</li>
+<li><p>at-least-once 意味着可能重复消费。你的任务处理器需要哪一层幂等保护？举一个不加幂等会出事的例子。</p>
+<p><strong>参考回答</strong>：幂等要落在<strong>业务写入层</strong>：用业务唯一键（订单号 + 操作类型）建唯一索引或 <code>SET NX</code> 去重标记，处理前后都可用；不要指望消息 ID 去重，因为重投时 ID 相同但你无法判断是否已成功。反例：支付回调被重投两次，不加幂等就会重复给用户加余额&#x2F;重复发货。</p>
+</li>
 </ol>
 <h2 id="十、官方资料"><a href="#十、官方资料" class="headerlink" title="十、官方资料"></a>十、官方资料</h2><ul>
 <li>Streams（类型定义、追加日志语义、消费组）：<a target="_blank" rel="noopener" href="https://redis.io/docs/latest/develop/data-types/streams/">https://redis.io/docs/latest/develop/data-types/streams/</a></li>

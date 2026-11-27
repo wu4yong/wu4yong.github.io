@@ -143,7 +143,7 @@ particlesJS("particles", {
   <h1 class="mb-title">redis-复制运维</h1>
   <div class="mb-sub">
     分类：database · redis
-     ｜ 标签：系统课 · Redis · 高可用 · 运维
+     ｜ 标签：Redis · 系统课 · 运维 · 高可用
   </div>
 
   <div class="mb-article"><div class="essay-banner essay-database"></div>
@@ -178,6 +178,8 @@ particlesJS("particles", {
 <p><strong>② 反复全量</strong>：<code>sync_full</code> 持续增长但每次都能连上。根因通常是 backlog 太小（断线一次就滚出）或网络抖动频繁。处置：重算 backlog &#x3D; 写入速率 × 容忍断线秒数；检查网络丢包与超时。</p>
 <p><strong>③ 从库写失败</strong>：报 <code>READONLY You can&#39;t write against a read only replica</code>。要么代码把写请求路由到了从库，要么有人 <code>replica-read-only no</code> 后误写导致主从不一致。处置：修正路由；保持只读。</p>
 <p><strong>④ 主从数据漂移</strong>：从库 key 数少于主库、值更旧。常见根因是<strong>主从 <code>maxmemory</code> 与淘汰策略不一致</strong>（主库淘汰了某些 key，从库因为内存更大没淘汰，或反之），也可能是从库被写过。处置：两台机器配置对齐、定期用 <code>DBSIZE</code> 与抽样 key 比对。</p>
+<p><img src="https://wu4yong.github.io/starry-images/assets/img/redis/rd-19b-repl-ops.svg" alt="六件套配置、五个观测点与四类故障"></p>
+<p><em>role → link_status → offset 差 → sync_full 增速 → 日志的排查顺序，最常漏的三项配置，以及四类典型故障｜依据 Redis 7.4 Replication &#x2F; INFO 文档自绘</em></p>
 <h2 id="五、场景说明"><a href="#五、场景说明" class="headerlink" title="五、场景说明"></a>五、场景说明</h2><ol>
 <li><strong>一主两从的缓存集群</strong>：<code>replica-read-only yes</code> + backlog 调到 32 MB + <code>min-replicas-to-write 1</code>；</li>
 <li><strong>备份专用从库</strong>：<code>replica-priority 0</code>，只承担 <code>BGSAVE</code> 与备份拷贝；</li>
@@ -234,6 +236,54 @@ OK
 <span class="token number">127.0</span>.0.1:638<span class="token operator"><span class="token file-descriptor important">0</span>></span> DBSIZE
 <span class="token punctuation">(</span>integer<span class="token punctuation">)</span> <span class="token number">1234000</span>                <span class="token comment"># 少了 567 个，需要查淘汰策略与写入</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
 
+<h3 id="Java-侧怎么落地：把「复制健康」做进应用的告警面"><a href="#Java-侧怎么落地：把「复制健康」做进应用的告警面" class="headerlink" title="Java 侧怎么落地：把「复制健康」做进应用的告警面"></a>Java 侧怎么落地：把「复制健康」做进应用的告警面</h3><p>复制配置是服务端的，Java 侧的价值在于「写失败会不会被正确处理」和「延迟能不能被看见」。</p>
+<ol>
+<li><strong>依赖照旧</strong>：<code>spring-boot-starter-data-redis</code>，不需要额外组件。</li>
+</ol>
+<pre class="line-numbers language-markup" data-language="markup"><code class="language-markup"><span class="token tag"><span class="token tag"><span class="token punctuation">&lt;</span>dependency</span><span class="token punctuation">></span></span>
+    <span class="token tag"><span class="token tag"><span class="token punctuation">&lt;</span>groupId</span><span class="token punctuation">></span></span>org.springframework.boot<span class="token tag"><span class="token tag"><span class="token punctuation">&lt;/</span>groupId</span><span class="token punctuation">></span></span>
+    <span class="token tag"><span class="token tag"><span class="token punctuation">&lt;</span>artifactId</span><span class="token punctuation">></span></span>spring-boot-starter-data-redis<span class="token tag"><span class="token tag"><span class="token punctuation">&lt;/</span>artifactId</span><span class="token punctuation">></span></span>
+<span class="token tag"><span class="token tag"><span class="token punctuation">&lt;/</span>dependency</span><span class="token punctuation">></span></span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span></span></code></pre>
+
+<ol start="2">
+<li><strong>yml 里显式设置超时与重试语义</strong>：<code>min-replicas-to-write</code> 生效后，主库会返回 <code>NOREPLICAS</code>，默认重试只会把线程池耗光。</li>
+</ol>
+<pre class="line-numbers language-yaml" data-language="yaml"><code class="language-yaml"><span class="token key atrule">spring</span><span class="token punctuation">:</span>
+  <span class="token key atrule">data</span><span class="token punctuation">:</span>
+    <span class="token key atrule">redis</span><span class="token punctuation">:</span>
+      <span class="token key atrule">host</span><span class="token punctuation">:</span> 10.0.0.5
+      <span class="token key atrule">timeout</span><span class="token punctuation">:</span> 3s
+      <span class="token key atrule">lettuce</span><span class="token punctuation">:</span>
+        <span class="token key atrule">pool</span><span class="token punctuation">:</span>
+          <span class="token key atrule">max-active</span><span class="token punctuation">:</span> <span class="token number">16</span>
+          <span class="token key atrule">max-wait</span><span class="token punctuation">:</span> 1s<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<ol start="3">
+<li><strong>单独识别 <code>NOREPLICAS</code> &#x2F; <code>READONLY</code>，不要当成普通异常吞掉</strong>：前者是「保护生效」，后者是「写到了从库」，处置完全不同。</li>
+</ol>
+<pre class="line-numbers language-java" data-language="java"><code class="language-java"><span class="token keyword">try</span> <span class="token punctuation">&#123;</span>
+    redis<span class="token punctuation">.</span><span class="token function">opsForValue</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token function">set</span><span class="token punctuation">(</span>key<span class="token punctuation">,</span> value<span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">&#125;</span> <span class="token keyword">catch</span> <span class="token punctuation">(</span><span class="token class-name">RedisSystemException</span> e<span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+    <span class="token class-name">String</span> msg <span class="token operator">=</span> <span class="token class-name">String</span><span class="token punctuation">.</span><span class="token function">valueOf</span><span class="token punctuation">(</span>e<span class="token punctuation">.</span><span class="token function">getMessage</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token keyword">if</span> <span class="token punctuation">(</span>msg<span class="token punctuation">.</span><span class="token function">contains</span><span class="token punctuation">(</span><span class="token string">"NOREPLICAS"</span><span class="token punctuation">)</span><span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+        metrics<span class="token punctuation">.</span><span class="token function">counter</span><span class="token punctuation">(</span><span class="token string">"redis.write.no_replicas"</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token function">increment</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>   <span class="token comment">// 保护生效：走降级队列</span>
+        <span class="token keyword">throw</span> <span class="token keyword">new</span> <span class="token class-name">DegradeException</span><span class="token punctuation">(</span><span class="token string">"replicas lost"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token punctuation">&#125;</span>
+    <span class="token keyword">if</span> <span class="token punctuation">(</span>msg<span class="token punctuation">.</span><span class="token function">contains</span><span class="token punctuation">(</span><span class="token string">"READONLY"</span><span class="token punctuation">)</span><span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+        metrics<span class="token punctuation">.</span><span class="token function">counter</span><span class="token punctuation">(</span><span class="token string">"redis.write.readonly"</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token function">increment</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>      <span class="token comment">// 路由错了：修正数据源</span>
+        <span class="token keyword">throw</span> <span class="token keyword">new</span> <span class="token class-name">RoutingException</span><span class="token punctuation">(</span><span class="token string">"write hit a replica"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token punctuation">&#125;</span>
+    <span class="token keyword">throw</span> e<span class="token punctuation">;</span>
+<span class="token punctuation">&#125;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<ol start="4">
+<li><strong>延迟用 offset 差做指标，不要用 <code>lag</code></strong>：<code>lag</code> 基于心跳、秒级且会被抖动放大；offset 差是字节级，更能反映真实落后。</li>
+</ol>
+<pre class="line-numbers language-java" data-language="java"><code class="language-java"><span class="token keyword">long</span> masterOffset <span class="token operator">=</span> <span class="token function">parseLong</span><span class="token punctuation">(</span>infoMaster<span class="token punctuation">,</span> <span class="token string">"master_repl_offset"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token keyword">long</span> slaveOffset  <span class="token operator">=</span> <span class="token function">parseLong</span><span class="token punctuation">(</span>infoSlave<span class="token punctuation">,</span>  <span class="token string">"slave_repl_offset"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token class-name">Metrics</span><span class="token punctuation">.</span><span class="token function">gauge</span><span class="token punctuation">(</span><span class="token string">"redis.repl.lag_bytes"</span><span class="token punctuation">,</span> masterOffset <span class="token operator">-</span> slaveOffset<span class="token punctuation">)</span><span class="token punctuation">;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span></span></code></pre>
+
+<p>配套一条硬规则：<code>sync_full</code> 建议按「每小时增量」打点，绝对值没有意义（重启会清零）；这个指标持续上涨就是全量风暴的前兆。</p>
 <h2 id="七、常见坑（官方明确说明的限制）"><a href="#七、常见坑（官方明确说明的限制）" class="headerlink" title="七、常见坑（官方明确说明的限制）"></a>七、常见坑（官方明确说明的限制）</h2><ol>
 <li><strong><code>masterauth</code> 漏配</strong>是最常见的「复制起不来」原因：日志会反复出现 <code>NOAUTH</code>，<code>master_link_status</code> 一直是 <code>down</code>。</li>
 <li><strong><code>replica-read-only</code> 只是「默认只读」</strong>，把它设成 <code>no</code> 并不会让从库「更好用」，只会让主从数据漂移。</li>
@@ -255,11 +305,21 @@ OK
 <li><code>min-replicas-to-write</code> 是「少从库就不让写」的保护，用之前必须有降级预案。</li>
 </ul>
 <h2 id="九、思考题"><a href="#九、思考题" class="headerlink" title="九、思考题"></a>九、思考题</h2><ol>
-<li>一个从库连不上主库，<code>master_link_status</code> 一直是 <code>down</code>，日志只有 <code>NOAUTH</code>。最可能漏了哪个配置？</li>
-<li><code>sync_full</code> 一小时内涨了 50 次，你会先查哪三个东西？</li>
-<li><code>min-replicas-to-write 1</code> 生效后，唯一从库宕机 → 主库拒绝写 → 业务怎么办？给出两条降级路径。</li>
-<li>主库 <code>maxmemory-policy allkeys-lru</code>、从库 <code>noeviction</code>，会发生什么？为什么？</li>
-<li>为什么备份专用从库要设 <code>replica-priority 0</code>？</li>
+<li><p>一个从库连不上主库，<code>master_link_status</code> 一直是 <code>down</code>，日志只有 <code>NOAUTH</code>。最可能漏了哪个配置？</p>
+<p><strong>参考回答</strong>：漏了 <code>masterauth</code>。主库设了 <code>requirepass</code> 而从库没配主库密码，握手阶段直接 <code>NOAUTH</code>，连接反复重试、状态永远 <code>down</code>。</p>
+</li>
+<li><p><code>sync_full</code> 一小时内涨了 50 次，你会先查哪三个东西？</p>
+<p><strong>参考回答</strong>：① <code>repl-backlog-size</code> 是否太小（按写入速率 × 容忍断线秒数重算）；② 网络是否频繁抖动&#x2F;超时（看丢包与 <code>master_last_io_seconds_ago</code>）；③ 是否有多个从库同时重连或主库刚重启（<code>replid</code> 变了）。这三项能覆盖绝大多数反复全量。</p>
+</li>
+<li><p><code>min-replicas-to-write 1</code> 生效后，唯一从库宕机 → 主库拒绝写 → 业务怎么办？给出两条降级路径。</p>
+<p><strong>参考回答</strong>：一是<strong>降级为本地队列</strong>：写请求进内存队列&#x2F;MQ，等从库恢复再补写（要求业务能容忍延迟）；二是<strong>临时关闭保护</strong>：运维确认可以接受 RPO 退化后 <code>CONFIG SET min-replicas-to-write 0</code>，恢复读写并同时告警。第二条是止血手段，必须留审计记录。</p>
+</li>
+<li><p>主库 <code>maxmemory-policy allkeys-lru</code>、从库 <code>noeviction</code>，会发生什么？为什么？</p>
+<p><strong>参考回答</strong>：会<strong>数据漂移</strong>。淘汰只在主库发生并同步为 <code>DEL</code>，从库收到 <code>DEL</code> 才删；但从库自己是 <code>noeviction</code>，内存不足时不是淘汰而是拒绝写&#x2F;报错，导致从库 key 集合与主库逐渐不一致，且从库内存可能更高。</p>
+</li>
+<li><p>为什么备份专用从库要设 <code>replica-priority 0</code>？</p>
+<p><strong>参考回答</strong>：<code>replica-priority</code> 是故障转移的选主权重，0 表示<strong>永不参与选主</strong>。备份从库通常磁盘大、配置低、还跑着 <code>BGSAVE</code>，让它当了主会把弱机器变成写入口，所以显式排除。</p>
+</li>
 </ol>
 <h2 id="十、官方资料"><a href="#十、官方资料" class="headerlink" title="十、官方资料"></a>十、官方资料</h2><ul>
 <li>Replication（从库只读与 <code>min-replicas-*</code> 语义）：<a target="_blank" rel="noopener" href="https://redis.io/docs/latest/operate/oss_and_stack/management/replication/">https://redis.io/docs/latest/operate/oss_and_stack/management/replication/</a></li>
