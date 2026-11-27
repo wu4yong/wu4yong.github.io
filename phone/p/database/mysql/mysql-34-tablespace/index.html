@@ -1,0 +1,416 @@
+<!--
+  ============================================
+  手机端 · 文章原文页
+  文件：phone/post.njk
+  适用终端：手机端（路由 /phone/p/<slug>/，由 scripts/phone-routes.js 生成）
+  作用：手机阅读单篇文章；单列布局、无侧栏无雷达，替代电脑端 post.njk
+        数据由生成期算好：page.item = { title, dateStr, content, cats, tags }
+  样式依赖：source/css/theme/phone/common.css、source/css/theme/phone/list.css
+  组件依赖：phone/_components/Particles.njk
+  最后修改：2026-11-11
+  ============================================
+-->
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="color-scheme" content="dark">
+  <meta name="theme-color" content="#020817">
+  <!-- 首帧兜底：浏览器默认画布是白的，样式未解析前会闪一下白。这条规则先锁死深空底色 -->
+  <style>html{background-color:#020817}</style>
+  <title>mysql-34-tablespace - 时空秘境</title>
+  <!-- 手机端样式：基础 + 列表/正文，外链引入（源文件 source/css/theme/phone/） -->
+  <link rel="stylesheet" href="/css/theme/phone/common.css">
+  <link rel="stylesheet" href="/css/theme/phone/list.css">
+<meta name="generator" content="Hexo 8.1.2"></head>
+<body>
+<div class="mb-shell">
+  <!--
+  ============================================
+  手机端星空粒子组件
+  文件：Particles.njk
+  适用终端：手机端
+  作用：Particles.njk 的手机端副本（nunjucks 子目录 include 取不到上级）
+        参数与电脑端 _components/Particles.njk 保持一致：
+        粒子 95 / 连线 118px / opacity 0.32，外加星座层与零星闪烁层
+  最后修改：2026-11-12
+  ============================================
+--><!-- z-index 必须是 0：负层级会被 body 不透明背景盖住，粒子在跑却看不见 -->
+<div id="particles" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 0; pointer-events: none;"></div>
+<!-- 星座层（与首页同一套：随机零星散布星座图形 + 偶尔闪烁的小星） -->
+<div id="constellations" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 1; pointer-events: none;" aria-hidden="true"></div>
+<script src="/js/particles.min.js"></script>
+<script>
+particlesJS("particles", {
+  particles: {
+    number: {
+      value: 95,
+      density: {
+        enable: true,
+        value_area: 800
+      }
+    },
+    color: {
+      value: "#00eeff"
+    },
+    shape: {
+      type: "circle",
+      stroke: {
+        width: 0,
+        color: "#000000"
+      }
+    },
+    opacity: {
+      value: 0.6,
+      random: true,
+      anim: {
+        enable: true,
+        speed: 0.5,
+        opacity_min: 0.1,
+        sync: false
+      }
+    },
+    size: {
+      value: 3,
+      random: true,
+      anim: {
+        enable: true,
+        speed: 2,
+        size_min: 0.1,
+        sync: false
+      }
+    },
+    line_linked: {
+      enable: true,
+      distance: 118,
+      color: "#00eeff",
+      opacity: 0.32,
+      width: 1
+    },
+    move: {
+      enable: true,
+      speed: 0.8,
+      direction: "none",
+      random: true,
+      straight: false,
+      out_mode: "out",
+      bounce: false,
+      attract: {
+        enable: true,
+        rotateX: 600,
+        rotateY: 1200
+      }
+    }
+  },
+  interactivity: {
+    detect_on: "canvas",
+    events: {
+      onhover: {
+        enable: true,
+        mode: "grab"       // 手指按住时粒子聚集
+      },
+      onclick: {
+        enable: true,
+        mode: "push"       // 点击时产生新粒子
+      },
+      resize: true
+    },
+    modes: {
+      grab: {
+        distance: 200,
+        line_linked: {
+          opacity: 1
+        }
+      },
+      push: {
+        particles_nb: 6
+      }
+    }
+  },
+  retina_detect: true
+});
+</script>
+<!-- 星座 + 零星闪烁层：与电脑端共用同一份绘制脚本 -->
+<script src="/js/theme/home/starfield.js"></script>
+
+
+  <div class="mb-top">
+    <a class="mb-back" href="/phone/">← 返回手机首页</a>
+    <span class="mb-sub" style="margin:0">2022-12-14</span>
+  </div>
+
+  <h1 class="mb-title">mysql-34-tablespace</h1>
+  <div class="mb-sub">
+    分类：database · mysql
+     ｜ 标签：系统课 · MySQL · 数据库
+  </div>
+
+  <div class="mb-article"><div class="essay-banner essay-database"></div>
+
+<h1 id="表空间与文件：ibdata、独立表空间与-undo-表空间"><a href="#表空间与文件：ibdata、独立表空间与-undo-表空间" class="headerlink" title="表空间与文件：ibdata、独立表空间与 undo 表空间"></a>表空间与文件：ibdata、独立表空间与 undo 表空间</h1><p><img src="https://wu4yong.github.io/starry-images/assets/img/mysql/mq-34-tablespace.svg" alt="InnoDB 的表空间体系"></p>
+<p><em>系统表空间、独立表空间、undo、临时、redo 各管一段｜依据 MySQL 8.4 Tablespaces 说明自绘</em></p>
+<h2 id="一、学习目标"><a href="#一、学习目标" class="headerlink" title="一、学习目标"></a>一、学习目标</h2><ol>
+<li>认全数据目录里的关键文件，知道每个文件属于谁；</li>
+<li>分清系统表空间与独立表空间的取舍，理解 <code>innodb_file_per_table</code>；</li>
+<li>会做单表迁移、undo 截断与容量排查。</li>
+</ol>
+<h2 id="二、前置知识"><a href="#二、前置知识" class="headerlink" title="二、前置知识"></a>二、前置知识</h2><p>InnoDB 架构（MQ28）、页与行格式（MQ29）、undo 与 purge（MQ31）。本篇解决「磁盘到底被谁吃了」。</p>
+<h2 id="三、理论讲解（官方定义）"><a href="#三、理论讲解（官方定义）" class="headerlink" title="三、理论讲解（官方定义）"></a>三、理论讲解（官方定义）</h2><p>InnoDB 把数据组织成若干<strong>表空间</strong>（tablespace），每个表空间由一组数据文件构成：</p>
+<table>
+<thead>
+<tr>
+<th>表空间</th>
+<th>文件</th>
+<th>内容</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>系统表空间</td>
+<td><code>ibdata1</code>（可多个）</td>
+<td>数据字典、change buffer、双写缓冲、部分系统数据</td>
+</tr>
+<tr>
+<td>独立表空间</td>
+<td><code>表名.ibd</code></td>
+<td>单表的数据与索引</td>
+</tr>
+<tr>
+<td>undo 表空间</td>
+<td><code>undo_001</code>、<code>undo_002</code></td>
+<td>回滚与 MVCC 旧版本</td>
+</tr>
+<tr>
+<td>全局临时表空间</td>
+<td><code>ibtmp1</code></td>
+<td>全局临时表、排序溢出</td>
+</tr>
+<tr>
+<td>会话临时表空间</td>
+<td><code>temp_*.ibt</code>（在 <code>#innodb_temp</code>）</td>
+<td>会话级临时表</td>
+</tr>
+<tr>
+<td>redo 日志</td>
+<td><code>#innodb_redo/</code></td>
+<td>崩溃恢复</td>
+</tr>
+</tbody></table>
+<p><code>innodb_file_per_table</code> 默认 <code>ON</code>，即每张表一个 <code>.ibd</code>；设为 <code>OFF</code> 时所有表都挤进系统表空间。</p>
+<h2 id="四、原理拆解"><a href="#四、原理拆解" class="headerlink" title="四、原理拆解"></a>四、原理拆解</h2><p><img src="https://wu4yong.github.io/starry-images/assets/img/mysql/mq-34b-tablespace.svg" alt="文件清单与运维动作"></p>
+<p><em>知道每个文件是谁的，才敢删、敢迁、敢扩容｜依据 MySQL 8.4 Tablespace Management 说明自绘</em></p>
+<h3 id="1-独立表空间-vs-系统表空间"><a href="#1-独立表空间-vs-系统表空间" class="headerlink" title="1. 独立表空间 vs 系统表空间"></a>1. 独立表空间 vs 系统表空间</h3><table>
+<thead>
+<tr>
+<th>维度</th>
+<th>独立表空间（默认）</th>
+<th>系统表空间</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>单表大小</td>
+<td>可单独增长与收缩</td>
+<td>混在一起，无法单独回收</td>
+</tr>
+<tr>
+<td>迁移</td>
+<td><code>TRANSPORTABLE TABLESPACE</code> 可单表搬</td>
+<td>只能整库搬</td>
+</tr>
+<tr>
+<td>删除表</td>
+<td><code>DROP</code> 后 <code>.ibd</code> 直接删除，空间归还 OS</td>
+<td>空间留在 <code>ibdata1</code> 里，不会变小</td>
+</tr>
+<tr>
+<td>文件数</td>
+<td>表多则文件多</td>
+<td>文件少</td>
+</tr>
+</tbody></table>
+<p>所以 <code>innodb_file_per_table = ON</code> 几乎是必须的：否则 <code>DROP TABLE</code> 后磁盘不会释放。</p>
+<h3 id="2-系统表空间为什么不能缩"><a href="#2-系统表空间为什么不能缩" class="headerlink" title="2. 系统表空间为什么不能缩"></a>2. 系统表空间为什么不能缩</h3><p><code>ibdata1</code> 只增不减（除非重建实例导出再导入）。里面放着数据字典、change buffer 与双写缓冲，无法按表拆分回收空间。这也是「磁盘被 ibdata1 吃满」的经典事故。</p>
+<h3 id="3-双写缓冲"><a href="#3-双写缓冲" class="headerlink" title="3. 双写缓冲"></a>3. 双写缓冲</h3><p>脏页刷盘前先写到 doublewrite 区域（连续空间），保证页写入的原子性，防止「页断裂」。8.0.20 起支持独立双写文件（<code>#ib_16384_0.dblwr</code>），不再占用 <code>ibdata1</code>。</p>
+<h3 id="4-表空间迁移"><a href="#4-表空间迁移" class="headerlink" title="4. 表空间迁移"></a>4. 表空间迁移</h3><p>同版本、同页大小时，可用 <code>FLUSH TABLES ... FOR EXPORT</code> + 拷贝 <code>.ibd</code>&#x2F;<code>.cfg</code> + <code>IMPORT TABLESPACE</code> 做单表迁移，适合大表在低峰搬迁，比逻辑导出快。</p>
+<h3 id="5-容量排查顺序"><a href="#5-容量排查顺序" class="headerlink" title="5. 容量排查顺序"></a>5. 容量排查顺序</h3><ol>
+<li>各表 <code>.ibd</code> 大小（<code>information_schema.TABLES</code> 的 <code>DATA_LENGTH + INDEX_LENGTH</code>）；</li>
+<li>undo 表空间大小（长事务导致膨胀）；</li>
+<li>binlog 目录（保留期与写入量）；</li>
+<li>redo 目录（<code>innodb_redo_log_capacity</code>）；</li>
+<li>临时表空间（大排序、<code>GROUP BY</code> 溢出）。</li>
+</ol>
+<h2 id="五、场景说明"><a href="#五、场景说明" class="headerlink" title="五、场景说明"></a>五、场景说明</h2><ol>
+<li><strong>磁盘告警</strong>：先看 <code>ibdata1</code> 是否异常增长，再看 undo 与 binlog；</li>
+<li><strong>大表迁移</strong>：用传输表空间而不是 <code>mysqldump</code>；</li>
+<li><strong>单表清理</strong>：<code>DROP</code> &#x2F; <code>TRUNCATE</code> 后确认 <code>.ibd</code> 是否被删除；</li>
+<li><strong>备份规划</strong>：物理备份要包含 <code>ibdata1</code>、<code>.ibd</code>、undo、redo；</li>
+<li><strong>容器化</strong>：数据目录挂载卷，<code>#innodb_redo</code> 与 <code>#innodb_temp</code> 不要遗漏。</li>
+</ol>
+<h2 id="六、示例代码-实操步骤"><a href="#六、示例代码-实操步骤" class="headerlink" title="六、示例代码&#x2F;实操步骤"></a>六、示例代码&#x2F;实操步骤</h2><h3 id="1-看表空间与文件"><a href="#1-看表空间与文件" class="headerlink" title="1. 看表空间与文件"></a>1. 看表空间与文件</h3><pre class="line-numbers language-sql" data-language="sql"><code class="language-sql"><span class="token keyword">SELECT</span> NAME<span class="token punctuation">,</span> SPACE_TYPE<span class="token punctuation">,</span> FILE_SIZE<span class="token punctuation">,</span> ALLOCATED_SIZE
+<span class="token keyword">FROM</span> information_schema<span class="token punctuation">.</span>INNODB_TABLESPACES
+<span class="token keyword">ORDER</span> <span class="token keyword">BY</span> FILE_SIZE <span class="token keyword">DESC</span> <span class="token keyword">LIMIT</span> <span class="token number">10</span><span class="token punctuation">;</span>
+
+<span class="token keyword">SELECT</span> TABLE_NAME<span class="token punctuation">,</span> <span class="token function">ROUND</span><span class="token punctuation">(</span><span class="token punctuation">(</span>DATA_LENGTH <span class="token operator">+</span> INDEX_LENGTH<span class="token punctuation">)</span> <span class="token operator">/</span> <span class="token number">1024</span> <span class="token operator">/</span> <span class="token number">1024</span><span class="token punctuation">)</span> <span class="token keyword">AS</span> mb
+<span class="token keyword">FROM</span> information_schema<span class="token punctuation">.</span><span class="token keyword">TABLES</span>
+<span class="token keyword">WHERE</span> TABLE_SCHEMA <span class="token operator">=</span> <span class="token string">'shop'</span>
+<span class="token keyword">ORDER</span> <span class="token keyword">BY</span> mb <span class="token keyword">DESC</span> <span class="token keyword">LIMIT</span> <span class="token number">10</span><span class="token punctuation">;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<h3 id="2-确认独立表空间开关"><a href="#2-确认独立表空间开关" class="headerlink" title="2. 确认独立表空间开关"></a>2. 确认独立表空间开关</h3><pre class="line-numbers language-sql" data-language="sql"><code class="language-sql"><span class="token keyword">SHOW</span> VARIABLES <span class="token operator">LIKE</span> <span class="token string">'innodb_file_per_table'</span><span class="token punctuation">;</span>
+<span class="token keyword">SHOW</span> VARIABLES <span class="token operator">LIKE</span> <span class="token string">'innodb_data_file_path'</span><span class="token punctuation">;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span></span></code></pre>
+
+<h3 id="3-单表迁移（同版本、同页大小）"><a href="#3-单表迁移（同版本、同页大小）" class="headerlink" title="3. 单表迁移（同版本、同页大小）"></a>3. 单表迁移（同版本、同页大小）</h3><pre class="line-numbers language-sql" data-language="sql"><code class="language-sql"><span class="token comment">-- 源库</span>
+FLUSH <span class="token keyword">TABLES</span> t_order <span class="token keyword">FOR</span> EXPORT<span class="token punctuation">;</span>
+<span class="token comment">-- 拷贝 t_order.ibd 与 t_order.cfg 到目标库数据目录</span>
+<span class="token keyword">UNLOCK</span> <span class="token keyword">TABLES</span><span class="token punctuation">;</span>
+
+<span class="token comment">-- 目标库</span>
+<span class="token keyword">ALTER</span> <span class="token keyword">TABLE</span> t_order <span class="token keyword">DISCARD</span> <span class="token keyword">TABLESPACE</span><span class="token punctuation">;</span>   <span class="token comment">-- 先有同名空表</span>
+<span class="token comment">-- 放入文件后</span>
+<span class="token keyword">ALTER</span> <span class="token keyword">TABLE</span> t_order <span class="token keyword">IMPORT</span> <span class="token keyword">TABLESPACE</span><span class="token punctuation">;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<h3 id="4-清理与回收"><a href="#4-清理与回收" class="headerlink" title="4. 清理与回收"></a>4. 清理与回收</h3><pre class="line-numbers language-sql" data-language="sql"><code class="language-sql"><span class="token keyword">DROP</span> <span class="token keyword">TABLE</span> t_history<span class="token punctuation">;</span>        <span class="token comment">-- 独立表空间：文件直接删除，空间归还</span>
+<span class="token keyword">TRUNCATE</span> <span class="token keyword">TABLE</span> t_log<span class="token punctuation">;</span>        <span class="token comment">-- 重建表空间，文件大小回落</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span></span></code></pre>
+
+<h3 id="5-Java-侧怎么落地：容量与运维约束"><a href="#5-Java-侧怎么落地：容量与运维约束" class="headerlink" title="5. Java 侧怎么落地：容量与运维约束"></a>5. Java 侧怎么落地：容量与运维约束</h3><ol>
+<li><strong>归档任务</strong>：历史表按月分区或定期 <code>DROP PARTITION</code>，避免单表无限膨胀；</li>
+<li><strong>临时大表</strong>：批处理中间结果用临时表并显式 <code>DROP</code>，别留在业务库；</li>
+<li><strong>监控</strong>：采集 <code>INNODB_TABLESPACES</code> 与磁盘使用率，设置 80% 告警；</li>
+<li><strong>备份校验</strong>：物理备份后核对 <code>ibdata1</code> + <code>.ibd</code> 数量与总大小；</li>
+<li><strong>发布规范</strong>：DDL 前评估 <code>.ibd</code> 增长与磁盘余量，<code>ALTER</code> 需要临时空间。</li>
+</ol>
+<h2 id="七、常见坑"><a href="#七、常见坑" class="headerlink" title="七、常见坑"></a>七、常见坑</h2><ol>
+<li><strong><code>innodb_file_per_table = OFF</code></strong>：删表不释放磁盘，<code>ibdata1</code> 越滚越大；</li>
+<li><strong>以为 <code>ibdata1</code> 能缩小</strong>：只能重建实例；</li>
+<li><strong>直接删 <code>.ibd</code> 文件</strong>：元数据还在，查询直接报错；</li>
+<li><strong><code>IMPORT TABLESPACE</code> 页大小不一致</strong>：导入失败，需同版本同 <code>innodb_page_size</code>；</li>
+<li><strong>undo 表空间占满磁盘</strong>：根因是长事务，扩容只是拖延；</li>
+<li><strong>临时表空间暴涨</strong>：大排序、<code>SELECT ... ORDER BY</code> 无索引，<code>ibtmp1</code> 迅速膨胀；</li>
+<li><strong>备份漏掉 redo 与 undo</strong>：恢复时无法前滚到一致点。</li>
+</ol>
+<h2 id="八、版本差异"><a href="#八、版本差异" class="headerlink" title="八、版本差异"></a>八、版本差异</h2><ul>
+<li><strong>5.6</strong>：独立表空间可选，undo 在 <code>ibdata1</code> 内；</li>
+<li><strong>5.7</strong>：独立 undo 表空间；<code>innodb_file_per_table</code> 默认开启；</li>
+<li><strong>8.0</strong>：数据字典迁入 <code>mysql.ibd</code>；双写支持独立文件（8.0.20+）；redo 迁入 <code>#innodb_redo</code>（8.0.30+）；</li>
+<li><strong>8.4</strong>：表空间体系与 8.0 一致，<code>innodb_redo_log_capacity</code> 统一管理 redo；支持表空间加密与在线 undo 截断。</li>
+</ul>
+<h2 id="九、课后小结"><a href="#九、课后小结" class="headerlink" title="九、课后小结"></a>九、课后小结</h2><ul>
+<li>五类表空间：系统、独立、undo、临时、redo，各管一段；</li>
+<li><code>innodb_file_per_table = ON</code> 是默认也是必须，否则删表不释放空间；</li>
+<li><code>ibdata1</code> 只增不减，容量异常先查它；</li>
+<li>单表迁移用传输表空间，同版本同页大小是前提；</li>
+<li>容量排查顺序：表 <code>.ibd</code> → undo → binlog → redo → 临时。</li>
+</ul>
+<h2 id="十、思考题"><a href="#十、思考题" class="headerlink" title="十、思考题"></a>十、思考题</h2><ol>
+<li><p>为什么 <code>DROP TABLE</code> 在独立表空间下能释放磁盘，在系统表空间下不能？</p>
+<p><strong>参考回答</strong>：独立表空间每表一个 <code>.ibd</code>，删除表即删除文件，空间直接归还 OS；系统表空间所有表共用 <code>ibdata1</code>，删除只释放内部页，文件本身不会缩小。</p>
+</li>
+<li><p><code>ibdata1</code> 越来越大，有哪些处理办法？</p>
+<p><strong>参考回答</strong>：确认 <code>innodb_file_per_table</code> 已开启；迁移历史表；若确需缩小，只能逻辑导出全库、重建实例再导入（停机窗口长，需充分演练）。</p>
+</li>
+<li><p>传输表空间迁移的前提是什么？</p>
+<p><strong>参考回答</strong>：源与目标同 MySQL 版本、同 <code>innodb_page_size</code>、表结构完全一致（含索引），并且源表在导出期间只读。</p>
+</li>
+<li><p>undo 表空间持续膨胀，扩容能解决吗？</p>
+<p><strong>参考回答</strong>：不能根治。膨胀根因是长事务或 purge 跟不上，扩容只是延后磁盘打满；应先找出最老事务并缩短事务，再配合 <code>SET INACTIVE</code> 截断。</p>
+</li>
+<li><p>容器化部署时，数据目录要特别注意什么？</p>
+<p><strong>参考回答</strong>：要包含 <code>ibdata1</code>、各 <code>.ibd</code>、<code>undo_*</code>、<code>#innodb_redo</code>、<code>#innodb_temp</code> 与 binlog 目录；只挂载 datadir 但漏挂子目录，重启后会出现表空间缺失。</p>
+</li>
+</ol>
+<h2 id="十一、官方资料"><a href="#十一、官方资料" class="headerlink" title="十一、官方资料"></a>十一、官方资料</h2><ul>
+<li>表空间：<a target="_blank" rel="noopener" href="https://dev.mysql.com/doc/refman/8.4/en/innodb-tablespace.html">https://dev.mysql.com/doc/refman/8.4/en/innodb-tablespace.html</a></li>
+<li>系统表空间：<a target="_blank" rel="noopener" href="https://dev.mysql.com/doc/refman/8.4/en/innodb-system-tablespace.html">https://dev.mysql.com/doc/refman/8.4/en/innodb-system-tablespace.html</a></li>
+<li>传输表空间：<a target="_blank" rel="noopener" href="https://dev.mysql.com/doc/refman/8.4/en/innodb-tablespace-copy.html?lang=en">https://dev.mysql.com/doc/refman/8.4/en/innodb-tablespace-copy.html?lang=en</a></li>
+<li>双写缓冲：<a target="_blank" rel="noopener" href="https://dev.mysql.com/doc/refman/8.4/en/innodb-doublewrite-buffer.html">https://dev.mysql.com/doc/refman/8.4/en/innodb-doublewrite-buffer.html</a></li>
+</ul>
+<p>上一篇：<a href="/2022/12/13/database/mysql/mysql-33-storage-engines/">MQ33 存储引擎对比</a> ｜ 下一篇：<a href="/2022/12/15/database/mysql/mysql-35-explain/">MQ35 EXPLAIN 逐列讲</a> ｜ <a href="/2022/11/10/database/mysql/mysql-0-series-index/">总目录</a></p>
+</div>
+
+  <div class="mb-foot">
+    <a href="/phone/">返回手机首页</a>
+    <a href="/phone/tags/">星迹索引</a>
+  </div>
+</div>
+
+
+<script>
+  /* 作用：懒加载本地 mermaid 库；无 mermaid 代码块时不加载 */
+  function loadLocalMermaid(){
+    return new Promise(function(resolve, reject){
+      if(window.mermaid) return resolve(window.mermaid);
+      var s = document.createElement('script');
+      s.src = '/js/third-party/mermaid/mermaid.min.js?v=10';
+      s.onload = function(){ resolve(window.mermaid); };
+      s.onerror = function(){ reject(new Error('mermaid local load failed')); };
+      document.head.appendChild(s);
+    });
+  }
+
+  /* 作用：把 ```mermaid 代码块替换成 SVG 图（手机端字号略小、图可横向滚动） */
+  async function renderMermaidDiagram(){
+    var blocks = document.querySelectorAll('pre[class*="language-mermaid"]');
+    if(!blocks.length) return;
+    var mermaid;
+    try { mermaid = await loadLocalMermaid(); }
+    catch(e){ console.warn('[mermaid] 本地库加载失败：', e); return; }
+
+    mermaid.initialize({
+      startOnLoad: false,
+      theme: 'base',
+      themeVariables: {
+        darkMode: true,
+        background: 'transparent',
+        fontFamily: '"Microsoft YaHei", "PingFang SC", "Segoe UI", sans-serif',
+        fontSize: '12px',
+        primaryColor: '#062f3d',
+        primaryTextColor: '#d6f6ff',
+        primaryBorderColor: '#00eeff',
+        secondaryColor: '#04222d',
+        tertiaryColor: '#04222d',
+        mainBkg: '#062f3d',
+        nodeBorder: '#00eeff',
+        clusterBkg: '#02161f',
+        clusterBorder: '#00eeff55',
+        lineColor: '#00eeff',
+        textColor: '#c0e8ff',
+        edgeLabelBackground: '#02161f'
+      },
+      flowchart: { curve: 'basis', useMaxWidth: false, htmlLabels: false, nodeSpacing: 30, rankSpacing: 40, padding: 10 }
+    });
+
+    var targets = [];
+    blocks.forEach(function(el){
+      var codeEl = el.querySelector('code');
+      if(!codeEl) return;
+      var div = document.createElement('div');
+      div.className = 'mermaid';
+      div.textContent = codeEl.textContent;
+      el.parentNode.replaceChild(div, el);
+      targets.push(div);
+    });
+    if(!targets.length) return;
+    try { await mermaid.run({ nodes: targets }); }
+    catch(e){ console.warn('[mermaid] 渲染失败：', e); }
+  }
+  /* 作用：多次触发兜底（延迟重试 + DOM 变化），防止某次时机没跑到导致图表留在代码块 */
+  var mmBusy = false;
+  function scheduleMermaid(){
+    if(mmBusy) return;
+    mmBusy = true;
+    renderMermaidDiagram().then(function(){ mmBusy = false; }, function(){ mmBusy = false; });
+  }
+  scheduleMermaid();
+  window.addEventListener('load', scheduleMermaid);
+  [1000, 3000, 8000].forEach(function(ms){ setTimeout(scheduleMermaid, ms); });
+  if(document.readyState !== 'loading') scheduleMermaid();
+  if(window.MutationObserver){
+    var mmTimer = null;
+    var mmObserver = new MutationObserver(function(){
+      clearTimeout(mmTimer);
+      mmTimer = setTimeout(scheduleMermaid, 400);
+    });
+    mmObserver.observe(document.querySelector('.mb-article') || document.body, { childList: true, subtree: true });
+  }
+</script>
+</body>
+</html>

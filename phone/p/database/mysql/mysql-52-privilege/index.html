@@ -1,0 +1,394 @@
+<!--
+  ============================================
+  手机端 · 文章原文页
+  文件：phone/post.njk
+  适用终端：手机端（路由 /phone/p/<slug>/，由 scripts/phone-routes.js 生成）
+  作用：手机阅读单篇文章；单列布局、无侧栏无雷达，替代电脑端 post.njk
+        数据由生成期算好：page.item = { title, dateStr, content, cats, tags }
+  样式依赖：source/css/theme/phone/common.css、source/css/theme/phone/list.css
+  组件依赖：phone/_components/Particles.njk
+  最后修改：2026-11-11
+  ============================================
+-->
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="color-scheme" content="dark">
+  <meta name="theme-color" content="#020817">
+  <!-- 首帧兜底：浏览器默认画布是白的，样式未解析前会闪一下白。这条规则先锁死深空底色 -->
+  <style>html{background-color:#020817}</style>
+  <title>mysql-52-privilege - 时空秘境</title>
+  <!-- 手机端样式：基础 + 列表/正文，外链引入（源文件 source/css/theme/phone/） -->
+  <link rel="stylesheet" href="/css/theme/phone/common.css">
+  <link rel="stylesheet" href="/css/theme/phone/list.css">
+<meta name="generator" content="Hexo 8.1.2"></head>
+<body>
+<div class="mb-shell">
+  <!--
+  ============================================
+  手机端星空粒子组件
+  文件：Particles.njk
+  适用终端：手机端
+  作用：Particles.njk 的手机端副本（nunjucks 子目录 include 取不到上级）
+        参数与电脑端 _components/Particles.njk 保持一致：
+        粒子 95 / 连线 118px / opacity 0.32，外加星座层与零星闪烁层
+  最后修改：2026-11-12
+  ============================================
+--><!-- z-index 必须是 0：负层级会被 body 不透明背景盖住，粒子在跑却看不见 -->
+<div id="particles" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 0; pointer-events: none;"></div>
+<!-- 星座层（与首页同一套：随机零星散布星座图形 + 偶尔闪烁的小星） -->
+<div id="constellations" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 1; pointer-events: none;" aria-hidden="true"></div>
+<script src="/js/particles.min.js"></script>
+<script>
+particlesJS("particles", {
+  particles: {
+    number: {
+      value: 95,
+      density: {
+        enable: true,
+        value_area: 800
+      }
+    },
+    color: {
+      value: "#00eeff"
+    },
+    shape: {
+      type: "circle",
+      stroke: {
+        width: 0,
+        color: "#000000"
+      }
+    },
+    opacity: {
+      value: 0.6,
+      random: true,
+      anim: {
+        enable: true,
+        speed: 0.5,
+        opacity_min: 0.1,
+        sync: false
+      }
+    },
+    size: {
+      value: 3,
+      random: true,
+      anim: {
+        enable: true,
+        speed: 2,
+        size_min: 0.1,
+        sync: false
+      }
+    },
+    line_linked: {
+      enable: true,
+      distance: 118,
+      color: "#00eeff",
+      opacity: 0.32,
+      width: 1
+    },
+    move: {
+      enable: true,
+      speed: 0.8,
+      direction: "none",
+      random: true,
+      straight: false,
+      out_mode: "out",
+      bounce: false,
+      attract: {
+        enable: true,
+        rotateX: 600,
+        rotateY: 1200
+      }
+    }
+  },
+  interactivity: {
+    detect_on: "canvas",
+    events: {
+      onhover: {
+        enable: true,
+        mode: "grab"       // 手指按住时粒子聚集
+      },
+      onclick: {
+        enable: true,
+        mode: "push"       // 点击时产生新粒子
+      },
+      resize: true
+    },
+    modes: {
+      grab: {
+        distance: 200,
+        line_linked: {
+          opacity: 1
+        }
+      },
+      push: {
+        particles_nb: 6
+      }
+    }
+  },
+  retina_detect: true
+});
+</script>
+<!-- 星座 + 零星闪烁层：与电脑端共用同一份绘制脚本 -->
+<script src="/js/theme/home/starfield.js"></script>
+
+
+  <div class="mb-top">
+    <a class="mb-back" href="/phone/">← 返回手机首页</a>
+    <span class="mb-sub" style="margin:0">2023-01-01</span>
+  </div>
+
+  <h1 class="mb-title">mysql-52-privilege</h1>
+  <div class="mb-sub">
+    分类：database · mysql
+     ｜ 标签：系统课 · MySQL · 数据库
+  </div>
+
+  <div class="mb-article"><div class="essay-banner essay-database"></div>
+
+<h1 id="权限体系与最小权限"><a href="#权限体系与最小权限" class="headerlink" title="权限体系与最小权限"></a>权限体系与最小权限</h1><p><img src="https://wu4yong.github.io/starry-images/assets/img/mysql/mq-52-privilege.svg" alt="权限体系的四层"></p>
+<p><em>账号 → 库 → 表 → 列，越往下越细，也越难维护｜依据 MySQL 8.4 Privileges &#x2F; 账号管理说明自绘</em></p>
+<h2 id="一、学习目标"><a href="#一、学习目标" class="headerlink" title="一、学习目标"></a>一、学习目标</h2><ol>
+<li>理清权限的四层粒度与授权语法，不再一律 <code>GRANT ALL</code>；</li>
+<li>用角色（ROLE）收敛重复授权，做到可复用、可回收；</li>
+<li>把「最小权限」落到账号命名、来源限制与审计上。</li>
+</ol>
+<h2 id="二、前置知识"><a href="#二、前置知识" class="headerlink" title="二、前置知识"></a>二、前置知识</h2><p>账号认证与 <code>caching_sha2_password</code>（MQ16）、安全加固（MQ53）、审计与日志（MQ36）。</p>
+<h2 id="三、理论讲解（官方定义）"><a href="#三、理论讲解（官方定义）" class="headerlink" title="三、理论讲解（官方定义）"></a>三、理论讲解（官方定义）</h2><p>MySQL 的权限授予模型是「用户 &#x3D; 账号 + 主机」的四层结构：</p>
+<table>
+<thead>
+<tr>
+<th>层级</th>
+<th>语法</th>
+<th>适用范围</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>全局</td>
+<td><code>ON *.*</code></td>
+<td>所有库所有表（含管理类权限）</td>
+</tr>
+<tr>
+<td>库级</td>
+<td><code>ON db.*</code></td>
+<td>指定数据库全部对象</td>
+</tr>
+<tr>
+<td>表级</td>
+<td><code>ON db.tbl</code></td>
+<td>单表</td>
+</tr>
+<tr>
+<td>列级</td>
+<td><code>SELECT (col1, col2) ON db.tbl</code></td>
+<td>单列</td>
+</tr>
+</tbody></table>
+<p>匹配规则第一条：<strong>权限检查按最细粒度优先</strong> —— 表级权限优先于库级，列级优先于表级。表级权限会<strong>覆盖</strong>库级权限（哪怕表级只给了 <code>SELECT</code>，库级的 <code>INSERT</code> 对该表也不生效），这是最容易记错的一点。</p>
+<p>8.4 的账号认证变化：<code>mysql_native_password</code> 默认关闭，新账号统一 <code>caching_sha2_password</code>；<code>authentication_policy</code> 取代 <code>default_authentication_plugin</code>。</p>
+<h2 id="四、原理拆解"><a href="#四、原理拆解" class="headerlink" title="四、原理拆解"></a>四、原理拆解</h2><p><img src="https://wu4yong.github.io/starry-images/assets/img/mysql/mq-52b-privilege.svg" alt="授权与审计的实操口径"></p>
+<p><em>能查、能审、能回收，权限才叫受控｜依据 MySQL 8.4 Roles &#x2F; GRANT 说明自绘</em></p>
+<h3 id="1-最小权限的三条实操"><a href="#1-最小权限的三条实操" class="headerlink" title="1. 最小权限的三条实操"></a>1. 最小权限的三条实操</h3><ul>
+<li><strong>只给业务必需的语句权限</strong>：应用通常只需 <code>SELECT, INSERT, UPDATE, DELETE</code>，<code>DROP/ALTER/GRANT</code> 一律不给；</li>
+<li><strong>来源收敛到网段</strong>：<code>app@&#39;10.20.%&#39;</code>，不要 <code>app@&#39;%&#39;</code>；</li>
+<li><strong>DDL 用独立账号 + 流水线执行</strong>：应用账号永不持有 <code>ALTER</code>，避免被注入后直接改表结构。</li>
+</ul>
+<h3 id="2-为什么表级权限会「抢」库级权限"><a href="#2-为什么表级权限会「抢」库级权限" class="headerlink" title="2. 为什么表级权限会「抢」库级权限"></a>2. 为什么表级权限会「抢」库级权限</h3><p>权限检查时，MySQL 先看表级条目：若该表在表级有记录，就以表级为准，不再合并库级。所以「库级给全套、表级只给查询」的结果是这张表<strong>只能查</strong>。想做「库内默认读写、个别表只读」，正确做法是表级不给该表任何条目，改用只读账号。</p>
+<h3 id="3-角色（ROLE）：把权限打包"><a href="#3-角色（ROLE）：把权限打包" class="headerlink" title="3. 角色（ROLE）：把权限打包"></a>3. 角色（ROLE）：把权限打包</h3><pre class="line-numbers language-sql" data-language="sql"><code class="language-sql"><span class="token keyword">CREATE</span> ROLE <span class="token string">'app_rw'</span><span class="token punctuation">,</span> <span class="token string">'report_ro'</span><span class="token punctuation">;</span>
+<span class="token keyword">GRANT</span> <span class="token keyword">SELECT</span><span class="token punctuation">,</span> <span class="token keyword">INSERT</span><span class="token punctuation">,</span> <span class="token keyword">UPDATE</span><span class="token punctuation">,</span> <span class="token keyword">DELETE</span> <span class="token keyword">ON</span> shop<span class="token punctuation">.</span><span class="token operator">*</span> <span class="token keyword">TO</span> <span class="token string">'app_rw'</span><span class="token punctuation">;</span>
+<span class="token keyword">GRANT</span> <span class="token keyword">SELECT</span> <span class="token keyword">ON</span> shop<span class="token punctuation">.</span><span class="token operator">*</span> <span class="token keyword">TO</span> <span class="token string">'report_ro'</span><span class="token punctuation">;</span>
+<span class="token keyword">GRANT</span> <span class="token string">'app_rw'</span> <span class="token keyword">TO</span> <span class="token string">'order_svc'</span><span class="token variable">@'10.20.%'</span><span class="token punctuation">;</span>
+<span class="token keyword">SET</span> <span class="token keyword">DEFAULT</span> ROLE <span class="token string">'app_rw'</span> <span class="token keyword">TO</span> <span class="token string">'order_svc'</span><span class="token variable">@'10.20.%'</span><span class="token punctuation">;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<p>角色的价值在变更时体现：新增一个库，只改角色定义，所有绑定该角色的账号自动生效；下线某类权限，<code>REVOKE</code> 一次即可。</p>
+<h3 id="4-管理类权限要单独看"><a href="#4-管理类权限要单独看" class="headerlink" title="4. 管理类权限要单独看"></a>4. 管理类权限要单独看</h3><p><code>SUPER</code>（8.0 起被拆成 <code>SYSTEM_VARIABLES_ADMIN</code>、<code>SESSION_VARIABLES_ADMIN</code> 等动态权限）、<code>RELOAD</code>、<code>PROCESS</code>、<code>REPLICATION CLIENT</code> 都属于「能看全局状态」的权限。备份账号需要 <code>RELOAD, LOCK TABLES, REPLICATION CLIENT</code>，但不需要 <code>ALL</code>。</p>
+<h3 id="5-审计：权限的另一半"><a href="#5-审计：权限的另一半" class="headerlink" title="5. 审计：权限的另一半"></a>5. 审计：权限的另一半</h3><ul>
+<li><code>SHOW GRANTS FOR &#39;app&#39;@&#39;10.20.%&#39;</code> 定期比对账号清单，找出多给的权限；</li>
+<li><code>mysql.user</code> &#x2F; <code>mysql.role_edges</code> 是权威来源，导出后做 diff；</li>
+<li>高危语句审计（<code>DELETE</code> 无 <code>WHERE</code>、<code>DROP TABLE</code>）用审计插件或代理层记录；</li>
+<li>离职&#x2F;下线账号 <code>DROP USER</code> 并回收其角色绑定。</li>
+</ul>
+<h2 id="五、场景说明"><a href="#五、场景说明" class="headerlink" title="五、场景说明"></a>五、场景说明</h2><ol>
+<li><strong>订单服务</strong>：<code>app_rw</code> 角色，只给 DML，来源限定应用网段；</li>
+<li><strong>报表平台</strong>：<code>report_ro</code> 只读，连从库，避免大查询打主库；</li>
+<li><strong>发布流水线</strong>：<code>ddl_rw</code> 只给 <code>ALTER, CREATE, DROP</code>，仅在变更窗口启用；</li>
+<li><strong>备份任务</strong>：最小集 <code>SELECT, RELOAD, LOCK TABLES, REPLICATION CLIENT</code>；</li>
+<li><strong>临时排障</strong>：建 <code>tmp_&lt;工单号&gt;</code> 账号，带有效期，事后立即删除。</li>
+</ol>
+<h2 id="六、示例代码-实操步骤"><a href="#六、示例代码-实操步骤" class="headerlink" title="六、示例代码&#x2F;实操步骤"></a>六、示例代码&#x2F;实操步骤</h2><h3 id="1-建账号与授权模板"><a href="#1-建账号与授权模板" class="headerlink" title="1. 建账号与授权模板"></a>1. 建账号与授权模板</h3><pre class="line-numbers language-sql" data-language="sql"><code class="language-sql"><span class="token keyword">CREATE</span> <span class="token keyword">USER</span> <span class="token string">'order_svc'</span><span class="token variable">@'10.20.%'</span>
+  IDENTIFIED <span class="token keyword">WITH</span> caching_sha2_password <span class="token keyword">BY</span> <span class="token string">'***'</span>
+  <span class="token keyword">REQUIRE</span> SSL
+  PASSWORD EXPIRE <span class="token keyword">INTERVAL</span> <span class="token number">180</span> <span class="token keyword">DAY</span><span class="token punctuation">;</span>
+
+<span class="token keyword">GRANT</span> <span class="token keyword">SELECT</span><span class="token punctuation">,</span> <span class="token keyword">INSERT</span><span class="token punctuation">,</span> <span class="token keyword">UPDATE</span><span class="token punctuation">,</span> <span class="token keyword">DELETE</span> <span class="token keyword">ON</span> shop<span class="token punctuation">.</span><span class="token operator">*</span> <span class="token keyword">TO</span> <span class="token string">'order_svc'</span><span class="token variable">@'10.20.%'</span><span class="token punctuation">;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<p><code>REQUIRE SSL</code> 强制走加密连接，配合 MQ53 的 TLS 配置使用。</p>
+<h3 id="2-用角色收敛"><a href="#2-用角色收敛" class="headerlink" title="2. 用角色收敛"></a>2. 用角色收敛</h3><pre class="line-numbers language-sql" data-language="sql"><code class="language-sql"><span class="token keyword">CREATE</span> ROLE <span class="token string">'app_rw'</span><span class="token punctuation">;</span>
+<span class="token keyword">GRANT</span> <span class="token keyword">SELECT</span><span class="token punctuation">,</span> <span class="token keyword">INSERT</span><span class="token punctuation">,</span> <span class="token keyword">UPDATE</span><span class="token punctuation">,</span> <span class="token keyword">DELETE</span> <span class="token keyword">ON</span> shop<span class="token punctuation">.</span><span class="token operator">*</span> <span class="token keyword">TO</span> <span class="token string">'app_rw'</span><span class="token punctuation">;</span>
+<span class="token keyword">GRANT</span> <span class="token string">'app_rw'</span> <span class="token keyword">TO</span> <span class="token string">'order_svc'</span><span class="token variable">@'10.20.%'</span><span class="token punctuation">,</span> <span class="token string">'pay_svc'</span><span class="token variable">@'10.21.%'</span><span class="token punctuation">;</span>
+<span class="token keyword">SET</span> <span class="token keyword">DEFAULT</span> ROLE <span class="token keyword">ALL</span> <span class="token keyword">TO</span> <span class="token string">'order_svc'</span><span class="token variable">@'10.20.%'</span><span class="token punctuation">;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span></span></code></pre>
+
+<p>之后新增服务只需 <code>GRANT &#39;app_rw&#39; TO ...</code>，不用重复写权限列表。</p>
+<h3 id="3-只读账号连从库"><a href="#3-只读账号连从库" class="headerlink" title="3. 只读账号连从库"></a>3. 只读账号连从库</h3><pre class="line-numbers language-sql" data-language="sql"><code class="language-sql"><span class="token keyword">CREATE</span> <span class="token keyword">USER</span> <span class="token string">'report_ro'</span><span class="token variable">@'10.30.%'</span> IDENTIFIED <span class="token keyword">WITH</span> caching_sha2_password <span class="token keyword">BY</span> <span class="token string">'***'</span><span class="token punctuation">;</span>
+<span class="token keyword">GRANT</span> <span class="token keyword">SELECT</span> <span class="token keyword">ON</span> shop<span class="token punctuation">.</span><span class="token operator">*</span> <span class="token keyword">TO</span> <span class="token string">'report_ro'</span><span class="token variable">@'10.30.%'</span><span class="token punctuation">;</span>
+<span class="token keyword">ALTER</span> <span class="token keyword">USER</span> <span class="token string">'report_ro'</span><span class="token variable">@'10.30.%'</span> <span class="token keyword">SET</span> RESOURCE <span class="token keyword">LIMIT</span>
+  MAX_USER_CONNECTIONS <span class="token number">20</span><span class="token punctuation">;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span></span></code></pre>
+
+<p><code>MAX_USER_CONNECTIONS</code> 限制并发，防止报表把从库打满。</p>
+<h3 id="4-定期审计脚本"><a href="#4-定期审计脚本" class="headerlink" title="4. 定期审计脚本"></a>4. 定期审计脚本</h3><pre class="line-numbers language-sql" data-language="sql"><code class="language-sql"><span class="token comment">-- 列出所有非系统账号及其授权</span>
+<span class="token keyword">SELECT</span> <span class="token keyword">DISTINCT</span> GRANTEE <span class="token keyword">FROM</span> information_schema<span class="token punctuation">.</span>USER_PRIVILEGES
+<span class="token keyword">UNION</span> <span class="token keyword">SELECT</span> <span class="token keyword">DISTINCT</span> GRANTEE <span class="token keyword">FROM</span> information_schema<span class="token punctuation">.</span>SCHEMA_PRIVILEGES
+<span class="token keyword">UNION</span> <span class="token keyword">SELECT</span> <span class="token keyword">DISTINCT</span> GRANTEE <span class="token keyword">FROM</span> information_schema<span class="token punctuation">.</span>TABLE_PRIVILEGES<span class="token punctuation">;</span>
+
+<span class="token comment">-- 找出持有高危全局权限的账号</span>
+<span class="token keyword">SELECT</span> GRANTEE<span class="token punctuation">,</span> PRIVILEGE_TYPE <span class="token keyword">FROM</span> information_schema<span class="token punctuation">.</span>USER_PRIVILEGES
+<span class="token keyword">WHERE</span> PRIVILEGE_TYPE <span class="token operator">IN</span> <span class="token punctuation">(</span><span class="token string">'SUPER'</span><span class="token punctuation">,</span><span class="token string">'SYSTEM_USER'</span><span class="token punctuation">,</span><span class="token string">'GRANT OPTION'</span><span class="token punctuation">)</span>
+   <span class="token operator">OR</span> GRANTEE <span class="token operator">NOT</span> <span class="token operator">LIKE</span> <span class="token string">"'mysql.%'"</span><span class="token punctuation">;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<p>审计结果与 CMDB 的账号台账做 diff，多出来的权限逐条确认。</p>
+<h3 id="5-Java-侧怎么落地：账号是配置项，不是硬编码"><a href="#5-Java-侧怎么落地：账号是配置项，不是硬编码" class="headerlink" title="5. Java 侧怎么落地：账号是配置项，不是硬编码"></a>5. Java 侧怎么落地：账号是配置项，不是硬编码</h3><ol>
+<li><strong>账号&#x2F;口令走配置中心或 KMS</strong>：不进代码库、不进镜像；</li>
+<li><strong>一个服务一套账号</strong>：便于按服务限流与审计，别共用 <code>root</code>；</li>
+<li><strong>权限随发布走</strong>：新功能需要新权限时，走工单 + 流水线授予，而不是临时 <code>GRANT ALL</code>；</li>
+<li><strong>连接串带 <code>requireSSL</code></strong>：<code>jdbc:mysql://...?sslMode=VERIFY_CA</code>；</li>
+<li><strong>启动自检</strong>：应用启动时执行 <code>SHOW GRANTS FOR CURRENT_USER()</code>，发现超出预期权限即告警。</li>
+</ol>
+<h2 id="七、常见坑"><a href="#七、常见坑" class="headerlink" title="七、常见坑"></a>七、常见坑</h2><ol>
+<li><strong>一律 <code>GRANT ALL</code></strong>：一次注入就能拖库、改表、删库；</li>
+<li><strong>账号主机写成 <code>%</code></strong>：等于对全网开放；</li>
+<li><strong>表级权限与库级混用</strong>：误以为「库级给了写，表级只读还能写」；</li>
+<li><strong>共用 root 或共用一个应用账号</strong>：出问题无法定位是哪个服务；</li>
+<li><strong>密码写死在代码&#x2F;配置里</strong>：泄露后无法快速轮换；</li>
+<li><strong>忘记 <code>DROP USER</code></strong>：离职人员账号仍在，历史权限仍生效；</li>
+<li><strong>角色未 <code>SET DEFAULT ROLE</code></strong>：授权了角色但账号登录后不生效；</li>
+<li><strong>备份账号给了 <code>ALL</code></strong>：最小集就够了。</li>
+</ol>
+<h2 id="八、版本差异"><a href="#八、版本差异" class="headerlink" title="八、版本差异"></a>八、版本差异</h2><ul>
+<li><strong>5.6&#x2F;5.7</strong>：账号认证以 <code>mysql_native_password</code> 为主；无角色概念，权限靠逐个 <code>GRANT</code>；</li>
+<li><strong>8.0</strong>：引入角色（<code>CREATE ROLE</code>）；<code>SUPER</code> 拆为动态权限（<code>SYSTEM_VARIABLES_ADMIN</code> 等）；<code>caching_sha2_password</code> 成为默认；</li>
+<li><strong>8.0.27+</strong>：<code>ALTER USER ... SET RESOURCE LIMIT</code> 支持按账号限流；</li>
+<li><strong>8.4 LTS</strong>：<code>mysql_native_password</code> 默认<strong>关闭</strong>（老客户端需显式启用插件）；<code>authentication_policy</code> 取代 <code>default_authentication_plugin</code>，可配置多因素；<code>GRANT ... WITH GRANT OPTION</code> 的使用建议收敛到极少数管理账号。</li>
+</ul>
+<h2 id="九、课后小结"><a href="#九、课后小结" class="headerlink" title="九、课后小结"></a>九、课后小结</h2><ul>
+<li>四层粒度：全局 → 库 → 表 → 列；表级优先且覆盖库级；</li>
+<li>应用账号只给 DML，DDL 交给流水线专用账号；</li>
+<li>角色让授权可复用、可一次性回收；</li>
+<li>来源限网段、强制 SSL、口令轮换，是账号卫生的三件套；</li>
+<li>审计靠「导出授权 + 台账 diff」，不靠记忆。</li>
+</ul>
+<h2 id="十、思考题"><a href="#十、思考题" class="headerlink" title="十、思考题"></a>十、思考题</h2><ol>
+<li><p>库级给了 <code>INSERT</code>，表级只给了 <code>SELECT</code>，这张表能写吗？</p>
+<p><strong>参考回答</strong>：不能。权限检查按最细粒度优先：该表在表级有记录时以表级为准，库级的 <code>INSERT</code> 不再合并进来。所以结果是这张表只能读。要「库可写、单表不可写」，正确做法是不给该表任何表级条目（靠库级生效），再用只读账号访问它。</p>
+</li>
+<li><p>为什么 DDL 权限不能给应用账号？</p>
+<p><strong>参考回答</strong>：应用账号一旦持有 <code>ALTER/DROP</code>，任何 SQL 注入或代码缺陷都可能直接改表结构甚至删表，影响面从「数据错」升级为「服务崩」。DDL 应由发布流水线用独立账号在变更窗口执行，应用账号永久只有 DML。</p>
+</li>
+<li><p>角色和直接 <code>GRANT</code> 相比优势在哪？</p>
+<p><strong>参考回答</strong>：角色是一组权限的命名集合，可复用、可统一变更、可一次性回收。新增同类服务只需绑定角色；调整权限只改角色定义，所有绑定账号自动生效；下线时 <code>REVOKE</code> 角色一次即可，不会遗漏。缺点是必须 <code>SET DEFAULT ROLE</code> 才会在登录后生效，容易漏配。</p>
+</li>
+<li><p><code>SUPER</code> 在 8.x 里为什么被拆掉？</p>
+<p><strong>参考回答</strong>：<code>SUPER</code> 原先是一个「万能」权限，既包含改系统变量，也包含复制、杀会话等能力，粒度太粗。8.0 起拆为 <code>SYSTEM_VARIABLES_ADMIN</code>、<code>SESSION_VARIABLES_ADMIN</code>、<code>CONNECTION_ADMIN</code> 等动态权限，可以按需授予，减少「为了一个功能给整套权限」的情况。</p>
+</li>
+<li><p>如何发现某个账号权限过大？</p>
+<p><strong>参考回答</strong>：定期导出 <code>information_schema.USER_PRIVILEGES/SCHEMA_PRIVILEGES/TABLE_PRIVILEGES</code> 与 <code>mysql.role_edges</code>，与账号台账（CMDB）做 diff；重点看持有 <code>SUPER/SYSTEM_USER/GRANT OPTION</code> 的账号、来源为 <code>%</code> 的账号、以及长期无访问的账号。多出来的权限逐条确认后 <code>REVOKE</code>。</p>
+</li>
+</ol>
+<h2 id="十一、官方资料"><a href="#十一、官方资料" class="headerlink" title="十一、官方资料"></a>十一、官方资料</h2><ul>
+<li>权限与账号管理：<a target="_blank" rel="noopener" href="https://dev.mysql.com/doc/refman/8.4/en/privileges-provided.html">https://dev.mysql.com/doc/refman/8.4/en/privileges-provided.html</a></li>
+<li>GRANT 语法：<a target="_blank" rel="noopener" href="https://dev.mysql.com/doc/refman/8.4/en/grant.html">https://dev.mysql.com/doc/refman/8.4/en/grant.html</a></li>
+<li>角色：<a target="_blank" rel="noopener" href="https://dev.mysql.com/doc/refman/8.4/en/roles.html">https://dev.mysql.com/doc/refman/8.4/en/roles.html</a></li>
+<li>认证插件：<a target="_blank" rel="noopener" href="https://dev.mysql.com/doc/refman/8.4/en/authentication-plugins.html">https://dev.mysql.com/doc/refman/8.4/en/authentication-plugins.html</a></li>
+</ul>
+<p>上一篇：<a href="/2022/12/31/database/mysql/mysql-51-monitoring/">MQ51 监控指标</a> ｜ 下一篇：<a href="/2023/01/02/database/mysql/mysql-53-security/">MQ53 安全加固</a> ｜ <a href="/2022/11/10/database/mysql/mysql-0-series-index/">总目录</a></p>
+</div>
+
+  <div class="mb-foot">
+    <a href="/phone/">返回手机首页</a>
+    <a href="/phone/tags/">星迹索引</a>
+  </div>
+</div>
+
+
+<script>
+  /* 作用：懒加载本地 mermaid 库；无 mermaid 代码块时不加载 */
+  function loadLocalMermaid(){
+    return new Promise(function(resolve, reject){
+      if(window.mermaid) return resolve(window.mermaid);
+      var s = document.createElement('script');
+      s.src = '/js/third-party/mermaid/mermaid.min.js?v=10';
+      s.onload = function(){ resolve(window.mermaid); };
+      s.onerror = function(){ reject(new Error('mermaid local load failed')); };
+      document.head.appendChild(s);
+    });
+  }
+
+  /* 作用：把 ```mermaid 代码块替换成 SVG 图（手机端字号略小、图可横向滚动） */
+  async function renderMermaidDiagram(){
+    var blocks = document.querySelectorAll('pre[class*="language-mermaid"]');
+    if(!blocks.length) return;
+    var mermaid;
+    try { mermaid = await loadLocalMermaid(); }
+    catch(e){ console.warn('[mermaid] 本地库加载失败：', e); return; }
+
+    mermaid.initialize({
+      startOnLoad: false,
+      theme: 'base',
+      themeVariables: {
+        darkMode: true,
+        background: 'transparent',
+        fontFamily: '"Microsoft YaHei", "PingFang SC", "Segoe UI", sans-serif',
+        fontSize: '12px',
+        primaryColor: '#062f3d',
+        primaryTextColor: '#d6f6ff',
+        primaryBorderColor: '#00eeff',
+        secondaryColor: '#04222d',
+        tertiaryColor: '#04222d',
+        mainBkg: '#062f3d',
+        nodeBorder: '#00eeff',
+        clusterBkg: '#02161f',
+        clusterBorder: '#00eeff55',
+        lineColor: '#00eeff',
+        textColor: '#c0e8ff',
+        edgeLabelBackground: '#02161f'
+      },
+      flowchart: { curve: 'basis', useMaxWidth: false, htmlLabels: false, nodeSpacing: 30, rankSpacing: 40, padding: 10 }
+    });
+
+    var targets = [];
+    blocks.forEach(function(el){
+      var codeEl = el.querySelector('code');
+      if(!codeEl) return;
+      var div = document.createElement('div');
+      div.className = 'mermaid';
+      div.textContent = codeEl.textContent;
+      el.parentNode.replaceChild(div, el);
+      targets.push(div);
+    });
+    if(!targets.length) return;
+    try { await mermaid.run({ nodes: targets }); }
+    catch(e){ console.warn('[mermaid] 渲染失败：', e); }
+  }
+  /* 作用：多次触发兜底（延迟重试 + DOM 变化），防止某次时机没跑到导致图表留在代码块 */
+  var mmBusy = false;
+  function scheduleMermaid(){
+    if(mmBusy) return;
+    mmBusy = true;
+    renderMermaidDiagram().then(function(){ mmBusy = false; }, function(){ mmBusy = false; });
+  }
+  scheduleMermaid();
+  window.addEventListener('load', scheduleMermaid);
+  [1000, 3000, 8000].forEach(function(ms){ setTimeout(scheduleMermaid, ms); });
+  if(document.readyState !== 'loading') scheduleMermaid();
+  if(window.MutationObserver){
+    var mmTimer = null;
+    var mmObserver = new MutationObserver(function(){
+      clearTimeout(mmTimer);
+      mmTimer = setTimeout(scheduleMermaid, 400);
+    });
+    mmObserver.observe(document.querySelector('.mb-article') || document.body, { childList: true, subtree: true });
+  }
+</script>
+</body>
+</html>

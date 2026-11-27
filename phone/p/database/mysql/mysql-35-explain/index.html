@@ -1,0 +1,430 @@
+<!--
+  ============================================
+  手机端 · 文章原文页
+  文件：phone/post.njk
+  适用终端：手机端（路由 /phone/p/<slug>/，由 scripts/phone-routes.js 生成）
+  作用：手机阅读单篇文章；单列布局、无侧栏无雷达，替代电脑端 post.njk
+        数据由生成期算好：page.item = { title, dateStr, content, cats, tags }
+  样式依赖：source/css/theme/phone/common.css、source/css/theme/phone/list.css
+  组件依赖：phone/_components/Particles.njk
+  最后修改：2026-11-11
+  ============================================
+-->
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="color-scheme" content="dark">
+  <meta name="theme-color" content="#020817">
+  <!-- 首帧兜底：浏览器默认画布是白的，样式未解析前会闪一下白。这条规则先锁死深空底色 -->
+  <style>html{background-color:#020817}</style>
+  <title>mysql-35-explain - 时空秘境</title>
+  <!-- 手机端样式：基础 + 列表/正文，外链引入（源文件 source/css/theme/phone/） -->
+  <link rel="stylesheet" href="/css/theme/phone/common.css">
+  <link rel="stylesheet" href="/css/theme/phone/list.css">
+<meta name="generator" content="Hexo 8.1.2"></head>
+<body>
+<div class="mb-shell">
+  <!--
+  ============================================
+  手机端星空粒子组件
+  文件：Particles.njk
+  适用终端：手机端
+  作用：Particles.njk 的手机端副本（nunjucks 子目录 include 取不到上级）
+        参数与电脑端 _components/Particles.njk 保持一致：
+        粒子 95 / 连线 118px / opacity 0.32，外加星座层与零星闪烁层
+  最后修改：2026-11-12
+  ============================================
+--><!-- z-index 必须是 0：负层级会被 body 不透明背景盖住，粒子在跑却看不见 -->
+<div id="particles" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 0; pointer-events: none;"></div>
+<!-- 星座层（与首页同一套：随机零星散布星座图形 + 偶尔闪烁的小星） -->
+<div id="constellations" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 1; pointer-events: none;" aria-hidden="true"></div>
+<script src="/js/particles.min.js"></script>
+<script>
+particlesJS("particles", {
+  particles: {
+    number: {
+      value: 95,
+      density: {
+        enable: true,
+        value_area: 800
+      }
+    },
+    color: {
+      value: "#00eeff"
+    },
+    shape: {
+      type: "circle",
+      stroke: {
+        width: 0,
+        color: "#000000"
+      }
+    },
+    opacity: {
+      value: 0.6,
+      random: true,
+      anim: {
+        enable: true,
+        speed: 0.5,
+        opacity_min: 0.1,
+        sync: false
+      }
+    },
+    size: {
+      value: 3,
+      random: true,
+      anim: {
+        enable: true,
+        speed: 2,
+        size_min: 0.1,
+        sync: false
+      }
+    },
+    line_linked: {
+      enable: true,
+      distance: 118,
+      color: "#00eeff",
+      opacity: 0.32,
+      width: 1
+    },
+    move: {
+      enable: true,
+      speed: 0.8,
+      direction: "none",
+      random: true,
+      straight: false,
+      out_mode: "out",
+      bounce: false,
+      attract: {
+        enable: true,
+        rotateX: 600,
+        rotateY: 1200
+      }
+    }
+  },
+  interactivity: {
+    detect_on: "canvas",
+    events: {
+      onhover: {
+        enable: true,
+        mode: "grab"       // 手指按住时粒子聚集
+      },
+      onclick: {
+        enable: true,
+        mode: "push"       // 点击时产生新粒子
+      },
+      resize: true
+    },
+    modes: {
+      grab: {
+        distance: 200,
+        line_linked: {
+          opacity: 1
+        }
+      },
+      push: {
+        particles_nb: 6
+      }
+    }
+  },
+  retina_detect: true
+});
+</script>
+<!-- 星座 + 零星闪烁层：与电脑端共用同一份绘制脚本 -->
+<script src="/js/theme/home/starfield.js"></script>
+
+
+  <div class="mb-top">
+    <a class="mb-back" href="/phone/">← 返回手机首页</a>
+    <span class="mb-sub" style="margin:0">2022-12-15</span>
+  </div>
+
+  <h1 class="mb-title">mysql-35-explain</h1>
+  <div class="mb-sub">
+    分类：database · mysql
+     ｜ 标签：系统课 · MySQL · 数据库
+  </div>
+
+  <div class="mb-article"><div class="essay-banner essay-database"></div>
+
+<h1 id="EXPLAIN-逐列讲：优化器打算怎么执行这条-SQL"><a href="#EXPLAIN-逐列讲：优化器打算怎么执行这条-SQL" class="headerlink" title="EXPLAIN 逐列讲：优化器打算怎么执行这条 SQL"></a>EXPLAIN 逐列讲：优化器打算怎么执行这条 SQL</h1><p><img src="https://wu4yong.github.io/starry-images/assets/img/mysql/mq-35-explain.svg" alt="EXPLAIN 的读法"></p>
+<p><em>四列决定成败：type、key、rows×filtered、Extra｜依据 MySQL 8.4 EXPLAIN Output Format 说明自绘</em></p>
+<h2 id="一、学习目标"><a href="#一、学习目标" class="headerlink" title="一、学习目标"></a>一、学习目标</h2><ol>
+<li>会读 <code>EXPLAIN</code> 的 12 个输出列，知道每个列在回答什么问题；</li>
+<li>记住 <code>type</code> 的优先级阶梯，能一眼判断「这计划还能不能要」；</li>
+<li>区分「估算」与「实测」，知道什么时候必须上 <code>EXPLAIN ANALYZE</code>。</li>
+</ol>
+<h2 id="二、前置知识"><a href="#二、前置知识" class="headerlink" title="二、前置知识"></a>二、前置知识</h2><p>B+Tree 与回表（MQ18）、联合索引与 ICP（MQ19）、索引失效（MQ20）。看不懂索引，<code>EXPLAIN</code> 只会给你一串看不懂的数字。</p>
+<h2 id="三、理论讲解（官方定义）"><a href="#三、理论讲解（官方定义）" class="headerlink" title="三、理论讲解（官方定义）"></a>三、理论讲解（官方定义）</h2><p><code>EXPLAIN</code> 用于展示优化器为一个语句选定的执行计划，不真正执行 SQL。8.4 的输出列固定为：</p>
+<table>
+<thead>
+<tr>
+<th>列</th>
+<th>含义</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>id</code></td>
+<td>查询块序号，值大的先执行；<code>NULL</code> 表示是 UNION 结果或排序结果</td>
+</tr>
+<tr>
+<td><code>select_type</code></td>
+<td><code>SIMPLE</code>／<code>PRIMARY</code>／<code>SUBQUERY</code>／<code>DERIVED</code>／<code>UNION</code>／<code>UNION RESULT</code></td>
+</tr>
+<tr>
+<td><code>table</code></td>
+<td>本行对应的表或派生表名</td>
+</tr>
+<tr>
+<td><code>partitions</code></td>
+<td>命中&#x2F;扫描的分区</td>
+</tr>
+<tr>
+<td><code>type</code></td>
+<td>访问类型，性能由好到差的关键列</td>
+</tr>
+<tr>
+<td><code>possible_keys</code></td>
+<td>可能用上的索引（理论上）</td>
+</tr>
+<tr>
+<td><code>key</code></td>
+<td>实际用上的索引</td>
+</tr>
+<tr>
+<td><code>key_len</code></td>
+<td>用到的索引字节数，可反推用了联合索引前几列</td>
+</tr>
+<tr>
+<td><code>ref</code></td>
+<td>与 <code>key</code> 比较的对象：常量、某列、函数</td>
+</tr>
+<tr>
+<td><code>rows</code></td>
+<td>优化器估算的扫描行数（每行一次，不是总计）</td>
+</tr>
+<tr>
+<td><code>filtered</code></td>
+<td>该行经条件过滤后剩余百分比</td>
+</tr>
+<tr>
+<td><code>Extra</code></td>
+<td>额外动作：<code>Using index</code>、<code>Using index condition</code>、<code>Using filesort</code>、<code>Using temporary</code>…</td>
+</tr>
+</tbody></table>
+<p>一句口诀：<strong>先看 type 判断访问方式，再看 key 是否命中预期索引，最后看 rows × filtered 估真实代价。</strong></p>
+<h2 id="四、原理拆解"><a href="#四、原理拆解" class="headerlink" title="四、原理拆解"></a>四、原理拆解</h2><p><img src="https://wu4yong.github.io/starry-images/assets/img/mysql/mq-35b-explain.svg" alt="type 阶梯与 Extra 信号"></p>
+<p><em>type 从上到下依次变慢，Extra 里的 filesort&#x2F;temporary 是需要动手的信号｜依据 MySQL 8.4 EXPLAIN 说明自绘</em></p>
+<h3 id="1-type-的优先级阶梯"><a href="#1-type-的优先级阶梯" class="headerlink" title="1. type 的优先级阶梯"></a>1. type 的优先级阶梯</h3><p><code>const</code> &gt; <code>eq_ref</code> &gt; <code>ref</code> &gt; <code>range</code> &gt; <code>index</code> &gt; <code>ALL</code>，中间还有 <code>ref_or_null</code>、<code>index_merge</code>、<code>unique_subquery</code>、<code>index_subquery</code>。</p>
+<ul>
+<li><code>const</code>：主键或唯一索引等值命中单行，读一次即出；</li>
+<li><code>eq_ref</code>：JOIN 时被驱动表按主键&#x2F;唯一索引匹配一行，是 JOIN 的最优解；</li>
+<li><code>ref</code>：普通二级索引等值，可能命中多行；</li>
+<li><code>range</code>：索引范围扫描（<code>BETWEEN</code>、<code>&gt;</code>、<code>IN</code>）；</li>
+<li><code>index</code>：扫整个索引树（比全表扫少读数据页，但仍扫全部索引项）；</li>
+<li><code>ALL</code>：全表扫描。</li>
+</ul>
+<p>线上出现 <code>ALL</code> 且表不小，基本等于「这条 SQL 没救了」。</p>
+<h3 id="2-key-len-怎么算"><a href="#2-key-len-怎么算" class="headerlink" title="2. key_len 怎么算"></a>2. key_len 怎么算</h3><p><code>key_len</code> &#x3D; 用到的索引列字节数之和（含可空列的 1 字节标志位）。<code>utf8mb4</code> 下 <code>VARCHAR(20)</code> 非空 &#x3D; 20×4 + 2 &#x3D; 82；<code>INT</code> &#x3D; 4；<code>BIGINT</code> &#x3D; 8。</p>
+<p>联合索引 <code>(a, b, c)</code> 上 <code>key_len</code> 只等于 <code>a</code> 的字节数，说明只用到了第一列——第二列没生效，这正是「最左前缀」的可观测证据。</p>
+<h3 id="3-rows-与-filtered-才是代价"><a href="#3-rows-与-filtered-才是代价" class="headerlink" title="3. rows 与 filtered 才是代价"></a>3. rows 与 filtered 才是代价</h3><p><code>rows</code> 是<strong>估算</strong>，来自统计信息与 index dive；<code>rows × filtered</code> 才是优化器认为要处理的行数。两张表的 <code>rows</code> 相乘，就是它估的 JOIN 代价量级。</p>
+<h3 id="4-Extra-的四个关键信号"><a href="#4-Extra-的四个关键信号" class="headerlink" title="4. Extra 的四个关键信号"></a>4. Extra 的四个关键信号</h3><ul>
+<li><code>Using index</code>＝覆盖索引，不用回表；</li>
+<li><code>Using index condition</code>＝ICP，条件下推到索引层过滤，但<strong>仍要回表</strong>；</li>
+<li><code>Using where</code>＝读完行之后在 Server 层再过滤；</li>
+<li><code>Using filesort</code>＝排序无法借索引顺序完成；<code>Using temporary</code>＝用了临时表（常见于 <code>GROUP BY</code>、<code>DISTINCT</code>、<code>UNION</code>）。</li>
+</ul>
+<h3 id="5-EXPLAIN-的三兄弟"><a href="#5-EXPLAIN-的三兄弟" class="headerlink" title="5. EXPLAIN 的三兄弟"></a>5. EXPLAIN 的三兄弟</h3><table>
+<thead>
+<tr>
+<th>命令</th>
+<th>是否执行</th>
+<th>用途</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>EXPLAIN</code></td>
+<td>否</td>
+<td>看计划</td>
+</tr>
+<tr>
+<td><code>EXPLAIN FORMAT=JSON</code></td>
+<td>否</td>
+<td>看成本明细（<code>cost_info</code>）</td>
+</tr>
+<tr>
+<td><code>EXPLAIN ANALYZE</code></td>
+<td><strong>是</strong></td>
+<td>看真实耗时与真实行数（8.0.18+）</td>
+</tr>
+</tbody></table>
+<p><code>EXPLAIN ANALYZE</code> 会真跑一遍，慎用于写语句与重查询。</p>
+<h2 id="五、场景说明"><a href="#五、场景说明" class="headerlink" title="五、场景说明"></a>五、场景说明</h2><ol>
+<li><strong>慢 SQL 首诊</strong>：先 <code>EXPLAIN</code> 看 type 与 key，判断是「没走索引」还是「走了但不合适」；</li>
+<li><strong>索引上线验收</strong>：建索引前后各 <code>EXPLAIN</code> 一次，对比 key 与 rows；</li>
+<li><strong>JOIN 调序</strong>：看 <code>id</code> 与 <code>table</code> 顺序，确认小表驱动；</li>
+<li><strong>计划漂移排查</strong>：同一 SQL 昨天 <code>ref</code> 今天 <code>ALL</code>，去查统计信息（MQ37）；</li>
+<li><strong>分页与排序</strong>：<code>Extra</code> 出现 <code>filesort</code> 时，考虑让 <code>ORDER BY</code> 列进索引。</li>
+</ol>
+<h2 id="六、示例代码-实操步骤"><a href="#六、示例代码-实操步骤" class="headerlink" title="六、示例代码&#x2F;实操步骤"></a>六、示例代码&#x2F;实操步骤</h2><h3 id="1-基础用法"><a href="#1-基础用法" class="headerlink" title="1. 基础用法"></a>1. 基础用法</h3><pre class="line-numbers language-sql" data-language="sql"><code class="language-sql"><span class="token keyword">EXPLAIN</span> <span class="token keyword">SELECT</span> o<span class="token punctuation">.</span>id<span class="token punctuation">,</span> o<span class="token punctuation">.</span>amount
+<span class="token keyword">FROM</span> t_order o
+<span class="token keyword">JOIN</span> t_user u <span class="token keyword">ON</span> u<span class="token punctuation">.</span>id <span class="token operator">=</span> o<span class="token punctuation">.</span>user_id
+<span class="token keyword">WHERE</span> o<span class="token punctuation">.</span><span class="token keyword">status</span> <span class="token operator">=</span> <span class="token number">1</span> <span class="token operator">AND</span> u<span class="token punctuation">.</span>city <span class="token operator">=</span> <span class="token string">'Chengdu'</span><span class="token punctuation">;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span></span></code></pre>
+
+<h3 id="2-看-JSON-里的成本"><a href="#2-看-JSON-里的成本" class="headerlink" title="2. 看 JSON 里的成本"></a>2. 看 JSON 里的成本</h3><pre class="line-numbers language-sql" data-language="sql"><code class="language-sql"><span class="token keyword">EXPLAIN</span> FORMAT<span class="token operator">=</span>JSON
+<span class="token keyword">SELECT</span> <span class="token operator">*</span> <span class="token keyword">FROM</span> t_order <span class="token keyword">WHERE</span> user_id <span class="token operator">=</span> <span class="token number">100</span> <span class="token keyword">ORDER</span> <span class="token keyword">BY</span> created_at <span class="token keyword">DESC</span> <span class="token keyword">LIMIT</span> <span class="token number">20</span><span class="token punctuation">;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span></span></code></pre>
+
+<p>关注 <code>query_block.cost_info</code> 与 <code>table.cost_info</code> 的 <code>read_cost</code>、<code>eval_cost</code>、<code>prefix_cost</code>。</p>
+<h3 id="3-看真实耗时与真实行数"><a href="#3-看真实耗时与真实行数" class="headerlink" title="3. 看真实耗时与真实行数"></a>3. 看真实耗时与真实行数</h3><pre class="line-numbers language-sql" data-language="sql"><code class="language-sql"><span class="token keyword">EXPLAIN</span> <span class="token keyword">ANALYZE</span>
+<span class="token keyword">SELECT</span> <span class="token operator">*</span> <span class="token keyword">FROM</span> t_order <span class="token keyword">WHERE</span> user_id <span class="token operator">=</span> <span class="token number">100</span> <span class="token keyword">ORDER</span> <span class="token keyword">BY</span> created_at <span class="token keyword">DESC</span> <span class="token keyword">LIMIT</span> <span class="token number">20</span><span class="token punctuation">;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span></span></code></pre>
+
+<p>输出里 <code>actual time=… rows=…</code> 与 <code>rows=…</code>（估算）差距大，就是统计信息不准的直接证据。</p>
+<h3 id="4-验证-key-len-与最左前缀"><a href="#4-验证-key-len-与最左前缀" class="headerlink" title="4. 验证 key_len 与最左前缀"></a>4. 验证 key_len 与最左前缀</h3><pre class="line-numbers language-sql" data-language="sql"><code class="language-sql"><span class="token keyword">ALTER</span> <span class="token keyword">TABLE</span> t_order <span class="token keyword">ADD</span> <span class="token keyword">INDEX</span> idx_user_status_time <span class="token punctuation">(</span>user_id<span class="token punctuation">,</span> <span class="token keyword">status</span><span class="token punctuation">,</span> created_at<span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+<span class="token keyword">EXPLAIN</span> <span class="token keyword">SELECT</span> <span class="token operator">*</span> <span class="token keyword">FROM</span> t_order <span class="token keyword">WHERE</span> user_id <span class="token operator">=</span> <span class="token number">100</span><span class="token punctuation">;</span>                    <span class="token comment">-- key_len 只有 user_id</span>
+<span class="token keyword">EXPLAIN</span> <span class="token keyword">SELECT</span> <span class="token operator">*</span> <span class="token keyword">FROM</span> t_order <span class="token keyword">WHERE</span> user_id <span class="token operator">=</span> <span class="token number">100</span> <span class="token operator">AND</span> <span class="token keyword">status</span> <span class="token operator">=</span> <span class="token number">1</span><span class="token punctuation">;</span>     <span class="token comment">-- key_len 累加</span>
+<span class="token keyword">EXPLAIN</span> <span class="token keyword">SELECT</span> <span class="token operator">*</span> <span class="token keyword">FROM</span> t_order <span class="token keyword">WHERE</span> <span class="token keyword">status</span> <span class="token operator">=</span> <span class="token number">1</span><span class="token punctuation">;</span>                       <span class="token comment">-- key = NULL</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<h3 id="5-Java-侧怎么落地：把-EXPLAIN-变成发布前检查"><a href="#5-Java-侧怎么落地：把-EXPLAIN-变成发布前检查" class="headerlink" title="5. Java 侧怎么落地：把 EXPLAIN 变成发布前检查"></a>5. Java 侧怎么落地：把 EXPLAIN 变成发布前检查</h3><ol>
+<li><strong>慢 SQL 采集</strong>：<code>p6spy</code> &#x2F; <code>datasource-proxy</code> 拦截执行时间超过阈值的语句，落到日志或消息队列；</li>
+<li><strong>门禁脚本</strong>：CI 里对新增 SQL 跑一次 <code>EXPLAIN FORMAT=JSON</code>，<code>type</code> 为 <code>ALL</code> 且 <code>rows</code> 超过 1 万时直接失败；</li>
+<li><strong>单元测试</strong>：用 Testcontainers 起 MySQL 8.4，对核心查询断言 <code>key</code> 命中预期索引名；</li>
+<li><strong>上线观察</strong>：<code>performance_schema.events_statements_summary_by_digest</code> 里比对 <code>ROWS_EXAMINED / ROWS_SENT</code> 比值；</li>
+<li><strong>告警</strong>：比值持续大于 100 视为「扫太多返回太少」，进优化队列。</li>
+</ol>
+<h2 id="七、常见坑"><a href="#七、常见坑" class="headerlink" title="七、常见坑"></a>七、常见坑</h2><ol>
+<li><strong>把 <code>rows</code> 当真实行数</strong>：它来自统计估算，可能差几个数量级；</li>
+<li><strong><code>possible_keys</code> 有值就以为走了索引</strong>：要看 <code>key</code>；</li>
+<li><strong><code>Using index</code> 与 <code>Using index condition</code> 混为一谈</strong>：前者不回表，后者要回表；</li>
+<li><strong><code>type=index</code> 当成好计划</strong>：扫全索引树依然可能很慢；</li>
+<li><strong><code>EXPLAIN ANALYZE</code> 用在写语句上</strong>：会真执行，生产上绝不要试；</li>
+<li><strong>忽略 <code>filtered</code></strong>：<code>rows</code> 小但 <code>filtered</code> 低，仍可能扫很多；</li>
+<li><strong>JOIN 只看单表 <code>rows</code></strong>：要看驱动顺序与两表相乘的规模。</li>
+</ol>
+<h2 id="八、版本差异"><a href="#八、版本差异" class="headerlink" title="八、版本差异"></a>八、版本差异</h2><ul>
+<li><strong>5.6</strong>：<code>EXPLAIN</code> 12 列成型，支持 <code>FORMAT=JSON</code>；</li>
+<li><strong>5.7</strong>：新增 <code>partitions</code> 列更准确，优化器成本模型可切换；</li>
+<li><strong>8.0</strong>：<code>EXPLAIN ANALYZE</code>（8.0.18+）；<code>EXPLAIN FORMAT=TREE</code>；直方图影响 <code>rows</code> 估算（8.0 起）；</li>
+<li><strong>8.4</strong>：输出列与 8.0 一致，<code>EXPLAIN ANALYZE</code> 稳定可用，<code>EXPLAIN FOR CONNECTION</code> 用于排查运行中的语句。</li>
+</ul>
+<h2 id="九、课后小结"><a href="#九、课后小结" class="headerlink" title="九、课后小结"></a>九、课后小结</h2><ul>
+<li><code>EXPLAIN</code> 只回答「打算怎么执行」，不回答「花了多久」；</li>
+<li><code>type</code> 阶梯是判断计划好坏的快捷方式，<code>ALL</code> + 大表 &#x3D; 必须改；</li>
+<li><code>key_len</code> 是判断最左前缀是否生效的硬证据；</li>
+<li><code>rows × filtered</code> 是优化器眼里的代价，<code>EXPLAIN ANALYZE</code> 才是真实代价；</li>
+<li>把 <code>EXPLAIN</code> 接进 CI 与慢 SQL 采集，索引问题才不会靠人肉发现。</li>
+</ul>
+<h2 id="十、思考题"><a href="#十、思考题" class="headerlink" title="十、思考题"></a>十、思考题</h2><ol>
+<li><p><code>type = index</code> 和 <code>type = ALL</code> 有什么区别，哪个更快？</p>
+<p><strong>参考回答</strong>：<code>index</code> 是扫整棵二级索引树，只读索引页，不回表；<code>ALL</code> 是扫聚簇索引（整张表）所有数据页。通常 <code>index</code> 更快，但若索引几乎和表一样大，两者差距很小；两者都属于「全扫」，都不是好计划。</p>
+</li>
+<li><p>为什么 <code>EXPLAIN</code> 的 <code>rows</code> 与实际差很多？</p>
+<p><strong>参考回答</strong>：<code>rows</code> 来自统计信息（持久化采样页）与小范围 index dive 的估算，数据分布倾斜、统计过期、采样页太少都会让估算失真；用 <code>EXPLAIN ANALYZE</code> 看真实行数，再 <code>ANALYZE TABLE</code> 修正统计。</p>
+</li>
+<li><p><code>Using index condition</code> 一定比 <code>Using where</code> 好吗？</p>
+<p><strong>参考回答</strong>：不一定更好，但通常更省。ICP 把能在索引层判断的条件先过滤，减少回表次数；<code>Using where</code> 是先回表取整行再在 Server 层过滤。是否生效取决于存储引擎是否支持该条件下推，以及条件涉及的列是否都在索引里。</p>
+</li>
+<li><p><code>EXPLAIN</code> 里 <code>key</code> 为 <code>NULL</code> 但 <code>possible_keys</code> 有值，说明什么？</p>
+<p><strong>参考回答</strong>：优化器认为走索引不划算（例如范围太宽、需要大量回表），主动选了全表扫描。此时应检查选择性与统计信息，而不是直接加 <code>FORCE INDEX</code>。</p>
+</li>
+<li><p>线上能不能直接跑 <code>EXPLAIN ANALYZE</code>？</p>
+<p><strong>参考回答</strong>：要非常谨慎。它会真实执行语句，重查询会占满 CPU&#x2F;IO；写语句会真的写数据。只允许在从库&#x2F;预发环境对只读语句使用，并加超时保护。</p>
+</li>
+</ol>
+<h2 id="十一、官方资料"><a href="#十一、官方资料" class="headerlink" title="十一、官方资料"></a>十一、官方资料</h2><ul>
+<li>EXPLAIN 输出：<a target="_blank" rel="noopener" href="https://dev.mysql.com/doc/refman/8.4/en/explain-output.html">https://dev.mysql.com/doc/refman/8.4/en/explain-output.html</a></li>
+<li>EXPLAIN 语法：<a target="_blank" rel="noopener" href="https://dev.mysql.com/doc/refman/8.4/en/explain.html">https://dev.mysql.com/doc/refman/8.4/en/explain.html</a></li>
+<li>EXPLAIN ANALYZE：<a target="_blank" rel="noopener" href="https://dev.mysql.com/doc/refman/8.4/en/explain.html#explain-analyze">https://dev.mysql.com/doc/refman/8.4/en/explain.html#explain-analyze</a></li>
+</ul>
+<p>上一篇：<a href="/2022/12/14/database/mysql/mysql-34-tablespace/">MQ34 表空间与文件</a> ｜ 下一篇：<a href="/2022/12/16/database/mysql/mysql-36-slow-log/">MQ36 慢查询日志与 profiling</a> ｜ <a href="/2022/11/10/database/mysql/mysql-0-series-index/">总目录</a></p>
+</div>
+
+  <div class="mb-foot">
+    <a href="/phone/">返回手机首页</a>
+    <a href="/phone/tags/">星迹索引</a>
+  </div>
+</div>
+
+
+<script>
+  /* 作用：懒加载本地 mermaid 库；无 mermaid 代码块时不加载 */
+  function loadLocalMermaid(){
+    return new Promise(function(resolve, reject){
+      if(window.mermaid) return resolve(window.mermaid);
+      var s = document.createElement('script');
+      s.src = '/js/third-party/mermaid/mermaid.min.js?v=10';
+      s.onload = function(){ resolve(window.mermaid); };
+      s.onerror = function(){ reject(new Error('mermaid local load failed')); };
+      document.head.appendChild(s);
+    });
+  }
+
+  /* 作用：把 ```mermaid 代码块替换成 SVG 图（手机端字号略小、图可横向滚动） */
+  async function renderMermaidDiagram(){
+    var blocks = document.querySelectorAll('pre[class*="language-mermaid"]');
+    if(!blocks.length) return;
+    var mermaid;
+    try { mermaid = await loadLocalMermaid(); }
+    catch(e){ console.warn('[mermaid] 本地库加载失败：', e); return; }
+
+    mermaid.initialize({
+      startOnLoad: false,
+      theme: 'base',
+      themeVariables: {
+        darkMode: true,
+        background: 'transparent',
+        fontFamily: '"Microsoft YaHei", "PingFang SC", "Segoe UI", sans-serif',
+        fontSize: '12px',
+        primaryColor: '#062f3d',
+        primaryTextColor: '#d6f6ff',
+        primaryBorderColor: '#00eeff',
+        secondaryColor: '#04222d',
+        tertiaryColor: '#04222d',
+        mainBkg: '#062f3d',
+        nodeBorder: '#00eeff',
+        clusterBkg: '#02161f',
+        clusterBorder: '#00eeff55',
+        lineColor: '#00eeff',
+        textColor: '#c0e8ff',
+        edgeLabelBackground: '#02161f'
+      },
+      flowchart: { curve: 'basis', useMaxWidth: false, htmlLabels: false, nodeSpacing: 30, rankSpacing: 40, padding: 10 }
+    });
+
+    var targets = [];
+    blocks.forEach(function(el){
+      var codeEl = el.querySelector('code');
+      if(!codeEl) return;
+      var div = document.createElement('div');
+      div.className = 'mermaid';
+      div.textContent = codeEl.textContent;
+      el.parentNode.replaceChild(div, el);
+      targets.push(div);
+    });
+    if(!targets.length) return;
+    try { await mermaid.run({ nodes: targets }); }
+    catch(e){ console.warn('[mermaid] 渲染失败：', e); }
+  }
+  /* 作用：多次触发兜底（延迟重试 + DOM 变化），防止某次时机没跑到导致图表留在代码块 */
+  var mmBusy = false;
+  function scheduleMermaid(){
+    if(mmBusy) return;
+    mmBusy = true;
+    renderMermaidDiagram().then(function(){ mmBusy = false; }, function(){ mmBusy = false; });
+  }
+  scheduleMermaid();
+  window.addEventListener('load', scheduleMermaid);
+  [1000, 3000, 8000].forEach(function(ms){ setTimeout(scheduleMermaid, ms); });
+  if(document.readyState !== 'loading') scheduleMermaid();
+  if(window.MutationObserver){
+    var mmTimer = null;
+    var mmObserver = new MutationObserver(function(){
+      clearTimeout(mmTimer);
+      mmTimer = setTimeout(scheduleMermaid, 400);
+    });
+    mmObserver.observe(document.querySelector('.mb-article') || document.body, { childList: true, subtree: true });
+  }
+</script>
+</body>
+</html>

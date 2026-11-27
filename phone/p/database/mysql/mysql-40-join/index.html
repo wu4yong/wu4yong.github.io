@@ -1,0 +1,373 @@
+<!--
+  ============================================
+  手机端 · 文章原文页
+  文件：phone/post.njk
+  适用终端：手机端（路由 /phone/p/<slug>/，由 scripts/phone-routes.js 生成）
+  作用：手机阅读单篇文章；单列布局、无侧栏无雷达，替代电脑端 post.njk
+        数据由生成期算好：page.item = { title, dateStr, content, cats, tags }
+  样式依赖：source/css/theme/phone/common.css、source/css/theme/phone/list.css
+  组件依赖：phone/_components/Particles.njk
+  最后修改：2026-11-11
+  ============================================
+-->
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="color-scheme" content="dark">
+  <meta name="theme-color" content="#020817">
+  <!-- 首帧兜底：浏览器默认画布是白的，样式未解析前会闪一下白。这条规则先锁死深空底色 -->
+  <style>html{background-color:#020817}</style>
+  <title>mysql-40-join - 时空秘境</title>
+  <!-- 手机端样式：基础 + 列表/正文，外链引入（源文件 source/css/theme/phone/） -->
+  <link rel="stylesheet" href="/css/theme/phone/common.css">
+  <link rel="stylesheet" href="/css/theme/phone/list.css">
+<meta name="generator" content="Hexo 8.1.2"></head>
+<body>
+<div class="mb-shell">
+  <!--
+  ============================================
+  手机端星空粒子组件
+  文件：Particles.njk
+  适用终端：手机端
+  作用：Particles.njk 的手机端副本（nunjucks 子目录 include 取不到上级）
+        参数与电脑端 _components/Particles.njk 保持一致：
+        粒子 95 / 连线 118px / opacity 0.32，外加星座层与零星闪烁层
+  最后修改：2026-11-12
+  ============================================
+--><!-- z-index 必须是 0：负层级会被 body 不透明背景盖住，粒子在跑却看不见 -->
+<div id="particles" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 0; pointer-events: none;"></div>
+<!-- 星座层（与首页同一套：随机零星散布星座图形 + 偶尔闪烁的小星） -->
+<div id="constellations" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 1; pointer-events: none;" aria-hidden="true"></div>
+<script src="/js/particles.min.js"></script>
+<script>
+particlesJS("particles", {
+  particles: {
+    number: {
+      value: 95,
+      density: {
+        enable: true,
+        value_area: 800
+      }
+    },
+    color: {
+      value: "#00eeff"
+    },
+    shape: {
+      type: "circle",
+      stroke: {
+        width: 0,
+        color: "#000000"
+      }
+    },
+    opacity: {
+      value: 0.6,
+      random: true,
+      anim: {
+        enable: true,
+        speed: 0.5,
+        opacity_min: 0.1,
+        sync: false
+      }
+    },
+    size: {
+      value: 3,
+      random: true,
+      anim: {
+        enable: true,
+        speed: 2,
+        size_min: 0.1,
+        sync: false
+      }
+    },
+    line_linked: {
+      enable: true,
+      distance: 118,
+      color: "#00eeff",
+      opacity: 0.32,
+      width: 1
+    },
+    move: {
+      enable: true,
+      speed: 0.8,
+      direction: "none",
+      random: true,
+      straight: false,
+      out_mode: "out",
+      bounce: false,
+      attract: {
+        enable: true,
+        rotateX: 600,
+        rotateY: 1200
+      }
+    }
+  },
+  interactivity: {
+    detect_on: "canvas",
+    events: {
+      onhover: {
+        enable: true,
+        mode: "grab"       // 手指按住时粒子聚集
+      },
+      onclick: {
+        enable: true,
+        mode: "push"       // 点击时产生新粒子
+      },
+      resize: true
+    },
+    modes: {
+      grab: {
+        distance: 200,
+        line_linked: {
+          opacity: 1
+        }
+      },
+      push: {
+        particles_nb: 6
+      }
+    }
+  },
+  retina_detect: true
+});
+</script>
+<!-- 星座 + 零星闪烁层：与电脑端共用同一份绘制脚本 -->
+<script src="/js/theme/home/starfield.js"></script>
+
+
+  <div class="mb-top">
+    <a class="mb-back" href="/phone/">← 返回手机首页</a>
+    <span class="mb-sub" style="margin:0">2022-12-20</span>
+  </div>
+
+  <h1 class="mb-title">mysql-40-join</h1>
+  <div class="mb-sub">
+    分类：database · mysql
+     ｜ 标签：系统课 · MySQL · 数据库
+  </div>
+
+  <div class="mb-article"><div class="essay-banner essay-database"></div>
+
+<h1 id="JOIN-优化：驱动表与连接算法"><a href="#JOIN-优化：驱动表与连接算法" class="headerlink" title="JOIN 优化：驱动表与连接算法"></a>JOIN 优化：驱动表与连接算法</h1><p><img src="https://wu4yong.github.io/starry-images/assets/img/mysql/mq-40-join.svg" alt="JOIN 的两个决定"></p>
+<p><em>谁当驱动表、用哪种算法，决定一条 JOIN 的全部代价｜依据 MySQL 8.4 JOIN &#x2F; Hash Join 优化说明自绘</em></p>
+<h2 id="一、学习目标"><a href="#一、学习目标" class="headerlink" title="一、学习目标"></a>一、学习目标</h2><ol>
+<li>说清「驱动表 → 被驱动表」的探测模型，知道 JOIN 成本怎么算；</li>
+<li>分清 NLJ、BNL、Hash Join 的触发条件与代价差异；</li>
+<li>会看 <code>EXPLAIN</code> 判断连接顺序，并用索引或改写把 BNL 变成 NLJ。</li>
+</ol>
+<h2 id="二、前置知识"><a href="#二、前置知识" class="headerlink" title="二、前置知识"></a>二、前置知识</h2><p>索引与回表（MQ18&#x2F;MQ38）、<code>EXPLAIN</code>（MQ35）、优化器成本（MQ37）。</p>
+<h2 id="三、理论讲解（官方定义）"><a href="#三、理论讲解（官方定义）" class="headerlink" title="三、理论讲解（官方定义）"></a>三、理论讲解（官方定义）</h2><p>MySQL 的 JOIN 一直以<strong>嵌套循环</strong>（Nested-Loop）为基本模型：外层表（驱动表）每取一行，就去内层表（被驱动表）找匹配行。8.0.18 起 InnoDB 支持 <strong>Hash Join</strong>，用于等值连接且没有可用索引的场景。</p>
+<table>
+<thead>
+<tr>
+<th>算法</th>
+<th>触发条件</th>
+<th><code>Extra</code> 提示</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Nested Loop Join（NLJ）</td>
+<td>被驱动表连接列有索引</td>
+<td>无特殊提示，<code>type</code> 为 <code>ref</code>&#x2F;<code>eq_ref</code></td>
+</tr>
+<tr>
+<td>Block Nested Loop（BNL）</td>
+<td>无可用索引，8.0.20 前默认</td>
+<td><code>Using join buffer (Block Nested Loop)</code></td>
+</tr>
+<tr>
+<td>Hash Join</td>
+<td>等值连接、无索引，8.0.18+</td>
+<td><code>Using join buffer (hash join)</code></td>
+</tr>
+</tbody></table>
+<p>8.0.20 起，无索引的等值连接默认走 Hash Join，BNL 只在非等值或哈希不可用时出现。</p>
+<h2 id="四、原理拆解"><a href="#四、原理拆解" class="headerlink" title="四、原理拆解"></a>四、原理拆解</h2><p><img src="https://wu4yong.github.io/starry-images/assets/img/mysql/mq-40b-join.svg" alt="连接顺序怎么排"></p>
+<p><em>小结果集在前，被驱动表连接列有索引｜依据 MySQL 8.4 Nested Loop &#x2F; Hash Join 说明自绘</em></p>
+<h3 id="1-成本模型：探测次数"><a href="#1-成本模型：探测次数" class="headerlink" title="1. 成本模型：探测次数"></a>1. 成本模型：探测次数</h3><p>设驱动表结果集为 <code>R</code> 行，被驱动表每次查找代价为 <code>c</code>：</p>
+<ul>
+<li>NLJ 总代价 ≈ <code>R × c</code>，<code>c</code> 是一次索引查找（含回表）；</li>
+<li>BNL 总代价 ≈ <code>R × 被驱动表页数</code>（整表读进 join buffer 再逐行匹配）；</li>
+<li>Hash Join ≈ 两表各扫一遍 + 建哈希表，内存不足会分区落盘。</li>
+</ul>
+<p>所以<strong>驱动表要小</strong>，这是 JOIN 优化的第一原则。<code>EXPLAIN</code> 里第一张表就是驱动表。</p>
+<h3 id="2-优化器怎么选驱动表"><a href="#2-优化器怎么选驱动表" class="headerlink" title="2. 优化器怎么选驱动表"></a>2. 优化器怎么选驱动表</h3><p>按 <code>rows × filtered</code> 估算各表结果集大小，再算两种顺序的总成本，取小的。<code>STRAIGHT_JOIN</code> 可强制按书写顺序，等于关掉这层优化，只在确认优化器判断错误时用。</p>
+<h3 id="3-LEFT-JOIN-的例外"><a href="#3-LEFT-JOIN-的例外" class="headerlink" title="3. LEFT JOIN 的例外"></a>3. LEFT JOIN 的例外</h3><p><code>LEFT JOIN</code> 语义要求左表全部保留，左表必须是驱动表，优化器没有选择权。所以「用 LEFT JOIN 代替 INNER JOIN」会白白丢掉调序空间。</p>
+<h3 id="4-被驱动表没索引会怎样"><a href="#4-被驱动表没索引会怎样" class="headerlink" title="4. 被驱动表没索引会怎样"></a>4. 被驱动表没索引会怎样</h3><p>退化成 BNL&#x2F;Hash Join：驱动表的每一行都要和内层整表比对。10 万 × 100 万 &#x3D; 10¹¹ 次比较，这就是「JOIN 一上线数据库就卡死」的典型形态。<strong>给被驱动表连接列加索引是最直接的解</strong>。</p>
+<h3 id="5-Hash-Join-的适用与限制"><a href="#5-Hash-Join-的适用与限制" class="headerlink" title="5. Hash Join 的适用与限制"></a>5. Hash Join 的适用与限制</h3><ul>
+<li>只支持等值连接（<code>=</code>、<code>&lt;=&gt;</code>），<code>&lt;&gt;</code>、<code>&gt;</code> 走不了；</li>
+<li>需要内存，<code>join_buffer_size</code> 不够会分区写入磁盘临时文件；</li>
+<li>大表 JOIN 大表且都无索引时，它比 BNL 快一个量级，但仍然不该是常态。</li>
+</ul>
+<h2 id="五、场景说明"><a href="#五、场景说明" class="headerlink" title="五、场景说明"></a>五、场景说明</h2><ol>
+<li><strong>订单 + 用户</strong>：<code>t_user</code> 小、<code>t_order</code> 大 → 用户驱动订单，<code>t_order(user_id)</code> 必须有索引；</li>
+<li><strong>标签 + 文章</strong>：多对多中间表驱动，两侧都建索引；</li>
+<li><strong>报表多表串联</strong>：先把过滤条件写进 <code>WHERE</code>，让排在前面的表结果集变小；</li>
+<li><strong>大表对拼</strong>：无索引的等值连接靠 Hash Join 兜底，但应尽早改成宽表或预聚合；</li>
+<li><strong>分页 JOIN</strong>：先分页取主键，再 JOIN 取详情（延迟关联）。</li>
+</ol>
+<h2 id="六、示例代码-实操步骤"><a href="#六、示例代码-实操步骤" class="headerlink" title="六、示例代码&#x2F;实操步骤"></a>六、示例代码&#x2F;实操步骤</h2><h3 id="1-先看谁在驱动"><a href="#1-先看谁在驱动" class="headerlink" title="1. 先看谁在驱动"></a>1. 先看谁在驱动</h3><pre class="line-numbers language-sql" data-language="sql"><code class="language-sql"><span class="token keyword">EXPLAIN</span> <span class="token keyword">SELECT</span> o<span class="token punctuation">.</span>id<span class="token punctuation">,</span> u<span class="token punctuation">.</span>name
+<span class="token keyword">FROM</span> t_order o
+<span class="token keyword">JOIN</span> t_user u <span class="token keyword">ON</span> u<span class="token punctuation">.</span>id <span class="token operator">=</span> o<span class="token punctuation">.</span>user_id
+<span class="token keyword">WHERE</span> o<span class="token punctuation">.</span><span class="token keyword">status</span> <span class="token operator">=</span> <span class="token number">1</span><span class="token punctuation">;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span></span></code></pre>
+
+<p><code>table</code> 列自上而下就是执行顺序，第一行是驱动表。</p>
+<h3 id="2-制造并识别-BNL"><a href="#2-制造并识别-BNL" class="headerlink" title="2. 制造并识别 BNL"></a>2. 制造并识别 BNL</h3><pre class="line-numbers language-sql" data-language="sql"><code class="language-sql"><span class="token comment">-- 被驱动表连接列无索引</span>
+<span class="token keyword">ALTER</span> <span class="token keyword">TABLE</span> t_order <span class="token keyword">DROP</span> <span class="token keyword">INDEX</span> idx_user_id<span class="token punctuation">;</span>
+<span class="token keyword">EXPLAIN</span> <span class="token keyword">SELECT</span> o<span class="token punctuation">.</span>id<span class="token punctuation">,</span> u<span class="token punctuation">.</span>name <span class="token keyword">FROM</span> t_order o <span class="token keyword">JOIN</span> t_user u <span class="token keyword">ON</span> u<span class="token punctuation">.</span>id <span class="token operator">=</span> o<span class="token punctuation">.</span>user_id<span class="token punctuation">;</span>
+<span class="token comment">-- Extra: Using join buffer (hash join)   ← 8.0.20+</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span></span></code></pre>
+
+<h3 id="3-加索引把-BNL-变回-NLJ"><a href="#3-加索引把-BNL-变回-NLJ" class="headerlink" title="3. 加索引把 BNL 变回 NLJ"></a>3. 加索引把 BNL 变回 NLJ</h3><pre class="line-numbers language-sql" data-language="sql"><code class="language-sql"><span class="token keyword">ALTER</span> <span class="token keyword">TABLE</span> t_order <span class="token keyword">ADD</span> <span class="token keyword">INDEX</span> idx_user_id <span class="token punctuation">(</span>user_id<span class="token punctuation">)</span><span class="token punctuation">,</span> <span class="token keyword">ALGORITHM</span><span class="token operator">=</span>INPLACE<span class="token punctuation">,</span> <span class="token keyword">LOCK</span><span class="token operator">=</span>NONE<span class="token punctuation">;</span>
+<span class="token keyword">ANALYZE</span> <span class="token keyword">TABLE</span> t_order<span class="token punctuation">;</span>
+<span class="token keyword">EXPLAIN</span> <span class="token keyword">SELECT</span> o<span class="token punctuation">.</span>id<span class="token punctuation">,</span> u<span class="token punctuation">.</span>name <span class="token keyword">FROM</span> t_order o <span class="token keyword">JOIN</span> t_user u <span class="token keyword">ON</span> u<span class="token punctuation">.</span>id <span class="token operator">=</span> o<span class="token punctuation">.</span>user_id<span class="token punctuation">;</span>
+<span class="token comment">-- t_order 的 type 变为 ref，join buffer 消失</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span></span></code></pre>
+
+<h3 id="4-小表驱动-先收敛"><a href="#4-小表驱动-先收敛" class="headerlink" title="4. 小表驱动 + 先收敛"></a>4. 小表驱动 + 先收敛</h3><pre class="line-numbers language-sql" data-language="sql"><code class="language-sql"><span class="token comment">-- 差：大表直接参与 JOIN</span>
+<span class="token keyword">SELECT</span> <span class="token punctuation">.</span><span class="token punctuation">.</span><span class="token punctuation">.</span> <span class="token keyword">FROM</span> t_order o <span class="token keyword">JOIN</span> t_user u <span class="token keyword">ON</span> u<span class="token punctuation">.</span>id <span class="token operator">=</span> o<span class="token punctuation">.</span>user_id <span class="token keyword">WHERE</span> u<span class="token punctuation">.</span>city <span class="token operator">=</span> <span class="token string">'Chengdu'</span><span class="token punctuation">;</span>
+<span class="token comment">-- 好：先把小表收敛成派生表</span>
+<span class="token keyword">SELECT</span> <span class="token punctuation">.</span><span class="token punctuation">.</span><span class="token punctuation">.</span> <span class="token keyword">FROM</span> <span class="token punctuation">(</span><span class="token keyword">SELECT</span> id<span class="token punctuation">,</span> name <span class="token keyword">FROM</span> t_user <span class="token keyword">WHERE</span> city <span class="token operator">=</span> <span class="token string">'Chengdu'</span><span class="token punctuation">)</span> u
+<span class="token keyword">JOIN</span> t_order o <span class="token keyword">ON</span> o<span class="token punctuation">.</span>user_id <span class="token operator">=</span> u<span class="token punctuation">.</span>id<span class="token punctuation">;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<h3 id="5-Java-侧怎么落地：JOIN-写法规范"><a href="#5-Java-侧怎么落地：JOIN-写法规范" class="headerlink" title="5. Java 侧怎么落地：JOIN 写法规范"></a>5. Java 侧怎么落地：JOIN 写法规范</h3><ol>
+<li><strong>禁止无索引 JOIN</strong>：DAO 层评审时对每条 JOIN 的 ON 列核对索引；</li>
+<li><strong>优先 INNER JOIN</strong>：非必要不用 LEFT JOIN，保留优化器调序空间；</li>
+<li><strong>JOIN 表数 ≤ 3</strong>：超过 3 张表拆成两次查询，在应用层拼装；</li>
+<li><strong>分页先取主键</strong>：<code>PageHelper</code> 深翻页场景改「先查 id 再 IN 查详情」；</li>
+<li><strong>监控</strong>：慢日志里出现 <code>Using join buffer</code> 直接进优化队列。</li>
+</ol>
+<h2 id="七、常见坑"><a href="#七、常见坑" class="headerlink" title="七、常见坑"></a>七、常见坑</h2><ol>
+<li><strong>大表当驱动表</strong>：探测次数被放大几个数量级；</li>
+<li><strong>被驱动表连接列没索引</strong>：BNL&#x2F;Hash Join 兜底，性能断崖；</li>
+<li><strong>用 LEFT JOIN 换 INNER JOIN</strong>：丢掉调序自由；</li>
+<li><strong>ON 里写过滤条件</strong>：外连接时语义不同，且优化器难以下推；</li>
+<li><strong>JOIN 列类型不一致</strong>：隐式转换导致索引失效（MQ20）；</li>
+<li><strong><code>STRAIGHT_JOIN</code> 当常规手段</strong>：统计一变就翻车；</li>
+<li><strong>JOIN 后排序</strong>：<code>ORDER BY</code> 落在被驱动表列上，容易 <code>filesort</code>。</li>
+</ol>
+<h2 id="八、版本差异"><a href="#八、版本差异" class="headerlink" title="八、版本差异"></a>八、版本差异</h2><ul>
+<li><strong>5.6</strong>：只有 NLJ 与 BNL，<code>join_buffer_size</code> 是主要旋钮；</li>
+<li><strong>5.7</strong>：BNL 支持多列 join buffer，<code>block_nested_loop</code> 开关；</li>
+<li><strong>8.0</strong>：Hash Join（8.0.18）、BNL 默认被替代（8.0.20）、<code>EXPLAIN ANALYZE</code> 可看实际行数；</li>
+<li><strong>8.4</strong>：连接算法与 8.0 一致，Hash Join 为无索引等值连接的默认；<code>optimizer_switch</code> 里 <code>hash_join</code> 可关。</li>
+</ul>
+<h2 id="九、课后小结"><a href="#九、课后小结" class="headerlink" title="九、课后小结"></a>九、课后小结</h2><ul>
+<li>JOIN 的成本 &#x3D; 驱动表行数 × 单次探测代价，驱动表越小越好；</li>
+<li>被驱动表连接列有索引 → NLJ；没索引 → BNL 或 Hash Join；</li>
+<li><code>EXPLAIN</code> 第一行就是驱动表，<code>Using join buffer</code> 就是没走索引；</li>
+<li>LEFT JOIN 锁死驱动表，非必要不用；</li>
+<li>Hash Join 是兜底而非目标，能加索引就加索引。</li>
+</ul>
+<h2 id="十、思考题"><a href="#十、思考题" class="headerlink" title="十、思考题"></a>十、思考题</h2><ol>
+<li><p>为什么「驱动表要小」？</p>
+<p><strong>参考回答</strong>：嵌套循环里驱动表每取一行就要探测被驱动表一次，总代价 ≈ 驱动行数 × 单次探测代价。驱动表从 1000 万降到 1 万，探测次数直接降三个数量级。</p>
+</li>
+<li><p><code>EXPLAIN</code> 出现 <code>Using join buffer (hash join)</code> 说明什么？</p>
+<p><strong>参考回答</strong>：说明这条等值连接没有可用索引，优化器改用了 Hash Join 兜底（8.0.18+，8.0.20 起成为默认）。它比 BNL 快，但仍意味着全表级扫描，正确做法是给被驱动表连接列建索引。</p>
+</li>
+<li><p>LEFT JOIN 为什么不能随便调换表顺序？</p>
+<p><strong>参考回答</strong>：LEFT JOIN 语义要求保留左表全部行，左表必须是驱动表，右表只是被探测方。换序会改变结果集语义，优化器不能自行调换。</p>
+</li>
+<li><p>大表 JOIN 大表都没有索引，能做什么？</p>
+<p><strong>参考回答</strong>：短期靠 Hash Join 兜底并调大 <code>join_buffer_size</code>；中期按业务维度预聚合宽表或建冗余列；长期改分片键让 JOIN 变成单表查询或应用层拼装。</p>
+</li>
+<li><p>JOIN 之后 <code>ORDER BY</code> 很慢，为什么？</p>
+<p><strong>参考回答</strong>：<code>ORDER BY</code> 的列通常来自被驱动表，其结果集已经过 JOIN 拼装，无法借用任何单表索引顺序，只能 <code>filesort</code>。解法是让排序发生在单表阶段（先排序取主键再 JOIN），或把排序列冗余进驱动表。</p>
+</li>
+</ol>
+<h2 id="十一、官方资料"><a href="#十一、官方资料" class="headerlink" title="十一、官方资料"></a>十一、官方资料</h2><ul>
+<li>JOIN 优化：<a target="_blank" rel="noopener" href="https://dev.mysql.com/doc/refman/8.4/en/nested-loop-joins.html">https://dev.mysql.com/doc/refman/8.4/en/nested-loop-joins.html</a></li>
+<li>Hash Join：<a target="_blank" rel="noopener" href="https://dev.mysql.com/doc/refman/8.4/en/hash-joins.html">https://dev.mysql.com/doc/refman/8.4/en/hash-joins.html</a></li>
+<li>优化器开关：<a target="_blank" rel="noopener" href="https://dev.mysql.com/doc/refman/8.4/en/switchable-optimizations.html">https://dev.mysql.com/doc/refman/8.4/en/switchable-optimizations.html</a></li>
+<li><code>join_buffer_size</code>：<a target="_blank" rel="noopener" href="https://dev.mysql.com/doc/refman/8.4/en/server-system-variables.html#sysvar_join_buffer_size">https://dev.mysql.com/doc/refman/8.4/en/server-system-variables.html#sysvar_join_buffer_size</a></li>
+</ul>
+<p>上一篇：<a href="/2022/12/19/database/mysql/mysql-39-sql-rewrite/">MQ39 SQL 改写</a> ｜ 下一篇：<a href="/2022/12/21/database/mysql/mysql-41-sort-group/">MQ41 排序与分组优化</a> ｜ <a href="/2022/11/10/database/mysql/mysql-0-series-index/">总目录</a></p>
+</div>
+
+  <div class="mb-foot">
+    <a href="/phone/">返回手机首页</a>
+    <a href="/phone/tags/">星迹索引</a>
+  </div>
+</div>
+
+
+<script>
+  /* 作用：懒加载本地 mermaid 库；无 mermaid 代码块时不加载 */
+  function loadLocalMermaid(){
+    return new Promise(function(resolve, reject){
+      if(window.mermaid) return resolve(window.mermaid);
+      var s = document.createElement('script');
+      s.src = '/js/third-party/mermaid/mermaid.min.js?v=10';
+      s.onload = function(){ resolve(window.mermaid); };
+      s.onerror = function(){ reject(new Error('mermaid local load failed')); };
+      document.head.appendChild(s);
+    });
+  }
+
+  /* 作用：把 ```mermaid 代码块替换成 SVG 图（手机端字号略小、图可横向滚动） */
+  async function renderMermaidDiagram(){
+    var blocks = document.querySelectorAll('pre[class*="language-mermaid"]');
+    if(!blocks.length) return;
+    var mermaid;
+    try { mermaid = await loadLocalMermaid(); }
+    catch(e){ console.warn('[mermaid] 本地库加载失败：', e); return; }
+
+    mermaid.initialize({
+      startOnLoad: false,
+      theme: 'base',
+      themeVariables: {
+        darkMode: true,
+        background: 'transparent',
+        fontFamily: '"Microsoft YaHei", "PingFang SC", "Segoe UI", sans-serif',
+        fontSize: '12px',
+        primaryColor: '#062f3d',
+        primaryTextColor: '#d6f6ff',
+        primaryBorderColor: '#00eeff',
+        secondaryColor: '#04222d',
+        tertiaryColor: '#04222d',
+        mainBkg: '#062f3d',
+        nodeBorder: '#00eeff',
+        clusterBkg: '#02161f',
+        clusterBorder: '#00eeff55',
+        lineColor: '#00eeff',
+        textColor: '#c0e8ff',
+        edgeLabelBackground: '#02161f'
+      },
+      flowchart: { curve: 'basis', useMaxWidth: false, htmlLabels: false, nodeSpacing: 30, rankSpacing: 40, padding: 10 }
+    });
+
+    var targets = [];
+    blocks.forEach(function(el){
+      var codeEl = el.querySelector('code');
+      if(!codeEl) return;
+      var div = document.createElement('div');
+      div.className = 'mermaid';
+      div.textContent = codeEl.textContent;
+      el.parentNode.replaceChild(div, el);
+      targets.push(div);
+    });
+    if(!targets.length) return;
+    try { await mermaid.run({ nodes: targets }); }
+    catch(e){ console.warn('[mermaid] 渲染失败：', e); }
+  }
+  /* 作用：多次触发兜底（延迟重试 + DOM 变化），防止某次时机没跑到导致图表留在代码块 */
+  var mmBusy = false;
+  function scheduleMermaid(){
+    if(mmBusy) return;
+    mmBusy = true;
+    renderMermaidDiagram().then(function(){ mmBusy = false; }, function(){ mmBusy = false; });
+  }
+  scheduleMermaid();
+  window.addEventListener('load', scheduleMermaid);
+  [1000, 3000, 8000].forEach(function(ms){ setTimeout(scheduleMermaid, ms); });
+  if(document.readyState !== 'loading') scheduleMermaid();
+  if(window.MutationObserver){
+    var mmTimer = null;
+    var mmObserver = new MutationObserver(function(){
+      clearTimeout(mmTimer);
+      mmTimer = setTimeout(scheduleMermaid, 400);
+    });
+    mmObserver.observe(document.querySelector('.mb-article') || document.body, { childList: true, subtree: true });
+  }
+</script>
+</body>
+</html>

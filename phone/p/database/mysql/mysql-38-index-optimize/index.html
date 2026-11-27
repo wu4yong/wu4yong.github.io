@@ -1,0 +1,374 @@
+<!--
+  ============================================
+  手机端 · 文章原文页
+  文件：phone/post.njk
+  适用终端：手机端（路由 /phone/p/<slug>/，由 scripts/phone-routes.js 生成）
+  作用：手机阅读单篇文章；单列布局、无侧栏无雷达，替代电脑端 post.njk
+        数据由生成期算好：page.item = { title, dateStr, content, cats, tags }
+  样式依赖：source/css/theme/phone/common.css、source/css/theme/phone/list.css
+  组件依赖：phone/_components/Particles.njk
+  最后修改：2026-11-11
+  ============================================
+-->
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="color-scheme" content="dark">
+  <meta name="theme-color" content="#020817">
+  <!-- 首帧兜底：浏览器默认画布是白的，样式未解析前会闪一下白。这条规则先锁死深空底色 -->
+  <style>html{background-color:#020817}</style>
+  <title>mysql-38-index-opt - 时空秘境</title>
+  <!-- 手机端样式：基础 + 列表/正文，外链引入（源文件 source/css/theme/phone/） -->
+  <link rel="stylesheet" href="/css/theme/phone/common.css">
+  <link rel="stylesheet" href="/css/theme/phone/list.css">
+<meta name="generator" content="Hexo 8.1.2"></head>
+<body>
+<div class="mb-shell">
+  <!--
+  ============================================
+  手机端星空粒子组件
+  文件：Particles.njk
+  适用终端：手机端
+  作用：Particles.njk 的手机端副本（nunjucks 子目录 include 取不到上级）
+        参数与电脑端 _components/Particles.njk 保持一致：
+        粒子 95 / 连线 118px / opacity 0.32，外加星座层与零星闪烁层
+  最后修改：2026-11-12
+  ============================================
+--><!-- z-index 必须是 0：负层级会被 body 不透明背景盖住，粒子在跑却看不见 -->
+<div id="particles" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 0; pointer-events: none;"></div>
+<!-- 星座层（与首页同一套：随机零星散布星座图形 + 偶尔闪烁的小星） -->
+<div id="constellations" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 1; pointer-events: none;" aria-hidden="true"></div>
+<script src="/js/particles.min.js"></script>
+<script>
+particlesJS("particles", {
+  particles: {
+    number: {
+      value: 95,
+      density: {
+        enable: true,
+        value_area: 800
+      }
+    },
+    color: {
+      value: "#00eeff"
+    },
+    shape: {
+      type: "circle",
+      stroke: {
+        width: 0,
+        color: "#000000"
+      }
+    },
+    opacity: {
+      value: 0.6,
+      random: true,
+      anim: {
+        enable: true,
+        speed: 0.5,
+        opacity_min: 0.1,
+        sync: false
+      }
+    },
+    size: {
+      value: 3,
+      random: true,
+      anim: {
+        enable: true,
+        speed: 2,
+        size_min: 0.1,
+        sync: false
+      }
+    },
+    line_linked: {
+      enable: true,
+      distance: 118,
+      color: "#00eeff",
+      opacity: 0.32,
+      width: 1
+    },
+    move: {
+      enable: true,
+      speed: 0.8,
+      direction: "none",
+      random: true,
+      straight: false,
+      out_mode: "out",
+      bounce: false,
+      attract: {
+        enable: true,
+        rotateX: 600,
+        rotateY: 1200
+      }
+    }
+  },
+  interactivity: {
+    detect_on: "canvas",
+    events: {
+      onhover: {
+        enable: true,
+        mode: "grab"       // 手指按住时粒子聚集
+      },
+      onclick: {
+        enable: true,
+        mode: "push"       // 点击时产生新粒子
+      },
+      resize: true
+    },
+    modes: {
+      grab: {
+        distance: 200,
+        line_linked: {
+          opacity: 1
+        }
+      },
+      push: {
+        particles_nb: 6
+      }
+    }
+  },
+  retina_detect: true
+});
+</script>
+<!-- 星座 + 零星闪烁层：与电脑端共用同一份绘制脚本 -->
+<script src="/js/theme/home/starfield.js"></script>
+
+
+  <div class="mb-top">
+    <a class="mb-back" href="/phone/">← 返回手机首页</a>
+    <span class="mb-sub" style="margin:0">2022-12-18</span>
+  </div>
+
+  <h1 class="mb-title">mysql-38-index-opt</h1>
+  <div class="mb-sub">
+    分类：database · mysql
+     ｜ 标签：系统课 · MySQL · 数据库
+  </div>
+
+  <div class="mb-article"><div class="essay-banner essay-database"></div>
+
+<h1 id="索引优化实战：回表、覆盖与索引合并"><a href="#索引优化实战：回表、覆盖与索引合并" class="headerlink" title="索引优化实战：回表、覆盖与索引合并"></a>索引优化实战：回表、覆盖与索引合并</h1><p><img src="https://wu4yong.github.io/starry-images/assets/img/mysql/mq-38-index-opt.svg" alt="回表是二级索引的固定成本"></p>
+<p><em>二级索引只存索引列 + 主键，要其它列就得再回聚簇索引查一次｜依据 MySQL 8.4 Covering Index &#x2F; ICP 说明自绘</em></p>
+<h2 id="一、学习目标"><a href="#一、学习目标" class="headerlink" title="一、学习目标"></a>一、学习目标</h2><ol>
+<li>算清一次查询的「回表次数」，并知道怎么把它降到零；</li>
+<li>会用覆盖索引、ICP、MRR、Skip Scan 四件工具，知道各自的适用边界；</li>
+<li>能识别 <code>index_merge</code> 是兜底而不是设计目标，学会用联合索引替换它。</li>
+</ol>
+<h2 id="二、前置知识"><a href="#二、前置知识" class="headerlink" title="二、前置知识"></a>二、前置知识</h2><p>B+Tree 与回表（MQ18）、联合索引与 ICP（MQ19）、<code>EXPLAIN</code>（MQ35）、优化器与统计（MQ37）。</p>
+<h2 id="三、理论讲解（官方定义）"><a href="#三、理论讲解（官方定义）" class="headerlink" title="三、理论讲解（官方定义）"></a>三、理论讲解（官方定义）</h2><p>InnoDB 的索引分为两类：</p>
+<table>
+<thead>
+<tr>
+<th>类型</th>
+<th>叶子节点内容</th>
+<th>一次查询的代价</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>聚簇索引（主键）</td>
+<td>完整行数据</td>
+<td>一次 B+Tree 查找即可拿到整行</td>
+</tr>
+<tr>
+<td>二级索引</td>
+<td>索引列 + 主键值</td>
+<td>拿到主键后<strong>还要回聚簇索引查整行</strong>（回表）</td>
+</tr>
+</tbody></table>
+<p>因此「走二级索引」不等于「更快」：如果命中的行很多、又要取索引外的列，回表次数会放大成本，优化器可能宁可全表扫。</p>
+<h2 id="四、原理拆解"><a href="#四、原理拆解" class="headerlink" title="四、原理拆解"></a>四、原理拆解</h2><p><img src="https://wu4yong.github.io/starry-images/assets/img/mysql/mq-38b-index-opt.svg" alt="索引合并与常见策略"></p>
+<p><em>index_merge 是优化器的兜底，不是设计目标｜依据 MySQL 8.4 Index Merge &#x2F; ICP &#x2F; Skip Scan 说明自绘</em></p>
+<h3 id="1-覆盖索引：把回表消掉"><a href="#1-覆盖索引：把回表消掉" class="headerlink" title="1. 覆盖索引：把回表消掉"></a>1. 覆盖索引：把回表消掉</h3><p>查询需要的列全部在索引里，就不需要回表。<code>EXPLAIN</code> 的 <code>Extra</code> 出现 <code>Using index</code> 才是真覆盖；出现 <code>Using index condition</code> 只是 ICP，<strong>仍然回表</strong>。</p>
+<pre class="line-numbers language-sql" data-language="sql"><code class="language-sql"><span class="token comment">-- 需要 id, status, created_at</span>
+<span class="token keyword">ALTER</span> <span class="token keyword">TABLE</span> t_order <span class="token keyword">ADD</span> <span class="token keyword">INDEX</span> idx_user_status_time <span class="token punctuation">(</span>user_id<span class="token punctuation">,</span> <span class="token keyword">status</span><span class="token punctuation">,</span> created_at<span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token comment">-- 只查这三列 → 覆盖</span>
+<span class="token keyword">SELECT</span> user_id<span class="token punctuation">,</span> <span class="token keyword">status</span><span class="token punctuation">,</span> created_at <span class="token keyword">FROM</span> t_order <span class="token keyword">WHERE</span> user_id <span class="token operator">=</span> <span class="token number">100</span> <span class="token operator">AND</span> <span class="token keyword">status</span> <span class="token operator">=</span> <span class="token number">1</span><span class="token punctuation">;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span></span></code></pre>
+
+<p>代价是索引变宽、写入变慢、占用更多内存，<strong>只给高频查询做覆盖，别给每张表都堆宽索引</strong>。</p>
+<h3 id="2-ICP：把过滤下推到索引层"><a href="#2-ICP：把过滤下推到索引层" class="headerlink" title="2. ICP：把过滤下推到索引层"></a>2. ICP：把过滤下推到索引层</h3><p><code>Using index condition</code> 表示 <code>WHERE</code> 中有一部分条件能在二级索引上直接判断，先过滤再回表，减少回表次数。条件是「条件涉及的列都在索引里」且存储引擎支持。</p>
+<h3 id="3-MRR：把随机回表变顺序"><a href="#3-MRR：把随机回表变顺序" class="headerlink" title="3. MRR：把随机回表变顺序"></a>3. MRR：把随机回表变顺序</h3><p>Disk-Sweep MRR 把命中的主键排序后再批量回表，把随机 IO 变成近似顺序 IO。SSD 上收益明显变小，机械盘时代它是救命工具。</p>
+<h3 id="4-Skip-Scan：跳过前缀用后列"><a href="#4-Skip-Scan：跳过前缀用后列" class="headerlink" title="4. Skip Scan：跳过前缀用后列"></a>4. Skip Scan：跳过前缀用后列</h3><p>8.0.13 起，若联合索引前缀列去重值很少（例如 <code>status</code> 只有 3 个值），优化器可以「跳过前缀」直接用后列。<code>Extra</code> 显示 <code>Using index for skip scan</code>。这是优化器的兜底能力，<strong>不能当作「不用管最左前缀」的理由</strong>。</p>
+<h3 id="5-index-merge-的两种形态"><a href="#5-index-merge-的两种形态" class="headerlink" title="5. index_merge 的两种形态"></a>5. index_merge 的两种形态</h3><ul>
+<li><code>intersection</code>：<code>a = 1 AND b = 2</code>，两索引各扫一遍取交集；</li>
+<li><code>union</code>：<code>a = 1 OR b = 2</code>，两索引结果并集，常伴随去重与临时表。</li>
+</ul>
+<p>它出现说明「每个条件各有一个单列索引」，正确做法是建联合索引 <code>(a, b)</code>，让一次索引扫描完成。</p>
+<h3 id="6-优化顺序"><a href="#6-优化顺序" class="headerlink" title="6. 优化顺序"></a>6. 优化顺序</h3><p><code>消 filesort</code> → <code>消临时表</code> → <code>减少回表</code> → <code>收敛扫描行数</code>。四步按收益从大到小排，别一上来就加索引。</p>
+<h2 id="五、场景说明"><a href="#五、场景说明" class="headerlink" title="五、场景说明"></a>五、场景说明</h2><ol>
+<li><strong>列表页查询</strong>：<code>WHERE user_id = ? ORDER BY created_at DESC LIMIT 20</code>，索引 <code>(user_id, created_at)</code> 一次搞定排序与范围；</li>
+<li><strong>详情页</strong>：<code>ORDER BY id LIMIT 1</code> 走主键，天然覆盖；</li>
+<li><strong>统计报表</strong>：<code>COUNT(*)</code> &#x2F; <code>SUM(amount)</code> 尽量走覆盖索引，避免回表；</li>
+<li><strong>OR 查询</strong>：两侧字段各有索引 → 改 <code>UNION ALL</code> 两段；</li>
+<li><strong>大表范围扫描</strong>：<code>BETWEEN</code> 走 <code>range</code>，注意 <code>filtered</code> 与回表量。</li>
+</ol>
+<h2 id="六、示例代码-实操步骤"><a href="#六、示例代码-实操步骤" class="headerlink" title="六、示例代码&#x2F;实操步骤"></a>六、示例代码&#x2F;实操步骤</h2><h3 id="1-量化回表：看-rows-与-filtered"><a href="#1-量化回表：看-rows-与-filtered" class="headerlink" title="1. 量化回表：看 rows 与 filtered"></a>1. 量化回表：看 rows 与 filtered</h3><pre class="line-numbers language-sql" data-language="sql"><code class="language-sql"><span class="token keyword">EXPLAIN</span> <span class="token keyword">SELECT</span> id<span class="token punctuation">,</span> amount<span class="token punctuation">,</span> created_at
+<span class="token keyword">FROM</span> t_order
+<span class="token keyword">WHERE</span> user_id <span class="token operator">=</span> <span class="token number">100</span> <span class="token operator">AND</span> <span class="token keyword">status</span> <span class="token operator">=</span> <span class="token number">1</span>
+<span class="token keyword">ORDER</span> <span class="token keyword">BY</span> created_at <span class="token keyword">DESC</span>
+<span class="token keyword">LIMIT</span> <span class="token number">20</span><span class="token punctuation">;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<p><code>rows</code> 是估算扫描行数，<code>filtered</code> 是过滤后剩余比例；两者相乘才是回表次数量级。</p>
+<h3 id="2-用覆盖索引消掉回表"><a href="#2-用覆盖索引消掉回表" class="headerlink" title="2. 用覆盖索引消掉回表"></a>2. 用覆盖索引消掉回表</h3><pre class="line-numbers language-sql" data-language="sql"><code class="language-sql"><span class="token comment">-- 原来要回表取 amount</span>
+<span class="token keyword">SELECT</span> id<span class="token punctuation">,</span> amount <span class="token keyword">FROM</span> t_order <span class="token keyword">WHERE</span> user_id <span class="token operator">=</span> <span class="token number">100</span><span class="token punctuation">;</span>
+
+<span class="token comment">-- 建覆盖索引（把 amount 放进索引）</span>
+<span class="token keyword">ALTER</span> <span class="token keyword">TABLE</span> t_order <span class="token keyword">ADD</span> <span class="token keyword">INDEX</span> idx_user_amount <span class="token punctuation">(</span>user_id<span class="token punctuation">,</span> amount<span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token keyword">EXPLAIN</span> <span class="token keyword">SELECT</span> id<span class="token punctuation">,</span> amount <span class="token keyword">FROM</span> t_order <span class="token keyword">WHERE</span> user_id <span class="token operator">=</span> <span class="token number">100</span><span class="token punctuation">;</span>  <span class="token comment">-- Extra: Using index</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<p>注意：<code>id</code> 是主键，本来就在二级索引里，不用额外加列。</p>
+<h3 id="3-用-ICP-减少回表"><a href="#3-用-ICP-减少回表" class="headerlink" title="3. 用 ICP 减少回表"></a>3. 用 ICP 减少回表</h3><pre class="line-numbers language-sql" data-language="sql"><code class="language-sql"><span class="token keyword">ALTER</span> <span class="token keyword">TABLE</span> t_order <span class="token keyword">ADD</span> <span class="token keyword">INDEX</span> idx_status_time <span class="token punctuation">(</span><span class="token keyword">status</span><span class="token punctuation">,</span> created_at<span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token keyword">EXPLAIN</span> <span class="token keyword">SELECT</span> <span class="token operator">*</span> <span class="token keyword">FROM</span> t_order
+<span class="token keyword">WHERE</span> <span class="token keyword">status</span> <span class="token operator">=</span> <span class="token number">1</span> <span class="token operator">AND</span> created_at <span class="token operator">></span> <span class="token string">'2022-12-01'</span><span class="token punctuation">;</span>   <span class="token comment">-- Extra: Using index condition</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span></span></code></pre>
+
+<h3 id="4-用联合索引替掉-index-merge"><a href="#4-用联合索引替掉-index-merge" class="headerlink" title="4. 用联合索引替掉 index_merge"></a>4. 用联合索引替掉 index_merge</h3><pre class="line-numbers language-sql" data-language="sql"><code class="language-sql"><span class="token comment">-- 前：两个单列索引，出现 index_merge</span>
+<span class="token keyword">EXPLAIN</span> <span class="token keyword">SELECT</span> <span class="token operator">*</span> <span class="token keyword">FROM</span> t_order <span class="token keyword">WHERE</span> user_id <span class="token operator">=</span> <span class="token number">100</span> <span class="token operator">AND</span> <span class="token keyword">status</span> <span class="token operator">=</span> <span class="token number">1</span><span class="token punctuation">;</span>
+
+<span class="token comment">-- 后：联合索引，一次 range/ref</span>
+<span class="token keyword">ALTER</span> <span class="token keyword">TABLE</span> t_order <span class="token keyword">ADD</span> <span class="token keyword">INDEX</span> idx_user_status <span class="token punctuation">(</span>user_id<span class="token punctuation">,</span> <span class="token keyword">status</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token keyword">ANALYZE</span> <span class="token keyword">TABLE</span> t_order<span class="token punctuation">;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<h3 id="5-Java-侧怎么落地：索引与代码一起改"><a href="#5-Java-侧怎么落地：索引与代码一起改" class="headerlink" title="5. Java 侧怎么落地：索引与代码一起改"></a>5. Java 侧怎么落地：索引与代码一起改</h3><ol>
+<li><strong>Mapper 只查必要列</strong>：把 <code>SELECT *</code> 改成显式列，覆盖索引才有机会生效；</li>
+<li><strong>分页参数校验</strong>：<code>LIMIT offset</code> 上限写死在 service 层，避免深翻页（MQ39）；</li>
+<li><strong>批量查询拆批</strong>：<code>IN</code> 列表按 100 一批，防止 index dive 失效；</li>
+<li><strong>索引变更走 Flyway&#x2F;Liquibase</strong>：<code>ALTER TABLE ... ADD INDEX, ALGORITHM=INPLACE, LOCK=NONE</code> 写进迁移脚本，避免锁表；</li>
+<li><strong>回归用例</strong>：每个核心查询配一条 <code>EXPLAIN</code> 断言（Testcontainers），断言 <code>key</code> 命中预期索引。</li>
+</ol>
+<h2 id="七、常见坑"><a href="#七、常见坑" class="headerlink" title="七、常见坑"></a>七、常见坑</h2><ol>
+<li><strong>以为走了索引就快</strong>：回表多时不如全表扫；</li>
+<li><strong><code>SELECT *</code> 破坏覆盖索引</strong>：哪怕只多取一列，也要回表；</li>
+<li><strong>把 <code>Using index condition</code> 当成覆盖</strong>：它仍然回表；</li>
+<li><strong>堆一排单列索引</strong>：<code>index_merge</code> 出现就是信号，应改联合索引；</li>
+<li><strong>盲目依赖 Skip Scan</strong>：条件苛刻（前缀列去重值少），写 SQL 仍要守最左前缀；</li>
+<li><strong>索引过宽</strong>：写入放大、buffer pool 命中率下降；</li>
+<li><strong><code>ORDER BY</code> 列不在索引尾部</strong>：排序借不到索引顺序，<code>filesort</code> 依旧。</li>
+</ol>
+<h2 id="八、版本差异"><a href="#八、版本差异" class="headerlink" title="八、版本差异"></a>八、版本差异</h2><ul>
+<li><strong>5.6</strong>：ICP 引入（5.6 起），MRR 可用；</li>
+<li><strong>5.7</strong>：虚拟列索引、<code>ALTER</code> 在线 DDL 更完善；</li>
+<li><strong>8.0</strong>：Skip Scan（8.0.13）、降序索引、函数索引（8.0.13）、hash join（8.0.18）、<code>ALGORITHM=INSTANT</code> 支持更多场景；</li>
+<li><strong>8.4</strong>：<code>ADD/DROP COLUMN</code> 默认 <code>INSTANT</code>，索引相关能力与 8.0 一致；直方图与统计让优化器选索引更准。</li>
+</ul>
+<h2 id="九、课后小结"><a href="#九、课后小结" class="headerlink" title="九、课后小结"></a>九、课后小结</h2><ul>
+<li>二级索引查一次 &#x3D; 索引查找 + 可能的回表，回表是固定成本；</li>
+<li>覆盖索引（<code>Using index</code>）是消回表的唯一手段，代价是索引变宽；</li>
+<li>ICP 减少回表次数但不消除回表，<code>key_len</code> 与 <code>Extra</code> 一起看；</li>
+<li><code>index_merge</code> 是兜底，出现就说明该建联合索引；</li>
+<li>优化顺序：filesort → 临时表 → 回表 → 扫描行数。</li>
+</ul>
+<h2 id="十、思考题"><a href="#十、思考题" class="headerlink" title="十、思考题"></a>十、思考题</h2><ol>
+<li><p><code>Extra</code> 里 <code>Using index</code> 与 <code>Using index condition</code> 有什么本质差别？</p>
+<p><strong>参考回答</strong>：<code>Using index</code> 是覆盖索引，查询所需列全在索引里，不需要回表；<code>Using index condition</code> 是 ICP，条件下推到索引层先过滤，减少了回表次数但<strong>仍要回表</strong>取剩余列。</p>
+</li>
+<li><p>已经走了二级索引，为什么还是慢？</p>
+<p><strong>参考回答</strong>：命中的行太多，回表次数放大，随机 IO 成为瓶颈；或者排序、去重产生了临时表。看 <code>rows × filtered</code> 与 <code>Extra</code> 是否有 <code>filesort</code>&#x2F;<code>temporary</code>，再考虑覆盖索引或改写。</p>
+</li>
+<li><p>什么时候该建覆盖索引，什么时候不该？</p>
+<p><strong>参考回答</strong>：该建：某条查询频率高、列少、回表量大，且该表写入不重。不该建：查询列很多（索引会极宽）、写入频繁（放大写代价）、低频查询（维护成本大于收益）。</p>
+</li>
+<li><p><code>index_merge</code> 出现了，一定是坏事吗？</p>
+<p><strong>参考回答</strong>：不一定坏，但通常不优。它意味着优化器用两个索引各扫一遍再合并，多了额外开销；如果这条 SQL 高频，应改写成联合索引让一次扫描完成。低频查询可以先不动。</p>
+</li>
+<li><p>Skip Scan 能替代最左前缀原则吗？</p>
+<p><strong>参考回答</strong>：不能。Skip Scan 只在「前缀列去重值很少」时才有效，且需要优化器判断划算；它的存在是为了兜底，不是让你不设计好联合索引。设计索引时仍按最左前缀与查询模式来。</p>
+</li>
+</ol>
+<h2 id="十一、官方资料"><a href="#十一、官方资料" class="headerlink" title="十一、官方资料"></a>十一、官方资料</h2><ul>
+<li>覆盖索引：<a target="_blank" rel="noopener" href="https://dev.mysql.com/doc/refman/8.4/en/explain-output.html#explain-extra-information">https://dev.mysql.com/doc/refman/8.4/en/explain-output.html#explain-extra-information</a></li>
+<li>索引条件下推：<a target="_blank" rel="noopener" href="https://dev.mysql.com/doc/refman/8.4/en/index-condition-pushdown-optimization.html">https://dev.mysql.com/doc/refman/8.4/en/index-condition-pushdown-optimization.html</a></li>
+<li>索引合并：<a target="_blank" rel="noopener" href="https://dev.mysql.com/doc/refman/8.4/en/index-merge-optimization.html">https://dev.mysql.com/doc/refman/8.4/en/index-merge-optimization.html</a></li>
+<li>Skip Scan：<a target="_blank" rel="noopener" href="https://dev.mysql.com/doc/refman/8.4/en/range-optimization.html#range-access-skip-scan">https://dev.mysql.com/doc/refman/8.4/en/range-optimization.html#range-access-skip-scan</a></li>
+<li>MRR：<a target="_blank" rel="noopener" href="https://dev.mysql.com/doc/refman/8.4/en/mrr-optimization.html">https://dev.mysql.com/doc/refman/8.4/en/mrr-optimization.html</a></li>
+</ul>
+<p>上一篇：<a href="/2022/12/17/database/mysql/mysql-37-optimizer-statistics/">MQ37 优化器与统计信息</a> ｜ 下一篇：<a href="/2022/12/19/database/mysql/mysql-39-sql-rewrite/">MQ39 SQL 改写</a> ｜ <a href="/2022/11/10/database/mysql/mysql-0-series-index/">总目录</a></p>
+</div>
+
+  <div class="mb-foot">
+    <a href="/phone/">返回手机首页</a>
+    <a href="/phone/tags/">星迹索引</a>
+  </div>
+</div>
+
+
+<script>
+  /* 作用：懒加载本地 mermaid 库；无 mermaid 代码块时不加载 */
+  function loadLocalMermaid(){
+    return new Promise(function(resolve, reject){
+      if(window.mermaid) return resolve(window.mermaid);
+      var s = document.createElement('script');
+      s.src = '/js/third-party/mermaid/mermaid.min.js?v=10';
+      s.onload = function(){ resolve(window.mermaid); };
+      s.onerror = function(){ reject(new Error('mermaid local load failed')); };
+      document.head.appendChild(s);
+    });
+  }
+
+  /* 作用：把 ```mermaid 代码块替换成 SVG 图（手机端字号略小、图可横向滚动） */
+  async function renderMermaidDiagram(){
+    var blocks = document.querySelectorAll('pre[class*="language-mermaid"]');
+    if(!blocks.length) return;
+    var mermaid;
+    try { mermaid = await loadLocalMermaid(); }
+    catch(e){ console.warn('[mermaid] 本地库加载失败：', e); return; }
+
+    mermaid.initialize({
+      startOnLoad: false,
+      theme: 'base',
+      themeVariables: {
+        darkMode: true,
+        background: 'transparent',
+        fontFamily: '"Microsoft YaHei", "PingFang SC", "Segoe UI", sans-serif',
+        fontSize: '12px',
+        primaryColor: '#062f3d',
+        primaryTextColor: '#d6f6ff',
+        primaryBorderColor: '#00eeff',
+        secondaryColor: '#04222d',
+        tertiaryColor: '#04222d',
+        mainBkg: '#062f3d',
+        nodeBorder: '#00eeff',
+        clusterBkg: '#02161f',
+        clusterBorder: '#00eeff55',
+        lineColor: '#00eeff',
+        textColor: '#c0e8ff',
+        edgeLabelBackground: '#02161f'
+      },
+      flowchart: { curve: 'basis', useMaxWidth: false, htmlLabels: false, nodeSpacing: 30, rankSpacing: 40, padding: 10 }
+    });
+
+    var targets = [];
+    blocks.forEach(function(el){
+      var codeEl = el.querySelector('code');
+      if(!codeEl) return;
+      var div = document.createElement('div');
+      div.className = 'mermaid';
+      div.textContent = codeEl.textContent;
+      el.parentNode.replaceChild(div, el);
+      targets.push(div);
+    });
+    if(!targets.length) return;
+    try { await mermaid.run({ nodes: targets }); }
+    catch(e){ console.warn('[mermaid] 渲染失败：', e); }
+  }
+  /* 作用：多次触发兜底（延迟重试 + DOM 变化），防止某次时机没跑到导致图表留在代码块 */
+  var mmBusy = false;
+  function scheduleMermaid(){
+    if(mmBusy) return;
+    mmBusy = true;
+    renderMermaidDiagram().then(function(){ mmBusy = false; }, function(){ mmBusy = false; });
+  }
+  scheduleMermaid();
+  window.addEventListener('load', scheduleMermaid);
+  [1000, 3000, 8000].forEach(function(ms){ setTimeout(scheduleMermaid, ms); });
+  if(document.readyState !== 'loading') scheduleMermaid();
+  if(window.MutationObserver){
+    var mmTimer = null;
+    var mmObserver = new MutationObserver(function(){
+      clearTimeout(mmTimer);
+      mmTimer = setTimeout(scheduleMermaid, 400);
+    });
+    mmObserver.observe(document.querySelector('.mb-article') || document.body, { childList: true, subtree: true });
+  }
+</script>
+</body>
+</html>

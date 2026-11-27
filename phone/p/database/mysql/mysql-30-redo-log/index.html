@@ -1,0 +1,415 @@
+<!--
+  ============================================
+  手机端 · 文章原文页
+  文件：phone/post.njk
+  适用终端：手机端（路由 /phone/p/<slug>/，由 scripts/phone-routes.js 生成）
+  作用：手机阅读单篇文章；单列布局、无侧栏无雷达，替代电脑端 post.njk
+        数据由生成期算好：page.item = { title, dateStr, content, cats, tags }
+  样式依赖：source/css/theme/phone/common.css、source/css/theme/phone/list.css
+  组件依赖：phone/_components/Particles.njk
+  最后修改：2026-11-11
+  ============================================
+-->
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="color-scheme" content="dark">
+  <meta name="theme-color" content="#020817">
+  <!-- 首帧兜底：浏览器默认画布是白的，样式未解析前会闪一下白。这条规则先锁死深空底色 -->
+  <style>html{background-color:#020817}</style>
+  <title>mysql-30-redo - 时空秘境</title>
+  <!-- 手机端样式：基础 + 列表/正文，外链引入（源文件 source/css/theme/phone/） -->
+  <link rel="stylesheet" href="/css/theme/phone/common.css">
+  <link rel="stylesheet" href="/css/theme/phone/list.css">
+<meta name="generator" content="Hexo 8.1.2"></head>
+<body>
+<div class="mb-shell">
+  <!--
+  ============================================
+  手机端星空粒子组件
+  文件：Particles.njk
+  适用终端：手机端
+  作用：Particles.njk 的手机端副本（nunjucks 子目录 include 取不到上级）
+        参数与电脑端 _components/Particles.njk 保持一致：
+        粒子 95 / 连线 118px / opacity 0.32，外加星座层与零星闪烁层
+  最后修改：2026-11-12
+  ============================================
+--><!-- z-index 必须是 0：负层级会被 body 不透明背景盖住，粒子在跑却看不见 -->
+<div id="particles" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 0; pointer-events: none;"></div>
+<!-- 星座层（与首页同一套：随机零星散布星座图形 + 偶尔闪烁的小星） -->
+<div id="constellations" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 1; pointer-events: none;" aria-hidden="true"></div>
+<script src="/js/particles.min.js"></script>
+<script>
+particlesJS("particles", {
+  particles: {
+    number: {
+      value: 95,
+      density: {
+        enable: true,
+        value_area: 800
+      }
+    },
+    color: {
+      value: "#00eeff"
+    },
+    shape: {
+      type: "circle",
+      stroke: {
+        width: 0,
+        color: "#000000"
+      }
+    },
+    opacity: {
+      value: 0.6,
+      random: true,
+      anim: {
+        enable: true,
+        speed: 0.5,
+        opacity_min: 0.1,
+        sync: false
+      }
+    },
+    size: {
+      value: 3,
+      random: true,
+      anim: {
+        enable: true,
+        speed: 2,
+        size_min: 0.1,
+        sync: false
+      }
+    },
+    line_linked: {
+      enable: true,
+      distance: 118,
+      color: "#00eeff",
+      opacity: 0.32,
+      width: 1
+    },
+    move: {
+      enable: true,
+      speed: 0.8,
+      direction: "none",
+      random: true,
+      straight: false,
+      out_mode: "out",
+      bounce: false,
+      attract: {
+        enable: true,
+        rotateX: 600,
+        rotateY: 1200
+      }
+    }
+  },
+  interactivity: {
+    detect_on: "canvas",
+    events: {
+      onhover: {
+        enable: true,
+        mode: "grab"       // 手指按住时粒子聚集
+      },
+      onclick: {
+        enable: true,
+        mode: "push"       // 点击时产生新粒子
+      },
+      resize: true
+    },
+    modes: {
+      grab: {
+        distance: 200,
+        line_linked: {
+          opacity: 1
+        }
+      },
+      push: {
+        particles_nb: 6
+      }
+    }
+  },
+  retina_detect: true
+});
+</script>
+<!-- 星座 + 零星闪烁层：与电脑端共用同一份绘制脚本 -->
+<script src="/js/theme/home/starfield.js"></script>
+
+
+  <div class="mb-top">
+    <a class="mb-back" href="/phone/">← 返回手机首页</a>
+    <span class="mb-sub" style="margin:0">2022-12-10</span>
+  </div>
+
+  <h1 class="mb-title">mysql-30-redo</h1>
+  <div class="mb-sub">
+    分类：database · mysql
+     ｜ 标签：系统课 · MySQL · 数据库
+  </div>
+
+  <div class="mb-article"><div class="essay-banner essay-database"></div>
+
+<h1 id="redo-log：WAL、两阶段提交与崩溃恢复"><a href="#redo-log：WAL、两阶段提交与崩溃恢复" class="headerlink" title="redo log：WAL、两阶段提交与崩溃恢复"></a>redo log：WAL、两阶段提交与崩溃恢复</h1><p><img src="https://wu4yong.github.io/starry-images/assets/img/mysql/mq-30-redo.svg" alt="WAL 与 redo 环形空间"></p>
+<p><em>改内存 → 写 redo → 提交返回 → 异步刷脏，四步把随机写变成顺序写｜依据 MySQL 8.4 InnoDB Redo Log 说明自绘</em></p>
+<h2 id="一、学习目标"><a href="#一、学习目标" class="headerlink" title="一、学习目标"></a>一、学习目标</h2><ol>
+<li>说清 WAL 到底省了什么，为什么「先写日志」能让提交变快；</li>
+<li>记住 redo 与 binlog 的两阶段提交顺序，能判断不同崩溃点的恢复结果；</li>
+<li>会调 <code>innodb_redo_log_capacity</code> 与刷盘参数，知道代价在哪。</li>
+</ol>
+<h2 id="二、前置知识"><a href="#二、前置知识" class="headerlink" title="二、前置知识"></a>二、前置知识</h2><p>InnoDB 架构（MQ28）、页与行格式（MQ29）。本篇讲「日志先行」这条主线，undo 与 binlog 分别在 MQ31、MQ32 展开。</p>
+<h2 id="三、理论讲解（官方定义）"><a href="#三、理论讲解（官方定义）" class="headerlink" title="三、理论讲解（官方定义）"></a>三、理论讲解（官方定义）</h2><p>InnoDB 使用 <strong>WAL（Write-Ahead Logging）</strong>：修改数据页时，先把变更以 redo 记录顺序写入日志并持久化，数据页本身留在 Buffer Pool 里等后台异步刷盘。崩溃重启后，用 redo 把已提交但未落盘的改动重放（前滚），用 undo 回滚未提交的事务。</p>
+<p>redo 记录的是<strong>物理逻辑日志</strong>：对某个页做了什么修改（页号 + 偏移 + 内容），不是完整的 SQL。</p>
+<h2 id="四、原理拆解"><a href="#四、原理拆解" class="headerlink" title="四、原理拆解"></a>四、原理拆解</h2><p><img src="https://wu4yong.github.io/starry-images/assets/img/mysql/mq-30b-redo.svg" alt="两阶段提交与崩溃恢复"></p>
+<p><em>redo prepare → binlog 落盘 → redo commit；崩溃恢复只认「binlog 完整」这一凭据｜依据 MySQL 8.4 崩溃恢复说明自绘</em></p>
+<h3 id="1-一次提交的完整链路"><a href="#1-一次提交的完整链路" class="headerlink" title="1. 一次提交的完整链路"></a>1. 一次提交的完整链路</h3><ol>
+<li>事务修改 Buffer Pool 中的页，同时生成 redo 记录放进 Log Buffer；</li>
+<li><code>COMMIT</code> 时按 <code>innodb_flush_log_at_trx_commit</code> 决定是否 fsync redo；</li>
+<li>Server 层把事务写入 binlog（按 <code>sync_binlog</code> 决定是否 fsync）；</li>
+<li>redo 打上 commit 标记，事务对客户端可见；</li>
+<li>脏页由 page cleaner 异步刷盘，刷完后 redo 中对应部分可被覆盖（checkpoint 前移）。</li>
+</ol>
+<h3 id="2-redo-是环形空间"><a href="#2-redo-是环形空间" class="headerlink" title="2. redo 是环形空间"></a>2. redo 是环形空间</h3><p>redo 容量固定（<code>innodb_redo_log_capacity</code>，默认约 100MB），写满就覆盖最老的日志。所以必须保证<strong>脏页刷得比覆盖快</strong>：<code>write pos</code> 追上 <code>checkpoint</code> 时会强制刷脏，业务上表现为周期性卡顿。</p>
+<p>8.0.30 起 redo 由 <code>#innodb_redo</code> 目录下的一组文件管理（最多 32 个），旧的 <code>innodb_log_file_size</code> &#x2F; <code>innodb_log_files_in_group</code> 已弃用。</p>
+<h3 id="3-为什么必须两阶段提交"><a href="#3-为什么必须两阶段提交" class="headerlink" title="3. 为什么必须两阶段提交"></a>3. 为什么必须两阶段提交</h3><p>redo（引擎层）与 binlog（Server 层）是两份独立日志。若先写 redo 并提交、binlog 还没写就崩溃：主库有数据、从库没有，主从不一致；反之先写 binlog 再崩：从库有数据、主库没有。</p>
+<p>两阶段提交把 binlog 当作「提交凭据」：</p>
+<table>
+<thead>
+<tr>
+<th>崩溃点</th>
+<th>redo</th>
+<th>binlog</th>
+<th>恢复动作</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>prepare 前</td>
+<td>无</td>
+<td>无</td>
+<td>无事发生</td>
+</tr>
+<tr>
+<td>prepare 后、binlog 前</td>
+<td>prepare</td>
+<td>缺</td>
+<td>回滚</td>
+</tr>
+<tr>
+<td>binlog 后、commit 前</td>
+<td>prepare</td>
+<td>完整</td>
+<td>前滚提交</td>
+</tr>
+<tr>
+<td>commit 后</td>
+<td>commit</td>
+<td>完整</td>
+<td>无需处理</td>
+</tr>
+</tbody></table>
+<p>前提是「双一」：<code>innodb_flush_log_at_trx_commit = 1</code> 且 <code>sync_binlog = 1</code>。</p>
+<h3 id="4-刷盘参数的取舍"><a href="#4-刷盘参数的取舍" class="headerlink" title="4. 刷盘参数的取舍"></a>4. 刷盘参数的取舍</h3><table>
+<thead>
+<tr>
+<th>参数</th>
+<th>取值</th>
+<th>语义</th>
+<th>代价</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>innodb_flush_log_at_trx_commit</code></td>
+<td>1（默认）</td>
+<td>每提交 fsync</td>
+<td>最安全</td>
+</tr>
+<tr>
+<td></td>
+<td>2</td>
+<td>提交写 OS cache，每秒 fsync</td>
+<td>宕机丢约 1 秒</td>
+</tr>
+<tr>
+<td></td>
+<td>0</td>
+<td>每秒写并 fsync</td>
+<td>丢 1 秒，MySQL 崩溃也丢</td>
+</tr>
+<tr>
+<td><code>sync_binlog</code></td>
+<td>1（默认）</td>
+<td>每提交 fsync binlog</td>
+<td>最安全</td>
+</tr>
+<tr>
+<td></td>
+<td>0 &#x2F; N</td>
+<td>交给 OS 或每 N 次</td>
+<td>崩溃丢事务，主从不一致</td>
+</tr>
+</tbody></table>
+<h3 id="5-崩溃恢复流程"><a href="#5-崩溃恢复流程" class="headerlink" title="5. 崩溃恢复流程"></a>5. 崩溃恢复流程</h3><ol>
+<li>找到最近一次 checkpoint，从该 LSN 开始扫描 redo；</li>
+<li>重放已提交事务（redo commit 或 binlog 完整的 prepare 事务）；</li>
+<li>回滚未提交事务（用 undo）；</li>
+<li>恢复期间 <code>innodb_force_recovery</code> 可按级别限制回滚动作，仅在数据抢救时使用。</li>
+</ol>
+<h2 id="五、场景说明"><a href="#五、场景说明" class="headerlink" title="五、场景说明"></a>五、场景说明</h2><ol>
+<li><strong>高并发写入</strong>：redo 顺序写是小事务快的关键，容量给足避免频繁强制刷脏；</li>
+<li><strong>大批量导入</strong>：单事务过大时 redo 生成速率超过刷脏，checkpoint 抖动；</li>
+<li><strong>崩溃恢复演练</strong>：故意 kill -9 后重启，验证已提交数据不丢；</li>
+<li><strong>主从切换</strong>：半同步 + 双一配置保证切换不丢数据；</li>
+<li><strong>磁盘规划</strong>：redo 与数据文件分开盘，避免刷脏与日志写互相抢 IO。</li>
+</ol>
+<h2 id="六、示例代码-实操步骤"><a href="#六、示例代码-实操步骤" class="headerlink" title="六、示例代码&#x2F;实操步骤"></a>六、示例代码&#x2F;实操步骤</h2><h3 id="1-看-redo-相关配置"><a href="#1-看-redo-相关配置" class="headerlink" title="1. 看 redo 相关配置"></a>1. 看 redo 相关配置</h3><pre class="line-numbers language-sql" data-language="sql"><code class="language-sql"><span class="token keyword">SHOW</span> VARIABLES <span class="token operator">LIKE</span> <span class="token string">'innodb_redo_log_capacity'</span><span class="token punctuation">;</span>
+<span class="token keyword">SHOW</span> VARIABLES <span class="token operator">LIKE</span> <span class="token string">'innodb_flush_log_at_trx_commit'</span><span class="token punctuation">;</span>
+<span class="token keyword">SHOW</span> VARIABLES <span class="token operator">LIKE</span> <span class="token string">'sync_binlog'</span><span class="token punctuation">;</span>
+<span class="token keyword">SHOW</span> VARIABLES <span class="token operator">LIKE</span> <span class="token string">'innodb_log_buffer_size'</span><span class="token punctuation">;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span></span></code></pre>
+
+<h3 id="2-观察-checkpoint-与写入位置"><a href="#2-观察-checkpoint-与写入位置" class="headerlink" title="2. 观察 checkpoint 与写入位置"></a>2. 观察 checkpoint 与写入位置</h3><pre class="line-numbers language-sql" data-language="sql"><code class="language-sql"><span class="token keyword">SHOW</span> <span class="token keyword">ENGINE</span> <span class="token keyword">INNODB</span> <span class="token keyword">STATUS</span>\G
+<span class="token comment">-- LOG 段：Log sequence number / Log flushed up to / Last checkpoint at</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span></span></code></pre>
+
+<p>三个值差距越大，说明未刷的脏日志越多；<code>Last checkpoint at</code> 长期不动要警惕。</p>
+<h3 id="3-在线扩容-redo"><a href="#3-在线扩容-redo" class="headerlink" title="3. 在线扩容 redo"></a>3. 在线扩容 redo</h3><pre class="line-numbers language-sql" data-language="sql"><code class="language-sql"><span class="token keyword">SET</span> <span class="token keyword">GLOBAL</span> innodb_redo_log_capacity <span class="token operator">=</span> <span class="token number">4294967296</span><span class="token punctuation">;</span>   <span class="token comment">-- 4GB</span><span aria-hidden="true" class="line-numbers-rows"><span></span></span></code></pre>
+
+<p>8.0.30+ 支持动态调整，后台按需重分配文件，业务低峰执行更稳。</p>
+<h3 id="4-Java-侧怎么落地：与刷盘策略对齐"><a href="#4-Java-侧怎么落地：与刷盘策略对齐" class="headerlink" title="4. Java 侧怎么落地：与刷盘策略对齐"></a>4. Java 侧怎么落地：与刷盘策略对齐</h3><ol>
+<li><strong>别为了压测数字关双一</strong>：<code>innodb_flush_log_at_trx_commit=2</code> 能提升 TPS，但宕机丢数据，金融&#x2F;订单场景不允许；</li>
+<li><strong>事务粒度要小</strong>：一个事务只写必要的行，redo 生成速率可控；</li>
+<li><strong>批量导入分批提交</strong>：每批 500～1000 行，避免 checkpoint 抖动；</li>
+<li><strong>连接池与提交模式</strong>：确认 <code>autocommit</code> 行为，批量场景显式控制事务边界；</li>
+<li><strong>监控</strong>：<code>Innodb_os_log_written</code>（redo 写入字节）、<code>Innodb_log_waits</code>（等待日志空间次数），后者非零说明 redo 容量偏小。</li>
+</ol>
+<h2 id="七、常见坑"><a href="#七、常见坑" class="headerlink" title="七、常见坑"></a>七、常见坑</h2><ol>
+<li><strong>把 redo 当归档</strong>：它会被覆盖，长期备份要靠 binlog；</li>
+<li><strong>redo 容量设太小</strong>：频繁强制刷脏，出现周期性卡顿；</li>
+<li><strong>只调大 <code>innodb_log_buffer_size</code> 不调容量</strong>：缓冲只是攒批，环形空间才是根本；</li>
+<li><strong>以为改了 <code>innodb_log_file_size</code> 还有效</strong>：8.0.30 起已弃用，要看 <code>innodb_redo_log_capacity</code>；</li>
+<li><strong>关双一换性能上线</strong>：压测好看，故障时丢数据；</li>
+<li><strong>redo 与数据同盘</strong>：刷脏与日志写抢 IO，延迟抖动；</li>
+<li><strong>崩溃恢复时间预估不足</strong>：redo 越大、脏页越多，重启越慢。</li>
+</ol>
+<h2 id="八、版本差异"><a href="#八、版本差异" class="headerlink" title="八、版本差异"></a>八、版本差异</h2><ul>
+<li><strong>5.7</strong>：redo 由 <code>innodb_log_file_size</code> + <code>innodb_log_files_in_group</code> 固定配置，改大小要停库；</li>
+<li><strong>8.0</strong>：支持在线调整 <code>innodb_log_file_size</code>；8.0.30 起引入 <code>innodb_redo_log_capacity</code>，文件迁到 <code>#innodb_redo</code> 目录；</li>
+<li><strong>8.4</strong>：统一使用 <code>innodb_redo_log_capacity</code>，旧参数弃用；redo 与 binlog 的两阶段提交语义不变，双一仍是推荐配置。</li>
+</ul>
+<h2 id="九、课后小结"><a href="#九、课后小结" class="headerlink" title="九、课后小结"></a>九、课后小结</h2><ul>
+<li>WAL 把随机写变顺序写，提交只需保证 redo 落盘；</li>
+<li>redo 是环形空间，容量与刷脏速度必须匹配；</li>
+<li>redo 与 binlog 靠两阶段提交对齐，binlog 是提交凭据；</li>
+<li>崩溃恢复先按 redo 前滚，再用 undo 回滚未提交；</li>
+<li>双一是数据安全的底线，性能优化别从这里抠。</li>
+</ul>
+<h2 id="十、思考题"><a href="#十、思考题" class="headerlink" title="十、思考题"></a>十、思考题</h2><ol>
+<li><p>为什么写了 redo 就能提前返回「提交成功」？</p>
+<p><strong>参考回答</strong>：redo 持久化后，即使脏页还没落盘，崩溃重启也能按 redo 重放出同样的修改；数据页的落盘被推迟到后台，提交路径上只剩一次顺序写 + fsync。</p>
+</li>
+<li><p>redo 与 binlog 分别属于哪一层，为什么不能合并成一份？</p>
+<p><strong>参考回答</strong>：redo 是 InnoDB 引擎层的物理逻辑日志，用于崩溃恢复；binlog 是 Server 层日志，用于复制与审计，且要兼容非 InnoDB 引擎。两者职责与格式不同，只能靠两阶段提交保持一致。</p>
+</li>
+<li><p>崩溃发生在「binlog 写完、redo commit 之前」，为什么是前滚而不是回滚？</p>
+<p><strong>参考回答</strong>：binlog 已完整落盘，说明事务在逻辑上已经成立，从库也会应用它；若本地回滚就会与从库不一致，因此按 binlog 判定为提交并前滚。</p>
+</li>
+<li><p><code>Innodb_log_waits</code> 持续增长说明什么？</p>
+<p><strong>参考回答</strong>：事务在等 redo 空间，通常是 redo 容量太小或刷脏跟不上写入速度；需要扩容 redo 或降低单事务写入量。</p>
+</li>
+<li><p>把 <code>innodb_flush_log_at_trx_commit</code> 设为 2 省下的到底是什么？</p>
+<p><strong>参考回答</strong>：省掉每次提交的 fsync，把刷盘交给操作系统每秒一次；代价是机器掉电或 OS 崩溃会丢失最后约 1 秒的已提交事务。</p>
+</li>
+</ol>
+<h2 id="十一、官方资料"><a href="#十一、官方资料" class="headerlink" title="十一、官方资料"></a>十一、官方资料</h2><ul>
+<li>redo log：<a target="_blank" rel="noopener" href="https://dev.mysql.com/doc/refman/8.4/en/innodb-redo-log.html">https://dev.mysql.com/doc/refman/8.4/en/innodb-redo-log.html</a></li>
+<li>两阶段提交：<a target="_blank" rel="noopener" href="https://dev.mysql.com/doc/refman/8.4/en/innodb-two-phase-commit.html?lang=en">https://dev.mysql.com/doc/refman/8.4/en/innodb-two-phase-commit.html?lang=en</a></li>
+<li>崩溃恢复：<a target="_blank" rel="noopener" href="https://dev.mysql.com/doc/refman/8.4/en/innodb-recovery.html">https://dev.mysql.com/doc/refman/8.4/en/innodb-recovery.html</a></li>
+<li>刷盘参数：<a target="_blank" rel="noopener" href="https://dev.mysql.com/doc/refman/8.4/en/innodb-parameters.html#sysvar_innodb_flush_log_at_trx_commit">https://dev.mysql.com/doc/refman/8.4/en/innodb-parameters.html#sysvar_innodb_flush_log_at_trx_commit</a></li>
+</ul>
+<p>上一篇：<a href="/2022/12/09/database/mysql/mysql-29-page-row-format/">MQ29 页与行格式</a> ｜ 下一篇：<a href="/2022/12/11/database/mysql/mysql-31-undo-purge/">MQ31 undo log 与 purge</a> ｜ <a href="/2022/11/10/database/mysql/mysql-0-series-index/">总目录</a></p>
+</div>
+
+  <div class="mb-foot">
+    <a href="/phone/">返回手机首页</a>
+    <a href="/phone/tags/">星迹索引</a>
+  </div>
+</div>
+
+
+<script>
+  /* 作用：懒加载本地 mermaid 库；无 mermaid 代码块时不加载 */
+  function loadLocalMermaid(){
+    return new Promise(function(resolve, reject){
+      if(window.mermaid) return resolve(window.mermaid);
+      var s = document.createElement('script');
+      s.src = '/js/third-party/mermaid/mermaid.min.js?v=10';
+      s.onload = function(){ resolve(window.mermaid); };
+      s.onerror = function(){ reject(new Error('mermaid local load failed')); };
+      document.head.appendChild(s);
+    });
+  }
+
+  /* 作用：把 ```mermaid 代码块替换成 SVG 图（手机端字号略小、图可横向滚动） */
+  async function renderMermaidDiagram(){
+    var blocks = document.querySelectorAll('pre[class*="language-mermaid"]');
+    if(!blocks.length) return;
+    var mermaid;
+    try { mermaid = await loadLocalMermaid(); }
+    catch(e){ console.warn('[mermaid] 本地库加载失败：', e); return; }
+
+    mermaid.initialize({
+      startOnLoad: false,
+      theme: 'base',
+      themeVariables: {
+        darkMode: true,
+        background: 'transparent',
+        fontFamily: '"Microsoft YaHei", "PingFang SC", "Segoe UI", sans-serif',
+        fontSize: '12px',
+        primaryColor: '#062f3d',
+        primaryTextColor: '#d6f6ff',
+        primaryBorderColor: '#00eeff',
+        secondaryColor: '#04222d',
+        tertiaryColor: '#04222d',
+        mainBkg: '#062f3d',
+        nodeBorder: '#00eeff',
+        clusterBkg: '#02161f',
+        clusterBorder: '#00eeff55',
+        lineColor: '#00eeff',
+        textColor: '#c0e8ff',
+        edgeLabelBackground: '#02161f'
+      },
+      flowchart: { curve: 'basis', useMaxWidth: false, htmlLabels: false, nodeSpacing: 30, rankSpacing: 40, padding: 10 }
+    });
+
+    var targets = [];
+    blocks.forEach(function(el){
+      var codeEl = el.querySelector('code');
+      if(!codeEl) return;
+      var div = document.createElement('div');
+      div.className = 'mermaid';
+      div.textContent = codeEl.textContent;
+      el.parentNode.replaceChild(div, el);
+      targets.push(div);
+    });
+    if(!targets.length) return;
+    try { await mermaid.run({ nodes: targets }); }
+    catch(e){ console.warn('[mermaid] 渲染失败：', e); }
+  }
+  /* 作用：多次触发兜底（延迟重试 + DOM 变化），防止某次时机没跑到导致图表留在代码块 */
+  var mmBusy = false;
+  function scheduleMermaid(){
+    if(mmBusy) return;
+    mmBusy = true;
+    renderMermaidDiagram().then(function(){ mmBusy = false; }, function(){ mmBusy = false; });
+  }
+  scheduleMermaid();
+  window.addEventListener('load', scheduleMermaid);
+  [1000, 3000, 8000].forEach(function(ms){ setTimeout(scheduleMermaid, ms); });
+  if(document.readyState !== 'loading') scheduleMermaid();
+  if(window.MutationObserver){
+    var mmTimer = null;
+    var mmObserver = new MutationObserver(function(){
+      clearTimeout(mmTimer);
+      mmTimer = setTimeout(scheduleMermaid, 400);
+    });
+    mmObserver.observe(document.querySelector('.mb-article') || document.body, { childList: true, subtree: true });
+  }
+</script>
+</body>
+</html>

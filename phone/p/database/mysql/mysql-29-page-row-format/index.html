@@ -1,0 +1,454 @@
+<!--
+  ============================================
+  手机端 · 文章原文页
+  文件：phone/post.njk
+  适用终端：手机端（路由 /phone/p/<slug>/，由 scripts/phone-routes.js 生成）
+  作用：手机阅读单篇文章；单列布局、无侧栏无雷达，替代电脑端 post.njk
+        数据由生成期算好：page.item = { title, dateStr, content, cats, tags }
+  样式依赖：source/css/theme/phone/common.css、source/css/theme/phone/list.css
+  组件依赖：phone/_components/Particles.njk
+  最后修改：2026-11-11
+  ============================================
+-->
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="color-scheme" content="dark">
+  <meta name="theme-color" content="#020817">
+  <!-- 首帧兜底：浏览器默认画布是白的，样式未解析前会闪一下白。这条规则先锁死深空底色 -->
+  <style>html{background-color:#020817}</style>
+  <title>mysql-29-page-row - 时空秘境</title>
+  <!-- 手机端样式：基础 + 列表/正文，外链引入（源文件 source/css/theme/phone/） -->
+  <link rel="stylesheet" href="/css/theme/phone/common.css">
+  <link rel="stylesheet" href="/css/theme/phone/list.css">
+<meta name="generator" content="Hexo 8.1.2"></head>
+<body>
+<div class="mb-shell">
+  <!--
+  ============================================
+  手机端星空粒子组件
+  文件：Particles.njk
+  适用终端：手机端
+  作用：Particles.njk 的手机端副本（nunjucks 子目录 include 取不到上级）
+        参数与电脑端 _components/Particles.njk 保持一致：
+        粒子 95 / 连线 118px / opacity 0.32，外加星座层与零星闪烁层
+  最后修改：2026-11-12
+  ============================================
+--><!-- z-index 必须是 0：负层级会被 body 不透明背景盖住，粒子在跑却看不见 -->
+<div id="particles" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 0; pointer-events: none;"></div>
+<!-- 星座层（与首页同一套：随机零星散布星座图形 + 偶尔闪烁的小星） -->
+<div id="constellations" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 1; pointer-events: none;" aria-hidden="true"></div>
+<script src="/js/particles.min.js"></script>
+<script>
+particlesJS("particles", {
+  particles: {
+    number: {
+      value: 95,
+      density: {
+        enable: true,
+        value_area: 800
+      }
+    },
+    color: {
+      value: "#00eeff"
+    },
+    shape: {
+      type: "circle",
+      stroke: {
+        width: 0,
+        color: "#000000"
+      }
+    },
+    opacity: {
+      value: 0.6,
+      random: true,
+      anim: {
+        enable: true,
+        speed: 0.5,
+        opacity_min: 0.1,
+        sync: false
+      }
+    },
+    size: {
+      value: 3,
+      random: true,
+      anim: {
+        enable: true,
+        speed: 2,
+        size_min: 0.1,
+        sync: false
+      }
+    },
+    line_linked: {
+      enable: true,
+      distance: 118,
+      color: "#00eeff",
+      opacity: 0.32,
+      width: 1
+    },
+    move: {
+      enable: true,
+      speed: 0.8,
+      direction: "none",
+      random: true,
+      straight: false,
+      out_mode: "out",
+      bounce: false,
+      attract: {
+        enable: true,
+        rotateX: 600,
+        rotateY: 1200
+      }
+    }
+  },
+  interactivity: {
+    detect_on: "canvas",
+    events: {
+      onhover: {
+        enable: true,
+        mode: "grab"       // 手指按住时粒子聚集
+      },
+      onclick: {
+        enable: true,
+        mode: "push"       // 点击时产生新粒子
+      },
+      resize: true
+    },
+    modes: {
+      grab: {
+        distance: 200,
+        line_linked: {
+          opacity: 1
+        }
+      },
+      push: {
+        particles_nb: 6
+      }
+    }
+  },
+  retina_detect: true
+});
+</script>
+<!-- 星座 + 零星闪烁层：与电脑端共用同一份绘制脚本 -->
+<script src="/js/theme/home/starfield.js"></script>
+
+
+  <div class="mb-top">
+    <a class="mb-back" href="/phone/">← 返回手机首页</a>
+    <span class="mb-sub" style="margin:0">2022-12-09</span>
+  </div>
+
+  <h1 class="mb-title">mysql-29-page-row</h1>
+  <div class="mb-sub">
+    分类：database · mysql
+     ｜ 标签：系统课 · MySQL · 数据库
+  </div>
+
+  <div class="mb-article"><div class="essay-banner essay-database"></div>
+
+<h1 id="页与行格式：16KB-页、DYNAMIC-与行溢出"><a href="#页与行格式：16KB-页、DYNAMIC-与行溢出" class="headerlink" title="页与行格式：16KB 页、DYNAMIC 与行溢出"></a>页与行格式：16KB 页、DYNAMIC 与行溢出</h1><p><img src="https://wu4yong.github.io/starry-images/assets/img/mysql/mq-29-page.svg" alt="16KB 页的结构"></p>
+<p><em>B+Tree 的节点是页，页内是链表，跨页靠指针｜依据 MySQL 8.4 InnoDB 物理结构与行格式说明自绘</em></p>
+<h2 id="一、学习目标"><a href="#一、学习目标" class="headerlink" title="一、学习目标"></a>一、学习目标</h2><ol>
+<li>记住一个 InnoDB 页的七段结构，理解「页内链表 + 页间 B+Tree」；</li>
+<li>分清四种行格式，知道 DYNAMIC 怎么处理大字段；</li>
+<li>会算一行大概占多少字节，能判断一页装多少行、索引前缀上限在哪。</li>
+</ol>
+<h2 id="二、前置知识"><a href="#二、前置知识" class="headerlink" title="二、前置知识"></a>二、前置知识</h2><p>B+Tree 索引（MQ18）、索引设计（MQ19）。本篇是「为什么索引这么大、为什么大字段拖慢查询」的底层答案。</p>
+<h2 id="三、理论讲解（官方定义）"><a href="#三、理论讲解（官方定义）" class="headerlink" title="三、理论讲解（官方定义）"></a>三、理论讲解（官方定义）</h2><p>InnoDB 以<strong>页</strong>为磁盘与内存之间传输的最小单位，默认 <code>innodb_page_size = 16KB</code>。B+Tree 的每个节点就是一页（或若干页），一次 IO 至少读一页。</p>
+<p>页的七段结构：</p>
+<table>
+<thead>
+<tr>
+<th>段</th>
+<th>大小</th>
+<th>作用</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>File Header</td>
+<td>38B</td>
+<td>页号、前后页指针、校验和、页类型</td>
+</tr>
+<tr>
+<td>Page Header</td>
+<td>56B</td>
+<td>页内记录数、堆顶位置、目录槽数等</td>
+</tr>
+<tr>
+<td>Infimum + Supremum</td>
+<td>26B</td>
+<td>两条虚拟记录，页内链表的头与尾</td>
+</tr>
+<tr>
+<td>User Records</td>
+<td>变长</td>
+<td>实际数据行，按主键有序的单向链表</td>
+</tr>
+<tr>
+<td>Free Space</td>
+<td>变长</td>
+<td>尚未分配的空间</td>
+</tr>
+<tr>
+<td>Page Directory</td>
+<td>变长</td>
+<td>每 6 条记录一个槽位，支持页内二分</td>
+</tr>
+<tr>
+<td>File Trailer</td>
+<td>8B</td>
+<td>校验和 + LSN 低位，用于检测页损坏</td>
+</tr>
+</tbody></table>
+<p>行格式（row format）决定行内字段如何排列、大字段放哪：<code>REDUNDANT</code>、<code>COMPACT</code>、<code>DYNAMIC</code>、<code>COMPRESSED</code>。8.x 新建表默认 <code>DYNAMIC</code>。</p>
+<h2 id="四、原理拆解"><a href="#四、原理拆解" class="headerlink" title="四、原理拆解"></a>四、原理拆解</h2><p><img src="https://wu4yong.github.io/starry-images/assets/img/mysql/mq-29b-rowformat.svg" alt="行格式与大字段溢出"></p>
+<p><em>DYNAMIC 把超长字段整段挪到溢出页，行内只留 20 字节指针｜依据 MySQL 8.4 InnoDB Row Formats 说明自绘</em></p>
+<h3 id="1-一行里到底存了什么"><a href="#1-一行里到底存了什么" class="headerlink" title="1. 一行里到底存了什么"></a>1. 一行里到底存了什么</h3><p>按顺序：</p>
+<ol>
+<li><strong>变长字段长度列表</strong>（逆序存放每个变长列的长度）；</li>
+<li><strong>NULL 位图</strong>（可空列各占 1 bit）；</li>
+<li><strong>记录头 5 字节</strong>：删除标记、<code>min_rec</code>、<code>n_owned</code>、<code>heap_no</code>、记录类型、<code>next_record</code> 偏移；</li>
+<li><strong>列数据</strong>：<code>DB_TRX_ID</code>(6B)、<code>DB_ROLL_PTR</code>(7B)、主键列、其余列。</li>
+</ol>
+<p><code>next_record</code> 是相对偏移，页内遍历就是沿着这条链走；页与页之间靠 B+Tree 的指针连接。</p>
+<h3 id="2-页内查找为什么快"><a href="#2-页内查找为什么快" class="headerlink" title="2. 页内查找为什么快"></a>2. 页内查找为什么快</h3><ul>
+<li>先按 <code>Page Directory</code> 槽位二分，定位到大致 6 条记录的范围；</li>
+<li>再沿 <code>next_record</code> 链表线性找 6 条；</li>
+<li>所以页内是「二分 + 短链表」，不是纯链表扫描。</li>
+</ul>
+<h3 id="3-四种行格式的差别"><a href="#3-四种行格式的差别" class="headerlink" title="3. 四种行格式的差别"></a>3. 四种行格式的差别</h3><table>
+<thead>
+<tr>
+<th>格式</th>
+<th>大字段溢出方式</th>
+<th>索引前缀上限</th>
+<th>备注</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>REDUNDANT</td>
+<td>768B 前缀 + 20B 指针</td>
+<td>767B</td>
+<td>最老，基本不用</td>
+</tr>
+<tr>
+<td>COMPACT</td>
+<td>768B 前缀 + 20B 指针</td>
+<td>767B</td>
+<td>5.6 时代主流</td>
+</tr>
+<tr>
+<td>DYNAMIC</td>
+<td>整段外移，仅留 20B 指针</td>
+<td>3072B</td>
+<td>8.x 默认</td>
+</tr>
+<tr>
+<td>COMPRESSED</td>
+<td>同 DYNAMIC + 页压缩</td>
+<td>3072B</td>
+<td>以 CPU 换空间</td>
+</tr>
+</tbody></table>
+<p>关键差别在「前缀」：COMPACT 会在行内保留 768 字节的大字段内容，行变长、页装得少；DYNAMIC 全部外移，行内只剩指针，页能装更多行，扫描更快。</p>
+<h3 id="4-什么时候会溢出"><a href="#4-什么时候会溢出" class="headerlink" title="4. 什么时候会溢出"></a>4. 什么时候会溢出</h3><p>行太长（超过页容量约一半）时，InnoDB 会把最长的变长列挪到溢出页，直到行能放进页。所以 <code>TEXT</code>、<code>BLOB</code>、长 <code>VARCHAR</code> 会触发溢出，而 <code>INT</code>、<code>DATETIME</code> 不会。</p>
+<h3 id="5-页大小的影响"><a href="#5-页大小的影响" class="headerlink" title="5. 页大小的影响"></a>5. 页大小的影响</h3><table>
+<thead>
+<tr>
+<th>页大小</th>
+<th>影响</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>4KB &#x2F; 8KB</td>
+<td>B+Tree 层数增加，IO 次数上升；适合小行宽</td>
+</tr>
+<tr>
+<td>16KB（默认）</td>
+<td>通用最优，SSD 上顺序读划算</td>
+</tr>
+<tr>
+<td>32KB &#x2F; 64KB</td>
+<td>读放大明显，刷脏慢，一般只在特殊场景</td>
+</tr>
+</tbody></table>
+<p><code>innodb_page_size</code> <strong>只能在初始化实例时指定</strong>，之后不可改。</p>
+<h3 id="6-估算一页能装多少行"><a href="#6-估算一页能装多少行" class="headerlink" title="6. 估算一页能装多少行"></a>6. 估算一页能装多少行</h3><pre class="line-numbers language-none"><code class="language-none">行大小 ≈ 变长长度列表 + NULL 位图 + 5B 头 + 6B trx_id + 7B roll_ptr + 各列字节
+每页行数 ≈ (16384 - 页头&#x2F;页尾开销约 200B) &#x2F; 行大小<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span></span></code></pre>
+
+<p>一行 100B 时约 150 行&#x2F;页；三层 B+Tree（根 + 分支 + 叶）在每页 150 行、每分支 200 指针的量级下可以撑到千万行。</p>
+<h2 id="五、场景说明"><a href="#五、场景说明" class="headerlink" title="五、场景说明"></a>五、场景说明</h2><ol>
+<li><strong>宽表设计</strong>：列太多导致行超页，触发溢出，扫描成本上升；宽表应拆冷热列；</li>
+<li><strong>大字段存储</strong>：图片、长文本放对象存储，库里只存 URL，避免行溢出与备份膨胀；</li>
+<li><strong>索引前缀</strong>：<code>VARCHAR(1000)</code> 建索引会超 3072B 上限，需前缀索引或改设计；</li>
+<li><strong>压缩表</strong>：日志类历史表可用 <code>COMPRESSED</code>，在线业务慎用；</li>
+<li><strong>备份与恢复</strong>：页越大，单页损坏影响的行越多，但校验和能快速发现。</li>
+</ol>
+<h2 id="六、示例代码-实操步骤"><a href="#六、示例代码-实操步骤" class="headerlink" title="六、示例代码&#x2F;实操步骤"></a>六、示例代码&#x2F;实操步骤</h2><h3 id="1-看表的行格式"><a href="#1-看表的行格式" class="headerlink" title="1. 看表的行格式"></a>1. 看表的行格式</h3><pre class="line-numbers language-sql" data-language="sql"><code class="language-sql"><span class="token keyword">SELECT</span> TABLE_NAME<span class="token punctuation">,</span> ROW_FORMAT<span class="token punctuation">,</span> AVG_ROW_LENGTH<span class="token punctuation">,</span> DATA_LENGTH<span class="token punctuation">,</span> INDEX_LENGTH
+<span class="token keyword">FROM</span> information_schema<span class="token punctuation">.</span><span class="token keyword">TABLES</span>
+<span class="token keyword">WHERE</span> TABLE_SCHEMA <span class="token operator">=</span> <span class="token string">'shop'</span><span class="token punctuation">;</span>
+
+<span class="token keyword">SHOW</span> <span class="token keyword">TABLE</span> <span class="token keyword">STATUS</span> <span class="token operator">LIKE</span> <span class="token string">'t_order'</span>\G<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<h3 id="2-指定行格式建表"><a href="#2-指定行格式建表" class="headerlink" title="2. 指定行格式建表"></a>2. 指定行格式建表</h3><pre class="line-numbers language-sql" data-language="sql"><code class="language-sql"><span class="token keyword">CREATE</span> <span class="token keyword">TABLE</span> t_doc <span class="token punctuation">(</span>
+  id <span class="token keyword">BIGINT</span> <span class="token keyword">PRIMARY</span> <span class="token keyword">KEY</span> <span class="token keyword">AUTO_INCREMENT</span><span class="token punctuation">,</span>
+  title <span class="token keyword">VARCHAR</span><span class="token punctuation">(</span><span class="token number">200</span><span class="token punctuation">)</span> <span class="token operator">NOT</span> <span class="token boolean">NULL</span><span class="token punctuation">,</span>
+  content <span class="token keyword">LONGTEXT</span><span class="token punctuation">,</span>
+  created_at <span class="token keyword">DATETIME</span> <span class="token operator">NOT</span> <span class="token boolean">NULL</span>
+<span class="token punctuation">)</span> <span class="token keyword">ENGINE</span> <span class="token operator">=</span> <span class="token keyword">InnoDB</span> ROW_FORMAT <span class="token operator">=</span> DYNAMIC<span class="token punctuation">;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<h3 id="3-观察页与行大小"><a href="#3-观察页与行大小" class="headerlink" title="3. 观察页与行大小"></a>3. 观察页与行大小</h3><pre class="line-numbers language-sql" data-language="sql"><code class="language-sql"><span class="token comment">-- 单页读取计数，验证「一次 IO 至少一页」</span>
+<span class="token keyword">SHOW</span> <span class="token keyword">GLOBAL</span> <span class="token keyword">STATUS</span> <span class="token operator">LIKE</span> <span class="token string">'Innodb_pages_read'</span><span class="token punctuation">;</span>
+<span class="token keyword">SHOW</span> <span class="token keyword">GLOBAL</span> <span class="token keyword">STATUS</span> <span class="token operator">LIKE</span> <span class="token string">'Innodb_buffer_pool_pages_data'</span><span class="token punctuation">;</span>
+
+<span class="token comment">-- 行格式与压缩情况</span>
+<span class="token keyword">SELECT</span> NAME<span class="token punctuation">,</span> ROW_FORMAT<span class="token punctuation">,</span> SPACE<span class="token punctuation">,</span> FILE_SIZE
+<span class="token keyword">FROM</span> information_schema<span class="token punctuation">.</span>INNODB_TABLESPACES
+<span class="token keyword">WHERE</span> NAME <span class="token operator">LIKE</span> <span class="token string">'shop/%'</span><span class="token punctuation">;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<h3 id="4-Java-侧怎么落地：让行别太长"><a href="#4-Java-侧怎么落地：让行别太长" class="headerlink" title="4. Java 侧怎么落地：让行别太长"></a>4. Java 侧怎么落地：让行别太长</h3><ol>
+<li><strong>实体拆分</strong>：<code>Order</code> 与 <code>OrderDetail</code>、<code>OrderExt</code> 分表，热字段与冷字段分离，单行控制在几百字节；</li>
+<li><strong>大字段外置</strong>：附件、富文本存 OSS，表里只留 <code>url</code> + <code>hash</code>；</li>
+<li><strong><code>VARCHAR</code> 长度按需</strong>：<code>VARCHAR(64)</code> 而不是 <code>VARCHAR(1024)</code>，长度不影响存储但影响校验与索引上限判断；</li>
+<li><strong>索引列避开大字段</strong>：需要检索长文本用全文索引或搜索引擎，不要给 <code>TEXT</code> 建普通索引；</li>
+<li><strong>批量读取按行宽调批大小</strong>：宽表一次取 500 行可能就超包大小，按 <code>max_allowed_packet</code> 调整；</li>
+<li><strong>监控 <code>AVG_ROW_LENGTH</code></strong>：突增说明有大字段塞进来了，及时拆分。</li>
+</ol>
+<h2 id="七、常见坑"><a href="#七、常见坑" class="headerlink" title="七、常见坑"></a>七、常见坑</h2><ol>
+<li><strong>以为 <code>VARCHAR(n)</code> 会预分配空间</strong>：实际按内容长度存，n 只做上限校验；</li>
+<li><strong>给 <code>TEXT</code> 建普通索引</strong>：超长键直接失败，或只能前缀索引；</li>
+<li><strong>宽表塞满 <code>TEXT</code></strong>：行溢出后每次扫描多一次随机 IO；</li>
+<li><strong>以为页大小能改</strong>：<code>innodb_page_size</code> 初始化后不可变；</li>
+<li><strong><code>COMPRESSED</code> 当默认</strong>：写放大与 CPU 开销在 OLTP 上很明显；</li>
+<li><strong>忽略 <code>NULL</code> 位图</strong>：大量可空列也会让行头变长，能 <code>NOT NULL</code> 就 <code>NOT NULL</code>；</li>
+<li><strong><code>ROW_FORMAT=COMPACT</code> 迁移</strong>：老表迁移到 8.4 建议一并改 DYNAMIC，否则大字段仍占行内空间。</li>
+</ol>
+<h2 id="八、版本差异"><a href="#八、版本差异" class="headerlink" title="八、版本差异"></a>八、版本差异</h2><ul>
+<li><strong>5.6</strong>：默认行格式 <code>COMPACT</code>，大字段行内保留 768B 前缀；<code>innodb_large_prefix</code> 需手动开启才能到 3072B；</li>
+<li><strong>5.7</strong>：<code>innodb_large_prefix</code> 默认开启，<code>DYNAMIC</code> 逐步成为推荐；</li>
+<li><strong>8.0</strong>：<code>innodb_large_prefix</code> 移除，索引前缀上限由行格式与页大小决定；默认 <code>innodb_default_row_format = dynamic</code>；</li>
+<li><strong>8.4</strong>：默认 DYNAMIC 不变，<code>innodb_page_size</code> 仍只能在初始化时设定；新建表统一用 DYNAMIC，除非确需页压缩。</li>
+</ul>
+<h2 id="九、课后小结"><a href="#九、课后小结" class="headerlink" title="九、课后小结"></a>九、课后小结</h2><ul>
+<li>页是 IO 与内存的最小单位，16KB 默认，七段结构里 User Records 是链表、Page Directory 是槽位；</li>
+<li>行内顺序：变长长度列表 → NULL 位图 → 5 字节头 → 列数据（含 6B trx_id、7B roll_ptr）；</li>
+<li>DYNAMIC 把大字段整段外移，行内只留 20B 指针，页能装更多行；</li>
+<li>索引前缀上限：COMPACT 767B，DYNAMIC&#x2F;COMPRESSED 3072B（16KB 页）；</li>
+<li>宽表、大字段、超长索引都会在这里付代价，设计阶段就要避开。</li>
+</ul>
+<h2 id="十、思考题"><a href="#十、思考题" class="headerlink" title="十、思考题"></a>十、思考题</h2><ol>
+<li><p>为什么说「B+Tree 的节点是页，不是行」？</p>
+<p><strong>参考回答</strong>：InnoDB 以页为单位读写磁盘和缓存，B+Tree 的分支节点存的是一页页的索引记录，叶子节点是一页页的数据行；一次查找的 IO 次数等于树高，也就是经过的页数。</p>
+</li>
+<li><p>DYNAMIC 相比 COMPACT 的优势在哪？</p>
+<p><strong>参考回答</strong>：COMPACT 会在行内保留最多 768 字节的大字段前缀，行变长、每页装的行变少；DYNAMIC 把大字段整段放到溢出页，行内只留 20 字节指针，页内密度更高，扫描更快。</p>
+</li>
+<li><p>索引前缀 767B 与 3072B 的差别由什么决定？</p>
+<p><strong>参考回答</strong>：由行格式与页大小共同决定。COMPACT&#x2F;REDUNDANT 上限 767 字节；DYNAMIC&#x2F;COMPRESSED 在 16KB 页下可到 3072 字节。8.0 起不再需要 <code>innodb_large_prefix</code> 开关。</p>
+</li>
+<li><p>一行 100B 的表，一页大约能放多少行，三层树能撑多少数据？</p>
+<p><strong>参考回答</strong>：扣除页头页尾约 200B，一页约 160 行；按分支节点每页约 200 个指针估算，两层分支 + 一层叶子约 200×200×160 ≈ 640 万行，量级在千万。</p>
+</li>
+<li><p>大字段为什么建议外置到对象存储？</p>
+<p><strong>参考回答</strong>：大字段触发行溢出，每次扫描多一次随机 IO；还会放大 binlog、备份与网络传输。库里只存 URL 与元信息，既保持行窄，也让大文件走更适合的存储。</p>
+</li>
+</ol>
+<h2 id="十一、官方资料"><a href="#十一、官方资料" class="headerlink" title="十一、官方资料"></a>十一、官方资料</h2><ul>
+<li>InnoDB 物理结构：<a target="_blank" rel="noopener" href="https://dev.mysql.com/doc/refman/8.4/en/innodb-physical-structure.html">https://dev.mysql.com/doc/refman/8.4/en/innodb-physical-structure.html</a></li>
+<li>行格式：<a target="_blank" rel="noopener" href="https://dev.mysql.com/doc/refman/8.4/en/innodb-row-format.html">https://dev.mysql.com/doc/refman/8.4/en/innodb-row-format.html</a></li>
+<li>DYNAMIC 与溢出：<a target="_blank" rel="noopener" href="https://dev.mysql.com/doc/refman/8.4/en/innodb-row-format-dynamic.html">https://dev.mysql.com/doc/refman/8.4/en/innodb-row-format-dynamic.html</a></li>
+<li><code>innodb_page_size</code>：<a target="_blank" rel="noopener" href="https://dev.mysql.com/doc/refman/8.4/en/innodb-parameters.html#sysvar_innodb_page_size">https://dev.mysql.com/doc/refman/8.4/en/innodb-parameters.html#sysvar_innodb_page_size</a></li>
+</ul>
+<p>上一篇：<a href="/2022/12/08/database/mysql/mysql-28-innodb-architecture/">MQ28 InnoDB 架构总览</a> ｜ 下一篇：<a href="/2022/12/10/database/mysql/mysql-30-redo-log/">MQ30 redo log：WAL、两阶段提交与崩溃恢复</a> ｜ <a href="/2022/11/10/database/mysql/mysql-0-series-index/">总目录</a></p>
+</div>
+
+  <div class="mb-foot">
+    <a href="/phone/">返回手机首页</a>
+    <a href="/phone/tags/">星迹索引</a>
+  </div>
+</div>
+
+
+<script>
+  /* 作用：懒加载本地 mermaid 库；无 mermaid 代码块时不加载 */
+  function loadLocalMermaid(){
+    return new Promise(function(resolve, reject){
+      if(window.mermaid) return resolve(window.mermaid);
+      var s = document.createElement('script');
+      s.src = '/js/third-party/mermaid/mermaid.min.js?v=10';
+      s.onload = function(){ resolve(window.mermaid); };
+      s.onerror = function(){ reject(new Error('mermaid local load failed')); };
+      document.head.appendChild(s);
+    });
+  }
+
+  /* 作用：把 ```mermaid 代码块替换成 SVG 图（手机端字号略小、图可横向滚动） */
+  async function renderMermaidDiagram(){
+    var blocks = document.querySelectorAll('pre[class*="language-mermaid"]');
+    if(!blocks.length) return;
+    var mermaid;
+    try { mermaid = await loadLocalMermaid(); }
+    catch(e){ console.warn('[mermaid] 本地库加载失败：', e); return; }
+
+    mermaid.initialize({
+      startOnLoad: false,
+      theme: 'base',
+      themeVariables: {
+        darkMode: true,
+        background: 'transparent',
+        fontFamily: '"Microsoft YaHei", "PingFang SC", "Segoe UI", sans-serif',
+        fontSize: '12px',
+        primaryColor: '#062f3d',
+        primaryTextColor: '#d6f6ff',
+        primaryBorderColor: '#00eeff',
+        secondaryColor: '#04222d',
+        tertiaryColor: '#04222d',
+        mainBkg: '#062f3d',
+        nodeBorder: '#00eeff',
+        clusterBkg: '#02161f',
+        clusterBorder: '#00eeff55',
+        lineColor: '#00eeff',
+        textColor: '#c0e8ff',
+        edgeLabelBackground: '#02161f'
+      },
+      flowchart: { curve: 'basis', useMaxWidth: false, htmlLabels: false, nodeSpacing: 30, rankSpacing: 40, padding: 10 }
+    });
+
+    var targets = [];
+    blocks.forEach(function(el){
+      var codeEl = el.querySelector('code');
+      if(!codeEl) return;
+      var div = document.createElement('div');
+      div.className = 'mermaid';
+      div.textContent = codeEl.textContent;
+      el.parentNode.replaceChild(div, el);
+      targets.push(div);
+    });
+    if(!targets.length) return;
+    try { await mermaid.run({ nodes: targets }); }
+    catch(e){ console.warn('[mermaid] 渲染失败：', e); }
+  }
+  /* 作用：多次触发兜底（延迟重试 + DOM 变化），防止某次时机没跑到导致图表留在代码块 */
+  var mmBusy = false;
+  function scheduleMermaid(){
+    if(mmBusy) return;
+    mmBusy = true;
+    renderMermaidDiagram().then(function(){ mmBusy = false; }, function(){ mmBusy = false; });
+  }
+  scheduleMermaid();
+  window.addEventListener('load', scheduleMermaid);
+  [1000, 3000, 8000].forEach(function(ms){ setTimeout(scheduleMermaid, ms); });
+  if(document.readyState !== 'loading') scheduleMermaid();
+  if(window.MutationObserver){
+    var mmTimer = null;
+    var mmObserver = new MutationObserver(function(){
+      clearTimeout(mmTimer);
+      mmTimer = setTimeout(scheduleMermaid, 400);
+    });
+    mmObserver.observe(document.querySelector('.mb-article') || document.body, { childList: true, subtree: true });
+  }
+</script>
+</body>
+</html>

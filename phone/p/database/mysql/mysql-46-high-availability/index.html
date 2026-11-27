@@ -1,0 +1,393 @@
+<!--
+  ============================================
+  手机端 · 文章原文页
+  文件：phone/post.njk
+  适用终端：手机端（路由 /phone/p/<slug>/，由 scripts/phone-routes.js 生成）
+  作用：手机阅读单篇文章；单列布局、无侧栏无雷达，替代电脑端 post.njk
+        数据由生成期算好：page.item = { title, dateStr, content, cats, tags }
+  样式依赖：source/css/theme/phone/common.css、source/css/theme/phone/list.css
+  组件依赖：phone/_components/Particles.njk
+  最后修改：2026-11-11
+  ============================================
+-->
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="color-scheme" content="dark">
+  <meta name="theme-color" content="#020817">
+  <!-- 首帧兜底：浏览器默认画布是白的，样式未解析前会闪一下白。这条规则先锁死深空底色 -->
+  <style>html{background-color:#020817}</style>
+  <title>mysql-46-ha - 时空秘境</title>
+  <!-- 手机端样式：基础 + 列表/正文，外链引入（源文件 source/css/theme/phone/） -->
+  <link rel="stylesheet" href="/css/theme/phone/common.css">
+  <link rel="stylesheet" href="/css/theme/phone/list.css">
+<meta name="generator" content="Hexo 8.1.2"></head>
+<body>
+<div class="mb-shell">
+  <!--
+  ============================================
+  手机端星空粒子组件
+  文件：Particles.njk
+  适用终端：手机端
+  作用：Particles.njk 的手机端副本（nunjucks 子目录 include 取不到上级）
+        参数与电脑端 _components/Particles.njk 保持一致：
+        粒子 95 / 连线 118px / opacity 0.32，外加星座层与零星闪烁层
+  最后修改：2026-11-12
+  ============================================
+--><!-- z-index 必须是 0：负层级会被 body 不透明背景盖住，粒子在跑却看不见 -->
+<div id="particles" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 0; pointer-events: none;"></div>
+<!-- 星座层（与首页同一套：随机零星散布星座图形 + 偶尔闪烁的小星） -->
+<div id="constellations" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 1; pointer-events: none;" aria-hidden="true"></div>
+<script src="/js/particles.min.js"></script>
+<script>
+particlesJS("particles", {
+  particles: {
+    number: {
+      value: 95,
+      density: {
+        enable: true,
+        value_area: 800
+      }
+    },
+    color: {
+      value: "#00eeff"
+    },
+    shape: {
+      type: "circle",
+      stroke: {
+        width: 0,
+        color: "#000000"
+      }
+    },
+    opacity: {
+      value: 0.6,
+      random: true,
+      anim: {
+        enable: true,
+        speed: 0.5,
+        opacity_min: 0.1,
+        sync: false
+      }
+    },
+    size: {
+      value: 3,
+      random: true,
+      anim: {
+        enable: true,
+        speed: 2,
+        size_min: 0.1,
+        sync: false
+      }
+    },
+    line_linked: {
+      enable: true,
+      distance: 118,
+      color: "#00eeff",
+      opacity: 0.32,
+      width: 1
+    },
+    move: {
+      enable: true,
+      speed: 0.8,
+      direction: "none",
+      random: true,
+      straight: false,
+      out_mode: "out",
+      bounce: false,
+      attract: {
+        enable: true,
+        rotateX: 600,
+        rotateY: 1200
+      }
+    }
+  },
+  interactivity: {
+    detect_on: "canvas",
+    events: {
+      onhover: {
+        enable: true,
+        mode: "grab"       // 手指按住时粒子聚集
+      },
+      onclick: {
+        enable: true,
+        mode: "push"       // 点击时产生新粒子
+      },
+      resize: true
+    },
+    modes: {
+      grab: {
+        distance: 200,
+        line_linked: {
+          opacity: 1
+        }
+      },
+      push: {
+        particles_nb: 6
+      }
+    }
+  },
+  retina_detect: true
+});
+</script>
+<!-- 星座 + 零星闪烁层：与电脑端共用同一份绘制脚本 -->
+<script src="/js/theme/home/starfield.js"></script>
+
+
+  <div class="mb-top">
+    <a class="mb-back" href="/phone/">← 返回手机首页</a>
+    <span class="mb-sub" style="margin:0">2022-12-26</span>
+  </div>
+
+  <h1 class="mb-title">mysql-46-ha</h1>
+  <div class="mb-sub">
+    分类：database · mysql
+     ｜ 标签：系统课 · MySQL · 数据库
+  </div>
+
+  <div class="mb-article"><div class="essay-banner essay-database"></div>
+
+<h1 id="高可用方案：MHA、MGR-与-Orchestrator"><a href="#高可用方案：MHA、MGR-与-Orchestrator" class="headerlink" title="高可用方案：MHA、MGR 与 Orchestrator"></a>高可用方案：MHA、MGR 与 Orchestrator</h1><p><img src="https://wu4yong.github.io/starry-images/assets/img/mysql/mq-46-ha.svg" alt="高可用方案怎么选"></p>
+<p><em>能自动切换只是及格线，切换后数据对不对才是重点｜依据 MySQL 8.4 Group Replication &#x2F; 高可用实践自绘</em></p>
+<h2 id="一、学习目标"><a href="#一、学习目标" class="headerlink" title="一、学习目标"></a>一、学习目标</h2><ol>
+<li>会比较 MHA、Orchestrator、MGR、云托管的切换粒度与数据风险；</li>
+<li>知道切换后必须核对的三件事，避免「切过去了但数据不对」；</li>
+<li>理解 MGR 多数派约束，能判断三节点够不够。</li>
+</ol>
+<h2 id="二、前置知识"><a href="#二、前置知识" class="headerlink" title="二、前置知识"></a>二、前置知识</h2><p>主从复制与 GTID（MQ43）、半同步（MQ44）、binlog 与崩溃恢复（MQ30&#x2F;MQ32）。</p>
+<h2 id="三、理论讲解（官方定义）"><a href="#三、理论讲解（官方定义）" class="headerlink" title="三、理论讲解（官方定义）"></a>三、理论讲解（官方定义）</h2><p>高可用（HA）的目标是<strong>缩短不可用时间</strong>并<strong>保证切换后数据正确</strong>。MySQL 侧没有内建的自动故障转移，需要外部组件：</p>
+<table>
+<thead>
+<tr>
+<th>方案</th>
+<th>切换粒度</th>
+<th>数据风险</th>
+<th>复杂度</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>MHA</td>
+<td>主从组，秒级</td>
+<td>依赖 relay log 补齐，可能丢少量</td>
+<td>中（脚本老旧）</td>
+</tr>
+<tr>
+<td>Orchestrator</td>
+<td>拓扑感知，自动&#x2F;半自动</td>
+<td>同 MHA，可配合半同步</td>
+<td>中</td>
+</tr>
+<tr>
+<td>MGR（单主）</td>
+<td>多数派自动选主</td>
+<td>几乎不丢</td>
+<td>高（三节点、网络要求）</td>
+</tr>
+<tr>
+<td>云多可用区</td>
+<td>云平台编排</td>
+<td>取决于同步模式</td>
+<td>低（托管）</td>
+</tr>
+</tbody></table>
+<p>MGR 是 MySQL 官方的组复制方案（5.7.17 引入，8.0 稳定），基于 Paxos 变体，提供<strong>认证（certify）</strong>：事务在提交前先在各节点认证，冲突则回滚。</p>
+<h2 id="四、原理拆解"><a href="#四、原理拆解" class="headerlink" title="四、原理拆解"></a>四、原理拆解</h2><p><img src="https://wu4yong.github.io/starry-images/assets/img/mysql/mq-46b-ha.svg" alt="MGR 的三节点与两种模式"></p>
+<p><em>多数派是硬约束：三节点才能容忍一台故障｜依据 MySQL 8.4 Group Replication 说明自绘</em></p>
+<h3 id="1-多数派是硬约束"><a href="#1-多数派是硬约束" class="headerlink" title="1. 多数派是硬约束"></a>1. 多数派是硬约束</h3><p>MGR 要求多数节点在线才能提交（3 节点需 2 台）。这是它「几乎不丢数据」的代价：节点数越少越脆，跨机房部署还要评估认证 RTT。</p>
+<h3 id="2-单主-vs-多主"><a href="#2-单主-vs-多主" class="headerlink" title="2. 单主 vs 多主"></a>2. 单主 vs 多主</h3><ul>
+<li><strong>单主（single-primary）</strong>：只有 PRIMARY 接受写，切换由组内自动选举，最接近传统主从的使用方式；</li>
+<li><strong>多主（multi-primary）</strong>：任一节点可写，冲突靠 certify 与回滚，自增主键、唯一键极易冲突，<strong>生产慎用</strong>。</li>
+</ul>
+<h3 id="3-切换后必须核对的三件事"><a href="#3-切换后必须核对的三件事" class="headerlink" title="3. 切换后必须核对的三件事"></a>3. 切换后必须核对的三件事</h3><ol>
+<li><strong>GTID 集合完整</strong>：新主的 <code>executed_gtid_set</code> 应包含旧主已提交的全部事务，否则后续复制会冲突；</li>
+<li><strong>虚拟 IP &#x2F; DNS 生效</strong>：应用重连要快于重试间隔，否则请求打到旧主；</li>
+<li><strong>回切预案</strong>：旧主恢复后不能直接以主身份回归，需重新加入并补数据。</li>
+</ol>
+<h3 id="4-脑裂怎么防"><a href="#4-脑裂怎么防" class="headerlink" title="4. 脑裂怎么防"></a>4. 脑裂怎么防</h3><p>切换组件必须能确认「旧主确实失联」（如通过仲裁节点、 fencing 机制）。仅凭「心跳超时」就提升从库，会出现双主同时写入，数据分叉不可逆。</p>
+<h3 id="5-演练比方案更重要"><a href="#5-演练比方案更重要" class="headerlink" title="5. 演练比方案更重要"></a>5. 演练比方案更重要</h3><p>任何 HA 方案没演练过都等于没有。演练要覆盖：主库 kill -9、网络分区、切换后回切、切换期间应用报错量。</p>
+<h2 id="五、场景说明"><a href="#五、场景说明" class="headerlink" title="五、场景说明"></a>五、场景说明</h2><ol>
+<li><strong>核心交易库</strong>：MGR 单主三节点，同城三机房；</li>
+<li><strong>中型业务</strong>：Orchestrator + 半同步，成本可控；</li>
+<li><strong>老系统改造</strong>：MHA 过渡，逐步迁 MGR；</li>
+<li><strong>云上部署</strong>：用云平台多可用区 + 只读实例；</li>
+<li><strong>报表库</strong>：不需要 HA，能重跑即可。</li>
+</ol>
+<h2 id="六、示例代码-实操步骤"><a href="#六、示例代码-实操步骤" class="headerlink" title="六、示例代码&#x2F;实操步骤"></a>六、示例代码&#x2F;实操步骤</h2><h3 id="1-MGR-三节点基础配置"><a href="#1-MGR-三节点基础配置" class="headerlink" title="1. MGR 三节点基础配置"></a>1. MGR 三节点基础配置</h3><pre class="line-numbers language-ini" data-language="ini"><code class="language-ini"><span class="token comment"># my.cnf（每个节点）</span>
+<span class="token section"><span class="token punctuation">[</span><span class="token section-name selector">mysqld</span><span class="token punctuation">]</span></span>
+<span class="token key attr-name">server_id</span><span class="token punctuation">=</span><span class="token value attr-value">1</span>
+<span class="token key attr-name">gtid_mode</span><span class="token punctuation">=</span><span class="token value attr-value">ON</span>
+<span class="token key attr-name">enforce_gtid_consistency</span><span class="token punctuation">=</span><span class="token value attr-value">ON</span>
+<span class="token key attr-name">binlog_checksum</span><span class="token punctuation">=</span><span class="token value attr-value">NONE</span>
+<span class="token key attr-name">log_replica_updates</span><span class="token punctuation">=</span><span class="token value attr-value">ON</span>
+<span class="token key attr-name">binlog_format</span><span class="token punctuation">=</span><span class="token value attr-value">ROW</span>
+<span class="token key attr-name">plugin-load-add</span><span class="token punctuation">=</span><span class="token value attr-value">group_replication.so</span>
+<span class="token key attr-name">group_replication_group_name</span><span class="token punctuation">=</span><span class="token value attr-value">"<span class="token inner-value">8f0c2c1e-1a2b-4c3d-9e4f-5a6b7c8d9e0f</span>"</span>
+<span class="token key attr-name">group_replication_start_on_boot</span><span class="token punctuation">=</span><span class="token value attr-value">OFF</span>
+<span class="token key attr-name">group_replication_local_address</span><span class="token punctuation">=</span><span class="token value attr-value">"<span class="token inner-value">10.0.3.11:33061</span>"</span>
+<span class="token key attr-name">group_replication_group_seeds</span><span class="token punctuation">=</span><span class="token value attr-value">"<span class="token inner-value">10.0.3.11:33061,10.0.3.12:33061,10.0.3.13:33061</span>"</span>
+<span class="token key attr-name">group_replication_single_primary_mode</span><span class="token punctuation">=</span><span class="token value attr-value">ON</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<h3 id="2-引导第一个节点并加入其余节点"><a href="#2-引导第一个节点并加入其余节点" class="headerlink" title="2. 引导第一个节点并加入其余节点"></a>2. 引导第一个节点并加入其余节点</h3><pre class="line-numbers language-sql" data-language="sql"><code class="language-sql"><span class="token comment">-- 节点 A</span>
+<span class="token keyword">SET</span> <span class="token keyword">GLOBAL</span> group_replication_bootstrap_group<span class="token operator">=</span><span class="token keyword">ON</span><span class="token punctuation">;</span>
+<span class="token keyword">START</span> GROUP_REPLICATION<span class="token punctuation">;</span>
+<span class="token keyword">SET</span> <span class="token keyword">GLOBAL</span> group_replication_bootstrap_group<span class="token operator">=</span><span class="token keyword">OFF</span><span class="token punctuation">;</span>
+
+<span class="token comment">-- 节点 B、C</span>
+<span class="token keyword">START</span> GROUP_REPLICATION<span class="token punctuation">;</span>
+<span class="token keyword">SELECT</span> <span class="token operator">*</span> <span class="token keyword">FROM</span> performance_schema<span class="token punctuation">.</span>replication_group_members<span class="token punctuation">;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<p><code>MEMBER_STATE</code> 全为 <code>ONLINE</code> 才算成功。</p>
+<h3 id="3-观察主节点与冲突"><a href="#3-观察主节点与冲突" class="headerlink" title="3. 观察主节点与冲突"></a>3. 观察主节点与冲突</h3><pre class="line-numbers language-sql" data-language="sql"><code class="language-sql"><span class="token keyword">SELECT</span> MEMBER_HOST<span class="token punctuation">,</span> MEMBER_ROLE<span class="token punctuation">,</span> MEMBER_STATE
+<span class="token keyword">FROM</span> performance_schema<span class="token punctuation">.</span>replication_group_members<span class="token punctuation">;</span>
+
+<span class="token keyword">SELECT</span> <span class="token operator">*</span> <span class="token keyword">FROM</span> performance_schema<span class="token punctuation">.</span>replication_group_member_stats\G
+<span class="token comment">-- 关注 COUNT_TRANSACTIONS_ROLLED_BACK（回滚数）</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<h3 id="4-Orchestrator-关键动作"><a href="#4-Orchestrator-关键动作" class="headerlink" title="4. Orchestrator 关键动作"></a>4. Orchestrator 关键动作</h3><pre class="line-numbers language-bash" data-language="bash"><code class="language-bash">orchestrator-client <span class="token parameter variable">-c</span> topology <span class="token parameter variable">-alias</span> prod
+orchestrator-client <span class="token parameter variable">-c</span> graceful-master-takeover <span class="token parameter variable">-alias</span> prod <span class="token parameter variable">-s</span> <span class="token number">10.0</span>.3.12<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span></span></code></pre>
+
+<p>切换前确认 <code>RecoveryAnalysis</code> 里有「relay log 可补齐」的结论，否则会丢事务。</p>
+<h3 id="5-Java-侧怎么落地：切换期间应用要做什么"><a href="#5-Java-侧怎么落地：切换期间应用要做什么" class="headerlink" title="5. Java 侧怎么落地：切换期间应用要做什么"></a>5. Java 侧怎么落地：切换期间应用要做什么</h3><ol>
+<li><strong>短连接超时</strong>：<code>connectionTimeout</code> 1~3s、<code>socketTimeout</code> 明确设置，避免线程长时间挂死；</li>
+<li><strong>重试要幂等</strong>：切换期间写请求重试必须业务幂等（唯一键或去重表）；</li>
+<li><strong>DNS &#x2F; VIP 优先</strong>：应用连虚拟地址而非固定 IP，由 HA 组件负责漂移；</li>
+<li><strong>熔断</strong>：连续 N 次连接失败进入熔断，避免雪崩式重试；</li>
+<li><strong>演练常态化</strong>：把切换演练写进季度计划，含应用侧报错率复盘。</li>
+</ol>
+<h2 id="七、常见坑"><a href="#七、常见坑" class="headerlink" title="七、常见坑"></a>七、常见坑</h2><ol>
+<li><strong>只有两节点</strong>：MGR 两节点无多数派，不如不用；</li>
+<li><strong>脑裂</strong>：未做 fencing，旧主仍可写；</li>
+<li><strong>切换后不校验 GTID</strong>：新主缺事务，后续复制报冲突；</li>
+<li><strong>多主模式跑高并发写</strong>：冲突回滚拖垮吞吐；</li>
+<li><strong>应用硬编码主库 IP</strong>：切换后仍连旧主；</li>
+<li><strong>MHA 脚本年久失修</strong>：与新版本 GTID 语义不兼容；</li>
+<li><strong>从不演练</strong>：真故障时脚本跑不通。</li>
+</ol>
+<h2 id="八、版本差异"><a href="#八、版本差异" class="headerlink" title="八、版本差异"></a>八、版本差异</h2><ul>
+<li><strong>5.6</strong>：无官方 HA，主要靠 MHA&#x2F;MMM；</li>
+<li><strong>5.7</strong>：MGR 引入（5.7.17），早期稳定性有限；</li>
+<li><strong>8.0</strong>：MGR 稳定，支持多主、流控（flow control）、成员自动重加入；</li>
+<li><strong>8.4</strong>：MGR 为推荐 HA 方案之一，<code>group_replication_consistency</code> 可调一致性级别。</li>
+</ul>
+<h2 id="九、课后小结"><a href="#九、课后小结" class="headerlink" title="九、课后小结"></a>九、课后小结</h2><ul>
+<li>HA 的目标是「切得快」且「切完数据对」，两者缺一不可；</li>
+<li>MHA&#x2F;Orchestrator 依赖 relay log 补齐，可能丢少量；</li>
+<li>MGR 靠多数派认证，3 节点最多容忍 1 台；</li>
+<li>切换后必查 GTID 集合、VIP 生效、回切预案；</li>
+<li>没演练过的 HA 方案等于没有。</li>
+</ul>
+<h2 id="十、思考题"><a href="#十、思考题" class="headerlink" title="十、思考题"></a>十、思考题</h2><ol>
+<li><p>三节点 MGR 为什么不能容忍两台故障？</p>
+<p><strong>参考回答</strong>：MGR 要求多数派在线才能认证提交，3 节点的多数派是 2。两台故障只剩 1 台，无法形成多数派，集群进入只读&#x2F;不可写状态。想容忍更多故障只能扩到 5 节点。</p>
+</li>
+<li><p>MHA 切换「可能丢少量事务」，丢的是什么？</p>
+<p><strong>参考回答</strong>：丢的是旧主已提交但尚未传送到从库的 binlog 事件。MHA 会用 relay log 与 binlog 做差异补齐，但若差异段在旧主磁盘上已不可读（宕机&#x2F;损坏），就只能放弃这部分，造成丢失。</p>
+</li>
+<li><p>为什么切换后要核对 GTID 集合？</p>
+<p><strong>参考回答</strong>：若新主的 <code>executed_gtid_set</code> 缺少旧主已提交的事务，后续从库接入或旧主回归时会因 GTID 缺失&#x2F;冲突而复制中断；业务上则表现为「切换后数据少了」。</p>
+</li>
+<li><p>多主模式为什么生产慎用？</p>
+<p><strong>参考回答</strong>：任一节点可写会带来写冲突，靠 certify 检测后回滚，冲突率高时吞吐骤降；自增主键、唯一索引、跨节点事务都容易踩坑。除非业务能按分片隔离写入，否则不如单主。</p>
+</li>
+<li><p>怎么防止切换时出现双主？</p>
+<p><strong>参考回答</strong>：HA 组件必须有 fencing 能力（关停&#x2F;隔离旧主，如断电、封网、STONITH），并基于仲裁节点判定失联，而不是仅凭单点心跳超时。应用侧配合 VIP 漂移，确保只有一个入口可写。</p>
+</li>
+</ol>
+<h2 id="十一、官方资料"><a href="#十一、官方资料" class="headerlink" title="十一、官方资料"></a>十一、官方资料</h2><ul>
+<li>组复制：<a target="_blank" rel="noopener" href="https://dev.mysql.com/doc/refman/8.4/en/group-replication.html">https://dev.mysql.com/doc/refman/8.4/en/group-replication.html</a></li>
+<li>组复制一致性：<a target="_blank" rel="noopener" href="https://dev.mysql.com/doc/refman/8.4/en/group-replication-consistency.html">https://dev.mysql.com/doc/refman/8.4/en/group-replication-consistency.html</a></li>
+<li>复制故障切换：<a target="_blank" rel="noopener" href="https://dev.mysql.com/doc/refman/8.4/en/replication-solutions.html">https://dev.mysql.com/doc/refman/8.4/en/replication-solutions.html</a></li>
+<li>MGR 限制：<a target="_blank" rel="noopener" href="https://dev.mysql.com/doc/refman/8.4/en/group-replication-limitations.html">https://dev.mysql.com/doc/refman/8.4/en/group-replication-limitations.html</a></li>
+</ul>
+<p>上一篇：<a href="/2022/12/25/database/mysql/mysql-45-readwrite/">MQ45 读写分离</a> ｜ 下一篇：<a href="/2022/12/27/database/mysql/mysql-47-sharding/">MQ47 分库分表</a> ｜ <a href="/2022/11/10/database/mysql/mysql-0-series-index/">总目录</a></p>
+</div>
+
+  <div class="mb-foot">
+    <a href="/phone/">返回手机首页</a>
+    <a href="/phone/tags/">星迹索引</a>
+  </div>
+</div>
+
+
+<script>
+  /* 作用：懒加载本地 mermaid 库；无 mermaid 代码块时不加载 */
+  function loadLocalMermaid(){
+    return new Promise(function(resolve, reject){
+      if(window.mermaid) return resolve(window.mermaid);
+      var s = document.createElement('script');
+      s.src = '/js/third-party/mermaid/mermaid.min.js?v=10';
+      s.onload = function(){ resolve(window.mermaid); };
+      s.onerror = function(){ reject(new Error('mermaid local load failed')); };
+      document.head.appendChild(s);
+    });
+  }
+
+  /* 作用：把 ```mermaid 代码块替换成 SVG 图（手机端字号略小、图可横向滚动） */
+  async function renderMermaidDiagram(){
+    var blocks = document.querySelectorAll('pre[class*="language-mermaid"]');
+    if(!blocks.length) return;
+    var mermaid;
+    try { mermaid = await loadLocalMermaid(); }
+    catch(e){ console.warn('[mermaid] 本地库加载失败：', e); return; }
+
+    mermaid.initialize({
+      startOnLoad: false,
+      theme: 'base',
+      themeVariables: {
+        darkMode: true,
+        background: 'transparent',
+        fontFamily: '"Microsoft YaHei", "PingFang SC", "Segoe UI", sans-serif',
+        fontSize: '12px',
+        primaryColor: '#062f3d',
+        primaryTextColor: '#d6f6ff',
+        primaryBorderColor: '#00eeff',
+        secondaryColor: '#04222d',
+        tertiaryColor: '#04222d',
+        mainBkg: '#062f3d',
+        nodeBorder: '#00eeff',
+        clusterBkg: '#02161f',
+        clusterBorder: '#00eeff55',
+        lineColor: '#00eeff',
+        textColor: '#c0e8ff',
+        edgeLabelBackground: '#02161f'
+      },
+      flowchart: { curve: 'basis', useMaxWidth: false, htmlLabels: false, nodeSpacing: 30, rankSpacing: 40, padding: 10 }
+    });
+
+    var targets = [];
+    blocks.forEach(function(el){
+      var codeEl = el.querySelector('code');
+      if(!codeEl) return;
+      var div = document.createElement('div');
+      div.className = 'mermaid';
+      div.textContent = codeEl.textContent;
+      el.parentNode.replaceChild(div, el);
+      targets.push(div);
+    });
+    if(!targets.length) return;
+    try { await mermaid.run({ nodes: targets }); }
+    catch(e){ console.warn('[mermaid] 渲染失败：', e); }
+  }
+  /* 作用：多次触发兜底（延迟重试 + DOM 变化），防止某次时机没跑到导致图表留在代码块 */
+  var mmBusy = false;
+  function scheduleMermaid(){
+    if(mmBusy) return;
+    mmBusy = true;
+    renderMermaidDiagram().then(function(){ mmBusy = false; }, function(){ mmBusy = false; });
+  }
+  scheduleMermaid();
+  window.addEventListener('load', scheduleMermaid);
+  [1000, 3000, 8000].forEach(function(ms){ setTimeout(scheduleMermaid, ms); });
+  if(document.readyState !== 'loading') scheduleMermaid();
+  if(window.MutationObserver){
+    var mmTimer = null;
+    var mmObserver = new MutationObserver(function(){
+      clearTimeout(mmTimer);
+      mmTimer = setTimeout(scheduleMermaid, 400);
+    });
+    mmObserver.observe(document.querySelector('.mb-article') || document.body, { childList: true, subtree: true });
+  }
+</script>
+</body>
+</html>

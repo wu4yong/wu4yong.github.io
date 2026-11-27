@@ -1,0 +1,446 @@
+<!--
+  ============================================
+  手机端 · 文章原文页
+  文件：phone/post.njk
+  适用终端：手机端（路由 /phone/p/<slug>/，由 scripts/phone-routes.js 生成）
+  作用：手机阅读单篇文章；单列布局、无侧栏无雷达，替代电脑端 post.njk
+        数据由生成期算好：page.item = { title, dateStr, content, cats, tags }
+  样式依赖：source/css/theme/phone/common.css、source/css/theme/phone/list.css
+  组件依赖：phone/_components/Particles.njk
+  最后修改：2026-11-11
+  ============================================
+-->
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="color-scheme" content="dark">
+  <meta name="theme-color" content="#020817">
+  <!-- 首帧兜底：浏览器默认画布是白的，样式未解析前会闪一下白。这条规则先锁死深空底色 -->
+  <style>html{background-color:#020817}</style>
+  <title>mysql-51-monitor - 时空秘境</title>
+  <!-- 手机端样式：基础 + 列表/正文，外链引入（源文件 source/css/theme/phone/） -->
+  <link rel="stylesheet" href="/css/theme/phone/common.css">
+  <link rel="stylesheet" href="/css/theme/phone/list.css">
+<meta name="generator" content="Hexo 8.1.2"></head>
+<body>
+<div class="mb-shell">
+  <!--
+  ============================================
+  手机端星空粒子组件
+  文件：Particles.njk
+  适用终端：手机端
+  作用：Particles.njk 的手机端副本（nunjucks 子目录 include 取不到上级）
+        参数与电脑端 _components/Particles.njk 保持一致：
+        粒子 95 / 连线 118px / opacity 0.32，外加星座层与零星闪烁层
+  最后修改：2026-11-12
+  ============================================
+--><!-- z-index 必须是 0：负层级会被 body 不透明背景盖住，粒子在跑却看不见 -->
+<div id="particles" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 0; pointer-events: none;"></div>
+<!-- 星座层（与首页同一套：随机零星散布星座图形 + 偶尔闪烁的小星） -->
+<div id="constellations" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 1; pointer-events: none;" aria-hidden="true"></div>
+<script src="/js/particles.min.js"></script>
+<script>
+particlesJS("particles", {
+  particles: {
+    number: {
+      value: 95,
+      density: {
+        enable: true,
+        value_area: 800
+      }
+    },
+    color: {
+      value: "#00eeff"
+    },
+    shape: {
+      type: "circle",
+      stroke: {
+        width: 0,
+        color: "#000000"
+      }
+    },
+    opacity: {
+      value: 0.6,
+      random: true,
+      anim: {
+        enable: true,
+        speed: 0.5,
+        opacity_min: 0.1,
+        sync: false
+      }
+    },
+    size: {
+      value: 3,
+      random: true,
+      anim: {
+        enable: true,
+        speed: 2,
+        size_min: 0.1,
+        sync: false
+      }
+    },
+    line_linked: {
+      enable: true,
+      distance: 118,
+      color: "#00eeff",
+      opacity: 0.32,
+      width: 1
+    },
+    move: {
+      enable: true,
+      speed: 0.8,
+      direction: "none",
+      random: true,
+      straight: false,
+      out_mode: "out",
+      bounce: false,
+      attract: {
+        enable: true,
+        rotateX: 600,
+        rotateY: 1200
+      }
+    }
+  },
+  interactivity: {
+    detect_on: "canvas",
+    events: {
+      onhover: {
+        enable: true,
+        mode: "grab"       // 手指按住时粒子聚集
+      },
+      onclick: {
+        enable: true,
+        mode: "push"       // 点击时产生新粒子
+      },
+      resize: true
+    },
+    modes: {
+      grab: {
+        distance: 200,
+        line_linked: {
+          opacity: 1
+        }
+      },
+      push: {
+        particles_nb: 6
+      }
+    }
+  },
+  retina_detect: true
+});
+</script>
+<!-- 星座 + 零星闪烁层：与电脑端共用同一份绘制脚本 -->
+<script src="/js/theme/home/starfield.js"></script>
+
+
+  <div class="mb-top">
+    <a class="mb-back" href="/phone/">← 返回手机首页</a>
+    <span class="mb-sub" style="margin:0">2022-12-31</span>
+  </div>
+
+  <h1 class="mb-title">mysql-51-monitor</h1>
+  <div class="mb-sub">
+    分类：database · mysql
+     ｜ 标签：系统课 · MySQL · 数据库
+  </div>
+
+  <div class="mb-article"><div class="essay-banner essay-database"></div>
+
+<h1 id="监控指标与告警"><a href="#监控指标与告警" class="headerlink" title="监控指标与告警"></a>监控指标与告警</h1><p><img src="https://wu4yong.github.io/starry-images/assets/img/mysql/mq-51-monitoring.svg" alt="监控的四层指标"></p>
+<p><em>先看能不能连上，再看快不快，最后看数据对不对｜依据 MySQL 8.4 Performance Schema &#x2F; 监控实践自绘</em></p>
+<h2 id="一、学习目标"><a href="#一、学习目标" class="headerlink" title="一、学习目标"></a>一、学习目标</h2><ol>
+<li>用四层（可用性、性能、资源、正确性）搭出覆盖到位的指标盘；</li>
+<li>知道每个指标异常时该往哪里查，避免「有告警没结论」；</li>
+<li>把告警分级定下来，让值班的人知道哪条要打电话。</li>
+</ol>
+<h2 id="二、前置知识"><a href="#二、前置知识" class="headerlink" title="二、前置知识"></a>二、前置知识</h2><p>InnoDB 内存结构（MQ19）、慢日志与执行计划（MQ35&#x2F;MQ36）、主从复制（MQ43）。</p>
+<h2 id="三、理论讲解（官方定义）"><a href="#三、理论讲解（官方定义）" class="headerlink" title="三、理论讲解（官方定义）"></a>三、理论讲解（官方定义）</h2><p>MySQL 的可观测数据来自四个入口：</p>
+<table>
+<thead>
+<tr>
+<th>入口</th>
+<th>提供什么</th>
+<th>采集方式</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>SHOW GLOBAL STATUS</code> &#x2F; <code>performance_schema.global_status</code></td>
+<td>计数器（连接、QPS、行操作、锁等待）</td>
+<td>定期 <code>SELECT</code>，看增量而非绝对值</td>
+</tr>
+<tr>
+<td><code>performance_schema</code></td>
+<td>语句、等待、锁、阶段、内存</td>
+<td>表查询，开销可控</td>
+</tr>
+<tr>
+<td>慢查询日志</td>
+<td>超阈值 SQL + 执行细节</td>
+<td><code>long_query_time</code> + <code>log_slow_extra</code></td>
+</tr>
+<tr>
+<td>错误日志 &#x2F; 复制状态</td>
+<td>崩溃、复制错误、GTID</td>
+<td>日志采集 + <code>SHOW REPLICA STATUS</code></td>
+</tr>
+</tbody></table>
+<p>官方建议监控以<strong>计数器增量 + 比率</strong>为主，绝对累计值只在重启后归零、不能直接当趋势。</p>
+<h2 id="四、原理拆解"><a href="#四、原理拆解" class="headerlink" title="四、原理拆解"></a>四、原理拆解</h2><p><img src="https://wu4yong.github.io/starry-images/assets/img/mysql/mq-51b-monitoring.svg" alt="必须盯住的指标"></p>
+<p><em>指标不在多，在于「异常时能定位到层」｜依据 MySQL 8.4 Server Status Variables 说明自绘</em></p>
+<h3 id="1-可用性：先确认「活着」"><a href="#1-可用性：先确认「活着」" class="headerlink" title="1. 可用性：先确认「活着」"></a>1. 可用性：先确认「活着」</h3><ul>
+<li><code>Threads_connected</code> 接近 <code>max_connections</code>（默认 151）→ 连接耗尽；</li>
+<li><code>Aborted_connects</code> 突增 → 认证失败、网络抖动或连接池配置错；</li>
+<li>复制状态：<code>Replica_IO_Running</code> &#x2F; <code>Replica_SQL_Running</code> 任一为 <code>No</code> 即中断；</li>
+<li>探活用一个最小权限账号执行 <code>SELECT 1</code>，不要用 root。</li>
+</ul>
+<h3 id="2-性能：分清「慢在等」还是「慢在算」"><a href="#2-性能：分清「慢在等」还是「慢在算」" class="headerlink" title="2. 性能：分清「慢在等」还是「慢在算」"></a>2. 性能：分清「慢在等」还是「慢在算」</h3><table>
+<thead>
+<tr>
+<th>指标</th>
+<th>异常含义</th>
+<th>下一步</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>Threads_running</code> 远高于 CPU 核数</td>
+<td>大量并发在跑或等锁</td>
+<td><code>innodb_trx</code>、<code>metadata_locks</code></td>
+</tr>
+<tr>
+<td><code>Innodb_row_lock_waits</code> &#x2F; <code>_time</code> 增长</td>
+<td>锁冲突</td>
+<td>找出持锁事务与热点行</td>
+</tr>
+<tr>
+<td><code>Slow_queries</code> 增速异常</td>
+<td>新上线 SQL 或统计信息失真</td>
+<td>按指纹聚合慢日志</td>
+</tr>
+<tr>
+<td><code>Questions</code> 突增但 <code>Com_select</code> 比例下降</td>
+<td>短连接&#x2F;探活风暴</td>
+<td>查连接池与探活</td>
+</tr>
+</tbody></table>
+<p><code>Threads_running</code> 是判断「是不是真堵」最快的指标：它统计正在执行（不含空闲）的线程数，持续高于核数说明要么 CPU 饱和、要么大量线程在等锁&#x2F;等 IO。</p>
+<h3 id="3-资源：buffer-pool、磁盘与临时表"><a href="#3-资源：buffer-pool、磁盘与临时表" class="headerlink" title="3. 资源：buffer pool、磁盘与临时表"></a>3. 资源：buffer pool、磁盘与临时表</h3><ul>
+<li><strong>命中率</strong> &#x3D; <code>1 - Innodb_buffer_pool_reads / Innodb_buffer_pool_read_requests</code>，低于 95% 说明池小或有大范围扫描；</li>
+<li><strong>临时表落盘</strong> <code>Created_tmp_disk_tables / Created_tmp_tables</code> 高于 30% 通常意味着 <code>GROUP BY</code>&#x2F;<code>DISTINCT</code> 缺索引或 <code>tmp_table_size</code> 偏小；</li>
+<li><strong>磁盘</strong>：数据目录增长速率、binlog 目录增长速率、redo 目录（<code>#innodb_redo</code>）大小。</li>
+</ul>
+<h3 id="4-正确性：复制与备份"><a href="#4-正确性：复制与备份" class="headerlink" title="4. 正确性：复制与备份"></a>4. 正确性：复制与备份</h3><ul>
+<li><code>Seconds_Behind_Source</code>（8.0.22+ 命名，旧名 <code>Seconds_Behind_Master</code>）只是粗指标，更准的是 <code>SHOW REPLICA STATUS</code> 里的 <code>Relay_Log_File</code>&#x2F;<code>Exec_Source_Log_Pos</code> 与主库位点差；</li>
+<li><code>Retrieved_Gtid_Set</code> 与 <code>Executed_Gtid_Set</code> 的差值才是真实积压；</li>
+<li>备份任务的成功率与最近一次恢复演练结果，也要进监控盘。</li>
+</ul>
+<h3 id="5-告警分级"><a href="#5-告警分级" class="headerlink" title="5. 告警分级"></a>5. 告警分级</h3><table>
+<thead>
+<tr>
+<th>级别</th>
+<th>判据</th>
+<th>通知方式</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>P0</td>
+<td>不可用（连不上、主库宕、复制全断）</td>
+<td>电话 + 值班</td>
+</tr>
+<tr>
+<td>P1</td>
+<td>性能劣化（P99 超阈值、慢 SQL 激增、延迟 &gt; 60s）</td>
+<td>群消息 @ 值班</td>
+</tr>
+<tr>
+<td>P2</td>
+<td>容量趋势（磁盘 &gt; 70%、连接数 &gt; 60%）</td>
+<td>日报</td>
+</tr>
+</tbody></table>
+<p>分级不清的后果很直接：所有告警都发群消息，两周后没人看。</p>
+<h2 id="五、场景说明"><a href="#五、场景说明" class="headerlink" title="五、场景说明"></a>五、场景说明</h2><ol>
+<li><strong>大促前</strong>：盯 <code>Threads_running</code>、连接数、从库延迟；</li>
+<li><strong>新上线</strong>：盯慢 SQL 指纹里是否出现新 SQL；</li>
+<li><strong>批处理时段</strong>：盯临时表落盘与磁盘 IO；</li>
+<li><strong>故障复盘</strong>：用 <code>performance_schema</code> 历史表还原当时的等待分布；</li>
+<li><strong>容量规划</strong>：按周采集数据&#x2F;bilog 增长速率，提前扩盘。</li>
+</ol>
+<h2 id="六、示例代码-实操步骤"><a href="#六、示例代码-实操步骤" class="headerlink" title="六、示例代码&#x2F;实操步骤"></a>六、示例代码&#x2F;实操步骤</h2><h3 id="1-采集核心计数器"><a href="#1-采集核心计数器" class="headerlink" title="1. 采集核心计数器"></a>1. 采集核心计数器</h3><pre class="line-numbers language-sql" data-language="sql"><code class="language-sql"><span class="token keyword">SELECT</span> VARIABLE_NAME<span class="token punctuation">,</span> VARIABLE_VALUE
+<span class="token keyword">FROM</span> performance_schema<span class="token punctuation">.</span>global_status
+<span class="token keyword">WHERE</span> VARIABLE_NAME <span class="token operator">IN</span> <span class="token punctuation">(</span>
+  <span class="token string">'Threads_connected'</span><span class="token punctuation">,</span><span class="token string">'Threads_running'</span><span class="token punctuation">,</span><span class="token string">'Max_used_connections'</span><span class="token punctuation">,</span>
+  <span class="token string">'Questions'</span><span class="token punctuation">,</span><span class="token string">'Com_select'</span><span class="token punctuation">,</span><span class="token string">'Com_insert'</span><span class="token punctuation">,</span><span class="token string">'Com_update'</span><span class="token punctuation">,</span><span class="token string">'Com_delete'</span><span class="token punctuation">,</span>
+  <span class="token string">'Innodb_row_lock_waits'</span><span class="token punctuation">,</span><span class="token string">'Innodb_row_lock_time_avg'</span><span class="token punctuation">,</span>
+  <span class="token string">'Innodb_buffer_pool_reads'</span><span class="token punctuation">,</span><span class="token string">'Innodb_buffer_pool_read_requests'</span><span class="token punctuation">,</span>
+  <span class="token string">'Created_tmp_tables'</span><span class="token punctuation">,</span><span class="token string">'Created_tmp_disk_tables'</span><span class="token punctuation">,</span>
+  <span class="token string">'Slow_queries'</span><span class="token punctuation">,</span><span class="token string">'Aborted_connects'</span>
+<span class="token punctuation">)</span><span class="token punctuation">;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<p>采集间隔 10s，落时序库后算<strong>增量与比率</strong>，不要直接展示累计值。</p>
+<h3 id="2-计算-buffer-pool-命中率"><a href="#2-计算-buffer-pool-命中率" class="headerlink" title="2. 计算 buffer pool 命中率"></a>2. 计算 buffer pool 命中率</h3><pre class="line-numbers language-sql" data-language="sql"><code class="language-sql"><span class="token keyword">SELECT</span>
+  <span class="token number">1</span> <span class="token operator">-</span> <span class="token punctuation">(</span><span class="token keyword">SELECT</span> VARIABLE_VALUE <span class="token keyword">FROM</span> performance_schema<span class="token punctuation">.</span>global_status
+       <span class="token keyword">WHERE</span> VARIABLE_NAME<span class="token operator">=</span><span class="token string">'Innodb_buffer_pool_reads'</span><span class="token punctuation">)</span> <span class="token operator">/</span>
+      <span class="token punctuation">(</span><span class="token keyword">SELECT</span> VARIABLE_VALUE <span class="token keyword">FROM</span> performance_schema<span class="token punctuation">.</span>global_status
+       <span class="token keyword">WHERE</span> VARIABLE_NAME<span class="token operator">=</span><span class="token string">'Innodb_buffer_pool_read_requests'</span><span class="token punctuation">)</span> <span class="token keyword">AS</span> hit_rate<span class="token punctuation">;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<p>低于 0.95 且伴随 <code>Innodb_buffer_pool_reads</code> 增量放大，优先查全表扫描。</p>
+<h3 id="3-慢-SQL-按指纹聚合"><a href="#3-慢-SQL-按指纹聚合" class="headerlink" title="3. 慢 SQL 按指纹聚合"></a>3. 慢 SQL 按指纹聚合</h3><pre class="line-numbers language-sql" data-language="sql"><code class="language-sql"><span class="token keyword">SELECT</span> DIGEST_TEXT<span class="token punctuation">,</span> COUNT_STAR<span class="token punctuation">,</span>
+       <span class="token function">ROUND</span><span class="token punctuation">(</span>SUM_TIMER_WAIT<span class="token operator">/</span><span class="token number">1000000000000</span><span class="token punctuation">,</span> <span class="token number">3</span><span class="token punctuation">)</span> <span class="token keyword">AS</span> total_sec<span class="token punctuation">,</span>
+       <span class="token function">ROUND</span><span class="token punctuation">(</span>AVG_TIMER_WAIT<span class="token operator">/</span><span class="token number">1000000000</span><span class="token punctuation">,</span> <span class="token number">2</span><span class="token punctuation">)</span> <span class="token keyword">AS</span> avg_ms<span class="token punctuation">,</span>
+       SUM_ROWS_EXAMINED<span class="token punctuation">,</span> SUM_ROWS_SENT
+<span class="token keyword">FROM</span> performance_schema<span class="token punctuation">.</span>events_statements_summary_by_digest
+<span class="token keyword">ORDER</span> <span class="token keyword">BY</span> SUM_TIMER_WAIT <span class="token keyword">DESC</span> <span class="token keyword">LIMIT</span> <span class="token number">20</span><span class="token punctuation">;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<p><code>SUM_ROWS_EXAMINED / SUM_ROWS_SENT</code> 比值过大，说明扫了很多行只返回很少 —— 索引或写法问题。</p>
+<h3 id="4-复制延迟的真实算法"><a href="#4-复制延迟的真实算法" class="headerlink" title="4. 复制延迟的真实算法"></a>4. 复制延迟的真实算法</h3><pre class="line-numbers language-sql" data-language="sql"><code class="language-sql"><span class="token keyword">SHOW</span> REPLICA <span class="token keyword">STATUS</span>\G
+<span class="token comment">-- 关注：Replica_IO_Running / Replica_SQL_Running</span>
+<span class="token comment">--       Retrieved_Gtid_Set 与 Executed_Gtid_Set 的差</span>
+<span class="token comment">--       Seconds_Behind_Source（粗指标）</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span></span></code></pre>
+
+<p>精确积压用 GTID 集合差：<code>SELECT GTID_SUBTRACT(retrieved, executed)</code>，差集大小才是待重放事务量。</p>
+<h3 id="5-Java-侧怎么落地：指标进统一监控平台"><a href="#5-Java-侧怎么落地：指标进统一监控平台" class="headerlink" title="5. Java 侧怎么落地：指标进统一监控平台"></a>5. Java 侧怎么落地：指标进统一监控平台</h3><ol>
+<li><strong>采集用只读账号</strong>：<code>GRANT SELECT ON performance_schema.*</code>，并限定来源网段；</li>
+<li><strong>不要在应用里高频查询</strong>：指标采集交给专用 exporter，应用侧只暴露业务指标；</li>
+<li><strong>告警带上下文</strong>：告警消息里附当时 QPS、连接数、Top3 慢 SQL、主从延迟；</li>
+<li><strong>阈值分环境</strong>：预发阈值放宽，生产按 SLA 定；</li>
+<li><strong>看板分角色</strong>：值班看四层总览，DBA 看实例细节，研发看自己服务的慢 SQL。</li>
+</ol>
+<h2 id="七、常见坑"><a href="#七、常见坑" class="headerlink" title="七、常见坑"></a>七、常见坑</h2><ol>
+<li><strong>只看累计值不看增量</strong>：实例重启后计数器归零，曲线突变误判；</li>
+<li><strong>用 <code>Seconds_Behind_Source</code> 当唯一延迟指标</strong>：它在大事务&#x2F;长 SQL 下不准；</li>
+<li><strong>探活用 root + <code>SELECT *</code></strong>：既耗资源又放大权限；</li>
+<li><strong>告警阈值全局一套</strong>：小实例与大实例同样的绝对阈值，天天误报；</li>
+<li><strong>只监控主库</strong>：从库磁盘满、IO 打满无人知；</li>
+<li><strong>忽略 binlog 目录增长</strong>：磁盘被 binlog 写满导致主库宕；</li>
+<li><strong><code>performance_schema</code> 全开</strong>：开销上升，按需开 consumer；</li>
+<li><strong>没有历史基线</strong>：无法判断「现在的慢」是不是异常。</li>
+</ol>
+<h2 id="八、版本差异"><a href="#八、版本差异" class="headerlink" title="八、版本差异"></a>八、版本差异</h2><ul>
+<li><strong>5.6</strong>：<code>performance_schema</code> 覆盖有限，多数靠 <code>SHOW STATUS</code> 与 <code>SHOW PROFILE</code>；</li>
+<li><strong>5.7</strong>：<code>sys</code> schema 提供开箱视图（<code>sys.schema_table_statistics</code> 等），<code>SHOW PROFILE</code> 仍可用；</li>
+<li><strong>8.0</strong>：<code>SHOW PROFILE</code> 弃用，阶段耗时统一走 <code>performance_schema</code>；8.0.22 起复制相关变量改名（<code>Seconds_Behind_Source</code>）；</li>
+<li><strong>8.4 LTS</strong>：<code>SHOW REPLICA STATUS</code> 为标准写法；<code>log_slow_extra</code>（8.0.14+）提供更多执行细节；<code>mysql_native_password</code> 默认关闭，监控账号统一 <code>caching_sha2_password</code>。</li>
+</ul>
+<h2 id="九、课后小结"><a href="#九、课后小结" class="headerlink" title="九、课后小结"></a>九、课后小结</h2><ul>
+<li>四层指标：可用性 → 性能 → 资源 → 正确性，缺一层就有盲区；</li>
+<li>计数器看增量与比率，不看累计绝对值；</li>
+<li><code>Threads_running</code> 判断「是否真堵」，<code>events_statements_summary_by_digest</code> 定位「谁在堵」；</li>
+<li>复制延迟用 GTID 差集算，<code>Seconds_Behind_Source</code> 只作参考；</li>
+<li>告警必须分级，否则等于没有告警。</li>
+</ul>
+<h2 id="十、思考题"><a href="#十、思考题" class="headerlink" title="十、思考题"></a>十、思考题</h2><ol>
+<li><p>为什么 <code>Threads_running</code> 比 <code>Threads_connected</code> 更能反映真实压力？</p>
+<p><strong>参考回答</strong>：<code>Threads_connected</code> 包含空闲连接（连接池常驻但不干活的那些），数值高只说明连接多。<code>Threads_running</code> 只统计正在执行命令的线程，持续高于 CPU 核数说明要么计算饱和、要么大量线程在等锁&#x2F;等 IO，是真正的压力信号。</p>
+</li>
+<li><p><code>Seconds_Behind_Source</code> 在什么情况下会「骗人」？</p>
+<p><strong>参考回答</strong>：它计算的是从库 SQL 线程处理的事件时间戳与主库当前时间的差。当主库长时间没有写入时，从库即使位点落后也显示 0；当有一个超大事务在重放时，它可能长时间停在某个值不动；时钟不同步也会导致偏差。准确判断要用 <code>Retrieved_Gtid_Set</code> 与 <code>Executed_Gtid_Set</code> 的差集。</p>
+</li>
+<li><p>buffer pool 命中率 90% 一定要扩池吗？</p>
+<p><strong>参考回答</strong>：不一定。先看 <code>Innodb_buffer_pool_reads</code> 的增量是否集中在某几个 SQL（说明是全表扫描而非池小）；再看池是否已接近物理内存上限。如果是少数大范围扫描导致，优化 SQL 比扩池有效。命中率长期低于 95% 且扫描分散，才考虑扩池或拆分实例。</p>
+</li>
+<li><p>慢 SQL 为什么要按指纹（digest）聚合，而不是逐条看？</p>
+<p><strong>参考回答</strong>：同一条 SQL 模板可能每秒执行上千次，逐条看会被淹没。<code>events_statements_summary_by_digest</code> 把参数不同的同类语句归一成一条指纹，给出总耗时、平均耗时、扫描行数，能直接排出「最贵的 20 条」。逐条看只适合定位单次异常。</p>
+</li>
+<li><p>告警分级做不好的典型后果是什么？</p>
+<p><strong>参考回答</strong>：所有告警都走同一个通道，值班人员在噪声中逐渐忽略消息，真正 P0 时没人响应（告警疲劳）。分级之后 P0 才能触发电话与升级路径，P1&#x2F;P2 走异步通道，同时要求每条告警附带足够上下文，减少「收到告警后还要自己查一圈」的时间。</p>
+</li>
+</ol>
+<h2 id="十一、官方资料"><a href="#十一、官方资料" class="headerlink" title="十一、官方资料"></a>十一、官方资料</h2><ul>
+<li>Server Status Variables：<a target="_blank" rel="noopener" href="https://dev.mysql.com/doc/refman/8.4/en/server-status-variables.html">https://dev.mysql.com/doc/refman/8.4/en/server-status-variables.html</a></li>
+<li>Performance Schema：<a target="_blank" rel="noopener" href="https://dev.mysql.com/doc/refman/8.4/en/performance-schema.html">https://dev.mysql.com/doc/refman/8.4/en/performance-schema.html</a></li>
+<li>慢查询日志：<a target="_blank" rel="noopener" href="https://dev.mysql.com/doc/refman/8.4/en/slow-query-log.html">https://dev.mysql.com/doc/refman/8.4/en/slow-query-log.html</a></li>
+<li>复制监控：<a target="_blank" rel="noopener" href="https://dev.mysql.com/doc/refman/8.4/en/replication-implementation.html">https://dev.mysql.com/doc/refman/8.4/en/replication-implementation.html</a></li>
+</ul>
+<p>上一篇：<a href="/2022/12/30/database/mysql/mysql-50-online-ddl/">MQ50 在线 DDL</a> ｜ 下一篇：<a href="/2023/01/01/database/mysql/mysql-52-privilege/">MQ52 权限体系</a> ｜ <a href="/2022/11/10/database/mysql/mysql-0-series-index/">总目录</a></p>
+</div>
+
+  <div class="mb-foot">
+    <a href="/phone/">返回手机首页</a>
+    <a href="/phone/tags/">星迹索引</a>
+  </div>
+</div>
+
+
+<script>
+  /* 作用：懒加载本地 mermaid 库；无 mermaid 代码块时不加载 */
+  function loadLocalMermaid(){
+    return new Promise(function(resolve, reject){
+      if(window.mermaid) return resolve(window.mermaid);
+      var s = document.createElement('script');
+      s.src = '/js/third-party/mermaid/mermaid.min.js?v=10';
+      s.onload = function(){ resolve(window.mermaid); };
+      s.onerror = function(){ reject(new Error('mermaid local load failed')); };
+      document.head.appendChild(s);
+    });
+  }
+
+  /* 作用：把 ```mermaid 代码块替换成 SVG 图（手机端字号略小、图可横向滚动） */
+  async function renderMermaidDiagram(){
+    var blocks = document.querySelectorAll('pre[class*="language-mermaid"]');
+    if(!blocks.length) return;
+    var mermaid;
+    try { mermaid = await loadLocalMermaid(); }
+    catch(e){ console.warn('[mermaid] 本地库加载失败：', e); return; }
+
+    mermaid.initialize({
+      startOnLoad: false,
+      theme: 'base',
+      themeVariables: {
+        darkMode: true,
+        background: 'transparent',
+        fontFamily: '"Microsoft YaHei", "PingFang SC", "Segoe UI", sans-serif',
+        fontSize: '12px',
+        primaryColor: '#062f3d',
+        primaryTextColor: '#d6f6ff',
+        primaryBorderColor: '#00eeff',
+        secondaryColor: '#04222d',
+        tertiaryColor: '#04222d',
+        mainBkg: '#062f3d',
+        nodeBorder: '#00eeff',
+        clusterBkg: '#02161f',
+        clusterBorder: '#00eeff55',
+        lineColor: '#00eeff',
+        textColor: '#c0e8ff',
+        edgeLabelBackground: '#02161f'
+      },
+      flowchart: { curve: 'basis', useMaxWidth: false, htmlLabels: false, nodeSpacing: 30, rankSpacing: 40, padding: 10 }
+    });
+
+    var targets = [];
+    blocks.forEach(function(el){
+      var codeEl = el.querySelector('code');
+      if(!codeEl) return;
+      var div = document.createElement('div');
+      div.className = 'mermaid';
+      div.textContent = codeEl.textContent;
+      el.parentNode.replaceChild(div, el);
+      targets.push(div);
+    });
+    if(!targets.length) return;
+    try { await mermaid.run({ nodes: targets }); }
+    catch(e){ console.warn('[mermaid] 渲染失败：', e); }
+  }
+  /* 作用：多次触发兜底（延迟重试 + DOM 变化），防止某次时机没跑到导致图表留在代码块 */
+  var mmBusy = false;
+  function scheduleMermaid(){
+    if(mmBusy) return;
+    mmBusy = true;
+    renderMermaidDiagram().then(function(){ mmBusy = false; }, function(){ mmBusy = false; });
+  }
+  scheduleMermaid();
+  window.addEventListener('load', scheduleMermaid);
+  [1000, 3000, 8000].forEach(function(ms){ setTimeout(scheduleMermaid, ms); });
+  if(document.readyState !== 'loading') scheduleMermaid();
+  if(window.MutationObserver){
+    var mmTimer = null;
+    var mmObserver = new MutationObserver(function(){
+      clearTimeout(mmTimer);
+      mmTimer = setTimeout(scheduleMermaid, 400);
+    });
+    mmObserver.observe(document.querySelector('.mb-article') || document.body, { childList: true, subtree: true });
+  }
+</script>
+</body>
+</html>

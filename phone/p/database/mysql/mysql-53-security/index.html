@@ -1,0 +1,438 @@
+<!--
+  ============================================
+  手机端 · 文章原文页
+  文件：phone/post.njk
+  适用终端：手机端（路由 /phone/p/<slug>/，由 scripts/phone-routes.js 生成）
+  作用：手机阅读单篇文章；单列布局、无侧栏无雷达，替代电脑端 post.njk
+        数据由生成期算好：page.item = { title, dateStr, content, cats, tags }
+  样式依赖：source/css/theme/phone/common.css、source/css/theme/phone/list.css
+  组件依赖：phone/_components/Particles.njk
+  最后修改：2026-11-11
+  ============================================
+-->
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="color-scheme" content="dark">
+  <meta name="theme-color" content="#020817">
+  <!-- 首帧兜底：浏览器默认画布是白的，样式未解析前会闪一下白。这条规则先锁死深空底色 -->
+  <style>html{background-color:#020817}</style>
+  <title>mysql-53-security - 时空秘境</title>
+  <!-- 手机端样式：基础 + 列表/正文，外链引入（源文件 source/css/theme/phone/） -->
+  <link rel="stylesheet" href="/css/theme/phone/common.css">
+  <link rel="stylesheet" href="/css/theme/phone/list.css">
+<meta name="generator" content="Hexo 8.1.2"></head>
+<body>
+<div class="mb-shell">
+  <!--
+  ============================================
+  手机端星空粒子组件
+  文件：Particles.njk
+  适用终端：手机端
+  作用：Particles.njk 的手机端副本（nunjucks 子目录 include 取不到上级）
+        参数与电脑端 _components/Particles.njk 保持一致：
+        粒子 95 / 连线 118px / opacity 0.32，外加星座层与零星闪烁层
+  最后修改：2026-11-12
+  ============================================
+--><!-- z-index 必须是 0：负层级会被 body 不透明背景盖住，粒子在跑却看不见 -->
+<div id="particles" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 0; pointer-events: none;"></div>
+<!-- 星座层（与首页同一套：随机零星散布星座图形 + 偶尔闪烁的小星） -->
+<div id="constellations" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 1; pointer-events: none;" aria-hidden="true"></div>
+<script src="/js/particles.min.js"></script>
+<script>
+particlesJS("particles", {
+  particles: {
+    number: {
+      value: 95,
+      density: {
+        enable: true,
+        value_area: 800
+      }
+    },
+    color: {
+      value: "#00eeff"
+    },
+    shape: {
+      type: "circle",
+      stroke: {
+        width: 0,
+        color: "#000000"
+      }
+    },
+    opacity: {
+      value: 0.6,
+      random: true,
+      anim: {
+        enable: true,
+        speed: 0.5,
+        opacity_min: 0.1,
+        sync: false
+      }
+    },
+    size: {
+      value: 3,
+      random: true,
+      anim: {
+        enable: true,
+        speed: 2,
+        size_min: 0.1,
+        sync: false
+      }
+    },
+    line_linked: {
+      enable: true,
+      distance: 118,
+      color: "#00eeff",
+      opacity: 0.32,
+      width: 1
+    },
+    move: {
+      enable: true,
+      speed: 0.8,
+      direction: "none",
+      random: true,
+      straight: false,
+      out_mode: "out",
+      bounce: false,
+      attract: {
+        enable: true,
+        rotateX: 600,
+        rotateY: 1200
+      }
+    }
+  },
+  interactivity: {
+    detect_on: "canvas",
+    events: {
+      onhover: {
+        enable: true,
+        mode: "grab"       // 手指按住时粒子聚集
+      },
+      onclick: {
+        enable: true,
+        mode: "push"       // 点击时产生新粒子
+      },
+      resize: true
+    },
+    modes: {
+      grab: {
+        distance: 200,
+        line_linked: {
+          opacity: 1
+        }
+      },
+      push: {
+        particles_nb: 6
+      }
+    }
+  },
+  retina_detect: true
+});
+</script>
+<!-- 星座 + 零星闪烁层：与电脑端共用同一份绘制脚本 -->
+<script src="/js/theme/home/starfield.js"></script>
+
+
+  <div class="mb-top">
+    <a class="mb-back" href="/phone/">← 返回手机首页</a>
+    <span class="mb-sub" style="margin:0">2023-01-02</span>
+  </div>
+
+  <h1 class="mb-title">mysql-53-security</h1>
+  <div class="mb-sub">
+    分类：database · mysql
+     ｜ 标签：系统课 · MySQL · 数据库
+  </div>
+
+  <div class="mb-article"><div class="essay-banner essay-database"></div>
+
+<h1 id="安全加固：TLS、注入与账号隔离"><a href="#安全加固：TLS、注入与账号隔离" class="headerlink" title="安全加固：TLS、注入与账号隔离"></a>安全加固：TLS、注入与账号隔离</h1><p><img src="https://wu4yong.github.io/starry-images/assets/img/mysql/mq-53-security.svg" alt="安全加固的三条主线"></p>
+<p><em>链路加密、注入防护、账号隔离 —— 一条断了两条白搭｜依据 MySQL 8.4 Security &#x2F; TLS 说明自绘</em></p>
+<h2 id="一、学习目标"><a href="#一、学习目标" class="headerlink" title="一、学习目标"></a>一、学习目标</h2><ol>
+<li>把服务端与客户端的 TLS 配置串起来，避免「配了但没校验」；</li>
+<li>认清 SQL 注入的几种变形，用参数化 + 白名单把口子堵住；</li>
+<li>按清单做实例加固，新实例上线即合规。</li>
+</ol>
+<h2 id="二、前置知识"><a href="#二、前置知识" class="headerlink" title="二、前置知识"></a>二、前置知识</h2><p>账号与权限（MQ52）、认证插件（MQ16）、日志与审计（MQ36）。</p>
+<h2 id="三、理论讲解（官方定义）"><a href="#三、理论讲解（官方定义）" class="headerlink" title="三、理论讲解（官方定义）"></a>三、理论讲解（官方定义）</h2><p>MySQL 支持 TLS 加密的连接建立与数据传输，服务端通过 <code>ssl_ca</code>、<code>ssl_cert</code>、<code>ssl_key</code> 提供证书，客户端通过 <code>--ssl-mode</code> 选择校验强度：</p>
+<table>
+<thead>
+<tr>
+<th>客户端模式</th>
+<th>校验内容</th>
+<th>风险</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>DISABLED</code></td>
+<td>不加密</td>
+<td>明文抓包</td>
+</tr>
+<tr>
+<td><code>PREFERRED</code></td>
+<td>尽量加密，不校验证书</td>
+<td>中间人可伪装</td>
+</tr>
+<tr>
+<td><code>REQUIRED</code></td>
+<td>加密，不校验 CA</td>
+<td>中间人可伪装</td>
+</tr>
+<tr>
+<td><code>VERIFY_CA</code></td>
+<td>加密 + 校验 CA 签发</td>
+<td>推荐</td>
+</tr>
+<tr>
+<td><code>VERIFY_IDENTITY</code></td>
+<td>再校验主机名</td>
+<td>最严格</td>
+</tr>
+</tbody></table>
+<p>服务端侧 <code>require_secure_transport=ON</code> 可强制所有连接必须加密。</p>
+<h2 id="四、原理拆解"><a href="#四、原理拆解" class="headerlink" title="四、原理拆解"></a>四、原理拆解</h2><p><img src="https://wu4yong.github.io/starry-images/assets/img/mysql/mq-53b-security.svg" alt="TLS 与注入的实操"></p>
+<p><em>加密是配置问题，注入是编码问题，两者都不靠自觉｜依据 MySQL 8.4 Encrypted Connections &#x2F; 注入防护实践自绘</em></p>
+<h3 id="1-TLS-只在「校验」时才是安全的"><a href="#1-TLS-只在「校验」时才是安全的" class="headerlink" title="1. TLS 只在「校验」时才是安全的"></a>1. TLS 只在「校验」时才是安全的</h3><p><code>REQUIRED</code> 与 <code>PREFERRED</code> 只保证加密，不保证对端身份 —— 攻击者可以自签一张证书冒充数据库。只有 <code>VERIFY_CA</code> 以上才校验签发链，<code>VERIFY_IDENTITY</code> 还校验主机名。很多「已开启 TLS」的生产环境，客户端配的其实是 <code>PREFERRED</code>，等于没防。</p>
+<h3 id="2-注入的三种常见变形"><a href="#2-注入的三种常见变形" class="headerlink" title="2. 注入的三种常见变形"></a>2. 注入的三种常见变形</h3><ul>
+<li><strong>拼接</strong>：<code>&quot;WHERE id=&quot; + id</code>，最典型；</li>
+<li><strong>排序&#x2F;列名</strong>：<code>ORDER BY &quot; + sort</code>，列名无法参数化，必须白名单映射；</li>
+<li><strong><code>LIKE</code> &#x2F; <code>IN</code></strong>：<code>%</code> 与 <code>_</code> 是通配符，<code>IN (&quot; + ids + &quot;)</code> 会拼出超长语句或被注入。</li>
+</ul>
+<p>参数化（<code>PreparedStatement</code>）能解决值注入，<strong>解决不了标识符注入</strong>（表名、列名、排序方向），后者只能靠白名单。</p>
+<h3 id="3-账号隔离的三层"><a href="#3-账号隔离的三层" class="headerlink" title="3. 账号隔离的三层"></a>3. 账号隔离的三层</h3><ul>
+<li><strong>权限隔离</strong>：读写&#x2F;只读&#x2F;DDL&#x2F;备份分账号（MQ52）；</li>
+<li><strong>网络隔离</strong>：<code>bind-address</code> + 安全组，只放应用网段；</li>
+<li><strong>入口隔离</strong>：高危操作（<code>DROP</code>、大批量 <code>DELETE</code>）走审批流水线，不给人直连权限。</li>
+</ul>
+<h3 id="4-加固清单（摘）"><a href="#4-加固清单（摘）" class="headerlink" title="4. 加固清单（摘）"></a>4. 加固清单（摘）</h3><table>
+<thead>
+<tr>
+<th>项</th>
+<th>做法</th>
+<th>验证</th>
+<th>风险</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>TLS 强制</td>
+<td><code>require_secure_transport=ON</code></td>
+<td><code>SHOW VARIABLES</code></td>
+<td>明文抓包</td>
+</tr>
+<tr>
+<td>账号口令</td>
+<td><code>caching_sha2_password</code> + 轮换</td>
+<td><code>mysql.user</code> 插件列</td>
+<td>弱口令爆破</td>
+</tr>
+<tr>
+<td>网络边界</td>
+<td><code>bind-address</code> + 安全组</td>
+<td><code>nmap</code> 外网扫描</td>
+<td>公网暴露</td>
+</tr>
+<tr>
+<td>审计日志</td>
+<td>审计插件或代理审计</td>
+<td>抽查高危语句</td>
+<td>内鬼操作无痕</td>
+</tr>
+<tr>
+<td>本地文件</td>
+<td><code>local_infile=OFF</code></td>
+<td><code>SHOW VARIABLES</code></td>
+<td>读服务器文件</td>
+</tr>
+<tr>
+<td>版本</td>
+<td>保持 LTS 小版本更新</td>
+<td><code>SELECT VERSION()</code></td>
+<td>已知漏洞</td>
+</tr>
+</tbody></table>
+<h3 id="5-为什么-local-infile-要关"><a href="#5-为什么-local-infile-要关" class="headerlink" title="5. 为什么 local_infile 要关"></a>5. 为什么 <code>local_infile</code> 要关</h3><p><code>LOAD DATA LOCAL INFILE</code> 允许客户端让<strong>服务端读取客户端本地文件</strong>（历史上存在被恶意服务端反读文件的攻击面）。业务不用就关掉；要用则限定到特定账号与目录。</p>
+<h2 id="五、场景说明"><a href="#五、场景说明" class="headerlink" title="五、场景说明"></a>五、场景说明</h2><ol>
+<li><strong>等保&#x2F;合规要求</strong>：全链路 TLS + 审计日志 + 口令策略；</li>
+<li><strong>公网暴露的读库</strong>：至少 <code>bind-address</code> 收内网 + 安全组白名单；</li>
+<li><strong>多租户</strong>：账号按租户隔离，禁止跨租户授权；</li>
+<li><strong>数据导出</strong>：只允许只读账号 + 审批，导出文件加密；</li>
+<li><strong>第三方接入</strong>：单独账号、单独网段、单独限流。</li>
+</ol>
+<h2 id="六、示例代码-实操步骤"><a href="#六、示例代码-实操步骤" class="headerlink" title="六、示例代码&#x2F;实操步骤"></a>六、示例代码&#x2F;实操步骤</h2><h3 id="1-服务端开启-TLS"><a href="#1-服务端开启-TLS" class="headerlink" title="1. 服务端开启 TLS"></a>1. 服务端开启 TLS</h3><pre class="line-numbers language-ini" data-language="ini"><code class="language-ini"><span class="token section"><span class="token punctuation">[</span><span class="token section-name selector">mysqld</span><span class="token punctuation">]</span></span>
+<span class="token key attr-name">ssl_ca</span>   <span class="token punctuation">=</span> <span class="token value attr-value">/etc/mysql/certs/ca.pem</span>
+<span class="token key attr-name">ssl_cert</span> <span class="token punctuation">=</span> <span class="token value attr-value">/etc/mysql/certs/server-cert.pem</span>
+<span class="token key attr-name">ssl_key</span>  <span class="token punctuation">=</span> <span class="token value attr-value">/etc/mysql/certs/server-key.pem</span>
+<span class="token key attr-name">require_secure_transport</span> <span class="token punctuation">=</span> <span class="token value attr-value">ON</span>
+<span class="token key attr-name">local_infile</span> <span class="token punctuation">=</span> <span class="token value attr-value">OFF</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<pre class="line-numbers language-sql" data-language="sql"><code class="language-sql"><span class="token keyword">SHOW</span> VARIABLES <span class="token operator">LIKE</span> <span class="token string">'have_ssl'</span><span class="token punctuation">;</span>        <span class="token comment">-- YES 表示 TLS 可用</span>
+<span class="token keyword">SHOW</span> VARIABLES <span class="token operator">LIKE</span> <span class="token string">'require_secure_transport'</span><span class="token punctuation">;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span></span></code></pre>
+
+<p>改 <code>require_secure_transport</code> 前先确认所有客户端都支持 TLS，否则会直接连不上。</p>
+<h3 id="2-客户端连接校验"><a href="#2-客户端连接校验" class="headerlink" title="2. 客户端连接校验"></a>2. 客户端连接校验</h3><pre class="line-numbers language-bash" data-language="bash"><code class="language-bash">mysql --ssl-mode<span class="token operator">=</span>VERIFY_CA --ssl-ca<span class="token operator">=</span>/etc/mysql/certs/ca.pem <span class="token parameter variable">-h</span> db0 <span class="token parameter variable">-u</span> app <span class="token parameter variable">-p</span><span aria-hidden="true" class="line-numbers-rows"><span></span></span></code></pre>
+
+<p><code>VERIFY_IDENTITY</code> 需要证书 SAN 与连接主机名一致，内网多用 IP 连接时反而会失败，按实际情况选。</p>
+<h3 id="3-JDBC-侧配置"><a href="#3-JDBC-侧配置" class="headerlink" title="3. JDBC 侧配置"></a>3. JDBC 侧配置</h3><pre class="line-numbers language-properties" data-language="properties"><code class="language-properties"><span class="token key attr-name">jdbc</span><span class="token punctuation">:</span><span class="token value attr-value">mysql://db0:3306/shop?sslMode=VERIFY_CA</span>
+<span class="token key attr-name">  &amp;trustCertificateKeyStoreUrl</span><span class="token punctuation">=</span><span class="token value attr-value">file:/opt/app/certs/truststore.jks</span>
+<span class="token key attr-name">  &amp;trustCertificateKeyStorePassword</span><span class="token punctuation">=</span><span class="token value attr-value">***</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span></span></code></pre>
+
+<p>禁止 <code>sslMode=DISABLED</code> 与 <code>PREFERRED</code>；<code>VERIFY_CA</code> 至少保证不会被中间人冒充。</p>
+<h3 id="4-防注入的写法对照"><a href="#4-防注入的写法对照" class="headerlink" title="4. 防注入的写法对照"></a>4. 防注入的写法对照</h3><pre class="line-numbers language-java" data-language="java"><code class="language-java"><span class="token comment">// ❌ 拼接</span>
+<span class="token class-name">String</span> sql <span class="token operator">=</span> <span class="token string">"SELECT * FROM t_order WHERE id="</span> <span class="token operator">+</span> id<span class="token punctuation">;</span>
+
+<span class="token comment">// ✅ 参数化</span>
+<span class="token class-name">String</span> sql <span class="token operator">=</span> <span class="token string">"SELECT * FROM t_order WHERE id=?"</span><span class="token punctuation">;</span>
+jdbcTemplate<span class="token punctuation">.</span><span class="token function">query</span><span class="token punctuation">(</span>sql<span class="token punctuation">,</span> <span class="token keyword">new</span> <span class="token class-name">Object</span><span class="token punctuation">[</span><span class="token punctuation">]</span><span class="token punctuation">&#123;</span>id<span class="token punctuation">&#125;</span><span class="token punctuation">,</span> mapper<span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+<span class="token comment">// ✅ 排序字段白名单（列名不能参数化）</span>
+<span class="token keyword">private</span> <span class="token keyword">static</span> <span class="token keyword">final</span> <span class="token class-name">Set</span><span class="token generics"><span class="token punctuation">&lt;</span><span class="token class-name">String</span><span class="token punctuation">></span></span> <span class="token constant">SORTABLE</span> <span class="token operator">=</span> <span class="token class-name">Set</span><span class="token punctuation">.</span><span class="token function">of</span><span class="token punctuation">(</span><span class="token string">"create_time"</span><span class="token punctuation">,</span><span class="token string">"amount"</span><span class="token punctuation">,</span><span class="token string">"id"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token class-name">String</span> col <span class="token operator">=</span> <span class="token constant">SORTABLE</span><span class="token punctuation">.</span><span class="token function">contains</span><span class="token punctuation">(</span>sort<span class="token punctuation">)</span> <span class="token operator">?</span> sort <span class="token operator">:</span> <span class="token string">"id"</span><span class="token punctuation">;</span>
+<span class="token class-name">String</span> sql2 <span class="token operator">=</span> <span class="token string">"SELECT * FROM t_order ORDER BY "</span> <span class="token operator">+</span> col <span class="token operator">+</span> <span class="token string">" LIMIT 20"</span><span class="token punctuation">;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<p><code>LIKE</code> 查询要对 <code>%</code>&#x2F;<code>_</code> 转义：<code>kw.replace(&quot;%&quot;,&quot;\\%&quot;).replace(&quot;_&quot;,&quot;\\_&quot;)</code>，再拼进参数。</p>
+<h3 id="5-Java-侧怎么落地：把安全做成默认值"><a href="#5-Java-侧怎么落地：把安全做成默认值" class="headerlink" title="5. Java 侧怎么落地：把安全做成默认值"></a>5. Java 侧怎么落地：把安全做成默认值</h3><ol>
+<li><strong>数据源模板统一</strong>：连接串默认带 <code>sslMode=VERIFY_CA</code>，禁止业务自行改；</li>
+<li><strong>持久层强制参数化</strong>：MyBatis 用 <code>#{}</code> 而非 <code>${}</code>，CI 里加静态检查规则拦截 <code>${}</code>；</li>
+<li><strong>SQL 审计</strong>：拦截器记录全表 <code>DELETE</code>、无 <code>WHERE</code> 的 <code>UPDATE</code>、超长 <code>IN</code>；</li>
+<li><strong>账号从配置中心取</strong>：口令轮换不改代码，重启即生效；</li>
+<li><strong>上线检查表</strong>：新实例必须过 TLS&#x2F;账号&#x2F;网络&#x2F;审计四项检查，缺一项不放行。</li>
+</ol>
+<h2 id="七、常见坑"><a href="#七、常见坑" class="headerlink" title="七、常见坑"></a>七、常见坑</h2><ol>
+<li><strong>客户端配 <code>PREFERRED</code></strong>：看着加密了，其实不校验对端；</li>
+<li><strong>证书过期无监控</strong>：某天凌晨全站连不上库；</li>
+<li><strong><code>ORDER BY</code> 用 <code>${}</code> 拼接</strong>：参数化管不到列名，仍是注入；</li>
+<li><strong><code>LIKE</code> 未转义通配符</strong>：用户输入 <code>%</code> 造成全表扫描甚至越权匹配；</li>
+<li><strong><code>bind-address=0.0.0.0</code> + 安全组放通</strong>：等于公网裸奔；</li>
+<li><strong>开 <code>local_infile</code> 且用 root</strong>：可读服务器任意可读文件；</li>
+<li><strong>审计只看慢日志</strong>：注入语句往往很快，慢日志抓不到；</li>
+<li><strong>改 <code>require_secure_transport</code> 前未灰度</strong>：老客户端批量掉线。</li>
+</ol>
+<h2 id="八、版本差异"><a href="#八、版本差异" class="headerlink" title="八、版本差异"></a>八、版本差异</h2><ul>
+<li><strong>5.6</strong>：TLS 支持较弱，默认不强制；无 <code>caching_sha2_password</code>；</li>
+<li><strong>5.7</strong>：<code>--ssl-mode</code> 体系成型，<code>require_secure_transport</code> 可用；</li>
+<li><strong>8.0</strong>：TLS 1.2&#x2F;1.3 支持完善；<code>caching_sha2_password</code> 成为默认插件；<code>local_infile</code> 默认关闭（8.0 起默认 <code>OFF</code>）；</li>
+<li><strong>8.4 LTS</strong>：<code>mysql_native_password</code> 默认关闭，老客户端&#x2F;libmysql 版本过低会直接认证失败；<code>require_secure_transport</code> 与 <code>authentication_policy</code> 共同构成默认安全基线；TLS 1.0&#x2F;1.1 已不支持。</li>
+</ul>
+<h2 id="九、课后小结"><a href="#九、课后小结" class="headerlink" title="九、课后小结"></a>九、课后小结</h2><ul>
+<li>TLS 的安全来自「校验」，<code>REQUIRED/PREFERRED</code> 只加密不防冒充；</li>
+<li>注入要靠参数化 + 标识符白名单，<code>${}</code> 拼接是硬伤；</li>
+<li>账号隔离三层：权限、网络、入口；</li>
+<li>加固清单要变成上线检查项，而不是事故后的补丁；</li>
+<li>证书过期、插件默认关闭、版本漏洞，是最容易忽视的三类风险。</li>
+</ul>
+<h2 id="十、思考题"><a href="#十、思考题" class="headerlink" title="十、思考题"></a>十、思考题</h2><ol>
+<li><p><code>sslMode=REQUIRED</code> 已经加密了，为什么还不够？</p>
+<p><strong>参考回答</strong>：<code>REQUIRED</code> 只保证通道加密，不校验服务端证书的签发链。攻击者可以自签一张证书冒充数据库，客户端照样接受并加密通信，形成中间人。只有 <code>VERIFY_CA</code>（校验签发链）或 <code>VERIFY_IDENTITY</code>（再校验主机名）才能确认对端身份。</p>
+</li>
+<li><p>参数化为什么解决不了 <code>ORDER BY</code> 注入？</p>
+<p><strong>参考回答</strong>：参数化是把「值」绑定到占位符，<code>ORDER BY</code> 后面跟的是标识符（列名&#x2F;表达式），不是数据值，数据库不允许用占位符替代标识符。因此必须用白名单把前端传入的排序字段映射到固定的列名，未命中的一律回落到默认列。</p>
+</li>
+<li><p><code>local_infile=ON</code> 的风险具体是什么？</p>
+<p><strong>参考回答</strong>：<code>LOAD DATA LOCAL INFILE</code> 由客户端发起、服务端请求客户端发送本地文件内容，历史上存在恶意服务端借此读取客户端机器文件的问题；同时若服务端允许，也可能被用来读取服务器侧可读文件。业务不需要就关闭，需要则限定账号与目录。</p>
+</li>
+<li><p>8.4 默认关闭 <code>mysql_native_password</code> 会带来什么上线风险？</p>
+<p><strong>参考回答</strong>：老版本客户端驱动（如低版本 Connector&#x2F;J、部分语言的旧驱动）只支持 <code>mysql_native_password</code>，升级到 8.4 后会直接认证失败。上线前要确认所有客户端驱动版本，必要时临时启用该插件过渡，同时把驱动升级排进计划。</p>
+</li>
+<li><p>怎样证明「加固真的生效」而不是「配置写了」？</p>
+<p><strong>参考回答</strong>：用外部视角验证：从非授权网段 <code>nmap</code>&#x2F;<code>telnet</code> 扫端口；用不带证书的客户端尝试连接看是否被拒；用只读账号尝试 <code>INSERT</code> 看是否报权限错；抽查审计日志是否记录高危语句；定期做恢复与权限巡检。配置项只是意图，验证才是证据。</p>
+</li>
+</ol>
+<h2 id="十一、官方资料"><a href="#十一、官方资料" class="headerlink" title="十一、官方资料"></a>十一、官方资料</h2><ul>
+<li>加密连接：<a target="_blank" rel="noopener" href="https://dev.mysql.com/doc/refman/8.4/en/encrypted-connections.html">https://dev.mysql.com/doc/refman/8.4/en/encrypted-connections.html</a></li>
+<li>安全指南：<a target="_blank" rel="noopener" href="https://dev.mysql.com/doc/refman/8.4/en/security.html">https://dev.mysql.com/doc/refman/8.4/en/security.html</a></li>
+<li>认证插件：<a target="_blank" rel="noopener" href="https://dev.mysql.com/doc/refman/8.4/en/authentication-plugins.html">https://dev.mysql.com/doc/refman/8.4/en/authentication-plugins.html</a></li>
+<li><code>LOAD DATA</code>：<a target="_blank" rel="noopener" href="https://dev.mysql.com/doc/refman/8.4/en/load-data.html">https://dev.mysql.com/doc/refman/8.4/en/load-data.html</a></li>
+</ul>
+<p>上一篇：<a href="/2023/01/01/database/mysql/mysql-52-privilege/">MQ52 权限体系</a> ｜ 下一篇：<a href="/2023/01/03/database/mysql/mysql-54-incident/">MQ54 故障应急</a> ｜ <a href="/2022/11/10/database/mysql/mysql-0-series-index/">总目录</a></p>
+</div>
+
+  <div class="mb-foot">
+    <a href="/phone/">返回手机首页</a>
+    <a href="/phone/tags/">星迹索引</a>
+  </div>
+</div>
+
+
+<script>
+  /* 作用：懒加载本地 mermaid 库；无 mermaid 代码块时不加载 */
+  function loadLocalMermaid(){
+    return new Promise(function(resolve, reject){
+      if(window.mermaid) return resolve(window.mermaid);
+      var s = document.createElement('script');
+      s.src = '/js/third-party/mermaid/mermaid.min.js?v=10';
+      s.onload = function(){ resolve(window.mermaid); };
+      s.onerror = function(){ reject(new Error('mermaid local load failed')); };
+      document.head.appendChild(s);
+    });
+  }
+
+  /* 作用：把 ```mermaid 代码块替换成 SVG 图（手机端字号略小、图可横向滚动） */
+  async function renderMermaidDiagram(){
+    var blocks = document.querySelectorAll('pre[class*="language-mermaid"]');
+    if(!blocks.length) return;
+    var mermaid;
+    try { mermaid = await loadLocalMermaid(); }
+    catch(e){ console.warn('[mermaid] 本地库加载失败：', e); return; }
+
+    mermaid.initialize({
+      startOnLoad: false,
+      theme: 'base',
+      themeVariables: {
+        darkMode: true,
+        background: 'transparent',
+        fontFamily: '"Microsoft YaHei", "PingFang SC", "Segoe UI", sans-serif',
+        fontSize: '12px',
+        primaryColor: '#062f3d',
+        primaryTextColor: '#d6f6ff',
+        primaryBorderColor: '#00eeff',
+        secondaryColor: '#04222d',
+        tertiaryColor: '#04222d',
+        mainBkg: '#062f3d',
+        nodeBorder: '#00eeff',
+        clusterBkg: '#02161f',
+        clusterBorder: '#00eeff55',
+        lineColor: '#00eeff',
+        textColor: '#c0e8ff',
+        edgeLabelBackground: '#02161f'
+      },
+      flowchart: { curve: 'basis', useMaxWidth: false, htmlLabels: false, nodeSpacing: 30, rankSpacing: 40, padding: 10 }
+    });
+
+    var targets = [];
+    blocks.forEach(function(el){
+      var codeEl = el.querySelector('code');
+      if(!codeEl) return;
+      var div = document.createElement('div');
+      div.className = 'mermaid';
+      div.textContent = codeEl.textContent;
+      el.parentNode.replaceChild(div, el);
+      targets.push(div);
+    });
+    if(!targets.length) return;
+    try { await mermaid.run({ nodes: targets }); }
+    catch(e){ console.warn('[mermaid] 渲染失败：', e); }
+  }
+  /* 作用：多次触发兜底（延迟重试 + DOM 变化），防止某次时机没跑到导致图表留在代码块 */
+  var mmBusy = false;
+  function scheduleMermaid(){
+    if(mmBusy) return;
+    mmBusy = true;
+    renderMermaidDiagram().then(function(){ mmBusy = false; }, function(){ mmBusy = false; });
+  }
+  scheduleMermaid();
+  window.addEventListener('load', scheduleMermaid);
+  [1000, 3000, 8000].forEach(function(ms){ setTimeout(scheduleMermaid, ms); });
+  if(document.readyState !== 'loading') scheduleMermaid();
+  if(window.MutationObserver){
+    var mmTimer = null;
+    var mmObserver = new MutationObserver(function(){
+      clearTimeout(mmTimer);
+      mmTimer = setTimeout(scheduleMermaid, 400);
+    });
+    mmObserver.observe(document.querySelector('.mb-article') || document.body, { childList: true, subtree: true });
+  }
+</script>
+</body>
+</html>

@@ -1,0 +1,384 @@
+<!--
+  ============================================
+  手机端 · 文章原文页
+  文件：phone/post.njk
+  适用终端：手机端（路由 /phone/p/<slug>/，由 scripts/phone-routes.js 生成）
+  作用：手机阅读单篇文章；单列布局、无侧栏无雷达，替代电脑端 post.njk
+        数据由生成期算好：page.item = { title, dateStr, content, cats, tags }
+  样式依赖：source/css/theme/phone/common.css、source/css/theme/phone/list.css
+  组件依赖：phone/_components/Particles.njk
+  最后修改：2026-11-11
+  ============================================
+-->
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="color-scheme" content="dark">
+  <meta name="theme-color" content="#020817">
+  <!-- 首帧兜底：浏览器默认画布是白的，样式未解析前会闪一下白。这条规则先锁死深空底色 -->
+  <style>html{background-color:#020817}</style>
+  <title>mysql-26-long-tx - 时空秘境</title>
+  <!-- 手机端样式：基础 + 列表/正文，外链引入（源文件 source/css/theme/phone/） -->
+  <link rel="stylesheet" href="/css/theme/phone/common.css">
+  <link rel="stylesheet" href="/css/theme/phone/list.css">
+<meta name="generator" content="Hexo 8.1.2"></head>
+<body>
+<div class="mb-shell">
+  <!--
+  ============================================
+  手机端星空粒子组件
+  文件：Particles.njk
+  适用终端：手机端
+  作用：Particles.njk 的手机端副本（nunjucks 子目录 include 取不到上级）
+        参数与电脑端 _components/Particles.njk 保持一致：
+        粒子 95 / 连线 118px / opacity 0.32，外加星座层与零星闪烁层
+  最后修改：2026-11-12
+  ============================================
+--><!-- z-index 必须是 0：负层级会被 body 不透明背景盖住，粒子在跑却看不见 -->
+<div id="particles" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 0; pointer-events: none;"></div>
+<!-- 星座层（与首页同一套：随机零星散布星座图形 + 偶尔闪烁的小星） -->
+<div id="constellations" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 1; pointer-events: none;" aria-hidden="true"></div>
+<script src="/js/particles.min.js"></script>
+<script>
+particlesJS("particles", {
+  particles: {
+    number: {
+      value: 95,
+      density: {
+        enable: true,
+        value_area: 800
+      }
+    },
+    color: {
+      value: "#00eeff"
+    },
+    shape: {
+      type: "circle",
+      stroke: {
+        width: 0,
+        color: "#000000"
+      }
+    },
+    opacity: {
+      value: 0.6,
+      random: true,
+      anim: {
+        enable: true,
+        speed: 0.5,
+        opacity_min: 0.1,
+        sync: false
+      }
+    },
+    size: {
+      value: 3,
+      random: true,
+      anim: {
+        enable: true,
+        speed: 2,
+        size_min: 0.1,
+        sync: false
+      }
+    },
+    line_linked: {
+      enable: true,
+      distance: 118,
+      color: "#00eeff",
+      opacity: 0.32,
+      width: 1
+    },
+    move: {
+      enable: true,
+      speed: 0.8,
+      direction: "none",
+      random: true,
+      straight: false,
+      out_mode: "out",
+      bounce: false,
+      attract: {
+        enable: true,
+        rotateX: 600,
+        rotateY: 1200
+      }
+    }
+  },
+  interactivity: {
+    detect_on: "canvas",
+    events: {
+      onhover: {
+        enable: true,
+        mode: "grab"       // 手指按住时粒子聚集
+      },
+      onclick: {
+        enable: true,
+        mode: "push"       // 点击时产生新粒子
+      },
+      resize: true
+    },
+    modes: {
+      grab: {
+        distance: 200,
+        line_linked: {
+          opacity: 1
+        }
+      },
+      push: {
+        particles_nb: 6
+      }
+    }
+  },
+  retina_detect: true
+});
+</script>
+<!-- 星座 + 零星闪烁层：与电脑端共用同一份绘制脚本 -->
+<script src="/js/theme/home/starfield.js"></script>
+
+
+  <div class="mb-top">
+    <a class="mb-back" href="/phone/">← 返回手机首页</a>
+    <span class="mb-sub" style="margin:0">2022-12-06</span>
+  </div>
+
+  <h1 class="mb-title">mysql-26-long-tx</h1>
+  <div class="mb-sub">
+    分类：database · mysql
+     ｜ 标签：系统课 · MySQL · 数据库
+  </div>
+
+  <div class="mb-article"><div class="essay-banner essay-database"></div>
+
+<h1 id="长事务与大事务的代价"><a href="#长事务与大事务的代价" class="headerlink" title="长事务与大事务的代价"></a>长事务与大事务的代价</h1><p><img src="https://wu4yong.github.io/starry-images/assets/img/mysql/mq-26-longtrx.svg" alt="长事务的四笔账"></p>
+<p><em>undo 难回收、快照被拖老、锁持更久、日志更大——四条链路同时恶化｜依据 MySQL 8.4 事务与 purge 章节自绘</em></p>
+<h2 id="一、学习目标"><a href="#一、学习目标" class="headerlink" title="一、学习目标"></a>一、学习目标</h2><ol>
+<li>区分「长事务」与「大事务」，知道两者各自伤在哪；</li>
+<li>会用 <code>innodb_trx</code> 与 <code>History list length</code> 量化一个事务的代价；</li>
+<li>能把一个跑了十分钟的批处理拆成可控的小事务。</li>
+</ol>
+<h2 id="二、前置知识"><a href="#二、前置知识" class="headerlink" title="二、前置知识"></a>二、前置知识</h2><p>MVCC 与版本链（MQ22）、redo&#x2F;undo 的定位（本模块 MQ30、MQ31 会展开）。本篇先讲「代价」，机制留到后面。</p>
+<h2 id="三、理论讲解（官方定义）"><a href="#三、理论讲解（官方定义）" class="headerlink" title="三、理论讲解（官方定义）"></a>三、理论讲解（官方定义）</h2><p>官方没有给「长事务」下定义，只说明两件事：</p>
+<ul>
+<li><strong>一致性读依赖活跃事务</strong>：<code>REPEATABLE READ</code> 下快照由第一次读时的活跃事务集合决定，事务不结束，这个快照就一直是老的；</li>
+<li><strong>purge 只能清理「早于所有活跃事务」的 undo</strong>：只要还有一个事务开着，比它新的版本都得留着。</li>
+</ul>
+<p>所以判断标准不是「跑了多久」，而是<strong>它占了多少资源</strong>：修改行数、持有的锁、产生的 undo、写入的 redo 与 binlog 量。</p>
+<h2 id="四、原理拆解"><a href="#四、原理拆解" class="headerlink" title="四、原理拆解"></a>四、原理拆解</h2><p><img src="https://wu4yong.github.io/starry-images/assets/img/mysql/mq-26b-longtrx.svg" alt="undo 如何被拖成历史"></p>
+<p><em>purge 停在水位线下，历史版本只增不减；水位前移时集中清理，IO 抖动｜依据 MySQL 8.4 purge 与多版本说明自绘</em></p>
+<h3 id="1-四条代价链路"><a href="#1-四条代价链路" class="headerlink" title="1. 四条代价链路"></a>1. 四条代价链路</h3><table>
+<thead>
+<tr>
+<th>代价</th>
+<th>机制</th>
+<th>表现</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>undo 堆积</td>
+<td>purge 不能越过最老活跃事务</td>
+<td><code>History list length</code> 持续上升，undo 表空间膨胀</td>
+</tr>
+<tr>
+<td>快照拖老</td>
+<td>所有快照读都要穿越更长版本链</td>
+<td>读变慢，读到「很久以前」的数据</td>
+</tr>
+<tr>
+<td>锁持有变久</td>
+<td>行锁、next-key、MDL 都跟着延长</td>
+<td>并发下降，DDL 被卡在 MDL 队列</td>
+</tr>
+<tr>
+<td>日志变大</td>
+<td>一个事务只有一个提交点</td>
+<td>redo 容量吃紧，binlog 单事件巨大，复制延迟</td>
+</tr>
+</tbody></table>
+<h3 id="2-长事务-≠-大事务"><a href="#2-长事务-≠-大事务" class="headerlink" title="2. 长事务 ≠ 大事务"></a>2. 长事务 ≠ 大事务</h3><ul>
+<li><strong>长事务</strong>：时间跨度长，哪怕只改一行，只要不提交就一直拖住 purge 水位；</li>
+<li><strong>大事务</strong>：一次改很多行，即使几秒钟结束，也会产生海量 undo、redo、binlog，提交瞬间刷盘形成尖刺。</li>
+</ul>
+<p>最糟的是「又长又大」：批处理循环里忘了提交，跑半小时改了几十万行。</p>
+<h3 id="3-量化手段"><a href="#3-量化手段" class="headerlink" title="3. 量化手段"></a>3. 量化手段</h3><pre class="line-numbers language-sql" data-language="sql"><code class="language-sql"><span class="token comment">-- 最老的事务活了多少秒</span>
+<span class="token keyword">SELECT</span> trx_id<span class="token punctuation">,</span> trx_state<span class="token punctuation">,</span> trx_started<span class="token punctuation">,</span>
+       TIMESTAMPDIFF<span class="token punctuation">(</span><span class="token keyword">SECOND</span><span class="token punctuation">,</span> trx_started<span class="token punctuation">,</span> <span class="token function">NOW</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span> <span class="token keyword">AS</span> secs<span class="token punctuation">,</span>
+       trx_rows_modified<span class="token punctuation">,</span> trx_mysql_thread_id<span class="token punctuation">,</span> trx_query
+<span class="token keyword">FROM</span> information_schema<span class="token punctuation">.</span>innodb_trx
+<span class="token keyword">ORDER</span> <span class="token keyword">BY</span> trx_started<span class="token punctuation">;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<p><code>SHOW ENGINE INNODB STATUS</code> 的 <code>TRANSACTIONS</code> 段里能看到 <code>History list length</code>，这个数持续上涨就是 purge 追不上的信号。</p>
+<h3 id="4-拆分原则"><a href="#4-拆分原则" class="headerlink" title="4. 拆分原则"></a>4. 拆分原则</h3><ol>
+<li><strong>按主键区间分批</strong>：<code>WHERE id &gt; ? ORDER BY id LIMIT 500</code>，记下最后一条 id 作为下一批起点；</li>
+<li><strong>每批独立提交</strong>：批与批之间释放锁、推进 purge 水位；</li>
+<li><strong>失败可重入</strong>：每批幂等，重跑不会重复处理（用 <code>processed</code> 标记或唯一键）；</li>
+<li><strong>控制单事务行数</strong>：OLTP 建议个位数到几十行，批处理单批 500～1000 行；</li>
+<li><strong>只读事务也要短</strong>：长 <code>SELECT</code> 同样持有快照，会拖住 purge。</li>
+</ol>
+<h3 id="5-大事务对复制的额外影响"><a href="#5-大事务对复制的额外影响" class="headerlink" title="5. 大事务对复制的额外影响"></a>5. 大事务对复制的额外影响</h3><p><code>binlog_format = ROW</code> 时，一个大事务会产生一个巨大的 binlog 事件组，从库必须整组应用才能推进位点，期间 <code>Seconds_Behind_Master</code> 会跳变；主库提交瞬间还要等 redo 落盘，形成写入尖刺。</p>
+<h2 id="五、场景说明"><a href="#五、场景说明" class="headerlink" title="五、场景说明"></a>五、场景说明</h2><ol>
+<li><strong>数据迁移</strong>：按主键区间分批，每批 <code>INSERT ... SELECT</code> 后立即提交；</li>
+<li><strong>对账跑批</strong>：先读后写的逻辑拆成「读一批 → 处理 → 写一批」，不要一个事务贯穿全表；</li>
+<li><strong>发券&#x2F;积分发放</strong>：10 万用户分 200 批，失败重试按批次粒度；</li>
+<li><strong>大 SQL 导入</strong>：拆文件、关自动提交再按批 <code>COMMIT</code>；</li>
+<li><strong>在线 DDL 前</strong>：先确认没有超过阈值的活跃事务，否则 <code>ALTER</code> 会卡在 MDL。</li>
+</ol>
+<h2 id="六、示例代码-实操步骤"><a href="#六、示例代码-实操步骤" class="headerlink" title="六、示例代码&#x2F;实操步骤"></a>六、示例代码&#x2F;实操步骤</h2><h3 id="1-建监控视图（一眼看出长事务）"><a href="#1-建监控视图（一眼看出长事务）" class="headerlink" title="1. 建监控视图（一眼看出长事务）"></a>1. 建监控视图（一眼看出长事务）</h3><pre class="line-numbers language-sql" data-language="sql"><code class="language-sql"><span class="token keyword">CREATE</span> <span class="token operator">OR</span> <span class="token keyword">REPLACE</span> <span class="token keyword">VIEW</span> v_long_trx <span class="token keyword">AS</span>
+<span class="token keyword">SELECT</span> trx_id<span class="token punctuation">,</span> trx_mysql_thread_id <span class="token keyword">AS</span> conn_id<span class="token punctuation">,</span> trx_state<span class="token punctuation">,</span>
+       trx_started<span class="token punctuation">,</span> TIMESTAMPDIFF<span class="token punctuation">(</span><span class="token keyword">SECOND</span><span class="token punctuation">,</span> trx_started<span class="token punctuation">,</span> <span class="token function">NOW</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span> <span class="token keyword">AS</span> secs<span class="token punctuation">,</span>
+       trx_rows_modified <span class="token keyword">AS</span> rows_mod<span class="token punctuation">,</span> trx_query
+<span class="token keyword">FROM</span> information_schema<span class="token punctuation">.</span>innodb_trx
+<span class="token keyword">WHERE</span> TIMESTAMPDIFF<span class="token punctuation">(</span><span class="token keyword">SECOND</span><span class="token punctuation">,</span> trx_started<span class="token punctuation">,</span> <span class="token function">NOW</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span> <span class="token operator">></span> <span class="token number">60</span><span class="token punctuation">;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<h3 id="2-分批更新的标准写法"><a href="#2-分批更新的标准写法" class="headerlink" title="2. 分批更新的标准写法"></a>2. 分批更新的标准写法</h3><pre class="line-numbers language-sql" data-language="sql"><code class="language-sql"><span class="token comment">-- 每批 500 行，循环直到 affected_rows = 0</span>
+<span class="token keyword">UPDATE</span> t_task <span class="token keyword">SET</span> <span class="token keyword">status</span> <span class="token operator">=</span> <span class="token number">1</span>
+<span class="token keyword">WHERE</span> <span class="token keyword">status</span> <span class="token operator">=</span> <span class="token number">0</span> <span class="token operator">AND</span> id <span class="token operator">></span> <span class="token variable">@last_id</span>
+<span class="token keyword">ORDER</span> <span class="token keyword">BY</span> id <span class="token keyword">LIMIT</span> <span class="token number">500</span><span class="token punctuation">;</span>
+<span class="token comment">-- 记录本批最大 id 作为下一轮的 @last_id</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<h3 id="3-观察-purge-是否追上"><a href="#3-观察-purge-是否追上" class="headerlink" title="3. 观察 purge 是否追上"></a>3. 观察 purge 是否追上</h3><pre class="line-numbers language-sql" data-language="sql"><code class="language-sql"><span class="token keyword">SHOW</span> <span class="token keyword">ENGINE</span> <span class="token keyword">INNODB</span> <span class="token keyword">STATUS</span>\G   <span class="token comment">-- 看 TRANSACTIONS 段的 History list length</span>
+<span class="token keyword">SELECT</span> <span class="token operator">*</span> <span class="token keyword">FROM</span> information_schema<span class="token punctuation">.</span>INNODB_METRICS
+<span class="token keyword">WHERE</span> NAME <span class="token operator">LIKE</span> <span class="token string">'%purge%'</span><span class="token punctuation">;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span></span></code></pre>
+
+<h3 id="4-Java-侧怎么落地：批处理与事务边界"><a href="#4-Java-侧怎么落地：批处理与事务边界" class="headerlink" title="4. Java 侧怎么落地：批处理与事务边界"></a>4. Java 侧怎么落地：批处理与事务边界</h3><ol>
+<li><strong>事务只包住一批</strong>：<code>for (batch : batches) { txTemplate.execute(s -&gt; handle(batch)); }</code>，绝不在循环外开一个大事务；</li>
+<li><strong>分页键用主键游标</strong>，不要 <code>OFFSET</code>（越翻越慢）；</li>
+<li><strong>单批大小可配</strong>：默认 500，按行宽与索引情况调整，压测后定值；</li>
+<li><strong>提交后做副作用</strong>：消息、缓存、远程调用都放事务提交后（<code>TransactionSynchronization.afterCommit</code>）；</li>
+<li><strong>超时保护</strong>：<code>@Transactional(timeout = 30)</code> 让失控事务自动回滚；</li>
+<li><strong>只读查询限时</strong>：<code>SET SESSION max_execution_time = 5000</code>（仅对 <code>SELECT</code> 生效）；</li>
+<li><strong>监控告警</strong>：<code>v_long_trx</code> 定时采样，超过 60 秒告警，配合 <code>innodb_trx</code> 输出到日志便于回溯。</li>
+</ol>
+<h2 id="七、常见坑"><a href="#七、常见坑" class="headerlink" title="七、常见坑"></a>七、常见坑</h2><ol>
+<li><strong>批处理忘提交</strong>：循环里只 <code>execute</code> 不 <code>commit</code>，跑到一半 undo 爆仓；</li>
+<li><strong>用 <code>OFFSET</code> 分页</strong>：深分页扫描量线性增长，事务越跑越久；</li>
+<li><strong>事务里调 RPC</strong>：等外部接口的几百毫秒全算在锁持有时间里；</li>
+<li><strong>只读事务无所谓</strong>：长 <code>SELECT</code> 同样拖住 purge 水位；</li>
+<li><strong>大事务失败后整段重跑</strong>：没有批次幂等标记，重复写入；</li>
+<li><strong>把 <code>max_execution_time</code> 当万能</strong>：只作用于 <code>SELECT</code>，DML 不受控；</li>
+<li><strong>提交后立刻大批量发消息</strong>：尖刺从数据库转移到 MQ，同样要限速。</li>
+</ol>
+<h2 id="八、版本差异"><a href="#八、版本差异" class="headerlink" title="八、版本差异"></a>八、版本差异</h2><ul>
+<li><strong>5.7</strong>：redo 由 <code>innodb_log_file_size</code> + <code>innodb_log_files_in_group</code> 固定配置，扩容量要重启；</li>
+<li><strong>8.0.30 起</strong>：改为 <code>innodb_redo_log_capacity</code> 统一管理，可动态调整，redo 文件放在 <code>#innodb_redo</code> 目录；旧的 <code>innodb_log_file_size</code> 已弃用；</li>
+<li><strong>8.4</strong>：沿用 <code>innodb_redo_log_capacity</code>；<code>binlog_format</code> 默认 <code>ROW</code>，大事务对复制的放大效应更明显；<code>innodb_purge_threads</code> 默认 4，可按核数适度上调。</li>
+</ul>
+<h2 id="九、课后小结"><a href="#九、课后小结" class="headerlink" title="九、课后小结"></a>九、课后小结</h2><ul>
+<li>长事务伤在「不提交」：拖住 purge 水位与快照，与改了多少行无关；</li>
+<li>大事务伤在「一次改太多」：undo&#x2F;redo&#x2F;binlog 三处同时放大，提交瞬间尖刺；</li>
+<li>量化靠 <code>innodb_trx</code> 的 <code>trx_started</code> &#x2F; <code>trx_rows_modified</code> 与 <code>History list length</code>；</li>
+<li>拆分靠主键游标 + 每批提交 + 幂等可重入；</li>
+<li>事务里禁止 RPC，副作用放 <code>afterCommit</code>，并给事务设超时。</li>
+</ul>
+<h2 id="十、思考题"><a href="#十、思考题" class="headerlink" title="十、思考题"></a>十、思考题</h2><ol>
+<li><p>一个只改了一行、但开了 10 分钟没提交的事务，危害在哪？</p>
+<p><strong>参考回答</strong>：它是最老活跃事务，purge 不能清理比它新的任何 undo，历史版本持续堆积；同时它持有的那一行锁与快照都会保留十分钟，读操作要穿越更长的版本链。</p>
+</li>
+<li><p>为什么大事务会导致主从延迟突然变大？</p>
+<p><strong>参考回答</strong>：<code>ROW</code> 格式下一个大事务是一个巨大的 binlog 事件组，从库必须整组应用完才能推进位点，期间延迟指标持续上涨，且无法被其它事务插队。</p>
+</li>
+<li><p>分批处理时为什么推荐主键游标而不是 <code>OFFSET</code>？</p>
+<p><strong>参考回答</strong>：<code>OFFSET</code> 需要扫描并丢弃前 N 行，批次越往后越慢，事务时长不可控；主键游标直接定位区间，扫描量与批大小成正比。</p>
+</li>
+<li><p><code>max_execution_time</code> 能防住长事务吗？</p>
+<p><strong>参考回答</strong>：不能完全防。它只对 <code>SELECT</code> 生效，<code>UPDATE</code>&#x2F;<code>DELETE</code> 不受限制；DML 要用事务超时（<code>@Transactional(timeout)</code>）或应用侧限时。</p>
+</li>
+<li><p>提交后发消息与事务内发消息，差别是什么？</p>
+<p><strong>参考回答</strong>：事务内发消息会把网络耗时算进锁持有时间，还会出现「消息已发、事务回滚」的不一致；放到 <code>afterCommit</code> 才既短又一致（更严格的做法是本地消息表，见 MQ27）。</p>
+</li>
+</ol>
+<h2 id="十一、官方资料"><a href="#十一、官方资料" class="headerlink" title="十一、官方资料"></a>十一、官方资料</h2><ul>
+<li>多版本与 purge：<a target="_blank" rel="noopener" href="https://dev.mysql.com/doc/refman/8.4/en/innodb-multi-versioning.html">https://dev.mysql.com/doc/refman/8.4/en/innodb-multi-versioning.html</a></li>
+<li>purge 配置：<a target="_blank" rel="noopener" href="https://dev.mysql.com/doc/refman/8.4/en/innodb-purge-configuration.html">https://dev.mysql.com/doc/refman/8.4/en/innodb-purge-configuration.html</a></li>
+<li>redo 容量：<a target="_blank" rel="noopener" href="https://dev.mysql.com/doc/refman/8.4/en/innodb-redo-log.html">https://dev.mysql.com/doc/refman/8.4/en/innodb-redo-log.html</a></li>
+<li><code>innodb_trx</code> 视图：<a target="_blank" rel="noopener" href="https://dev.mysql.com/doc/refman/8.4/en/information-schema-innodb-trxs-table.html">https://dev.mysql.com/doc/refman/8.4/en/information-schema-innodb-trxs-table.html</a></li>
+</ul>
+<p>上一篇：<a href="/2022/12/05/database/mysql/mysql-25-deadlock/">MQ25 死锁</a> ｜ 下一篇：<a href="/2022/12/07/database/mysql/mysql-27-distributed-transaction/">MQ27 分布式事务</a> ｜ <a href="/2022/11/10/database/mysql/mysql-0-series-index/">总目录</a></p>
+</div>
+
+  <div class="mb-foot">
+    <a href="/phone/">返回手机首页</a>
+    <a href="/phone/tags/">星迹索引</a>
+  </div>
+</div>
+
+
+<script>
+  /* 作用：懒加载本地 mermaid 库；无 mermaid 代码块时不加载 */
+  function loadLocalMermaid(){
+    return new Promise(function(resolve, reject){
+      if(window.mermaid) return resolve(window.mermaid);
+      var s = document.createElement('script');
+      s.src = '/js/third-party/mermaid/mermaid.min.js?v=10';
+      s.onload = function(){ resolve(window.mermaid); };
+      s.onerror = function(){ reject(new Error('mermaid local load failed')); };
+      document.head.appendChild(s);
+    });
+  }
+
+  /* 作用：把 ```mermaid 代码块替换成 SVG 图（手机端字号略小、图可横向滚动） */
+  async function renderMermaidDiagram(){
+    var blocks = document.querySelectorAll('pre[class*="language-mermaid"]');
+    if(!blocks.length) return;
+    var mermaid;
+    try { mermaid = await loadLocalMermaid(); }
+    catch(e){ console.warn('[mermaid] 本地库加载失败：', e); return; }
+
+    mermaid.initialize({
+      startOnLoad: false,
+      theme: 'base',
+      themeVariables: {
+        darkMode: true,
+        background: 'transparent',
+        fontFamily: '"Microsoft YaHei", "PingFang SC", "Segoe UI", sans-serif',
+        fontSize: '12px',
+        primaryColor: '#062f3d',
+        primaryTextColor: '#d6f6ff',
+        primaryBorderColor: '#00eeff',
+        secondaryColor: '#04222d',
+        tertiaryColor: '#04222d',
+        mainBkg: '#062f3d',
+        nodeBorder: '#00eeff',
+        clusterBkg: '#02161f',
+        clusterBorder: '#00eeff55',
+        lineColor: '#00eeff',
+        textColor: '#c0e8ff',
+        edgeLabelBackground: '#02161f'
+      },
+      flowchart: { curve: 'basis', useMaxWidth: false, htmlLabels: false, nodeSpacing: 30, rankSpacing: 40, padding: 10 }
+    });
+
+    var targets = [];
+    blocks.forEach(function(el){
+      var codeEl = el.querySelector('code');
+      if(!codeEl) return;
+      var div = document.createElement('div');
+      div.className = 'mermaid';
+      div.textContent = codeEl.textContent;
+      el.parentNode.replaceChild(div, el);
+      targets.push(div);
+    });
+    if(!targets.length) return;
+    try { await mermaid.run({ nodes: targets }); }
+    catch(e){ console.warn('[mermaid] 渲染失败：', e); }
+  }
+  /* 作用：多次触发兜底（延迟重试 + DOM 变化），防止某次时机没跑到导致图表留在代码块 */
+  var mmBusy = false;
+  function scheduleMermaid(){
+    if(mmBusy) return;
+    mmBusy = true;
+    renderMermaidDiagram().then(function(){ mmBusy = false; }, function(){ mmBusy = false; });
+  }
+  scheduleMermaid();
+  window.addEventListener('load', scheduleMermaid);
+  [1000, 3000, 8000].forEach(function(ms){ setTimeout(scheduleMermaid, ms); });
+  if(document.readyState !== 'loading') scheduleMermaid();
+  if(window.MutationObserver){
+    var mmTimer = null;
+    var mmObserver = new MutationObserver(function(){
+      clearTimeout(mmTimer);
+      mmTimer = setTimeout(scheduleMermaid, 400);
+    });
+    mmObserver.observe(document.querySelector('.mb-article') || document.body, { childList: true, subtree: true });
+  }
+</script>
+</body>
+</html>

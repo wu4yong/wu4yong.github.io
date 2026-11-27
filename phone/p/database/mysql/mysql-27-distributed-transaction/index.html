@@ -1,0 +1,448 @@
+<!--
+  ============================================
+  手机端 · 文章原文页
+  文件：phone/post.njk
+  适用终端：手机端（路由 /phone/p/<slug>/，由 scripts/phone-routes.js 生成）
+  作用：手机阅读单篇文章；单列布局、无侧栏无雷达，替代电脑端 post.njk
+        数据由生成期算好：page.item = { title, dateStr, content, cats, tags }
+  样式依赖：source/css/theme/phone/common.css、source/css/theme/phone/list.css
+  组件依赖：phone/_components/Particles.njk
+  最后修改：2026-11-11
+  ============================================
+-->
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="color-scheme" content="dark">
+  <meta name="theme-color" content="#020817">
+  <!-- 首帧兜底：浏览器默认画布是白的，样式未解析前会闪一下白。这条规则先锁死深空底色 -->
+  <style>html{background-color:#020817}</style>
+  <title>mysql-27-dtx - 时空秘境</title>
+  <!-- 手机端样式：基础 + 列表/正文，外链引入（源文件 source/css/theme/phone/） -->
+  <link rel="stylesheet" href="/css/theme/phone/common.css">
+  <link rel="stylesheet" href="/css/theme/phone/list.css">
+<meta name="generator" content="Hexo 8.1.2"></head>
+<body>
+<div class="mb-shell">
+  <!--
+  ============================================
+  手机端星空粒子组件
+  文件：Particles.njk
+  适用终端：手机端
+  作用：Particles.njk 的手机端副本（nunjucks 子目录 include 取不到上级）
+        参数与电脑端 _components/Particles.njk 保持一致：
+        粒子 95 / 连线 118px / opacity 0.32，外加星座层与零星闪烁层
+  最后修改：2026-11-12
+  ============================================
+--><!-- z-index 必须是 0：负层级会被 body 不透明背景盖住，粒子在跑却看不见 -->
+<div id="particles" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 0; pointer-events: none;"></div>
+<!-- 星座层（与首页同一套：随机零星散布星座图形 + 偶尔闪烁的小星） -->
+<div id="constellations" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 1; pointer-events: none;" aria-hidden="true"></div>
+<script src="/js/particles.min.js"></script>
+<script>
+particlesJS("particles", {
+  particles: {
+    number: {
+      value: 95,
+      density: {
+        enable: true,
+        value_area: 800
+      }
+    },
+    color: {
+      value: "#00eeff"
+    },
+    shape: {
+      type: "circle",
+      stroke: {
+        width: 0,
+        color: "#000000"
+      }
+    },
+    opacity: {
+      value: 0.6,
+      random: true,
+      anim: {
+        enable: true,
+        speed: 0.5,
+        opacity_min: 0.1,
+        sync: false
+      }
+    },
+    size: {
+      value: 3,
+      random: true,
+      anim: {
+        enable: true,
+        speed: 2,
+        size_min: 0.1,
+        sync: false
+      }
+    },
+    line_linked: {
+      enable: true,
+      distance: 118,
+      color: "#00eeff",
+      opacity: 0.32,
+      width: 1
+    },
+    move: {
+      enable: true,
+      speed: 0.8,
+      direction: "none",
+      random: true,
+      straight: false,
+      out_mode: "out",
+      bounce: false,
+      attract: {
+        enable: true,
+        rotateX: 600,
+        rotateY: 1200
+      }
+    }
+  },
+  interactivity: {
+    detect_on: "canvas",
+    events: {
+      onhover: {
+        enable: true,
+        mode: "grab"       // 手指按住时粒子聚集
+      },
+      onclick: {
+        enable: true,
+        mode: "push"       // 点击时产生新粒子
+      },
+      resize: true
+    },
+    modes: {
+      grab: {
+        distance: 200,
+        line_linked: {
+          opacity: 1
+        }
+      },
+      push: {
+        particles_nb: 6
+      }
+    }
+  },
+  retina_detect: true
+});
+</script>
+<!-- 星座 + 零星闪烁层：与电脑端共用同一份绘制脚本 -->
+<script src="/js/theme/home/starfield.js"></script>
+
+
+  <div class="mb-top">
+    <a class="mb-back" href="/phone/">← 返回手机首页</a>
+    <span class="mb-sub" style="margin:0">2022-12-07</span>
+  </div>
+
+  <h1 class="mb-title">mysql-27-dtx</h1>
+  <div class="mb-sub">
+    分类：database · mysql
+     ｜ 标签：系统课 · MySQL · 数据库
+  </div>
+
+  <div class="mb-article"><div class="essay-banner essay-database"></div>
+
+<h1 id="分布式事务：XA-与本地消息表"><a href="#分布式事务：XA-与本地消息表" class="headerlink" title="分布式事务：XA 与本地消息表"></a>分布式事务：XA 与本地消息表</h1><p><img src="https://wu4yong.github.io/starry-images/assets/img/mysql/mq-27-dtx.svg" alt="分布式事务的两条路"></p>
+<p><em>XA 用两阶段换强一致，消息表用补偿换可用性｜依据 MySQL 8.4 XA Transactions 与 Outbox 模式自绘</em></p>
+<h2 id="一、学习目标"><a href="#一、学习目标" class="headerlink" title="一、学习目标"></a>一、学习目标</h2><ol>
+<li>说清 XA 的两阶段流程，以及「悬挂事务」是怎么产生的；</li>
+<li>掌握本地消息表（Outbox）的五步闭环，能自己建表并写出投递任务；</li>
+<li>能按业务强度选型：哪些场景必须强一致，哪些用最终一致就够。</li>
+</ol>
+<h2 id="二、前置知识"><a href="#二、前置知识" class="headerlink" title="二、前置知识"></a>二、前置知识</h2><p>事务与 ACID（MQ21）、锁与事务边界（MQ24、MQ26）。分布式事务不是数据库单点问题，是「跨服务写一致性」问题。</p>
+<h2 id="三、理论讲解（官方定义）"><a href="#三、理论讲解（官方定义）" class="headerlink" title="三、理论讲解（官方定义）"></a>三、理论讲解（官方定义）</h2><p>MySQL 的 XA 实现遵循 X&#x2F;Open 分布式事务模型，用两阶段提交（2PC）保证多个资源管理器（这里指多个 MySQL 实例，或 MySQL 与其它支持 XA 的资源）要么都提交、要么都回滚。</p>
+<p>语法核心：</p>
+<pre class="line-numbers language-sql" data-language="sql"><code class="language-sql">XA <span class="token keyword">START</span> <span class="token string">'xid'</span><span class="token punctuation">;</span>
+<span class="token comment">-- 业务 SQL</span>
+XA <span class="token keyword">END</span> <span class="token string">'xid'</span><span class="token punctuation">;</span>
+XA <span class="token keyword">PREPARE</span> <span class="token string">'xid'</span><span class="token punctuation">;</span>    <span class="token comment">-- 第一阶段：所有参与者准备好但不提交</span>
+XA <span class="token keyword">COMMIT</span> <span class="token string">'xid'</span><span class="token punctuation">;</span>     <span class="token comment">-- 第二阶段：统一提交</span>
+XA <span class="token keyword">ROLLBACK</span> <span class="token string">'xid'</span><span class="token punctuation">;</span>   <span class="token comment">-- 第二阶段：统一回滚</span>
+XA RECOVER<span class="token punctuation">;</span>          <span class="token comment">-- 查看处于 PREPARE 状态的事务</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<p>关键语义：<strong><code>XA PREPARE</code> 之后，行锁仍然被持有</strong>，直到 <code>COMMIT</code> 或 <code>ROLLBACK</code>。这也是 XA 吞吐上不去的根本原因。</p>
+<h2 id="四、原理拆解"><a href="#四、原理拆解" class="headerlink" title="四、原理拆解"></a>四、原理拆解</h2><p><img src="https://wu4yong.github.io/starry-images/assets/img/mysql/mq-27b-dtx.svg" alt="本地消息表的五步闭环"></p>
+<p><em>同一本地事务写业务行与消息行，再靠投递 + 幂等把不一致收敛｜依据 MySQL 8.4 XA 与事务消息实践自绘</em></p>
+<h3 id="1-XA-的两阶段与三个角色"><a href="#1-XA-的两阶段与三个角色" class="headerlink" title="1. XA 的两阶段与三个角色"></a>1. XA 的两阶段与三个角色</h3><table>
+<thead>
+<tr>
+<th>角色</th>
+<th>职责</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>协调者（应用或 TM）</td>
+<td>发起 <code>PREPARE</code>，收集结果，决定 <code>COMMIT</code>&#x2F;<code>ROLLBACK</code></td>
+</tr>
+<tr>
+<td>参与者（各 MySQL 实例）</td>
+<td>执行本地事务，进入 prepare 后等待裁决</td>
+</tr>
+<tr>
+<td>恢复日志</td>
+<td>参与者把 prepare 状态持久化，崩溃后可 <code>XA RECOVER</code></td>
+</tr>
+</tbody></table>
+<h3 id="2-悬挂事务"><a href="#2-悬挂事务" class="headerlink" title="2. 悬挂事务"></a>2. 悬挂事务</h3><p>协调者在发完 <code>PREPARE</code>、还没发 <code>COMMIT</code> 时崩溃，参与者就停在 prepare 状态：锁不放、日志不落、业务无法推进。<code>XA RECOVER</code> 能看到它，但<strong>只能人工或由补偿任务裁决</strong>，这就是「悬挂」。</p>
+<h3 id="3-XA-的性能代价"><a href="#3-XA-的性能代价" class="headerlink" title="3. XA 的性能代价"></a>3. XA 的性能代价</h3><ul>
+<li>prepare 到 commit 之间持锁，等于把两段网络往返塞进临界区；</li>
+<li>每个参与者都要写 prepare 日志并刷盘，提交阶段再刷一次；</li>
+<li>协调者单点，挂了就悬挂；</li>
+<li>因此 XA 适合<strong>低频、强一致</strong>的场景（资金、账务），不适合高频交易主链路。</li>
+</ul>
+<h3 id="4-本地消息表（Outbox）"><a href="#4-本地消息表（Outbox）" class="headerlink" title="4. 本地消息表（Outbox）"></a>4. 本地消息表（Outbox）</h3><p>思路：<strong>不发远程消息，先在本地库里写一行「待发送」记录</strong>。业务行与消息行在同一个本地事务里落库，天然原子；再由后台任务把消息投出去，下游幂等消费。</p>
+<p>表设计：</p>
+<pre class="line-numbers language-sql" data-language="sql"><code class="language-sql"><span class="token keyword">CREATE</span> <span class="token keyword">TABLE</span> msg_outbox <span class="token punctuation">(</span>
+  id <span class="token keyword">BIGINT</span> <span class="token keyword">PRIMARY</span> <span class="token keyword">KEY</span> <span class="token keyword">AUTO_INCREMENT</span><span class="token punctuation">,</span>
+  biz_id <span class="token keyword">VARCHAR</span><span class="token punctuation">(</span><span class="token number">64</span><span class="token punctuation">)</span> <span class="token operator">NOT</span> <span class="token boolean">NULL</span><span class="token punctuation">,</span>        <span class="token comment">-- 业务唯一键，用于幂等</span>
+  topic <span class="token keyword">VARCHAR</span><span class="token punctuation">(</span><span class="token number">64</span><span class="token punctuation">)</span> <span class="token operator">NOT</span> <span class="token boolean">NULL</span><span class="token punctuation">,</span>
+  payload JSON <span class="token operator">NOT</span> <span class="token boolean">NULL</span><span class="token punctuation">,</span>
+  <span class="token keyword">status</span> <span class="token keyword">TINYINT</span> <span class="token operator">NOT</span> <span class="token boolean">NULL</span> <span class="token keyword">DEFAULT</span> <span class="token number">0</span><span class="token punctuation">,</span>  <span class="token comment">-- 0 待发 1 已发 2 失败</span>
+  retry <span class="token keyword">INT</span> <span class="token operator">NOT</span> <span class="token boolean">NULL</span> <span class="token keyword">DEFAULT</span> <span class="token number">0</span><span class="token punctuation">,</span>
+  created_at <span class="token keyword">DATETIME</span><span class="token punctuation">(</span><span class="token number">3</span><span class="token punctuation">)</span> <span class="token operator">NOT</span> <span class="token boolean">NULL</span> <span class="token keyword">DEFAULT</span> <span class="token keyword">CURRENT_TIMESTAMP</span><span class="token punctuation">(</span><span class="token number">3</span><span class="token punctuation">)</span><span class="token punctuation">,</span>
+  <span class="token keyword">KEY</span> idx_status_id <span class="token punctuation">(</span><span class="token keyword">status</span><span class="token punctuation">,</span> id<span class="token punctuation">)</span>
+<span class="token punctuation">)</span> <span class="token keyword">ENGINE</span> <span class="token operator">=</span> <span class="token keyword">InnoDB</span><span class="token punctuation">;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<p>投递任务用 <code>FOR UPDATE SKIP LOCKED</code> 抢占，多个 worker 互不阻塞：</p>
+<pre class="line-numbers language-sql" data-language="sql"><code class="language-sql"><span class="token keyword">START</span> <span class="token keyword">TRANSACTION</span><span class="token punctuation">;</span>
+<span class="token keyword">SELECT</span> id<span class="token punctuation">,</span> topic<span class="token punctuation">,</span> payload <span class="token keyword">FROM</span> msg_outbox
+<span class="token keyword">WHERE</span> <span class="token keyword">status</span> <span class="token operator">=</span> <span class="token number">0</span> <span class="token keyword">ORDER</span> <span class="token keyword">BY</span> id <span class="token keyword">LIMIT</span> <span class="token number">100</span>
+<span class="token keyword">FOR</span> <span class="token keyword">UPDATE</span> SKIP LOCKED<span class="token punctuation">;</span>
+<span class="token comment">-- 逐条投递，成功后</span>
+<span class="token keyword">UPDATE</span> msg_outbox <span class="token keyword">SET</span> <span class="token keyword">status</span> <span class="token operator">=</span> <span class="token number">1</span> <span class="token keyword">WHERE</span> id <span class="token operator">IN</span> <span class="token punctuation">(</span><span class="token punctuation">.</span><span class="token punctuation">.</span><span class="token punctuation">.</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token keyword">COMMIT</span><span class="token punctuation">;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<h3 id="5-三种方案的取舍"><a href="#5-三种方案的取舍" class="headerlink" title="5. 三种方案的取舍"></a>5. 三种方案的取舍</h3><table>
+<thead>
+<tr>
+<th>维度</th>
+<th>XA</th>
+<th>本地消息表</th>
+<th>TCC</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>一致性</td>
+<td>强一致</td>
+<td>最终一致</td>
+<td>最终一致</td>
+</tr>
+<tr>
+<td>锁范围</td>
+<td>跨库行锁</td>
+<td>无跨库锁</td>
+<td>业务资源预留</td>
+</tr>
+<tr>
+<td>失败处理</td>
+<td><code>XA RECOVER</code> 人工裁决</td>
+<td>重投 + 对账</td>
+<td>cancel 补偿</td>
+</tr>
+<tr>
+<td>复杂度</td>
+<td>中，运维重</td>
+<td>低</td>
+<td>高</td>
+</tr>
+<tr>
+<td>适用</td>
+<td>资金、账务</td>
+<td>通知、积分、日志</td>
+<td>订单、库存</td>
+</tr>
+</tbody></table>
+<h2 id="五、场景说明"><a href="#五、场景说明" class="headerlink" title="五、场景说明"></a>五、场景说明</h2><ol>
+<li><strong>跨行转账</strong>：两个账户在不同实例，金额敏感，用 XA 或 TCC；</li>
+<li><strong>下单后发通知</strong>：订单库落库 + 消息表，异步通知，用 Outbox；</li>
+<li><strong>积分发放</strong>：支付成功后加积分，失败可补偿，Outbox + 对账；</li>
+<li><strong>跨服务库存扣减</strong>：TCC 的 Try&#x2F;Confirm&#x2F;Cancel 更合适，XA 会拖长锁；</li>
+<li><strong>遗留系统对接</strong>：对方不支持 XA，只能走消息表 + 对账兜底。</li>
+</ol>
+<h2 id="六、示例代码-实操步骤"><a href="#六、示例代码-实操步骤" class="headerlink" title="六、示例代码&#x2F;实操步骤"></a>六、示例代码&#x2F;实操步骤</h2><h3 id="1-XA-实操（两实例）"><a href="#1-XA-实操（两实例）" class="headerlink" title="1. XA 实操（两实例）"></a>1. XA 实操（两实例）</h3><pre class="line-numbers language-sql" data-language="sql"><code class="language-sql"><span class="token comment">-- 实例 A</span>
+XA <span class="token keyword">START</span> <span class="token string">'tx-1001'</span><span class="token punctuation">;</span>
+<span class="token keyword">UPDATE</span> account <span class="token keyword">SET</span> bal <span class="token operator">=</span> bal <span class="token operator">-</span> <span class="token number">100</span> <span class="token keyword">WHERE</span> id <span class="token operator">=</span> <span class="token number">1</span><span class="token punctuation">;</span>
+XA <span class="token keyword">END</span> <span class="token string">'tx-1001'</span><span class="token punctuation">;</span>
+XA <span class="token keyword">PREPARE</span> <span class="token string">'tx-1001'</span><span class="token punctuation">;</span>
+
+<span class="token comment">-- 实例 B</span>
+XA <span class="token keyword">START</span> <span class="token string">'tx-1001'</span><span class="token punctuation">;</span>
+<span class="token keyword">UPDATE</span> account <span class="token keyword">SET</span> bal <span class="token operator">=</span> bal <span class="token operator">+</span> <span class="token number">100</span> <span class="token keyword">WHERE</span> id <span class="token operator">=</span> <span class="token number">2</span><span class="token punctuation">;</span>
+XA <span class="token keyword">END</span> <span class="token string">'tx-1001'</span><span class="token punctuation">;</span>
+XA <span class="token keyword">PREPARE</span> <span class="token string">'tx-1001'</span><span class="token punctuation">;</span>
+
+<span class="token comment">-- 两边都 prepare 成功后</span>
+XA <span class="token keyword">COMMIT</span> <span class="token string">'tx-1001'</span><span class="token punctuation">;</span>   <span class="token comment">-- A、B 各执行一次</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<p>任一 <code>PREPARE</code> 失败则两边都 <code>XA ROLLBACK</code>。中途崩溃用 <code>XA RECOVER</code> 查悬挂。</p>
+<h3 id="2-Outbox-同事务写入"><a href="#2-Outbox-同事务写入" class="headerlink" title="2. Outbox 同事务写入"></a>2. Outbox 同事务写入</h3><pre class="line-numbers language-sql" data-language="sql"><code class="language-sql"><span class="token keyword">START</span> <span class="token keyword">TRANSACTION</span><span class="token punctuation">;</span>
+<span class="token keyword">INSERT</span> <span class="token keyword">INTO</span> t_order <span class="token punctuation">(</span>order_no<span class="token punctuation">,</span> amount<span class="token punctuation">,</span> <span class="token keyword">status</span><span class="token punctuation">)</span> <span class="token keyword">VALUES</span> <span class="token punctuation">(</span><span class="token string">'NO20261207001'</span><span class="token punctuation">,</span> <span class="token number">99.00</span><span class="token punctuation">,</span> <span class="token string">'PAID'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token keyword">INSERT</span> <span class="token keyword">INTO</span> msg_outbox <span class="token punctuation">(</span>biz_id<span class="token punctuation">,</span> topic<span class="token punctuation">,</span> payload<span class="token punctuation">)</span>
+<span class="token keyword">VALUES</span> <span class="token punctuation">(</span><span class="token string">'NO20261207001'</span><span class="token punctuation">,</span> <span class="token string">'order.paid'</span><span class="token punctuation">,</span> JSON_OBJECT<span class="token punctuation">(</span><span class="token string">'orderNo'</span><span class="token punctuation">,</span> <span class="token string">'NO20261207001'</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token keyword">COMMIT</span><span class="token punctuation">;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<p>两行要么都成功、要么都失败，不存在「订单成功但消息丢」。</p>
+<h3 id="3-Java-侧怎么落地：XA-与-Outbox-两条线"><a href="#3-Java-侧怎么落地：XA-与-Outbox-两条线" class="headerlink" title="3. Java 侧怎么落地：XA 与 Outbox 两条线"></a>3. Java 侧怎么落地：XA 与 Outbox 两条线</h3><p><strong>XA 线（多数据源强一致）</strong></p>
+<ol>
+<li><code>pom.xml</code> 引入 <code>spring-boot-starter-jdbc</code> 与 <code>mysql-connector-j</code>，两个数据源分别配 <code>DataSource</code>；</li>
+<li>使用 <code>AtomikosDataSourceBean</code> 或 <code>Bitronix</code> 包装两个 <code>DataSource</code>，交给 <code>JtaTransactionManager</code>；</li>
+<li>事务管理器切换为 JTA：<code>@Transactional</code> 走 <code>JtaTransactionManager</code>，提交由协调者驱动两阶段；</li>
+<li>连接串加 <code>pinGlobalTxToPhysicalConnection=true</code>（Atomikos）避免连接错乱；</li>
+<li>一定要配 <code>recovery</code> 日志目录，否则协调者重启后无法恢复悬挂事务。</li>
+</ol>
+<p><strong>Outbox 线（推荐主链路）</strong></p>
+<ol>
+<li><code>pom.xml</code> 引入 <code>spring-boot-starter-jdbc</code>、<code>spring-boot-starter-quartz</code>（或 XXL-Job），无需分布式事务组件；</li>
+<li>业务方法内一个本地 <code>@Transactional</code>：写业务表 + 写 <code>msg_outbox</code>；</li>
+<li>定时任务每 500ms 扫一批，<code>FOR UPDATE SKIP LOCKED</code> 抢占，投递 MQ（RocketMQ &#x2F; Kafka）；</li>
+<li>消费端以 <code>biz_id</code> 做幂等键，Redis <code>SETNX</code> 或唯一索引兜底；</li>
+<li>失败重试指数退避，超过 N 次进「死信」表并告警，配日终对账补偿；</li>
+<li>监控指标：<code>outbox_lag</code>（最老待发记录的时间差）、失败率、重试次数分布。</li>
+</ol>
+<p><strong>微服务下的事务边界</strong></p>
+<ul>
+<li>一个业务用例只允许一个服务写自己的库，其它服务通过消息驱动；</li>
+<li>跨服务查询用接口，跨服务写用消息，禁止「服务 A 直接连服务 B 的库」；</li>
+<li>若必须跨库强一致，优先缩小范围（同实例多库仍可用本地事务），再考虑 XA。</li>
+</ul>
+<h2 id="七、常见坑"><a href="#七、常见坑" class="headerlink" title="七、常见坑"></a>七、常见坑</h2><ol>
+<li><strong><code>XA PREPARE</code> 后忘记裁决</strong>：悬挂事务长期持锁，拖死整张表；</li>
+<li><strong>把 XA 用在秒杀主链路</strong>：锁持有时间翻倍，吞吐直接塌；</li>
+<li><strong>Outbox 投递不加锁</strong>：多 worker 重复投递，下游必须幂等才不出事；</li>
+<li><strong><code>status</code> 更新与投递不在同一事务</strong>：投递成功但状态没落，下一轮重复发；</li>
+<li><strong>消息体塞大 JSON</strong>：拖慢扫描与网络，只放关键字段 + 业务键；</li>
+<li><strong>没有对账</strong>：最终一致系统的最后一道防线是对账，不是重试；</li>
+<li><strong>幂等键用自增 id</strong>：重投时 id 会变，等于没有幂等。</li>
+</ol>
+<h2 id="八、版本差异"><a href="#八、版本差异" class="headerlink" title="八、版本差异"></a>八、版本差异</h2><ul>
+<li><strong>5.7</strong>：XA 支持但 <code>innodb_support_xa</code> 参数仍在，配置项较多；</li>
+<li><strong>8.0</strong>：<code>innodb_support_xa</code> 已移除，XA 默认可用；新增 <code>SKIP LOCKED</code>，让消息表抢占成为标准做法；</li>
+<li><strong>8.4</strong>：XA 语法与两阶段语义不变，仍是「prepare 后持锁」；<code>binlog</code> 默认 <code>ROW</code>，XA 事务的复制行为更可预期；社区更推荐 Outbox&#x2F;TCC 替代高频 XA。</li>
+</ul>
+<h2 id="九、课后小结"><a href="#九、课后小结" class="headerlink" title="九、课后小结"></a>九、课后小结</h2><ul>
+<li>XA &#x3D; 两阶段提交，强一致但持锁久、怕悬挂，适合低频资金场景；</li>
+<li>悬挂事务只能靠 <code>XA RECOVER</code> + 人工&#x2F;补偿裁决；</li>
+<li>Outbox &#x3D; 本地事务写「业务行 + 消息行」，异步投递 + 幂等消费 + 对账兜底；</li>
+<li>高频主链路优先最终一致，别把强一致当默认；</li>
+<li>幂等键要业务唯一，不能用自增 id。</li>
+</ul>
+<h2 id="十、思考题"><a href="#十、思考题" class="headerlink" title="十、思考题"></a>十、思考题</h2><ol>
+<li><p>XA 的 <code>PREPARE</code> 阶段为什么要持锁？</p>
+<p><strong>参考回答</strong>：参与者必须保证在最终裁决前数据不被别人改掉，否则提交时会与自己看到的状态不一致；持锁是隔离性的代价，也是 XA 吞吐低的根源。</p>
+</li>
+<li><p>什么是悬挂事务，怎么发现？</p>
+<p><strong>参考回答</strong>：协调者在 <code>PREPARE</code> 后、<code>COMMIT</code> 前崩溃，参与者停在 prepare 状态，既未提交也未回滚。用 <code>XA RECOVER</code> 能列出这些 xid，再按业务日志决定提交或回滚。</p>
+</li>
+<li><p>本地消息表为什么能保证「订单成功消息不丢」？</p>
+<p><strong>参考回答</strong>：业务行与消息行在同一个本地事务里写入，事务原子性保证两者同时可见；消息即使暂时没投出去也留在表里，投递任务会重试直到成功。</p>
+</li>
+<li><p>Outbox 投递任务为什么用 <code>SKIP LOCKED</code>？</p>
+<p><strong>参考回答</strong>：多个 worker 并发扫同一张表时，<code>SKIP LOCKED</code> 让它们跳过已被别人锁住的行，各取各的，不会互相等待，也不需要额外的分布式锁。</p>
+</li>
+<li><p>最终一致的系统里，对账为什么不可省？</p>
+<p><strong>参考回答</strong>：重试只能处理「已知失败」，消息丢失、逻辑 bug、人工改库都可能造成静默不一致；对账是周期性全量比对，是最后一道兜底。</p>
+</li>
+</ol>
+<h2 id="十一、官方资料"><a href="#十一、官方资料" class="headerlink" title="十一、官方资料"></a>十一、官方资料</h2><ul>
+<li>XA 事务：<a target="_blank" rel="noopener" href="https://dev.mysql.com/doc/refman/8.4/en/xa.html">https://dev.mysql.com/doc/refman/8.4/en/xa.html</a></li>
+<li>XA 语句：<a target="_blank" rel="noopener" href="https://dev.mysql.com/doc/refman/8.4/en/xa-statements.html">https://dev.mysql.com/doc/refman/8.4/en/xa-statements.html</a></li>
+<li><code>SKIP LOCKED</code>：<a target="_blank" rel="noopener" href="https://dev.mysql.com/doc/refman/8.4/en/select.html">https://dev.mysql.com/doc/refman/8.4/en/select.html</a></li>
+<li>InnoDB 与 XA 的崩溃安全：<a target="_blank" rel="noopener" href="https://dev.mysql.com/doc/refman/8.4/en/xa.html">https://dev.mysql.com/doc/refman/8.4/en/xa.html</a></li>
+</ul>
+<p>上一篇：<a href="/2022/12/06/database/mysql/mysql-26-long-transaction/">MQ26 长事务与大事务</a> ｜ 下一篇：<a href="/2022/12/08/database/mysql/mysql-28-innodb-architecture/">MQ28 InnoDB 架构总览</a> ｜ <a href="/2022/11/10/database/mysql/mysql-0-series-index/">总目录</a></p>
+</div>
+
+  <div class="mb-foot">
+    <a href="/phone/">返回手机首页</a>
+    <a href="/phone/tags/">星迹索引</a>
+  </div>
+</div>
+
+
+<script>
+  /* 作用：懒加载本地 mermaid 库；无 mermaid 代码块时不加载 */
+  function loadLocalMermaid(){
+    return new Promise(function(resolve, reject){
+      if(window.mermaid) return resolve(window.mermaid);
+      var s = document.createElement('script');
+      s.src = '/js/third-party/mermaid/mermaid.min.js?v=10';
+      s.onload = function(){ resolve(window.mermaid); };
+      s.onerror = function(){ reject(new Error('mermaid local load failed')); };
+      document.head.appendChild(s);
+    });
+  }
+
+  /* 作用：把 ```mermaid 代码块替换成 SVG 图（手机端字号略小、图可横向滚动） */
+  async function renderMermaidDiagram(){
+    var blocks = document.querySelectorAll('pre[class*="language-mermaid"]');
+    if(!blocks.length) return;
+    var mermaid;
+    try { mermaid = await loadLocalMermaid(); }
+    catch(e){ console.warn('[mermaid] 本地库加载失败：', e); return; }
+
+    mermaid.initialize({
+      startOnLoad: false,
+      theme: 'base',
+      themeVariables: {
+        darkMode: true,
+        background: 'transparent',
+        fontFamily: '"Microsoft YaHei", "PingFang SC", "Segoe UI", sans-serif',
+        fontSize: '12px',
+        primaryColor: '#062f3d',
+        primaryTextColor: '#d6f6ff',
+        primaryBorderColor: '#00eeff',
+        secondaryColor: '#04222d',
+        tertiaryColor: '#04222d',
+        mainBkg: '#062f3d',
+        nodeBorder: '#00eeff',
+        clusterBkg: '#02161f',
+        clusterBorder: '#00eeff55',
+        lineColor: '#00eeff',
+        textColor: '#c0e8ff',
+        edgeLabelBackground: '#02161f'
+      },
+      flowchart: { curve: 'basis', useMaxWidth: false, htmlLabels: false, nodeSpacing: 30, rankSpacing: 40, padding: 10 }
+    });
+
+    var targets = [];
+    blocks.forEach(function(el){
+      var codeEl = el.querySelector('code');
+      if(!codeEl) return;
+      var div = document.createElement('div');
+      div.className = 'mermaid';
+      div.textContent = codeEl.textContent;
+      el.parentNode.replaceChild(div, el);
+      targets.push(div);
+    });
+    if(!targets.length) return;
+    try { await mermaid.run({ nodes: targets }); }
+    catch(e){ console.warn('[mermaid] 渲染失败：', e); }
+  }
+  /* 作用：多次触发兜底（延迟重试 + DOM 变化），防止某次时机没跑到导致图表留在代码块 */
+  var mmBusy = false;
+  function scheduleMermaid(){
+    if(mmBusy) return;
+    mmBusy = true;
+    renderMermaidDiagram().then(function(){ mmBusy = false; }, function(){ mmBusy = false; });
+  }
+  scheduleMermaid();
+  window.addEventListener('load', scheduleMermaid);
+  [1000, 3000, 8000].forEach(function(ms){ setTimeout(scheduleMermaid, ms); });
+  if(document.readyState !== 'loading') scheduleMermaid();
+  if(window.MutationObserver){
+    var mmTimer = null;
+    var mmObserver = new MutationObserver(function(){
+      clearTimeout(mmTimer);
+      mmTimer = setTimeout(scheduleMermaid, 400);
+    });
+    mmObserver.observe(document.querySelector('.mb-article') || document.body, { childList: true, subtree: true });
+  }
+</script>
+</body>
+</html>

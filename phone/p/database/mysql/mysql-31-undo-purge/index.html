@@ -1,0 +1,391 @@
+<!--
+  ============================================
+  手机端 · 文章原文页
+  文件：phone/post.njk
+  适用终端：手机端（路由 /phone/p/<slug>/，由 scripts/phone-routes.js 生成）
+  作用：手机阅读单篇文章；单列布局、无侧栏无雷达，替代电脑端 post.njk
+        数据由生成期算好：page.item = { title, dateStr, content, cats, tags }
+  样式依赖：source/css/theme/phone/common.css、source/css/theme/phone/list.css
+  组件依赖：phone/_components/Particles.njk
+  最后修改：2026-11-11
+  ============================================
+-->
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="color-scheme" content="dark">
+  <meta name="theme-color" content="#020817">
+  <!-- 首帧兜底：浏览器默认画布是白的，样式未解析前会闪一下白。这条规则先锁死深空底色 -->
+  <style>html{background-color:#020817}</style>
+  <title>mysql-31-undo - 时空秘境</title>
+  <!-- 手机端样式：基础 + 列表/正文，外链引入（源文件 source/css/theme/phone/） -->
+  <link rel="stylesheet" href="/css/theme/phone/common.css">
+  <link rel="stylesheet" href="/css/theme/phone/list.css">
+<meta name="generator" content="Hexo 8.1.2"></head>
+<body>
+<div class="mb-shell">
+  <!--
+  ============================================
+  手机端星空粒子组件
+  文件：Particles.njk
+  适用终端：手机端
+  作用：Particles.njk 的手机端副本（nunjucks 子目录 include 取不到上级）
+        参数与电脑端 _components/Particles.njk 保持一致：
+        粒子 95 / 连线 118px / opacity 0.32，外加星座层与零星闪烁层
+  最后修改：2026-11-12
+  ============================================
+--><!-- z-index 必须是 0：负层级会被 body 不透明背景盖住，粒子在跑却看不见 -->
+<div id="particles" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 0; pointer-events: none;"></div>
+<!-- 星座层（与首页同一套：随机零星散布星座图形 + 偶尔闪烁的小星） -->
+<div id="constellations" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 1; pointer-events: none;" aria-hidden="true"></div>
+<script src="/js/particles.min.js"></script>
+<script>
+particlesJS("particles", {
+  particles: {
+    number: {
+      value: 95,
+      density: {
+        enable: true,
+        value_area: 800
+      }
+    },
+    color: {
+      value: "#00eeff"
+    },
+    shape: {
+      type: "circle",
+      stroke: {
+        width: 0,
+        color: "#000000"
+      }
+    },
+    opacity: {
+      value: 0.6,
+      random: true,
+      anim: {
+        enable: true,
+        speed: 0.5,
+        opacity_min: 0.1,
+        sync: false
+      }
+    },
+    size: {
+      value: 3,
+      random: true,
+      anim: {
+        enable: true,
+        speed: 2,
+        size_min: 0.1,
+        sync: false
+      }
+    },
+    line_linked: {
+      enable: true,
+      distance: 118,
+      color: "#00eeff",
+      opacity: 0.32,
+      width: 1
+    },
+    move: {
+      enable: true,
+      speed: 0.8,
+      direction: "none",
+      random: true,
+      straight: false,
+      out_mode: "out",
+      bounce: false,
+      attract: {
+        enable: true,
+        rotateX: 600,
+        rotateY: 1200
+      }
+    }
+  },
+  interactivity: {
+    detect_on: "canvas",
+    events: {
+      onhover: {
+        enable: true,
+        mode: "grab"       // 手指按住时粒子聚集
+      },
+      onclick: {
+        enable: true,
+        mode: "push"       // 点击时产生新粒子
+      },
+      resize: true
+    },
+    modes: {
+      grab: {
+        distance: 200,
+        line_linked: {
+          opacity: 1
+        }
+      },
+      push: {
+        particles_nb: 6
+      }
+    }
+  },
+  retina_detect: true
+});
+</script>
+<!-- 星座 + 零星闪烁层：与电脑端共用同一份绘制脚本 -->
+<script src="/js/theme/home/starfield.js"></script>
+
+
+  <div class="mb-top">
+    <a class="mb-back" href="/phone/">← 返回手机首页</a>
+    <span class="mb-sub" style="margin:0">2022-12-11</span>
+  </div>
+
+  <h1 class="mb-title">mysql-31-undo</h1>
+  <div class="mb-sub">
+    分类：database · mysql
+     ｜ 标签：系统课 · MySQL · 数据库
+  </div>
+
+  <div class="mb-article"><div class="essay-banner essay-database"></div>
+
+<h1 id="undo-log-与-purge：多版本是怎么留下来的"><a href="#undo-log-与-purge：多版本是怎么留下来的" class="headerlink" title="undo log 与 purge：多版本是怎么留下来的"></a>undo log 与 purge：多版本是怎么留下来的</h1><p><img src="https://wu4yong.github.io/starry-images/assets/img/mysql/mq-31-undo.svg" alt="undo 与版本链"></p>
+<p><em>insert undo 提交即可丢，update undo 要活到没人读旧版本｜依据 MySQL 8.4 Undo Logs &#x2F; Purge 说明自绘</em></p>
+<h2 id="一、学习目标"><a href="#一、学习目标" class="headerlink" title="一、学习目标"></a>一、学习目标</h2><ol>
+<li>分清 insert undo 与 update undo 的生命周期差别；</li>
+<li>说清 purge 的判定条件，知道 undo 为什么会膨胀；</li>
+<li>会读 <code>History list length</code>、会在线截断 undo 表空间。</li>
+</ol>
+<h2 id="二、前置知识"><a href="#二、前置知识" class="headerlink" title="二、前置知识"></a>二、前置知识</h2><p>MVCC 与 Read View（MQ22）、长事务（MQ26）、InnoDB 架构（MQ28）。undo 是 MVCC 的「存储侧」，MVCC 是 undo 的「使用侧」。</p>
+<h2 id="三、理论讲解（官方定义）"><a href="#三、理论讲解（官方定义）" class="headerlink" title="三、理论讲解（官方定义）"></a>三、理论讲解（官方定义）</h2><p>undo log 记录的是<strong>如何撤销一次修改</strong>：</p>
+<ul>
+<li><code>INSERT</code> 的 undo 记录「这条记录是插入的」，回滚即删除；</li>
+<li><code>UPDATE</code> 的 undo 记录「修改前的值」，回滚即写回旧值；</li>
+<li><code>DELETE</code> 的 undo 记录被删除的行，回滚即恢复（行上的删除标记被清除）。</li>
+</ul>
+<p>同一份 undo 还有第二个用途：<strong>为 MVCC 提供旧版本</strong>。行头 <code>DB_ROLL_PTR</code> 指向 undo，undo 里的 <code>roll_ptr</code> 再指向上一个版本，形成版本链。</p>
+<h2 id="四、原理拆解"><a href="#四、原理拆解" class="headerlink" title="四、原理拆解"></a>四、原理拆解</h2><p><img src="https://wu4yong.github.io/starry-images/assets/img/mysql/mq-31b-undo.svg" alt="purge 的判定与处理"></p>
+<p><em>purge 只有一个判据：这个版本还有没有活跃事务可能读到｜依据 MySQL 8.4 Purge 配置说明自绘</em></p>
+<h3 id="1-两种-undo-的生命周期"><a href="#1-两种-undo-的生命周期" class="headerlink" title="1. 两种 undo 的生命周期"></a>1. 两种 undo 的生命周期</h3><table>
+<thead>
+<tr>
+<th>类型</th>
+<th>内容</th>
+<th>何时可丢</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>insert undo</td>
+<td>新插入的行</td>
+<td>事务提交后立即可丢（别人本来就看不见）</td>
+</tr>
+<tr>
+<td>update undo</td>
+<td>旧值 + 版本信息</td>
+<td>提交后仍要保留，直到没有任何活跃事务需要读它</td>
+</tr>
+</tbody></table>
+<p>delete 本质上是一次「打删除标记的 update」，走 update undo。</p>
+<h3 id="2-purge-的三步判断"><a href="#2-purge-的三步判断" class="headerlink" title="2. purge 的三步判断"></a>2. purge 的三步判断</h3><ol>
+<li>事务已提交（或已回滚）；</li>
+<li>该 undo 对应的版本不再被任何活跃事务的 ReadView 需要；</li>
+<li>没有更老的 purge 任务依赖它。</li>
+</ol>
+<p>满足后 purge 线程删除记录、断开版本链、把 undo 页标记为空闲。8.x 默认 4 个 purge 线程（<code>innodb_purge_threads</code>）。</p>
+<h3 id="3-History-list-length-是什么"><a href="#3-History-list-length-是什么" class="headerlink" title="3. History list length 是什么"></a>3. History list length 是什么</h3><p><code>SHOW ENGINE INNODB STATUS</code> 里的 <code>History list length</code> 表示<strong>尚未 purge 的 undo 记录数</strong>。它持续上涨，说明有长事务拖住了水位，或者 purge 线程跟不上写入。</p>
+<p>这个数不看绝对值，看趋势：稳定在低位正常，只涨不跌要立即排查最老事务。</p>
+<h3 id="4-undo-表空间"><a href="#4-undo-表空间" class="headerlink" title="4. undo 表空间"></a>4. undo 表空间</h3><p>8.x 默认 2 个 undo 表空间（<code>undo_001</code>、<code>undo_002</code>），<code>innodb_undo_log_truncate</code> 默认开启：当单个 undo 表空间超过阈值时，标记为 <code>inactive</code>，等 purge 清空后截断回初始大小。</p>
+<pre class="line-numbers language-sql" data-language="sql"><code class="language-sql"><span class="token keyword">SELECT</span> NAME<span class="token punctuation">,</span> SPACE_TYPE<span class="token punctuation">,</span> STATE<span class="token punctuation">,</span> FILE_SIZE
+<span class="token keyword">FROM</span> information_schema<span class="token punctuation">.</span>INNODB_TABLESPACES
+<span class="token keyword">WHERE</span> SPACE_TYPE <span class="token operator">=</span> <span class="token string">'Undo'</span><span class="token punctuation">;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span></span></code></pre>
+
+<h3 id="5-为什么-undo-会膨胀"><a href="#5-为什么-undo-会膨胀" class="headerlink" title="5. 为什么 undo 会膨胀"></a>5. 为什么 undo 会膨胀</h3><table>
+<thead>
+<tr>
+<th>原因</th>
+<th>表现</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>长事务不提交</td>
+<td>水位不动，所有新版本都留着</td>
+</tr>
+<tr>
+<td>大批量更新</td>
+<td>短时间产生海量 update undo</td>
+</tr>
+<tr>
+<td>purge 线程不足</td>
+<td>队列堆积，清理速度跟不上</td>
+</tr>
+<tr>
+<td>复制延迟 + 大事务</td>
+<td>从库只读长查询拖住 purge</td>
+</tr>
+</tbody></table>
+<h2 id="五、场景说明"><a href="#五、场景说明" class="headerlink" title="五、场景说明"></a>五、场景说明</h2><ol>
+<li><strong>秒杀后的批量回滚</strong>：大量失败事务回滚，undo 短时暴涨；</li>
+<li><strong>对账批处理</strong>：一次更新百万行，undo 与 redo 同时放大；</li>
+<li><strong>报表长查询</strong>：只读事务也持有 ReadView，会阻止 purge；</li>
+<li><strong>主从延迟</strong>：从库延迟时，只读业务读到老快照，间接拉长版本链；</li>
+<li><strong>磁盘告警</strong>：undo 表空间吃掉几十 GB，多半是长事务常年不提交。</li>
+</ol>
+<h2 id="六、示例代码-实操步骤"><a href="#六、示例代码-实操步骤" class="headerlink" title="六、示例代码&#x2F;实操步骤"></a>六、示例代码&#x2F;实操步骤</h2><h3 id="1-观察-undo-与-History-list"><a href="#1-观察-undo-与-History-list" class="headerlink" title="1. 观察 undo 与 History list"></a>1. 观察 undo 与 History list</h3><pre class="line-numbers language-sql" data-language="sql"><code class="language-sql"><span class="token keyword">SHOW</span> <span class="token keyword">ENGINE</span> <span class="token keyword">INNODB</span> <span class="token keyword">STATUS</span>\G       <span class="token comment">-- TRANSACTIONS 段的 History list length</span>
+<span class="token keyword">SELECT</span> trx_id<span class="token punctuation">,</span> trx_state<span class="token punctuation">,</span> trx_started<span class="token punctuation">,</span>
+       TIMESTAMPDIFF<span class="token punctuation">(</span><span class="token keyword">SECOND</span><span class="token punctuation">,</span> trx_started<span class="token punctuation">,</span> <span class="token function">NOW</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span> <span class="token keyword">AS</span> secs
+<span class="token keyword">FROM</span> information_schema<span class="token punctuation">.</span>innodb_trx
+<span class="token keyword">ORDER</span> <span class="token keyword">BY</span> trx_started <span class="token keyword">LIMIT</span> <span class="token number">5</span><span class="token punctuation">;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<p>最老事务就是「水位线」，它不结束，purge 无法前进。</p>
+<h3 id="2-在线截断-undo-表空间"><a href="#2-在线截断-undo-表空间" class="headerlink" title="2. 在线截断 undo 表空间"></a>2. 在线截断 undo 表空间</h3><pre class="line-numbers language-sql" data-language="sql"><code class="language-sql"><span class="token keyword">ALTER</span> UNDO <span class="token keyword">TABLESPACE</span> undo_002 <span class="token keyword">SET</span> INACTIVE<span class="token punctuation">;</span>
+<span class="token comment">-- 等 purge 清空后，表空间自动截断；需要时可再设为 ACTIVE</span>
+<span class="token keyword">ALTER</span> UNDO <span class="token keyword">TABLESPACE</span> undo_002 <span class="token keyword">SET</span> ACTIVE<span class="token punctuation">;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span></span></code></pre>
+
+<p><code>SET INACTIVE</code> 期间不会分配新的 undo 到该表空间，保证能清空。</p>
+<h3 id="3-控制-purge-行为"><a href="#3-控制-purge-行为" class="headerlink" title="3. 控制 purge 行为"></a>3. 控制 purge 行为</h3><pre class="line-numbers language-sql" data-language="sql"><code class="language-sql"><span class="token keyword">SHOW</span> VARIABLES <span class="token operator">LIKE</span> <span class="token string">'innodb_purge_threads'</span><span class="token punctuation">;</span>
+<span class="token keyword">SHOW</span> VARIABLES <span class="token operator">LIKE</span> <span class="token string">'innodb_undo_log_truncate'</span><span class="token punctuation">;</span>
+<span class="token keyword">SHOW</span> VARIABLES <span class="token operator">LIKE</span> <span class="token string">'innodb_max_undo_log_size'</span><span class="token punctuation">;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span></span></code></pre>
+
+<p>SSD + 多核机器可把 <code>innodb_purge_threads</code> 提到 8，与 <code>innodb_page_cleaners</code> 数量对齐。</p>
+<h3 id="4-Java-侧怎么落地：别让事务成为水位"><a href="#4-Java-侧怎么落地：别让事务成为水位" class="headerlink" title="4. Java 侧怎么落地：别让事务成为水位"></a>4. Java 侧怎么落地：别让事务成为水位</h3><ol>
+<li><strong>事务超时</strong>：<code>@Transactional(timeout = 30)</code>，超时自动回滚，防止僵尸事务；</li>
+<li><strong>只读查询也限时</strong>：报表类接口 <code>SET SESSION max_execution_time</code>，避免长快照；</li>
+<li><strong>批处理按批提交</strong>：每批 500 行，undo 峰值可控；</li>
+<li><strong>避免 <code>SELECT ... FOR UPDATE</code> 后等待外部回调</strong>：锁与快照都被拉长；</li>
+<li><strong>监控</strong>：把 <code>History list length</code> 与最老事务时长做成告警项，超过阈值（如 60 秒 &#x2F; 1 万条）就介入；</li>
+<li><strong>连接泄漏排查</strong>：<code>innodb_trx</code> 里存在大量 <code>sleep</code> 状态的空事务，多半是连接池归还前没提交&#x2F;回滚。</li>
+</ol>
+<h2 id="七、常见坑"><a href="#七、常见坑" class="headerlink" title="七、常见坑"></a>七、常见坑</h2><ol>
+<li><strong>以为 undo 只是回滚用</strong>：它同时是 MVCC 的版本存储，删早了读到脏数据；</li>
+<li><strong>只看 undo 表空间大小不看 History list</strong>：前者是结果，后者才是水位；</li>
+<li><strong>频繁 <code>SET INACTIVE</code> 又立刻 <code>ACTIVE</code></strong>：截断没完成就恢复分配，白折腾；</li>
+<li><strong>purge 线程调太多</strong>：与刷脏争 IO，反而拖慢前台；</li>
+<li><strong>长事务当「连接一直开着」</strong>：连接池空闲连接若开了事务不提交，同样压住水位；</li>
+<li><strong>回滚大事务</strong>：回滚本身也要读 undo，可能比正向执行还慢，尽量拆批；</li>
+<li><strong>磁盘只剩一点余量才清理 undo</strong>：截断需要临时空间，空间不足会失败。</li>
+</ol>
+<h2 id="八、版本差异"><a href="#八、版本差异" class="headerlink" title="八、版本差异"></a>八、版本差异</h2><ul>
+<li><strong>5.6</strong>：undo 默认放在系统表空间 <code>ibdata1</code> 里，无法单独截断，容易只涨不缩；</li>
+<li><strong>5.7</strong>：支持独立 undo 表空间，<code>innodb_undo_tablespaces</code> 需初始化时设定；</li>
+<li><strong>8.0</strong>：默认 2 个 undo 表空间，支持在线增删与 <code>SET INACTIVE</code> 截断，<code>innodb_undo_log_truncate</code> 默认开启；</li>
+<li><strong>8.4</strong>：延续 8.0 的 undo 表空间管理与自动截断，<code>innodb_purge_threads</code> 默认 4。</li>
+</ul>
+<h2 id="九、课后小结"><a href="#九、课后小结" class="headerlink" title="九、课后小结"></a>九、课后小结</h2><ul>
+<li>undo 记录「怎么撤销」，同时为 MVCC 保存旧版本；</li>
+<li>insert undo 提交即可丢，update undo 要等无人读旧版本；</li>
+<li>purge 的唯一判据是「有没有活跃事务还需要这个版本」；</li>
+<li><code>History list length</code> 是水位指标，持续上涨先找最老事务；</li>
+<li>undo 表空间支持在线截断，但根因永远是长事务。</li>
+</ul>
+<h2 id="十、思考题"><a href="#十、思考题" class="headerlink" title="十、思考题"></a>十、思考题</h2><ol>
+<li><p>为什么 insert undo 提交后就能丢，update undo 却不行？</p>
+<p><strong>参考回答</strong>：新插入的行在提交前对别人不可见，提交后也没有「更早的版本」需要保留；update 的旧值要被并发事务的 ReadView 读到，必须等这些事务结束后才能清理。</p>
+</li>
+<li><p><code>History list length</code> 一直上涨，第一步查什么？</p>
+<p><strong>参考回答</strong>：查 <code>information_schema.innodb_trx</code> 里最老的事务，看它的开始时间、状态与正在执行的 SQL；水位由最老事务决定，找到它才知道是代码问题还是连接泄漏。</p>
+</li>
+<li><p>只读的长查询为什么会阻止 purge？</p>
+<p><strong>参考回答</strong>：一致性读要用 ReadView 判断可见性，长查询持有的 ReadView 需要读旧版本，purge 若清掉这些 undo，查询就会读到错误数据，所以必须保留。</p>
+</li>
+<li><p><code>SET INACTIVE</code> 与直接删 undo 表空间文件有什么区别？</p>
+<p><strong>参考回答</strong>：<code>SET INACTIVE</code> 是受控流程：停止向该表空间分配新 undo，等 purge 清空后由后台截断，数据安全；直接删文件会破坏一致性，实例可能无法启动。</p>
+</li>
+<li><p>大批量 UPDATE 之后 undo 暴涨，怎么处理？</p>
+<p><strong>参考回答</strong>：短期看 purge 是否能追上，必要时临时增加 purge 线程；长期要靠拆批提交，把单事务行数降下来，避免一次生成过多 update undo。</p>
+</li>
+</ol>
+<h2 id="十一、官方资料"><a href="#十一、官方资料" class="headerlink" title="十一、官方资料"></a>十一、官方资料</h2><ul>
+<li>undo 日志：<a target="_blank" rel="noopener" href="https://dev.mysql.com/doc/refman/8.4/en/innodb-undo-logs.html">https://dev.mysql.com/doc/refman/8.4/en/innodb-undo-logs.html</a></li>
+<li>purge 配置：<a target="_blank" rel="noopener" href="https://dev.mysql.com/doc/refman/8.4/en/innodb-purge-configuration.html">https://dev.mysql.com/doc/refman/8.4/en/innodb-purge-configuration.html</a></li>
+<li>undo 表空间：<a target="_blank" rel="noopener" href="https://dev.mysql.com/doc/refman/8.4/en/innodb-undo-tablespaces.html">https://dev.mysql.com/doc/refman/8.4/en/innodb-undo-tablespaces.html</a></li>
+</ul>
+<p>上一篇：<a href="/2022/12/10/database/mysql/mysql-30-redo-log/">MQ30 redo log</a> ｜ 下一篇：<a href="/2022/12/12/database/mysql/mysql-32-binlog/">MQ32 binlog</a> ｜ <a href="/2022/11/10/database/mysql/mysql-0-series-index/">总目录</a></p>
+</div>
+
+  <div class="mb-foot">
+    <a href="/phone/">返回手机首页</a>
+    <a href="/phone/tags/">星迹索引</a>
+  </div>
+</div>
+
+
+<script>
+  /* 作用：懒加载本地 mermaid 库；无 mermaid 代码块时不加载 */
+  function loadLocalMermaid(){
+    return new Promise(function(resolve, reject){
+      if(window.mermaid) return resolve(window.mermaid);
+      var s = document.createElement('script');
+      s.src = '/js/third-party/mermaid/mermaid.min.js?v=10';
+      s.onload = function(){ resolve(window.mermaid); };
+      s.onerror = function(){ reject(new Error('mermaid local load failed')); };
+      document.head.appendChild(s);
+    });
+  }
+
+  /* 作用：把 ```mermaid 代码块替换成 SVG 图（手机端字号略小、图可横向滚动） */
+  async function renderMermaidDiagram(){
+    var blocks = document.querySelectorAll('pre[class*="language-mermaid"]');
+    if(!blocks.length) return;
+    var mermaid;
+    try { mermaid = await loadLocalMermaid(); }
+    catch(e){ console.warn('[mermaid] 本地库加载失败：', e); return; }
+
+    mermaid.initialize({
+      startOnLoad: false,
+      theme: 'base',
+      themeVariables: {
+        darkMode: true,
+        background: 'transparent',
+        fontFamily: '"Microsoft YaHei", "PingFang SC", "Segoe UI", sans-serif',
+        fontSize: '12px',
+        primaryColor: '#062f3d',
+        primaryTextColor: '#d6f6ff',
+        primaryBorderColor: '#00eeff',
+        secondaryColor: '#04222d',
+        tertiaryColor: '#04222d',
+        mainBkg: '#062f3d',
+        nodeBorder: '#00eeff',
+        clusterBkg: '#02161f',
+        clusterBorder: '#00eeff55',
+        lineColor: '#00eeff',
+        textColor: '#c0e8ff',
+        edgeLabelBackground: '#02161f'
+      },
+      flowchart: { curve: 'basis', useMaxWidth: false, htmlLabels: false, nodeSpacing: 30, rankSpacing: 40, padding: 10 }
+    });
+
+    var targets = [];
+    blocks.forEach(function(el){
+      var codeEl = el.querySelector('code');
+      if(!codeEl) return;
+      var div = document.createElement('div');
+      div.className = 'mermaid';
+      div.textContent = codeEl.textContent;
+      el.parentNode.replaceChild(div, el);
+      targets.push(div);
+    });
+    if(!targets.length) return;
+    try { await mermaid.run({ nodes: targets }); }
+    catch(e){ console.warn('[mermaid] 渲染失败：', e); }
+  }
+  /* 作用：多次触发兜底（延迟重试 + DOM 变化），防止某次时机没跑到导致图表留在代码块 */
+  var mmBusy = false;
+  function scheduleMermaid(){
+    if(mmBusy) return;
+    mmBusy = true;
+    renderMermaidDiagram().then(function(){ mmBusy = false; }, function(){ mmBusy = false; });
+  }
+  scheduleMermaid();
+  window.addEventListener('load', scheduleMermaid);
+  [1000, 3000, 8000].forEach(function(ms){ setTimeout(scheduleMermaid, ms); });
+  if(document.readyState !== 'loading') scheduleMermaid();
+  if(window.MutationObserver){
+    var mmTimer = null;
+    var mmObserver = new MutationObserver(function(){
+      clearTimeout(mmTimer);
+      mmTimer = setTimeout(scheduleMermaid, 400);
+    });
+    mmObserver.observe(document.querySelector('.mb-article') || document.body, { childList: true, subtree: true });
+  }
+</script>
+</body>
+</html>

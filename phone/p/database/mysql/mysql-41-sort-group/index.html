@@ -1,0 +1,373 @@
+<!--
+  ============================================
+  手机端 · 文章原文页
+  文件：phone/post.njk
+  适用终端：手机端（路由 /phone/p/<slug>/，由 scripts/phone-routes.js 生成）
+  作用：手机阅读单篇文章；单列布局、无侧栏无雷达，替代电脑端 post.njk
+        数据由生成期算好：page.item = { title, dateStr, content, cats, tags }
+  样式依赖：source/css/theme/phone/common.css、source/css/theme/phone/list.css
+  组件依赖：phone/_components/Particles.njk
+  最后修改：2026-11-11
+  ============================================
+-->
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="color-scheme" content="dark">
+  <meta name="theme-color" content="#020817">
+  <!-- 首帧兜底：浏览器默认画布是白的，样式未解析前会闪一下白。这条规则先锁死深空底色 -->
+  <style>html{background-color:#020817}</style>
+  <title>mysql-41-sort - 时空秘境</title>
+  <!-- 手机端样式：基础 + 列表/正文，外链引入（源文件 source/css/theme/phone/） -->
+  <link rel="stylesheet" href="/css/theme/phone/common.css">
+  <link rel="stylesheet" href="/css/theme/phone/list.css">
+<meta name="generator" content="Hexo 8.1.2"></head>
+<body>
+<div class="mb-shell">
+  <!--
+  ============================================
+  手机端星空粒子组件
+  文件：Particles.njk
+  适用终端：手机端
+  作用：Particles.njk 的手机端副本（nunjucks 子目录 include 取不到上级）
+        参数与电脑端 _components/Particles.njk 保持一致：
+        粒子 95 / 连线 118px / opacity 0.32，外加星座层与零星闪烁层
+  最后修改：2026-11-12
+  ============================================
+--><!-- z-index 必须是 0：负层级会被 body 不透明背景盖住，粒子在跑却看不见 -->
+<div id="particles" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 0; pointer-events: none;"></div>
+<!-- 星座层（与首页同一套：随机零星散布星座图形 + 偶尔闪烁的小星） -->
+<div id="constellations" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 1; pointer-events: none;" aria-hidden="true"></div>
+<script src="/js/particles.min.js"></script>
+<script>
+particlesJS("particles", {
+  particles: {
+    number: {
+      value: 95,
+      density: {
+        enable: true,
+        value_area: 800
+      }
+    },
+    color: {
+      value: "#00eeff"
+    },
+    shape: {
+      type: "circle",
+      stroke: {
+        width: 0,
+        color: "#000000"
+      }
+    },
+    opacity: {
+      value: 0.6,
+      random: true,
+      anim: {
+        enable: true,
+        speed: 0.5,
+        opacity_min: 0.1,
+        sync: false
+      }
+    },
+    size: {
+      value: 3,
+      random: true,
+      anim: {
+        enable: true,
+        speed: 2,
+        size_min: 0.1,
+        sync: false
+      }
+    },
+    line_linked: {
+      enable: true,
+      distance: 118,
+      color: "#00eeff",
+      opacity: 0.32,
+      width: 1
+    },
+    move: {
+      enable: true,
+      speed: 0.8,
+      direction: "none",
+      random: true,
+      straight: false,
+      out_mode: "out",
+      bounce: false,
+      attract: {
+        enable: true,
+        rotateX: 600,
+        rotateY: 1200
+      }
+    }
+  },
+  interactivity: {
+    detect_on: "canvas",
+    events: {
+      onhover: {
+        enable: true,
+        mode: "grab"       // 手指按住时粒子聚集
+      },
+      onclick: {
+        enable: true,
+        mode: "push"       // 点击时产生新粒子
+      },
+      resize: true
+    },
+    modes: {
+      grab: {
+        distance: 200,
+        line_linked: {
+          opacity: 1
+        }
+      },
+      push: {
+        particles_nb: 6
+      }
+    }
+  },
+  retina_detect: true
+});
+</script>
+<!-- 星座 + 零星闪烁层：与电脑端共用同一份绘制脚本 -->
+<script src="/js/theme/home/starfield.js"></script>
+
+
+  <div class="mb-top">
+    <a class="mb-back" href="/phone/">← 返回手机首页</a>
+    <span class="mb-sub" style="margin:0">2022-12-21</span>
+  </div>
+
+  <h1 class="mb-title">mysql-41-sort</h1>
+  <div class="mb-sub">
+    分类：database · mysql
+     ｜ 标签：系统课 · MySQL · 数据库
+  </div>
+
+  <div class="mb-article"><div class="essay-banner essay-database"></div>
+
+<h1 id="排序与分组优化：filesort-与临时表"><a href="#排序与分组优化：filesort-与临时表" class="headerlink" title="排序与分组优化：filesort 与临时表"></a>排序与分组优化：filesort 与临时表</h1><p><img src="https://wu4yong.github.io/starry-images/assets/img/mysql/mq-41-sort.svg" alt="filesort 的三种形态"></p>
+<p><em>排序借不到索引顺序，就只能自己排一遍｜依据 MySQL 8.4 ORDER BY &#x2F; GROUP BY 优化说明自绘</em></p>
+<h2 id="一、学习目标"><a href="#一、学习目标" class="headerlink" title="一、学习目标"></a>一、学习目标</h2><ol>
+<li>分清 filesort 的两种实现与它们的代价差异；</li>
+<li>记住「借索引顺序」的四个条件，能把 <code>filesort</code> 消掉；</li>
+<li>找到 <code>GROUP BY</code> 建临时表的根因，用索引或改写替换掉。</li>
+</ol>
+<h2 id="二、前置知识"><a href="#二、前置知识" class="headerlink" title="二、前置知识"></a>二、前置知识</h2><p>索引与最左前缀（MQ19&#x2F;MQ38）、<code>EXPLAIN</code> 的 <code>Extra</code> 列（MQ35）。</p>
+<h2 id="三、理论讲解（官方定义）"><a href="#三、理论讲解（官方定义）" class="headerlink" title="三、理论讲解（官方定义）"></a>三、理论讲解（官方定义）</h2><p><code>ORDER BY</code> 有两种执行方式：</p>
+<table>
+<thead>
+<tr>
+<th>方式</th>
+<th>条件</th>
+<th><code>Extra</code></th>
+</tr>
+</thead>
+<tbody><tr>
+<td>借索引顺序</td>
+<td>排序键是索引的有序前缀，且过滤条件与索引前缀一致</td>
+<td>无 <code>Using filesort</code></td>
+</tr>
+<tr>
+<td>filesort</td>
+<td>无法借用索引顺序</td>
+<td><code>Using filesort</code></td>
+</tr>
+</tbody></table>
+<p><code>filesort</code> 不是「用文件排序」，而是「在内存或临时文件里排序」：<code>sort_buffer_size</code> 装得下就在内存排，装不下就分块排序再归并（磁盘临时文件）。</p>
+<p><code>GROUP BY</code> 同理：分组列能借索引顺序就逐段聚合，否则建内部临时表。</p>
+<h2 id="四、原理拆解"><a href="#四、原理拆解" class="headerlink" title="四、原理拆解"></a>四、原理拆解</h2><p><img src="https://wu4yong.github.io/starry-images/assets/img/mysql/mq-41b-sort.svg" alt="GROUP BY 的三种走法"></p>
+<p><em>能用索引就别用临时表，能给常量就别让优化器猜｜依据 MySQL 8.4 GROUP BY 优化 &#x2F; 内部临时表说明自绘</em></p>
+<h3 id="1-两种-filesort"><a href="#1-两种-filesort" class="headerlink" title="1. 两种 filesort"></a>1. 两种 filesort</h3><ul>
+<li><strong>全字段排序</strong>：把 <code>SELECT</code> 需要的所有列读进 sort buffer，排完直接返回，不回表，但行宽大容易溢出磁盘；</li>
+<li><strong>rowid 排序</strong>：只放「排序键 + 主键」，排完按主键回表取其余列，buffer 能装更多行，但多一次回表。</li>
+</ul>
+<p>8.0.20 起优化器优先用<strong>打包排序</strong>（packed sort），把变长字段压缩存放，等价于「尽量全字段但不溢出」。所以 <code>max_length_for_sort_data</code> 已不再是主要旋钮。</p>
+<h3 id="2-借索引顺序的四个条件"><a href="#2-借索引顺序的四个条件" class="headerlink" title="2. 借索引顺序的四个条件"></a>2. 借索引顺序的四个条件</h3><ol>
+<li><code>ORDER BY</code> 的列是索引的<strong>最左连续前缀</strong>；</li>
+<li><code>WHERE</code> 中前缀列都是<strong>等值</strong>条件（范围会打断排序可用性）；</li>
+<li>排序方向一致（全 <code>ASC</code> 或全 <code>DESC</code>；混合方向需要 8.0 的降序索引）；</li>
+<li>排序列不参与函数计算（<code>ORDER BY DATE(created_at)</code> 用不了原索引）。</li>
+</ol>
+<h3 id="3-为什么-ORDER-BY-LIMIT-看起来快却慢"><a href="#3-为什么-ORDER-BY-LIMIT-看起来快却慢" class="headerlink" title="3. 为什么 ORDER BY ... LIMIT 看起来快却慢"></a>3. 为什么 <code>ORDER BY ... LIMIT</code> 看起来快却慢</h3><p><code>LIMIT</code> 只有在排序能借索引时才真正「提前停」；否则必须把所有匹配行排完才知道前 20 名。这就是「<code>ORDER BY created_at DESC LIMIT 20</code> 扫了 80 万行」的原因。</p>
+<h3 id="4-GROUP-BY-的三条路"><a href="#4-GROUP-BY-的三条路" class="headerlink" title="4. GROUP BY 的三条路"></a>4. GROUP BY 的三条路</h3><ul>
+<li>索引有序扫描：分组列是索引最左前缀，逐段聚合，无临时表；</li>
+<li>临时表 + 排序：无索引可用，建内部临时表再聚合；</li>
+<li>磁盘临时表：临时表超过 <code>tmp_table_size</code> &#x2F; <code>max_heap_table_size</code>，落盘（<code>Created_tmp_disk_tables</code> 上升）。</li>
+</ul>
+<h3 id="5-HAVING-与-WHERE-的分工"><a href="#5-HAVING-与-WHERE-的分工" class="headerlink" title="5. HAVING 与 WHERE 的分工"></a>5. <code>HAVING</code> 与 <code>WHERE</code> 的分工</h3><p><code>WHERE</code> 在聚合前过滤，能减少参与分组的行；<code>HAVING</code> 在聚合后过滤，无法减少扫描。把「能写进 <code>WHERE</code> 的条件」写进 <code>WHERE</code>，是最便宜的一条优化。</p>
+<h2 id="五、场景说明"><a href="#五、场景说明" class="headerlink" title="五、场景说明"></a>五、场景说明</h2><ol>
+<li><strong>列表页排序</strong>：<code>WHERE status = 1 ORDER BY created_at DESC</code> → 索引 <code>(status, created_at)</code>；</li>
+<li><strong>排行榜</strong>：按分数排序且要分页，考虑预计算排名表；</li>
+<li><strong>报表分组</strong>：<code>GROUP BY city</code> 无索引 → 建索引或先按城市分片预聚合；</li>
+<li><strong>去重统计</strong>：<code>COUNT(DISTINCT)</code> 与 <code>GROUP BY</code> 相似，看能否走覆盖索引；</li>
+<li><strong>大排序溢出</strong>：<code>sort_buffer_size</code> 调大会加剧内存压力，优先改索引。</li>
+</ol>
+<h2 id="六、示例代码-实操步骤"><a href="#六、示例代码-实操步骤" class="headerlink" title="六、示例代码&#x2F;实操步骤"></a>六、示例代码&#x2F;实操步骤</h2><h3 id="1-判断是否-filesort"><a href="#1-判断是否-filesort" class="headerlink" title="1. 判断是否 filesort"></a>1. 判断是否 filesort</h3><pre class="line-numbers language-sql" data-language="sql"><code class="language-sql"><span class="token keyword">EXPLAIN</span> <span class="token keyword">SELECT</span> id<span class="token punctuation">,</span> amount <span class="token keyword">FROM</span> t_order <span class="token keyword">WHERE</span> <span class="token keyword">status</span> <span class="token operator">=</span> <span class="token number">1</span> <span class="token keyword">ORDER</span> <span class="token keyword">BY</span> created_at <span class="token keyword">DESC</span> <span class="token keyword">LIMIT</span> <span class="token number">20</span><span class="token punctuation">;</span>
+<span class="token comment">-- Extra 里出现 Using filesort → 排序没借到索引</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span></span></code></pre>
+
+<h3 id="2-建索引消掉-filesort"><a href="#2-建索引消掉-filesort" class="headerlink" title="2. 建索引消掉 filesort"></a>2. 建索引消掉 filesort</h3><pre class="line-numbers language-sql" data-language="sql"><code class="language-sql"><span class="token keyword">ALTER</span> <span class="token keyword">TABLE</span> t_order <span class="token keyword">ADD</span> <span class="token keyword">INDEX</span> idx_status_time <span class="token punctuation">(</span><span class="token keyword">status</span><span class="token punctuation">,</span> created_at<span class="token punctuation">)</span><span class="token punctuation">,</span>
+  <span class="token keyword">ALGORITHM</span><span class="token operator">=</span>INPLACE<span class="token punctuation">,</span> <span class="token keyword">LOCK</span><span class="token operator">=</span>NONE<span class="token punctuation">;</span>
+<span class="token keyword">ANALYZE</span> <span class="token keyword">TABLE</span> t_order<span class="token punctuation">;</span>
+
+<span class="token keyword">EXPLAIN</span> <span class="token keyword">SELECT</span> id<span class="token punctuation">,</span> amount <span class="token keyword">FROM</span> t_order <span class="token keyword">WHERE</span> <span class="token keyword">status</span> <span class="token operator">=</span> <span class="token number">1</span> <span class="token keyword">ORDER</span> <span class="token keyword">BY</span> created_at <span class="token keyword">DESC</span> <span class="token keyword">LIMIT</span> <span class="token number">20</span><span class="token punctuation">;</span>
+<span class="token comment">-- Extra 无 filesort；若 amount 也在索引里则额外出现 Using index</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<h3 id="3-看排序有没有落盘"><a href="#3-看排序有没有落盘" class="headerlink" title="3. 看排序有没有落盘"></a>3. 看排序有没有落盘</h3><pre class="line-numbers language-sql" data-language="sql"><code class="language-sql"><span class="token keyword">SHOW</span> <span class="token keyword">GLOBAL</span> <span class="token keyword">STATUS</span> <span class="token operator">LIKE</span> <span class="token string">'Sort%'</span><span class="token punctuation">;</span>
+<span class="token comment">-- Sort_merge_passes > 0 说明发生过磁盘归并</span>
+<span class="token keyword">SHOW</span> <span class="token keyword">GLOBAL</span> <span class="token keyword">STATUS</span> <span class="token operator">LIKE</span> <span class="token string">'Created_tmp%'</span><span class="token punctuation">;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span></span></code></pre>
+
+<p><code>Sort_merge_passes</code> 持续增长 &#x3D; <code>sort_buffer_size</code> 不够或需要排序的数据太多。</p>
+<h3 id="4-GROUP-BY-消临时表"><a href="#4-GROUP-BY-消临时表" class="headerlink" title="4. GROUP BY 消临时表"></a>4. GROUP BY 消临时表</h3><pre class="line-numbers language-sql" data-language="sql"><code class="language-sql"><span class="token comment">-- 前：Extra: Using temporary; Using filesort</span>
+<span class="token keyword">EXPLAIN</span> <span class="token keyword">SELECT</span> city<span class="token punctuation">,</span> <span class="token function">COUNT</span><span class="token punctuation">(</span><span class="token operator">*</span><span class="token punctuation">)</span> <span class="token keyword">FROM</span> t_user <span class="token keyword">GROUP</span> <span class="token keyword">BY</span> city<span class="token punctuation">;</span>
+
+<span class="token comment">-- 建索引后</span>
+<span class="token keyword">ALTER</span> <span class="token keyword">TABLE</span> t_user <span class="token keyword">ADD</span> <span class="token keyword">INDEX</span> idx_city <span class="token punctuation">(</span>city<span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token keyword">EXPLAIN</span> <span class="token keyword">SELECT</span> city<span class="token punctuation">,</span> <span class="token function">COUNT</span><span class="token punctuation">(</span><span class="token operator">*</span><span class="token punctuation">)</span> <span class="token keyword">FROM</span> t_user <span class="token keyword">GROUP</span> <span class="token keyword">BY</span> city<span class="token punctuation">;</span>
+<span class="token comment">-- Extra 变为 Using index（覆盖）</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<h3 id="5-Java-侧怎么落地：让排序在数据库里「顺」起来"><a href="#5-Java-侧怎么落地：让排序在数据库里「顺」起来" class="headerlink" title="5. Java 侧怎么落地：让排序在数据库里「顺」起来"></a>5. Java 侧怎么落地：让排序在数据库里「顺」起来</h3><ol>
+<li><strong>排序参数白名单</strong>：前端传入的 <code>orderBy</code> 字段只允许命中已建索引的列，其余拒绝；</li>
+<li><strong>分页与排序绑定</strong>：分页 SQL 统一模板 <code>WHERE ... ORDER BY &lt;indexed_col&gt; LIMIT</code>，禁止 <code>ORDER BY RAND()</code>；</li>
+<li><strong>报表走离线</strong>：<code>GROUP BY</code> 维度多的统计改成定时任务预聚合到结果表；</li>
+<li><strong>连接池参数</strong>：<code>sort_buffer_size</code> 按「并发 × 缓冲」评估，别一调就是 8MB × 200 连接；</li>
+<li><strong>监控</strong>：采集 <code>Created_tmp_disk_tables / Created_tmp_tables</code> 比值，超过 30% 报警。</li>
+</ol>
+<h2 id="七、常见坑"><a href="#七、常见坑" class="headerlink" title="七、常见坑"></a>七、常见坑</h2><ol>
+<li><strong><code>ORDER BY</code> 列不在索引尾部</strong>：前面有范围条件就借不到顺序；</li>
+<li><strong>混合 ASC&#x2F;DESC</strong>：8.0 前无法用索引，需建降序索引；</li>
+<li><strong><code>ORDER BY</code> 用函数</strong>：索引完全失效；</li>
+<li><strong>盲目调大 <code>sort_buffer_size</code></strong>：并发高时直接 OOM；</li>
+<li><strong><code>GROUP BY</code> 后 <code>ORDER BY</code> 同一列</strong>：多一次多余排序（8.0 已优化部分场景）；</li>
+<li><strong>把过滤条件写进 <code>HAVING</code></strong>：多扫描一遍；</li>
+<li><strong><code>DISTINCT</code> 与 <code>GROUP BY</code> 混用</strong>：双份去重开销。</li>
+</ol>
+<h2 id="八、版本差异"><a href="#八、版本差异" class="headerlink" title="八、版本差异"></a>八、版本差异</h2><ul>
+<li><strong>5.6</strong>：filesort 有全字段&#x2F;rowid 两种，<code>max_length_for_sort_data</code> 是关键参数；</li>
+<li><strong>5.7</strong>：<code>GROUP BY</code> 隐式排序被移除，不再默认 <code>ORDER BY</code>；</li>
+<li><strong>8.0</strong>：降序索引（8.0 起真正生效）、打包排序（8.0.20）、<code>EXPLAIN ANALYZE</code> 可看排序实际行数；</li>
+<li><strong>8.4</strong>：排序&#x2F;分组机制同 8.0，<code>max_length_for_sort_data</code> 影响力进一步下降。</li>
+</ul>
+<h2 id="九、课后小结"><a href="#九、课后小结" class="headerlink" title="九、课后小结"></a>九、课后小结</h2><ul>
+<li><code>filesort</code> 是「自己排」，能借索引顺序就不要它；</li>
+<li>借索引顺序要满足：最左连续前缀、前缀等值、方向一致、无函数；</li>
+<li><code>ORDER BY ... LIMIT</code> 只有在借索引时才是真「提前停」；</li>
+<li><code>GROUP BY</code> 无索引必建临时表，超限就落盘；</li>
+<li>过滤条件尽量写 <code>WHERE</code>，<code>HAVING</code> 只留聚合后的判断。</li>
+</ul>
+<h2 id="十、思考题"><a href="#十、思考题" class="headerlink" title="十、思考题"></a>十、思考题</h2><ol>
+<li><p>为什么 <code>ORDER BY created_at DESC LIMIT 20</code> 有时要扫几十万行？</p>
+<p><strong>参考回答</strong>：排序键不是索引的可借顺序（例如 <code>WHERE status = 2</code> 而索引是 <code>(created_at)</code>），必须先取出所有匹配行排完序，才知道前 20 条是谁；<code>LIMIT</code> 无法提前停止。解法是把过滤列与排序列做成联合索引 <code>(status, created_at)</code>。</p>
+</li>
+<li><p>全字段排序与 rowid 排序，哪个更快？</p>
+<p><strong>参考回答</strong>：取决于行宽与结果集大小。行窄时全字段排序一次读完、不回表，更快；行宽或结果集大时 rowid 排序能在 buffer 里装更多行、减少磁盘归并，反而更快。8.0.20 后用打包排序自动在两者间取优。</p>
+</li>
+<li><p><code>Sort_merge_passes</code> 一直增长说明什么？</p>
+<p><strong>参考回答</strong>：说明排序数据超过了 <code>sort_buffer_size</code>，发生了多路归并（读磁盘临时文件）。要么调大 buffer（注意并发内存），要么通过索引消除排序。</p>
+</li>
+<li><p><code>GROUP BY city</code> 出现 <code>Using temporary</code> 该怎么改？</p>
+<p><strong>参考回答</strong>：先给 <code>city</code> 建索引让分组借索引顺序；若分组维度多且无法建索引，把范围条件压到 <code>WHERE</code> 减少参与行，或改为离线预聚合。调 <code>tmp_table_size</code> 只能缓解落盘，治不了根因。</p>
+</li>
+<li><p>混合排序方向（<code>a ASC, b DESC</code>）为什么用不了普通索引？</p>
+<p><strong>参考回答</strong>：普通（升序）索引的物理顺序是统一方向的，无法同时满足两个相反方向。8.0 支持降序索引，建 <code>(a ASC, b DESC)</code> 后优化器才能借用；8.0 之前只能改排序方向或在应用层排序。</p>
+</li>
+</ol>
+<h2 id="十一、官方资料"><a href="#十一、官方资料" class="headerlink" title="十一、官方资料"></a>十一、官方资料</h2><ul>
+<li>ORDER BY 优化：<a target="_blank" rel="noopener" href="https://dev.mysql.com/doc/refman/8.4/en/order-by-optimization.html">https://dev.mysql.com/doc/refman/8.4/en/order-by-optimization.html</a></li>
+<li>GROUP BY 优化：<a target="_blank" rel="noopener" href="https://dev.mysql.com/doc/refman/8.4/en/group-by-optimization.html">https://dev.mysql.com/doc/refman/8.4/en/group-by-optimization.html</a></li>
+<li>内部临时表：<a target="_blank" rel="noopener" href="https://dev.mysql.com/doc/refman/8.4/en/internal-temporary-tables.html">https://dev.mysql.com/doc/refman/8.4/en/internal-temporary-tables.html</a></li>
+<li>降序索引：<a target="_blank" rel="noopener" href="https://dev.mysql.com/doc/refman/8.4/en/descending-indexes.html">https://dev.mysql.com/doc/refman/8.4/en/descending-indexes.html</a></li>
+</ul>
+<p>上一篇：<a href="/2022/12/20/database/mysql/mysql-40-join/">MQ40 JOIN 优化</a> ｜ 下一篇：<a href="/2022/12/22/database/mysql/mysql-42-tuning/">MQ42 参数调优</a> ｜ <a href="/2022/11/10/database/mysql/mysql-0-series-index/">总目录</a></p>
+</div>
+
+  <div class="mb-foot">
+    <a href="/phone/">返回手机首页</a>
+    <a href="/phone/tags/">星迹索引</a>
+  </div>
+</div>
+
+
+<script>
+  /* 作用：懒加载本地 mermaid 库；无 mermaid 代码块时不加载 */
+  function loadLocalMermaid(){
+    return new Promise(function(resolve, reject){
+      if(window.mermaid) return resolve(window.mermaid);
+      var s = document.createElement('script');
+      s.src = '/js/third-party/mermaid/mermaid.min.js?v=10';
+      s.onload = function(){ resolve(window.mermaid); };
+      s.onerror = function(){ reject(new Error('mermaid local load failed')); };
+      document.head.appendChild(s);
+    });
+  }
+
+  /* 作用：把 ```mermaid 代码块替换成 SVG 图（手机端字号略小、图可横向滚动） */
+  async function renderMermaidDiagram(){
+    var blocks = document.querySelectorAll('pre[class*="language-mermaid"]');
+    if(!blocks.length) return;
+    var mermaid;
+    try { mermaid = await loadLocalMermaid(); }
+    catch(e){ console.warn('[mermaid] 本地库加载失败：', e); return; }
+
+    mermaid.initialize({
+      startOnLoad: false,
+      theme: 'base',
+      themeVariables: {
+        darkMode: true,
+        background: 'transparent',
+        fontFamily: '"Microsoft YaHei", "PingFang SC", "Segoe UI", sans-serif',
+        fontSize: '12px',
+        primaryColor: '#062f3d',
+        primaryTextColor: '#d6f6ff',
+        primaryBorderColor: '#00eeff',
+        secondaryColor: '#04222d',
+        tertiaryColor: '#04222d',
+        mainBkg: '#062f3d',
+        nodeBorder: '#00eeff',
+        clusterBkg: '#02161f',
+        clusterBorder: '#00eeff55',
+        lineColor: '#00eeff',
+        textColor: '#c0e8ff',
+        edgeLabelBackground: '#02161f'
+      },
+      flowchart: { curve: 'basis', useMaxWidth: false, htmlLabels: false, nodeSpacing: 30, rankSpacing: 40, padding: 10 }
+    });
+
+    var targets = [];
+    blocks.forEach(function(el){
+      var codeEl = el.querySelector('code');
+      if(!codeEl) return;
+      var div = document.createElement('div');
+      div.className = 'mermaid';
+      div.textContent = codeEl.textContent;
+      el.parentNode.replaceChild(div, el);
+      targets.push(div);
+    });
+    if(!targets.length) return;
+    try { await mermaid.run({ nodes: targets }); }
+    catch(e){ console.warn('[mermaid] 渲染失败：', e); }
+  }
+  /* 作用：多次触发兜底（延迟重试 + DOM 变化），防止某次时机没跑到导致图表留在代码块 */
+  var mmBusy = false;
+  function scheduleMermaid(){
+    if(mmBusy) return;
+    mmBusy = true;
+    renderMermaidDiagram().then(function(){ mmBusy = false; }, function(){ mmBusy = false; });
+  }
+  scheduleMermaid();
+  window.addEventListener('load', scheduleMermaid);
+  [1000, 3000, 8000].forEach(function(ms){ setTimeout(scheduleMermaid, ms); });
+  if(document.readyState !== 'loading') scheduleMermaid();
+  if(window.MutationObserver){
+    var mmTimer = null;
+    var mmObserver = new MutationObserver(function(){
+      clearTimeout(mmTimer);
+      mmTimer = setTimeout(scheduleMermaid, 400);
+    });
+    mmObserver.observe(document.querySelector('.mb-article') || document.body, { childList: true, subtree: true });
+  }
+</script>
+</body>
+</html>

@@ -1,0 +1,372 @@
+<!--
+  ============================================
+  手机端 · 文章原文页
+  文件：phone/post.njk
+  适用终端：手机端（路由 /phone/p/<slug>/，由 scripts/phone-routes.js 生成）
+  作用：手机阅读单篇文章；单列布局、无侧栏无雷达，替代电脑端 post.njk
+        数据由生成期算好：page.item = { title, dateStr, content, cats, tags }
+  样式依赖：source/css/theme/phone/common.css、source/css/theme/phone/list.css
+  组件依赖：phone/_components/Particles.njk
+  最后修改：2026-11-11
+  ============================================
+-->
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="color-scheme" content="dark">
+  <meta name="theme-color" content="#020817">
+  <!-- 首帧兜底：浏览器默认画布是白的，样式未解析前会闪一下白。这条规则先锁死深空底色 -->
+  <style>html{background-color:#020817}</style>
+  <title>mysql-39-rewrite - 时空秘境</title>
+  <!-- 手机端样式：基础 + 列表/正文，外链引入（源文件 source/css/theme/phone/） -->
+  <link rel="stylesheet" href="/css/theme/phone/common.css">
+  <link rel="stylesheet" href="/css/theme/phone/list.css">
+<meta name="generator" content="Hexo 8.1.2"></head>
+<body>
+<div class="mb-shell">
+  <!--
+  ============================================
+  手机端星空粒子组件
+  文件：Particles.njk
+  适用终端：手机端
+  作用：Particles.njk 的手机端副本（nunjucks 子目录 include 取不到上级）
+        参数与电脑端 _components/Particles.njk 保持一致：
+        粒子 95 / 连线 118px / opacity 0.32，外加星座层与零星闪烁层
+  最后修改：2026-11-12
+  ============================================
+--><!-- z-index 必须是 0：负层级会被 body 不透明背景盖住，粒子在跑却看不见 -->
+<div id="particles" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 0; pointer-events: none;"></div>
+<!-- 星座层（与首页同一套：随机零星散布星座图形 + 偶尔闪烁的小星） -->
+<div id="constellations" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 1; pointer-events: none;" aria-hidden="true"></div>
+<script src="/js/particles.min.js"></script>
+<script>
+particlesJS("particles", {
+  particles: {
+    number: {
+      value: 95,
+      density: {
+        enable: true,
+        value_area: 800
+      }
+    },
+    color: {
+      value: "#00eeff"
+    },
+    shape: {
+      type: "circle",
+      stroke: {
+        width: 0,
+        color: "#000000"
+      }
+    },
+    opacity: {
+      value: 0.6,
+      random: true,
+      anim: {
+        enable: true,
+        speed: 0.5,
+        opacity_min: 0.1,
+        sync: false
+      }
+    },
+    size: {
+      value: 3,
+      random: true,
+      anim: {
+        enable: true,
+        speed: 2,
+        size_min: 0.1,
+        sync: false
+      }
+    },
+    line_linked: {
+      enable: true,
+      distance: 118,
+      color: "#00eeff",
+      opacity: 0.32,
+      width: 1
+    },
+    move: {
+      enable: true,
+      speed: 0.8,
+      direction: "none",
+      random: true,
+      straight: false,
+      out_mode: "out",
+      bounce: false,
+      attract: {
+        enable: true,
+        rotateX: 600,
+        rotateY: 1200
+      }
+    }
+  },
+  interactivity: {
+    detect_on: "canvas",
+    events: {
+      onhover: {
+        enable: true,
+        mode: "grab"       // 手指按住时粒子聚集
+      },
+      onclick: {
+        enable: true,
+        mode: "push"       // 点击时产生新粒子
+      },
+      resize: true
+    },
+    modes: {
+      grab: {
+        distance: 200,
+        line_linked: {
+          opacity: 1
+        }
+      },
+      push: {
+        particles_nb: 6
+      }
+    }
+  },
+  retina_detect: true
+});
+</script>
+<!-- 星座 + 零星闪烁层：与电脑端共用同一份绘制脚本 -->
+<script src="/js/theme/home/starfield.js"></script>
+
+
+  <div class="mb-top">
+    <a class="mb-back" href="/phone/">← 返回手机首页</a>
+    <span class="mb-sub" style="margin:0">2022-12-19</span>
+  </div>
+
+  <h1 class="mb-title">mysql-39-rewrite</h1>
+  <div class="mb-sub">
+    分类：database · mysql
+     ｜ 标签：系统课 · MySQL · 数据库
+  </div>
+
+  <div class="mb-article"><div class="essay-banner essay-database"></div>
+
+<h1 id="SQL-改写：深翻页、OR、子查询与-UNION"><a href="#SQL-改写：深翻页、OR、子查询与-UNION" class="headerlink" title="SQL 改写：深翻页、OR、子查询与 UNION"></a>SQL 改写：深翻页、OR、子查询与 UNION</h1><p><img src="https://wu4yong.github.io/starry-images/assets/img/mysql/mq-39-rewrite.svg" alt="深翻页的两种改写"></p>
+<p><em><code>LIMIT 500000, 20</code> 要把前 50 万行读出来再丢掉｜依据 MySQL 8.4 LIMIT 优化与延迟关联实践自绘</em></p>
+<h2 id="一、学习目标"><a href="#一、学习目标" class="headerlink" title="一、学习目标"></a>一、学习目标</h2><ol>
+<li>会三种深翻页改法（游标法、延迟关联、页码上限），知道各自前提；</li>
+<li>把 <code>OR</code>、<code>NOT IN</code>、<code>UNION</code> 这几类常见「慢写法」改成能走索引的形态；</li>
+<li>建立「改写后必须逐段 <code>EXPLAIN</code> 验证」的习惯。</li>
+</ol>
+<h2 id="二、前置知识"><a href="#二、前置知识" class="headerlink" title="二、前置知识"></a>二、前置知识</h2><p>索引与覆盖（MQ38）、<code>EXPLAIN</code>（MQ35）、优化器（MQ37）。改写的本质是「让优化器有更好的计划可选」。</p>
+<h2 id="三、理论讲解（官方定义）"><a href="#三、理论讲解（官方定义）" class="headerlink" title="三、理论讲解（官方定义）"></a>三、理论讲解（官方定义）</h2><p><code>LIMIT offset, n</code> 的语义是「先按顺序取出 offset + n 行，再丢掉前 offset 行」。因此 offset 越大，无用功越多，耗时随页码线性增长。</p>
+<p>MySQL 8.4 的优化器对子查询、<code>OR</code>、<code>UNION</code> 都有专门策略（semijoin、物化、<code>index_merge</code>），但<strong>策略能否生效取决于写法与索引</strong>。</p>
+<h2 id="四、原理拆解"><a href="#四、原理拆解" class="headerlink" title="四、原理拆解"></a>四、原理拆解</h2><p><img src="https://wu4yong.github.io/starry-images/assets/img/mysql/mq-39b-rewrite.svg" alt="四类改写的对照"></p>
+<p><em>改写的目标只有一个：让每一段都能走索引，且不做多余的去重｜依据 MySQL 8.4 子查询优化 &#x2F; UNION 说明自绘</em></p>
+<h3 id="1-深翻页的三种改法"><a href="#1-深翻页的三种改法" class="headerlink" title="1. 深翻页的三种改法"></a>1. 深翻页的三种改法</h3><table>
+<thead>
+<tr>
+<th>改法</th>
+<th>写法</th>
+<th>前提</th>
+<th>代价</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>游标法（keyset）</td>
+<td><code>WHERE id &gt; :last_id ORDER BY id LIMIT 20</code></td>
+<td>排序键唯一且递增</td>
+<td>只能顺序翻，不能跳页</td>
+</tr>
+<tr>
+<td>延迟关联</td>
+<td>子查询只取主键，外层按主键回表</td>
+<td>子查询能走覆盖索引</td>
+<td>扫描量仍在，但回表量大幅下降</td>
+</tr>
+<tr>
+<td>页码上限</td>
+<td>业务层限制最大页数</td>
+<td>产品可接受</td>
+<td>治标不治本</td>
+</tr>
+</tbody></table>
+<p>延迟关联的关键：子查询 <code>SELECT id FROM t_order WHERE ... ORDER BY ... LIMIT 500000, 20</code> 只走二级索引（覆盖），拿到 20 个 id 后外层用主键 IN 查整行，把 50 万次回表压成 20 次。</p>
+<h3 id="2-OR-为什么慢，怎么改"><a href="#2-OR-为什么慢，怎么改" class="headerlink" title="2. OR 为什么慢，怎么改"></a>2. <code>OR</code> 为什么慢，怎么改</h3><p><code>a = 1 OR b = 2</code> 无法用单个联合索引，优化器要么 <code>index_merge</code>（两次扫描 + 合并），要么全表扫。稳妥写法是拆成两段各自走索引：</p>
+<pre class="line-numbers language-sql" data-language="sql"><code class="language-sql"><span class="token keyword">SELECT</span> <span class="token punctuation">.</span><span class="token punctuation">.</span><span class="token punctuation">.</span> <span class="token keyword">WHERE</span> a <span class="token operator">=</span> <span class="token number">1</span>
+<span class="token keyword">UNION</span> <span class="token keyword">ALL</span>
+<span class="token keyword">SELECT</span> <span class="token punctuation">.</span><span class="token punctuation">.</span><span class="token punctuation">.</span> <span class="token keyword">WHERE</span> b <span class="token operator">=</span> <span class="token number">2</span> <span class="token operator">AND</span> a <span class="token operator">&lt;></span> <span class="token number">1</span><span class="token punctuation">;</span>   <span class="token comment">-- 排除重复，避免二次去重</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span></span></code></pre>
+
+<h3 id="3-NOT-IN-的-NULL-陷阱"><a href="#3-NOT-IN-的-NULL-陷阱" class="headerlink" title="3. NOT IN 的 NULL 陷阱"></a>3. <code>NOT IN</code> 的 NULL 陷阱</h3><p><code>NOT IN (子查询)</code> 只要子查询结果里有 <code>NULL</code>，整体结果就是空集。这是语义层面的坑，不只看性能。改 <code>NOT EXISTS</code> 或 <code>LEFT JOIN ... WHERE t.id IS NULL</code>，并确认关联列 <code>NOT NULL</code>。</p>
+<h3 id="4-IN-子查询与-semijoin"><a href="#4-IN-子查询与-semijoin" class="headerlink" title="4. IN 子查询与 semijoin"></a>4. <code>IN</code> 子查询与 semijoin</h3><p>8.0 起 <code>IN (子查询)</code> 有多种 semijoin 策略（<code>FirstMatch</code>、<code>LooseScan</code>、物化后 JOIN）。生产上仍建议写成 <code>EXISTS</code> 或显式 <code>JOIN</code>，计划更稳定、可读性更好。</p>
+<h3 id="5-UNION-与-UNION-ALL"><a href="#5-UNION-与-UNION-ALL" class="headerlink" title="5. UNION 与 UNION ALL"></a>5. <code>UNION</code> 与 <code>UNION ALL</code></h3><p><code>UNION</code> 强制去重，会建临时表；语义上不需要去重时必须写 <code>UNION ALL</code>。这是最低成本、收益最确定的一条改写。</p>
+<h3 id="6-COUNT-DISTINCT-的重代价"><a href="#6-COUNT-DISTINCT-的重代价" class="headerlink" title="6. COUNT(DISTINCT) 的重代价"></a>6. <code>COUNT(DISTINCT)</code> 的重代价</h3><p>大表 <code>COUNT(DISTINCT col)</code> 需要扫全部匹配行并去重。可改近似统计（业务可接受误差时）或维护预聚合表，别在列表页实时算。</p>
+<h2 id="五、场景说明"><a href="#五、场景说明" class="headerlink" title="五、场景说明"></a>五、场景说明</h2><ol>
+<li><strong>后台列表深翻页</strong>：优先延迟关联；能改游标就改游标；</li>
+<li><strong>多条件筛选</strong>：<code>status</code> + <code>type</code> 各一个索引 → 改 <code>UNION ALL</code> 两段；</li>
+<li><strong>数据同步去重</strong>：<code>NOT IN</code> 改成 <code>LEFT JOIN ... IS NULL</code>；</li>
+<li><strong>报表统计</strong>：<code>COUNT(DISTINCT)</code> 走预聚合或 HyperLogLog 近似；</li>
+<li><strong>分页接口封装</strong>：把「页码上限 + 每页上限」写进公共分页工具类。</li>
+</ol>
+<h2 id="六、示例代码-实操步骤"><a href="#六、示例代码-实操步骤" class="headerlink" title="六、示例代码&#x2F;实操步骤"></a>六、示例代码&#x2F;实操步骤</h2><h3 id="1-先测出问题"><a href="#1-先测出问题" class="headerlink" title="1. 先测出问题"></a>1. 先测出问题</h3><pre class="line-numbers language-sql" data-language="sql"><code class="language-sql"><span class="token keyword">EXPLAIN</span> <span class="token keyword">SELECT</span> <span class="token operator">*</span> <span class="token keyword">FROM</span> t_order <span class="token keyword">ORDER</span> <span class="token keyword">BY</span> id <span class="token keyword">LIMIT</span> <span class="token number">500000</span><span class="token punctuation">,</span> <span class="token number">20</span><span class="token punctuation">;</span>
+<span class="token comment">-- type=index, rows≈500020, Extra 无 Using index → 大量无用回表</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span></span></code></pre>
+
+<h3 id="2-延迟关联改写"><a href="#2-延迟关联改写" class="headerlink" title="2. 延迟关联改写"></a>2. 延迟关联改写</h3><pre class="line-numbers language-sql" data-language="sql"><code class="language-sql"><span class="token keyword">SELECT</span> o<span class="token punctuation">.</span><span class="token operator">*</span>
+<span class="token keyword">FROM</span> t_order o
+<span class="token keyword">JOIN</span> <span class="token punctuation">(</span>
+  <span class="token keyword">SELECT</span> id <span class="token keyword">FROM</span> t_order <span class="token keyword">ORDER</span> <span class="token keyword">BY</span> id <span class="token keyword">LIMIT</span> <span class="token number">500000</span><span class="token punctuation">,</span> <span class="token number">20</span>
+<span class="token punctuation">)</span> t <span class="token keyword">USING</span> <span class="token punctuation">(</span>id<span class="token punctuation">)</span><span class="token punctuation">;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<p>子查询只读索引页，外层按 20 个主键回表，<code>Rows_examined</code> 从 50 万降到约 50 万次索引项读 + 20 次回表。</p>
+<h3 id="3-游标法改写"><a href="#3-游标法改写" class="headerlink" title="3. 游标法改写"></a>3. 游标法改写</h3><pre class="line-numbers language-sql" data-language="sql"><code class="language-sql"><span class="token comment">-- 首页</span>
+<span class="token keyword">SELECT</span> <span class="token operator">*</span> <span class="token keyword">FROM</span> t_order <span class="token keyword">ORDER</span> <span class="token keyword">BY</span> id <span class="token keyword">LIMIT</span> <span class="token number">20</span><span class="token punctuation">;</span>
+<span class="token comment">-- 后续页（last_id 为上一页最后一条的 id）</span>
+<span class="token keyword">SELECT</span> <span class="token operator">*</span> <span class="token keyword">FROM</span> t_order <span class="token keyword">WHERE</span> id <span class="token operator">></span> <span class="token number">500000</span> <span class="token keyword">ORDER</span> <span class="token keyword">BY</span> id <span class="token keyword">LIMIT</span> <span class="token number">20</span><span class="token punctuation">;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span></span></code></pre>
+
+<h3 id="4-OR-与-UNION-ALL"><a href="#4-OR-与-UNION-ALL" class="headerlink" title="4. OR 与 UNION ALL"></a>4. OR 与 UNION ALL</h3><pre class="line-numbers language-sql" data-language="sql"><code class="language-sql"><span class="token comment">-- 差</span>
+<span class="token keyword">SELECT</span> <span class="token operator">*</span> <span class="token keyword">FROM</span> t_order <span class="token keyword">WHERE</span> <span class="token keyword">status</span> <span class="token operator">=</span> <span class="token number">1</span> <span class="token operator">OR</span> <span class="token keyword">type</span> <span class="token operator">=</span> <span class="token number">3</span><span class="token punctuation">;</span>
+<span class="token comment">-- 好</span>
+<span class="token keyword">SELECT</span> <span class="token operator">*</span> <span class="token keyword">FROM</span> t_order <span class="token keyword">WHERE</span> <span class="token keyword">status</span> <span class="token operator">=</span> <span class="token number">1</span>
+<span class="token keyword">UNION</span> <span class="token keyword">ALL</span>
+<span class="token keyword">SELECT</span> <span class="token operator">*</span> <span class="token keyword">FROM</span> t_order <span class="token keyword">WHERE</span> <span class="token keyword">type</span> <span class="token operator">=</span> <span class="token number">3</span> <span class="token operator">AND</span> <span class="token keyword">status</span> <span class="token operator">&lt;></span> <span class="token number">1</span><span class="token punctuation">;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<h3 id="5-Java-侧怎么落地：在数据访问层固化改写"><a href="#5-Java-侧怎么落地：在数据访问层固化改写" class="headerlink" title="5. Java 侧怎么落地：在数据访问层固化改写"></a>5. Java 侧怎么落地：在数据访问层固化改写</h3><ol>
+<li><strong>分页工具类</strong>：<code>PageQuery</code> 强制 <code>pageSize &lt;= 100</code>、<code>pageNo &lt;= 500</code>，超限直接返回错误；</li>
+<li><strong>延迟关联模板</strong>：MyBatis 提供 <code>selectByDeferredJoin</code> 片段，超过阈值页码自动切换；</li>
+<li><strong>游标接口</strong>：列表接口同时支持 <code>lastId</code> 参数，前端下拉加载走游标；</li>
+<li><strong>批处理去重</strong>：<code>INSERT ... SELECT ... LEFT JOIN ... WHERE t.id IS NULL</code> 替代 <code>NOT IN</code>，并按 1000 一批提交；</li>
+<li><strong>SQL 评审清单</strong>：禁止 <code>SELECT *</code>、禁止 <code>UNION</code>（除非语义需要去重）、禁止 <code>NOT IN</code> 子查询，纳入 CI 静态扫描。</li>
+</ol>
+<h2 id="七、常见坑"><a href="#七、常见坑" class="headerlink" title="七、常见坑"></a>七、常见坑</h2><ol>
+<li><strong>延迟关联的子查询没走覆盖索引</strong>：变成两次全扫，更慢；</li>
+<li><strong>游标法用在非唯一排序键上</strong>：会漏数据或重复；</li>
+<li><strong><code>UNION ALL</code> 两段条件重叠</strong>：产生重复行，业务层没去重；</li>
+<li><strong><code>NOT IN</code> 子查询含 NULL</strong>：结果恒为空，测试数据不覆盖就上线；</li>
+<li><strong>改写后没验证</strong>：新写法可能触发另一种坏计划；</li>
+<li><strong><code>COUNT(DISTINCT)</code> 放列表页</strong>：每页都算一遍全表；</li>
+<li><strong>深度分页 + 排序键非索引列</strong>：<code>filesort</code> + 全扫，双重打击。</li>
+</ol>
+<h2 id="八、版本差异"><a href="#八、版本差异" class="headerlink" title="八、版本差异"></a>八、版本差异</h2><ul>
+<li><strong>5.6</strong>：子查询物化优化有限，<code>IN</code> 子查询常退化为全扫；</li>
+<li><strong>5.7</strong>：semijoin 策略增强，<code>optimizer_switch</code> 可精细控制；</li>
+<li><strong>8.0</strong>：<code>LATERAL</code>（8.0.14）、CTE、窗口函数、hash join（8.0.18）、<code>SKIP LOCKED</code>；</li>
+<li><strong>8.4</strong>：沿用 8.0 的优化器能力，<code>EXPLAIN ANALYZE</code> 便于逐段验证改写效果。</li>
+</ul>
+<h2 id="九、课后小结"><a href="#九、课后小结" class="headerlink" title="九、课后小结"></a>九、课后小结</h2><ul>
+<li><code>LIMIT offset, n</code> 的成本随页码线性增长，深翻页必须改写；</li>
+<li>游标法最快但有前提，延迟关联最通用，页码上限是兜底；</li>
+<li><code>OR</code> 拆 <code>UNION ALL</code>、<code>NOT IN</code> 改 <code>NOT EXISTS</code>、<code>UNION</code> 改 <code>UNION ALL</code>，是三招最稳的改写；</li>
+<li>改写不是凭经验替换，必须逐段 <code>EXPLAIN</code> 验证；</li>
+<li>把「页码上限、批大小、禁用写法」固化到代码层，问题才不会复发。</li>
+</ul>
+<h2 id="十、思考题"><a href="#十、思考题" class="headerlink" title="十、思考题"></a>十、思考题</h2><ol>
+<li><p>为什么 <code>LIMIT 500000, 20</code> 会慢？</p>
+<p><strong>参考回答</strong>：语义是先按顺序取 500020 行再丢弃前 500000 行。若排序键不是覆盖索引列，每一行都要回表取整行，等于做了 50 万次无用回表；耗时随 offset 线性增长。</p>
+</li>
+<li><p>延迟关联为什么能提速？它治的是哪一段开销？</p>
+<p><strong>参考回答</strong>：子查询只从二级索引取主键（覆盖扫描，不回表），把「50 万次回表」压成「50 万次索引项读 + 20 次回表」。它治的是回表开销，索引扫描量本身并没有减少。</p>
+</li>
+<li><p>游标法（keyset pagination）的前提是什么？</p>
+<p><strong>参考回答</strong>：排序键必须唯一且单调（通常用自增主键或唯一时间戳 + id 组合），否则会出现漏行或重复；同时它只支持顺序翻页，不能随机跳页。</p>
+</li>
+<li><p><code>a = 1 OR b = 2</code> 有哪些改法，各自的代价是什么？</p>
+<p><strong>参考回答</strong>：① 拆 <code>UNION ALL</code> 两段，各走索引，代价是两次查询 + 可能的去重条件；② 建联合索引覆盖常见组合（若能确定查询模式）；③ 保持 <code>index_merge</code>，代价是两索引扫描加合并，通常最慢。优先拆 <code>UNION ALL</code>。</p>
+</li>
+<li><p><code>NOT IN (子查询)</code> 结果为空，是性能问题还是语义问题？</p>
+<p><strong>参考回答</strong>：是语义问题。SQL 三值逻辑下，只要子查询结果含 <code>NULL</code>，比较结果就是 <code>UNKNOWN</code>，<code>NOT IN</code> 整体不成立，返回空集。改 <code>NOT EXISTS</code> 或 <code>LEFT JOIN ... IS NULL</code>，并确保关联列 <code>NOT NULL</code>。</p>
+</li>
+</ol>
+<h2 id="十一、官方资料"><a href="#十一、官方资料" class="headerlink" title="十一、官方资料"></a>十一、官方资料</h2><ul>
+<li>LIMIT 优化：<a target="_blank" rel="noopener" href="https://dev.mysql.com/doc/refman/8.4/en/limit-optimization.html">https://dev.mysql.com/doc/refman/8.4/en/limit-optimization.html</a></li>
+<li>子查询优化：<a target="_blank" rel="noopener" href="https://dev.mysql.com/doc/refman/8.4/en/subquery-optimization.html">https://dev.mysql.com/doc/refman/8.4/en/subquery-optimization.html</a></li>
+<li>UNION：<a target="_blank" rel="noopener" href="https://dev.mysql.com/doc/refman/8.4/en/union.html">https://dev.mysql.com/doc/refman/8.4/en/union.html</a></li>
+<li>优化器开关：<a target="_blank" rel="noopener" href="https://dev.mysql.com/doc/refman/8.4/en/switchable-optimizations.html">https://dev.mysql.com/doc/refman/8.4/en/switchable-optimizations.html</a></li>
+</ul>
+<p>上一篇：<a href="/2022/12/18/database/mysql/mysql-38-index-optimize/">MQ38 索引优化实战</a> ｜ 下一篇：<a href="/2022/12/20/database/mysql/mysql-40-join/">MQ40 JOIN 优化</a> ｜ <a href="/2022/11/10/database/mysql/mysql-0-series-index/">总目录</a></p>
+</div>
+
+  <div class="mb-foot">
+    <a href="/phone/">返回手机首页</a>
+    <a href="/phone/tags/">星迹索引</a>
+  </div>
+</div>
+
+
+<script>
+  /* 作用：懒加载本地 mermaid 库；无 mermaid 代码块时不加载 */
+  function loadLocalMermaid(){
+    return new Promise(function(resolve, reject){
+      if(window.mermaid) return resolve(window.mermaid);
+      var s = document.createElement('script');
+      s.src = '/js/third-party/mermaid/mermaid.min.js?v=10';
+      s.onload = function(){ resolve(window.mermaid); };
+      s.onerror = function(){ reject(new Error('mermaid local load failed')); };
+      document.head.appendChild(s);
+    });
+  }
+
+  /* 作用：把 ```mermaid 代码块替换成 SVG 图（手机端字号略小、图可横向滚动） */
+  async function renderMermaidDiagram(){
+    var blocks = document.querySelectorAll('pre[class*="language-mermaid"]');
+    if(!blocks.length) return;
+    var mermaid;
+    try { mermaid = await loadLocalMermaid(); }
+    catch(e){ console.warn('[mermaid] 本地库加载失败：', e); return; }
+
+    mermaid.initialize({
+      startOnLoad: false,
+      theme: 'base',
+      themeVariables: {
+        darkMode: true,
+        background: 'transparent',
+        fontFamily: '"Microsoft YaHei", "PingFang SC", "Segoe UI", sans-serif',
+        fontSize: '12px',
+        primaryColor: '#062f3d',
+        primaryTextColor: '#d6f6ff',
+        primaryBorderColor: '#00eeff',
+        secondaryColor: '#04222d',
+        tertiaryColor: '#04222d',
+        mainBkg: '#062f3d',
+        nodeBorder: '#00eeff',
+        clusterBkg: '#02161f',
+        clusterBorder: '#00eeff55',
+        lineColor: '#00eeff',
+        textColor: '#c0e8ff',
+        edgeLabelBackground: '#02161f'
+      },
+      flowchart: { curve: 'basis', useMaxWidth: false, htmlLabels: false, nodeSpacing: 30, rankSpacing: 40, padding: 10 }
+    });
+
+    var targets = [];
+    blocks.forEach(function(el){
+      var codeEl = el.querySelector('code');
+      if(!codeEl) return;
+      var div = document.createElement('div');
+      div.className = 'mermaid';
+      div.textContent = codeEl.textContent;
+      el.parentNode.replaceChild(div, el);
+      targets.push(div);
+    });
+    if(!targets.length) return;
+    try { await mermaid.run({ nodes: targets }); }
+    catch(e){ console.warn('[mermaid] 渲染失败：', e); }
+  }
+  /* 作用：多次触发兜底（延迟重试 + DOM 变化），防止某次时机没跑到导致图表留在代码块 */
+  var mmBusy = false;
+  function scheduleMermaid(){
+    if(mmBusy) return;
+    mmBusy = true;
+    renderMermaidDiagram().then(function(){ mmBusy = false; }, function(){ mmBusy = false; });
+  }
+  scheduleMermaid();
+  window.addEventListener('load', scheduleMermaid);
+  [1000, 3000, 8000].forEach(function(ms){ setTimeout(scheduleMermaid, ms); });
+  if(document.readyState !== 'loading') scheduleMermaid();
+  if(window.MutationObserver){
+    var mmTimer = null;
+    var mmObserver = new MutationObserver(function(){
+      clearTimeout(mmTimer);
+      mmTimer = setTimeout(scheduleMermaid, 400);
+    });
+    mmObserver.observe(document.querySelector('.mb-article') || document.body, { childList: true, subtree: true });
+  }
+</script>
+</body>
+</html>

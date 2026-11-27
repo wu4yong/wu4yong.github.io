@@ -1,0 +1,421 @@
+<!--
+  ============================================
+  手机端 · 文章原文页
+  文件：phone/post.njk
+  适用终端：手机端（路由 /phone/p/<slug>/，由 scripts/phone-routes.js 生成）
+  作用：手机阅读单篇文章；单列布局、无侧栏无雷达，替代电脑端 post.njk
+        数据由生成期算好：page.item = { title, dateStr, content, cats, tags }
+  样式依赖：source/css/theme/phone/common.css、source/css/theme/phone/list.css
+  组件依赖：phone/_components/Particles.njk
+  最后修改：2026-11-11
+  ============================================
+-->
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="color-scheme" content="dark">
+  <meta name="theme-color" content="#020817">
+  <!-- 首帧兜底：浏览器默认画布是白的，样式未解析前会闪一下白。这条规则先锁死深空底色 -->
+  <style>html{background-color:#020817}</style>
+  <title>mysql-42-tuning - 时空秘境</title>
+  <!-- 手机端样式：基础 + 列表/正文，外链引入（源文件 source/css/theme/phone/） -->
+  <link rel="stylesheet" href="/css/theme/phone/common.css">
+  <link rel="stylesheet" href="/css/theme/phone/list.css">
+<meta name="generator" content="Hexo 8.1.2"></head>
+<body>
+<div class="mb-shell">
+  <!--
+  ============================================
+  手机端星空粒子组件
+  文件：Particles.njk
+  适用终端：手机端
+  作用：Particles.njk 的手机端副本（nunjucks 子目录 include 取不到上级）
+        参数与电脑端 _components/Particles.njk 保持一致：
+        粒子 95 / 连线 118px / opacity 0.32，外加星座层与零星闪烁层
+  最后修改：2026-11-12
+  ============================================
+--><!-- z-index 必须是 0：负层级会被 body 不透明背景盖住，粒子在跑却看不见 -->
+<div id="particles" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 0; pointer-events: none;"></div>
+<!-- 星座层（与首页同一套：随机零星散布星座图形 + 偶尔闪烁的小星） -->
+<div id="constellations" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 1; pointer-events: none;" aria-hidden="true"></div>
+<script src="/js/particles.min.js"></script>
+<script>
+particlesJS("particles", {
+  particles: {
+    number: {
+      value: 95,
+      density: {
+        enable: true,
+        value_area: 800
+      }
+    },
+    color: {
+      value: "#00eeff"
+    },
+    shape: {
+      type: "circle",
+      stroke: {
+        width: 0,
+        color: "#000000"
+      }
+    },
+    opacity: {
+      value: 0.6,
+      random: true,
+      anim: {
+        enable: true,
+        speed: 0.5,
+        opacity_min: 0.1,
+        sync: false
+      }
+    },
+    size: {
+      value: 3,
+      random: true,
+      anim: {
+        enable: true,
+        speed: 2,
+        size_min: 0.1,
+        sync: false
+      }
+    },
+    line_linked: {
+      enable: true,
+      distance: 118,
+      color: "#00eeff",
+      opacity: 0.32,
+      width: 1
+    },
+    move: {
+      enable: true,
+      speed: 0.8,
+      direction: "none",
+      random: true,
+      straight: false,
+      out_mode: "out",
+      bounce: false,
+      attract: {
+        enable: true,
+        rotateX: 600,
+        rotateY: 1200
+      }
+    }
+  },
+  interactivity: {
+    detect_on: "canvas",
+    events: {
+      onhover: {
+        enable: true,
+        mode: "grab"       // 手指按住时粒子聚集
+      },
+      onclick: {
+        enable: true,
+        mode: "push"       // 点击时产生新粒子
+      },
+      resize: true
+    },
+    modes: {
+      grab: {
+        distance: 200,
+        line_linked: {
+          opacity: 1
+        }
+      },
+      push: {
+        particles_nb: 6
+      }
+    }
+  },
+  retina_detect: true
+});
+</script>
+<!-- 星座 + 零星闪烁层：与电脑端共用同一份绘制脚本 -->
+<script src="/js/theme/home/starfield.js"></script>
+
+
+  <div class="mb-top">
+    <a class="mb-back" href="/phone/">← 返回手机首页</a>
+    <span class="mb-sub" style="margin:0">2022-12-22</span>
+  </div>
+
+  <h1 class="mb-title">mysql-42-tuning</h1>
+  <div class="mb-sub">
+    分类：database · mysql
+     ｜ 标签：系统课 · MySQL · 数据库
+  </div>
+
+  <div class="mb-article"><div class="essay-banner essay-database"></div>
+
+<h1 id="参数调优：buffer-pool、连接数与并发线程"><a href="#参数调优：buffer-pool、连接数与并发线程" class="headerlink" title="参数调优：buffer pool、连接数与并发线程"></a>参数调优：buffer pool、连接数与并发线程</h1><p><img src="https://wu4yong.github.io/starry-images/assets/img/mysql/mq-42-tuning.svg" alt="参数调优的四个抽屉"></p>
+<p><em>先调内存与日志，再调连接与线程，最后才碰并发上限｜依据 MySQL 8.4 InnoDB 启动参数与连接管理说明自绘</em></p>
+<h2 id="一、学习目标"><a href="#一、学习目标" class="headerlink" title="一、学习目标"></a>一、学习目标</h2><ol>
+<li>会用「容量 → 参数 → 指标 → 风险」四步给关键参数定值；</li>
+<li>知道哪些参数是安全底线（<code>flush_log_at_trx_commit</code>、<code>sync_binlog</code>），哪些可以按容量放大；</li>
+<li>会算 buffer pool 大小与 <code>max_connections</code> 的上限，避免调参把机器调崩。</li>
+</ol>
+<h2 id="二、前置知识"><a href="#二、前置知识" class="headerlink" title="二、前置知识"></a>二、前置知识</h2><p>InnoDB 架构与 buffer pool（MQ28）、redo 与 binlog（MQ30&#x2F;MQ32）、慢 SQL 与监控指标（MQ36）。</p>
+<h2 id="三、理论讲解（官方定义）"><a href="#三、理论讲解（官方定义）" class="headerlink" title="三、理论讲解（官方定义）"></a>三、理论讲解（官方定义）</h2><p>MySQL 的默认参数值是「最小可运行」口径，不是生产口径。关键默认值（8.4）：</p>
+<table>
+<thead>
+<tr>
+<th>参数</th>
+<th>默认值</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>innodb_buffer_pool_size</code></td>
+<td>128MB</td>
+<td>数据与索引缓存，最重要的一个参数</td>
+</tr>
+<tr>
+<td><code>innodb_buffer_pool_instances</code></td>
+<td>8</td>
+<td>池实例数，&lt; 1GB 时多实例无收益</td>
+</tr>
+<tr>
+<td><code>innodb_log_buffer_size</code></td>
+<td>16MB</td>
+<td>redo 写盘前的缓冲</td>
+</tr>
+<tr>
+<td><code>innodb_flush_log_at_trx_commit</code></td>
+<td>1</td>
+<td>每次提交刷 redo，最安全</td>
+</tr>
+<tr>
+<td><code>sync_binlog</code></td>
+<td>1</td>
+<td>每次提交刷 binlog</td>
+</tr>
+<tr>
+<td><code>innodb_redo_log_capacity</code></td>
+<td>约 100MB</td>
+<td>统一管理 redo 容量（8.0.30+）</td>
+</tr>
+<tr>
+<td><code>max_connections</code></td>
+<td>151</td>
+<td>最大并发连接</td>
+</tr>
+<tr>
+<td><code>thread_cache_size</code></td>
+<td>151</td>
+<td>线程缓存</td>
+</tr>
+<tr>
+<td><code>innodb_read_io_threads</code> &#x2F; <code>write_io_threads</code></td>
+<td>4 &#x2F; 4</td>
+<td>IO 线程数</td>
+</tr>
+<tr>
+<td><code>innodb_page_cleaners</code></td>
+<td>4</td>
+<td>脏页清理线程</td>
+</tr>
+<tr>
+<td><code>innodb_purge_threads</code></td>
+<td>4</td>
+<td>purge 线程</td>
+</tr>
+</tbody></table>
+<h2 id="四、原理拆解"><a href="#四、原理拆解" class="headerlink" title="四、原理拆解"></a>四、原理拆解</h2><p><img src="https://wu4yong.github.io/starry-images/assets/img/mysql/mq-42b-tuning.svg" alt="关键参数与推荐口径"></p>
+<p><em>默认值是按「最小可用」设的，生产必须按容量重算｜依据 MySQL 8.4 Server System Variables 说明自绘</em></p>
+<h3 id="1-buffer-pool-怎么定"><a href="#1-buffer-pool-怎么定" class="headerlink" title="1. buffer pool 怎么定"></a>1. buffer pool 怎么定</h3><p>经验公式：</p>
+<pre class="line-numbers language-text" data-language="text"><code class="language-text">innodb_buffer_pool_size ≈ 热点数据总量 × 1.2，且不超过物理内存的 70%<span aria-hidden="true" class="line-numbers-rows"><span></span></span></code></pre>
+
+<p>留 30% 给 OS 页缓存、连接内存（每连接排序缓冲&#x2F;读缓冲）与其它进程。池不是越大越好：超过物理内存会触发系统换页，性能断崖。</p>
+<p><code>innodb_buffer_pool_instances</code> 的作用是拆分锁竞争，每个实例至少 1GB 才有意义；小实例上设 8 反而增加碎片。</p>
+<h3 id="2-日志参数：安全与性能的取舍"><a href="#2-日志参数：安全与性能的取舍" class="headerlink" title="2. 日志参数：安全与性能的取舍"></a>2. 日志参数：安全与性能的取舍</h3><ul>
+<li><code>innodb_flush_log_at_trx_commit = 1</code>：每次提交都刷盘，崩溃最多丢「未提交」，最安全；</li>
+<li>改 <code>2</code>：每秒刷一次，丢 1 秒内已提交事务；</li>
+<li>改 <code>0</code>：靠后台线程，丢更多；</li>
+<li><code>sync_binlog = 1</code> 同理，改 0 会丢 binlog，影响复制与恢复。</li>
+</ul>
+<p><strong>这两项是数据安全底线，改之前必须业务方书面确认</strong>，不能为了 QPS 直接调。</p>
+<h3 id="3-redo-容量"><a href="#3-redo-容量" class="headerlink" title="3. redo 容量"></a>3. redo 容量</h3><p><code>innodb_redo_log_capacity</code> 取代了 <code>innodb_log_file_size</code> &#x2F; <code>innodb_log_files_in_group</code>，默认约 100MB。写入量大的实例要按「写入速率 × 覆盖 1 小时」估：太小会频繁触发 checkpoint，表现为 <code>Log sequence number</code> 与 <code>Last checkpoint at</code> 间隔很小、写抖动。</p>
+<h3 id="4-连接数与内存的乘法"><a href="#4-连接数与内存的乘法" class="headerlink" title="4. 连接数与内存的乘法"></a>4. 连接数与内存的乘法</h3><p><code>max_connections</code> 不是越大越好。每个连接占：</p>
+<pre class="line-numbers language-text" data-language="text"><code class="language-text">线程栈（约 256KB~1MB）+ sort_buffer_size + join_buffer_size + read_buffer_size<span aria-hidden="true" class="line-numbers-rows"><span></span></span></code></pre>
+
+<p>200 连接 × (1MB + 256KB + 256KB) 就接近 300MB，加上 buffer pool 才是真实占用。判断依据是 <code>Threads_connected</code> 峰值 × 1.2，而不是「越大越保险」。</p>
+<h3 id="5-线程数要跟磁盘匹配"><a href="#5-线程数要跟磁盘匹配" class="headerlink" title="5. 线程数要跟磁盘匹配"></a>5. 线程数要跟磁盘匹配</h3><p><code>innodb_read_io_threads</code>&#x2F;<code>write_io_threads</code> 默认各 4，SSD 且脏页压力大时才加到 8；<code>innodb_page_cleaners</code> 与 buffer pool 实例数相关，通常与实例数一致；<code>purge_threads</code> 在 undo 膨胀（长事务多）时才需要加。</p>
+<h2 id="五、场景说明"><a href="#五、场景说明" class="headerlink" title="五、场景说明"></a>五、场景说明</h2><ol>
+<li><strong>新实例上线</strong>：先按容量算 buffer pool 与 redo，其余保持默认；</li>
+<li><strong>QPS 上不去</strong>：先看是不是锁&#x2F;慢 SQL，再考虑日志参数（且需评审）；</li>
+<li><strong>写抖动</strong>：查 redo 容量与 checkpoint 间隔；</li>
+<li><strong>连接被打满</strong>：先查连接泄漏与慢 SQL 占连接，再谈调 <code>max_connections</code>；</li>
+<li><strong>内存吃紧</strong>：优先核 buffer pool 是否超过 70%，再看每连接缓冲。</li>
+</ol>
+<h2 id="六、示例代码-实操步骤"><a href="#六、示例代码-实操步骤" class="headerlink" title="六、示例代码&#x2F;实操步骤"></a>六、示例代码&#x2F;实操步骤</h2><h3 id="1-看当前值与命中率"><a href="#1-看当前值与命中率" class="headerlink" title="1. 看当前值与命中率"></a>1. 看当前值与命中率</h3><pre class="line-numbers language-sql" data-language="sql"><code class="language-sql"><span class="token keyword">SHOW</span> VARIABLES <span class="token operator">LIKE</span> <span class="token string">'innodb_buffer_pool_size'</span><span class="token punctuation">;</span>
+<span class="token keyword">SHOW</span> VARIABLES <span class="token operator">LIKE</span> <span class="token string">'innodb_buffer_pool_instances'</span><span class="token punctuation">;</span>
+
+<span class="token keyword">SELECT</span> VARIABLE_NAME<span class="token punctuation">,</span> VARIABLE_VALUE
+<span class="token keyword">FROM</span> performance_schema<span class="token punctuation">.</span>global_status
+<span class="token keyword">WHERE</span> VARIABLE_NAME <span class="token operator">IN</span> <span class="token punctuation">(</span>
+  <span class="token string">'Innodb_buffer_pool_read_requests'</span><span class="token punctuation">,</span>
+  <span class="token string">'Innodb_buffer_pool_reads'</span><span class="token punctuation">,</span>
+  <span class="token string">'Innodb_buffer_pool_pages_free'</span><span class="token punctuation">,</span>
+  <span class="token string">'Innodb_buffer_pool_pages_dirty'</span>
+<span class="token punctuation">)</span><span class="token punctuation">;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<p>命中率 ≈ <code>1 - reads / read_requests</code>，长期低于 95% 就该扩池。</p>
+<h3 id="2-在线扩-buffer-pool（8-0-支持动态调整）"><a href="#2-在线扩-buffer-pool（8-0-支持动态调整）" class="headerlink" title="2. 在线扩 buffer pool（8.0+ 支持动态调整）"></a>2. 在线扩 buffer pool（8.0+ 支持动态调整）</h3><pre class="line-numbers language-sql" data-language="sql"><code class="language-sql"><span class="token keyword">SET</span> <span class="token keyword">GLOBAL</span> innodb_buffer_pool_size <span class="token operator">=</span> <span class="token number">12884901888</span><span class="token punctuation">;</span>  <span class="token comment">-- 12GB</span>
+<span class="token keyword">SHOW</span> <span class="token keyword">STATUS</span> <span class="token operator">LIKE</span> <span class="token string">'Innodb_buffer_pool_resize_status'</span><span class="token punctuation">;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span></span></code></pre>
+
+<p>调整是渐进式的，期间观察 <code>resize_status</code>，不要在高负载时段做。</p>
+<h3 id="3-连接与线程现状"><a href="#3-连接与线程现状" class="headerlink" title="3. 连接与线程现状"></a>3. 连接与线程现状</h3><pre class="line-numbers language-sql" data-language="sql"><code class="language-sql"><span class="token keyword">SHOW</span> <span class="token keyword">STATUS</span> <span class="token operator">LIKE</span> <span class="token string">'Threads_connected'</span><span class="token punctuation">;</span>
+<span class="token keyword">SHOW</span> <span class="token keyword">STATUS</span> <span class="token operator">LIKE</span> <span class="token string">'Max_used_connections'</span><span class="token punctuation">;</span>
+<span class="token keyword">SHOW</span> <span class="token keyword">STATUS</span> <span class="token operator">LIKE</span> <span class="token string">'Threads_running'</span><span class="token punctuation">;</span>
+<span class="token keyword">SHOW</span> VARIABLES <span class="token operator">LIKE</span> <span class="token string">'max_connections'</span><span class="token punctuation">;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span></span></code></pre>
+
+<p><code>Threads_running</code> 长期高于 CPU 核数数倍，说明是慢 SQL 堆积，不是连接数不够。</p>
+<h3 id="4-redo-与-checkpoint"><a href="#4-redo-与-checkpoint" class="headerlink" title="4. redo 与 checkpoint"></a>4. redo 与 checkpoint</h3><pre class="line-numbers language-sql" data-language="sql"><code class="language-sql"><span class="token keyword">SHOW</span> VARIABLES <span class="token operator">LIKE</span> <span class="token string">'innodb_redo_log_capacity'</span><span class="token punctuation">;</span>
+<span class="token keyword">SHOW</span> <span class="token keyword">ENGINE</span> <span class="token keyword">INNODB</span> <span class="token keyword">STATUS</span>\G   <span class="token comment">-- 看 Log sequence number / Last checkpoint at</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span></span></code></pre>
+
+<p>两者差距长期很小（例如 &lt; 10% 容量），说明 checkpoint 追得太紧，应调大容量。</p>
+<h3 id="5-Java-侧怎么落地：连接池与参数对齐"><a href="#5-Java-侧怎么落地：连接池与参数对齐" class="headerlink" title="5. Java 侧怎么落地：连接池与参数对齐"></a>5. Java 侧怎么落地：连接池与参数对齐</h3><ol>
+<li><strong>HikariCP</strong>：<code>maximumPoolSize</code> 与 <code>max_connections</code> 对齐（多应用共享实例时按比例分配），<code>minimumIdle</code> 不宜过大；</li>
+<li><strong>超时</strong>：<code>connectionTimeout</code>、<code>validationTimeout</code>、<code>maxLifetime</code> 必须小于数据库侧 <code>wait_timeout</code>，避免拿到已被服务端关闭的连接；</li>
+<li><strong>启动校验</strong>：应用启动时读一次 <code>SHOW VARIABLES</code>，把 buffer pool、<code>max_connections</code> 记入健康检查；</li>
+<li><strong>参数外置</strong>：所有服务端参数写进 <code>my.cnf</code> 的 <code>[mysqld]</code>，随镜像&#x2F;配置中心发布，禁止线上 <code>SET GLOBAL</code> 长期生效；</li>
+<li><strong>变更纪律</strong>：一次只改一项，记录基线指标（QPS、P99、命中率），观察一周再改下一项。</li>
+</ol>
+<h2 id="七、常见坑"><a href="#七、常见坑" class="headerlink" title="七、常见坑"></a>七、常见坑</h2><ol>
+<li><strong>buffer pool 设到物理内存 90%</strong>：触发系统换页，性能反降；</li>
+<li><strong><code>max_connections</code> 调到 1000+</strong>：内存被连接吃光，慢 SQL 依旧；</li>
+<li><strong>为 QPS 把 <code>flush_log_at_trx_commit</code> 改 0</strong>：一次断电丢一批已提交事务；</li>
+<li><strong>redo 容量太小</strong>：频繁 checkpoint，写抖动；</li>
+<li><strong><code>sort_buffer_size</code> 全局调大</strong>：并发 × 缓冲直接压垮内存；</li>
+<li><strong>线上 <code>SET GLOBAL</code> 不落配置</strong>：重启即失效，事故时找不到差异；</li>
+<li><strong>一次性改十个参数</strong>：出问题无法归因。</li>
+</ol>
+<h2 id="八、版本差异"><a href="#八、版本差异" class="headerlink" title="八、版本差异"></a>八、版本差异</h2><ul>
+<li><strong>5.6</strong>：redo 由 <code>innodb_log_file_size</code> × <code>innodb_log_files_in_group</code> 决定，改需重启；</li>
+<li><strong>5.7</strong>：<code>innodb_buffer_pool_size</code> 支持在线调整；<code>innodb_page_cleaners</code> 引入；</li>
+<li><strong>8.0</strong>：<code>innodb_redo_log_capacity</code>（8.0.30+）统一管理 redo，最多 32 个文件；buffer pool 在线扩缩更平滑；</li>
+<li><strong>8.4</strong>：默认值延续 8.0，<code>innodb_redo_log_capacity</code> 为唯一 redo 容量入口；<code>mysql_native_password</code> 默认关闭需注意账号兼容。</li>
+</ul>
+<h2 id="九、课后小结"><a href="#九、课后小结" class="headerlink" title="九、课后小结"></a>九、课后小结</h2><ul>
+<li>参数调优顺序：内存（buffer pool）→ 日志（redo&#x2F;binlog）→ 连接 → 线程；</li>
+<li>buffer pool ≈ 热点数据 × 1.2，且不超过物理内存 70%；</li>
+<li><code>flush_log_at_trx_commit</code> 与 <code>sync_binlog</code> 是安全底线，改需签字；</li>
+<li><code>max_connections</code> 要按峰值 × 1.2 算，并算上每连接内存；</li>
+<li>一次只改一个参数，观察一周，写进变更记录。</li>
+</ul>
+<h2 id="十、思考题"><a href="#十、思考题" class="headerlink" title="十、思考题"></a>十、思考题</h2><ol>
+<li><p><code>innodb_buffer_pool_size</code> 是不是越大越好？</p>
+<p><strong>参考回答</strong>：不是。它最多占到物理内存的 70% 左右，超过后会挤占 OS 页缓存与连接内存，触发系统换页，性能反而下降。且扩容前应确认热点数据规模，盲目扩大只是浪费内存。</p>
+</li>
+<li><p>为什么说 <code>innodb_flush_log_at_trx_commit = 0</code> 是危险配置？</p>
+<p><strong>参考回答</strong>：它把 redo 刷盘交给后台线程，实例崩溃或断电会丢掉最近一段已提交事务，破坏「已提交即持久」的承诺。除非业务能接受丢事务（如纯缓存型数据），否则应保持 1。</p>
+</li>
+<li><p><code>max_connections</code> 调到 1000 能解决连接打满吗？</p>
+<p><strong>参考回答</strong>：通常不能。连接打满多半是连接池配置不当、连接泄漏或慢 SQL 长时间占用连接。盲目调大只会放大内存占用，让问题从「连不上」变成「内存不足 + 更慢」。应先看 <code>Threads_running</code> 与慢日志。</p>
+</li>
+<li><p>redo 容量太小会有什么表现？</p>
+<p><strong>参考回答</strong>：checkpoint 频繁触发，<code>Log sequence number</code> 与 <code>Last checkpoint at</code> 间隔很小，写入出现周期性抖动，redo 文件反复覆盖。表现上像「磁盘没问题但写入忽快忽慢」，调大 <code>innodb_redo_log_capacity</code> 可缓解。</p>
+</li>
+<li><p>为什么参数必须写进 <code>my.cnf</code> 而不是只 <code>SET GLOBAL</code>？</p>
+<p><strong>参考回答</strong>：<code>SET GLOBAL</code> 只在当前实例生命周期内有效，重启即恢复默认；事故复盘时也无法从配置里看出「当时改了什么」。写进配置文件并纳入版本管理，才能保证环境一致与可追溯。</p>
+</li>
+</ol>
+<h2 id="十一、官方资料"><a href="#十一、官方资料" class="headerlink" title="十一、官方资料"></a>十一、官方资料</h2><ul>
+<li>InnoDB 启动参数：<a target="_blank" rel="noopener" href="https://dev.mysql.com/doc/refman/8.4/en/innodb-parameters.html">https://dev.mysql.com/doc/refman/8.4/en/innodb-parameters.html</a></li>
+<li>buffer pool 配置：<a target="_blank" rel="noopener" href="https://dev.mysql.com/doc/refman/8.4/en/innodb-buffer-pool-resize.html">https://dev.mysql.com/doc/refman/8.4/en/innodb-buffer-pool-resize.html</a></li>
+<li>redo 容量：<a target="_blank" rel="noopener" href="https://dev.mysql.com/doc/refman/8.4/en/innodb-redo-log.html">https://dev.mysql.com/doc/refman/8.4/en/innodb-redo-log.html</a></li>
+<li>连接管理：<a target="_blank" rel="noopener" href="https://dev.mysql.com/doc/refman/8.4/en/connection-interfaces.html">https://dev.mysql.com/doc/refman/8.4/en/connection-interfaces.html</a></li>
+<li>Server 系统变量总表：<a target="_blank" rel="noopener" href="https://dev.mysql.com/doc/refman/8.4/en/server-system-variables.html">https://dev.mysql.com/doc/refman/8.4/en/server-system-variables.html</a></li>
+</ul>
+<p>上一篇：<a href="/2022/12/21/database/mysql/mysql-41-sort-group/">MQ41 排序与分组优化</a> ｜ 下一篇：MQ43 主从复制（下一批发布） ｜ <a href="/2022/11/10/database/mysql/mysql-0-series-index/">总目录</a></p>
+</div>
+
+  <div class="mb-foot">
+    <a href="/phone/">返回手机首页</a>
+    <a href="/phone/tags/">星迹索引</a>
+  </div>
+</div>
+
+
+<script>
+  /* 作用：懒加载本地 mermaid 库；无 mermaid 代码块时不加载 */
+  function loadLocalMermaid(){
+    return new Promise(function(resolve, reject){
+      if(window.mermaid) return resolve(window.mermaid);
+      var s = document.createElement('script');
+      s.src = '/js/third-party/mermaid/mermaid.min.js?v=10';
+      s.onload = function(){ resolve(window.mermaid); };
+      s.onerror = function(){ reject(new Error('mermaid local load failed')); };
+      document.head.appendChild(s);
+    });
+  }
+
+  /* 作用：把 ```mermaid 代码块替换成 SVG 图（手机端字号略小、图可横向滚动） */
+  async function renderMermaidDiagram(){
+    var blocks = document.querySelectorAll('pre[class*="language-mermaid"]');
+    if(!blocks.length) return;
+    var mermaid;
+    try { mermaid = await loadLocalMermaid(); }
+    catch(e){ console.warn('[mermaid] 本地库加载失败：', e); return; }
+
+    mermaid.initialize({
+      startOnLoad: false,
+      theme: 'base',
+      themeVariables: {
+        darkMode: true,
+        background: 'transparent',
+        fontFamily: '"Microsoft YaHei", "PingFang SC", "Segoe UI", sans-serif',
+        fontSize: '12px',
+        primaryColor: '#062f3d',
+        primaryTextColor: '#d6f6ff',
+        primaryBorderColor: '#00eeff',
+        secondaryColor: '#04222d',
+        tertiaryColor: '#04222d',
+        mainBkg: '#062f3d',
+        nodeBorder: '#00eeff',
+        clusterBkg: '#02161f',
+        clusterBorder: '#00eeff55',
+        lineColor: '#00eeff',
+        textColor: '#c0e8ff',
+        edgeLabelBackground: '#02161f'
+      },
+      flowchart: { curve: 'basis', useMaxWidth: false, htmlLabels: false, nodeSpacing: 30, rankSpacing: 40, padding: 10 }
+    });
+
+    var targets = [];
+    blocks.forEach(function(el){
+      var codeEl = el.querySelector('code');
+      if(!codeEl) return;
+      var div = document.createElement('div');
+      div.className = 'mermaid';
+      div.textContent = codeEl.textContent;
+      el.parentNode.replaceChild(div, el);
+      targets.push(div);
+    });
+    if(!targets.length) return;
+    try { await mermaid.run({ nodes: targets }); }
+    catch(e){ console.warn('[mermaid] 渲染失败：', e); }
+  }
+  /* 作用：多次触发兜底（延迟重试 + DOM 变化），防止某次时机没跑到导致图表留在代码块 */
+  var mmBusy = false;
+  function scheduleMermaid(){
+    if(mmBusy) return;
+    mmBusy = true;
+    renderMermaidDiagram().then(function(){ mmBusy = false; }, function(){ mmBusy = false; });
+  }
+  scheduleMermaid();
+  window.addEventListener('load', scheduleMermaid);
+  [1000, 3000, 8000].forEach(function(ms){ setTimeout(scheduleMermaid, ms); });
+  if(document.readyState !== 'loading') scheduleMermaid();
+  if(window.MutationObserver){
+    var mmTimer = null;
+    var mmObserver = new MutationObserver(function(){
+      clearTimeout(mmTimer);
+      mmTimer = setTimeout(scheduleMermaid, 400);
+    });
+    mmObserver.observe(document.querySelector('.mb-article') || document.body, { childList: true, subtree: true });
+  }
+</script>
+</body>
+</html>

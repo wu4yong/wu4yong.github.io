@@ -1,0 +1,394 @@
+<!--
+  ============================================
+  手机端 · 文章原文页
+  文件：phone/post.njk
+  适用终端：手机端（路由 /phone/p/<slug>/，由 scripts/phone-routes.js 生成）
+  作用：手机阅读单篇文章；单列布局、无侧栏无雷达，替代电脑端 post.njk
+        数据由生成期算好：page.item = { title, dateStr, content, cats, tags }
+  样式依赖：source/css/theme/phone/common.css、source/css/theme/phone/list.css
+  组件依赖：phone/_components/Particles.njk
+  最后修改：2026-11-11
+  ============================================
+-->
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="color-scheme" content="dark">
+  <meta name="theme-color" content="#020817">
+  <!-- 首帧兜底：浏览器默认画布是白的，样式未解析前会闪一下白。这条规则先锁死深空底色 -->
+  <style>html{background-color:#020817}</style>
+  <title>mysql-43-repl - 时空秘境</title>
+  <!-- 手机端样式：基础 + 列表/正文，外链引入（源文件 source/css/theme/phone/） -->
+  <link rel="stylesheet" href="/css/theme/phone/common.css">
+  <link rel="stylesheet" href="/css/theme/phone/list.css">
+<meta name="generator" content="Hexo 8.1.2"></head>
+<body>
+<div class="mb-shell">
+  <!--
+  ============================================
+  手机端星空粒子组件
+  文件：Particles.njk
+  适用终端：手机端
+  作用：Particles.njk 的手机端副本（nunjucks 子目录 include 取不到上级）
+        参数与电脑端 _components/Particles.njk 保持一致：
+        粒子 95 / 连线 118px / opacity 0.32，外加星座层与零星闪烁层
+  最后修改：2026-11-12
+  ============================================
+--><!-- z-index 必须是 0：负层级会被 body 不透明背景盖住，粒子在跑却看不见 -->
+<div id="particles" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 0; pointer-events: none;"></div>
+<!-- 星座层（与首页同一套：随机零星散布星座图形 + 偶尔闪烁的小星） -->
+<div id="constellations" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 1; pointer-events: none;" aria-hidden="true"></div>
+<script src="/js/particles.min.js"></script>
+<script>
+particlesJS("particles", {
+  particles: {
+    number: {
+      value: 95,
+      density: {
+        enable: true,
+        value_area: 800
+      }
+    },
+    color: {
+      value: "#00eeff"
+    },
+    shape: {
+      type: "circle",
+      stroke: {
+        width: 0,
+        color: "#000000"
+      }
+    },
+    opacity: {
+      value: 0.6,
+      random: true,
+      anim: {
+        enable: true,
+        speed: 0.5,
+        opacity_min: 0.1,
+        sync: false
+      }
+    },
+    size: {
+      value: 3,
+      random: true,
+      anim: {
+        enable: true,
+        speed: 2,
+        size_min: 0.1,
+        sync: false
+      }
+    },
+    line_linked: {
+      enable: true,
+      distance: 118,
+      color: "#00eeff",
+      opacity: 0.32,
+      width: 1
+    },
+    move: {
+      enable: true,
+      speed: 0.8,
+      direction: "none",
+      random: true,
+      straight: false,
+      out_mode: "out",
+      bounce: false,
+      attract: {
+        enable: true,
+        rotateX: 600,
+        rotateY: 1200
+      }
+    }
+  },
+  interactivity: {
+    detect_on: "canvas",
+    events: {
+      onhover: {
+        enable: true,
+        mode: "grab"       // 手指按住时粒子聚集
+      },
+      onclick: {
+        enable: true,
+        mode: "push"       // 点击时产生新粒子
+      },
+      resize: true
+    },
+    modes: {
+      grab: {
+        distance: 200,
+        line_linked: {
+          opacity: 1
+        }
+      },
+      push: {
+        particles_nb: 6
+      }
+    }
+  },
+  retina_detect: true
+});
+</script>
+<!-- 星座 + 零星闪烁层：与电脑端共用同一份绘制脚本 -->
+<script src="/js/theme/home/starfield.js"></script>
+
+
+  <div class="mb-top">
+    <a class="mb-back" href="/phone/">← 返回手机首页</a>
+    <span class="mb-sub" style="margin:0">2022-12-23</span>
+  </div>
+
+  <h1 class="mb-title">mysql-43-repl</h1>
+  <div class="mb-sub">
+    分类：database · mysql
+     ｜ 标签：系统课 · MySQL · 数据库
+  </div>
+
+  <div class="mb-article"><div class="essay-banner essay-database"></div>
+
+<h1 id="主从复制：一条-binlog-怎么到从库"><a href="#主从复制：一条-binlog-怎么到从库" class="headerlink" title="主从复制：一条 binlog 怎么到从库"></a>主从复制：一条 binlog 怎么到从库</h1><p><img src="https://wu4yong.github.io/starry-images/assets/img/mysql/mq-43-replication.svg" alt="一条 binlog 的三段旅程"></p>
+<p><em>主库写 binlog → 从库拉 relay log → 从库回放，三段各有自己的延迟｜依据 MySQL 8.4 Replication 说明自绘</em></p>
+<h2 id="一、学习目标"><a href="#一、学习目标" class="headerlink" title="一、学习目标"></a>一、学习目标</h2><ol>
+<li>说清复制链路的三个线程与两个日志，知道延迟可能卡在哪一段；</li>
+<li>会用 <code>File + Position</code> 与 <code>GTID</code> 两种坐标搭建复制；</li>
+<li>会用 <code>SHOW REPLICA STATUS</code> 的字段判断链路是否健康。</li>
+</ol>
+<h2 id="二、前置知识"><a href="#二、前置知识" class="headerlink" title="二、前置知识"></a>二、前置知识</h2><p>binlog 三种格式与 <code>sync_binlog</code>（MQ32）、redo 与崩溃恢复（MQ30）。</p>
+<h2 id="三、理论讲解（官方定义）"><a href="#三、理论讲解（官方定义）" class="headerlink" title="三、理论讲解（官方定义）"></a>三、理论讲解（官方定义）</h2><p>MySQL 复制是<strong>基于 binlog 的异步复制</strong>，链路为：</p>
+<ol>
+<li>主库把变更写入 binlog；</li>
+<li>主库的 <strong>dump 线程</strong>（binlog dump thread）按位点或 GTID 把事件推给从库；</li>
+<li>从库的 <strong>IO 线程</strong> 拉取事件并写入本地 <strong>relay log</strong>；</li>
+<li>从库的 <strong>applier 线程（SQL 线程）</strong> 读 relay log 并在从库重放。</li>
+</ol>
+<p>8.0.22 起术语统一为 source &#x2F; replica，<code>SHOW SLAVE STATUS</code> 改名为 <code>SHOW REPLICA STATUS</code>，<code>CHANGE MASTER TO</code> 改为 <code>CHANGE REPLICATION SOURCE TO</code>。</p>
+<h2 id="四、原理拆解"><a href="#四、原理拆解" class="headerlink" title="四、原理拆解"></a>四、原理拆解</h2><p><img src="https://wu4yong.github.io/starry-images/assets/img/mysql/mq-43b-replication.svg" alt="位点与 GTID"></p>
+<p><em>手写位点容易错，GTID 让「从哪继续」变成自动的｜依据 MySQL 8.4 GTID &#x2F; SHOW REPLICA STATUS 说明自绘</em></p>
+<h3 id="1-两种复制坐标"><a href="#1-两种复制坐标" class="headerlink" title="1. 两种复制坐标"></a>1. 两种复制坐标</h3><table>
+<thead>
+<tr>
+<th>方式</th>
+<th>记录什么</th>
+<th>切换影响</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>File + Position</td>
+<td><code>binlog 文件名 + 偏移量</code></td>
+<td>主从切换必须重算，人肉易错</td>
+</tr>
+<tr>
+<td>GTID</td>
+<td>每个事务的全局唯一编号集合</td>
+<td><code>SOURCE_AUTO_POSITION=1</code> 自动找位置</td>
+</tr>
+</tbody></table>
+<p>GTID 是 5.6 引入、8.x 的推荐方式：从库知道自己执行过哪些事务，重搭或切换都不用手算位点。</p>
+<h3 id="2-三段延迟要分开看"><a href="#2-三段延迟要分开看" class="headerlink" title="2. 三段延迟要分开看"></a>2. 三段延迟要分开看</h3><ul>
+<li><strong>拉取段</strong>：主库 dump 推送慢 &#x2F; 网络带宽不足 → <code>Relay_Log_Space</code> 持续增长；</li>
+<li><strong>回放段</strong>：从库 applier 跟不上 → <code>Seconds_Behind_Source</code> 上升；</li>
+<li><strong>结构变更段</strong>：从库执行 DDL 时后续事件全部排队，表现为「延迟突然拉高再回落」。</li>
+</ul>
+<p><code>Seconds_Behind_Source</code> 只看回放线程，不能反映 IO 段与前段网络延迟，必须配合 <code>Relay_Log_Space</code> 与 GTID 差值一起看。</p>
+<h3 id="3-复制的三个前提"><a href="#3-复制的三个前提" class="headerlink" title="3. 复制的三个前提"></a>3. 复制的三个前提</h3><ol>
+<li><code>server_id</code> 全局唯一（主从都不能重复）；</li>
+<li>主库 <code>log_bin=ON</code>、<code>binlog_format=ROW</code>（8.4 默认）；</li>
+<li>从库 <code>read_only=ON</code>（<code>super_read_only</code> 更强），避免误写。</li>
+</ol>
+<h3 id="4-一致性从哪来"><a href="#4-一致性从哪来" class="headerlink" title="4. 一致性从哪来"></a>4. 一致性从哪来</h3><p>异步复制<strong>不保证</strong>从库拿到最新数据；主库崩溃时，尚未推送的 binlog 就丢了。要「不丢已提交事务」，得叠加半同步复制（MQ44）或 MGR（MQ46）。</p>
+<h2 id="五、场景说明"><a href="#五、场景说明" class="headerlink" title="五、场景说明"></a>五、场景说明</h2><ol>
+<li><strong>读写分离底座</strong>：一主两从，从库承接报表与列表查询；</li>
+<li><strong>备份窗口</strong>：在从库做逻辑&#x2F;物理备份，避免影响主库；</li>
+<li><strong>机房容灾</strong>：跨机房从库，注意网络 RTT 对拉取段的影响；</li>
+<li><strong>灰度验证</strong>：把新版本应用连到从库做读写演练；</li>
+<li><strong>大表迁移</strong>：从库做 <code>ALTER</code> 验证，再上主库。</li>
+</ol>
+<h2 id="六、示例代码-实操步骤"><a href="#六、示例代码-实操步骤" class="headerlink" title="六、示例代码&#x2F;实操步骤"></a>六、示例代码&#x2F;实操步骤</h2><h3 id="1-主库侧准备"><a href="#1-主库侧准备" class="headerlink" title="1. 主库侧准备"></a>1. 主库侧准备</h3><pre class="line-numbers language-sql" data-language="sql"><code class="language-sql"><span class="token comment">-- my.cnf</span>
+<span class="token comment">-- [mysqld]</span>
+<span class="token comment">-- server_id=1</span>
+<span class="token comment">-- log_bin=mysql-bin</span>
+<span class="token comment">-- binlog_format=ROW</span>
+<span class="token comment">-- gtid_mode=ON</span>
+<span class="token comment">-- enforce_gtid_consistency=ON</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<pre class="line-numbers language-sql" data-language="sql"><code class="language-sql"><span class="token keyword">CREATE</span> <span class="token keyword">USER</span> <span class="token string">'repl'</span><span class="token variable">@'10.0.%'</span> IDENTIFIED <span class="token keyword">BY</span> <span class="token string">'Repl_2022#'</span><span class="token punctuation">;</span>
+<span class="token keyword">GRANT</span> <span class="token keyword">REPLICATION</span> SLAVE <span class="token keyword">ON</span> <span class="token operator">*</span><span class="token punctuation">.</span><span class="token operator">*</span> <span class="token keyword">TO</span> <span class="token string">'repl'</span><span class="token variable">@'10.0.%'</span><span class="token punctuation">;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span></span></code></pre>
+
+<h3 id="2-从库侧建立复制（GTID-方式）"><a href="#2-从库侧建立复制（GTID-方式）" class="headerlink" title="2. 从库侧建立复制（GTID 方式）"></a>2. 从库侧建立复制（GTID 方式）</h3><pre class="line-numbers language-sql" data-language="sql"><code class="language-sql"><span class="token comment">-- my.cnf</span>
+<span class="token comment">-- [mysqld]</span>
+<span class="token comment">-- server_id=2</span>
+<span class="token comment">-- relay_log=relay-bin</span>
+<span class="token comment">-- read_only=ON</span>
+<span class="token comment">-- super_read_only=ON</span>
+<span class="token comment">-- gtid_mode=ON</span>
+
+CHANGE <span class="token keyword">REPLICATION</span> SOURCE <span class="token keyword">TO</span>
+  SOURCE_HOST<span class="token operator">=</span><span class="token string">'10.0.3.11'</span><span class="token punctuation">,</span>
+  SOURCE_PORT<span class="token operator">=</span><span class="token number">3306</span><span class="token punctuation">,</span>
+  SOURCE_USER<span class="token operator">=</span><span class="token string">'repl'</span><span class="token punctuation">,</span>
+  SOURCE_PASSWORD<span class="token operator">=</span><span class="token string">'Repl_2022#'</span><span class="token punctuation">,</span>
+  SOURCE_AUTO_POSITION<span class="token operator">=</span><span class="token number">1</span><span class="token punctuation">;</span>
+
+<span class="token keyword">START</span> REPLICA<span class="token punctuation">;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<h3 id="3-看健康状况"><a href="#3-看健康状况" class="headerlink" title="3. 看健康状况"></a>3. 看健康状况</h3><pre class="line-numbers language-sql" data-language="sql"><code class="language-sql"><span class="token keyword">SHOW</span> REPLICA <span class="token keyword">STATUS</span>\G
+<span class="token comment">-- 关注：</span>
+<span class="token comment">-- Replica_IO_Running: Yes</span>
+<span class="token comment">-- Replica_SQL_Running: Yes</span>
+<span class="token comment">-- Seconds_Behind_Source</span>
+<span class="token comment">-- Relay_Log_Space</span>
+<span class="token comment">-- Retrieved_Gtid_Set / Executed_Gtid_Set</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<h3 id="4-传统位点方式（老环境兼容）"><a href="#4-传统位点方式（老环境兼容）" class="headerlink" title="4. 传统位点方式（老环境兼容）"></a>4. 传统位点方式（老环境兼容）</h3><pre class="line-numbers language-sql" data-language="sql"><code class="language-sql"><span class="token comment">-- 主库</span>
+<span class="token keyword">SHOW</span> MASTER <span class="token keyword">STATUS</span><span class="token punctuation">;</span>   <span class="token comment">-- 记下 File 与 Position（8.4 用 SHOW BINARY LOG STATUS）</span>
+<span class="token comment">-- 从库</span>
+CHANGE <span class="token keyword">REPLICATION</span> SOURCE <span class="token keyword">TO</span>
+  SOURCE_HOST<span class="token operator">=</span><span class="token string">'10.0.3.11'</span><span class="token punctuation">,</span> SOURCE_USER<span class="token operator">=</span><span class="token string">'repl'</span><span class="token punctuation">,</span> SOURCE_PASSWORD<span class="token operator">=</span><span class="token string">'...'</span><span class="token punctuation">,</span>
+  SOURCE_LOG_FILE<span class="token operator">=</span><span class="token string">'mysql-bin.000023'</span><span class="token punctuation">,</span> SOURCE_LOG_POS<span class="token operator">=</span><span class="token number">1048576</span><span class="token punctuation">;</span>
+<span class="token keyword">START</span> REPLICA<span class="token punctuation">;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<h3 id="5-Java-侧怎么落地：主从在应用里的边界"><a href="#5-Java-侧怎么落地：主从在应用里的边界" class="headerlink" title="5. Java 侧怎么落地：主从在应用里的边界"></a>5. Java 侧怎么落地：主从在应用里的边界</h3><ol>
+<li><strong>数据源分组</strong>：HikariCP 配 <code>master</code>&#x2F;<code>replica</code> 两个数据源，<code>@Transactional</code> 内强制走主库；</li>
+<li><strong>只读事务标记</strong>：<code>@Transactional(readOnly = true)</code> 交给路由层决定是否走从库；</li>
+<li><strong>健康检查</strong>：<code>/actuator/health</code> 里加复制延迟探针，延迟超阈值自动摘除该从库；</li>
+<li><strong>切换预案</strong>：切换后应用必须能重连新主，连接池 <code>maxLifetime</code> 要小于故障发现时间；</li>
+<li><strong>禁止直连从库写</strong>：从库开 <code>super_read_only</code>，应用侧不做任何绕过。</li>
+</ol>
+<h2 id="七、常见坑"><a href="#七、常见坑" class="headerlink" title="七、常见坑"></a>七、常见坑</h2><ol>
+<li><strong><code>server_id</code> 冲突</strong>：复制直接起不来或循环复制；</li>
+<li><strong>从库被应用写入</strong>：主从数据分叉，后续只能重搭；</li>
+<li><strong>只看 <code>Seconds_Behind_Source</code></strong>：忽略 IO 段，误判健康；</li>
+<li><strong><code>binlog_format=STATEMENT</code></strong>：函数、时间戳类语句在从库重放出错；</li>
+<li><strong>大事务</strong>：单事务几百万行，从库回放长时间卡住；</li>
+<li><strong>改 <code>gtid_mode</code> 未按官方步骤</strong>：需 <code>OFF → OFF_PERMISSIVE → ON_PERMISSIVE → ON</code> 逐步切换；</li>
+<li><strong>网络抖动未监控</strong>：拉取段延迟全靠 <code>Relay_Log_Space</code> 才能看出来。</li>
+</ol>
+<h2 id="八、版本差异"><a href="#八、版本差异" class="headerlink" title="八、版本差异"></a>八、版本差异</h2><ul>
+<li><strong>5.6</strong>：GTID 引入，<code>relay_log_info_repository=TABLE</code> 可选；</li>
+<li><strong>5.7</strong>：并行复制（LOGICAL_CLOCK）、<code>gtid_mode</code> 在线切换完善；</li>
+<li><strong>8.0</strong>：<code>CHANGE REPLICATION SOURCE TO</code>（8.0.23 术语统一）、<code>SHOW REPLICA STATUS</code>（8.0.22）、崩溃安全复制（表存元数据）；</li>
+<li><strong>8.4</strong>：沿用 8.0 复制体系，<code>SHOW BINARY LOG STATUS</code> 取代 <code>SHOW MASTER STATUS</code>，默认 <code>binlog_format=ROW</code>。</li>
+</ul>
+<h2 id="九、课后小结"><a href="#九、课后小结" class="headerlink" title="九、课后小结"></a>九、课后小结</h2><ul>
+<li>复制三段：主库 dump → 从库 IO 拉 relay log → applier 回放；</li>
+<li>延迟要分段定位，<code>Seconds_Behind_Source</code> 只覆盖回放段；</li>
+<li>GTID 是 8.x 推荐方式，切换与重搭不用手算位点；</li>
+<li>异步复制不保证不丢数据，要更强一致性得叠半同步或 MGR；</li>
+<li>从库必须 <code>super_read_only</code>，否则主从分叉不可逆。</li>
+</ul>
+<h2 id="十、思考题"><a href="#十、思考题" class="headerlink" title="十、思考题"></a>十、思考题</h2><ol>
+<li><p><code>Seconds_Behind_Source = 0</code> 是否等于从库数据最新？</p>
+<p><strong>参考回答</strong>：不等于。该值只反映 applier 线程的相对落后时间，IO 线程可能仍在拉取、网络可能积压，甚至主库刚提交的事务还没推送。要结合 <code>Relay_Log_Space</code>、GTID 差值与心跳表时间差综合判断。</p>
+</li>
+<li><p>为什么推荐 GTID 而不是 File + Position？</p>
+<p><strong>参考回答</strong>：GTID 给每个事务全局唯一编号，从库通过 <code>SOURCE_AUTO_POSITION=1</code> 自动补齐缺失事务，主从切换、重建从库都不需要人工计算位点；位点方式一旦算错就会重复或漏掉事务，且难以校验。</p>
+</li>
+<li><p>从库 <code>read_only=ON</code> 足够吗，为什么还要 <code>super_read_only</code>？</p>
+<p><strong>参考回答</strong>：<code>read_only</code> 对具有 <code>SUPER</code> 权限的账号无效，运维账号或应用误用高权限账号仍可写入，造成主从分叉。<code>super_read_only</code> 连 <code>SUPER</code> 也限制，只有复制线程能写，更安全。</p>
+</li>
+<li><p>主库执行一个大 DDL，从库延迟为什么会突然拉高？</p>
+<p><strong>参考回答</strong>：relay log 中的事件严格串行回放，DDL 在从库执行期间会持有元数据锁，后续所有事件只能排队等待。窗口越长，堆积越多，延迟表现为陡升后缓慢回落。</p>
+</li>
+<li><p>复制断了，<code>Replica_IO_Running=No</code> 与 <code>Replica_SQL_Running=No</code> 有什么区别？</p>
+<p><strong>参考回答</strong>：IO 为 No 表示从库连不上主库（网络、账号、权限、主库 dump 线程被占满）；SQL 为 No 表示回放出错（数据冲突、表不存在、GTID 冲突）。前者查连接与网络，后者看 <code>Last_SQL_Error</code> 与 <code>performance_schema.replication_applier_status</code>。</p>
+</li>
+</ol>
+<h2 id="十一、官方资料"><a href="#十一、官方资料" class="headerlink" title="十一、官方资料"></a>十一、官方资料</h2><ul>
+<li>复制总览：<a target="_blank" rel="noopener" href="https://dev.mysql.com/doc/refman/8.4/en/replication.html">https://dev.mysql.com/doc/refman/8.4/en/replication.html</a></li>
+<li>GTID：<a target="_blank" rel="noopener" href="https://dev.mysql.com/doc/refman/8.4/en/replication-gtids.html">https://dev.mysql.com/doc/refman/8.4/en/replication-gtids.html</a></li>
+<li><code>SHOW REPLICA STATUS</code>：<a target="_blank" rel="noopener" href="https://dev.mysql.com/doc/refman/8.4/en/show-replica-status.html">https://dev.mysql.com/doc/refman/8.4/en/show-replica-status.html</a></li>
+<li>复制线程：<a target="_blank" rel="noopener" href="https://dev.mysql.com/doc/refman/8.4/en/replication-threads.html">https://dev.mysql.com/doc/refman/8.4/en/replication-threads.html</a></li>
+</ul>
+<p>上一篇：<a href="/2022/12/22/database/mysql/mysql-42-tuning/">MQ42 参数调优</a> ｜ 下一篇：<a href="/2022/12/24/database/mysql/mysql-44-semisync-parallel/">MQ44 复制格式与延迟</a> ｜ <a href="/2022/11/10/database/mysql/mysql-0-series-index/">总目录</a></p>
+</div>
+
+  <div class="mb-foot">
+    <a href="/phone/">返回手机首页</a>
+    <a href="/phone/tags/">星迹索引</a>
+  </div>
+</div>
+
+
+<script>
+  /* 作用：懒加载本地 mermaid 库；无 mermaid 代码块时不加载 */
+  function loadLocalMermaid(){
+    return new Promise(function(resolve, reject){
+      if(window.mermaid) return resolve(window.mermaid);
+      var s = document.createElement('script');
+      s.src = '/js/third-party/mermaid/mermaid.min.js?v=10';
+      s.onload = function(){ resolve(window.mermaid); };
+      s.onerror = function(){ reject(new Error('mermaid local load failed')); };
+      document.head.appendChild(s);
+    });
+  }
+
+  /* 作用：把 ```mermaid 代码块替换成 SVG 图（手机端字号略小、图可横向滚动） */
+  async function renderMermaidDiagram(){
+    var blocks = document.querySelectorAll('pre[class*="language-mermaid"]');
+    if(!blocks.length) return;
+    var mermaid;
+    try { mermaid = await loadLocalMermaid(); }
+    catch(e){ console.warn('[mermaid] 本地库加载失败：', e); return; }
+
+    mermaid.initialize({
+      startOnLoad: false,
+      theme: 'base',
+      themeVariables: {
+        darkMode: true,
+        background: 'transparent',
+        fontFamily: '"Microsoft YaHei", "PingFang SC", "Segoe UI", sans-serif',
+        fontSize: '12px',
+        primaryColor: '#062f3d',
+        primaryTextColor: '#d6f6ff',
+        primaryBorderColor: '#00eeff',
+        secondaryColor: '#04222d',
+        tertiaryColor: '#04222d',
+        mainBkg: '#062f3d',
+        nodeBorder: '#00eeff',
+        clusterBkg: '#02161f',
+        clusterBorder: '#00eeff55',
+        lineColor: '#00eeff',
+        textColor: '#c0e8ff',
+        edgeLabelBackground: '#02161f'
+      },
+      flowchart: { curve: 'basis', useMaxWidth: false, htmlLabels: false, nodeSpacing: 30, rankSpacing: 40, padding: 10 }
+    });
+
+    var targets = [];
+    blocks.forEach(function(el){
+      var codeEl = el.querySelector('code');
+      if(!codeEl) return;
+      var div = document.createElement('div');
+      div.className = 'mermaid';
+      div.textContent = codeEl.textContent;
+      el.parentNode.replaceChild(div, el);
+      targets.push(div);
+    });
+    if(!targets.length) return;
+    try { await mermaid.run({ nodes: targets }); }
+    catch(e){ console.warn('[mermaid] 渲染失败：', e); }
+  }
+  /* 作用：多次触发兜底（延迟重试 + DOM 变化），防止某次时机没跑到导致图表留在代码块 */
+  var mmBusy = false;
+  function scheduleMermaid(){
+    if(mmBusy) return;
+    mmBusy = true;
+    renderMermaidDiagram().then(function(){ mmBusy = false; }, function(){ mmBusy = false; });
+  }
+  scheduleMermaid();
+  window.addEventListener('load', scheduleMermaid);
+  [1000, 3000, 8000].forEach(function(ms){ setTimeout(scheduleMermaid, ms); });
+  if(document.readyState !== 'loading') scheduleMermaid();
+  if(window.MutationObserver){
+    var mmTimer = null;
+    var mmObserver = new MutationObserver(function(){
+      clearTimeout(mmTimer);
+      mmTimer = setTimeout(scheduleMermaid, 400);
+    });
+    mmObserver.observe(document.querySelector('.mb-article') || document.body, { childList: true, subtree: true });
+  }
+</script>
+</body>
+</html>

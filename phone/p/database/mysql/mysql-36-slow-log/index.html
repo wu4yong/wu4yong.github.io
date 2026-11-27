@@ -1,0 +1,431 @@
+<!--
+  ============================================
+  手机端 · 文章原文页
+  文件：phone/post.njk
+  适用终端：手机端（路由 /phone/p/<slug>/，由 scripts/phone-routes.js 生成）
+  作用：手机阅读单篇文章；单列布局、无侧栏无雷达，替代电脑端 post.njk
+        数据由生成期算好：page.item = { title, dateStr, content, cats, tags }
+  样式依赖：source/css/theme/phone/common.css、source/css/theme/phone/list.css
+  组件依赖：phone/_components/Particles.njk
+  最后修改：2026-11-11
+  ============================================
+-->
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="color-scheme" content="dark">
+  <meta name="theme-color" content="#020817">
+  <!-- 首帧兜底：浏览器默认画布是白的，样式未解析前会闪一下白。这条规则先锁死深空底色 -->
+  <style>html{background-color:#020817}</style>
+  <title>mysql-36-slow-log - 时空秘境</title>
+  <!-- 手机端样式：基础 + 列表/正文，外链引入（源文件 source/css/theme/phone/） -->
+  <link rel="stylesheet" href="/css/theme/phone/common.css">
+  <link rel="stylesheet" href="/css/theme/phone/list.css">
+<meta name="generator" content="Hexo 8.1.2"></head>
+<body>
+<div class="mb-shell">
+  <!--
+  ============================================
+  手机端星空粒子组件
+  文件：Particles.njk
+  适用终端：手机端
+  作用：Particles.njk 的手机端副本（nunjucks 子目录 include 取不到上级）
+        参数与电脑端 _components/Particles.njk 保持一致：
+        粒子 95 / 连线 118px / opacity 0.32，外加星座层与零星闪烁层
+  最后修改：2026-11-12
+  ============================================
+--><!-- z-index 必须是 0：负层级会被 body 不透明背景盖住，粒子在跑却看不见 -->
+<div id="particles" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 0; pointer-events: none;"></div>
+<!-- 星座层（与首页同一套：随机零星散布星座图形 + 偶尔闪烁的小星） -->
+<div id="constellations" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 1; pointer-events: none;" aria-hidden="true"></div>
+<script src="/js/particles.min.js"></script>
+<script>
+particlesJS("particles", {
+  particles: {
+    number: {
+      value: 95,
+      density: {
+        enable: true,
+        value_area: 800
+      }
+    },
+    color: {
+      value: "#00eeff"
+    },
+    shape: {
+      type: "circle",
+      stroke: {
+        width: 0,
+        color: "#000000"
+      }
+    },
+    opacity: {
+      value: 0.6,
+      random: true,
+      anim: {
+        enable: true,
+        speed: 0.5,
+        opacity_min: 0.1,
+        sync: false
+      }
+    },
+    size: {
+      value: 3,
+      random: true,
+      anim: {
+        enable: true,
+        speed: 2,
+        size_min: 0.1,
+        sync: false
+      }
+    },
+    line_linked: {
+      enable: true,
+      distance: 118,
+      color: "#00eeff",
+      opacity: 0.32,
+      width: 1
+    },
+    move: {
+      enable: true,
+      speed: 0.8,
+      direction: "none",
+      random: true,
+      straight: false,
+      out_mode: "out",
+      bounce: false,
+      attract: {
+        enable: true,
+        rotateX: 600,
+        rotateY: 1200
+      }
+    }
+  },
+  interactivity: {
+    detect_on: "canvas",
+    events: {
+      onhover: {
+        enable: true,
+        mode: "grab"       // 手指按住时粒子聚集
+      },
+      onclick: {
+        enable: true,
+        mode: "push"       // 点击时产生新粒子
+      },
+      resize: true
+    },
+    modes: {
+      grab: {
+        distance: 200,
+        line_linked: {
+          opacity: 1
+        }
+      },
+      push: {
+        particles_nb: 6
+      }
+    }
+  },
+  retina_detect: true
+});
+</script>
+<!-- 星座 + 零星闪烁层：与电脑端共用同一份绘制脚本 -->
+<script src="/js/theme/home/starfield.js"></script>
+
+
+  <div class="mb-top">
+    <a class="mb-back" href="/phone/">← 返回手机首页</a>
+    <span class="mb-sub" style="margin:0">2022-12-16</span>
+  </div>
+
+  <h1 class="mb-title">mysql-36-slow-log</h1>
+  <div class="mb-sub">
+    分类：database · mysql
+     ｜ 标签：系统课 · MySQL · 数据库
+  </div>
+
+  <div class="mb-article"><div class="essay-banner essay-database"></div>
+
+<h1 id="慢查询日志与-profiling：先把那条慢-SQL-抓出来"><a href="#慢查询日志与-profiling：先把那条慢-SQL-抓出来" class="headerlink" title="慢查询日志与 profiling：先把那条慢 SQL 抓出来"></a>慢查询日志与 profiling：先把那条慢 SQL 抓出来</h1><p><img src="https://wu4yong.github.io/starry-images/assets/img/mysql/mq-36-slowlog.svg" alt="从采集到归因的链路"></p>
+<p><em>慢日志负责发现，聚合工具负责排序，EXPLAIN 负责归因｜依据 MySQL 8.4 Slow Query Log 说明自绘</em></p>
+<h2 id="一、学习目标"><a href="#一、学习目标" class="headerlink" title="一、学习目标"></a>一、学习目标</h2><ol>
+<li>会开慢日志，并配好 <code>long_query_time</code>、<code>log_slow_extra</code> 等关键参数；</li>
+<li>用 <code>mysqldumpslow</code>、<code>pt-query-digest</code> 或 Performance Schema 按<strong>总耗时</strong>排序；</li>
+<li>区分「单次慢」与「总耗时高」，知道该优化哪一条。</li>
+</ol>
+<h2 id="二、前置知识"><a href="#二、前置知识" class="headerlink" title="二、前置知识"></a>二、前置知识</h2><p><code>EXPLAIN</code> 基本读法（MQ35）。慢日志只负责告诉你「哪条慢」，归因仍然是 <code>EXPLAIN</code> 的活。</p>
+<h2 id="三、理论讲解（官方定义）"><a href="#三、理论讲解（官方定义）" class="headerlink" title="三、理论讲解（官方定义）"></a>三、理论讲解（官方定义）</h2><p>慢查询日志记录执行时间超过 <code>long_query_time</code> 的语句，默认关闭、默认阈值 10 秒：</p>
+<pre class="line-numbers language-sql" data-language="sql"><code class="language-sql"><span class="token keyword">SET</span> <span class="token keyword">GLOBAL</span> slow_query_log <span class="token operator">=</span> <span class="token keyword">ON</span><span class="token punctuation">;</span>
+<span class="token keyword">SET</span> <span class="token keyword">GLOBAL</span> long_query_time <span class="token operator">=</span> <span class="token number">0.2</span><span class="token punctuation">;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span></span></code></pre>
+
+<p>常用参数：</p>
+<table>
+<thead>
+<tr>
+<th>参数</th>
+<th>默认</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>slow_query_log</code></td>
+<td><code>OFF</code></td>
+<td>开关</td>
+</tr>
+<tr>
+<td><code>slow_query_log_file</code></td>
+<td><code>hostname-slow.log</code></td>
+<td>输出文件，<code>log_output=TABLE</code> 时写 <code>mysql.slow_log</code></td>
+</tr>
+<tr>
+<td><code>long_query_time</code></td>
+<td><code>10</code></td>
+<td>阈值（秒，支持小数）</td>
+</tr>
+<tr>
+<td><code>log_queries_not_using_indexes</code></td>
+<td><code>OFF</code></td>
+<td>记录未走索引的语句，易刷爆日志</td>
+</tr>
+<tr>
+<td><code>log_slow_admin_statements</code></td>
+<td><code>OFF</code></td>
+<td>是否记录 <code>ALTER</code>&#x2F;<code>ANALYZE</code> 等管理语句</td>
+</tr>
+<tr>
+<td><code>min_examined_row_limit</code></td>
+<td><code>0</code></td>
+<td>扫描行数低于此值不记，用来滤噪</td>
+</tr>
+<tr>
+<td><code>log_slow_extra</code></td>
+<td><code>OFF</code></td>
+<td>8.0.14+，输出更多字段（<code>Rows_affected</code>、<code>Bytes_sent</code> 等）</td>
+</tr>
+<tr>
+<td><code>log_slow_replica_statements</code></td>
+<td><code>OFF</code></td>
+<td>是否记录复制线程的语句</td>
+</tr>
+</tbody></table>
+<p><strong>默认 10 秒几乎抓不到东西</strong>，线上一般按 P95 定在 0.1～0.5 秒。</p>
+<h2 id="四、原理拆解"><a href="#四、原理拆解" class="headerlink" title="四、原理拆解"></a>四、原理拆解</h2><p><img src="https://wu4yong.github.io/starry-images/assets/img/mysql/mq-36b-slowlog.svg" alt="聚合之后看什么"></p>
+<p><em>按总耗时排序，比按单次耗时排序更容易找到真正的瓶颈｜依据 MySQL 8.4 Performance Schema &#x2F; 慢日志说明自绘</em></p>
+<h3 id="1-一条慢日志长什么样"><a href="#1-一条慢日志长什么样" class="headerlink" title="1. 一条慢日志长什么样"></a>1. 一条慢日志长什么样</h3><pre class="line-numbers language-text" data-language="text"><code class="language-text"># Time: 2022-12-16T10:21:33.512345Z
+# User@Host: app[app] @ 10.0.3.21 []  Id: 88213
+# Query_time: 3.812  Lock_time: 0.001  Rows_sent: 20  Rows_examined: 480000
+SET timestamp=1671186093;
+SELECT * FROM t_order WHERE user_id = 100 ORDER BY created_at DESC LIMIT 20;<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<p>四个数字先看：<code>Query_time</code> 耗时、<code>Lock_time</code> 等锁耗时、<code>Rows_sent</code> 返回行数、<code>Rows_examined</code> 扫描行数。<strong>扫描&#x2F;返回比值 &gt; 100</strong> 基本可以断定索引没用好。</p>
+<h3 id="2-为什么按「总耗时」排"><a href="#2-为什么按「总耗时」排" class="headerlink" title="2. 为什么按「总耗时」排"></a>2. 为什么按「总耗时」排</h3><p>一条 1.3ms 的 SQL 被调用 182 万次，总耗时 2461 秒；另一条 3 秒的 SQL 一天跑一次，总耗时 3 秒。前者才是拖垮实例的那条。聚合工具按 <code>total time</code> 排序，正是为了抓这种「单次不慢、累计很重」的语句。</p>
+<h3 id="3-log-queries-not-using-indexes-的陷阱"><a href="#3-log-queries-not-using-indexes-的陷阱" class="headerlink" title="3. log_queries_not_using_indexes 的陷阱"></a>3. <code>log_queries_not_using_indexes</code> 的陷阱</h3><p>开了它会记录所有未走索引的语句，包括 <code>SELECT 1</code>、元数据查询这类天然无索引的小语句，日志几分钟就几百 MB。要用就配合 <code>min_examined_row_limit=100</code>，并且只在排查期临时打开。</p>
+<h3 id="4-Performance-Schema-已经是标配"><a href="#4-Performance-Schema-已经是标配" class="headerlink" title="4. Performance Schema 已经是标配"></a>4. Performance Schema 已经是标配</h3><p>8.x 里慢日志与 Performance Schema 都在记录，后者更适合做聚合：</p>
+<table>
+<thead>
+<tr>
+<th>表</th>
+<th>用途</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>events_statements_summary_by_digest</code></td>
+<td>按 SQL 指纹聚合，自带总耗时、扫描行数</td>
+</tr>
+<tr>
+<td><code>events_statements_current</code></td>
+<td>看当前正在跑什么</td>
+</tr>
+<tr>
+<td><code>events_stages_*</code></td>
+<td>看阶段耗时，替代已弃用的 <code>SHOW PROFILE</code></td>
+</tr>
+</tbody></table>
+<p><code>digest</code> 把常量与参数归一成 <code>?</code>，天然就是「同一类 SQL」的聚合键。</p>
+<h3 id="5-SHOW-PROFILE-已弃用"><a href="#5-SHOW-PROFILE-已弃用" class="headerlink" title="5. SHOW PROFILE 已弃用"></a>5. <code>SHOW PROFILE</code> 已弃用</h3><p>8.x 中 <code>SHOW PROFILE</code> 已被标记弃用，阶段耗时统一走 Performance Schema 的 <code>events_stages_*</code>，或直接用 <code>EXPLAIN ANALYZE</code> 看每个迭代器的耗时。</p>
+<h2 id="五、场景说明"><a href="#五、场景说明" class="headerlink" title="五、场景说明"></a>五、场景说明</h2><ol>
+<li><strong>日常巡检</strong>：每天拉一次 <code>summary_by_digest</code>，按总耗时前十名看趋势；</li>
+<li><strong>突发卡顿</strong>：先看 <code>events_statements_current</code>，找出正在跑的重语句；</li>
+<li><strong>上线回归</strong>：发布后 24 小时对比慢日志数量与总耗时；</li>
+<li><strong>容量评估</strong>：<code>Rows_examined</code> 增长快于业务量增长，说明索引或 SQL 退化；</li>
+<li><strong>复制延迟</strong>：<code>log_slow_replica_statements</code> 单独打开，定位从库回放慢的语句。</li>
+</ol>
+<h2 id="六、示例代码-实操步骤"><a href="#六、示例代码-实操步骤" class="headerlink" title="六、示例代码&#x2F;实操步骤"></a>六、示例代码&#x2F;实操步骤</h2><h3 id="1-开日志并落到表里（便于-SQL-查询）"><a href="#1-开日志并落到表里（便于-SQL-查询）" class="headerlink" title="1. 开日志并落到表里（便于 SQL 查询）"></a>1. 开日志并落到表里（便于 SQL 查询）</h3><pre class="line-numbers language-sql" data-language="sql"><code class="language-sql"><span class="token keyword">SET</span> <span class="token keyword">GLOBAL</span> log_output <span class="token operator">=</span> <span class="token string">'TABLE,FILE'</span><span class="token punctuation">;</span>
+<span class="token keyword">SET</span> <span class="token keyword">GLOBAL</span> slow_query_log <span class="token operator">=</span> <span class="token keyword">ON</span><span class="token punctuation">;</span>
+<span class="token keyword">SET</span> <span class="token keyword">GLOBAL</span> long_query_time <span class="token operator">=</span> <span class="token number">0.2</span><span class="token punctuation">;</span>
+<span class="token keyword">SET</span> <span class="token keyword">GLOBAL</span> min_examined_row_limit <span class="token operator">=</span> <span class="token number">100</span><span class="token punctuation">;</span>
+<span class="token keyword">SET</span> <span class="token keyword">GLOBAL</span> log_slow_extra <span class="token operator">=</span> <span class="token keyword">ON</span><span class="token punctuation">;</span>
+
+<span class="token keyword">SELECT</span> start_time<span class="token punctuation">,</span> query_time<span class="token punctuation">,</span> rows_examined<span class="token punctuation">,</span> rows_sent<span class="token punctuation">,</span> sql_text
+<span class="token keyword">FROM</span> mysql<span class="token punctuation">.</span>slow_log
+<span class="token keyword">ORDER</span> <span class="token keyword">BY</span> start_time <span class="token keyword">DESC</span> <span class="token keyword">LIMIT</span> <span class="token number">20</span><span class="token punctuation">;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<h3 id="2-用-Performance-Schema-聚合前十"><a href="#2-用-Performance-Schema-聚合前十" class="headerlink" title="2. 用 Performance Schema 聚合前十"></a>2. 用 Performance Schema 聚合前十</h3><pre class="line-numbers language-sql" data-language="sql"><code class="language-sql"><span class="token keyword">SELECT</span> DIGEST_TEXT<span class="token punctuation">,</span>
+       COUNT_STAR <span class="token keyword">AS</span> calls<span class="token punctuation">,</span>
+       <span class="token function">ROUND</span><span class="token punctuation">(</span>SUM_TIMER_WAIT <span class="token operator">/</span> <span class="token number">1</span>e12<span class="token punctuation">,</span> <span class="token number">1</span><span class="token punctuation">)</span> <span class="token keyword">AS</span> total_s<span class="token punctuation">,</span>
+       <span class="token function">ROUND</span><span class="token punctuation">(</span>AVG_TIMER_WAIT <span class="token operator">/</span> <span class="token number">1</span>e9<span class="token punctuation">,</span> <span class="token number">2</span><span class="token punctuation">)</span> <span class="token keyword">AS</span> avg_ms<span class="token punctuation">,</span>
+       SUM_ROWS_EXAMINED <span class="token keyword">AS</span> rows_examined<span class="token punctuation">,</span>
+       SUM_ROWS_SENT <span class="token keyword">AS</span> rows_sent
+<span class="token keyword">FROM</span> performance_schema<span class="token punctuation">.</span>events_statements_summary_by_digest
+<span class="token keyword">WHERE</span> SCHEMA_NAME <span class="token operator">=</span> <span class="token string">'shop'</span>
+<span class="token keyword">ORDER</span> <span class="token keyword">BY</span> SUM_TIMER_WAIT <span class="token keyword">DESC</span>
+<span class="token keyword">LIMIT</span> <span class="token number">10</span><span class="token punctuation">;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<h3 id="3-看阶段耗时（替代-SHOW-PROFILE）"><a href="#3-看阶段耗时（替代-SHOW-PROFILE）" class="headerlink" title="3. 看阶段耗时（替代 SHOW PROFILE）"></a>3. 看阶段耗时（替代 SHOW PROFILE）</h3><pre class="line-numbers language-sql" data-language="sql"><code class="language-sql"><span class="token keyword">UPDATE</span> performance_schema<span class="token punctuation">.</span>setup_instruments
+<span class="token keyword">SET</span> ENABLED <span class="token operator">=</span> <span class="token string">'YES'</span><span class="token punctuation">,</span> TIMED <span class="token operator">=</span> <span class="token string">'YES'</span>
+<span class="token keyword">WHERE</span> NAME <span class="token operator">LIKE</span> <span class="token string">'stage/sql/%'</span><span class="token punctuation">;</span>
+
+<span class="token keyword">SELECT</span> EVENT_NAME<span class="token punctuation">,</span> COUNT_STAR<span class="token punctuation">,</span>
+       <span class="token function">ROUND</span><span class="token punctuation">(</span>SUM_TIMER_WAIT <span class="token operator">/</span> <span class="token number">1</span>e12<span class="token punctuation">,</span> <span class="token number">3</span><span class="token punctuation">)</span> <span class="token keyword">AS</span> total_s
+<span class="token keyword">FROM</span> performance_schema<span class="token punctuation">.</span>events_stages_summary_global_by_event_name
+<span class="token keyword">ORDER</span> <span class="token keyword">BY</span> SUM_TIMER_WAIT <span class="token keyword">DESC</span> <span class="token keyword">LIMIT</span> <span class="token number">10</span><span class="token punctuation">;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<h3 id="4-命令行聚合工具"><a href="#4-命令行聚合工具" class="headerlink" title="4. 命令行聚合工具"></a>4. 命令行聚合工具</h3><pre class="line-numbers language-bash" data-language="bash"><code class="language-bash">pt-query-digest /var/lib/mysql/slow.log <span class="token operator">|</span> <span class="token function">head</span> <span class="token parameter variable">-n</span> <span class="token number">40</span>
+mysqldumpslow <span class="token parameter variable">-s</span> t <span class="token parameter variable">-t</span> <span class="token number">10</span> /var/lib/mysql/slow.log<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span></span></code></pre>
+
+<p><code>-s t</code> 按总耗时排，<code>-t 10</code> 取前十。</p>
+<h3 id="5-Java-侧怎么落地：慢-SQL-自动进治理流程"><a href="#5-Java-侧怎么落地：慢-SQL-自动进治理流程" class="headerlink" title="5. Java 侧怎么落地：慢 SQL 自动进治理流程"></a>5. Java 侧怎么落地：慢 SQL 自动进治理流程</h3><ol>
+<li><strong>依赖</strong>：引入 <code>datasource-proxy</code> 或 <code>p6spy</code>，在 <code>application.yml</code> 里配 <code>logging</code> 级别与阈值；</li>
+<li><strong>拦截</strong>：MyBatis 场景用 <code>Interceptor</code> 包一层，记录 <code>MappedStatement.id</code>、参数、耗时；</li>
+<li><strong>上报</strong>：超阈值（例如 500ms）写入独立日志或 Kafka topic，避免污染业务日志；</li>
+<li><strong>聚合</strong>：定时任务把上报数据按「SQL 指纹」聚合，每天生成 TopN 报表推给值班群；</li>
+<li><strong>门禁</strong>：把 TopN 与新上线的 mapper 语句比对，新出现的慢语句阻断发布。</li>
+</ol>
+<h2 id="七、常见坑"><a href="#七、常见坑" class="headerlink" title="七、常见坑"></a>七、常见坑</h2><ol>
+<li><strong><code>long_query_time</code> 用默认 10 秒</strong>：等于没开；</li>
+<li><strong>只开 <code>log_queries_not_using_indexes</code></strong>：日志被小语句刷爆，真正的慢 SQL 被淹没；</li>
+<li><strong>按单次耗时排序</strong>：抓不到高频轻量语句；</li>
+<li><strong>直接看 <code>Rows_examined</code> 绝对值</strong>：要结合返回行数看比值；</li>
+<li><strong>在高峰期做全量日志采集</strong>：IO 抖动会放大问题；</li>
+<li><strong>忘记日志轮转</strong>：慢日志几个 GB 后拖慢写入，需配合 <code>logrotate</code> 或定期 <code>TRUNCATE mysql.slow_log</code>；</li>
+<li><strong><code>SHOW PROFILE</code> 还在用</strong>：8.x 已弃用，结果也不完整。</li>
+</ol>
+<h2 id="八、版本差异"><a href="#八、版本差异" class="headerlink" title="八、版本差异"></a>八、版本差异</h2><ul>
+<li><strong>5.6</strong>：慢日志基础能力，<code>log_slow_admin_statements</code> 已存在；</li>
+<li><strong>5.7</strong>：<code>log_syslog</code>、<code>--log-timestamps</code> 精度提升到微秒；</li>
+<li><strong>8.0</strong>：<code>log_slow_extra</code>（8.0.14+）；<code>SHOW PROFILE</code> 弃用；Performance Schema 默认更完整；<code>log_slow_replica_statements</code> 拆分（8.0.26+）；</li>
+<li><strong>8.4</strong>：慢日志参数与 8.0 一致，重点转向 <code>performance_schema</code> 与 <code>EXPLAIN ANALYZE</code> 的组合排查。</li>
+</ul>
+<h2 id="九、课后小结"><a href="#九、课后小结" class="headerlink" title="九、课后小结"></a>九、课后小结</h2><ul>
+<li>慢日志是「发现」工具，<code>EXPLAIN</code> 是「归因」工具，两者必须配合；</li>
+<li>阈值按 P95 定，默认 10 秒等于没开；</li>
+<li>排序要按总耗时，高频轻量语句才是隐形杀手；</li>
+<li><code>Rows_examined / Rows_sent</code> 比值是判断索引质量的快指标；</li>
+<li>线上聚合优先用 <code>events_statements_summary_by_digest</code>，<code>SHOW PROFILE</code> 已经过时。</li>
+</ul>
+<h2 id="十、思考题"><a href="#十、思考题" class="headerlink" title="十、思考题"></a>十、思考题</h2><ol>
+<li><p>为什么线上不建议长期开启 <code>log_queries_not_using_indexes</code>？</p>
+<p><strong>参考回答</strong>：它会记录所有未走索引的语句，包括 <code>SELECT 1</code>、系统元数据查询等本来就没有索引可用的小语句，日志体积暴涨、写盘 IO 抖动，真正的问题语句被淹没。排查期临时打开，并配合 <code>min_examined_row_limit</code> 滤掉小语句。</p>
+</li>
+<li><p>一条 SQL 单次 1ms、QPS 5000，另一条单次 2 秒、每小时 1 次，先优化哪条？</p>
+<p><strong>参考回答</strong>：先优化第一条。它每秒消耗 5 秒的数据库时间，后者一小时才 2 秒；资源占用看的是总耗时（<code>SUM_TIMER_WAIT</code>），不是单次耗时。</p>
+</li>
+<li><p><code>Rows_examined</code> 很大但 <code>Rows_sent</code> 很小，通常说明什么？</p>
+<p><strong>参考回答</strong>：说明扫了大量行才筛出少量结果，索引选择性差或没走索引，也可能是排序&#x2F;去重导致的多余扫描。比值超过 100 就该看 <code>EXPLAIN</code>。</p>
+</li>
+<li><p>8.x 里想定位一条 SQL 的阶段耗时，应该用什么？</p>
+<p><strong>参考回答</strong>：用 Performance Schema 的 <code>events_stages_*</code>（先开 <code>stage/sql/%</code> 的 instrument），或直接 <code>EXPLAIN ANALYZE</code> 看各迭代器耗时。<code>SHOW PROFILE</code> 在 8.x 已弃用。</p>
+</li>
+<li><p>慢日志文件越来越大，怎么处理不影响业务？</p>
+<p><strong>参考回答</strong>：配置 <code>logrotate</code> 按天切割并压缩，或 <code>log_output=TABLE</code> 时定期 <code>TRUNCATE mysql.slow_log</code>；避免直接 <code>rm</code> 正在写入的文件（句柄仍指向旧 inode，空间不释放），应 <code>mv</code> 后 <code>kill -USR1</code> 或重启日志。</p>
+</li>
+</ol>
+<h2 id="十一、官方资料"><a href="#十一、官方资料" class="headerlink" title="十一、官方资料"></a>十一、官方资料</h2><ul>
+<li>慢查询日志：<a target="_blank" rel="noopener" href="https://dev.mysql.com/doc/refman/8.4/en/slow-query-log.html">https://dev.mysql.com/doc/refman/8.4/en/slow-query-log.html</a></li>
+<li><code>log_slow_extra</code>：<a target="_blank" rel="noopener" href="https://dev.mysql.com/doc/refman/8.4/en/server-system-variables.html#sysvar_log_slow_extra">https://dev.mysql.com/doc/refman/8.4/en/server-system-variables.html#sysvar_log_slow_extra</a></li>
+<li>statements summary：<a target="_blank" rel="noopener" href="https://dev.mysql.com/doc/refman/8.4/en/performance-schema-statement-tables.html">https://dev.mysql.com/doc/refman/8.4/en/performance-schema-statement-tables.html</a></li>
+<li>stages 表：<a target="_blank" rel="noopener" href="https://dev.mysql.com/doc/refman/8.4/en/performance-schema-stage-tables.html">https://dev.mysql.com/doc/refman/8.4/en/performance-schema-stage-tables.html</a></li>
+</ul>
+<p>上一篇：<a href="/2022/12/15/database/mysql/mysql-35-explain/">MQ35 EXPLAIN 逐列讲</a> ｜ 下一篇：<a href="/2022/12/17/database/mysql/mysql-37-optimizer-statistics/">MQ37 优化器与统计信息</a> ｜ <a href="/2022/11/10/database/mysql/mysql-0-series-index/">总目录</a></p>
+</div>
+
+  <div class="mb-foot">
+    <a href="/phone/">返回手机首页</a>
+    <a href="/phone/tags/">星迹索引</a>
+  </div>
+</div>
+
+
+<script>
+  /* 作用：懒加载本地 mermaid 库；无 mermaid 代码块时不加载 */
+  function loadLocalMermaid(){
+    return new Promise(function(resolve, reject){
+      if(window.mermaid) return resolve(window.mermaid);
+      var s = document.createElement('script');
+      s.src = '/js/third-party/mermaid/mermaid.min.js?v=10';
+      s.onload = function(){ resolve(window.mermaid); };
+      s.onerror = function(){ reject(new Error('mermaid local load failed')); };
+      document.head.appendChild(s);
+    });
+  }
+
+  /* 作用：把 ```mermaid 代码块替换成 SVG 图（手机端字号略小、图可横向滚动） */
+  async function renderMermaidDiagram(){
+    var blocks = document.querySelectorAll('pre[class*="language-mermaid"]');
+    if(!blocks.length) return;
+    var mermaid;
+    try { mermaid = await loadLocalMermaid(); }
+    catch(e){ console.warn('[mermaid] 本地库加载失败：', e); return; }
+
+    mermaid.initialize({
+      startOnLoad: false,
+      theme: 'base',
+      themeVariables: {
+        darkMode: true,
+        background: 'transparent',
+        fontFamily: '"Microsoft YaHei", "PingFang SC", "Segoe UI", sans-serif',
+        fontSize: '12px',
+        primaryColor: '#062f3d',
+        primaryTextColor: '#d6f6ff',
+        primaryBorderColor: '#00eeff',
+        secondaryColor: '#04222d',
+        tertiaryColor: '#04222d',
+        mainBkg: '#062f3d',
+        nodeBorder: '#00eeff',
+        clusterBkg: '#02161f',
+        clusterBorder: '#00eeff55',
+        lineColor: '#00eeff',
+        textColor: '#c0e8ff',
+        edgeLabelBackground: '#02161f'
+      },
+      flowchart: { curve: 'basis', useMaxWidth: false, htmlLabels: false, nodeSpacing: 30, rankSpacing: 40, padding: 10 }
+    });
+
+    var targets = [];
+    blocks.forEach(function(el){
+      var codeEl = el.querySelector('code');
+      if(!codeEl) return;
+      var div = document.createElement('div');
+      div.className = 'mermaid';
+      div.textContent = codeEl.textContent;
+      el.parentNode.replaceChild(div, el);
+      targets.push(div);
+    });
+    if(!targets.length) return;
+    try { await mermaid.run({ nodes: targets }); }
+    catch(e){ console.warn('[mermaid] 渲染失败：', e); }
+  }
+  /* 作用：多次触发兜底（延迟重试 + DOM 变化），防止某次时机没跑到导致图表留在代码块 */
+  var mmBusy = false;
+  function scheduleMermaid(){
+    if(mmBusy) return;
+    mmBusy = true;
+    renderMermaidDiagram().then(function(){ mmBusy = false; }, function(){ mmBusy = false; });
+  }
+  scheduleMermaid();
+  window.addEventListener('load', scheduleMermaid);
+  [1000, 3000, 8000].forEach(function(ms){ setTimeout(scheduleMermaid, ms); });
+  if(document.readyState !== 'loading') scheduleMermaid();
+  if(window.MutationObserver){
+    var mmTimer = null;
+    var mmObserver = new MutationObserver(function(){
+      clearTimeout(mmTimer);
+      mmTimer = setTimeout(scheduleMermaid, 400);
+    });
+    mmObserver.observe(document.querySelector('.mb-article') || document.body, { childList: true, subtree: true });
+  }
+</script>
+</body>
+</html>

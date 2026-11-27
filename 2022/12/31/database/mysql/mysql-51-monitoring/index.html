@@ -1,0 +1,3946 @@
+<!--
+  ============================================
+  文章原文页模板
+  文件：post.njk
+  适用终端：电脑端
+  作用：文章正文 + 侧栏；手机 UA 跳 /phone/p/<slug>/
+  最后修改：2026-11-11
+  ============================================
+-->
+
+
+<!DOCTYPE html>
+<html class="post-page">
+<!--
+  ============================================
+  公共 head 组件
+  文件：Head.njk
+  适用终端：电脑端
+  作用：输出 charset/viewport/title，并按 pageCss 输出外链样式表
+  样式资源：themes/butterfly/source/css/theme/{base,home,starmap,media,phone}/*.css
+            （Hexo 复制到 /css/theme/，pageCss 里写子目录 + 文件名，如 "base/common.css"）
+  引入层级顺序（= CSS 层叠顺序，调整只允许追加，不要打乱前后）：
+    1 基础  base/common.css
+    2 布局  base/post-layout.css
+    3 组件  base/sidebar.css
+    4 正文  base/post.css
+    5 页面  starmap/tags.css · starmap/chronicle.css · home/about.css · starmap/tag.css · starmap/category-shared.css · home/pc-home.css
+    6 浮层  media/star-reader.css
+    7 特效  starmap/starmap-live.css
+  最后修改：2026-11-12
+  ============================================
+--><head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="color-scheme" content="dark">
+  <meta name="theme-color" content="#020817">
+  <!-- 首帧兜底：浏览器默认画布是白的，样式表还没解析完就画会闪一下白。这条 8 字节规则先锁死深空底色 -->
+  <style>html{background-color:#020817}</style>
+  <title>时空秘境 - mysql-51-monitor</title>
+  
+  <link rel="stylesheet" href="/css/theme/base/common.css">
+  
+  <link rel="stylesheet" href="/css/theme/base/post-layout.css">
+  
+  <link rel="stylesheet" href="/css/theme/base/sidebar.css">
+  
+  <link rel="stylesheet" href="/css/theme/base/post.css">
+  
+  <!-- 全站代码高亮配色（One Dark Pro）：所有版面统一在最外层加载，任意入口进入都生效 -->
+  <link rel="stylesheet" href="/css/code-table.css">
+  <!-- KaTeX 公式样式：配套字体在 /css/fonts/，由 scripts/math-katex.js 在构建期渲染公式 -->
+  <link rel="stylesheet" href="/css/katex.min.css">
+<meta name="generator" content="Hexo 8.1.2"></head>
+
+<script>
+  /* 手机 UA 分流：电脑端这套控制台不再给手机用，直接换成手机版页面 */
+  (function () {
+    var ua = navigator.userAgent || '';
+    if (/Android|iPhone|iPod|HarmonyOS|Windows Phone|MicroMessenger|Mobile Safari/i.test(ua)) {
+      location.replace('/phone/p/database/mysql/mysql-51-monitoring/');
+    }
+  })();
+</script>
+
+<body>
+  <!--
+  ============================================
+  星空粒子背景组件
+  文件：Particles.njk
+  适用终端：电脑端
+  作用：particles.js 全站星空动画，鼠标悬停互动
+  最后修改：2026-11-11
+  ============================================
+--><!-- z-index 必须是 0 而不是 -1：body 带着不透明的 radial-gradient 底色，
+     负层级的子元素会被父元素背景整个盖住，粒子在跑但一个点都看不见 -->
+<div id="particles" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 0; pointer-events: none;"></div>
+<!-- 星座层：随机零星散布星座图形，叠在粒子之上、页面内容之下 -->
+<div id="constellations" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 1; pointer-events: none;" aria-hidden="true"></div>
+<script src="/js/particles.min.js"></script>
+<script>/* 本地库在仓库里，缺失时只提示、不再回退外网 CDN：
+   jsdelivr 在部分网络下会长时间挂起，而它是在这里同步插入的，会阻塞后面所有脚本（含 mermaid 渲染） */
+if (typeof particlesJS === "undefined") {
+  console.warn("[particles] 本地 /js/particles.min.js 未加载，跳过星空背景");
+}
+</script>
+<script>
+particlesJS("particles", {
+  particles: {
+    number: {
+      value: 95,
+      density: {
+        enable: true,
+        value_area: 800
+      }
+    },
+    color: {
+      value: "#00eeff"
+    },
+    shape: {
+      type: "circle",
+      stroke: {
+        width: 0,
+        color: "#000000"
+      }
+    },
+    opacity: {
+      value: 0.6,
+      random: true,
+      anim: {
+        enable: true,
+        speed: 0.5,
+        opacity_min: 0.1,
+        sync: false
+      }
+    },
+    size: {
+      value: 3,
+      random: true,
+      anim: {
+        enable: true,
+        speed: 2,
+        size_min: 0.1,
+        sync: false
+      }
+    },
+    line_linked: {
+      enable: true,
+      distance: 118,          /* 比原来 150 收紧，让粒子网络稀疏些，给星座留出视觉空间 */
+      color: "#00eeff",
+      opacity: 0.32,
+      width: 1
+    },
+    move: {
+      enable: true,
+      speed: 0.8,
+      direction: "none",
+      random: true,
+      straight: false,
+      out_mode: "out",
+      bounce: false,
+      attract: {
+        enable: true,
+        rotateX: 600,
+        rotateY: 1200
+      }
+    }
+  },
+  interactivity: {
+    detect_on: "canvas",
+    events: {
+      onhover: {
+        enable: true,
+        mode: "grab"       // 鼠标悬停时粒子聚集
+      },
+      onclick: {
+        enable: true,
+        mode: "push"       // 点击时产生新粒子
+      },
+      resize: true
+    },
+    modes: {
+      grab: {
+        distance: 200,
+        line_linked: {
+          opacity: 1
+        }
+      },
+      push: {
+        particles_nb: 6
+      }
+    }
+  },
+  retina_detect: true
+});
+</script>
+<!-- 星座层：独立 canvas，随机散布真实星座图形（依赖上面的 #constellations 容器） -->
+<script src="/js/theme/home/starfield.js"></script>
+
+  <!-- 返回按钮：按来源回到星图手记 / 星迹索引，默认回星图手记。
+       放在 body 顶层（不进 main-content），避免被其溢出裁剪切掉右半边 -->
+  <a class="article-back" id="articleBack" href="/archives/">← 返回星图手记</a>
+
+  <div class="app-layout">
+    <!--
+  ============================================
+  左侧栏个人卡组件
+  文件：_components/Sidebar.njk
+  适用终端：电脑端（星图手记 / 星迹索引 / 秘境主人 页面通栏侧栏）
+  作用：头像、昵称、站点统计、导航菜单、底部信息与全局搜索面板（结果落在雷达区，无结果播「内容走丢 → 404」动画）
+  样式依赖：source/css/theme/base/sidebar.css
+  脚本依赖：source/js/theme/base/sidebar.js
+  最后修改：2026-11-11
+  ============================================
+-->
+<aside class="sidebar" id="sidebar">
+  <div class="profile-card">
+    <div class="avatar">
+      
+      <div class="avatar-orb" aria-hidden="true">
+        <svg class="orb-svg" viewBox="0 0 80 80" width="80" height="80" role="img">
+          <defs>
+            <radialGradient id="orbBg" cx="50%" cy="46%" r="56%">
+              <stop offset="0%" stop-color="#0d1b4a" />
+              <stop offset="100%" stop-color="#060a20" />
+            </radialGradient>
+            <linearGradient id="orbMainGrad" x1="0" y1="0" x2="1" y2="1">
+              <stop offset="0%" stop-color="#ffffff" />
+              <stop offset="52%" stop-color="#a8f4ff" />
+              <stop offset="100%" stop-color="#3fd8ff" />
+            </linearGradient>
+          </defs>
+          <circle cx="40" cy="40" r="37" fill="url(#orbBg)" stroke="#00eeff" stroke-width="2" />
+          <circle cx="40" cy="40" r="32.5" fill="none" stroke="rgba(0,238,255,0.22)" stroke-width="1" />
+          <!-- 主星 -->
+          <path class="orb-star-main" fill="url(#orbMainGrad)"
+            d="M40.5 21.5 L43.5 35 L57 38 L43.5 41 L40.5 54.5 L37.5 41 L24 38 L37.5 35 Z" />
+          <!-- 三颗小星：位置/颜色错开，闪烁节奏随机 -->
+          <path class="orb-star s1" fill="#9ff0ff"
+            d="M22 17.4 L23 22 L27.6 23 L23 24 L22 28.6 L21 24 L16.4 23 L21 22 Z" />
+          <path class="orb-star s2" fill="#bcd9ff"
+            d="M58.5 25.6 L59.3 29.2 L62.9 30 L59.3 30.8 L58.5 34.4 L57.7 30.8 L54.1 30 L57.7 29.2 Z" />
+          <path class="orb-star s3" fill="#ffe1a6"
+            d="M33 51 L34.1 55.9 L39 57 L34.1 58.1 L33 63 L31.9 58.1 L27 57 L31.9 55.9 Z" />
+        </svg>
+      </div>
+    </div>
+    <h3 class="nickname">时空行者</h3>
+    <p class="bio">星辰大海，代码为舟</p>
+    <div class="stats">
+      <div class="stat-item">
+        <span class="stat-num">706</span>
+        <span class="stat-label">文章</span>
+      </div>
+      <div class="stat-item">
+        <span class="stat-num" id="fans-count" data-base="1088">1088</span>
+        <span class="stat-label">粉丝</span>
+      </div>
+      <div class="stat-item">
+        <span class="stat-num" id="follow-count" style="cursor:pointer;">66</span>
+        <span class="stat-label">关注</span>
+      </div>
+    </div>
+    <button class="follow-btn" id="followBtn" type="button" aria-pressed="false">+ 关注</button>
+  </div>
+  <div class="search-box">
+    <input type="text" placeholder="找找看..." id="search-input">
+    <button class="search-btn" id="searchModalOpen">🔍</button>
+  </div>
+  <div class="links-card">
+    <h4>常用链接</h4>
+    <ul>
+      <li><a href="/about/">秘境主人</a></li>
+      <li><a href="/archives/">星图手记</a></li>
+      <li><a href="/tags/">星迹索引</a></li>
+      <li><a href="/fun/">星屿乐园</a></li>
+      <!-- 音乐专区不再放侧栏：入口统一收在「星屿乐园」的休闲分区矩阵里 -->
+      <!-- ✅ 新增联系我 -->
+      <li><a class="contact-trigger" href="javascript:void(0)">星语传书</a></li>
+      <li><a class="donate-trigger" href="javascript:void(0)">星芒赠礼</a></li>
+    </ul>
+  </div>
+  <div class="tags-card">
+    <h4>热门标签</h4>
+    
+    <div class="tag-cloud">
+      
+      <a href="/tags/AICoding/" class="tag-link" data-tag="AICoding"
+        data-count="14">AICoding</a>
+      
+      <a href="/tags/深度研搜/" class="tag-link" data-tag="深度研搜"
+        data-count="15">深度研搜</a>
+      
+      <a href="/tags/电商问数/" class="tag-link" data-tag="电商问数"
+        data-count="18">电商问数</a>
+      
+      <a href="/tags/langchain/" class="tag-link" data-tag="langchain"
+        data-count="10">langchain</a>
+      
+      <a href="/tags/web/" class="tag-link" data-tag="web"
+        data-count="229">web</a>
+      
+      <a href="/tags/llmheima/" class="tag-link" data-tag="llmheima"
+        data-count="17">llmheima</a>
+      
+      <a href="/tags/大模型/" class="tag-link" data-tag="大模型"
+        data-count="40">大模型</a>
+      
+      <a href="/tags/面试/" class="tag-link" data-tag="面试"
+        data-count="11">面试</a>
+      
+      <a href="/tags/vue/" class="tag-link" data-tag="vue"
+        data-count="9">vue</a>
+      
+      <a href="/tags/git/" class="tag-link" data-tag="git"
+        data-count="7">git</a>
+      
+      <a href="/tags/jenkins/" class="tag-link" data-tag="jenkins"
+        data-count="9">jenkins</a>
+      
+      <a href="/tags/linux/" class="tag-link" data-tag="linux"
+        data-count="12">linux</a>
+      
+      <a href="/tags/Docker/" class="tag-link" data-tag="Docker"
+        data-count="13">Docker</a>
+      
+      <a href="/tags/idea/" class="tag-link" data-tag="idea"
+        data-count="2">idea</a>
+      
+      <a href="/tags/mac/" class="tag-link" data-tag="mac"
+        data-count="1">mac</a>
+      
+      <a href="/tags/Elasticsearch/" class="tag-link" data-tag="Elasticsearch"
+        data-count="52">Elasticsearch</a>
+      
+      <a href="/tags/全文检索/" class="tag-link" data-tag="全文检索"
+        data-count="6">全文检索</a>
+      
+      <a href="/tags/系统课/" class="tag-link" data-tag="系统课"
+        data-count="165">系统课</a>
+      
+      <a href="/tags/中文分词/" class="tag-link" data-tag="中文分词"
+        data-count="1">中文分词</a>
+      
+      <a href="/tags/Flink/" class="tag-link" data-tag="Flink"
+        data-count="8">Flink</a>
+      
+      <a href="/tags/Hadoop/" class="tag-link" data-tag="Hadoop"
+        data-count="7">Hadoop</a>
+      
+      <a href="/tags/HBase/" class="tag-link" data-tag="HBase"
+        data-count="7">HBase</a>
+      
+      <a href="/tags/Hive/" class="tag-link" data-tag="Hive"
+        data-count="6">Hive</a>
+      
+      <a href="/tags/Spark/" class="tag-link" data-tag="Spark"
+        data-count="8">Spark</a>
+      
+      <a href="/tags/Kafka/" class="tag-link" data-tag="Kafka"
+        data-count="8">Kafka</a>
+      
+      <a href="/tags/MySQL/" class="tag-link" data-tag="MySQL"
+        data-count="55">MySQL</a>
+      
+      <a href="/tags/数据库/" class="tag-link" data-tag="数据库"
+        data-count="55">数据库</a>
+      
+      <a href="/tags/Java/" class="tag-link" data-tag="Java"
+        data-count="22">Java</a>
+      
+      <a href="/tags/集合/" class="tag-link" data-tag="集合"
+        data-count="1">集合</a>
+      
+      <a href="/tags/设计模式/" class="tag-link" data-tag="设计模式"
+        data-count="1">设计模式</a>
+      
+      <a href="/tags/算法/" class="tag-link" data-tag="算法"
+        data-count="1">算法</a>
+      
+      <a href="/tags/排序/" class="tag-link" data-tag="排序"
+        data-count="1">排序</a>
+      
+      <a href="/tags/MyBatisPlus/" class="tag-link" data-tag="MyBatisPlus"
+        data-count="8">MyBatisPlus</a>
+      
+      <a href="/tags/SpringAi/" class="tag-link" data-tag="SpringAi"
+        data-count="15">SpringAi</a>
+      
+      <a href="/tags/Netty/" class="tag-link" data-tag="Netty"
+        data-count="4">Netty</a>
+      
+      <a href="/tags/Redis/" class="tag-link" data-tag="Redis"
+        data-count="58">Redis</a>
+      
+      <a href="/tags/缓存/" class="tag-link" data-tag="缓存"
+        data-count="10">缓存</a>
+      
+      <a href="/tags/数据结构/" class="tag-link" data-tag="数据结构"
+        data-count="6">数据结构</a>
+      
+      <a href="/tags/内存管理/" class="tag-link" data-tag="内存管理"
+        data-count="1">内存管理</a>
+      
+      <a href="/tags/性能/" class="tag-link" data-tag="性能"
+        data-count="4">性能</a>
+      
+      <a href="/tags/消息队列/" class="tag-link" data-tag="消息队列"
+        data-count="1">消息队列</a>
+      
+      <a href="/tags/持久化/" class="tag-link" data-tag="持久化"
+        data-count="3">持久化</a>
+      
+      <a href="/tags/运维/" class="tag-link" data-tag="运维"
+        data-count="9">运维</a>
+      
+      <a href="/tags/高可用/" class="tag-link" data-tag="高可用"
+        data-count="5">高可用</a>
+      
+      <a href="/tags/Cluster/" class="tag-link" data-tag="Cluster"
+        data-count="3">Cluster</a>
+      
+      <a href="/tags/架构/" class="tag-link" data-tag="架构"
+        data-count="1">架构</a>
+      
+      <a href="/tags/底层原理/" class="tag-link" data-tag="底层原理"
+        data-count="5">底层原理</a>
+      
+      <a href="/tags/内存/" class="tag-link" data-tag="内存"
+        data-count="1">内存</a>
+      
+      <a href="/tags/排障/" class="tag-link" data-tag="排障"
+        data-count="1">排障</a>
+      
+      <a href="/tags/事务/" class="tag-link" data-tag="事务"
+        data-count="1">事务</a>
+      
+      <a href="/tags/脚本/" class="tag-link" data-tag="脚本"
+        data-count="2">脚本</a>
+      
+      <a href="/tags/消息/" class="tag-link" data-tag="消息"
+        data-count="2">消息</a>
+      
+      <a href="/tags/分布式/" class="tag-link" data-tag="分布式"
+        data-count="2">分布式</a>
+      
+      <a href="/tags/限流/" class="tag-link" data-tag="限流"
+        data-count="1">限流</a>
+      
+      <a href="/tags/安全/" class="tag-link" data-tag="安全"
+        data-count="2">安全</a>
+      
+      <a href="/tags/实战/" class="tag-link" data-tag="实战"
+        data-count="4">实战</a>
+      
+      <a href="/tags/SpringBoot/" class="tag-link" data-tag="SpringBoot"
+        data-count="9">SpringBoot</a>
+      
+      <a href="/tags/SpringCloud/" class="tag-link" data-tag="SpringCloud"
+        data-count="10">SpringCloud</a>
+      
+      <a href="/tags/SpringData/" class="tag-link" data-tag="SpringData"
+        data-count="6">SpringData</a>
+      
+      <a href="/tags/SpringSession/" class="tag-link" data-tag="SpringSession"
+        data-count="4">SpringSession</a>
+      
+      <a href="/tags/游戏/" class="tag-link" data-tag="游戏"
+        data-count="1">游戏</a>
+      
+      <a href="/tags/电影/" class="tag-link" data-tag="电影"
+        data-count="5">电影</a>
+      
+      <a href="/tags/画册/" class="tag-link" data-tag="画册"
+        data-count="3">画册</a>
+      
+      <a href="/tags/吉他/" class="tag-link" data-tag="吉他"
+        data-count="2">吉他</a>
+      
+      <a href="/tags/视频剪辑/" class="tag-link" data-tag="视频剪辑"
+        data-count="1">视频剪辑</a>
+      
+      <a href="/tags/AI/" class="tag-link" data-tag="AI"
+        data-count="1">AI</a>
+      
+      <a href="/tags/随笔杂谈/" class="tag-link" data-tag="随笔杂谈"
+        data-count="2">随笔杂谈</a>
+      
+    </div>
+    <script>
+      /*
+  ============================================
+  侧栏热门标签排序（首帧前执行）
+  文件：_js/hot-tags.js
+  引入位置：_components/Sidebar.njk 里 .tag-cloud 闭合标签之后（紧跟着写死）
+  作用：按点击次数排序、只露前 5 个、点一下立刻重排
+  为什么单独拆出来：以前放在 sidebar.js 的 DOMContentLoaded 里，首帧渲染的还是
+  模板顺序的 20 个标签，等脚本跑完才收成 5 个；配合跨页淡入（View Transition）
+  会出现「新旧两套标签叠在一起、影子跳一下」。紧跟标签节点内联执行就没有中间态。
+  最后修改：2026-11-12
+  ============================================
+*/
+(function () {
+  var cloud = document.querySelector('.tag-cloud');
+  if (!cloud) return;
+  var links = Array.prototype.slice.call(cloud.querySelectorAll('.tag-link'));
+  if (!links.length) return;
+
+  var KEY = 'starry_tag_visits'; // 标签名 -> 点击次数
+  var TOP = 5;
+  var visits = {};
+
+  try {
+    var raw = JSON.parse(localStorage.getItem(KEY) || '{}');
+    visits = (raw && typeof raw === 'object') ? raw : {};
+  } catch (e) {
+    visits = {};
+  }
+
+  links.forEach(function (link) {
+    var name = link.dataset.tag || (link.textContent || '').trim();
+    link.dataset.tag = name;
+    if (!link.dataset.count) link.dataset.count = '0';
+  });
+
+  // 排序：点击次数降序 → 文章数降序 → 名字，保证同分时顺序稳定不来回跳
+  function order() {
+    return links.slice().sort(function (a, b) {
+      var va = visits[a.dataset.tag] || 0;
+      var vb = visits[b.dataset.tag] || 0;
+      if (vb !== va) return vb - va;
+      var ca = Number(a.dataset.count) || 0;
+      var cb = Number(b.dataset.count) || 0;
+      if (cb !== ca) return cb - ca;
+      return String(a.dataset.tag).localeCompare(String(b.dataset.tag), 'zh');
+    });
+  }
+
+  // 重排 DOM：按名次 append，超出 5 个的 hidden（仍留在 DOM，等名次升上来再显示）
+  function render() {
+    order().forEach(function (link, i) {
+      link.dataset.visits = visits[link.dataset.tag] || 0;
+      cloud.appendChild(link);
+      link.hidden = i >= TOP;
+    });
+  }
+
+  links.forEach(function (link) {
+    link.addEventListener('click', function () {
+      var name = link.dataset.tag;
+      visits[name] = (visits[name] || 0) + 1;
+      try { localStorage.setItem(KEY, JSON.stringify(visits)); } catch (e) { /* 忽略配额错误 */ }
+      render(); // 当前页立刻看到「谁被点多了谁上前」
+    });
+  });
+
+  render();
+})();
+
+    </script>
+  </div>
+  <div class="archive-card">
+    <h4>按月归档</h4>
+    <ul class="archive-list">
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2026/11/">
+          2026年11月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2026/10/">
+          2026年10月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2026/09/">
+          2026年09月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2026/08/">
+          2026年08月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2026/07/">
+          2026年07月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2026/06/">
+          2026年06月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2026/05/">
+          2026年05月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2026/04/">
+          2026年04月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2026/03/">
+          2026年03月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2026/02/">
+          2026年02月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2026/01/">
+          2026年01月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2025/12/">
+          2025年12月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2025/11/">
+          2025年11月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2025/10/">
+          2025年10月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2025/09/">
+          2025年09月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2025/08/">
+          2025年08月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2025/07/">
+          2025年07月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2025/06/">
+          2025年06月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2025/05/">
+          2025年05月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2025/04/">
+          2025年04月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2025/03/">
+          2025年03月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2025/02/">
+          2025年02月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2025/01/">
+          2025年01月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2024/12/">
+          2024年12月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2024/11/">
+          2024年11月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2024/10/">
+          2024年10月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2024/09/">
+          2024年09月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2024/08/">
+          2024年08月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2024/07/">
+          2024年07月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2024/06/">
+          2024年06月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2024/05/">
+          2024年05月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2024/04/">
+          2024年04月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2024/03/">
+          2024年03月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2024/02/">
+          2024年02月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2024/01/">
+          2024年01月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2023/12/">
+          2023年12月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2023/11/">
+          2023年11月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2023/10/">
+          2023年10月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2023/09/">
+          2023年09月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2023/08/">
+          2023年08月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2023/07/">
+          2023年07月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2023/06/">
+          2023年06月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2023/05/">
+          2023年05月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2023/04/">
+          2023年04月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2023/03/">
+          2023年03月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2023/02/">
+          2023年02月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2023/01/">
+          2023年01月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2022/12/">
+          2022年12月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2022/11/">
+          2022年11月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2022/10/">
+          2022年10月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2022/09/">
+          2022年09月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2022/08/">
+          2022年08月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2022/07/">
+          2022年07月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2022/06/">
+          2022年06月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2022/05/">
+          2022年05月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2022/04/">
+          2022年04月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2022/03/">
+          2022年03月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2022/02/">
+          2022年02月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2022/01/">
+          2022年01月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2021/12/">
+          2021年12月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2021/11/">
+          2021年11月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2021/10/">
+          2021年10月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2021/09/">
+          2021年09月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2021/08/">
+          2021年08月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2021/07/">
+          2021年07月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2021/06/">
+          2021年06月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2021/05/">
+          2021年05月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2021/04/">
+          2021年04月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2021/03/">
+          2021年03月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2021/02/">
+          2021年02月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2021/01/">
+          2021年01月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2020/12/">
+          2020年12月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2020/11/">
+          2020年11月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2020/10/">
+          2020年10月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2020/09/">
+          2020年09月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2020/08/">
+          2020年08月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2020/07/">
+          2020年07月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2020/06/">
+          2020年06月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2020/05/">
+          2020年05月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2020/04/">
+          2020年04月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2020/03/">
+          2020年03月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2020/02/">
+          2020年02月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2020/01/">
+          2020年01月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2019/12/">
+          2019年12月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2019/11/">
+          2019年11月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2019/10/">
+          2019年10月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2019/09/">
+          2019年09月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2019/08/">
+          2019年08月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2019/07/">
+          2019年07月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2019/06/">
+          2019年06月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2019/05/">
+          2019年05月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2019/04/">
+          2019年04月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2019/03/">
+          2019年03月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2019/02/">
+          2019年02月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2019/01/">
+          2019年01月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2018/12/">
+          2018年12月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2018/11/">
+          2018年11月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2018/10/">
+          2018年10月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2018/09/">
+          2018年09月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2018/08/">
+          2018年08月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2018/07/">
+          2018年07月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2018/06/">
+          2018年06月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2018/05/">
+          2018年05月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2018/04/">
+          2018年04月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2018/03/">
+          2018年03月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2018/02/">
+          2018年02月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2018/01/">
+          2018年01月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+    </ul>
+  </div>
+
+  <!-- ========== 星语传书（雷达区弹窗，与搜索面板同一套面板样式） ========== -->
+  <div class="search-panel dock-panel" id="contactModal" hidden>
+    <div class="sp-mask" data-dock-close></div>
+    <div class="sp-box" role="dialog" aria-modal="true" aria-label="星语传书">
+      <div class="sp-head">
+        <span class="sp-dot"></span>
+        <span class="sp-title">星语传书</span>
+        <span class="sp-title-sub">/ SIGNAL CHANNEL</span>
+        <span class="sp-meta">SYS.REPLY ≤ 48H</span>
+        <button class="sp-close" type="button" data-dock-close title="关闭">×</button>
+      </div>
+      <div class="sp-body dock-body">
+        <p class="dock-lead">写信给时空行者：文章里的错字、跑不通的 demo、想聊的一句技术，都可以从这里进来。信号收到，我会尽量回。</p>
+        <div class="dock-grid">
+          <div class="dock-list">
+            <a class="dock-row" href="https://wpa.qq.com/msgrd?v=3&amp;uin=372109355&amp;site=qq&amp;menu=yes"
+              target="_blank" rel="noopener">
+              <span class="dock-ico">企</span>
+              <span class="dock-k"><b>QQ</b><span>372109355</span></span>
+            </a>
+            <a class="dock-row" href="https://wu4yong.github.io" target="_blank" rel="noopener">
+              <span class="dock-ico">⌂</span>
+              <span class="dock-k"><b>站点主站</b><span>wu4yong.github.io</span></span>
+            </a>
+            <div class="dock-row dock-row-static">
+              <span class="dock-ico">✉</span>
+              <span class="dock-k"><b>电子邮箱</b><span>暂未公开 · 任何问题QQ留言</span></span>
+            </div>
+            <a class="dock-row" href="#" target="_blank" rel="noopener">
+              <span class="dock-ico">◈</span>
+              <span class="dock-k"><b>GitHub</b><span>暂未公开 · 任何问题QQ留言</span></span>
+            </a>
+            <a class="dock-row" href="#" target="_blank" rel="noopener">
+              <span class="dock-ico">◇</span>
+              <span class="dock-k"><b>Gitee</b><span>暂未公开 · 任何问题QQ留言</span></span>
+            </a>
+          </div>
+          <div class="dock-side">
+            <div class="dock-qr">
+              <em>WECHAT · 微信</em>
+              <img src="/images/wechat-qr.png" alt="微信二维码">
+              <span class="dock-qr-tip">扫码添加，备注「来自时空秘境」</span>
+            </div>
+          </div>
+        </div>
+        <div class="dock-chips">
+          <span class="dock-chip">文章纠错</span>
+          <span class="dock-chip">Demo 答疑</span>
+          <span class="dock-chip">转载授权</span>
+          <span class="dock-chip">技术交流</span>
+          <span class="dock-chip">内推 / 合作</span>
+        </div>
+        <p class="dock-note">无正文的「在吗」容易被当作信号干扰滤掉，直接把问题写清楚，回信会快很多。</p>
+      </div>
+      <!-- 开合转场层：百叶窗 / 电影幕布 / 淡入，由 source/js/theme/base/sidebar.js 轮换播放 -->
+      <div class="dock-fx" aria-hidden="true">
+        <div class="dock-fx-slats"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+        <div class="dock-fx-curtain"><span class="top"></span><span class="bottom"></span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========== 全局搜索面板 ==========
+       索引来自构建期生成的 /search.json（hexo-generator-searchdb），随文章新增自动更新；
+       打开时由 source/js/theme/base/sidebar.js 把整块挪进 Radar 中间区（无雷达的页面退化为居中浮层） -->
+  <div class="search-panel" id="searchPanel" hidden>
+    <div class="sp-mask" id="searchMask"></div>
+    <div class="sp-box" role="dialog" aria-modal="true" aria-label="全文搜索">
+      <div class="sp-head">
+        <span class="sp-dot"></span>
+        <span class="sp-title">全文搜索</span>
+        <span class="sp-title-sub">/ GLOBAL SEARCH</span>
+        <span class="sp-meta" id="spMeta"></span>
+        <button class="sp-close" id="searchPanelClose" type="button" title="关闭搜索">×</button>
+      </div>
+      <div class="sp-body" id="spBody">
+        <div class="sp-loading" id="spLoading">正在扫描星图索引…</div>
+        <ul class="sp-list" id="spList"></ul>
+        <!-- 无结果：内容走丢 → 慢速落 404 -->
+        <div class="sp-empty" id="spEmpty" hidden>
+          <div class="sp-drift-wrap">
+            <span class="sp-trail"></span>
+            <span class="sp-drift"></span>
+            <span class="sp-lost">SIGNAL LOST · 信号已丢失</span>
+          </div>
+          <div class="sp-404"><span>4</span><span>0</span><span>4</span></div>
+          <p class="sp-empty-main">内容走丢在星海里了</p>
+          <p class="sp-empty-tip">换个关键词，或去〈星迹索引 / 星图手记〉里慢慢逛</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========== 星芒赠礼（雷达区弹窗，收款码图片沿用原图不改） ========== -->
+  <div class="search-panel dock-panel" id="donateModal" hidden>
+    <div class="sp-mask" data-dock-close></div>
+    <div class="sp-box" role="dialog" aria-modal="true" aria-label="星芒赠礼">
+      <div class="sp-head">
+        <span class="sp-dot"></span>
+        <span class="sp-title">星芒赠礼</span>
+        <span class="sp-title-sub">/ STAR OFFERING</span>
+        <span class="sp-meta">THANKS FOR THE LIGHT</span>
+        <button class="sp-close" type="button" data-dock-close title="关闭">×</button>
+      </div>
+      <div class="sp-body dock-body">
+        <div class="dock-thanks">
+          <p>这片星空是工作闲暇时光一个个凌晨攒出来的：一篇文章、一次复盘、一个修不完的 bug。</p>
+          <p>如果你在这里找到了能用的东西，愿意赏一杯凌晨三点的咖啡 —— 这份心意我会记很久。</p>
+          <p>不打赏也完全没关系：所有文章永久免费，愿你我在各自的轨道上都跑得稳一点。</p>
+        </div>
+        <div class="dock-donate">
+          <div class="dock-hero">
+            <div class="dock-hero-pic">
+              <span class="dock-hero-halo" aria-hidden="true"></span>
+              <span class="dock-hero-ring dock-hero-ring-a" aria-hidden="true"></span>
+              <span class="dock-hero-ring dock-hero-ring-b" aria-hidden="true"></span>
+              <img src="/images/donate-boy.png" alt="感谢支持">
+            </div>
+            <em>THANKS FOR THE LIGHT</em>
+            <span class="dock-hero-tip">愿每一次凌晨，都有人替你留一盏灯</span>
+          </div>
+          <div class="dock-pay">
+            <div class="dock-qr dock-qr-row">
+              <img src="/images/alipay-qr.jpg" alt="支付宝收款码">
+              <div class="dock-qr-txt">
+                <b>支付宝 · 星途赞赏</b>
+                <span>请我喝一杯凌晨三点的咖啡</span>
+              </div>
+            </div>
+            <div class="dock-qr dock-qr-row">
+              <img src="/images/wechat-pay-qr.jpg" alt="微信收款码">
+              <div class="dock-qr-txt">
+                <b>微信 · 星河致谢</b>
+                <span>金额随意，心意已经收到</span>
+              </div>
+            </div>
+          </div>
+        </div>        <div class="dock-chips">
+          <span class="dock-chip">域名与服务器</span>
+          <span class="dock-chip">图床与备份</span>
+          <span class="dock-chip">一本技术书</span>
+          <span class="dock-chip">深夜的一杯咖啡</span>
+        </div>
+        <p class="dock-note">赠礼纯属心意，不产生任何付费内容或额外承诺；扫码前请确认收款人，小心仿冒。</p>
+      </div>
+      <!-- 开合转场层：百叶窗 / 电影幕布 / 淡入，由 source/js/theme/base/sidebar.js 轮换播放 -->
+      <div class="dock-fx" aria-hidden="true">
+        <div class="dock-fx-slats"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+        <div class="dock-fx-curtain"><span class="top"></span><span class="bottom"></span></div>
+      </div>
+    </div>
+  </div>
+
+
+</aside>
+<!-- 引入侧边栏交互脚本：外链（源文件 themes/butterfly/source/js/theme/base/sidebar.js） -->
+<script src="/js/theme/base/sidebar.js"></script>
+
+    
+    <button id="sidebarToggle" class="sidebar-toggle" title="隐藏侧栏"></button>
+
+    <main class="main-content">
+      <div class="article-card">
+        <h1 class="article-title">mysql-51-monitor</h1>
+        <div class="article-meta">📅 2022-12-31</div>
+        <div class="article-content"><div class="essay-banner essay-database"></div>
+
+<h1 id="监控指标与告警"><a href="#监控指标与告警" class="headerlink" title="监控指标与告警"></a>监控指标与告警</h1><p><img src="https://wu4yong.github.io/starry-images/assets/img/mysql/mq-51-monitoring.svg" alt="监控的四层指标"></p>
+<p><em>先看能不能连上，再看快不快，最后看数据对不对｜依据 MySQL 8.4 Performance Schema &#x2F; 监控实践自绘</em></p>
+<h2 id="一、学习目标"><a href="#一、学习目标" class="headerlink" title="一、学习目标"></a>一、学习目标</h2><ol>
+<li>用四层（可用性、性能、资源、正确性）搭出覆盖到位的指标盘；</li>
+<li>知道每个指标异常时该往哪里查，避免「有告警没结论」；</li>
+<li>把告警分级定下来，让值班的人知道哪条要打电话。</li>
+</ol>
+<h2 id="二、前置知识"><a href="#二、前置知识" class="headerlink" title="二、前置知识"></a>二、前置知识</h2><p>InnoDB 内存结构（MQ19）、慢日志与执行计划（MQ35&#x2F;MQ36）、主从复制（MQ43）。</p>
+<h2 id="三、理论讲解（官方定义）"><a href="#三、理论讲解（官方定义）" class="headerlink" title="三、理论讲解（官方定义）"></a>三、理论讲解（官方定义）</h2><p>MySQL 的可观测数据来自四个入口：</p>
+<table>
+<thead>
+<tr>
+<th>入口</th>
+<th>提供什么</th>
+<th>采集方式</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>SHOW GLOBAL STATUS</code> &#x2F; <code>performance_schema.global_status</code></td>
+<td>计数器（连接、QPS、行操作、锁等待）</td>
+<td>定期 <code>SELECT</code>，看增量而非绝对值</td>
+</tr>
+<tr>
+<td><code>performance_schema</code></td>
+<td>语句、等待、锁、阶段、内存</td>
+<td>表查询，开销可控</td>
+</tr>
+<tr>
+<td>慢查询日志</td>
+<td>超阈值 SQL + 执行细节</td>
+<td><code>long_query_time</code> + <code>log_slow_extra</code></td>
+</tr>
+<tr>
+<td>错误日志 &#x2F; 复制状态</td>
+<td>崩溃、复制错误、GTID</td>
+<td>日志采集 + <code>SHOW REPLICA STATUS</code></td>
+</tr>
+</tbody></table>
+<p>官方建议监控以<strong>计数器增量 + 比率</strong>为主，绝对累计值只在重启后归零、不能直接当趋势。</p>
+<h2 id="四、原理拆解"><a href="#四、原理拆解" class="headerlink" title="四、原理拆解"></a>四、原理拆解</h2><p><img src="https://wu4yong.github.io/starry-images/assets/img/mysql/mq-51b-monitoring.svg" alt="必须盯住的指标"></p>
+<p><em>指标不在多，在于「异常时能定位到层」｜依据 MySQL 8.4 Server Status Variables 说明自绘</em></p>
+<h3 id="1-可用性：先确认「活着」"><a href="#1-可用性：先确认「活着」" class="headerlink" title="1. 可用性：先确认「活着」"></a>1. 可用性：先确认「活着」</h3><ul>
+<li><code>Threads_connected</code> 接近 <code>max_connections</code>（默认 151）→ 连接耗尽；</li>
+<li><code>Aborted_connects</code> 突增 → 认证失败、网络抖动或连接池配置错；</li>
+<li>复制状态：<code>Replica_IO_Running</code> &#x2F; <code>Replica_SQL_Running</code> 任一为 <code>No</code> 即中断；</li>
+<li>探活用一个最小权限账号执行 <code>SELECT 1</code>，不要用 root。</li>
+</ul>
+<h3 id="2-性能：分清「慢在等」还是「慢在算」"><a href="#2-性能：分清「慢在等」还是「慢在算」" class="headerlink" title="2. 性能：分清「慢在等」还是「慢在算」"></a>2. 性能：分清「慢在等」还是「慢在算」</h3><table>
+<thead>
+<tr>
+<th>指标</th>
+<th>异常含义</th>
+<th>下一步</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>Threads_running</code> 远高于 CPU 核数</td>
+<td>大量并发在跑或等锁</td>
+<td><code>innodb_trx</code>、<code>metadata_locks</code></td>
+</tr>
+<tr>
+<td><code>Innodb_row_lock_waits</code> &#x2F; <code>_time</code> 增长</td>
+<td>锁冲突</td>
+<td>找出持锁事务与热点行</td>
+</tr>
+<tr>
+<td><code>Slow_queries</code> 增速异常</td>
+<td>新上线 SQL 或统计信息失真</td>
+<td>按指纹聚合慢日志</td>
+</tr>
+<tr>
+<td><code>Questions</code> 突增但 <code>Com_select</code> 比例下降</td>
+<td>短连接&#x2F;探活风暴</td>
+<td>查连接池与探活</td>
+</tr>
+</tbody></table>
+<p><code>Threads_running</code> 是判断「是不是真堵」最快的指标：它统计正在执行（不含空闲）的线程数，持续高于核数说明要么 CPU 饱和、要么大量线程在等锁&#x2F;等 IO。</p>
+<h3 id="3-资源：buffer-pool、磁盘与临时表"><a href="#3-资源：buffer-pool、磁盘与临时表" class="headerlink" title="3. 资源：buffer pool、磁盘与临时表"></a>3. 资源：buffer pool、磁盘与临时表</h3><ul>
+<li><strong>命中率</strong> &#x3D; <code>1 - Innodb_buffer_pool_reads / Innodb_buffer_pool_read_requests</code>，低于 95% 说明池小或有大范围扫描；</li>
+<li><strong>临时表落盘</strong> <code>Created_tmp_disk_tables / Created_tmp_tables</code> 高于 30% 通常意味着 <code>GROUP BY</code>&#x2F;<code>DISTINCT</code> 缺索引或 <code>tmp_table_size</code> 偏小；</li>
+<li><strong>磁盘</strong>：数据目录增长速率、binlog 目录增长速率、redo 目录（<code>#innodb_redo</code>）大小。</li>
+</ul>
+<h3 id="4-正确性：复制与备份"><a href="#4-正确性：复制与备份" class="headerlink" title="4. 正确性：复制与备份"></a>4. 正确性：复制与备份</h3><ul>
+<li><code>Seconds_Behind_Source</code>（8.0.22+ 命名，旧名 <code>Seconds_Behind_Master</code>）只是粗指标，更准的是 <code>SHOW REPLICA STATUS</code> 里的 <code>Relay_Log_File</code>&#x2F;<code>Exec_Source_Log_Pos</code> 与主库位点差；</li>
+<li><code>Retrieved_Gtid_Set</code> 与 <code>Executed_Gtid_Set</code> 的差值才是真实积压；</li>
+<li>备份任务的成功率与最近一次恢复演练结果，也要进监控盘。</li>
+</ul>
+<h3 id="5-告警分级"><a href="#5-告警分级" class="headerlink" title="5. 告警分级"></a>5. 告警分级</h3><table>
+<thead>
+<tr>
+<th>级别</th>
+<th>判据</th>
+<th>通知方式</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>P0</td>
+<td>不可用（连不上、主库宕、复制全断）</td>
+<td>电话 + 值班</td>
+</tr>
+<tr>
+<td>P1</td>
+<td>性能劣化（P99 超阈值、慢 SQL 激增、延迟 &gt; 60s）</td>
+<td>群消息 @ 值班</td>
+</tr>
+<tr>
+<td>P2</td>
+<td>容量趋势（磁盘 &gt; 70%、连接数 &gt; 60%）</td>
+<td>日报</td>
+</tr>
+</tbody></table>
+<p>分级不清的后果很直接：所有告警都发群消息，两周后没人看。</p>
+<h2 id="五、场景说明"><a href="#五、场景说明" class="headerlink" title="五、场景说明"></a>五、场景说明</h2><ol>
+<li><strong>大促前</strong>：盯 <code>Threads_running</code>、连接数、从库延迟；</li>
+<li><strong>新上线</strong>：盯慢 SQL 指纹里是否出现新 SQL；</li>
+<li><strong>批处理时段</strong>：盯临时表落盘与磁盘 IO；</li>
+<li><strong>故障复盘</strong>：用 <code>performance_schema</code> 历史表还原当时的等待分布；</li>
+<li><strong>容量规划</strong>：按周采集数据&#x2F;bilog 增长速率，提前扩盘。</li>
+</ol>
+<h2 id="六、示例代码-实操步骤"><a href="#六、示例代码-实操步骤" class="headerlink" title="六、示例代码&#x2F;实操步骤"></a>六、示例代码&#x2F;实操步骤</h2><h3 id="1-采集核心计数器"><a href="#1-采集核心计数器" class="headerlink" title="1. 采集核心计数器"></a>1. 采集核心计数器</h3><pre class="line-numbers language-sql" data-language="sql"><code class="language-sql"><span class="token keyword">SELECT</span> VARIABLE_NAME<span class="token punctuation">,</span> VARIABLE_VALUE
+<span class="token keyword">FROM</span> performance_schema<span class="token punctuation">.</span>global_status
+<span class="token keyword">WHERE</span> VARIABLE_NAME <span class="token operator">IN</span> <span class="token punctuation">(</span>
+  <span class="token string">'Threads_connected'</span><span class="token punctuation">,</span><span class="token string">'Threads_running'</span><span class="token punctuation">,</span><span class="token string">'Max_used_connections'</span><span class="token punctuation">,</span>
+  <span class="token string">'Questions'</span><span class="token punctuation">,</span><span class="token string">'Com_select'</span><span class="token punctuation">,</span><span class="token string">'Com_insert'</span><span class="token punctuation">,</span><span class="token string">'Com_update'</span><span class="token punctuation">,</span><span class="token string">'Com_delete'</span><span class="token punctuation">,</span>
+  <span class="token string">'Innodb_row_lock_waits'</span><span class="token punctuation">,</span><span class="token string">'Innodb_row_lock_time_avg'</span><span class="token punctuation">,</span>
+  <span class="token string">'Innodb_buffer_pool_reads'</span><span class="token punctuation">,</span><span class="token string">'Innodb_buffer_pool_read_requests'</span><span class="token punctuation">,</span>
+  <span class="token string">'Created_tmp_tables'</span><span class="token punctuation">,</span><span class="token string">'Created_tmp_disk_tables'</span><span class="token punctuation">,</span>
+  <span class="token string">'Slow_queries'</span><span class="token punctuation">,</span><span class="token string">'Aborted_connects'</span>
+<span class="token punctuation">)</span><span class="token punctuation">;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<p>采集间隔 10s，落时序库后算<strong>增量与比率</strong>，不要直接展示累计值。</p>
+<h3 id="2-计算-buffer-pool-命中率"><a href="#2-计算-buffer-pool-命中率" class="headerlink" title="2. 计算 buffer pool 命中率"></a>2. 计算 buffer pool 命中率</h3><pre class="line-numbers language-sql" data-language="sql"><code class="language-sql"><span class="token keyword">SELECT</span>
+  <span class="token number">1</span> <span class="token operator">-</span> <span class="token punctuation">(</span><span class="token keyword">SELECT</span> VARIABLE_VALUE <span class="token keyword">FROM</span> performance_schema<span class="token punctuation">.</span>global_status
+       <span class="token keyword">WHERE</span> VARIABLE_NAME<span class="token operator">=</span><span class="token string">'Innodb_buffer_pool_reads'</span><span class="token punctuation">)</span> <span class="token operator">/</span>
+      <span class="token punctuation">(</span><span class="token keyword">SELECT</span> VARIABLE_VALUE <span class="token keyword">FROM</span> performance_schema<span class="token punctuation">.</span>global_status
+       <span class="token keyword">WHERE</span> VARIABLE_NAME<span class="token operator">=</span><span class="token string">'Innodb_buffer_pool_read_requests'</span><span class="token punctuation">)</span> <span class="token keyword">AS</span> hit_rate<span class="token punctuation">;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<p>低于 0.95 且伴随 <code>Innodb_buffer_pool_reads</code> 增量放大，优先查全表扫描。</p>
+<h3 id="3-慢-SQL-按指纹聚合"><a href="#3-慢-SQL-按指纹聚合" class="headerlink" title="3. 慢 SQL 按指纹聚合"></a>3. 慢 SQL 按指纹聚合</h3><pre class="line-numbers language-sql" data-language="sql"><code class="language-sql"><span class="token keyword">SELECT</span> DIGEST_TEXT<span class="token punctuation">,</span> COUNT_STAR<span class="token punctuation">,</span>
+       <span class="token function">ROUND</span><span class="token punctuation">(</span>SUM_TIMER_WAIT<span class="token operator">/</span><span class="token number">1000000000000</span><span class="token punctuation">,</span> <span class="token number">3</span><span class="token punctuation">)</span> <span class="token keyword">AS</span> total_sec<span class="token punctuation">,</span>
+       <span class="token function">ROUND</span><span class="token punctuation">(</span>AVG_TIMER_WAIT<span class="token operator">/</span><span class="token number">1000000000</span><span class="token punctuation">,</span> <span class="token number">2</span><span class="token punctuation">)</span> <span class="token keyword">AS</span> avg_ms<span class="token punctuation">,</span>
+       SUM_ROWS_EXAMINED<span class="token punctuation">,</span> SUM_ROWS_SENT
+<span class="token keyword">FROM</span> performance_schema<span class="token punctuation">.</span>events_statements_summary_by_digest
+<span class="token keyword">ORDER</span> <span class="token keyword">BY</span> SUM_TIMER_WAIT <span class="token keyword">DESC</span> <span class="token keyword">LIMIT</span> <span class="token number">20</span><span class="token punctuation">;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<p><code>SUM_ROWS_EXAMINED / SUM_ROWS_SENT</code> 比值过大，说明扫了很多行只返回很少 —— 索引或写法问题。</p>
+<h3 id="4-复制延迟的真实算法"><a href="#4-复制延迟的真实算法" class="headerlink" title="4. 复制延迟的真实算法"></a>4. 复制延迟的真实算法</h3><pre class="line-numbers language-sql" data-language="sql"><code class="language-sql"><span class="token keyword">SHOW</span> REPLICA <span class="token keyword">STATUS</span>\G
+<span class="token comment">-- 关注：Replica_IO_Running / Replica_SQL_Running</span>
+<span class="token comment">--       Retrieved_Gtid_Set 与 Executed_Gtid_Set 的差</span>
+<span class="token comment">--       Seconds_Behind_Source（粗指标）</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span></span></code></pre>
+
+<p>精确积压用 GTID 集合差：<code>SELECT GTID_SUBTRACT(retrieved, executed)</code>，差集大小才是待重放事务量。</p>
+<h3 id="5-Java-侧怎么落地：指标进统一监控平台"><a href="#5-Java-侧怎么落地：指标进统一监控平台" class="headerlink" title="5. Java 侧怎么落地：指标进统一监控平台"></a>5. Java 侧怎么落地：指标进统一监控平台</h3><ol>
+<li><strong>采集用只读账号</strong>：<code>GRANT SELECT ON performance_schema.*</code>，并限定来源网段；</li>
+<li><strong>不要在应用里高频查询</strong>：指标采集交给专用 exporter，应用侧只暴露业务指标；</li>
+<li><strong>告警带上下文</strong>：告警消息里附当时 QPS、连接数、Top3 慢 SQL、主从延迟；</li>
+<li><strong>阈值分环境</strong>：预发阈值放宽，生产按 SLA 定；</li>
+<li><strong>看板分角色</strong>：值班看四层总览，DBA 看实例细节，研发看自己服务的慢 SQL。</li>
+</ol>
+<h2 id="七、常见坑"><a href="#七、常见坑" class="headerlink" title="七、常见坑"></a>七、常见坑</h2><ol>
+<li><strong>只看累计值不看增量</strong>：实例重启后计数器归零，曲线突变误判；</li>
+<li><strong>用 <code>Seconds_Behind_Source</code> 当唯一延迟指标</strong>：它在大事务&#x2F;长 SQL 下不准；</li>
+<li><strong>探活用 root + <code>SELECT *</code></strong>：既耗资源又放大权限；</li>
+<li><strong>告警阈值全局一套</strong>：小实例与大实例同样的绝对阈值，天天误报；</li>
+<li><strong>只监控主库</strong>：从库磁盘满、IO 打满无人知；</li>
+<li><strong>忽略 binlog 目录增长</strong>：磁盘被 binlog 写满导致主库宕；</li>
+<li><strong><code>performance_schema</code> 全开</strong>：开销上升，按需开 consumer；</li>
+<li><strong>没有历史基线</strong>：无法判断「现在的慢」是不是异常。</li>
+</ol>
+<h2 id="八、版本差异"><a href="#八、版本差异" class="headerlink" title="八、版本差异"></a>八、版本差异</h2><ul>
+<li><strong>5.6</strong>：<code>performance_schema</code> 覆盖有限，多数靠 <code>SHOW STATUS</code> 与 <code>SHOW PROFILE</code>；</li>
+<li><strong>5.7</strong>：<code>sys</code> schema 提供开箱视图（<code>sys.schema_table_statistics</code> 等），<code>SHOW PROFILE</code> 仍可用；</li>
+<li><strong>8.0</strong>：<code>SHOW PROFILE</code> 弃用，阶段耗时统一走 <code>performance_schema</code>；8.0.22 起复制相关变量改名（<code>Seconds_Behind_Source</code>）；</li>
+<li><strong>8.4 LTS</strong>：<code>SHOW REPLICA STATUS</code> 为标准写法；<code>log_slow_extra</code>（8.0.14+）提供更多执行细节；<code>mysql_native_password</code> 默认关闭，监控账号统一 <code>caching_sha2_password</code>。</li>
+</ul>
+<h2 id="九、课后小结"><a href="#九、课后小结" class="headerlink" title="九、课后小结"></a>九、课后小结</h2><ul>
+<li>四层指标：可用性 → 性能 → 资源 → 正确性，缺一层就有盲区；</li>
+<li>计数器看增量与比率，不看累计绝对值；</li>
+<li><code>Threads_running</code> 判断「是否真堵」，<code>events_statements_summary_by_digest</code> 定位「谁在堵」；</li>
+<li>复制延迟用 GTID 差集算，<code>Seconds_Behind_Source</code> 只作参考；</li>
+<li>告警必须分级，否则等于没有告警。</li>
+</ul>
+<h2 id="十、思考题"><a href="#十、思考题" class="headerlink" title="十、思考题"></a>十、思考题</h2><ol>
+<li><p>为什么 <code>Threads_running</code> 比 <code>Threads_connected</code> 更能反映真实压力？</p>
+<p><strong>参考回答</strong>：<code>Threads_connected</code> 包含空闲连接（连接池常驻但不干活的那些），数值高只说明连接多。<code>Threads_running</code> 只统计正在执行命令的线程，持续高于 CPU 核数说明要么计算饱和、要么大量线程在等锁&#x2F;等 IO，是真正的压力信号。</p>
+</li>
+<li><p><code>Seconds_Behind_Source</code> 在什么情况下会「骗人」？</p>
+<p><strong>参考回答</strong>：它计算的是从库 SQL 线程处理的事件时间戳与主库当前时间的差。当主库长时间没有写入时，从库即使位点落后也显示 0；当有一个超大事务在重放时，它可能长时间停在某个值不动；时钟不同步也会导致偏差。准确判断要用 <code>Retrieved_Gtid_Set</code> 与 <code>Executed_Gtid_Set</code> 的差集。</p>
+</li>
+<li><p>buffer pool 命中率 90% 一定要扩池吗？</p>
+<p><strong>参考回答</strong>：不一定。先看 <code>Innodb_buffer_pool_reads</code> 的增量是否集中在某几个 SQL（说明是全表扫描而非池小）；再看池是否已接近物理内存上限。如果是少数大范围扫描导致，优化 SQL 比扩池有效。命中率长期低于 95% 且扫描分散，才考虑扩池或拆分实例。</p>
+</li>
+<li><p>慢 SQL 为什么要按指纹（digest）聚合，而不是逐条看？</p>
+<p><strong>参考回答</strong>：同一条 SQL 模板可能每秒执行上千次，逐条看会被淹没。<code>events_statements_summary_by_digest</code> 把参数不同的同类语句归一成一条指纹，给出总耗时、平均耗时、扫描行数，能直接排出「最贵的 20 条」。逐条看只适合定位单次异常。</p>
+</li>
+<li><p>告警分级做不好的典型后果是什么？</p>
+<p><strong>参考回答</strong>：所有告警都走同一个通道，值班人员在噪声中逐渐忽略消息，真正 P0 时没人响应（告警疲劳）。分级之后 P0 才能触发电话与升级路径，P1&#x2F;P2 走异步通道，同时要求每条告警附带足够上下文，减少「收到告警后还要自己查一圈」的时间。</p>
+</li>
+</ol>
+<h2 id="十一、官方资料"><a href="#十一、官方资料" class="headerlink" title="十一、官方资料"></a>十一、官方资料</h2><ul>
+<li>Server Status Variables：<a target="_blank" rel="noopener" href="https://dev.mysql.com/doc/refman/8.4/en/server-status-variables.html">https://dev.mysql.com/doc/refman/8.4/en/server-status-variables.html</a></li>
+<li>Performance Schema：<a target="_blank" rel="noopener" href="https://dev.mysql.com/doc/refman/8.4/en/performance-schema.html">https://dev.mysql.com/doc/refman/8.4/en/performance-schema.html</a></li>
+<li>慢查询日志：<a target="_blank" rel="noopener" href="https://dev.mysql.com/doc/refman/8.4/en/slow-query-log.html">https://dev.mysql.com/doc/refman/8.4/en/slow-query-log.html</a></li>
+<li>复制监控：<a target="_blank" rel="noopener" href="https://dev.mysql.com/doc/refman/8.4/en/replication-implementation.html">https://dev.mysql.com/doc/refman/8.4/en/replication-implementation.html</a></li>
+</ul>
+<p>上一篇：<a href="/2022/12/30/database/mysql/mysql-50-online-ddl/">MQ50 在线 DDL</a> ｜ 下一篇：<a href="/2023/01/01/database/mysql/mysql-52-privilege/">MQ52 权限体系</a> ｜ <a href="/2022/11/10/database/mysql/mysql-0-series-index/">总目录</a></p>
+</div>
+      </div>
+    </main>
+  </div>
+
+  <div class="float-buttons">
+    <button id="back-to-top" class="float-btn" title="返回顶部">↑</button>
+    <a href="/" class="float-btn" title="返回首页">🏠</a>
+  </div>
+
+  
+  <!-- 浮动按钮脚本：外链（源文件 themes/butterfly/source/js/theme/base/post-float-btn.js） -->
+  <script src="/js/theme/base/post-float-btn.js"></script>
+
+  
+  <!--
+  ============================================
+  音频播放器组件
+  文件：APlayer.njk
+  适用终端：电脑端
+  作用：全站左下角固定迷你歌单播放器（数据来自 /music/playlist.json）
+  说明：
+    - 由 post.njk / page.njk 引入；独立页可用 front-matter 的 player: false 单独关闭
+    - 歌单是本站自己的音频（背景音乐 + 自学吉他），不再走网易云 Meting
+    - 加歌只改 source/music/playlist.json，这里不用动
+    - 渲染逻辑在 /js/theme/media/star-player.js
+  ============================================
+-->
+<link rel="stylesheet" href="/js/third-party/aplayer/APlayer.min.css">
+<link rel="stylesheet" href="/css/theme/media/star-player.css">
+<script defer src="/js/third-party/aplayer/APlayer.min.js"></script>
+<script defer src="/js/theme/media/star-player.js"></script>
+<div id="star-mini"></div>
+
+
+
+<script>
+  /* 作用：懒加载本地 mermaid 库（不走外部 CDN，避免网络波动导致图表不渲染） */
+  function loadLocalMermaid(){
+    return new Promise(function(resolve, reject){
+      if(window.mermaid) return resolve(window.mermaid);
+      var s = document.createElement('script');
+      s.src = '/js/third-party/mermaid/mermaid.min.js?v=10';
+      s.onload = function(){ resolve(window.mermaid); };
+      s.onerror = function(){ reject(new Error('mermaid local load failed')); };
+      document.head.appendChild(s);
+    });
+  }
+
+  /* 作用：把 ```mermaid 代码块替换成渲染后的 SVG 图 */
+  async function renderMermaidDiagram(){
+    var blocks = document.querySelectorAll('pre[class*="language-mermaid"]');
+    if(!blocks.length) return;
+    var mermaid;
+    try { mermaid = await loadLocalMermaid(); }
+    catch(e){ console.warn('[mermaid] 本地库加载失败：', e); return; }
+
+    mermaid.initialize({
+      startOnLoad: false,
+      theme: 'base',
+      themeVariables: {
+        darkMode: true,
+        background: 'transparent',
+        fontFamily: '"Microsoft YaHei", "PingFang SC", "Segoe UI", sans-serif',
+        fontSize: '14px',
+        primaryColor: '#062f3d',
+        primaryTextColor: '#d6f6ff',
+        primaryBorderColor: '#00eeff',
+        secondaryColor: '#04222d',
+        tertiaryColor: '#04222d',
+        mainBkg: '#062f3d',
+        nodeBorder: '#00eeff',
+        clusterBkg: '#02161f',
+        clusterBorder: '#00eeff55',
+        lineColor: '#00eeff',
+        textColor: '#c0e8ff',
+        edgeLabelBackground: '#02161f'
+      },
+      flowchart: { curve: 'basis', useMaxWidth: true, htmlLabels: false, nodeSpacing: 46, rankSpacing: 64, padding: 14 }
+    });
+
+    var targets = [];
+    blocks.forEach(function(el){
+      var codeEl = el.querySelector('code');
+      if(!codeEl) return;
+      var div = document.createElement('div');
+      div.className = 'mermaid';
+      div.textContent = codeEl.textContent;
+      el.parentNode.replaceChild(div, el);
+      targets.push(div);
+    });
+    if(!targets.length) return;
+    try { await mermaid.run({ nodes: targets }); }
+    catch(e){ console.warn('[mermaid] 渲染失败：', e); }
+  }
+  /* 作用：多次触发兜底。某些时机（pjax 局部加载、标签页从后台恢复、库加载慢）
+     脚本可能一次没跑到，用「延迟重试 + DOM 变化监听」保证最终一定渲染成图 */
+  var mmBusy = false;
+  function scheduleMermaid(){
+    if(mmBusy) return;
+    mmBusy = true;
+    renderMermaidDiagram().then(function(){ mmBusy = false; }, function(){ mmBusy = false; });
+  }
+
+  document.addEventListener('DOMContentLoaded', scheduleMermaid);
+  window.addEventListener('load', scheduleMermaid);
+  ['pjax:complete', 'pjax:success', 'render'].forEach(function(ev){
+    document.addEventListener(ev, scheduleMermaid);
+  });
+  [1000, 3000, 8000].forEach(function(ms){ setTimeout(scheduleMermaid, ms); });
+  if(document.readyState !== 'loading') scheduleMermaid();
+
+  /* 作用：正文被动态替换（局部刷新 / 回到前台）时再兜一次，防漏渲染 */
+  if(window.MutationObserver){
+    var mmTimer = null;
+    var mmObserver = new MutationObserver(function(){
+      clearTimeout(mmTimer);
+      mmTimer = setTimeout(scheduleMermaid, 400);
+    });
+    document.addEventListener('DOMContentLoaded', function(){
+      var root = document.querySelector('#article-container') || document.body;
+      mmObserver.observe(root, { childList: true, subtree: true });
+    });
+  }
+</script>
+
+
+  <script>
+    /* 返回按钮来源判定：从星迹索引进来回 /tags/，从星图手记进来回 /archives/；
+       直接从地址栏/站外进入时默认回星图手记，保证按钮始终可用 */
+    (function () {
+      var back = document.getElementById('articleBack');
+      if (!back) return;
+      var from = '';
+      try {
+        var q = new URLSearchParams(location.search);
+        from = q.get('from') || '';
+      } catch (e) {}
+      if (!from) {
+        var ref = document.referrer || '';
+        if (ref.indexOf('/tags') > -1) from = 'tags';
+        else if (ref.indexOf('/archives') > -1) from = 'archive';
+      }
+      if (from === 'tags') {
+        back.href = '/tags/';
+        back.textContent = '← 返回星迹索引';
+      } else if (from === 'search') {
+        back.href = '/';
+        back.textContent = '← 返回首页';
+      } else {
+        back.href = '/archives/';
+        back.textContent = '← 返回星图手记';
+      }
+    })();
+  </script>
+</body>
+</html>
