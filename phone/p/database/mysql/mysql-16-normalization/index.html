@@ -1,0 +1,451 @@
+<!--
+  ============================================
+  手机端 · 文章原文页
+  文件：phone/post.njk
+  适用终端：手机端（路由 /phone/p/<slug>/，由 scripts/phone-routes.js 生成）
+  作用：手机阅读单篇文章；单列布局、无侧栏无雷达，替代电脑端 post.njk
+        数据由生成期算好：page.item = { title, dateStr, content, cats, tags }
+  样式依赖：source/css/theme/phone/common.css、source/css/theme/phone/list.css
+  组件依赖：phone/_components/Particles.njk
+  最后修改：2026-11-11
+  ============================================
+-->
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="color-scheme" content="dark">
+  <meta name="theme-color" content="#020817">
+  <!-- 首帧兜底：浏览器默认画布是白的，样式未解析前会闪一下白。这条规则先锁死深空底色 -->
+  <style>html{background-color:#020817}</style>
+  <title>mysql-16-范式与反范式 - 时空秘境</title>
+  <!-- 手机端样式：基础 + 列表/正文，外链引入（源文件 source/css/theme/phone/） -->
+  <link rel="stylesheet" href="/css/theme/phone/common.css">
+  <link rel="stylesheet" href="/css/theme/phone/list.css">
+<meta name="generator" content="Hexo 8.1.2"></head>
+<body>
+<div class="mb-shell">
+  <!--
+  ============================================
+  手机端星空粒子组件
+  文件：Particles.njk
+  适用终端：手机端
+  作用：Particles.njk 的手机端副本（nunjucks 子目录 include 取不到上级）
+        参数与电脑端 _components/Particles.njk 保持一致：
+        粒子 95 / 连线 118px / opacity 0.32，外加星座层与零星闪烁层
+  最后修改：2026-11-12
+  ============================================
+--><!-- z-index 必须是 0：负层级会被 body 不透明背景盖住，粒子在跑却看不见 -->
+<div id="particles" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 0; pointer-events: none;"></div>
+<!-- 星座层（与首页同一套：随机零星散布星座图形 + 偶尔闪烁的小星） -->
+<div id="constellations" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 1; pointer-events: none;" aria-hidden="true"></div>
+<script src="/js/particles.min.js"></script>
+<script>
+particlesJS("particles", {
+  particles: {
+    number: {
+      value: 95,
+      density: {
+        enable: true,
+        value_area: 800
+      }
+    },
+    color: {
+      value: "#00eeff"
+    },
+    shape: {
+      type: "circle",
+      stroke: {
+        width: 0,
+        color: "#000000"
+      }
+    },
+    opacity: {
+      value: 0.6,
+      random: true,
+      anim: {
+        enable: true,
+        speed: 0.5,
+        opacity_min: 0.1,
+        sync: false
+      }
+    },
+    size: {
+      value: 3,
+      random: true,
+      anim: {
+        enable: true,
+        speed: 2,
+        size_min: 0.1,
+        sync: false
+      }
+    },
+    line_linked: {
+      enable: true,
+      distance: 118,
+      color: "#00eeff",
+      opacity: 0.32,
+      width: 1
+    },
+    move: {
+      enable: true,
+      speed: 0.8,
+      direction: "none",
+      random: true,
+      straight: false,
+      out_mode: "out",
+      bounce: false,
+      attract: {
+        enable: true,
+        rotateX: 600,
+        rotateY: 1200
+      }
+    }
+  },
+  interactivity: {
+    detect_on: "canvas",
+    events: {
+      onhover: {
+        enable: true,
+        mode: "grab"       // 手指按住时粒子聚集
+      },
+      onclick: {
+        enable: true,
+        mode: "push"       // 点击时产生新粒子
+      },
+      resize: true
+    },
+    modes: {
+      grab: {
+        distance: 200,
+        line_linked: {
+          opacity: 1
+        }
+      },
+      push: {
+        particles_nb: 6
+      }
+    }
+  },
+  retina_detect: true
+});
+</script>
+<!-- 星座 + 零星闪烁层：与电脑端共用同一份绘制脚本 -->
+<script src="/js/theme/home/starfield.js"></script>
+
+
+  <div class="mb-top">
+    <a class="mb-back" href="/phone/">← 返回手机首页</a>
+    <span class="mb-sub" style="margin:0">2022-11-26</span>
+  </div>
+
+  <h1 class="mb-title">mysql-16-范式与反范式</h1>
+  <div class="mb-sub">
+    分类：database · mysql
+     ｜ 标签：系统课 · MySQL · 数据库
+  </div>
+
+  <div class="mb-article"><div class="essay-banner essay-database"></div>
+
+<h1 id="三大范式与反范式：什么时候故意冗余"><a href="#三大范式与反范式：什么时候故意冗余" class="headerlink" title="三大范式与反范式：什么时候故意冗余"></a>三大范式与反范式：什么时候故意冗余</h1><p><img src="https://wu4yong.github.io/starry-images/assets/img/mysql/mq-16-normal.svg" alt="范式是默认，冗余是被批准的例外"></p>
+<p><em>范式解决一致性与更新异常，反范式解决读性能，两者是权衡而不是对错｜依据关系数据库设计理论与 MySQL 实践自绘</em></p>
+<h2 id="一、学习目标"><a href="#一、学习目标" class="headerlink" title="一、学习目标"></a>一、学习目标</h2><ol>
+<li>用一个例子把 1NF &#x2F; 2NF &#x2F; 3NF 讲清楚，而不是背定义；</li>
+<li>知道范式到底防的是什么问题（更新异常、插入异常、删除异常）；</li>
+<li>能判断哪些冗余可以接受、哪些冗余一定会失控，并写得出「冗余字段的同步方案」。</li>
+</ol>
+<h2 id="二、前置知识"><a href="#二、前置知识" class="headerlink" title="二、前置知识"></a>二、前置知识</h2><p>表结构、主键与外键、函数依赖的基本概念。看到「A 决定 B」能反应过来是函数依赖即可。</p>
+<h2 id="三、理论讲解（官方定义）"><a href="#三、理论讲解（官方定义）" class="headerlink" title="三、理论讲解（官方定义）"></a>三、理论讲解（官方定义）</h2><p>范式（Normal Form）是关系模型对「表内不该存在部分依赖与传递依赖」的约束：</p>
+<ul>
+<li><strong>1NF</strong>：每个列都是原子的，不能再拆（不能把「省,市,区」塞进一个列）；</li>
+<li><strong>2NF</strong>：在 1NF 基础上，非主属性完全依赖于候选键，不存在<strong>部分依赖</strong>（联合主键里只依赖其中一列）；</li>
+<li><strong>3NF</strong>：在 2NF 基础上，非主属性不<strong>传递依赖</strong>于候选键（A→B→C，C 不该存在）；</li>
+<li><strong>BCNF</strong>：所有决定因素都是候选键，3NF 的加强版。</li>
+</ul>
+<p>范式不是 MySQL 强制的东西——它没有「范式检查开关」，只是设计方法论。MySQL 侧只提供工具（主键、唯一索引、外键）来支撑你按范式建模。</p>
+<h2 id="四、原理拆解"><a href="#四、原理拆解" class="headerlink" title="四、原理拆解"></a>四、原理拆解</h2><p><img src="https://wu4yong.github.io/starry-images/assets/img/mysql/mq-16b-normal.svg" alt="范式到反范式的取舍路径"></p>
+<p><em>先按 3NF 建模保证一致，再按读写比例对热点路径做定向冗余｜依据关系模型理论与 MySQL 索引特性自绘</em></p>
+<h3 id="1-一个具体例子看清-1NF-→-3NF"><a href="#1-一个具体例子看清-1NF-→-3NF" class="headerlink" title="1. 一个具体例子看清 1NF → 3NF"></a>1. 一个具体例子看清 1NF → 3NF</h3><pre class="line-numbers language-sql" data-language="sql"><code class="language-sql"><span class="token comment">-- 反例：一张表塞了所有东西</span>
+<span class="token keyword">CREATE</span> <span class="token keyword">TABLE</span> t_order_bad <span class="token punctuation">(</span>
+  id        <span class="token keyword">BIGINT</span> <span class="token keyword">PRIMARY</span> <span class="token keyword">KEY</span><span class="token punctuation">,</span>
+  user_info <span class="token keyword">VARCHAR</span><span class="token punctuation">(</span><span class="token number">200</span><span class="token punctuation">)</span><span class="token punctuation">,</span>   <span class="token comment">-- "1001,张三,138xxxx" 违反 1NF</span>
+  items     <span class="token keyword">TEXT</span><span class="token punctuation">,</span>           <span class="token comment">-- "商品A x 2;商品B x 1" 违反 1NF</span>
+  city      <span class="token keyword">VARCHAR</span><span class="token punctuation">(</span><span class="token number">32</span><span class="token punctuation">)</span>     <span class="token comment">-- 用户的城市，可通过 user_id 得到，属传递依赖</span>
+<span class="token punctuation">)</span><span class="token punctuation">;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<p>拆成 3NF：</p>
+<pre class="line-numbers language-sql" data-language="sql"><code class="language-sql"><span class="token keyword">CREATE</span> <span class="token keyword">TABLE</span> t_user <span class="token punctuation">(</span>
+  id    <span class="token keyword">BIGINT</span> <span class="token keyword">PRIMARY</span> <span class="token keyword">KEY</span><span class="token punctuation">,</span>
+  name  <span class="token keyword">VARCHAR</span><span class="token punctuation">(</span><span class="token number">32</span><span class="token punctuation">)</span> <span class="token operator">NOT</span> <span class="token boolean">NULL</span><span class="token punctuation">,</span>
+  phone <span class="token keyword">VARCHAR</span><span class="token punctuation">(</span><span class="token number">20</span><span class="token punctuation">)</span> <span class="token operator">NOT</span> <span class="token boolean">NULL</span><span class="token punctuation">,</span>
+  city  <span class="token keyword">VARCHAR</span><span class="token punctuation">(</span><span class="token number">32</span><span class="token punctuation">)</span> <span class="token operator">NOT</span> <span class="token boolean">NULL</span>
+<span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+<span class="token keyword">CREATE</span> <span class="token keyword">TABLE</span> t_order <span class="token punctuation">(</span>
+  id      <span class="token keyword">BIGINT</span> <span class="token keyword">PRIMARY</span> <span class="token keyword">KEY</span><span class="token punctuation">,</span>
+  user_id <span class="token keyword">BIGINT</span> <span class="token operator">NOT</span> <span class="token boolean">NULL</span><span class="token punctuation">,</span>
+  <span class="token keyword">status</span>  <span class="token keyword">TINYINT</span> <span class="token operator">NOT</span> <span class="token boolean">NULL</span>
+<span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+<span class="token keyword">CREATE</span> <span class="token keyword">TABLE</span> t_order_item <span class="token punctuation">(</span>
+  order_id   <span class="token keyword">BIGINT</span> <span class="token operator">NOT</span> <span class="token boolean">NULL</span><span class="token punctuation">,</span>
+  product_id <span class="token keyword">BIGINT</span> <span class="token operator">NOT</span> <span class="token boolean">NULL</span><span class="token punctuation">,</span>
+  qty        <span class="token keyword">INT</span> <span class="token operator">NOT</span> <span class="token boolean">NULL</span><span class="token punctuation">,</span>
+  unit_price <span class="token keyword">DECIMAL</span><span class="token punctuation">(</span><span class="token number">10</span><span class="token punctuation">,</span><span class="token number">2</span><span class="token punctuation">)</span> <span class="token operator">NOT</span> <span class="token boolean">NULL</span><span class="token punctuation">,</span>
+  <span class="token keyword">PRIMARY</span> <span class="token keyword">KEY</span> <span class="token punctuation">(</span>order_id<span class="token punctuation">,</span> product_id<span class="token punctuation">)</span>
+<span class="token punctuation">)</span><span class="token punctuation">;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<p>注意 <code>t_order_item</code> 里 <code>unit_price</code> 是「下单时的成交价」，属于订单自己的属性；而商品当前价格在 <code>t_product</code> 里——同一概念两个值，是<strong>有意的冗余</strong>（见下文）。</p>
+<h3 id="2-范式防的三类异常"><a href="#2-范式防的三类异常" class="headerlink" title="2. 范式防的三类异常"></a>2. 范式防的三类异常</h3><table>
+<thead>
+<tr>
+<th>异常</th>
+<th>不范式时会发生什么</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>更新异常</td>
+<td>用户改城市，订单表里 100 条历史行都要改，漏一条就不一致</td>
+</tr>
+<tr>
+<td>插入异常</td>
+<td>想把新用户登记进来，但没有订单就没有地方放它的信息</td>
+</tr>
+<tr>
+<td>删除异常</td>
+<td>删掉最后一条订单，用户信息跟着没了</td>
+</tr>
+</tbody></table>
+<h3 id="3-什么时候故意反范式"><a href="#3-什么时候故意反范式" class="headerlink" title="3. 什么时候故意反范式"></a>3. 什么时候故意反范式</h3><p>反范式的本质是<strong>用空间与一致性维护成本，换读路径上的 JOIN 与计算</strong>。</p>
+<p>可以接受的三类冗余：</p>
+<ol>
+<li><strong>读多写少的展示字段</strong>：订单列表要显示用户名、商品标题，把 <code>user_name</code>、<code>product_title</code> 冗余进订单快照；</li>
+<li><strong>快照型字段</strong>：价格、地址、优惠规则在<strong>下单时刻</strong>固化，业务上本来就要求和当前值不同；</li>
+<li><strong>预聚合结果</strong>：日活、销售额这类统计，写时更新宽表或定时跑批，查询直接命中。</li>
+</ol>
+<p>不该做的冗余：</p>
+<ul>
+<li>冗余一个<strong>高频变化</strong>的字段（在线状态、余额）到多张表，同步成本会超过收益；</li>
+<li>冗余<strong>可以通过索引解决</strong>的东西：分页慢不是靠加宽表，而是靠覆盖索引 &#x2F; 延迟关联（MQ19）；</li>
+<li>无同步机制的冗余：改一张表不改另一张，迟早不一致。</li>
+</ul>
+<h3 id="4-冗余的三种同步方案"><a href="#4-冗余的三种同步方案" class="headerlink" title="4. 冗余的三种同步方案"></a>4. 冗余的三种同步方案</h3><table>
+<thead>
+<tr>
+<th>方案</th>
+<th>一致性</th>
+<th>复杂度</th>
+<th>适用</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>同事务双写</td>
+<td>强（同库同事务）</td>
+<td>低</td>
+<td>单库、字段少</td>
+</tr>
+<tr>
+<td>事务后发消息（MQ）</td>
+<td>最终一致，可重试</td>
+<td>中</td>
+<td>跨服务、跨库</td>
+</tr>
+<tr>
+<td>定时对账 + 补偿</td>
+<td>最终一致，滞后</td>
+<td>中高</td>
+<td>兜底，必备</td>
+</tr>
+</tbody></table>
+<p>写冗余字段要同时想清楚：<strong>谁写、失败怎么办、怎么核对</strong>。三者缺一个，冗余就是负债。</p>
+<h3 id="5-宽表与冷热分离"><a href="#5-宽表与冷热分离" class="headerlink" title="5. 宽表与冷热分离"></a>5. 宽表与冷热分离</h3><p>数仓里常见的「宽表」是极端的反范式：把用户、订单、商品全部打平到一张宽表，用空间换查询速度。代价是更新链路复杂，通常由离线&#x2F;实时同步任务维护，而<strong>不作为线上写库的表结构</strong>。</p>
+<h2 id="五、场景说明"><a href="#五、场景说明" class="headerlink" title="五、场景说明"></a>五、场景说明</h2><ol>
+<li><strong>电商订单</strong>：订单表 3NF 为主，冗余 <code>user_name</code> 与下单时价格做快照；</li>
+<li><strong>社交 Feed</strong>：<code>feed</code> 表冗余作者头像与昵称，避免每次渲染都查用户表；</li>
+<li><strong>统计看板</strong>：<code>stat_daily</code> 预聚合表，按天写入，查询只扫一张表；</li>
+<li><strong>配置中心</strong>：字典、枚举这类「变化极慢」的维表，冗余到业务表里完全可接受；</li>
+<li><strong>历史归档</strong>：订单归档表直接按查询形态打平，反正不再更新。</li>
+</ol>
+<h2 id="六、示例代码-实操步骤"><a href="#六、示例代码-实操步骤" class="headerlink" title="六、示例代码&#x2F;实操步骤"></a>六、示例代码&#x2F;实操步骤</h2><h3 id="1-从反例出发拆表"><a href="#1-从反例出发拆表" class="headerlink" title="1. 从反例出发拆表"></a>1. 从反例出发拆表</h3><pre class="line-numbers language-sql" data-language="sql"><code class="language-sql"><span class="token comment">-- 违反 1NF 的写法</span>
+<span class="token keyword">INSERT</span> <span class="token keyword">INTO</span> t_order_bad <span class="token punctuation">(</span>id<span class="token punctuation">,</span> user_info<span class="token punctuation">,</span> items<span class="token punctuation">)</span> <span class="token keyword">VALUES</span> <span class="token punctuation">(</span><span class="token number">1</span><span class="token punctuation">,</span> <span class="token string">'1001,张三,13800000000'</span><span class="token punctuation">,</span> <span class="token string">'A x2;B x1'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+<span class="token comment">-- 拆表后：一次插入落到三张表，同一个事务里</span>
+<span class="token keyword">START</span> <span class="token keyword">TRANSACTION</span><span class="token punctuation">;</span>
+<span class="token keyword">INSERT</span> <span class="token keyword">INTO</span> t_order <span class="token punctuation">(</span>id<span class="token punctuation">,</span> user_id<span class="token punctuation">,</span> <span class="token keyword">status</span><span class="token punctuation">)</span> <span class="token keyword">VALUES</span> <span class="token punctuation">(</span><span class="token number">1</span><span class="token punctuation">,</span> <span class="token number">1001</span><span class="token punctuation">,</span> <span class="token number">0</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token keyword">INSERT</span> <span class="token keyword">INTO</span> t_order_item <span class="token punctuation">(</span>order_id<span class="token punctuation">,</span> product_id<span class="token punctuation">,</span> qty<span class="token punctuation">,</span> unit_price<span class="token punctuation">)</span>
+<span class="token keyword">VALUES</span> <span class="token punctuation">(</span><span class="token number">1</span><span class="token punctuation">,</span> <span class="token number">2001</span><span class="token punctuation">,</span> <span class="token number">2</span><span class="token punctuation">,</span> <span class="token number">99.00</span><span class="token punctuation">)</span><span class="token punctuation">,</span> <span class="token punctuation">(</span><span class="token number">1</span><span class="token punctuation">,</span> <span class="token number">2002</span><span class="token punctuation">,</span> <span class="token number">1</span><span class="token punctuation">,</span> <span class="token number">19.90</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token keyword">COMMIT</span><span class="token punctuation">;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<h3 id="2-冗余快照字段的正确姿势"><a href="#2-冗余快照字段的正确姿势" class="headerlink" title="2. 冗余快照字段的正确姿势"></a>2. 冗余快照字段的正确姿势</h3><pre class="line-numbers language-sql" data-language="sql"><code class="language-sql"><span class="token keyword">CREATE</span> <span class="token keyword">TABLE</span> t_order <span class="token punctuation">(</span>
+  id            <span class="token keyword">BIGINT</span> <span class="token keyword">UNSIGNED</span> <span class="token operator">NOT</span> <span class="token boolean">NULL</span> <span class="token keyword">AUTO_INCREMENT</span><span class="token punctuation">,</span>
+  user_id       <span class="token keyword">BIGINT</span> <span class="token keyword">UNSIGNED</span> <span class="token operator">NOT</span> <span class="token boolean">NULL</span><span class="token punctuation">,</span>
+  user_name     <span class="token keyword">VARCHAR</span><span class="token punctuation">(</span><span class="token number">32</span><span class="token punctuation">)</span> <span class="token operator">NOT</span> <span class="token boolean">NULL</span><span class="token punctuation">,</span>     <span class="token comment">-- 快照，不随用户改名变化</span>
+  total_amount  <span class="token keyword">DECIMAL</span><span class="token punctuation">(</span><span class="token number">12</span><span class="token punctuation">,</span><span class="token number">2</span><span class="token punctuation">)</span> <span class="token operator">NOT</span> <span class="token boolean">NULL</span><span class="token punctuation">,</span>
+  receiver_city <span class="token keyword">VARCHAR</span><span class="token punctuation">(</span><span class="token number">32</span><span class="token punctuation">)</span> <span class="token operator">NOT</span> <span class="token boolean">NULL</span><span class="token punctuation">,</span>     <span class="token comment">-- 快照收货城市</span>
+  created_at    <span class="token keyword">DATETIME</span> <span class="token operator">NOT</span> <span class="token boolean">NULL</span> <span class="token keyword">DEFAULT</span> <span class="token keyword">CURRENT_TIMESTAMP</span><span class="token punctuation">,</span>
+  <span class="token keyword">PRIMARY</span> <span class="token keyword">KEY</span> <span class="token punctuation">(</span>id<span class="token punctuation">)</span><span class="token punctuation">,</span>
+  <span class="token keyword">KEY</span> idx_user_created <span class="token punctuation">(</span>user_id<span class="token punctuation">,</span> created_at<span class="token punctuation">)</span>
+<span class="token punctuation">)</span> <span class="token keyword">ENGINE</span><span class="token operator">=</span><span class="token keyword">InnoDB</span><span class="token punctuation">;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<p>下单时把当时的值写进去，之后<strong>永不回写</strong>——这叫快照，不叫冗余，一致性天然成立。</p>
+<h3 id="3-字典维表冗余"><a href="#3-字典维表冗余" class="headerlink" title="3. 字典维表冗余"></a>3. 字典维表冗余</h3><pre class="line-numbers language-sql" data-language="sql"><code class="language-sql"><span class="token comment">-- 维表变化极慢，业务表只存 code + 展示名</span>
+<span class="token keyword">CREATE</span> <span class="token keyword">TABLE</span> t_dict_item <span class="token punctuation">(</span>
+  dict_type <span class="token keyword">VARCHAR</span><span class="token punctuation">(</span><span class="token number">32</span><span class="token punctuation">)</span> <span class="token operator">NOT</span> <span class="token boolean">NULL</span><span class="token punctuation">,</span>
+  item_code <span class="token keyword">VARCHAR</span><span class="token punctuation">(</span><span class="token number">32</span><span class="token punctuation">)</span> <span class="token operator">NOT</span> <span class="token boolean">NULL</span><span class="token punctuation">,</span>
+  item_name <span class="token keyword">VARCHAR</span><span class="token punctuation">(</span><span class="token number">64</span><span class="token punctuation">)</span> <span class="token operator">NOT</span> <span class="token boolean">NULL</span><span class="token punctuation">,</span>
+  <span class="token keyword">PRIMARY</span> <span class="token keyword">KEY</span> <span class="token punctuation">(</span>dict_type<span class="token punctuation">,</span> item_code<span class="token punctuation">)</span>
+<span class="token punctuation">)</span><span class="token punctuation">;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<h3 id="4-冗余一致性巡检"><a href="#4-冗余一致性巡检" class="headerlink" title="4. 冗余一致性巡检"></a>4. 冗余一致性巡检</h3><pre class="line-numbers language-sql" data-language="sql"><code class="language-sql"><span class="token comment">-- 找出「订单里的用户名」与「用户表当前名」不一致的行（只允许历史快照差异）</span>
+<span class="token keyword">SELECT</span> o<span class="token punctuation">.</span>id<span class="token punctuation">,</span> o<span class="token punctuation">.</span>user_name<span class="token punctuation">,</span> u<span class="token punctuation">.</span>name
+<span class="token keyword">FROM</span> t_order o <span class="token keyword">JOIN</span> t_user u <span class="token keyword">ON</span> u<span class="token punctuation">.</span>id <span class="token operator">=</span> o<span class="token punctuation">.</span>user_id
+<span class="token keyword">WHERE</span> o<span class="token punctuation">.</span>user_name <span class="token operator">&lt;></span> u<span class="token punctuation">.</span>name
+<span class="token keyword">LIMIT</span> <span class="token number">20</span><span class="token punctuation">;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<h3 id="5-判定该不该冗余的三个问题"><a href="#5-判定该不该冗余的三个问题" class="headerlink" title="5. 判定该不该冗余的三个问题"></a>5. 判定该不该冗余的三个问题</h3><ol>
+<li>这个字段<strong>读</strong>的频率远高于<strong>写</strong>吗？</li>
+<li>业务上允许它「过期」吗（快照）？还是必须实时一致？</li>
+<li>同步失败时，有没有对账能发现？</li>
+</ol>
+<p>三问都过，才加冗余。</p>
+<h3 id="Java-侧怎么落地：实体拆分与冗余字段维护"><a href="#Java-侧怎么落地：实体拆分与冗余字段维护" class="headerlink" title="Java 侧怎么落地：实体拆分与冗余字段维护"></a>Java 侧怎么落地：实体拆分与冗余字段维护</h3><ol>
+<li><strong>实体按表拆，不按页面拆</strong>：<code>Order</code>、<code>OrderItem</code> 各一个实体，页面需要的聚合放到 VO 里组装，别为了省一次查询把实体做成「大宽类」；</li>
+<li><strong>快照字段用值对象固化</strong>：下单时把 <code>user_name</code>、<code>address</code> 拷进 <code>OrderSnapshot</code>，之后不再读用户表；</li>
+<li><strong>冗余用领域事件同步</strong>：<code>UserRenamedEvent</code> → 监听方更新冗余字段，失败进重试队列；</li>
+<li><strong>写路径统一</strong>：所有对 <code>t_order</code> 的写入走同一个 Repository，禁掉散落的 UPDATE，否则冗余字段会漏更新；</li>
+<li><strong>对账任务</strong>：每天跑一次上面那条巡检 SQL，差异超阈值报警。</li>
+</ol>
+<h2 id="七、常见坑"><a href="#七、常见坑" class="headerlink" title="七、常见坑"></a>七、常见坑</h2><ol>
+<li><strong>把 1NF 理解成「不能有数组」</strong>：JSON 列存数组在 MySQL 里合法，但查询、索引、约束都会很别扭，能拆表就拆表；</li>
+<li><strong>联合主键表漏了完全依赖</strong>：<code>(order_id, product_id)</code> 主键却把 <code>product_name</code> 放进来，改名就产生更新异常；</li>
+<li><strong>冗余高频变化字段</strong>：余额、在线状态冗余三份，同步迟早崩；</li>
+<li><strong>快照与冗余混为一谈</strong>：快照是「有意保留历史值」，冗余是「要跟源表保持一致」，两者的回写策略完全相反；</li>
+<li><strong>宽表直接当写库</strong>：更新一条要改十几处，事务又长又重；</li>
+<li><strong>没有唯一约束兜底</strong>：拆表后忘了在子表建 <code>(order_id, product_id)</code> 唯一键，重复写入没人拦。</li>
+</ol>
+<h2 id="八、版本差异"><a href="#八、版本差异" class="headerlink" title="八、版本差异"></a>八、版本差异</h2><ul>
+<li><strong>5.7 &#x2F; 8.0 &#x2F; 8.4</strong>：范式本身与版本无关，属于设计方法论；</li>
+<li><strong>8.0 起</strong>：<code>JSON</code> 类型与函数更完善（<code>JSON_TABLE</code>、多值索引），让「半结构化冗余」有了可用方案，但不改变范式判断；</li>
+<li><strong>8.4</strong>：多值索引（multi-valued index）可用于 <code>JSON</code> 数组列，能在一定程度上替代「拆成关联表」的做法，但更新语义仍不如关系表清晰。</li>
+</ul>
+<h2 id="九、课后小结"><a href="#九、课后小结" class="headerlink" title="九、课后小结"></a>九、课后小结</h2><ul>
+<li>1NF 原子、2NF 无部分依赖、3NF 无传递依赖，BCNF 更严；</li>
+<li>范式防的是更新、插入、删除三类异常；</li>
+<li>反范式的三种合法形态：展示字段、快照、预聚合；</li>
+<li>冗余必须回答「谁写、失败怎么办、怎么核对」；</li>
+<li>快照不回写，冗余要同步，两者别混。</li>
+</ul>
+<h2 id="十、思考题"><a href="#十、思考题" class="headerlink" title="十、思考题"></a>十、思考题</h2><ol>
+<li><p>订单表里冗余 <code>user_name</code>，用户改名后订单列表还显示旧名字，是 bug 吗？</p>
+<p><strong>参考回答</strong>：不是，这通常是<strong>快照</strong>语义——订单展示的是下单时刻的信息。如果业务要求「实时显示当前昵称」，那就不该冗余，而是在查询时 JOIN 或通过缓存读用户服务。</p>
+</li>
+<li><p>为什么说「加宽表解决分页慢」是错误的反范式？</p>
+<p><strong>参考回答</strong>：分页慢的根因是回表与深翻页扫描，宽表只是把更多列塞进同一行，扫描量没减少，还增加了行宽与 IO。正确做法是覆盖索引或延迟关联（先取主键再回表）。</p>
+</li>
+<li><p>3NF 的表一定没有冗余吗？</p>
+<p><strong>参考回答</strong>：不一定。3NF 只约束「非主属性对候选键的依赖」，不代表业务上不会为了读性能额外放快照字段。范式是下限，不是上限。</p>
+</li>
+<li><p>冗余字段的双写放在同一个事务里，能保证强一致吗？</p>
+<p><strong>参考回答</strong>：同库同事务可以；跨库跨服务不行（无法真正两阶段提交），只能做到最终一致，需要消息重试与对账兜底。</p>
+</li>
+<li><p>什么情况下应该放弃拆表、直接用 JSON 列？</p>
+<p><strong>参考回答</strong>：字段集合不固定、整体读写、很少按其中某个键过滤的场景（如埋点扩展属性）。一旦需要按内部字段高频查询或聚合，就该拆成关系表。</p>
+</li>
+</ol>
+<h2 id="十一、官方资料"><a href="#十一、官方资料" class="headerlink" title="十一、官方资料"></a>十一、官方资料</h2><ul>
+<li>数据类型与 JSON：<a target="_blank" rel="noopener" href="https://dev.mysql.com/doc/refman/8.4/en/json.html">https://dev.mysql.com/doc/refman/8.4/en/json.html</a></li>
+<li>多值索引：<a target="_blank" rel="noopener" href="https://dev.mysql.com/doc/refman/8.4/en/create-index.html#create-index-multi-valued">https://dev.mysql.com/doc/refman/8.4/en/create-index.html#create-index-multi-valued</a></li>
+<li>索引与查询优化总览：<a target="_blank" rel="noopener" href="https://dev.mysql.com/doc/refman/8.4/en/optimization.html">https://dev.mysql.com/doc/refman/8.4/en/optimization.html</a></li>
+</ul>
+<p>上一篇：<a href="/2022/11/25/database/mysql/mysql-15-constraints/">MQ15 约束</a> ｜ 下一篇：<a href="/2022/11/27/database/mysql/mysql-17-primary-key/">MQ17 主键选型</a> ｜ <a href="/2022/11/10/database/mysql/mysql-0-series-index/">总目录</a></p>
+</div>
+
+  <div class="mb-foot">
+    <a href="/phone/">返回手机首页</a>
+    <a href="/phone/tags/">星迹索引</a>
+  </div>
+</div>
+
+
+<script>
+  /* 作用：懒加载本地 mermaid 库；无 mermaid 代码块时不加载 */
+  function loadLocalMermaid(){
+    return new Promise(function(resolve, reject){
+      if(window.mermaid) return resolve(window.mermaid);
+      var s = document.createElement('script');
+      s.src = '/js/third-party/mermaid/mermaid.min.js?v=10';
+      s.onload = function(){ resolve(window.mermaid); };
+      s.onerror = function(){ reject(new Error('mermaid local load failed')); };
+      document.head.appendChild(s);
+    });
+  }
+
+  /* 作用：把 ```mermaid 代码块替换成 SVG 图（手机端字号略小、图可横向滚动） */
+  async function renderMermaidDiagram(){
+    var blocks = document.querySelectorAll('pre[class*="language-mermaid"]');
+    if(!blocks.length) return;
+    var mermaid;
+    try { mermaid = await loadLocalMermaid(); }
+    catch(e){ console.warn('[mermaid] 本地库加载失败：', e); return; }
+
+    mermaid.initialize({
+      startOnLoad: false,
+      theme: 'base',
+      themeVariables: {
+        darkMode: true,
+        background: 'transparent',
+        fontFamily: '"Microsoft YaHei", "PingFang SC", "Segoe UI", sans-serif',
+        fontSize: '12px',
+        primaryColor: '#062f3d',
+        primaryTextColor: '#d6f6ff',
+        primaryBorderColor: '#00eeff',
+        secondaryColor: '#04222d',
+        tertiaryColor: '#04222d',
+        mainBkg: '#062f3d',
+        nodeBorder: '#00eeff',
+        clusterBkg: '#02161f',
+        clusterBorder: '#00eeff55',
+        lineColor: '#00eeff',
+        textColor: '#c0e8ff',
+        edgeLabelBackground: '#02161f'
+      },
+      flowchart: { curve: 'basis', useMaxWidth: false, htmlLabels: false, nodeSpacing: 30, rankSpacing: 40, padding: 10 }
+    });
+
+    var targets = [];
+    blocks.forEach(function(el){
+      var codeEl = el.querySelector('code');
+      if(!codeEl) return;
+      var div = document.createElement('div');
+      div.className = 'mermaid';
+      div.textContent = codeEl.textContent;
+      el.parentNode.replaceChild(div, el);
+      targets.push(div);
+    });
+    if(!targets.length) return;
+    try { await mermaid.run({ nodes: targets }); }
+    catch(e){ console.warn('[mermaid] 渲染失败：', e); }
+  }
+  /* 作用：多次触发兜底（延迟重试 + DOM 变化），防止某次时机没跑到导致图表留在代码块 */
+  var mmBusy = false;
+  function scheduleMermaid(){
+    if(mmBusy) return;
+    mmBusy = true;
+    renderMermaidDiagram().then(function(){ mmBusy = false; }, function(){ mmBusy = false; });
+  }
+  scheduleMermaid();
+  window.addEventListener('load', scheduleMermaid);
+  [1000, 3000, 8000].forEach(function(ms){ setTimeout(scheduleMermaid, ms); });
+  if(document.readyState !== 'loading') scheduleMermaid();
+  if(window.MutationObserver){
+    var mmTimer = null;
+    var mmObserver = new MutationObserver(function(){
+      clearTimeout(mmTimer);
+      mmTimer = setTimeout(scheduleMermaid, 400);
+    });
+    mmObserver.observe(document.querySelector('.mb-article') || document.body, { childList: true, subtree: true });
+  }
+</script>
+</body>
+</html>

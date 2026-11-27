@@ -1,0 +1,383 @@
+<!--
+  ============================================
+  手机端 · 文章原文页
+  文件：phone/post.njk
+  适用终端：手机端（路由 /phone/p/<slug>/，由 scripts/phone-routes.js 生成）
+  作用：手机阅读单篇文章；单列布局、无侧栏无雷达，替代电脑端 post.njk
+        数据由生成期算好：page.item = { title, dateStr, content, cats, tags }
+  样式依赖：source/css/theme/phone/common.css、source/css/theme/phone/list.css
+  组件依赖：phone/_components/Particles.njk
+  最后修改：2026-11-11
+  ============================================
+-->
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="color-scheme" content="dark">
+  <meta name="theme-color" content="#020817">
+  <!-- 首帧兜底：浏览器默认画布是白的，样式未解析前会闪一下白。这条规则先锁死深空底色 -->
+  <style>html{background-color:#020817}</style>
+  <title>mysql-12-子查询与派生表 - 时空秘境</title>
+  <!-- 手机端样式：基础 + 列表/正文，外链引入（源文件 source/css/theme/phone/） -->
+  <link rel="stylesheet" href="/css/theme/phone/common.css">
+  <link rel="stylesheet" href="/css/theme/phone/list.css">
+<meta name="generator" content="Hexo 8.1.2"></head>
+<body>
+<div class="mb-shell">
+  <!--
+  ============================================
+  手机端星空粒子组件
+  文件：Particles.njk
+  适用终端：手机端
+  作用：Particles.njk 的手机端副本（nunjucks 子目录 include 取不到上级）
+        参数与电脑端 _components/Particles.njk 保持一致：
+        粒子 95 / 连线 118px / opacity 0.32，外加星座层与零星闪烁层
+  最后修改：2026-11-12
+  ============================================
+--><!-- z-index 必须是 0：负层级会被 body 不透明背景盖住，粒子在跑却看不见 -->
+<div id="particles" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 0; pointer-events: none;"></div>
+<!-- 星座层（与首页同一套：随机零星散布星座图形 + 偶尔闪烁的小星） -->
+<div id="constellations" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 1; pointer-events: none;" aria-hidden="true"></div>
+<script src="/js/particles.min.js"></script>
+<script>
+particlesJS("particles", {
+  particles: {
+    number: {
+      value: 95,
+      density: {
+        enable: true,
+        value_area: 800
+      }
+    },
+    color: {
+      value: "#00eeff"
+    },
+    shape: {
+      type: "circle",
+      stroke: {
+        width: 0,
+        color: "#000000"
+      }
+    },
+    opacity: {
+      value: 0.6,
+      random: true,
+      anim: {
+        enable: true,
+        speed: 0.5,
+        opacity_min: 0.1,
+        sync: false
+      }
+    },
+    size: {
+      value: 3,
+      random: true,
+      anim: {
+        enable: true,
+        speed: 2,
+        size_min: 0.1,
+        sync: false
+      }
+    },
+    line_linked: {
+      enable: true,
+      distance: 118,
+      color: "#00eeff",
+      opacity: 0.32,
+      width: 1
+    },
+    move: {
+      enable: true,
+      speed: 0.8,
+      direction: "none",
+      random: true,
+      straight: false,
+      out_mode: "out",
+      bounce: false,
+      attract: {
+        enable: true,
+        rotateX: 600,
+        rotateY: 1200
+      }
+    }
+  },
+  interactivity: {
+    detect_on: "canvas",
+    events: {
+      onhover: {
+        enable: true,
+        mode: "grab"       // 手指按住时粒子聚集
+      },
+      onclick: {
+        enable: true,
+        mode: "push"       // 点击时产生新粒子
+      },
+      resize: true
+    },
+    modes: {
+      grab: {
+        distance: 200,
+        line_linked: {
+          opacity: 1
+        }
+      },
+      push: {
+        particles_nb: 6
+      }
+    }
+  },
+  retina_detect: true
+});
+</script>
+<!-- 星座 + 零星闪烁层：与电脑端共用同一份绘制脚本 -->
+<script src="/js/theme/home/starfield.js"></script>
+
+
+  <div class="mb-top">
+    <a class="mb-back" href="/phone/">← 返回手机首页</a>
+    <span class="mb-sub" style="margin:0">2022-11-22</span>
+  </div>
+
+  <h1 class="mb-title">mysql-12-子查询与派生表</h1>
+  <div class="mb-sub">
+    分类：database · mysql
+     ｜ 标签：系统课 · MySQL · 数据库
+  </div>
+
+  <div class="mb-article"><div class="essay-banner essay-database"></div>
+
+<h1 id="子查询与派生表：EXISTS、IN-与-LATERAL"><a href="#子查询与派生表：EXISTS、IN-与-LATERAL" class="headerlink" title="子查询与派生表：EXISTS、IN 与 LATERAL"></a>子查询与派生表：EXISTS、IN 与 LATERAL</h1><p><img src="https://wu4yong.github.io/starry-images/assets/img/mysql/mq-12-subquery.svg" alt="子查询的三种形态与优化路径"></p>
+<p><em>子查询不是「嵌套的 SQL」，而是四种会被重写成不同执行计划的语法结构｜依据 MySQL 8.4 子查询优化章节自绘</em></p>
+<h2 id="一、学习目标"><a href="#一、学习目标" class="headerlink" title="一、学习目标"></a>一、学习目标</h2><ol>
+<li>分清标量子查询、<code>IN</code> &#x2F; <code>NOT IN</code>、<code>EXISTS</code> &#x2F; <code>NOT EXISTS</code>、派生表四类，知道各自的优化路径；</li>
+<li>说清 <code>NOT IN</code> 遇 NULL 的坑，以及 <code>EXISTS</code> 为什么在相关子查询里更稳；</li>
+<li>会用 <code>LATERAL</code> 做「每行取 Top N」这类派生表做不到的事。</li>
+</ol>
+<h2 id="二、前置知识"><a href="#二、前置知识" class="headerlink" title="二、前置知识"></a>二、前置知识</h2><p>JOIN 与聚合分组。知道优化器会做「半连接」「物化」这类改写即可。</p>
+<h2 id="三、理论讲解（官方定义）"><a href="#三、理论讲解（官方定义）" class="headerlink" title="三、理论讲解（官方定义）"></a>三、理论讲解（官方定义）</h2><p>按官方分类，子查询有三种位置：<strong>标量</strong>（返回单值）、<strong>行&#x2F;表</strong>（返回结果集）、<strong>相关</strong>（引用外层列）。MySQL 优化器对它们的处理方式不同：</p>
+<ul>
+<li><code>IN</code> &#x2F; <code>EXISTS</code> 子查询会被尝试改写成 <strong>semi-join</strong>（半连接），与 JOIN 同代价；</li>
+<li>无法改写时物化成临时表（<code>materialization</code>），再与外表连接；</li>
+<li>派生表（<code>FROM (SELECT ...) t</code>）在 8.0 默认尝试 <strong>merge</strong>（合并进外层查询），有聚合、窗口函数、<code>LIMIT</code> 时只能物化；</li>
+<li><code>LATERAL</code>（8.0.14 起）允许派生表引用左侧表的列，实现「逐行求值」的相关派生表。</li>
+</ul>
+<h2 id="四、原理拆解"><a href="#四、原理拆解" class="headerlink" title="四、原理拆解"></a>四、原理拆解</h2><p><img src="https://wu4yong.github.io/starry-images/assets/img/mysql/mq-12b-subquery.svg" alt="IN、EXISTS、LATERAL 三条执行路径"></p>
+<p><em>能改写成半连接的子查询和 JOIN 一样快，改不写的就只能物化或逐行执行｜依据 MySQL 8.4 Optimizer 章节自绘</em></p>
+<h3 id="1-标量子查询：逐行执行，最贵"><a href="#1-标量子查询：逐行执行，最贵" class="headerlink" title="1. 标量子查询：逐行执行，最贵"></a>1. 标量子查询：逐行执行，最贵</h3><pre class="line-numbers language-sql" data-language="sql"><code class="language-sql"><span class="token keyword">SELECT</span> o<span class="token punctuation">.</span>id<span class="token punctuation">,</span>
+       <span class="token punctuation">(</span><span class="token keyword">SELECT</span> u<span class="token punctuation">.</span>nickname <span class="token keyword">FROM</span> t_user u <span class="token keyword">WHERE</span> u<span class="token punctuation">.</span>id <span class="token operator">=</span> o<span class="token punctuation">.</span>user_id<span class="token punctuation">)</span> <span class="token keyword">AS</span> nickname
+<span class="token keyword">FROM</span> t_order o<span class="token punctuation">;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span></span></code></pre>
+
+<p>优化器不一定能把它转成 JOIN，最坏情况是每行都触发一次子查询。等价写法直接 JOIN，通常更快也更可预测。</p>
+<h3 id="2-IN-与-EXISTS：语义相近，路径不同"><a href="#2-IN-与-EXISTS：语义相近，路径不同" class="headerlink" title="2. IN 与 EXISTS：语义相近，路径不同"></a>2. IN 与 EXISTS：语义相近，路径不同</h3><pre class="line-numbers language-sql" data-language="sql"><code class="language-sql"><span class="token comment">-- IN：子查询结果会被物化或改写成半连接</span>
+<span class="token keyword">SELECT</span> <span class="token operator">*</span> <span class="token keyword">FROM</span> t_order <span class="token keyword">WHERE</span> user_id <span class="token operator">IN</span> <span class="token punctuation">(</span><span class="token keyword">SELECT</span> id <span class="token keyword">FROM</span> t_user <span class="token keyword">WHERE</span> <span class="token keyword">status</span> <span class="token operator">=</span> <span class="token number">1</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+<span class="token comment">-- EXISTS：相关子查询，通常改写成半连接，一旦命中即停止</span>
+<span class="token keyword">SELECT</span> <span class="token operator">*</span> <span class="token keyword">FROM</span> t_order o
+<span class="token keyword">WHERE</span> <span class="token keyword">EXISTS</span> <span class="token punctuation">(</span><span class="token keyword">SELECT</span> <span class="token number">1</span> <span class="token keyword">FROM</span> t_user u <span class="token keyword">WHERE</span> u<span class="token punctuation">.</span>id <span class="token operator">=</span> o<span class="token punctuation">.</span>user_id <span class="token operator">AND</span> u<span class="token punctuation">.</span><span class="token keyword">status</span> <span class="token operator">=</span> <span class="token number">1</span><span class="token punctuation">)</span><span class="token punctuation">;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<p><code>IN</code> 适合子查询结果集小、可去重的场景；<code>EXISTS</code> 在「只判断存在性」时更自然，优化器也更容易提前终止。二者在 8.0 里多数情况会被重写成同一类计划，但 <code>NOT IN</code> 有致命差异（下一条）。</p>
+<h3 id="3-NOT-IN-的-NULL-陷阱"><a href="#3-NOT-IN-的-NULL-陷阱" class="headerlink" title="3. NOT IN 的 NULL 陷阱"></a>3. NOT IN 的 NULL 陷阱</h3><pre class="line-numbers language-sql" data-language="sql"><code class="language-sql"><span class="token keyword">SELECT</span> <span class="token operator">*</span> <span class="token keyword">FROM</span> t_order <span class="token keyword">WHERE</span> user_id <span class="token operator">NOT</span> <span class="token operator">IN</span> <span class="token punctuation">(</span><span class="token keyword">SELECT</span> id <span class="token keyword">FROM</span> t_user<span class="token punctuation">)</span><span class="token punctuation">;</span>  <span class="token comment">-- 子查询含 NULL 就返回空</span>
+<span class="token comment">-- 安全写法</span>
+<span class="token keyword">SELECT</span> <span class="token operator">*</span> <span class="token keyword">FROM</span> t_order o
+<span class="token keyword">WHERE</span> <span class="token operator">NOT</span> <span class="token keyword">EXISTS</span> <span class="token punctuation">(</span><span class="token keyword">SELECT</span> <span class="token number">1</span> <span class="token keyword">FROM</span> t_user u <span class="token keyword">WHERE</span> u<span class="token punctuation">.</span>id <span class="token operator">=</span> o<span class="token punctuation">.</span>user_id<span class="token punctuation">)</span><span class="token punctuation">;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span></span></code></pre>
+
+<p><code>NOT IN</code> 等价于「对列表里每个值都不相等」，只要列表有一个 NULL，结果就是 <code>UNKNOWN</code>。<code>NOT EXISTS</code> 没有这个问题，且能改写成 anti-join。</p>
+<h3 id="4-派生表：能-merge-就别物化"><a href="#4-派生表：能-merge-就别物化" class="headerlink" title="4. 派生表：能 merge 就别物化"></a>4. 派生表：能 merge 就别物化</h3><pre class="line-numbers language-sql" data-language="sql"><code class="language-sql"><span class="token comment">-- 可 merge：直接展开进外层，等价于普通 JOIN</span>
+<span class="token keyword">SELECT</span> <span class="token operator">*</span> <span class="token keyword">FROM</span> <span class="token punctuation">(</span><span class="token keyword">SELECT</span> id<span class="token punctuation">,</span> user_id<span class="token punctuation">,</span> amount <span class="token keyword">FROM</span> t_order <span class="token keyword">WHERE</span> <span class="token keyword">status</span> <span class="token operator">=</span> <span class="token number">2</span><span class="token punctuation">)</span> t
+<span class="token keyword">WHERE</span> t<span class="token punctuation">.</span>amount <span class="token operator">></span> <span class="token number">100</span><span class="token punctuation">;</span>
+
+<span class="token comment">-- 只能物化：带聚合/窗口/LIMIT</span>
+<span class="token keyword">SELECT</span> <span class="token operator">*</span> <span class="token keyword">FROM</span> <span class="token punctuation">(</span><span class="token keyword">SELECT</span> user_id<span class="token punctuation">,</span> <span class="token function">SUM</span><span class="token punctuation">(</span>amount<span class="token punctuation">)</span> gmv <span class="token keyword">FROM</span> t_order <span class="token keyword">GROUP</span> <span class="token keyword">BY</span> user_id<span class="token punctuation">)</span> t
+<span class="token keyword">WHERE</span> t<span class="token punctuation">.</span>gmv <span class="token operator">></span> <span class="token number">1000</span><span class="token punctuation">;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<p><code>EXPLAIN</code> 里出现 <code>&lt;derived2&gt;</code> 就是物化了。物化本身不慢，慢的是「物化全量再过滤」——把过滤条件下推不进去时，先在内层缩小结果集。</p>
+<h3 id="5-LATERAL：逐行派生"><a href="#5-LATERAL：逐行派生" class="headerlink" title="5. LATERAL：逐行派生"></a>5. LATERAL：逐行派生</h3><pre class="line-numbers language-sql" data-language="sql"><code class="language-sql"><span class="token keyword">SELECT</span> u<span class="token punctuation">.</span>id<span class="token punctuation">,</span> u<span class="token punctuation">.</span>nickname<span class="token punctuation">,</span> o<span class="token punctuation">.</span>id <span class="token keyword">AS</span> last_order<span class="token punctuation">,</span> o<span class="token punctuation">.</span>amount
+<span class="token keyword">FROM</span> t_user u<span class="token punctuation">,</span>
+LATERAL <span class="token punctuation">(</span>
+  <span class="token keyword">SELECT</span> id<span class="token punctuation">,</span> amount <span class="token keyword">FROM</span> t_order <span class="token keyword">WHERE</span> user_id <span class="token operator">=</span> u<span class="token punctuation">.</span>id <span class="token keyword">ORDER</span> <span class="token keyword">BY</span> id <span class="token keyword">DESC</span> <span class="token keyword">LIMIT</span> <span class="token number">1</span>
+<span class="token punctuation">)</span> o<span class="token punctuation">;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<p>普通派生表不能引用 <code>u.id</code>，<code>LATERAL</code> 可以。它适合「每个用户取最近一单」这类 Top-N-per-group，代价是逐行执行子查询，用户量大时要评估。</p>
+<h2 id="五、场景说明"><a href="#五、场景说明" class="headerlink" title="五、场景说明"></a>五、场景说明</h2><ol>
+<li><strong>存在性判断</strong>：<code>EXISTS</code> &#x2F; <code>NOT EXISTS</code> 优先；</li>
+<li><strong>集合过滤</strong>：<code>IN</code> 配小结果集，大结果集改 JOIN；</li>
+<li><strong>每行取一条</strong>：<code>LATERAL</code> 或窗口函数（见 MQ13）；</li>
+<li><strong>先聚合再过滤</strong>：派生表 + 外层 <code>WHERE</code>，注意能否下推；</li>
+<li><strong>复杂报表</strong>：多层派生表会让优化器放弃 merge，尽量压平成 1~2 层。</li>
+</ol>
+<h2 id="六、示例代码-实操步骤"><a href="#六、示例代码-实操步骤" class="headerlink" title="六、示例代码&#x2F;实操步骤"></a>六、示例代码&#x2F;实操步骤</h2><h3 id="1-同一需求的三种写法"><a href="#1-同一需求的三种写法" class="headerlink" title="1. 同一需求的三种写法"></a>1. 同一需求的三种写法</h3><pre class="line-numbers language-sql" data-language="sql"><code class="language-sql"><span class="token comment">-- 写法 A：IN（子查询结果小）</span>
+<span class="token keyword">SELECT</span> id<span class="token punctuation">,</span> order_no <span class="token keyword">FROM</span> t_order <span class="token keyword">WHERE</span> user_id <span class="token operator">IN</span> <span class="token punctuation">(</span><span class="token keyword">SELECT</span> id <span class="token keyword">FROM</span> t_user <span class="token keyword">WHERE</span> <span class="token keyword">status</span> <span class="token operator">=</span> <span class="token number">1</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+<span class="token comment">-- 写法 B：EXISTS（只判存在）</span>
+<span class="token keyword">SELECT</span> o<span class="token punctuation">.</span>id<span class="token punctuation">,</span> o<span class="token punctuation">.</span>order_no <span class="token keyword">FROM</span> t_order o
+<span class="token keyword">WHERE</span> <span class="token keyword">EXISTS</span> <span class="token punctuation">(</span><span class="token keyword">SELECT</span> <span class="token number">1</span> <span class="token keyword">FROM</span> t_user u <span class="token keyword">WHERE</span> u<span class="token punctuation">.</span>id <span class="token operator">=</span> o<span class="token punctuation">.</span>user_id <span class="token operator">AND</span> u<span class="token punctuation">.</span><span class="token keyword">status</span> <span class="token operator">=</span> <span class="token number">1</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+<span class="token comment">-- 写法 C：JOIN（要取用户字段）</span>
+<span class="token keyword">SELECT</span> o<span class="token punctuation">.</span>id<span class="token punctuation">,</span> o<span class="token punctuation">.</span>order_no<span class="token punctuation">,</span> u<span class="token punctuation">.</span>nickname <span class="token keyword">FROM</span> t_order o
+<span class="token keyword">JOIN</span> t_user u <span class="token keyword">ON</span> u<span class="token punctuation">.</span>id <span class="token operator">=</span> o<span class="token punctuation">.</span>user_id <span class="token operator">AND</span> u<span class="token punctuation">.</span><span class="token keyword">status</span> <span class="token operator">=</span> <span class="token number">1</span><span class="token punctuation">;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<p>三种写法在 8.0 里常被优化成相似计划，但 C 能顺便带出用户字段，实际项目里最常用。</p>
+<h3 id="2-找出「没有订单的用户」的两种安全写法"><a href="#2-找出「没有订单的用户」的两种安全写法" class="headerlink" title="2. 找出「没有订单的用户」的两种安全写法"></a>2. 找出「没有订单的用户」的两种安全写法</h3><pre class="line-numbers language-sql" data-language="sql"><code class="language-sql"><span class="token keyword">SELECT</span> u<span class="token punctuation">.</span>id <span class="token keyword">FROM</span> t_user u <span class="token keyword">WHERE</span> <span class="token operator">NOT</span> <span class="token keyword">EXISTS</span> <span class="token punctuation">(</span><span class="token keyword">SELECT</span> <span class="token number">1</span> <span class="token keyword">FROM</span> t_order o <span class="token keyword">WHERE</span> o<span class="token punctuation">.</span>user_id <span class="token operator">=</span> u<span class="token punctuation">.</span>id<span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token keyword">SELECT</span> u<span class="token punctuation">.</span>id <span class="token keyword">FROM</span> t_user u <span class="token keyword">LEFT</span> <span class="token keyword">JOIN</span> t_order o <span class="token keyword">ON</span> o<span class="token punctuation">.</span>user_id <span class="token operator">=</span> u<span class="token punctuation">.</span>id <span class="token keyword">WHERE</span> o<span class="token punctuation">.</span>id <span class="token operator">IS</span> <span class="token boolean">NULL</span><span class="token punctuation">;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span></span></code></pre>
+
+<p>两者都能走 anti-join，选哪个看可读性；不要用 <code>NOT IN</code>。</p>
+<h3 id="3-每个用户最近一单：LATERAL-与窗口函数"><a href="#3-每个用户最近一单：LATERAL-与窗口函数" class="headerlink" title="3. 每个用户最近一单：LATERAL 与窗口函数"></a>3. 每个用户最近一单：LATERAL 与窗口函数</h3><pre class="line-numbers language-sql" data-language="sql"><code class="language-sql"><span class="token comment">-- LATERAL</span>
+<span class="token keyword">SELECT</span> u<span class="token punctuation">.</span>id<span class="token punctuation">,</span> x<span class="token punctuation">.</span>id <span class="token keyword">AS</span> order_id<span class="token punctuation">,</span> x<span class="token punctuation">.</span>created_at
+<span class="token keyword">FROM</span> t_user u<span class="token punctuation">,</span>
+LATERAL <span class="token punctuation">(</span><span class="token keyword">SELECT</span> id<span class="token punctuation">,</span> created_at <span class="token keyword">FROM</span> t_order <span class="token keyword">WHERE</span> user_id <span class="token operator">=</span> u<span class="token punctuation">.</span>id <span class="token keyword">ORDER</span> <span class="token keyword">BY</span> id <span class="token keyword">DESC</span> <span class="token keyword">LIMIT</span> <span class="token number">1</span><span class="token punctuation">)</span> x<span class="token punctuation">;</span>
+
+<span class="token comment">-- 窗口函数（MQ13 详讲）</span>
+<span class="token keyword">SELECT</span> <span class="token operator">*</span> <span class="token keyword">FROM</span> <span class="token punctuation">(</span>
+  <span class="token keyword">SELECT</span> o<span class="token punctuation">.</span><span class="token operator">*</span><span class="token punctuation">,</span> ROW_NUMBER<span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token keyword">OVER</span> <span class="token punctuation">(</span><span class="token keyword">PARTITION</span> <span class="token keyword">BY</span> user_id <span class="token keyword">ORDER</span> <span class="token keyword">BY</span> id <span class="token keyword">DESC</span><span class="token punctuation">)</span> rn
+  <span class="token keyword">FROM</span> t_order o
+<span class="token punctuation">)</span> t <span class="token keyword">WHERE</span> rn <span class="token operator">=</span> <span class="token number">1</span><span class="token punctuation">;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<p>数据量大时窗口函数通常更快：一次扫描 + 排序，而 <code>LATERAL</code> 是逐行子查询。</p>
+<h3 id="4-看优化器怎么改写的"><a href="#4-看优化器怎么改写的" class="headerlink" title="4. 看优化器怎么改写的"></a>4. 看优化器怎么改写的</h3><pre class="line-numbers language-sql" data-language="sql"><code class="language-sql"><span class="token keyword">EXPLAIN</span> FORMAT<span class="token operator">=</span>TREE
+<span class="token keyword">SELECT</span> <span class="token operator">*</span> <span class="token keyword">FROM</span> t_order <span class="token keyword">WHERE</span> user_id <span class="token operator">IN</span> <span class="token punctuation">(</span><span class="token keyword">SELECT</span> id <span class="token keyword">FROM</span> t_user <span class="token keyword">WHERE</span> <span class="token keyword">status</span> <span class="token operator">=</span> <span class="token number">1</span><span class="token punctuation">)</span><span class="token punctuation">;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span></span></code></pre>
+
+<p>树里出现 <code>semijoin</code>、<code>materialize</code> 就能判断走了哪条路径。</p>
+<h3 id="Java-侧怎么落地：子查询该不该出现在代码里"><a href="#Java-侧怎么落地：子查询该不该出现在代码里" class="headerlink" title="Java 侧怎么落地：子查询该不该出现在代码里"></a>Java 侧怎么落地：子查询该不该出现在代码里</h3><ol>
+<li><strong>Mapper 里少写多层嵌套</strong>：两层以上派生表往往无法 merge，改成两次查询在内存合并更可控；</li>
+<li><strong><code>IN</code> 的参数化</strong>：<code>IN (?)</code> 只能传一个值，批量要用 <code>foreach</code> 拼列表；列表超过几千个元素要分批，避免 SQL 过长；</li>
+<li><strong><code>EXISTS</code> 配分页</strong>：<code>EXISTS</code> 不返回列，分页时先按主表分页再判断存在性；</li>
+<li><strong><code>LATERAL</code> 慎用于列表接口</strong>：每行一次子查询，1000 行就是 1000 次，接口 RT 直接翻倍；</li>
+<li><strong>别把子查询结果当缓存</strong>：同一子查询在循环里重复执行是典型 N+1，抽到外层或 Redis。</li>
+</ol>
+<h2 id="七、常见坑"><a href="#七、常见坑" class="headerlink" title="七、常见坑"></a>七、常见坑</h2><ol>
+<li><strong><code>NOT IN</code> 遇 NULL 返回空集</strong>：误判为「没有数据」；</li>
+<li><strong>标量子查询逐行执行</strong>：大表上直接超时；</li>
+<li><strong>派生表带 <code>LIMIT</code> 还想 merge</strong>：必然物化，外层过滤无法下推；</li>
+<li><strong><code>IN</code> 列表几千个值</strong>：SQL 过长、解析变慢；</li>
+<li><strong>相关子查询放在 <code>SELECT</code> 列表里</strong>：每行一次，最隐蔽的性能杀手；</li>
+<li><strong><code>LATERAL</code> 逐行执行</strong>：行数一多就雪崩；</li>
+<li><strong>子查询与外表类型不一致</strong>：触发隐式转换，索引失效。</li>
+</ol>
+<h2 id="八、版本差异"><a href="#八、版本差异" class="headerlink" title="八、版本差异"></a>八、版本差异</h2><ul>
+<li><strong>5.7</strong>：子查询优化能力弱，很多 <code>IN</code> 直接物化；无 <code>LATERAL</code>；</li>
+<li><strong>8.0</strong>：semi-join &#x2F; anti-join 改写更完善，派生表 merge 更积极；8.0.14 起支持 <code>LATERAL</code>；<code>EXPLAIN FORMAT=TREE</code> 可看改写结果；</li>
+<li><strong>8.4</strong>：优化器行为延续 8.0，无破坏性变化。</li>
+</ul>
+<h2 id="九、课后小结"><a href="#九、课后小结" class="headerlink" title="九、课后小结"></a>九、课后小结</h2><ul>
+<li>四类子查询：标量、<code>IN</code>、<code>EXISTS</code>、派生表，路径各不相同；</li>
+<li>存在性判断用 <code>EXISTS</code>，集合过滤用小结果集 <code>IN</code>，要字段就用 JOIN；</li>
+<li><code>NOT IN</code> 遇 NULL 恒空，一律换 <code>NOT EXISTS</code>；</li>
+<li>派生表能 merge 就快，带聚合&#x2F;窗口&#x2F;<code>LIMIT</code> 会物化；</li>
+<li><code>LATERAL</code> 用于逐行派生，注意它是「每行一次」。</li>
+</ul>
+<h2 id="十、思考题"><a href="#十、思考题" class="headerlink" title="十、思考题"></a>十、思考题</h2><ol>
+<li><p><code>NOT IN</code> 和 <code>NOT EXISTS</code> 的差别在哪，为什么后者更安全？</p>
+<p><strong>参考回答</strong>：<code>NOT IN</code> 对列表逐值比较，列表含 NULL 时比较结果为 <code>UNKNOWN</code>，整个条件不成立，返回空集；<code>NOT EXISTS</code> 只判断子查询是否为空，不涉及 NULL 比较，且能被改写成 anti-join。</p>
+</li>
+<li><p>派生表什么时候会被物化，物化的代价是什么？</p>
+<p><strong>参考回答</strong>：含聚合、窗口函数、<code>DISTINCT</code>、<code>LIMIT</code> 或 <code>UNION</code> 等无法合并的结构时物化；代价是要先把整个子结果算出来存进临时表，外层过滤无法下推，数据量大时会落盘。</p>
+</li>
+<li><p><code>EXISTS</code> 为什么常比 <code>IN</code> 快？</p>
+<p><strong>参考回答</strong>：<code>EXISTS</code> 只关心「有没有一行匹配」，找到即停；<code>IN</code> 需要把子查询结果集算出来（或去重物化）再比较。不过 8.0 优化器常把两者改写成同类半连接，实际差异要看执行计划。</p>
+</li>
+<li><p><code>LATERAL</code> 与窗口函数都能做「每组取 Top 1」，怎么选？</p>
+<p><strong>参考回答</strong>：窗口函数一次扫描 + 排序，适合大结果集；<code>LATERAL</code> 逐行执行子查询，行数少且子查询能走索引时更简单直观。数据量大优先窗口函数。</p>
+</li>
+<li><p>一个接口里出现 5 层嵌套子查询，你会怎么改？</p>
+<p><strong>参考回答</strong>：先 <code>EXPLAIN FORMAT=TREE</code> 看哪些层被物化；把可独立执行的子查询提到应用层分批查询再合并；把存在性判断改成 <code>JOIN</code> 或 <code>EXISTS</code>；必要时建汇总表或加覆盖索引，把嵌套压到 1~2 层。</p>
+</li>
+</ol>
+<h2 id="十一、官方资料"><a href="#十一、官方资料" class="headerlink" title="十一、官方资料"></a>十一、官方资料</h2><ul>
+<li>子查询语法：<a target="_blank" rel="noopener" href="https://dev.mysql.com/doc/refman/8.4/en/subqueries.html">https://dev.mysql.com/doc/refman/8.4/en/subqueries.html</a></li>
+<li>子查询优化（semi-join &#x2F; materialization）：<a target="_blank" rel="noopener" href="https://dev.mysql.com/doc/refman/8.4/en/subquery-optimization.html">https://dev.mysql.com/doc/refman/8.4/en/subquery-optimization.html</a></li>
+<li>派生表与 <code>LATERAL</code>：<a target="_blank" rel="noopener" href="https://dev.mysql.com/doc/refman/8.4/en/derived-tables.html">https://dev.mysql.com/doc/refman/8.4/en/derived-tables.html</a></li>
+<li><code>EXPLAIN</code> 输出：<a target="_blank" rel="noopener" href="https://dev.mysql.com/doc/refman/8.4/en/explain-output.html">https://dev.mysql.com/doc/refman/8.4/en/explain-output.html</a></li>
+</ul>
+<p>上一篇：<a href="/2022/11/21/database/mysql/mysql-11-joins/">MQ11 多表连接</a> ｜ 下一篇：<a href="/2022/11/23/database/mysql/mysql-13-window-cte/">MQ13 窗口函数与 CTE</a> ｜ <a href="/2022/11/10/database/mysql/mysql-0-series-index/">总目录</a></p>
+</div>
+
+  <div class="mb-foot">
+    <a href="/phone/">返回手机首页</a>
+    <a href="/phone/tags/">星迹索引</a>
+  </div>
+</div>
+
+
+<script>
+  /* 作用：懒加载本地 mermaid 库；无 mermaid 代码块时不加载 */
+  function loadLocalMermaid(){
+    return new Promise(function(resolve, reject){
+      if(window.mermaid) return resolve(window.mermaid);
+      var s = document.createElement('script');
+      s.src = '/js/third-party/mermaid/mermaid.min.js?v=10';
+      s.onload = function(){ resolve(window.mermaid); };
+      s.onerror = function(){ reject(new Error('mermaid local load failed')); };
+      document.head.appendChild(s);
+    });
+  }
+
+  /* 作用：把 ```mermaid 代码块替换成 SVG 图（手机端字号略小、图可横向滚动） */
+  async function renderMermaidDiagram(){
+    var blocks = document.querySelectorAll('pre[class*="language-mermaid"]');
+    if(!blocks.length) return;
+    var mermaid;
+    try { mermaid = await loadLocalMermaid(); }
+    catch(e){ console.warn('[mermaid] 本地库加载失败：', e); return; }
+
+    mermaid.initialize({
+      startOnLoad: false,
+      theme: 'base',
+      themeVariables: {
+        darkMode: true,
+        background: 'transparent',
+        fontFamily: '"Microsoft YaHei", "PingFang SC", "Segoe UI", sans-serif',
+        fontSize: '12px',
+        primaryColor: '#062f3d',
+        primaryTextColor: '#d6f6ff',
+        primaryBorderColor: '#00eeff',
+        secondaryColor: '#04222d',
+        tertiaryColor: '#04222d',
+        mainBkg: '#062f3d',
+        nodeBorder: '#00eeff',
+        clusterBkg: '#02161f',
+        clusterBorder: '#00eeff55',
+        lineColor: '#00eeff',
+        textColor: '#c0e8ff',
+        edgeLabelBackground: '#02161f'
+      },
+      flowchart: { curve: 'basis', useMaxWidth: false, htmlLabels: false, nodeSpacing: 30, rankSpacing: 40, padding: 10 }
+    });
+
+    var targets = [];
+    blocks.forEach(function(el){
+      var codeEl = el.querySelector('code');
+      if(!codeEl) return;
+      var div = document.createElement('div');
+      div.className = 'mermaid';
+      div.textContent = codeEl.textContent;
+      el.parentNode.replaceChild(div, el);
+      targets.push(div);
+    });
+    if(!targets.length) return;
+    try { await mermaid.run({ nodes: targets }); }
+    catch(e){ console.warn('[mermaid] 渲染失败：', e); }
+  }
+  /* 作用：多次触发兜底（延迟重试 + DOM 变化），防止某次时机没跑到导致图表留在代码块 */
+  var mmBusy = false;
+  function scheduleMermaid(){
+    if(mmBusy) return;
+    mmBusy = true;
+    renderMermaidDiagram().then(function(){ mmBusy = false; }, function(){ mmBusy = false; });
+  }
+  scheduleMermaid();
+  window.addEventListener('load', scheduleMermaid);
+  [1000, 3000, 8000].forEach(function(ms){ setTimeout(scheduleMermaid, ms); });
+  if(document.readyState !== 'loading') scheduleMermaid();
+  if(window.MutationObserver){
+    var mmTimer = null;
+    var mmObserver = new MutationObserver(function(){
+      clearTimeout(mmTimer);
+      mmTimer = setTimeout(scheduleMermaid, 400);
+    });
+    mmObserver.observe(document.querySelector('.mb-article') || document.body, { childList: true, subtree: true });
+  }
+</script>
+</body>
+</html>

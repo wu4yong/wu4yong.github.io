@@ -1,0 +1,427 @@
+<!--
+  ============================================
+  手机端 · 文章原文页
+  文件：phone/post.njk
+  适用终端：手机端（路由 /phone/p/<slug>/，由 scripts/phone-routes.js 生成）
+  作用：手机阅读单篇文章；单列布局、无侧栏无雷达，替代电脑端 post.njk
+        数据由生成期算好：page.item = { title, dateStr, content, cats, tags }
+  样式依赖：source/css/theme/phone/common.css、source/css/theme/phone/list.css
+  组件依赖：phone/_components/Particles.njk
+  最后修改：2026-11-11
+  ============================================
+-->
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="color-scheme" content="dark">
+  <meta name="theme-color" content="#020817">
+  <!-- 首帧兜底：浏览器默认画布是白的，样式未解析前会闪一下白。这条规则先锁死深空底色 -->
+  <style>html{background-color:#020817}</style>
+  <title>mysql-8-增删改与批量写入 - 时空秘境</title>
+  <!-- 手机端样式：基础 + 列表/正文，外链引入（源文件 source/css/theme/phone/） -->
+  <link rel="stylesheet" href="/css/theme/phone/common.css">
+  <link rel="stylesheet" href="/css/theme/phone/list.css">
+<meta name="generator" content="Hexo 8.1.2"></head>
+<body>
+<div class="mb-shell">
+  <!--
+  ============================================
+  手机端星空粒子组件
+  文件：Particles.njk
+  适用终端：手机端
+  作用：Particles.njk 的手机端副本（nunjucks 子目录 include 取不到上级）
+        参数与电脑端 _components/Particles.njk 保持一致：
+        粒子 95 / 连线 118px / opacity 0.32，外加星座层与零星闪烁层
+  最后修改：2026-11-12
+  ============================================
+--><!-- z-index 必须是 0：负层级会被 body 不透明背景盖住，粒子在跑却看不见 -->
+<div id="particles" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 0; pointer-events: none;"></div>
+<!-- 星座层（与首页同一套：随机零星散布星座图形 + 偶尔闪烁的小星） -->
+<div id="constellations" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 1; pointer-events: none;" aria-hidden="true"></div>
+<script src="/js/particles.min.js"></script>
+<script>
+particlesJS("particles", {
+  particles: {
+    number: {
+      value: 95,
+      density: {
+        enable: true,
+        value_area: 800
+      }
+    },
+    color: {
+      value: "#00eeff"
+    },
+    shape: {
+      type: "circle",
+      stroke: {
+        width: 0,
+        color: "#000000"
+      }
+    },
+    opacity: {
+      value: 0.6,
+      random: true,
+      anim: {
+        enable: true,
+        speed: 0.5,
+        opacity_min: 0.1,
+        sync: false
+      }
+    },
+    size: {
+      value: 3,
+      random: true,
+      anim: {
+        enable: true,
+        speed: 2,
+        size_min: 0.1,
+        sync: false
+      }
+    },
+    line_linked: {
+      enable: true,
+      distance: 118,
+      color: "#00eeff",
+      opacity: 0.32,
+      width: 1
+    },
+    move: {
+      enable: true,
+      speed: 0.8,
+      direction: "none",
+      random: true,
+      straight: false,
+      out_mode: "out",
+      bounce: false,
+      attract: {
+        enable: true,
+        rotateX: 600,
+        rotateY: 1200
+      }
+    }
+  },
+  interactivity: {
+    detect_on: "canvas",
+    events: {
+      onhover: {
+        enable: true,
+        mode: "grab"       // 手指按住时粒子聚集
+      },
+      onclick: {
+        enable: true,
+        mode: "push"       // 点击时产生新粒子
+      },
+      resize: true
+    },
+    modes: {
+      grab: {
+        distance: 200,
+        line_linked: {
+          opacity: 1
+        }
+      },
+      push: {
+        particles_nb: 6
+      }
+    }
+  },
+  retina_detect: true
+});
+</script>
+<!-- 星座 + 零星闪烁层：与电脑端共用同一份绘制脚本 -->
+<script src="/js/theme/home/starfield.js"></script>
+
+
+  <div class="mb-top">
+    <a class="mb-back" href="/phone/">← 返回手机首页</a>
+    <span class="mb-sub" style="margin:0">2022-11-18</span>
+  </div>
+
+  <h1 class="mb-title">mysql-8-增删改与批量写入</h1>
+  <div class="mb-sub">
+    分类：database · mysql
+     ｜ 标签：系统课 · MySQL · 数据库
+  </div>
+
+  <div class="mb-article"><div class="essay-banner essay-database"></div>
+
+<h1 id="增删改：INSERT-UPDATE-DELETE-与批量写入"><a href="#增删改：INSERT-UPDATE-DELETE-与批量写入" class="headerlink" title="增删改：INSERT &#x2F; UPDATE &#x2F; DELETE 与批量写入"></a>增删改：INSERT &#x2F; UPDATE &#x2F; DELETE 与批量写入</h1><p><img src="https://wu4yong.github.io/starry-images/assets/img/mysql/mq-8-dml.svg" alt="增删改的四类语句与批量写入五个参数"></p>
+<p><em>写入性能不取决于单条语句快不快，而取决于事务多大、锁持有多久、binlog 有多胖｜依据 MySQL 8.4 DML 与 InnoDB 事务章节自绘</em></p>
+<h2 id="一、学习目标"><a href="#一、学习目标" class="headerlink" title="一、学习目标"></a>一、学习目标</h2><ol>
+<li>写对 <code>INSERT</code> 的四种形态，理解 <code>ON DUPLICATE KEY UPDATE</code> 与 <code>REPLACE</code> 的语义差异；</li>
+<li>知道 <code>UPDATE</code> &#x2F; <code>DELETE</code> 为什么必须先看执行计划，以及大事务的真实代价；</li>
+<li>把批量写入的五个参数（批量大小、事务边界、自增锁模式、连接参数、重试）配到位。</li>
+</ol>
+<h2 id="二、前置知识"><a href="#二、前置知识" class="headerlink" title="二、前置知识"></a>二、前置知识</h2><p>前两讲的表结构与类型。会用 <code>EXPLAIN</code>、看得懂 <code>SHOW ENGINE INNODB STATUS</code> 的事务段即可。</p>
+<h2 id="三、理论讲解（官方定义）"><a href="#三、理论讲解（官方定义）" class="headerlink" title="三、理论讲解（官方定义）"></a>三、理论讲解（官方定义）</h2><p>DML 三类语句的官方语义：</p>
+<ul>
+<li><code>INSERT</code>：插入新行；<code>INSERT ... ON DUPLICATE KEY UPDATE</code> 在唯一键冲突时转成更新；<code>REPLACE</code> 则是<strong>先删后插</strong>；</li>
+<li><code>UPDATE</code>：修改匹配行，<code>ROW_COUNT()</code> 返回「实际改变的行数」，值没变的行不计入；</li>
+<li><code>DELETE</code>：按条件删除行；<code>TRUNCATE TABLE</code> 是 DDL，直接重建表、不可回滚、不写逐行 undo。</li>
+</ul>
+<p>几个常被忽略的官方事实：</p>
+<ul>
+<li>8.0 起 <strong><code>innodb_autoinc_lock_mode</code> 默认就是 2</strong>（交错模式），批量插入不再持有表级自增锁；</li>
+<li><code>REPLACE</code> 等价 <code>DELETE + INSERT</code>，会触发两次行操作、两次 binlog，自增 ID 也会跳；</li>
+<li><code>ON DUPLICATE KEY UPDATE</code> 的 <code>ROW_COUNT()</code> 语义是：插入 1、更新 2、值没变 0；</li>
+<li><code>UPDATE</code> &#x2F; <code>DELETE</code> 不带 <code>WHERE</code> 不是「快」，而是把整表行锁住并写入巨量 binlog。</li>
+</ul>
+<h2 id="四、原理拆解"><a href="#四、原理拆解" class="headerlink" title="四、原理拆解"></a>四、原理拆解</h2><p><img src="https://wu4yong.github.io/starry-images/assets/img/mysql/mq-8b-batch.svg" alt="批量写入的五个关键参数"></p>
+<p><em>同一条 INSERT，批量大小与事务边界不同，吞吐能差一个数量级｜依据 MySQL 8.4 InnoDB 与复制章节自绘</em></p>
+<h3 id="1-四种-INSERT-怎么选"><a href="#1-四种-INSERT-怎么选" class="headerlink" title="1. 四种 INSERT 怎么选"></a>1. 四种 INSERT 怎么选</h3><pre class="line-numbers language-sql" data-language="sql"><code class="language-sql"><span class="token keyword">INSERT</span> <span class="token keyword">INTO</span> t_order <span class="token punctuation">(</span>order_no<span class="token punctuation">,</span> amount<span class="token punctuation">)</span> <span class="token keyword">VALUES</span> <span class="token punctuation">(</span><span class="token string">'A1'</span><span class="token punctuation">,</span> <span class="token number">10.00</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token keyword">INSERT</span> <span class="token keyword">INTO</span> t_order <span class="token punctuation">(</span>order_no<span class="token punctuation">,</span> amount<span class="token punctuation">)</span> <span class="token keyword">VALUES</span> <span class="token punctuation">(</span><span class="token string">'A2'</span><span class="token punctuation">,</span> <span class="token number">20.00</span><span class="token punctuation">)</span><span class="token punctuation">,</span> <span class="token punctuation">(</span><span class="token string">'A3'</span><span class="token punctuation">,</span> <span class="token number">30.00</span><span class="token punctuation">)</span><span class="token punctuation">;</span>   <span class="token comment">-- 多值，一次网络往返</span>
+<span class="token keyword">INSERT</span> <span class="token keyword">INTO</span> t_order_archive <span class="token keyword">SELECT</span> <span class="token operator">*</span> <span class="token keyword">FROM</span> t_order <span class="token keyword">WHERE</span> created_at <span class="token operator">&lt;</span> <span class="token string">'2022-01-01'</span><span class="token punctuation">;</span>
+<span class="token keyword">INSERT</span> <span class="token keyword">INTO</span> t_order <span class="token punctuation">(</span>order_no<span class="token punctuation">,</span> amount<span class="token punctuation">)</span> <span class="token keyword">VALUES</span> <span class="token punctuation">(</span><span class="token string">'A1'</span><span class="token punctuation">,</span> <span class="token number">10.00</span><span class="token punctuation">)</span>
+  <span class="token keyword">ON</span> <span class="token keyword">DUPLICATE</span> <span class="token keyword">KEY</span> <span class="token keyword">UPDATE</span> amount <span class="token operator">=</span> amount <span class="token operator">+</span> <span class="token keyword">VALUES</span><span class="token punctuation">(</span>amount<span class="token punctuation">)</span><span class="token punctuation">;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<p>多值插入是把「N 次网络往返 + N 次解析」压成 1 次，最直接的提速手段。<code>ON DUPLICATE KEY UPDATE</code> 适合幂等写入，但注意它在冲突时<strong>先尝试插入再更新</strong>，会消耗自增 ID。</p>
+<h3 id="2-REPLACE-的隐性代价"><a href="#2-REPLACE-的隐性代价" class="headerlink" title="2. REPLACE 的隐性代价"></a>2. REPLACE 的隐性代价</h3><pre class="line-numbers language-sql" data-language="sql"><code class="language-sql"><span class="token keyword">REPLACE</span> <span class="token keyword">INTO</span> t_user <span class="token punctuation">(</span>id<span class="token punctuation">,</span> nickname<span class="token punctuation">)</span> <span class="token keyword">VALUES</span> <span class="token punctuation">(</span><span class="token number">1</span><span class="token punctuation">,</span> <span class="token string">'new'</span><span class="token punctuation">)</span><span class="token punctuation">;</span><span aria-hidden="true" class="line-numbers-rows"><span></span></span></code></pre>
+
+<p>语义是「删除冲突行 + 插入新行」：旧行的 <code>created_at</code> 丢失、触发器执行两次、从库多一条 DELETE 事件、<code>AUTO_INCREMENT</code> 继续前进。业务上想要「存在则更新」时，用 <code>ON DUPLICATE KEY UPDATE</code>。</p>
+<h3 id="3-UPDATE-的两个关键点"><a href="#3-UPDATE-的两个关键点" class="headerlink" title="3. UPDATE 的两个关键点"></a>3. UPDATE 的两个关键点</h3><pre class="line-numbers language-sql" data-language="sql"><code class="language-sql"><span class="token keyword">UPDATE</span> t_order <span class="token keyword">SET</span> <span class="token keyword">status</span> <span class="token operator">=</span> <span class="token number">2</span> <span class="token keyword">WHERE</span> id <span class="token operator">=</span> <span class="token number">100</span><span class="token punctuation">;</span>                     <span class="token comment">-- 主键定位，行锁</span>
+<span class="token keyword">UPDATE</span> t_order <span class="token keyword">SET</span> <span class="token keyword">status</span> <span class="token operator">=</span> <span class="token number">2</span> <span class="token keyword">WHERE</span> created_at <span class="token operator">&lt;</span> <span class="token string">'2022-01-01'</span><span class="token punctuation">;</span>    <span class="token comment">-- 范围更新，锁多行</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span></span></code></pre>
+
+<ul>
+<li><strong>WHERE 必须能走索引</strong>，否则扫描的每一行都加锁，等于放大锁范围；</li>
+<li><strong>不要在大范围 UPDATE 里放函数</strong>（<code>WHERE DATE(created_at) = ...</code>），列被包住就用不上索引；</li>
+<li>大批量更新要<strong>分片循环 + 限流</strong>，每批 500~1000 行并提交，避免一个事务扛住几万行。</li>
+</ul>
+<h3 id="4-DELETE、TRUNCATE、软删除"><a href="#4-DELETE、TRUNCATE、软删除" class="headerlink" title="4. DELETE、TRUNCATE、软删除"></a>4. DELETE、TRUNCATE、软删除</h3><table>
+<thead>
+<tr>
+<th>方式</th>
+<th>是否可回滚</th>
+<th>空间回收</th>
+<th>适用</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>DELETE</td>
+<td>可以（大事务慎用）</td>
+<td>不回收，留碎片</td>
+<td>按条件删少量</td>
+</tr>
+<tr>
+<td>TRUNCATE</td>
+<td>不可回滚</td>
+<td>直接重建表</td>
+<td>清空整表</td>
+</tr>
+<tr>
+<td>软删除标记</td>
+<td>可以</td>
+<td>不回收</td>
+<td>需要审计&#x2F;恢复</td>
+</tr>
+</tbody></table>
+<p><code>DELETE</code> 删掉的行只是标记删除，页空间不会自动还给操作系统；大量删除后要评估 <code>OPTIMIZE TABLE</code>（会重建表，等同 DDL）。</p>
+<h3 id="5-批量写入的五个参数"><a href="#5-批量写入的五个参数" class="headerlink" title="5. 批量写入的五个参数"></a>5. 批量写入的五个参数</h3><ol>
+<li><strong>批量大小</strong>：单批 500<del>1000 行或 1</del>4MB，太大触发 <code>max_allowed_packet</code> 与长事务；</li>
+<li><strong>事务边界</strong>：每批一个事务提交，别把百万行塞进一个事务；</li>
+<li><strong>自增锁模式</strong>：<code>innodb_autoinc_lock_mode=2</code>（8.0 默认），交错分配，批量插入不互相阻塞；</li>
+<li><strong>连接参数</strong>：<code>rewriteBatchedStatements=true</code> 让驱动把多条 INSERT 合成多值语句；</li>
+<li><strong>重试与幂等</strong>：唯一键 + <code>ON DUPLICATE KEY UPDATE</code>，死锁&#x2F;超时按指数退避重试。</li>
+</ol>
+<h2 id="五、场景说明"><a href="#五、场景说明" class="headerlink" title="五、场景说明"></a>五、场景说明</h2><ol>
+<li><strong>订单落库</strong>：唯一键 <code>order_no</code> + <code>ON DUPLICATE KEY UPDATE</code> 做幂等；</li>
+<li><strong>数据导入</strong>：<code>LOAD DATA</code> 最快，其次多值 INSERT，最差逐条 INSERT；</li>
+<li><strong>状态批量流转</strong>：按主键区间分批 UPDATE，每批提交并记录进度；</li>
+<li><strong>历史数据清理</strong>：按时间分区 + <code>DROP PARTITION</code>，比 DELETE 百万行优雅得多；</li>
+<li><strong>归档表迁移</strong>：<code>INSERT ... SELECT</code> + 分批，配合主从延迟监控。</li>
+</ol>
+<h2 id="六、示例代码-实操步骤"><a href="#六、示例代码-实操步骤" class="headerlink" title="六、示例代码&#x2F;实操步骤"></a>六、示例代码&#x2F;实操步骤</h2><h3 id="1-幂等写入"><a href="#1-幂等写入" class="headerlink" title="1. 幂等写入"></a>1. 幂等写入</h3><pre class="line-numbers language-sql" data-language="sql"><code class="language-sql"><span class="token keyword">INSERT</span> <span class="token keyword">INTO</span> t_order <span class="token punctuation">(</span>order_no<span class="token punctuation">,</span> amount<span class="token punctuation">,</span> <span class="token keyword">status</span><span class="token punctuation">)</span>
+<span class="token keyword">VALUES</span> <span class="token punctuation">(</span><span class="token string">'A1001'</span><span class="token punctuation">,</span> <span class="token number">99.00</span><span class="token punctuation">,</span> <span class="token number">0</span><span class="token punctuation">)</span>
+<span class="token keyword">ON</span> <span class="token keyword">DUPLICATE</span> <span class="token keyword">KEY</span> <span class="token keyword">UPDATE</span>
+  amount <span class="token operator">=</span> <span class="token keyword">VALUES</span><span class="token punctuation">(</span>amount<span class="token punctuation">)</span><span class="token punctuation">,</span>
+  <span class="token keyword">status</span> <span class="token operator">=</span> <span class="token keyword">VALUES</span><span class="token punctuation">(</span><span class="token keyword">status</span><span class="token punctuation">)</span><span class="token punctuation">,</span>
+  updated_at <span class="token operator">=</span> <span class="token keyword">CURRENT_TIMESTAMP</span><span class="token punctuation">(</span><span class="token number">3</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+<span class="token keyword">SELECT</span> ROW_COUNT<span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>   <span class="token comment">-- 1 插入 / 2 更新 / 0 无变化</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<h3 id="2-分批更新模板"><a href="#2-分批更新模板" class="headerlink" title="2. 分批更新模板"></a>2. 分批更新模板</h3><pre class="line-numbers language-sql" data-language="sql"><code class="language-sql"><span class="token comment">-- 第一批</span>
+<span class="token keyword">UPDATE</span> t_order <span class="token keyword">SET</span> <span class="token keyword">status</span> <span class="token operator">=</span> <span class="token number">3</span> <span class="token keyword">WHERE</span> <span class="token keyword">status</span> <span class="token operator">=</span> <span class="token number">1</span> <span class="token operator">AND</span> id <span class="token operator">BETWEEN</span> <span class="token number">1</span> <span class="token operator">AND</span> <span class="token number">1000</span> <span class="token keyword">LIMIT</span> <span class="token number">1000</span><span class="token punctuation">;</span>
+<span class="token comment">-- 后续按上一批最大 id 推进，直到 ROW_COUNT() = 0</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span></span></code></pre>
+
+<p><code>LIMIT</code> 只在该语句是单表 UPDATE 时合法，且能防止单条语句锁太多行。</p>
+<h3 id="3-大批量导入"><a href="#3-大批量导入" class="headerlink" title="3. 大批量导入"></a>3. 大批量导入</h3><pre class="line-numbers language-bash" data-language="bash"><code class="language-bash">mysql <span class="token parameter variable">-uapp_rw</span> <span class="token parameter variable">-p</span> demo <span class="token parameter variable">-e</span> <span class="token string">"LOAD DATA LOCAL INFILE '/tmp/orders.csv' INTO TABLE t_order
+FIELDS TERMINATED BY ',' OPTIONALLY ENCLOSED BY '<span class="token entity" title="\&quot;">\"</span>'
+LINES TERMINATED BY '<span class="token entity" title="\n">\n</span>' IGNORE 1 LINES (order_no, amount, status);"</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span></span></code></pre>
+
+<p><code>LOAD DATA</code> 比逐条 INSERT 快一个量级，注意客户端要开 <code>local_infile</code>。</p>
+<h3 id="Java-侧怎么落地：批量写入的三层配置"><a href="#Java-侧怎么落地：批量写入的三层配置" class="headerlink" title="Java 侧怎么落地：批量写入的三层配置"></a>Java 侧怎么落地：批量写入的三层配置</h3><ol>
+<li><strong>连接参数</strong>：</li>
+</ol>
+<pre class="line-numbers language-yaml" data-language="yaml"><code class="language-yaml"><span class="token key atrule">spring</span><span class="token punctuation">:</span>
+  <span class="token key atrule">datasource</span><span class="token punctuation">:</span>
+    <span class="token key atrule">url</span><span class="token punctuation">:</span> jdbc<span class="token punctuation">:</span>mysql<span class="token punctuation">:</span>//10.0.0.11<span class="token punctuation">:</span>3306/demo<span class="token punctuation">?</span>rewriteBatchedStatements=true<span class="token important">&amp;useServerPrepStmts=true&amp;cachePrepStmts=true&amp;characterEncoding=utf8&amp;serverTimezone=Asia/Shanghai</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span></span></code></pre>
+
+<p><code>rewriteBatchedStatements=true</code> 是关键：不开它，<code>addBatch</code> 仍是一条条发。</p>
+<ol start="2">
+<li><strong>代码层批量提交</strong>：</li>
+</ol>
+<pre class="line-numbers language-java" data-language="java"><code class="language-java"><span class="token annotation punctuation">@Transactional</span><span class="token punctuation">(</span>propagation <span class="token operator">=</span> <span class="token class-name">Propagation</span><span class="token punctuation">.</span><span class="token constant">REQUIRES_NEW</span><span class="token punctuation">)</span>
+<span class="token keyword">public</span> <span class="token keyword">void</span> <span class="token function">flushBatch</span><span class="token punctuation">(</span><span class="token class-name">List</span><span class="token generics"><span class="token punctuation">&lt;</span><span class="token class-name">Order</span><span class="token punctuation">></span></span> batch<span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+    jdbcTemplate<span class="token punctuation">.</span><span class="token function">batchUpdate</span><span class="token punctuation">(</span>
+        <span class="token string">"INSERT INTO t_order(order_no, amount, status) VALUES (?,?,?) "</span> <span class="token operator">+</span>
+        <span class="token string">"ON DUPLICATE KEY UPDATE amount=VALUES(amount), status=VALUES(status)"</span><span class="token punctuation">,</span>
+        batch<span class="token punctuation">,</span> <span class="token number">500</span><span class="token punctuation">,</span> <span class="token punctuation">(</span>ps<span class="token punctuation">,</span> o<span class="token punctuation">)</span> <span class="token operator">-></span> <span class="token punctuation">&#123;</span>
+            ps<span class="token punctuation">.</span><span class="token function">setString</span><span class="token punctuation">(</span><span class="token number">1</span><span class="token punctuation">,</span> o<span class="token punctuation">.</span><span class="token function">getOrderNo</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+            ps<span class="token punctuation">.</span><span class="token function">setBigDecimal</span><span class="token punctuation">(</span><span class="token number">2</span><span class="token punctuation">,</span> o<span class="token punctuation">.</span><span class="token function">getAmount</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+            ps<span class="token punctuation">.</span><span class="token function">setInt</span><span class="token punctuation">(</span><span class="token number">3</span><span class="token punctuation">,</span> o<span class="token punctuation">.</span><span class="token function">getStatus</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+        <span class="token punctuation">&#125;</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">&#125;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<ol start="3">
+<li><strong>外层切批 + 边界事务</strong>：</li>
+</ol>
+<pre class="line-numbers language-java" data-language="java"><code class="language-java"><span class="token keyword">for</span> <span class="token punctuation">(</span><span class="token class-name">List</span><span class="token generics"><span class="token punctuation">&lt;</span><span class="token class-name">Order</span><span class="token punctuation">></span></span> chunk <span class="token operator">:</span> <span class="token class-name">Lists</span><span class="token punctuation">.</span><span class="token function">partition</span><span class="token punctuation">(</span>orders<span class="token punctuation">,</span> <span class="token number">500</span><span class="token punctuation">)</span><span class="token punctuation">)</span> <span class="token punctuation">&#123;</span>
+    retryTemplate<span class="token punctuation">.</span><span class="token function">execute</span><span class="token punctuation">(</span>ctx <span class="token operator">-></span> <span class="token punctuation">&#123;</span> orderWriter<span class="token punctuation">.</span><span class="token function">flushBatch</span><span class="token punctuation">(</span>chunk<span class="token punctuation">)</span><span class="token punctuation">;</span> <span class="token keyword">return</span> <span class="token keyword">null</span><span class="token punctuation">;</span> <span class="token punctuation">&#125;</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">&#125;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span></span></code></pre>
+
+<p>每次 <code>flushBatch</code> 独立事务（<code>REQUIRES_NEW</code>），失败只回滚这一批，配合唯一键幂等可安全重试；死锁重试间隔用 50ms 起、指数退避，最多 3 次。</p>
+<ol start="4">
+<li><p><strong>MyBatis 侧</strong>：<code>ExecutorType.BATCH</code> 的 <code>SqlSession</code> 要手动 <code>flushStatements()</code>，否则攒到 <code>commit</code> 才发；<code>foreach</code> 拼多值 INSERT 时注意单条 SQL 长度，超过 <code>max_allowed_packet</code> 会直接失败。</p>
+</li>
+<li><p><strong>监控</strong>：批量任务要打「每批行数 &#x2F; 耗时 &#x2F; 失败重试次数」，并观察主从 <code>Seconds_Behind_Master</code>，大事务会把延迟拉爆。</p>
+</li>
+</ol>
+<h2 id="七、常见坑"><a href="#七、常见坑" class="headerlink" title="七、常见坑"></a>七、常见坑</h2><ol>
+<li><strong><code>UPDATE</code> &#x2F; <code>DELETE</code> 忘写 <code>WHERE</code></strong>：全表锁 + 巨量 binlog，从库直接延迟几十分钟；</li>
+<li><strong><code>REPLACE</code> 当 upsert</strong>：丢字段、跳自增、触发器双触发；</li>
+<li><strong>一个事务写百万行</strong>：undo 膨胀、锁等待、崩溃恢复变慢；</li>
+<li><strong>开着 <code>autocommit=1</code> 逐条插</strong>：每行一次提交，吞吐极低；</li>
+<li><strong><code>rewriteBatchedStatements</code> 没开</strong>：以为在批量，其实还是逐条；</li>
+<li><strong>批量里混不同表</strong>：驱动无法合并，退化成多条语句；</li>
+<li><strong>删除后不回收空间</strong>：表越来越大，<code>DATA_FREE</code> 持续增长；</li>
+<li><strong>批量插入不排序主键</strong>：随机主键导致页分裂，写入越跑越慢。</li>
+</ol>
+<h2 id="八、版本差异"><a href="#八、版本差异" class="headerlink" title="八、版本差异"></a>八、版本差异</h2><ul>
+<li><strong>8.0</strong>：<code>innodb_autoinc_lock_mode</code> 默认改为 2；<code>VALUES()</code> 函数在 <code>ON DUPLICATE KEY UPDATE</code> 中仍可用，但官方推荐改用行别名（8.0.19 起 <code>AS new</code>）；</li>
+<li><strong>8.4</strong>：DML 语义无变化，<code>mysql_native_password</code> 默认关闭不影响写入；</li>
+<li><strong>9.x</strong>：无破坏性变化；向量列的写入方式与普通列一致。</li>
+</ul>
+<h2 id="九、课后小结"><a href="#九、课后小结" class="headerlink" title="九、课后小结"></a>九、课后小结</h2><ul>
+<li>多值 INSERT 优先，<code>LOAD DATA</code> 最快；</li>
+<li>幂等用唯一键 + <code>ON DUPLICATE KEY UPDATE</code>，别用 <code>REPLACE</code>；</li>
+<li><code>UPDATE</code> &#x2F; <code>DELETE</code> 必须能走索引，且分批提交；</li>
+<li>批量写入靠五个参数：批量大小、事务边界、自增锁模式、连接参数、重试幂等；</li>
+<li>大批量删除优先考虑分区与归档，而不是 DELETE。</li>
+</ul>
+<h2 id="十、思考题"><a href="#十、思考题" class="headerlink" title="十、思考题"></a>十、思考题</h2><ol>
+<li><p><code>ON DUPLICATE KEY UPDATE</code> 的 <code>ROW_COUNT()</code> 返回 2 意味着什么？</p>
+<p><strong>参考回答</strong>：表示发生了唯一键冲突并执行了更新，且确实改动了行；返回 1 是纯插入，返回 0 是冲突但新值与旧值相同、没有实际变更。</p>
+</li>
+<li><p>为什么说 <code>REPLACE INTO</code> 在生产上要慎用？</p>
+<p><strong>参考回答</strong>：它是「删除 + 插入」，会丢失未在语句中列出的列值（回到默认）、触发两次触发器、多写一条 DELETE binlog、消耗新的自增 ID，还可能级联删除子表数据。</p>
+</li>
+<li><p>一个事务里更新 10 万行会带来哪些具体问题？</p>
+<p><strong>参考回答</strong>：undo 日志暴涨、行锁持有时间长导致其他事务等待、binlog 事件巨大使从库回放延迟、崩溃恢复时间变长；正确做法是按主键或时间分批，每批 500~1000 行提交。</p>
+</li>
+<li><p>开了 <code>rewriteBatchedStatements=true</code> 之后还有什么要注意的？</p>
+<p><strong>参考回答</strong>：驱动只有在 SQL 结构完全一致、参数类型匹配时才能合并；单条合并后的语句不能超过 <code>max_allowed_packet</code>；另外批量里若混有不同表或不同 SQL，合并会退化为逐条发送。</p>
+</li>
+<li><p>为什么批量导入时建议按主键顺序写？</p>
+<p><strong>参考回答</strong>：InnoDB 是聚簇索引，按主键递增插入只追加到 B+Tree 尾部；随机主键会不断在中间页插入，引发页分裂与缓冲池抖动，写入吞吐随数据量增大而下降。</p>
+</li>
+</ol>
+<h2 id="十一、官方资料"><a href="#十一、官方资料" class="headerlink" title="十一、官方资料"></a>十一、官方资料</h2><ul>
+<li><code>INSERT</code>：<a target="_blank" rel="noopener" href="https://dev.mysql.com/doc/refman/8.4/en/insert.html">https://dev.mysql.com/doc/refman/8.4/en/insert.html</a></li>
+<li><code>UPDATE</code>：<a target="_blank" rel="noopener" href="https://dev.mysql.com/doc/refman/8.4/en/update.html">https://dev.mysql.com/doc/refman/8.4/en/update.html</a></li>
+<li><code>DELETE</code>：<a target="_blank" rel="noopener" href="https://dev.mysql.com/doc/refman/8.4/en/delete.html">https://dev.mysql.com/doc/refman/8.4/en/delete.html</a></li>
+<li><code>LOAD DATA</code>：<a target="_blank" rel="noopener" href="https://dev.mysql.com/doc/refman/8.4/en/load-data.html">https://dev.mysql.com/doc/refman/8.4/en/load-data.html</a></li>
+<li>InnoDB 自动递增处理：<a target="_blank" rel="noopener" href="https://dev.mysql.com/doc/refman/8.4/en/innodb-auto-increment-handling.html">https://dev.mysql.com/doc/refman/8.4/en/innodb-auto-increment-handling.html</a></li>
+</ul>
+<p>上一篇：<a href="/2022/11/17/database/mysql/mysql-7-type-choice/">MQ07 选类型的四条原则</a> ｜ 下一篇：<a href="/2022/11/19/database/mysql/mysql-9-single-table-query/">MQ09 单表查询：WHERE、排序、分页与 NULL 语义</a> ｜ <a href="/2022/11/10/database/mysql/mysql-0-series-index/">总目录</a></p>
+</div>
+
+  <div class="mb-foot">
+    <a href="/phone/">返回手机首页</a>
+    <a href="/phone/tags/">星迹索引</a>
+  </div>
+</div>
+
+
+<script>
+  /* 作用：懒加载本地 mermaid 库；无 mermaid 代码块时不加载 */
+  function loadLocalMermaid(){
+    return new Promise(function(resolve, reject){
+      if(window.mermaid) return resolve(window.mermaid);
+      var s = document.createElement('script');
+      s.src = '/js/third-party/mermaid/mermaid.min.js?v=10';
+      s.onload = function(){ resolve(window.mermaid); };
+      s.onerror = function(){ reject(new Error('mermaid local load failed')); };
+      document.head.appendChild(s);
+    });
+  }
+
+  /* 作用：把 ```mermaid 代码块替换成 SVG 图（手机端字号略小、图可横向滚动） */
+  async function renderMermaidDiagram(){
+    var blocks = document.querySelectorAll('pre[class*="language-mermaid"]');
+    if(!blocks.length) return;
+    var mermaid;
+    try { mermaid = await loadLocalMermaid(); }
+    catch(e){ console.warn('[mermaid] 本地库加载失败：', e); return; }
+
+    mermaid.initialize({
+      startOnLoad: false,
+      theme: 'base',
+      themeVariables: {
+        darkMode: true,
+        background: 'transparent',
+        fontFamily: '"Microsoft YaHei", "PingFang SC", "Segoe UI", sans-serif',
+        fontSize: '12px',
+        primaryColor: '#062f3d',
+        primaryTextColor: '#d6f6ff',
+        primaryBorderColor: '#00eeff',
+        secondaryColor: '#04222d',
+        tertiaryColor: '#04222d',
+        mainBkg: '#062f3d',
+        nodeBorder: '#00eeff',
+        clusterBkg: '#02161f',
+        clusterBorder: '#00eeff55',
+        lineColor: '#00eeff',
+        textColor: '#c0e8ff',
+        edgeLabelBackground: '#02161f'
+      },
+      flowchart: { curve: 'basis', useMaxWidth: false, htmlLabels: false, nodeSpacing: 30, rankSpacing: 40, padding: 10 }
+    });
+
+    var targets = [];
+    blocks.forEach(function(el){
+      var codeEl = el.querySelector('code');
+      if(!codeEl) return;
+      var div = document.createElement('div');
+      div.className = 'mermaid';
+      div.textContent = codeEl.textContent;
+      el.parentNode.replaceChild(div, el);
+      targets.push(div);
+    });
+    if(!targets.length) return;
+    try { await mermaid.run({ nodes: targets }); }
+    catch(e){ console.warn('[mermaid] 渲染失败：', e); }
+  }
+  /* 作用：多次触发兜底（延迟重试 + DOM 变化），防止某次时机没跑到导致图表留在代码块 */
+  var mmBusy = false;
+  function scheduleMermaid(){
+    if(mmBusy) return;
+    mmBusy = true;
+    renderMermaidDiagram().then(function(){ mmBusy = false; }, function(){ mmBusy = false; });
+  }
+  scheduleMermaid();
+  window.addEventListener('load', scheduleMermaid);
+  [1000, 3000, 8000].forEach(function(ms){ setTimeout(scheduleMermaid, ms); });
+  if(document.readyState !== 'loading') scheduleMermaid();
+  if(window.MutationObserver){
+    var mmTimer = null;
+    var mmObserver = new MutationObserver(function(){
+      clearTimeout(mmTimer);
+      mmTimer = setTimeout(scheduleMermaid, 400);
+    });
+    mmObserver.observe(document.querySelector('.mb-article') || document.body, { childList: true, subtree: true });
+  }
+</script>
+</body>
+</html>

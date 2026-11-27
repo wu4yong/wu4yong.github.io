@@ -1,0 +1,422 @@
+<!--
+  ============================================
+  手机端 · 文章原文页
+  文件：phone/post.njk
+  适用终端：手机端（路由 /phone/p/<slug>/，由 scripts/phone-routes.js 生成）
+  作用：手机阅读单篇文章；单列布局、无侧栏无雷达，替代电脑端 post.njk
+        数据由生成期算好：page.item = { title, dateStr, content, cats, tags }
+  样式依赖：source/css/theme/phone/common.css、source/css/theme/phone/list.css
+  组件依赖：phone/_components/Particles.njk
+  最后修改：2026-11-11
+  ============================================
+-->
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="color-scheme" content="dark">
+  <meta name="theme-color" content="#020817">
+  <!-- 首帧兜底：浏览器默认画布是白的，样式未解析前会闪一下白。这条规则先锁死深空底色 -->
+  <style>html{background-color:#020817}</style>
+  <title>mysql-14-内置函数 - 时空秘境</title>
+  <!-- 手机端样式：基础 + 列表/正文，外链引入（源文件 source/css/theme/phone/） -->
+  <link rel="stylesheet" href="/css/theme/phone/common.css">
+  <link rel="stylesheet" href="/css/theme/phone/list.css">
+<meta name="generator" content="Hexo 8.1.2"></head>
+<body>
+<div class="mb-shell">
+  <!--
+  ============================================
+  手机端星空粒子组件
+  文件：Particles.njk
+  适用终端：手机端
+  作用：Particles.njk 的手机端副本（nunjucks 子目录 include 取不到上级）
+        参数与电脑端 _components/Particles.njk 保持一致：
+        粒子 95 / 连线 118px / opacity 0.32，外加星座层与零星闪烁层
+  最后修改：2026-11-12
+  ============================================
+--><!-- z-index 必须是 0：负层级会被 body 不透明背景盖住，粒子在跑却看不见 -->
+<div id="particles" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 0; pointer-events: none;"></div>
+<!-- 星座层（与首页同一套：随机零星散布星座图形 + 偶尔闪烁的小星） -->
+<div id="constellations" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 1; pointer-events: none;" aria-hidden="true"></div>
+<script src="/js/particles.min.js"></script>
+<script>
+particlesJS("particles", {
+  particles: {
+    number: {
+      value: 95,
+      density: {
+        enable: true,
+        value_area: 800
+      }
+    },
+    color: {
+      value: "#00eeff"
+    },
+    shape: {
+      type: "circle",
+      stroke: {
+        width: 0,
+        color: "#000000"
+      }
+    },
+    opacity: {
+      value: 0.6,
+      random: true,
+      anim: {
+        enable: true,
+        speed: 0.5,
+        opacity_min: 0.1,
+        sync: false
+      }
+    },
+    size: {
+      value: 3,
+      random: true,
+      anim: {
+        enable: true,
+        speed: 2,
+        size_min: 0.1,
+        sync: false
+      }
+    },
+    line_linked: {
+      enable: true,
+      distance: 118,
+      color: "#00eeff",
+      opacity: 0.32,
+      width: 1
+    },
+    move: {
+      enable: true,
+      speed: 0.8,
+      direction: "none",
+      random: true,
+      straight: false,
+      out_mode: "out",
+      bounce: false,
+      attract: {
+        enable: true,
+        rotateX: 600,
+        rotateY: 1200
+      }
+    }
+  },
+  interactivity: {
+    detect_on: "canvas",
+    events: {
+      onhover: {
+        enable: true,
+        mode: "grab"       // 手指按住时粒子聚集
+      },
+      onclick: {
+        enable: true,
+        mode: "push"       // 点击时产生新粒子
+      },
+      resize: true
+    },
+    modes: {
+      grab: {
+        distance: 200,
+        line_linked: {
+          opacity: 1
+        }
+      },
+      push: {
+        particles_nb: 6
+      }
+    }
+  },
+  retina_detect: true
+});
+</script>
+<!-- 星座 + 零星闪烁层：与电脑端共用同一份绘制脚本 -->
+<script src="/js/theme/home/starfield.js"></script>
+
+
+  <div class="mb-top">
+    <a class="mb-back" href="/phone/">← 返回手机首页</a>
+    <span class="mb-sub" style="margin:0">2022-11-24</span>
+  </div>
+
+  <h1 class="mb-title">mysql-14-内置函数</h1>
+  <div class="mb-sub">
+    分类：database · mysql
+     ｜ 标签：系统课 · MySQL · 数据库
+  </div>
+
+  <div class="mb-article"><div class="essay-banner essay-database"></div>
+
+<h1 id="内置函数：字符串、日期与-JSON"><a href="#内置函数：字符串、日期与-JSON" class="headerlink" title="内置函数：字符串、日期与 JSON"></a>内置函数：字符串、日期与 JSON</h1><p><img src="https://wu4yong.github.io/starry-images/assets/img/mysql/mq-14-func.svg" alt="字符串、日期、JSON 三类常用函数"></p>
+<p><em>函数用得越顺手，越容易在 WHERE 里把索引包死——先看函数，再看它能不能下推｜依据 MySQL 8.4 Functions 章节自绘</em></p>
+<h2 id="一、学习目标"><a href="#一、学习目标" class="headerlink" title="一、学习目标"></a>一、学习目标</h2><ol>
+<li>掌握字符串处理最常用的八个函数，分清 <code>LENGTH</code> 与 <code>CHAR_LENGTH</code>；</li>
+<li>把日期计算从「Java 里算完再传参」改成「SQL 里用可走索引的区间条件」；</li>
+<li>会用 JSON 函数读写与展开，并知道什么时候该给函数建索引。</li>
+</ol>
+<h2 id="二、前置知识"><a href="#二、前置知识" class="headerlink" title="二、前置知识"></a>二、前置知识</h2><p>类型与单表查询。知道函数包住索引列会让索引失效即可。</p>
+<h2 id="三、理论讲解（官方定义）"><a href="#三、理论讲解（官方定义）" class="headerlink" title="三、理论讲解（官方定义）"></a>三、理论讲解（官方定义）</h2><p>MySQL 内置函数按族分：字符串、数值、日期时间、JSON、聚合、窗口、信息函数（<code>VERSION()</code>、<code>DATABASE()</code>、<code>LAST_INSERT_ID()</code>）。它们都是<strong>逐行求值</strong>的标量函数，因此出现在 <code>WHERE</code> 里时，能否走索引取决于是否作用在列上。</p>
+<p>官方要点：</p>
+<ul>
+<li><code>LENGTH()</code> 返回字节数，<code>CHAR_LENGTH()</code> 返回字符数，utf8mb4 下「中文」是 6 与 2；</li>
+<li>日期函数受会话时区影响：<code>NOW()</code> 取会话时区，<code>UTC_TIMESTAMP()</code> 取 UTC；</li>
+<li>JSON 有 <code>-&gt;</code>（等价 <code>JSON_EXTRACT</code>）与 <code>-&gt;&gt;</code>（抽出并去引号）两种取值运算符；</li>
+<li>8.0.13 起支持<strong>函数索引</strong>，把「对列用函数」的查询变成可索引。</li>
+</ul>
+<h2 id="四、原理拆解"><a href="#四、原理拆解" class="headerlink" title="四、原理拆解"></a>四、原理拆解</h2><p><img src="https://wu4yong.github.io/starry-images/assets/img/mysql/mq-14b-func.svg" alt="三类函数的常用清单与索引影响"></p>
+<p><em>函数本身很快，问题在于它出现在索引列上时会让 B+Tree 失去有序性｜依据 MySQL 8.4 Functions 与索引章节自绘</em></p>
+<h3 id="1-字符串：八个够用的函数"><a href="#1-字符串：八个够用的函数" class="headerlink" title="1. 字符串：八个够用的函数"></a>1. 字符串：八个够用的函数</h3><table>
+<thead>
+<tr>
+<th>函数</th>
+<th>用途</th>
+<th>注意</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>CONCAT</code> &#x2F; <code>CONCAT_WS</code></td>
+<td>拼接 &#x2F; 带分隔符拼接</td>
+<td>任一参数为 NULL，<code>CONCAT</code> 返回 NULL</td>
+</tr>
+<tr>
+<td><code>SUBSTRING_INDEX</code></td>
+<td>按分隔符取第 N 段</td>
+<td>解析 URL、路径最常用</td>
+</tr>
+<tr>
+<td><code>GROUP_CONCAT</code></td>
+<td>分组内拼接</td>
+<td>默认 1024 字节上限</td>
+</tr>
+<tr>
+<td><code>LPAD</code> &#x2F; <code>RPAD</code></td>
+<td>左&#x2F;右补位</td>
+<td>生成定长编码</td>
+</tr>
+<tr>
+<td><code>TRIM</code></td>
+<td>去首尾空格</td>
+<td>中间空格要用 <code>REPLACE</code></td>
+</tr>
+<tr>
+<td><code>REPLACE</code></td>
+<td>字符串替换</td>
+<td>不支持正则</td>
+</tr>
+<tr>
+<td><code>REGEXP_REPLACE</code> &#x2F; <code>REGEXP_LIKE</code></td>
+<td>正则替换 &#x2F; 匹配</td>
+<td>8.0 起可用，无法走索引</td>
+</tr>
+<tr>
+<td><code>LEFT</code> &#x2F; <code>RIGHT</code> &#x2F; <code>LOCATE</code></td>
+<td>截取 &#x2F; 定位</td>
+<td>与 <code>SUBSTRING</code> 配合</td>
+</tr>
+</tbody></table>
+<p><code>CONCAT</code> 的 NULL 传染是最常见的坑：<code>CONCAT(&#39;a&#39;, NULL)</code> 得 NULL，而 <code>CONCAT_WS</code> 会跳过 NULL。</p>
+<h3 id="2-日期：把计算放回-SQL，但别包住列"><a href="#2-日期：把计算放回-SQL，但别包住列" class="headerlink" title="2. 日期：把计算放回 SQL，但别包住列"></a>2. 日期：把计算放回 SQL，但别包住列</h3><pre class="line-numbers language-sql" data-language="sql"><code class="language-sql"><span class="token comment">-- 错：列被函数包住，索引失效</span>
+<span class="token keyword">WHERE</span> <span class="token keyword">DATE</span><span class="token punctuation">(</span>created_at<span class="token punctuation">)</span> <span class="token operator">=</span> <span class="token string">'2022-11-24'</span><span class="token punctuation">;</span>
+<span class="token comment">-- 对：改写为半开区间</span>
+<span class="token keyword">WHERE</span> created_at <span class="token operator">>=</span> <span class="token string">'2022-11-24'</span> <span class="token operator">AND</span> created_at <span class="token operator">&lt;</span> <span class="token string">'2022-11-25'</span><span class="token punctuation">;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span></span></code></pre>
+
+<p>常用函数：</p>
+<ul>
+<li><code>DATE_FORMAT(d, &#39;%Y-%m-%d&#39;)</code>：格式化，展示用；</li>
+<li><code>STR_TO_DATE(&#39;2022-11-24&#39;, &#39;%Y-%m-%d&#39;)</code>：字符串转日期；</li>
+<li><code>DATE_ADD(d, INTERVAL 1 DAY)</code> &#x2F; <code>DATE_SUB</code>：日期加减；</li>
+<li><code>TIMESTAMPDIFF(MINUTE, a, b)</code>：跨单位差值；</li>
+<li><code>DATEDIFF(a, b)</code>：只算日期差；</li>
+<li><code>LAST_DAY(d)</code>：当月最后一天，做月报边界；</li>
+<li><code>UNIX_TIMESTAMP</code> &#x2F; <code>FROM_UNIXTIME</code>：与秒级时间戳互转。</li>
+</ul>
+<h3 id="3-JSON：取值、改写、展开"><a href="#3-JSON：取值、改写、展开" class="headerlink" title="3. JSON：取值、改写、展开"></a>3. JSON：取值、改写、展开</h3><pre class="line-numbers language-sql" data-language="sql"><code class="language-sql"><span class="token keyword">SELECT</span> payload<span class="token operator">-</span><span class="token operator">>></span><span class="token string">'$.user_id'</span>            <span class="token keyword">AS</span> uid<span class="token punctuation">,</span>        <span class="token comment">-- 取值并去引号</span>
+       JSON_EXTRACT<span class="token punctuation">(</span>payload<span class="token punctuation">,</span> <span class="token string">'$.tags'</span><span class="token punctuation">)</span>  <span class="token keyword">AS</span> tags<span class="token punctuation">,</span>        <span class="token comment">-- 取子文档</span>
+       JSON_UNQUOTE<span class="token punctuation">(</span>payload<span class="token operator">-</span><span class="token operator">></span><span class="token string">'$.city'</span><span class="token punctuation">)</span>  <span class="token keyword">AS</span> city
+<span class="token keyword">FROM</span> t_event<span class="token punctuation">;</span>
+
+<span class="token keyword">UPDATE</span> t_event <span class="token keyword">SET</span> payload <span class="token operator">=</span> JSON_SET<span class="token punctuation">(</span>payload<span class="token punctuation">,</span> <span class="token string">'$.vip'</span><span class="token punctuation">,</span> <span class="token boolean">true</span><span class="token punctuation">)</span> <span class="token keyword">WHERE</span> id <span class="token operator">=</span> <span class="token number">1</span><span class="token punctuation">;</span>
+<span class="token keyword">SELECT</span> jt<span class="token punctuation">.</span>tag <span class="token keyword">FROM</span> t_event<span class="token punctuation">,</span> JSON_TABLE<span class="token punctuation">(</span>payload<span class="token punctuation">,</span> <span class="token string">'$.tags[*]'</span> <span class="token keyword">COLUMNS</span> <span class="token punctuation">(</span>tag <span class="token keyword">VARCHAR</span><span class="token punctuation">(</span><span class="token number">32</span><span class="token punctuation">)</span> PATH <span class="token string">'$'</span><span class="token punctuation">)</span><span class="token punctuation">)</span> <span class="token keyword">AS</span> jt<span class="token punctuation">;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<p><code>JSON_SET</code> 改已存在的键、<code>JSON_INSERT</code> 只加不覆盖、<code>JSON_REPLACE</code> 只改不新增；判断包含用 <code>JSON_CONTAINS</code>，重叠判断用 <code>JSON_OVERLAPS</code>。</p>
+<h3 id="4-让函数查询也能走索引"><a href="#4-让函数查询也能走索引" class="headerlink" title="4. 让函数查询也能走索引"></a>4. 让函数查询也能走索引</h3><pre class="line-numbers language-sql" data-language="sql"><code class="language-sql"><span class="token comment">-- 方案一：函数索引（8.0.13+）</span>
+<span class="token keyword">ALTER</span> <span class="token keyword">TABLE</span> t_order <span class="token keyword">ADD</span> <span class="token keyword">KEY</span> idx_created_day <span class="token punctuation">(</span><span class="token punctuation">(</span><span class="token keyword">DATE</span><span class="token punctuation">(</span>created_at<span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+<span class="token comment">-- 方案二：生成列 + 普通索引（更通用，也更易读）</span>
+<span class="token keyword">ALTER</span> <span class="token keyword">TABLE</span> t_order <span class="token keyword">ADD</span> <span class="token keyword">COLUMN</span> created_day <span class="token keyword">DATE</span>
+  GENERATED ALWAYS <span class="token keyword">AS</span> <span class="token punctuation">(</span><span class="token keyword">DATE</span><span class="token punctuation">(</span>created_at<span class="token punctuation">)</span><span class="token punctuation">)</span> STORED<span class="token punctuation">,</span> <span class="token keyword">ADD</span> <span class="token keyword">KEY</span> idx_day <span class="token punctuation">(</span>created_day<span class="token punctuation">)</span><span class="token punctuation">;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<p>函数索引适合「查询形态固定」的场景；生成列还能被其他查询复用，团队里更推荐后者。</p>
+<h2 id="五、场景说明"><a href="#五、场景说明" class="headerlink" title="五、场景说明"></a>五、场景说明</h2><ol>
+<li><strong>手机号脱敏</strong>：<code>CONCAT(LEFT(phone,3),&#39;****&#39;,RIGHT(phone,4))</code>；</li>
+<li><strong>拆标签</strong>：<code>SUBSTRING_INDEX(tags, &#39;,&#39;, 1)</code> 取第一个标签；</li>
+<li><strong>按月报表</strong>：<code>DATE_FORMAT(created_at,&#39;%Y-%m&#39;)</code> 展示，过滤仍用区间；</li>
+<li><strong>保留 N 天数据</strong>：<code>WHERE created_at &lt; DATE_SUB(NOW(), INTERVAL 30 DAY)</code>；</li>
+<li><strong>JSON 扩展字段读取</strong>：<code>payload-&gt;&gt;&#39;$.order_id&#39;</code>；</li>
+<li><strong>JSON 数组展开成行</strong>：<code>JSON_TABLE</code>。</li>
+</ol>
+<h2 id="六、示例代码-实操步骤"><a href="#六、示例代码-实操步骤" class="headerlink" title="六、示例代码&#x2F;实操步骤"></a>六、示例代码&#x2F;实操步骤</h2><h3 id="1-字符串常用组合"><a href="#1-字符串常用组合" class="headerlink" title="1. 字符串常用组合"></a>1. 字符串常用组合</h3><pre class="line-numbers language-sql" data-language="sql"><code class="language-sql"><span class="token keyword">SELECT</span> CONCAT_WS<span class="token punctuation">(</span><span class="token string">'-'</span><span class="token punctuation">,</span> <span class="token string">'2022'</span><span class="token punctuation">,</span> <span class="token string">'11'</span><span class="token punctuation">,</span> <span class="token string">'24'</span><span class="token punctuation">)</span>                     <span class="token keyword">AS</span> d<span class="token punctuation">,</span>        <span class="token comment">-- 2022-11-24</span>
+       SUBSTRING_INDEX<span class="token punctuation">(</span><span class="token string">'a.b.c'</span><span class="token punctuation">,</span> <span class="token string">'.'</span><span class="token punctuation">,</span> <span class="token operator">-</span><span class="token number">1</span><span class="token punctuation">)</span>                      <span class="token keyword">AS</span> last_seg<span class="token punctuation">,</span> <span class="token comment">-- c</span>
+       LPAD<span class="token punctuation">(</span><span class="token string">'7'</span><span class="token punctuation">,</span> <span class="token number">4</span><span class="token punctuation">,</span> <span class="token string">'0'</span><span class="token punctuation">)</span>                                       <span class="token keyword">AS</span> code<span class="token punctuation">,</span>     <span class="token comment">-- 0007</span>
+       CHAR_LENGTH<span class="token punctuation">(</span><span class="token string">'中文'</span><span class="token punctuation">)</span>                                     <span class="token keyword">AS</span> chars<span class="token punctuation">,</span>    <span class="token comment">-- 2</span>
+       LENGTH<span class="token punctuation">(</span><span class="token string">'中文'</span><span class="token punctuation">)</span>                                          <span class="token keyword">AS</span> bytes<span class="token punctuation">;</span>    <span class="token comment">-- 6</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<h3 id="2-日期区间与格式化"><a href="#2-日期区间与格式化" class="headerlink" title="2. 日期区间与格式化"></a>2. 日期区间与格式化</h3><pre class="line-numbers language-sql" data-language="sql"><code class="language-sql"><span class="token keyword">SELECT</span> <span class="token function">NOW</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">,</span> UTC_TIMESTAMP<span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">,</span> @<span class="token variable">@session.time_zone</span><span class="token punctuation">;</span>
+<span class="token keyword">SELECT</span> DATE_FORMAT<span class="token punctuation">(</span>created_at<span class="token punctuation">,</span> <span class="token string">'%Y-%m-%d %H:%i'</span><span class="token punctuation">)</span> <span class="token keyword">AS</span> t<span class="token punctuation">,</span>
+       TIMESTAMPDIFF<span class="token punctuation">(</span><span class="token keyword">MINUTE</span><span class="token punctuation">,</span> created_at<span class="token punctuation">,</span> <span class="token function">NOW</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span>  <span class="token keyword">AS</span> mins_ago
+<span class="token keyword">FROM</span> t_order <span class="token keyword">WHERE</span> created_at <span class="token operator">>=</span> CURDATE<span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token keyword">ORDER</span> <span class="token keyword">BY</span> id <span class="token keyword">DESC</span> <span class="token keyword">LIMIT</span> <span class="token number">5</span><span class="token punctuation">;</span>
+
+<span class="token keyword">SELECT</span> LAST_DAY<span class="token punctuation">(</span><span class="token string">'2022-11-24'</span><span class="token punctuation">)</span> <span class="token keyword">AS</span> month_end<span class="token punctuation">;</span>   <span class="token comment">-- 2022-11-30</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<h3 id="3-JSON-读写与展开"><a href="#3-JSON-读写与展开" class="headerlink" title="3. JSON 读写与展开"></a>3. JSON 读写与展开</h3><pre class="line-numbers language-sql" data-language="sql"><code class="language-sql"><span class="token keyword">UPDATE</span> t_event <span class="token keyword">SET</span> payload <span class="token operator">=</span> JSON_SET<span class="token punctuation">(</span>payload<span class="token punctuation">,</span> <span class="token string">'$.vip'</span><span class="token punctuation">,</span> <span class="token boolean">true</span><span class="token punctuation">,</span> <span class="token string">'$.level'</span><span class="token punctuation">,</span> <span class="token number">3</span><span class="token punctuation">)</span> <span class="token keyword">WHERE</span> id <span class="token operator">=</span> <span class="token number">1</span><span class="token punctuation">;</span>
+<span class="token keyword">SELECT</span> JSON_CONTAINS<span class="token punctuation">(</span>payload<span class="token operator">-</span><span class="token operator">></span><span class="token string">'$.tags'</span><span class="token punctuation">,</span> <span class="token string">'"mysql"'</span><span class="token punctuation">)</span> <span class="token keyword">FROM</span> t_event <span class="token keyword">WHERE</span> id <span class="token operator">=</span> <span class="token number">1</span><span class="token punctuation">;</span>
+<span class="token keyword">SELECT</span> e<span class="token punctuation">.</span>id<span class="token punctuation">,</span> jt<span class="token punctuation">.</span>tag
+<span class="token keyword">FROM</span> t_event e<span class="token punctuation">,</span> JSON_TABLE<span class="token punctuation">(</span>e<span class="token punctuation">.</span>payload<span class="token punctuation">,</span> <span class="token string">'$.tags[*]'</span> <span class="token keyword">COLUMNS</span> <span class="token punctuation">(</span>tag <span class="token keyword">VARCHAR</span><span class="token punctuation">(</span><span class="token number">32</span><span class="token punctuation">)</span> PATH <span class="token string">'$'</span><span class="token punctuation">)</span><span class="token punctuation">)</span> jt
+<span class="token keyword">WHERE</span> jt<span class="token punctuation">.</span>tag <span class="token operator">=</span> <span class="token string">'mysql'</span><span class="token punctuation">;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<h3 id="4-验证函数索引是否生效"><a href="#4-验证函数索引是否生效" class="headerlink" title="4. 验证函数索引是否生效"></a>4. 验证函数索引是否生效</h3><pre class="line-numbers language-sql" data-language="sql"><code class="language-sql"><span class="token keyword">EXPLAIN</span> <span class="token keyword">SELECT</span> <span class="token operator">*</span> <span class="token keyword">FROM</span> t_order <span class="token keyword">WHERE</span> <span class="token keyword">DATE</span><span class="token punctuation">(</span>created_at<span class="token punctuation">)</span> <span class="token operator">=</span> <span class="token string">'2022-11-24'</span><span class="token punctuation">;</span>
+<span class="token comment">-- 建函数索引后，key 列应显示 idx_created_day</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span></span></code></pre>
+
+<h3 id="Java-侧怎么落地：该在-SQL-算还是在应用算"><a href="#Java-侧怎么落地：该在-SQL-算还是在应用算" class="headerlink" title="Java 侧怎么落地：该在 SQL 算还是在应用算"></a>Java 侧怎么落地：该在 SQL 算还是在应用算</h3><ol>
+<li><strong>展示格式化放应用层</strong>：<code>DATE_FORMAT</code> 只影响可读性，交给 <code>DateTimeFormatter</code> 更灵活，SQL 保持返回原始时间；</li>
+<li><strong>时间边界一定在 SQL 侧用区间</strong>，Java 传 <code>LocalDateTime</code> 参数，避免拼接字符串；</li>
+<li><strong><code>GROUP_CONCAT</code> 结果长度</strong>：默认 1024 字节，超长会静默截断，必要时 <code>SET SESSION group_concat_max_len = 8192</code>；</li>
+<li><strong>JSON 字段用 Jackson 序列化后再写</strong>，避免手工拼 <code>JSON_OBJECT</code> 时引号转义出错；</li>
+<li><strong>别把业务规则写进 SQL 函数</strong>：脱敏、编码这类逻辑放应用层，SQL 里只留过滤与聚合，方便测试与复用。</li>
+</ol>
+<h2 id="七、常见坑"><a href="#七、常见坑" class="headerlink" title="七、常见坑"></a>七、常见坑</h2><ol>
+<li><strong><code>WHERE DATE(col) = ...</code></strong>：索引失效，改区间或函数索引；</li>
+<li><strong><code>LENGTH</code> 当字符数用</strong>：utf8mb4 下差 3 倍；</li>
+<li><strong><code>CONCAT</code> 遇 NULL 全变 NULL</strong>：用 <code>CONCAT_WS</code> 或 <code>IFNULL</code>；</li>
+<li><strong><code>GROUP_CONCAT</code> 截断</strong>：默认 1024 字节；</li>
+<li><strong><code>NOW()</code> 与 <code>UTC_TIMESTAMP()</code> 混用</strong>：跨时区统计错位；</li>
+<li><strong><code>REGEXP</code> 查询</strong>：全表扫描，且无法走索引；</li>
+<li><strong>JSON 直接比较大小</strong>：类型与格式不一致时结果反直觉，比较前先 <code>CAST</code>。</li>
+</ol>
+<h2 id="八、版本差异"><a href="#八、版本差异" class="headerlink" title="八、版本差异"></a>八、版本差异</h2><ul>
+<li><strong>5.7</strong>：无 <code>REGEXP_REPLACE</code>、无函数索引、JSON 支持有限；</li>
+<li><strong>8.0</strong>：新增 <code>REGEXP_*</code> 系列、<code>JSON_TABLE</code>、函数索引（8.0.13）、<code>JSON_VALUE</code>（8.0.21）；</li>
+<li><strong>8.4</strong>：函数集延续 8.0，无破坏性变更；<code>utf8mb3</code> 弃用影响 <code>CONVERT(... USING utf8)</code> 这类写法。</li>
+</ul>
+<h2 id="九、课后小结"><a href="#九、课后小结" class="headerlink" title="九、课后小结"></a>九、课后小结</h2><ul>
+<li><code>LENGTH</code> 是字节，<code>CHAR_LENGTH</code> 是字符；</li>
+<li>日期过滤用半开区间，别把函数套在索引列上；</li>
+<li>JSON 取值用 <code>-&gt;&gt;</code>，展开用 <code>JSON_TABLE</code>，修改用 <code>JSON_SET</code>；</li>
+<li>必须对列用函数时，建生成列或函数索引；</li>
+<li>展示格式化放应用层，SQL 只做过滤与聚合。</li>
+</ul>
+<h2 id="十、思考题"><a href="#十、思考题" class="headerlink" title="十、思考题"></a>十、思考题</h2><ol>
+<li><p><code>LENGTH(&#39;中文&#39;)</code> 与 <code>CHAR_LENGTH(&#39;中文&#39;)</code> 分别返回什么，为什么？</p>
+<p><strong>参考回答</strong>：返回 6 和 2。utf8mb4 下每个汉字占 3 字节，<code>LENGTH</code> 统计字节数，<code>CHAR_LENGTH</code> 统计字符数。</p>
+</li>
+<li><p>为什么 <code>WHERE DATE(created_at) = &#39;2022-11-24&#39;</code> 用不上索引，怎么改？</p>
+<p><strong>参考回答</strong>：函数作用在索引列上，B+Tree 的有序性无法用于比较，只能逐行求值。改成 <code>created_at &gt;= &#39;2022-11-24&#39; AND created_at &lt; &#39;2022-11-25&#39;</code> 即可走范围扫描；也可建 <code>(DATE(created_at))</code> 函数索引。</p>
+</li>
+<li><p><code>CONCAT(&#39;a&#39;, NULL)</code> 与 <code>CONCAT_WS(&#39;-&#39;, &#39;a&#39;, NULL)</code> 的结果差别？</p>
+<p><strong>参考回答</strong>：前者返回 NULL（任参数为 NULL 则整体为 NULL）；后者跳过 NULL，返回 <code>a</code>。</p>
+</li>
+<li><p>JSON 字段要按某个键过滤，怎么让它走索引？</p>
+<p><strong>参考回答</strong>：把该键抽成 <code>STORED</code> 生成列（如 <code>payload-&gt;&gt;&#39;$.user_id&#39;</code>），在生成列上建索引，查询时直接比较生成列。</p>
+</li>
+<li><p><code>GROUP_CONCAT</code> 拼接出来的列表少了几条，可能是什么原因？</p>
+<p><strong>参考回答</strong>：<code>group_concat_max_len</code> 默认 1024 字节，超长会被静默截断；另外 <code>GROUP_CONCAT</code> 会跳过 NULL 值，也可能造成条数变少。</p>
+</li>
+</ol>
+<h2 id="十一、官方资料"><a href="#十一、官方资料" class="headerlink" title="十一、官方资料"></a>十一、官方资料</h2><ul>
+<li>字符串函数：<a target="_blank" rel="noopener" href="https://dev.mysql.com/doc/refman/8.4/en/string-functions.html">https://dev.mysql.com/doc/refman/8.4/en/string-functions.html</a></li>
+<li>日期时间函数：<a target="_blank" rel="noopener" href="https://dev.mysql.com/doc/refman/8.4/en/date-and-time-functions.html">https://dev.mysql.com/doc/refman/8.4/en/date-and-time-functions.html</a></li>
+<li>JSON 函数：<a target="_blank" rel="noopener" href="https://dev.mysql.com/doc/refman/8.4/en/json-functions.html">https://dev.mysql.com/doc/refman/8.4/en/json-functions.html</a></li>
+<li>函数索引：<a target="_blank" rel="noopener" href="https://dev.mysql.com/doc/refman/8.4/en/create-index.html#create-index-functional-key-parts">https://dev.mysql.com/doc/refman/8.4/en/create-index.html#create-index-functional-key-parts</a></li>
+</ul>
+<p>上一篇：<a href="/2022/11/23/database/mysql/mysql-13-window-cte/">MQ13 窗口函数与 CTE</a> ｜ 下一篇：<a href="/2022/11/25/database/mysql/mysql-15-constraints/">MQ15 约束</a> ｜ <a href="/2022/11/10/database/mysql/mysql-0-series-index/">总目录</a></p>
+</div>
+
+  <div class="mb-foot">
+    <a href="/phone/">返回手机首页</a>
+    <a href="/phone/tags/">星迹索引</a>
+  </div>
+</div>
+
+
+<script>
+  /* 作用：懒加载本地 mermaid 库；无 mermaid 代码块时不加载 */
+  function loadLocalMermaid(){
+    return new Promise(function(resolve, reject){
+      if(window.mermaid) return resolve(window.mermaid);
+      var s = document.createElement('script');
+      s.src = '/js/third-party/mermaid/mermaid.min.js?v=10';
+      s.onload = function(){ resolve(window.mermaid); };
+      s.onerror = function(){ reject(new Error('mermaid local load failed')); };
+      document.head.appendChild(s);
+    });
+  }
+
+  /* 作用：把 ```mermaid 代码块替换成 SVG 图（手机端字号略小、图可横向滚动） */
+  async function renderMermaidDiagram(){
+    var blocks = document.querySelectorAll('pre[class*="language-mermaid"]');
+    if(!blocks.length) return;
+    var mermaid;
+    try { mermaid = await loadLocalMermaid(); }
+    catch(e){ console.warn('[mermaid] 本地库加载失败：', e); return; }
+
+    mermaid.initialize({
+      startOnLoad: false,
+      theme: 'base',
+      themeVariables: {
+        darkMode: true,
+        background: 'transparent',
+        fontFamily: '"Microsoft YaHei", "PingFang SC", "Segoe UI", sans-serif',
+        fontSize: '12px',
+        primaryColor: '#062f3d',
+        primaryTextColor: '#d6f6ff',
+        primaryBorderColor: '#00eeff',
+        secondaryColor: '#04222d',
+        tertiaryColor: '#04222d',
+        mainBkg: '#062f3d',
+        nodeBorder: '#00eeff',
+        clusterBkg: '#02161f',
+        clusterBorder: '#00eeff55',
+        lineColor: '#00eeff',
+        textColor: '#c0e8ff',
+        edgeLabelBackground: '#02161f'
+      },
+      flowchart: { curve: 'basis', useMaxWidth: false, htmlLabels: false, nodeSpacing: 30, rankSpacing: 40, padding: 10 }
+    });
+
+    var targets = [];
+    blocks.forEach(function(el){
+      var codeEl = el.querySelector('code');
+      if(!codeEl) return;
+      var div = document.createElement('div');
+      div.className = 'mermaid';
+      div.textContent = codeEl.textContent;
+      el.parentNode.replaceChild(div, el);
+      targets.push(div);
+    });
+    if(!targets.length) return;
+    try { await mermaid.run({ nodes: targets }); }
+    catch(e){ console.warn('[mermaid] 渲染失败：', e); }
+  }
+  /* 作用：多次触发兜底（延迟重试 + DOM 变化），防止某次时机没跑到导致图表留在代码块 */
+  var mmBusy = false;
+  function scheduleMermaid(){
+    if(mmBusy) return;
+    mmBusy = true;
+    renderMermaidDiagram().then(function(){ mmBusy = false; }, function(){ mmBusy = false; });
+  }
+  scheduleMermaid();
+  window.addEventListener('load', scheduleMermaid);
+  [1000, 3000, 8000].forEach(function(ms){ setTimeout(scheduleMermaid, ms); });
+  if(document.readyState !== 'loading') scheduleMermaid();
+  if(window.MutationObserver){
+    var mmTimer = null;
+    var mmObserver = new MutationObserver(function(){
+      clearTimeout(mmTimer);
+      mmTimer = setTimeout(scheduleMermaid, 400);
+    });
+    mmObserver.observe(document.querySelector('.mb-article') || document.body, { childList: true, subtree: true });
+  }
+</script>
+</body>
+</html>

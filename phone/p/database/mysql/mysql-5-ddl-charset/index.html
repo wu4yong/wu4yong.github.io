@@ -1,0 +1,397 @@
+<!--
+  ============================================
+  手机端 · 文章原文页
+  文件：phone/post.njk
+  适用终端：手机端（路由 /phone/p/<slug>/，由 scripts/phone-routes.js 生成）
+  作用：手机阅读单篇文章；单列布局、无侧栏无雷达，替代电脑端 post.njk
+        数据由生成期算好：page.item = { title, dateStr, content, cats, tags }
+  样式依赖：source/css/theme/phone/common.css、source/css/theme/phone/list.css
+  组件依赖：phone/_components/Particles.njk
+  最后修改：2026-11-11
+  ============================================
+-->
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="color-scheme" content="dark">
+  <meta name="theme-color" content="#020817">
+  <!-- 首帧兜底：浏览器默认画布是白的，样式未解析前会闪一下白。这条规则先锁死深空底色 -->
+  <style>html{background-color:#020817}</style>
+  <title>mysql-5-库与表：DDL、字符集与排序规则 - 时空秘境</title>
+  <!-- 手机端样式：基础 + 列表/正文，外链引入（源文件 source/css/theme/phone/） -->
+  <link rel="stylesheet" href="/css/theme/phone/common.css">
+  <link rel="stylesheet" href="/css/theme/phone/list.css">
+<meta name="generator" content="Hexo 8.1.2"></head>
+<body>
+<div class="mb-shell">
+  <!--
+  ============================================
+  手机端星空粒子组件
+  文件：Particles.njk
+  适用终端：手机端
+  作用：Particles.njk 的手机端副本（nunjucks 子目录 include 取不到上级）
+        参数与电脑端 _components/Particles.njk 保持一致：
+        粒子 95 / 连线 118px / opacity 0.32，外加星座层与零星闪烁层
+  最后修改：2026-11-12
+  ============================================
+--><!-- z-index 必须是 0：负层级会被 body 不透明背景盖住，粒子在跑却看不见 -->
+<div id="particles" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 0; pointer-events: none;"></div>
+<!-- 星座层（与首页同一套：随机零星散布星座图形 + 偶尔闪烁的小星） -->
+<div id="constellations" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 1; pointer-events: none;" aria-hidden="true"></div>
+<script src="/js/particles.min.js"></script>
+<script>
+particlesJS("particles", {
+  particles: {
+    number: {
+      value: 95,
+      density: {
+        enable: true,
+        value_area: 800
+      }
+    },
+    color: {
+      value: "#00eeff"
+    },
+    shape: {
+      type: "circle",
+      stroke: {
+        width: 0,
+        color: "#000000"
+      }
+    },
+    opacity: {
+      value: 0.6,
+      random: true,
+      anim: {
+        enable: true,
+        speed: 0.5,
+        opacity_min: 0.1,
+        sync: false
+      }
+    },
+    size: {
+      value: 3,
+      random: true,
+      anim: {
+        enable: true,
+        speed: 2,
+        size_min: 0.1,
+        sync: false
+      }
+    },
+    line_linked: {
+      enable: true,
+      distance: 118,
+      color: "#00eeff",
+      opacity: 0.32,
+      width: 1
+    },
+    move: {
+      enable: true,
+      speed: 0.8,
+      direction: "none",
+      random: true,
+      straight: false,
+      out_mode: "out",
+      bounce: false,
+      attract: {
+        enable: true,
+        rotateX: 600,
+        rotateY: 1200
+      }
+    }
+  },
+  interactivity: {
+    detect_on: "canvas",
+    events: {
+      onhover: {
+        enable: true,
+        mode: "grab"       // 手指按住时粒子聚集
+      },
+      onclick: {
+        enable: true,
+        mode: "push"       // 点击时产生新粒子
+      },
+      resize: true
+    },
+    modes: {
+      grab: {
+        distance: 200,
+        line_linked: {
+          opacity: 1
+        }
+      },
+      push: {
+        particles_nb: 6
+      }
+    }
+  },
+  retina_detect: true
+});
+</script>
+<!-- 星座 + 零星闪烁层：与电脑端共用同一份绘制脚本 -->
+<script src="/js/theme/home/starfield.js"></script>
+
+
+  <div class="mb-top">
+    <a class="mb-back" href="/phone/">← 返回手机首页</a>
+    <span class="mb-sub" style="margin:0">2022-11-15</span>
+  </div>
+
+  <h1 class="mb-title">mysql-5-库与表：DDL、字符集与排序规则</h1>
+  <div class="mb-sub">
+    分类：database · mysql
+     ｜ 标签：系统课 · MySQL · 数据库
+  </div>
+
+  <div class="mb-article"><div class="essay-banner essay-database"></div>
+
+<h1 id="库与表：DDL、字符集与排序规则"><a href="#库与表：DDL、字符集与排序规则" class="headerlink" title="库与表：DDL、字符集与排序规则"></a>库与表：DDL、字符集与排序规则</h1><p><img src="https://wu4yong.github.io/starry-images/assets/img/mysql/mq-5-ddl.svg" alt="库、表、列、连接四层字符集与排序规则"></p>
+<p><em>建表只写 ENGINE 是不够的，字符集与排序规则决定了后面所有比较与索引行为｜依据 MySQL 8.4 Charset 与 InnoDB Online DDL 章节自绘</em></p>
+<h2 id="一、学习目标"><a href="#一、学习目标" class="headerlink" title="一、学习目标"></a>一、学习目标</h2><ol>
+<li>写出经得起复查的 <code>CREATE DATABASE</code> &#x2F; <code>CREATE TABLE</code>，把字符集、排序规则、引擎、主键一次写对；</li>
+<li>说清字符集的四层继承与连接层三个变量，能定位「乱码」和「排序不符合预期」；</li>
+<li>知道 8.4 里 <code>ALTER TABLE</code> 默认走 <code>ALGORITHM=INSTANT</code>，以及哪些变更一定会重建表。</li>
+</ol>
+<h2 id="二、前置知识"><a href="#二、前置知识" class="headerlink" title="二、前置知识"></a>二、前置知识</h2><p>上一讲的客户端与实例。会用 <code>SHOW CREATE TABLE</code>、看得懂 <code>information_schema</code> 即可。</p>
+<h2 id="三、理论讲解（官方定义）"><a href="#三、理论讲解（官方定义）" class="headerlink" title="三、理论讲解（官方定义）"></a>三、理论讲解（官方定义）</h2><p>官方对字符集的定义分两层：<strong>字符集</strong>决定「哪些字符能存」，**排序规则（collation）**决定「怎么比较、怎么排序、唯一性怎么判定」。8.4 的服务端默认是 <code>utf8mb4</code> + <code>utf8mb4_0900_ai_ci</code>。</p>
+<p>几个容易记错的官方事实：</p>
+<ul>
+<li><code>utf8</code> 是 <code>utf8mb3</code> 的别名，最多 3 字节，<strong>存不了 emoji</strong>；8.4 里 <code>utf8mb3</code> 已标记弃用，新库一律 <code>utf8mb4</code>；</li>
+<li>字符集不是全局一个，而是<strong>四层继承</strong>：server → database → table → column，谁近谁生效；</li>
+<li><code>SET NAMES utf8mb4</code> 一次改三个会话变量：<code>character_set_client</code>、<code>character_set_connection</code>、<code>character_set_results</code>；</li>
+<li>8.4 起 <code>ADD COLUMN</code> &#x2F; <code>DROP COLUMN</code> 的<strong>默认算法就是 INSTANT</strong>，不再需要显式写 <code>ALGORITHM=INSTANT</code>。</li>
+</ul>
+<h2 id="四、原理拆解"><a href="#四、原理拆解" class="headerlink" title="四、原理拆解"></a>四、原理拆解</h2><p><img src="https://wu4yong.github.io/starry-images/assets/img/mysql/mq-5b-charset.svg" alt="字符集四层继承与连接层三个变量"></p>
+<p><em>建库时定一层，建表时不写就继承，列上再写一次就覆盖；比较发生在连接层字符集上｜依据 MySQL 8.4 Charset 章节自绘</em></p>
+<h3 id="1-四层继承：优先级从近到远"><a href="#1-四层继承：优先级从近到远" class="headerlink" title="1. 四层继承：优先级从近到远"></a>1. 四层继承：优先级从近到远</h3><pre class="line-numbers language-sql" data-language="sql"><code class="language-sql"><span class="token keyword">CREATE</span> <span class="token keyword">DATABASE</span> demo
+  <span class="token keyword">DEFAULT</span> <span class="token keyword">CHARACTER</span> <span class="token keyword">SET</span> utf8mb4
+  <span class="token keyword">DEFAULT</span> <span class="token keyword">COLLATE</span> utf8mb4_0900_ai_ci<span class="token punctuation">;</span>
+
+<span class="token keyword">CREATE</span> <span class="token keyword">TABLE</span> demo<span class="token punctuation">.</span>t_user <span class="token punctuation">(</span>
+  id      <span class="token keyword">BIGINT</span> <span class="token keyword">UNSIGNED</span> <span class="token operator">NOT</span> <span class="token boolean">NULL</span> <span class="token keyword">AUTO_INCREMENT</span><span class="token punctuation">,</span>
+  nickname <span class="token keyword">VARCHAR</span><span class="token punctuation">(</span><span class="token number">64</span><span class="token punctuation">)</span> <span class="token operator">NOT</span> <span class="token boolean">NULL</span><span class="token punctuation">,</span>
+  <span class="token keyword">PRIMARY</span> <span class="token keyword">KEY</span> <span class="token punctuation">(</span>id<span class="token punctuation">)</span>
+<span class="token punctuation">)</span> <span class="token keyword">ENGINE</span><span class="token operator">=</span><span class="token keyword">InnoDB</span> <span class="token keyword">DEFAULT</span> <span class="token keyword">CHARSET</span><span class="token operator">=</span>utf8mb4 <span class="token keyword">COLLATE</span><span class="token operator">=</span>utf8mb4_0900_ai_ci<span class="token punctuation">;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<p><code>CREATE TABLE</code> 不写 <code>CHARSET</code> 时继承库；列上再写 <code>CHARACTER SET</code> 才覆盖。<strong>一个库里混着两种字符集</strong>是最常见的隐式转换来源：两表 JOIN 时比较字段字符集不同，要么报 <code>Illegal mix of collations</code>，要么把其中一侧转成另一侧，索引直接失效。</p>
+<h3 id="2-排序规则的三个后缀怎么读"><a href="#2-排序规则的三个后缀怎么读" class="headerlink" title="2. 排序规则的三个后缀怎么读"></a>2. 排序规则的三个后缀怎么读</h3><p><code>utf8mb4_0900_ai_ci</code> 拆开看：<code>0900</code> 是 UCA 9.0.0 算法版本，<code>ai</code> &#x3D; accent insensitive（重音不敏感），<code>ci</code> &#x3D; case insensitive（大小写不敏感）。于是 <code>&#39;a&#39; = &#39;A&#39;</code> 成立，<code>&#39;café&#39; = &#39;cafe&#39;</code> 也成立。</p>
+<ul>
+<li><code>..._as_cs</code>：重音敏感、大小写敏感，适合需要严格区分的编码类字段；</li>
+<li><code>..._bin</code>：按字节比较，最快也最「死板」，适合 token、哈希、大小写敏感的账号名；</li>
+<li><code>utf8mb4_general_ci</code>：8.0 之前的老默认，排序结果与 0900 不完全一致，<strong>新表不要再用</strong>。</li>
+</ul>
+<p>唯一索引的判定也走排序规则：<code>_ai_ci</code> 下 <code>&#39;Tom&#39;</code> 与 <code>&#39;tom&#39;</code> 冲突，迁库时这点最容易踩。</p>
+<h3 id="3-连接层：乱码真正发生的地方"><a href="#3-连接层：乱码真正发生的地方" class="headerlink" title="3. 连接层：乱码真正发生的地方"></a>3. 连接层：乱码真正发生的地方</h3><p>客户端发来的是字节流，服务端要知道「这串字节按哪个字符集解释」，靠的就是 <code>character_set_client</code>；返回时按 <code>character_set_results</code> 编码。两边不一致 → 存进去是 <code>?</code> 或乱码。</p>
+<pre class="line-numbers language-sql" data-language="sql"><code class="language-sql"><span class="token keyword">SHOW</span> VARIABLES <span class="token operator">LIKE</span> <span class="token string">'character_set%'</span><span class="token punctuation">;</span>
+<span class="token keyword">SET</span> NAMES utf8mb4<span class="token punctuation">;</span>              <span class="token comment">-- 等价于同时设 client / connection / results</span>
+<span class="token keyword">SET</span> collation_connection <span class="token operator">=</span> utf8mb4_0900_ai_ci<span class="token punctuation">;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span></span></code></pre>
+
+<h3 id="4-DDL-的三种算法与元数据锁"><a href="#4-DDL-的三种算法与元数据锁" class="headerlink" title="4. DDL 的三种算法与元数据锁"></a>4. DDL 的三种算法与元数据锁</h3><table>
+<thead>
+<tr>
+<th>算法</th>
+<th>做的事</th>
+<th>代价</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>INSTANT</td>
+<td>只改数据字典，旧行按「行版本」补齐默认值</td>
+<td>毫秒级，不重建表</td>
+</tr>
+<tr>
+<td>INPLACE</td>
+<td>重建聚簇索引或二级索引，允许并发 DML</td>
+<td>与表大小成正比</td>
+</tr>
+<tr>
+<td>COPY</td>
+<td>建新表、逐行拷数据，阻塞写</td>
+<td>最慢，DDL 高峰期的元凶</td>
+</tr>
+</tbody></table>
+<p>8.4 的 INSTANT 能覆盖加列（任意位置）、删列、改列默认值、改 ENUM&#x2F;SET 定义、重命名列；<strong>改数据类型、加索引、改字符集仍然是 INPLACE 或 COPY</strong>。另外 INSTANT 有硬限制：带 <code>FULLTEXT</code> 索引的表、<code>ROW_FORMAT=COMPRESSED</code> 的表、系统库表都不支持；连续 INSTANT 会累积行版本，<code>INFORMATION_SCHEMA.INNODB_TABLES.TOTAL_ROW_VERSIONS</code> 能查。</p>
+<p>DDL 还要拿 <strong>MDL（元数据锁）</strong> 的排他锁。只要表上有未提交的长事务，DDL 就等着，后面所有查询一起排队——这就是「一条 DDL 把库拖死」的机制，<code>lock_wait_timeout</code> 默认值大到几乎等于不超时。</p>
+<h2 id="五、场景说明"><a href="#五、场景说明" class="headerlink" title="五、场景说明"></a>五、场景说明</h2><ol>
+<li><strong>新库初始化</strong>：一条 <code>CREATE DATABASE ... utf8mb4 ... 0900_ai_ci</code> 定调，后续建表不再逐条写字符集；</li>
+<li><strong>老库迁 utf8mb4</strong>：先 <code>ALTER TABLE ... CONVERT TO CHARACTER SET utf8mb4</code>（重建表，安排在低峰），再刷连接串；</li>
+<li><strong>加字段上线</strong>：8.4 直接 <code>ADD COLUMN</code>，默认 INSTANT，不用 gh-ost（细节见 MQ50）；</li>
+<li><strong>大小写敏感的业务</strong>：账号、优惠码这类字段显式 <code>COLLATE utf8mb4_0900_as_cs</code> 或 <code>_bin</code>；</li>
+<li><strong>给非 DBA 讲表结构</strong>：<code>SHOW CREATE TABLE</code> 的输出比任何 GUI 都准确。</li>
+</ol>
+<h2 id="六、示例代码-实操步骤"><a href="#六、示例代码-实操步骤" class="headerlink" title="六、示例代码&#x2F;实操步骤"></a>六、示例代码&#x2F;实操步骤</h2><h3 id="1-建库建表并核对"><a href="#1-建库建表并核对" class="headerlink" title="1. 建库建表并核对"></a>1. 建库建表并核对</h3><pre class="line-numbers language-sql" data-language="sql"><code class="language-sql"><span class="token keyword">CREATE</span> <span class="token keyword">DATABASE</span> demo <span class="token keyword">DEFAULT</span> <span class="token keyword">CHARACTER</span> <span class="token keyword">SET</span> utf8mb4 <span class="token keyword">COLLATE</span> utf8mb4_0900_ai_ci<span class="token punctuation">;</span>
+<span class="token keyword">USE</span> demo<span class="token punctuation">;</span>
+
+<span class="token keyword">CREATE</span> <span class="token keyword">TABLE</span> t_order <span class="token punctuation">(</span>
+  id          <span class="token keyword">BIGINT</span> <span class="token keyword">UNSIGNED</span> <span class="token operator">NOT</span> <span class="token boolean">NULL</span> <span class="token keyword">AUTO_INCREMENT</span><span class="token punctuation">,</span>
+  order_no    <span class="token keyword">VARCHAR</span><span class="token punctuation">(</span><span class="token number">32</span><span class="token punctuation">)</span>  <span class="token operator">NOT</span> <span class="token boolean">NULL</span><span class="token punctuation">,</span>
+  amount      <span class="token keyword">DECIMAL</span><span class="token punctuation">(</span><span class="token number">12</span><span class="token punctuation">,</span><span class="token number">2</span><span class="token punctuation">)</span> <span class="token operator">NOT</span> <span class="token boolean">NULL</span> <span class="token keyword">DEFAULT</span> <span class="token number">0.00</span><span class="token punctuation">,</span>
+  created_at  <span class="token keyword">DATETIME</span><span class="token punctuation">(</span><span class="token number">3</span><span class="token punctuation">)</span>  <span class="token operator">NOT</span> <span class="token boolean">NULL</span> <span class="token keyword">DEFAULT</span> <span class="token keyword">CURRENT_TIMESTAMP</span><span class="token punctuation">(</span><span class="token number">3</span><span class="token punctuation">)</span><span class="token punctuation">,</span>
+  <span class="token keyword">PRIMARY</span> <span class="token keyword">KEY</span> <span class="token punctuation">(</span>id<span class="token punctuation">)</span><span class="token punctuation">,</span>
+  <span class="token keyword">UNIQUE</span> <span class="token keyword">KEY</span> uk_order_no <span class="token punctuation">(</span>order_no<span class="token punctuation">)</span>
+<span class="token punctuation">)</span> <span class="token keyword">ENGINE</span><span class="token operator">=</span><span class="token keyword">InnoDB</span> <span class="token keyword">DEFAULT</span> <span class="token keyword">CHARSET</span><span class="token operator">=</span>utf8mb4 <span class="token keyword">COLLATE</span><span class="token operator">=</span>utf8mb4_0900_ai_ci<span class="token punctuation">;</span>
+
+<span class="token keyword">SHOW</span> <span class="token keyword">CREATE</span> <span class="token keyword">TABLE</span> t_order\G
+<span class="token keyword">SELECT</span> TABLE_NAME<span class="token punctuation">,</span> TABLE_COLLATION <span class="token keyword">FROM</span> information_schema<span class="token punctuation">.</span><span class="token keyword">TABLES</span> <span class="token keyword">WHERE</span> TABLE_SCHEMA<span class="token operator">=</span><span class="token string">'demo'</span><span class="token punctuation">;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<h3 id="2-改字符集：库、表、列三种粒度"><a href="#2-改字符集：库、表、列三种粒度" class="headerlink" title="2. 改字符集：库、表、列三种粒度"></a>2. 改字符集：库、表、列三种粒度</h3><pre class="line-numbers language-sql" data-language="sql"><code class="language-sql"><span class="token keyword">ALTER</span> <span class="token keyword">DATABASE</span> demo <span class="token keyword">CHARACTER</span> <span class="token keyword">SET</span> utf8mb4 <span class="token keyword">COLLATE</span> utf8mb4_0900_ai_ci<span class="token punctuation">;</span>  <span class="token comment">-- 只影响以后新建的表</span>
+<span class="token keyword">ALTER</span> <span class="token keyword">TABLE</span> t_order <span class="token keyword">CONVERT</span> <span class="token keyword">TO</span> <span class="token keyword">CHARACTER</span> <span class="token keyword">SET</span> utf8mb4 <span class="token keyword">COLLATE</span> utf8mb4_0900_ai_ci<span class="token punctuation">;</span>  <span class="token comment">-- 重建表并转数据</span>
+<span class="token keyword">ALTER</span> <span class="token keyword">TABLE</span> t_order <span class="token keyword">MODIFY</span> nickname <span class="token keyword">VARCHAR</span><span class="token punctuation">(</span><span class="token number">64</span><span class="token punctuation">)</span> <span class="token keyword">CHARACTER</span> <span class="token keyword">SET</span> utf8mb4 <span class="token keyword">COLLATE</span> utf8mb4_0900_bin<span class="token punctuation">;</span>  <span class="token comment">-- 只改一列</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span></span></code></pre>
+
+<p>第一条<strong>不改存量表</strong>，这是最常见的误解；第二条才是真正转数据，务必评估耗时与锁。</p>
+<h3 id="3-验证排序规则的实际行为"><a href="#3-验证排序规则的实际行为" class="headerlink" title="3. 验证排序规则的实际行为"></a>3. 验证排序规则的实际行为</h3><pre class="line-numbers language-sql" data-language="sql"><code class="language-sql"><span class="token keyword">SELECT</span> <span class="token string">'Tom'</span> <span class="token operator">=</span> <span class="token string">'tom'</span> <span class="token keyword">COLLATE</span> utf8mb4_0900_ai_ci<span class="token punctuation">;</span>   <span class="token comment">-- 1</span>
+<span class="token keyword">SELECT</span> <span class="token string">'Tom'</span> <span class="token operator">=</span> <span class="token string">'tom'</span> <span class="token keyword">COLLATE</span> utf8mb4_0900_as_cs<span class="token punctuation">;</span>   <span class="token comment">-- 0</span>
+<span class="token keyword">SELECT</span> <span class="token string">'café'</span> <span class="token operator">=</span> <span class="token string">'cafe'</span> <span class="token keyword">COLLATE</span> utf8mb4_0900_ai_ci<span class="token punctuation">;</span> <span class="token comment">-- 1</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span></span></code></pre>
+
+<h3 id="Java-侧怎么落地：连接串与建表脚本"><a href="#Java-侧怎么落地：连接串与建表脚本" class="headerlink" title="Java 侧怎么落地：连接串与建表脚本"></a>Java 侧怎么落地：连接串与建表脚本</h3><ol>
+<li><strong>连接串固定字符集</strong>（Connector&#x2F;J 8.x 里 <code>characterEncoding=utf8</code> 即 utf8mb4）：</li>
+</ol>
+<pre class="line-numbers language-yaml" data-language="yaml"><code class="language-yaml"><span class="token key atrule">spring</span><span class="token punctuation">:</span>
+  <span class="token key atrule">datasource</span><span class="token punctuation">:</span>
+    <span class="token key atrule">url</span><span class="token punctuation">:</span> jdbc<span class="token punctuation">:</span>mysql<span class="token punctuation">:</span>//10.0.0.11<span class="token punctuation">:</span>3306/demo<span class="token punctuation">?</span>useUnicode=true<span class="token important">&amp;characterEncoding=utf8&amp;connectionCollation=utf8mb4_0900_ai_ci&amp;serverTimezone=Asia/Shanghai&amp;rewriteBatchedStatements=true</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span></span></code></pre>
+
+<ol start="2">
+<li><strong>DDL 不写进 <code>schema.sql</code> 随手执行</strong>，用 Flyway &#x2F; Liquibase 管版本，脚本里显式写 <code>ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci</code>；</li>
+<li><strong>实体字段长度与 DDL 对齐</strong>：<code>@Column(length = 64)</code> 只影响校验，不改变表结构，两边必须人工对齐；</li>
+<li><strong>排序规则相关查询不要靠 Java 侧 <code>equalsIgnoreCase</code> 兜底</strong>：数据库判重与 Java 判重规则不一致时，唯一键冲突会在插入时才暴露；</li>
+<li><strong>多租户&#x2F;多库场景</strong>：连接池按库配 <code>connectionCollation</code>，别让默认值随驱动版本漂移。</li>
+</ol>
+<h2 id="七、常见坑"><a href="#七、常见坑" class="headerlink" title="七、常见坑"></a>七、常见坑</h2><ol>
+<li><strong><code>ALTER DATABASE</code> 以为改了所有表</strong>：它只管以后新建的表；</li>
+<li><strong><code>utf8</code> 存 emoji 报 <code>Incorrect string value</code></strong>：那是 utf8mb3，换 utf8mb4；</li>
+<li><strong>JOIN 两侧排序规则不同</strong>：报错或索引失效，统一到 <code>0900_ai_ci</code>；</li>
+<li><strong><code>utf8mb4_general_ci</code> 与 <code>0900_ai_ci</code> 混用</strong>：唯一索引冲突判定不一致，迁库时数据对不上；</li>
+<li><strong>DDL 撞上长事务</strong>：MDL 排队把整库拖慢，先 <code>SHOW PROCESSLIST</code> 找长事务再执行；</li>
+<li><strong>给大表 <code>CONVERT TO CHARACTER SET</code></strong>：整表重建，务必低峰 + 备份，或走 MQ50 的在线方案；</li>
+<li><strong><code>VARCHAR(255)</code> 惯性写法</strong>：utf8mb4 下 255 字符可能占 1020 字节，组合索引很容易超 3072 字节上限。</li>
+</ol>
+<h2 id="八、版本差异"><a href="#八、版本差异" class="headerlink" title="八、版本差异"></a>八、版本差异</h2><ul>
+<li><strong>8.0</strong>：默认已是 <code>utf8mb4</code> + <code>utf8mb4_0900_ai_ci</code>；原子 DDL 从 8.0 起生效（DDL 要么全成功要么全回滚）；<code>INT(11)</code> 这类显示宽度自 8.0.17 起弃用，8.4 仍接受但无实际作用。</li>
+<li><strong>8.4</strong>：<code>utf8mb3</code> 明确弃用；<code>ADD/DROP COLUMN</code> 默认 <code>INSTANT</code>；<code>mysql_native_password</code> 默认关闭（与建表无关，但影响建库后第一次连）。</li>
+<li><strong>9.x</strong>：字符集层面无破坏性变化，<code>VECTOR</code> 类型才登场（见 MQ06 版本差异）。</li>
+</ul>
+<h2 id="九、课后小结"><a href="#九、课后小结" class="headerlink" title="九、课后小结"></a>九、课后小结</h2><ul>
+<li>字符集四层继承，建库定调、建表继承、列上覆盖；</li>
+<li>排序规则决定比较与唯一性，新表统一 <code>utf8mb4_0900_ai_ci</code>，需要严格区分才用 <code>_as_cs</code> &#x2F; <code>_bin</code>；</li>
+<li>乱码发生在连接层，<code>SET NAMES</code> 同时改三个变量；</li>
+<li>DDL 有三种算法，8.4 加删列默认 INSTANT，改类型&#x2F;加索引仍会重建；</li>
+<li>DDL 的真正风险是 MDL 排队，不是执行时间。</li>
+</ul>
+<h2 id="十、思考题"><a href="#十、思考题" class="headerlink" title="十、思考题"></a>十、思考题</h2><ol>
+<li><p><code>ALTER DATABASE demo CHARACTER SET utf8mb4</code> 之后，库里已有的表字符集变了吗？</p>
+<p><strong>参考回答</strong>：没变。库级字符集只是新建表的默认值，存量表在创建时就已固化自己的字符集，必须逐表 <code>ALTER TABLE ... CONVERT TO CHARACTER SET</code> 才会真正转换数据。</p>
+</li>
+<li><p>为什么 <code>&#39;Tom&#39; = &#39;tom&#39;</code> 在默认排序规则下返回 1？</p>
+<p><strong>参考回答</strong>：默认 <code>utf8mb4_0900_ai_ci</code> 的 <code>ci</code> 表示大小写不敏感，比较时先做大小写折叠；要区分就显式指定 <code>utf8mb4_0900_as_cs</code> 或 <code>utf8mb4_0900_bin</code>。</p>
+</li>
+<li><p>一条 <code>ALTER TABLE ADD COLUMN</code> 明明只花了几毫秒，为什么业务侧却出现几分钟的接口超时？</p>
+<p><strong>参考回答</strong>：DDL 需要 MDL 排他锁。表上若有未提交的长事务，DDL 会一直等锁；等待期间它已持有 MDL 请求，后续查询全部排队，于是表现为「DDL 很快，但整库卡住」。应先定位长事务或设置较短的 <code>lock_wait_timeout</code>。</p>
+</li>
+<li><p>两表 JOIN 报 <code>Illegal mix of collations</code>，你怎么修？</p>
+<p><strong>参考回答</strong>：先 <code>SHOW CREATE TABLE</code> 对比两表相关列的字符集与排序规则，把其中一侧 <code>ALTER TABLE ... MODIFY col ... COLLATE utf8mb4_0900_ai_ci</code> 对齐；临时应急可在查询里 <code>COLLATE</code> 强制统一，但会失去索引，只能当止血手段。</p>
+</li>
+<li><p>8.4 里哪些 <code>ALTER TABLE</code> 仍然是重建表？</p>
+<p><strong>参考回答</strong>：改列数据类型、扩展 <code>VARCHAR</code> 长度、加&#x2F;删索引、改字符集、<code>ROW_FORMAT</code> 变更等都不支持 INSTANT；加删列、改默认值、改 ENUM&#x2F;SET 定义、重命名列才走 INSTANT。</p>
+</li>
+</ol>
+<h2 id="十一、官方资料"><a href="#十一、官方资料" class="headerlink" title="十一、官方资料"></a>十一、官方资料</h2><ul>
+<li>字符集与排序规则：<a target="_blank" rel="noopener" href="https://dev.mysql.com/doc/refman/8.4/en/charset.html">https://dev.mysql.com/doc/refman/8.4/en/charset.html</a></li>
+<li>服务端字符集与排序规则：<a target="_blank" rel="noopener" href="https://dev.mysql.com/doc/refman/8.4/en/charset-server.html">https://dev.mysql.com/doc/refman/8.4/en/charset-server.html</a></li>
+<li><code>CREATE TABLE</code>：<a target="_blank" rel="noopener" href="https://dev.mysql.com/doc/refman/8.4/en/create-table.html">https://dev.mysql.com/doc/refman/8.4/en/create-table.html</a></li>
+<li>在线 DDL 操作表：<a target="_blank" rel="noopener" href="https://dev.mysql.com/doc/refman/8.4/en/innodb-online-ddl-operations.html">https://dev.mysql.com/doc/refman/8.4/en/innodb-online-ddl-operations.html</a></li>
+<li>原子 DDL：<a target="_blank" rel="noopener" href="https://dev.mysql.com/doc/refman/8.4/en/atomic-ddl.html">https://dev.mysql.com/doc/refman/8.4/en/atomic-ddl.html</a></li>
+</ul>
+<p>上一篇：<a href="/2022/11/14/database/mysql/mysql-4-client-tools/">MQ04 客户端与图形化工具</a> ｜ 下一篇：<a href="/2022/11/16/database/mysql/mysql-6-data-types/">MQ06 数据类型总览</a> ｜ <a href="/2022/11/10/database/mysql/mysql-0-series-index/">总目录</a></p>
+</div>
+
+  <div class="mb-foot">
+    <a href="/phone/">返回手机首页</a>
+    <a href="/phone/tags/">星迹索引</a>
+  </div>
+</div>
+
+
+<script>
+  /* 作用：懒加载本地 mermaid 库；无 mermaid 代码块时不加载 */
+  function loadLocalMermaid(){
+    return new Promise(function(resolve, reject){
+      if(window.mermaid) return resolve(window.mermaid);
+      var s = document.createElement('script');
+      s.src = '/js/third-party/mermaid/mermaid.min.js?v=10';
+      s.onload = function(){ resolve(window.mermaid); };
+      s.onerror = function(){ reject(new Error('mermaid local load failed')); };
+      document.head.appendChild(s);
+    });
+  }
+
+  /* 作用：把 ```mermaid 代码块替换成 SVG 图（手机端字号略小、图可横向滚动） */
+  async function renderMermaidDiagram(){
+    var blocks = document.querySelectorAll('pre[class*="language-mermaid"]');
+    if(!blocks.length) return;
+    var mermaid;
+    try { mermaid = await loadLocalMermaid(); }
+    catch(e){ console.warn('[mermaid] 本地库加载失败：', e); return; }
+
+    mermaid.initialize({
+      startOnLoad: false,
+      theme: 'base',
+      themeVariables: {
+        darkMode: true,
+        background: 'transparent',
+        fontFamily: '"Microsoft YaHei", "PingFang SC", "Segoe UI", sans-serif',
+        fontSize: '12px',
+        primaryColor: '#062f3d',
+        primaryTextColor: '#d6f6ff',
+        primaryBorderColor: '#00eeff',
+        secondaryColor: '#04222d',
+        tertiaryColor: '#04222d',
+        mainBkg: '#062f3d',
+        nodeBorder: '#00eeff',
+        clusterBkg: '#02161f',
+        clusterBorder: '#00eeff55',
+        lineColor: '#00eeff',
+        textColor: '#c0e8ff',
+        edgeLabelBackground: '#02161f'
+      },
+      flowchart: { curve: 'basis', useMaxWidth: false, htmlLabels: false, nodeSpacing: 30, rankSpacing: 40, padding: 10 }
+    });
+
+    var targets = [];
+    blocks.forEach(function(el){
+      var codeEl = el.querySelector('code');
+      if(!codeEl) return;
+      var div = document.createElement('div');
+      div.className = 'mermaid';
+      div.textContent = codeEl.textContent;
+      el.parentNode.replaceChild(div, el);
+      targets.push(div);
+    });
+    if(!targets.length) return;
+    try { await mermaid.run({ nodes: targets }); }
+    catch(e){ console.warn('[mermaid] 渲染失败：', e); }
+  }
+  /* 作用：多次触发兜底（延迟重试 + DOM 变化），防止某次时机没跑到导致图表留在代码块 */
+  var mmBusy = false;
+  function scheduleMermaid(){
+    if(mmBusy) return;
+    mmBusy = true;
+    renderMermaidDiagram().then(function(){ mmBusy = false; }, function(){ mmBusy = false; });
+  }
+  scheduleMermaid();
+  window.addEventListener('load', scheduleMermaid);
+  [1000, 3000, 8000].forEach(function(ms){ setTimeout(scheduleMermaid, ms); });
+  if(document.readyState !== 'loading') scheduleMermaid();
+  if(window.MutationObserver){
+    var mmTimer = null;
+    var mmObserver = new MutationObserver(function(){
+      clearTimeout(mmTimer);
+      mmTimer = setTimeout(scheduleMermaid, 400);
+    });
+    mmObserver.observe(document.querySelector('.mb-article') || document.body, { childList: true, subtree: true });
+  }
+</script>
+</body>
+</html>

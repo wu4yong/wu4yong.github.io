@@ -1,0 +1,439 @@
+<!--
+  ============================================
+  手机端 · 文章原文页
+  文件：phone/post.njk
+  适用终端：手机端（路由 /phone/p/<slug>/，由 scripts/phone-routes.js 生成）
+  作用：手机阅读单篇文章；单列布局、无侧栏无雷达，替代电脑端 post.njk
+        数据由生成期算好：page.item = { title, dateStr, content, cats, tags }
+  样式依赖：source/css/theme/phone/common.css、source/css/theme/phone/list.css
+  组件依赖：phone/_components/Particles.njk
+  最后修改：2026-11-11
+  ============================================
+-->
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="color-scheme" content="dark">
+  <meta name="theme-color" content="#020817">
+  <!-- 首帧兜底：浏览器默认画布是白的，样式未解析前会闪一下白。这条规则先锁死深空底色 -->
+  <style>html{background-color:#020817}</style>
+  <title>mysql-21-事务与隔离级别 - 时空秘境</title>
+  <!-- 手机端样式：基础 + 列表/正文，外链引入（源文件 source/css/theme/phone/） -->
+  <link rel="stylesheet" href="/css/theme/phone/common.css">
+  <link rel="stylesheet" href="/css/theme/phone/list.css">
+<meta name="generator" content="Hexo 8.1.2"></head>
+<body>
+<div class="mb-shell">
+  <!--
+  ============================================
+  手机端星空粒子组件
+  文件：Particles.njk
+  适用终端：手机端
+  作用：Particles.njk 的手机端副本（nunjucks 子目录 include 取不到上级）
+        参数与电脑端 _components/Particles.njk 保持一致：
+        粒子 95 / 连线 118px / opacity 0.32，外加星座层与零星闪烁层
+  最后修改：2026-11-12
+  ============================================
+--><!-- z-index 必须是 0：负层级会被 body 不透明背景盖住，粒子在跑却看不见 -->
+<div id="particles" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 0; pointer-events: none;"></div>
+<!-- 星座层（与首页同一套：随机零星散布星座图形 + 偶尔闪烁的小星） -->
+<div id="constellations" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 1; pointer-events: none;" aria-hidden="true"></div>
+<script src="/js/particles.min.js"></script>
+<script>
+particlesJS("particles", {
+  particles: {
+    number: {
+      value: 95,
+      density: {
+        enable: true,
+        value_area: 800
+      }
+    },
+    color: {
+      value: "#00eeff"
+    },
+    shape: {
+      type: "circle",
+      stroke: {
+        width: 0,
+        color: "#000000"
+      }
+    },
+    opacity: {
+      value: 0.6,
+      random: true,
+      anim: {
+        enable: true,
+        speed: 0.5,
+        opacity_min: 0.1,
+        sync: false
+      }
+    },
+    size: {
+      value: 3,
+      random: true,
+      anim: {
+        enable: true,
+        speed: 2,
+        size_min: 0.1,
+        sync: false
+      }
+    },
+    line_linked: {
+      enable: true,
+      distance: 118,
+      color: "#00eeff",
+      opacity: 0.32,
+      width: 1
+    },
+    move: {
+      enable: true,
+      speed: 0.8,
+      direction: "none",
+      random: true,
+      straight: false,
+      out_mode: "out",
+      bounce: false,
+      attract: {
+        enable: true,
+        rotateX: 600,
+        rotateY: 1200
+      }
+    }
+  },
+  interactivity: {
+    detect_on: "canvas",
+    events: {
+      onhover: {
+        enable: true,
+        mode: "grab"       // 手指按住时粒子聚集
+      },
+      onclick: {
+        enable: true,
+        mode: "push"       // 点击时产生新粒子
+      },
+      resize: true
+    },
+    modes: {
+      grab: {
+        distance: 200,
+        line_linked: {
+          opacity: 1
+        }
+      },
+      push: {
+        particles_nb: 6
+      }
+    }
+  },
+  retina_detect: true
+});
+</script>
+<!-- 星座 + 零星闪烁层：与电脑端共用同一份绘制脚本 -->
+<script src="/js/theme/home/starfield.js"></script>
+
+
+  <div class="mb-top">
+    <a class="mb-back" href="/phone/">← 返回手机首页</a>
+    <span class="mb-sub" style="margin:0">2022-12-01</span>
+  </div>
+
+  <h1 class="mb-title">mysql-21-事务与隔离级别</h1>
+  <div class="mb-sub">
+    分类：database · mysql
+     ｜ 标签：系统课 · MySQL · 数据库
+  </div>
+
+  <div class="mb-article"><div class="essay-banner essay-database"></div>
+
+<h1 id="事务与-ACID、四种隔离级别"><a href="#事务与-ACID、四种隔离级别" class="headerlink" title="事务与 ACID、四种隔离级别"></a>事务与 ACID、四种隔离级别</h1><p><img src="https://wu4yong.github.io/starry-images/assets/img/mysql/mq-21-acid.svg" alt="ACID 与四根支柱"></p>
+<p><em>ACID 不是四个并列的口号，而是四套机制在不同层面的保证｜依据 MySQL 8.4 InnoDB Transaction Model 章节自绘</em></p>
+<h2 id="一、学习目标"><a href="#一、学习目标" class="headerlink" title="一、学习目标"></a>一、学习目标</h2><ol>
+<li>说清 ACID 每一项在 InnoDB 里由哪套机制实现，而不是背四个单词；</li>
+<li>记住四种隔离级别各解决什么现象，以及 MySQL 默认为什么是 RR；</li>
+<li>会查、会改隔离级别，并知道改完之后 binlog 与锁行为会有什么变化。</li>
+</ol>
+<h2 id="二、前置知识"><a href="#二、前置知识" class="headerlink" title="二、前置知识"></a>二、前置知识</h2><p>SQL 基础、索引（MQ18&#x2F;MQ19）。如果知道「快照读」与「当前读」这两个词，本节会更顺。</p>
+<h2 id="三、理论讲解（官方定义）"><a href="#三、理论讲解（官方定义）" class="headerlink" title="三、理论讲解（官方定义）"></a>三、理论讲解（官方定义）</h2><p>事务是一组要么全做、要么全不做的操作。ACID 四项：</p>
+<ul>
+<li><strong>原子性（Atomicity）</strong>：靠 undo log 回滚；</li>
+<li><strong>一致性（Consistency）</strong>：靠约束、事务边界与应用逻辑共同保证，数据库只提供工具；</li>
+<li><strong>隔离性（Isolation）</strong>：靠锁与 MVCC；</li>
+<li><strong>持久性（Durability）</strong>：靠 redo log + WAL 刷盘。</li>
+</ul>
+<p>四种隔离级别（SQL 标准）：</p>
+<table>
+<thead>
+<tr>
+<th>级别</th>
+<th>脏读</th>
+<th>不可重复读</th>
+<th>幻读</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>READ UNCOMMITTED</td>
+<td>可能</td>
+<td>可能</td>
+<td>可能</td>
+</tr>
+<tr>
+<td>READ COMMITTED</td>
+<td>不可能</td>
+<td>可能</td>
+<td>可能</td>
+</tr>
+<tr>
+<td>REPEATABLE READ</td>
+<td>不可能</td>
+<td>不可能</td>
+<td>InnoDB 用间隙锁基本避免</td>
+</tr>
+<tr>
+<td>SERIALIZABLE</td>
+<td>不可能</td>
+<td>不可能</td>
+<td>不可能</td>
+</tr>
+</tbody></table>
+<p>MySQL 的默认级别是 <strong>REPEATABLE READ</strong>，且 InnoDB 在 RR 下用 next-key lock 阻止幻读（这是 InnoDB 相对标准 RR 的加强）。</p>
+<h2 id="四、原理拆解"><a href="#四、原理拆解" class="headerlink" title="四、原理拆解"></a>四、原理拆解</h2><p><img src="https://wu4yong.github.io/starry-images/assets/img/mysql/mq-21b-acid.svg" alt="四种隔离级别的现象矩阵"></p>
+<p><em>级别越高，锁越多、并发越低；RC 的间隙锁被关闭，代价是可能幻读｜依据 MySQL 8.4 事务隔离与锁章节自绘</em></p>
+<h3 id="1-并发读的三类异常"><a href="#1-并发读的三类异常" class="headerlink" title="1. 并发读的三类异常"></a>1. 并发读的三类异常</h3><pre class="line-numbers language-sql" data-language="sql"><code class="language-sql"><span class="token comment">-- 脏读：读到别人未提交的数据（RU 才有）</span>
+<span class="token comment">-- 不可重复读：同一事务两次读同一行，值变了（RC 有）</span>
+<span class="token comment">-- 幻读：同一事务两次读，行数变了（RC/RR 的快照读不会，当前读要靠间隙锁）</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span></span></code></pre>
+
+<p>区分关键：<strong>不可重复读是「同一行的值变了」，幻读是「多出或少掉了行」</strong>。</p>
+<h3 id="2-RR-与-RC-的差别只有一句话"><a href="#2-RR-与-RC-的差别只有一句话" class="headerlink" title="2. RR 与 RC 的差别只有一句话"></a>2. RR 与 RC 的差别只有一句话</h3><ul>
+<li><strong>RR</strong>：事务内第一次快照读建立 ReadView，之后所有快照读都用它；</li>
+<li><strong>RC</strong>：每次快照读都新建 ReadView，所以能看到别人刚提交的数据。</li>
+</ul>
+<pre class="line-numbers language-sql" data-language="sql"><code class="language-sql"><span class="token comment">-- 查看当前隔离级别</span>
+<span class="token keyword">SELECT</span> @<span class="token variable">@transaction_isolation</span><span class="token punctuation">;</span>              <span class="token comment">-- 8.0/8.4 原名 @@tx_isolation</span>
+<span class="token comment">-- 会话级修改</span>
+<span class="token keyword">SET</span> <span class="token keyword">SESSION</span> transaction_isolation <span class="token operator">=</span> <span class="token string">'READ-COMMITTED'</span><span class="token punctuation">;</span>
+<span class="token comment">-- 全局修改（影响新连接）</span>
+<span class="token keyword">SET</span> <span class="token keyword">GLOBAL</span> transaction_isolation <span class="token operator">=</span> <span class="token string">'READ-COMMITTED'</span><span class="token punctuation">;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<h3 id="3-快照读与当前读"><a href="#3-快照读与当前读" class="headerlink" title="3. 快照读与当前读"></a>3. 快照读与当前读</h3><table>
+<thead>
+<tr>
+<th>类型</th>
+<th>语句</th>
+<th>读什么</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>快照读</td>
+<td>普通 <code>SELECT</code></td>
+<td>ReadView 对应的历史版本</td>
+</tr>
+<tr>
+<td>当前读</td>
+<td><code>SELECT ... FOR UPDATE</code> &#x2F; <code>FOR SHARE</code> &#x2F; <code>UPDATE</code> &#x2F; <code>DELETE</code> &#x2F; <code>INSERT</code></td>
+<td>最新已提交版本，并加锁</td>
+</tr>
+</tbody></table>
+<p>这就是「RR 下普通 SELECT 看不到别人刚插入的行，但 <code>UPDATE</code> 却能改到它」的原因——两者读的不是同一份数据。</p>
+<h3 id="4-自动提交与显式事务"><a href="#4-自动提交与显式事务" class="headerlink" title="4. 自动提交与显式事务"></a>4. 自动提交与显式事务</h3><pre class="line-numbers language-sql" data-language="sql"><code class="language-sql"><span class="token keyword">SELECT</span> @<span class="token variable">@autocommit</span><span class="token punctuation">;</span>          <span class="token comment">-- 默认 1</span>
+<span class="token keyword">SET</span> autocommit <span class="token operator">=</span> <span class="token number">0</span><span class="token punctuation">;</span>           <span class="token comment">-- 关闭自动提交，每条语句都在隐式事务里</span>
+<span class="token keyword">START</span> <span class="token keyword">TRANSACTION</span><span class="token punctuation">;</span>            <span class="token comment">-- 显式开启</span>
+<span class="token keyword">SAVEPOINT</span> sp1<span class="token punctuation">;</span>                <span class="token comment">-- 保存点</span>
+<span class="token keyword">ROLLBACK</span> <span class="token keyword">TO</span> sp1<span class="token punctuation">;</span>              <span class="token comment">-- 回滚到保存点，不结束事务</span>
+<span class="token keyword">COMMIT</span><span class="token punctuation">;</span>                       <span class="token comment">-- 提交</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<p><code>START TRANSACTION WITH CONSISTENT SNAPSHOT</code> 会在开启事务的同时建立快照，避免「先 SELECT 再 START TRANSACTION」造成的快照时机偏差。</p>
+<h3 id="5-隔离级别与-binlog"><a href="#5-隔离级别与-binlog" class="headerlink" title="5. 隔离级别与 binlog"></a>5. 隔离级别与 binlog</h3><p><code>binlog_format=STATEMENT</code> 在 RC 下记录的是语句，主从可能因执行顺序不同而数据不一致；所以生产用 RC 时务必 <code>binlog_format=ROW</code>。MySQL 8.0 起默认就是 <code>ROW</code>，这一条已经不再是坑，但迁移老库时要确认。</p>
+<h2 id="五、场景说明"><a href="#五、场景说明" class="headerlink" title="五、场景说明"></a>五、场景说明</h2><ol>
+<li><strong>默认业务</strong>：RR + 自动提交，普通查询走快照读；</li>
+<li><strong>报表&#x2F;长查询</strong>：RR 下多次查询拿到一致快照，适合对账；</li>
+<li><strong>高并发写入</strong>：很多团队改成 RC，减少间隙锁带来的死锁；</li>
+<li><strong>库存扣减</strong>：<code>UPDATE ... WHERE stock &gt;= n</code> 靠当前读 + 行锁保证；</li>
+<li><strong>批量任务</strong>：显式事务 + 分批提交，避免长事务。</li>
+</ol>
+<h2 id="六、示例代码-实操步骤"><a href="#六、示例代码-实操步骤" class="headerlink" title="六、示例代码&#x2F;实操步骤"></a>六、示例代码&#x2F;实操步骤</h2><h3 id="1-复现不可重复读"><a href="#1-复现不可重复读" class="headerlink" title="1. 复现不可重复读"></a>1. 复现不可重复读</h3><pre class="line-numbers language-sql" data-language="sql"><code class="language-sql"><span class="token comment">-- 会话 A</span>
+<span class="token keyword">SET</span> <span class="token keyword">SESSION</span> transaction_isolation <span class="token operator">=</span> <span class="token string">'READ-COMMITTED'</span><span class="token punctuation">;</span>
+<span class="token keyword">START</span> <span class="token keyword">TRANSACTION</span><span class="token punctuation">;</span>
+<span class="token keyword">SELECT</span> balance <span class="token keyword">FROM</span> t_account <span class="token keyword">WHERE</span> id <span class="token operator">=</span> <span class="token number">1</span><span class="token punctuation">;</span>   <span class="token comment">-- 100</span>
+
+<span class="token comment">-- 会话 B</span>
+<span class="token keyword">UPDATE</span> t_account <span class="token keyword">SET</span> balance <span class="token operator">=</span> <span class="token number">50</span> <span class="token keyword">WHERE</span> id <span class="token operator">=</span> <span class="token number">1</span><span class="token punctuation">;</span>
+<span class="token keyword">COMMIT</span><span class="token punctuation">;</span>
+
+<span class="token comment">-- 会话 A 再读</span>
+<span class="token keyword">SELECT</span> balance <span class="token keyword">FROM</span> t_account <span class="token keyword">WHERE</span> id <span class="token operator">=</span> <span class="token number">1</span><span class="token punctuation">;</span>   <span class="token comment">-- 50（RC 下变了）</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<p>同样流程在 RR 下第二次读仍是 100——因为用的是同一个 ReadView。</p>
+<h3 id="2-复现幻读（当前读）"><a href="#2-复现幻读（当前读）" class="headerlink" title="2. 复现幻读（当前读）"></a>2. 复现幻读（当前读）</h3><pre class="line-numbers language-sql" data-language="sql"><code class="language-sql"><span class="token comment">-- 会话 A（RR）</span>
+<span class="token keyword">START</span> <span class="token keyword">TRANSACTION</span><span class="token punctuation">;</span>
+<span class="token keyword">SELECT</span> <span class="token function">COUNT</span><span class="token punctuation">(</span><span class="token operator">*</span><span class="token punctuation">)</span> <span class="token keyword">FROM</span> t_order <span class="token keyword">WHERE</span> user_id <span class="token operator">=</span> <span class="token number">1</span> <span class="token keyword">FOR</span> <span class="token keyword">UPDATE</span><span class="token punctuation">;</span>   <span class="token comment">-- 2</span>
+
+<span class="token comment">-- 会话 B 插入一条 user_id=1 的记录并提交</span>
+<span class="token comment">-- 若 A 的条件命中了间隙，B 会被阻塞；不阻塞时说明没加间隙锁（如唯一索引等值）</span>
+
+<span class="token comment">-- 会话 A</span>
+<span class="token keyword">SELECT</span> <span class="token function">COUNT</span><span class="token punctuation">(</span><span class="token operator">*</span><span class="token punctuation">)</span> <span class="token keyword">FROM</span> t_order <span class="token keyword">WHERE</span> user_id <span class="token operator">=</span> <span class="token number">1</span> <span class="token keyword">FOR</span> <span class="token keyword">UPDATE</span><span class="token punctuation">;</span>   <span class="token comment">-- 仍是 2</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<h3 id="3-查看事务与锁"><a href="#3-查看事务与锁" class="headerlink" title="3. 查看事务与锁"></a>3. 查看事务与锁</h3><pre class="line-numbers language-sql" data-language="sql"><code class="language-sql"><span class="token comment">-- 当前运行的事务</span>
+<span class="token keyword">SELECT</span> trx_id<span class="token punctuation">,</span> trx_state<span class="token punctuation">,</span> trx_started<span class="token punctuation">,</span> trx_rows_locked<span class="token punctuation">,</span> trx_query
+<span class="token keyword">FROM</span> information_schema<span class="token punctuation">.</span>INNODB_TRX <span class="token keyword">ORDER</span> <span class="token keyword">BY</span> trx_started<span class="token punctuation">;</span>
+
+<span class="token comment">-- 8.0 起的锁视图</span>
+<span class="token keyword">SELECT</span> <span class="token operator">*</span> <span class="token keyword">FROM</span> performance_schema<span class="token punctuation">.</span>data_locks<span class="token punctuation">;</span>
+<span class="token keyword">SELECT</span> <span class="token operator">*</span> <span class="token keyword">FROM</span> performance_schema<span class="token punctuation">.</span>data_lock_waits<span class="token punctuation">;</span>
+
+<span class="token comment">-- 锁等待超时（默认 50 秒）</span>
+<span class="token keyword">SELECT</span> @<span class="token variable">@innodb_lock_wait_timeout</span><span class="token punctuation">;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<h3 id="4-保存点与部分回滚"><a href="#4-保存点与部分回滚" class="headerlink" title="4. 保存点与部分回滚"></a>4. 保存点与部分回滚</h3><pre class="line-numbers language-sql" data-language="sql"><code class="language-sql"><span class="token keyword">START</span> <span class="token keyword">TRANSACTION</span><span class="token punctuation">;</span>
+<span class="token keyword">INSERT</span> <span class="token keyword">INTO</span> t_order <span class="token punctuation">(</span>id<span class="token punctuation">,</span> user_id<span class="token punctuation">)</span> <span class="token keyword">VALUES</span> <span class="token punctuation">(</span><span class="token number">1</span><span class="token punctuation">,</span> <span class="token number">100</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token keyword">SAVEPOINT</span> after_order<span class="token punctuation">;</span>
+<span class="token keyword">INSERT</span> <span class="token keyword">INTO</span> t_order_item <span class="token punctuation">(</span>order_id<span class="token punctuation">,</span> product_id<span class="token punctuation">)</span> <span class="token keyword">VALUES</span> <span class="token punctuation">(</span><span class="token number">1</span><span class="token punctuation">,</span> <span class="token number">200</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token keyword">ROLLBACK</span> <span class="token keyword">TO</span> after_order<span class="token punctuation">;</span>   <span class="token comment">-- 只回滚明细，订单保留</span>
+<span class="token keyword">COMMIT</span><span class="token punctuation">;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<h3 id="Java-侧怎么落地：事务边界与隔离级别"><a href="#Java-侧怎么落地：事务边界与隔离级别" class="headerlink" title="Java 侧怎么落地：事务边界与隔离级别"></a>Java 侧怎么落地：事务边界与隔离级别</h3><ol>
+<li><strong>事务只包住写操作</strong>：查询、远程调用、消息发送放到事务外，避免长事务；</li>
+<li><strong><code>@Transactional</code> 要指定 <code>rollbackFor</code></strong>：默认只回滚 <code>RuntimeException</code>，受检异常不回滚是经典事故；</li>
+<li><strong>避免自调用失效</strong>：同类内部方法调用不走代理，<code>@Transactional</code> 不生效，注入自身代理或拆类；</li>
+<li><strong>隔离级别在连接串统一</strong>：<code>transactionIsolation=TRANSACTION_READ_COMMITTED</code>，别在代码里零散 <code>SET</code>；</li>
+<li><strong>幂等与重试</strong>：捕获死锁异常（<code>1213</code>）后整段重试，别在事务里吞异常继续执行；</li>
+<li><strong>只读事务</strong>：查询服务用 <code>@Transactional(readOnly = true)</code>，可减少不必要的锁与优化器开销。</li>
+</ol>
+<h2 id="七、常见坑"><a href="#七、常见坑" class="headerlink" title="七、常见坑"></a>七、常见坑</h2><ol>
+<li><strong>以为 RR 完全没有幻读</strong>：快照读没有，当前读要靠间隙锁；间隙锁在某些场景（唯一索引等值）根本不加；</li>
+<li><strong>长事务拖住 purge</strong>：undo 无法清理，版本链越来越长，读性能持续下降；</li>
+<li><strong>事务里做 RPC&#x2F;MQ</strong>：外部调用超时会长时间持锁，还可能造成重复消息；</li>
+<li><strong><code>@Transactional</code> 加在 private 方法上</strong>：代理不生效，等于没加；</li>
+<li><strong>RC 下仍用 <code>STATEMENT</code> binlog</strong>：主从可能不一致（8.0 默认 ROW 已缓解）；</li>
+<li><strong><code>SELECT ... FOR UPDATE</code> 当普通查询用</strong>：加锁读会阻塞写入，能快照读就别加锁；</li>
+<li><strong><code>SET autocommit=0</code> 后忘提交</strong>：连接归还池时事务还挂着，后续请求莫名锁等待。</li>
+</ol>
+<h2 id="八、版本差异"><a href="#八、版本差异" class="headerlink" title="八、版本差异"></a>八、版本差异</h2><ul>
+<li><strong>5.7</strong>：变量名 <code>tx_isolation</code>；<code>binlog_format</code> 默认 <code>ROW</code>（5.7.7 起）；</li>
+<li><strong>8.0</strong>：变量更名为 <code>transaction_isolation</code>（<code>tx_isolation</code> 仍兼容）；<code>performance_schema.data_locks</code> &#x2F; <code>data_lock_waits</code> 取代 <code>innodb_lock_waits</code>；</li>
+<li><strong>8.4</strong>：默认仍是 RR，机制一致；<code>innodb_lock_wait_timeout</code> 默认 50 秒。</li>
+</ul>
+<h2 id="九、课后小结"><a href="#九、课后小结" class="headerlink" title="九、课后小结"></a>九、课后小结</h2><ul>
+<li>原子性靠 undo、持久性靠 redo、隔离性靠锁 + MVCC、一致性靠约束与业务；</li>
+<li>默认 RR，事务内快照读共用一个 ReadView；RC 每次读新建；</li>
+<li>快照读不加锁，当前读读最新版本并加锁；</li>
+<li>幻读在 RR 的当前读里靠 next-key lock 阻止，快照读天然看不到新行；</li>
+<li>RC 关闭间隙锁，能减少死锁但可能幻读，需配 ROW 格式 binlog。</li>
+</ul>
+<h2 id="十、思考题"><a href="#十、思考题" class="headerlink" title="十、思考题"></a>十、思考题</h2><ol>
+<li><p>RR 下「同一事务两次读到不同行数」有可能吗？</p>
+<p><strong>参考回答</strong>：快照读不会，因为两次都读同一个 ReadView；但如果第二次是当前读（<code>FOR UPDATE</code>），且第一次的条件没加间隙锁，就可能读到新插入的行，表现为行数变化。</p>
+</li>
+<li><p>RC 为什么能减少死锁？</p>
+<p><strong>参考回答</strong>：RC 关闭了间隙锁（除外键与唯一性检查），锁的范围更小、持有时间更短，减少了「交叉等待同一间隙」这类死锁。</p>
+</li>
+<li><p><code>START TRANSACTION WITH CONSISTENT SNAPSHOT</code> 解决了什么问题？</p>
+<p><strong>参考回答</strong>：普通 <code>START TRANSACTION</code> 不立即建快照，快照在第一条 <code>SELECT</code> 时才建立；如果中间隔了很久，快照时机就被推后。带 <code>WITH CONSISTENT SNAPSHOT</code> 可让快照与事务同时开始。</p>
+</li>
+<li><p>为什么说「一致性」不是数据库单独保证的？</p>
+<p><strong>参考回答</strong>：数据库只能保证约束与事务原子性；业务一致性（如转账两边金额守恒、库存不为负）需要正确的 SQL 逻辑与约束设计，数据库无法替你判断业务规则。</p>
+</li>
+<li><p>长事务为什么会让读变慢？</p>
+<p><strong>参考回答</strong>：长事务持有旧 ReadView，undo log 里对应的历史版本无法被 purge，版本链不断变长，后续查询遍历版本链的成本上升，同时占用更多 undo 空间。</p>
+</li>
+</ol>
+<h2 id="十一、官方资料"><a href="#十一、官方资料" class="headerlink" title="十一、官方资料"></a>十一、官方资料</h2><ul>
+<li>事务模型：<a target="_blank" rel="noopener" href="https://dev.mysql.com/doc/refman/8.4/en/innodb-transaction-model.html">https://dev.mysql.com/doc/refman/8.4/en/innodb-transaction-model.html</a></li>
+<li>一致性非锁定读：<a target="_blank" rel="noopener" href="https://dev.mysql.com/doc/refman/8.4/en/innodb-consistent-read.html">https://dev.mysql.com/doc/refman/8.4/en/innodb-consistent-read.html</a></li>
+<li>隔离级别：<a target="_blank" rel="noopener" href="https://dev.mysql.com/doc/refman/8.4/en/innodb-transaction-isolation-levels.html">https://dev.mysql.com/doc/refman/8.4/en/innodb-transaction-isolation-levels.html</a></li>
+<li><code>START TRANSACTION</code>：<a target="_blank" rel="noopener" href="https://dev.mysql.com/doc/refman/8.4/en/commit.html">https://dev.mysql.com/doc/refman/8.4/en/commit.html</a></li>
+</ul>
+<p>上一篇：<a href="/2022/11/30/database/mysql/mysql-20-index-failures/">MQ20 索引失效</a> ｜ 下一篇：<a href="/2022/12/02/database/mysql/mysql-22-mvcc/">MQ22 MVCC</a> ｜ <a href="/2022/11/10/database/mysql/mysql-0-series-index/">总目录</a></p>
+</div>
+
+  <div class="mb-foot">
+    <a href="/phone/">返回手机首页</a>
+    <a href="/phone/tags/">星迹索引</a>
+  </div>
+</div>
+
+
+<script>
+  /* 作用：懒加载本地 mermaid 库；无 mermaid 代码块时不加载 */
+  function loadLocalMermaid(){
+    return new Promise(function(resolve, reject){
+      if(window.mermaid) return resolve(window.mermaid);
+      var s = document.createElement('script');
+      s.src = '/js/third-party/mermaid/mermaid.min.js?v=10';
+      s.onload = function(){ resolve(window.mermaid); };
+      s.onerror = function(){ reject(new Error('mermaid local load failed')); };
+      document.head.appendChild(s);
+    });
+  }
+
+  /* 作用：把 ```mermaid 代码块替换成 SVG 图（手机端字号略小、图可横向滚动） */
+  async function renderMermaidDiagram(){
+    var blocks = document.querySelectorAll('pre[class*="language-mermaid"]');
+    if(!blocks.length) return;
+    var mermaid;
+    try { mermaid = await loadLocalMermaid(); }
+    catch(e){ console.warn('[mermaid] 本地库加载失败：', e); return; }
+
+    mermaid.initialize({
+      startOnLoad: false,
+      theme: 'base',
+      themeVariables: {
+        darkMode: true,
+        background: 'transparent',
+        fontFamily: '"Microsoft YaHei", "PingFang SC", "Segoe UI", sans-serif',
+        fontSize: '12px',
+        primaryColor: '#062f3d',
+        primaryTextColor: '#d6f6ff',
+        primaryBorderColor: '#00eeff',
+        secondaryColor: '#04222d',
+        tertiaryColor: '#04222d',
+        mainBkg: '#062f3d',
+        nodeBorder: '#00eeff',
+        clusterBkg: '#02161f',
+        clusterBorder: '#00eeff55',
+        lineColor: '#00eeff',
+        textColor: '#c0e8ff',
+        edgeLabelBackground: '#02161f'
+      },
+      flowchart: { curve: 'basis', useMaxWidth: false, htmlLabels: false, nodeSpacing: 30, rankSpacing: 40, padding: 10 }
+    });
+
+    var targets = [];
+    blocks.forEach(function(el){
+      var codeEl = el.querySelector('code');
+      if(!codeEl) return;
+      var div = document.createElement('div');
+      div.className = 'mermaid';
+      div.textContent = codeEl.textContent;
+      el.parentNode.replaceChild(div, el);
+      targets.push(div);
+    });
+    if(!targets.length) return;
+    try { await mermaid.run({ nodes: targets }); }
+    catch(e){ console.warn('[mermaid] 渲染失败：', e); }
+  }
+  /* 作用：多次触发兜底（延迟重试 + DOM 变化），防止某次时机没跑到导致图表留在代码块 */
+  var mmBusy = false;
+  function scheduleMermaid(){
+    if(mmBusy) return;
+    mmBusy = true;
+    renderMermaidDiagram().then(function(){ mmBusy = false; }, function(){ mmBusy = false; });
+  }
+  scheduleMermaid();
+  window.addEventListener('load', scheduleMermaid);
+  [1000, 3000, 8000].forEach(function(ms){ setTimeout(scheduleMermaid, ms); });
+  if(document.readyState !== 'loading') scheduleMermaid();
+  if(window.MutationObserver){
+    var mmTimer = null;
+    var mmObserver = new MutationObserver(function(){
+      clearTimeout(mmTimer);
+      mmTimer = setTimeout(scheduleMermaid, 400);
+    });
+    mmObserver.observe(document.querySelector('.mb-article') || document.body, { childList: true, subtree: true });
+  }
+</script>
+</body>
+</html>

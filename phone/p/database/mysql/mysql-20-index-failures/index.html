@@ -1,0 +1,384 @@
+<!--
+  ============================================
+  手机端 · 文章原文页
+  文件：phone/post.njk
+  适用终端：手机端（路由 /phone/p/<slug>/，由 scripts/phone-routes.js 生成）
+  作用：手机阅读单篇文章；单列布局、无侧栏无雷达，替代电脑端 post.njk
+        数据由生成期算好：page.item = { title, dateStr, content, cats, tags }
+  样式依赖：source/css/theme/phone/common.css、source/css/theme/phone/list.css
+  组件依赖：phone/_components/Particles.njk
+  最后修改：2026-11-11
+  ============================================
+-->
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="color-scheme" content="dark">
+  <meta name="theme-color" content="#020817">
+  <!-- 首帧兜底：浏览器默认画布是白的，样式未解析前会闪一下白。这条规则先锁死深空底色 -->
+  <style>html{background-color:#020817}</style>
+  <title>mysql-20-索引失效 - 时空秘境</title>
+  <!-- 手机端样式：基础 + 列表/正文，外链引入（源文件 source/css/theme/phone/） -->
+  <link rel="stylesheet" href="/css/theme/phone/common.css">
+  <link rel="stylesheet" href="/css/theme/phone/list.css">
+<meta name="generator" content="Hexo 8.1.2"></head>
+<body>
+<div class="mb-shell">
+  <!--
+  ============================================
+  手机端星空粒子组件
+  文件：Particles.njk
+  适用终端：手机端
+  作用：Particles.njk 的手机端副本（nunjucks 子目录 include 取不到上级）
+        参数与电脑端 _components/Particles.njk 保持一致：
+        粒子 95 / 连线 118px / opacity 0.32，外加星座层与零星闪烁层
+  最后修改：2026-11-12
+  ============================================
+--><!-- z-index 必须是 0：负层级会被 body 不透明背景盖住，粒子在跑却看不见 -->
+<div id="particles" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 0; pointer-events: none;"></div>
+<!-- 星座层（与首页同一套：随机零星散布星座图形 + 偶尔闪烁的小星） -->
+<div id="constellations" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 1; pointer-events: none;" aria-hidden="true"></div>
+<script src="/js/particles.min.js"></script>
+<script>
+particlesJS("particles", {
+  particles: {
+    number: {
+      value: 95,
+      density: {
+        enable: true,
+        value_area: 800
+      }
+    },
+    color: {
+      value: "#00eeff"
+    },
+    shape: {
+      type: "circle",
+      stroke: {
+        width: 0,
+        color: "#000000"
+      }
+    },
+    opacity: {
+      value: 0.6,
+      random: true,
+      anim: {
+        enable: true,
+        speed: 0.5,
+        opacity_min: 0.1,
+        sync: false
+      }
+    },
+    size: {
+      value: 3,
+      random: true,
+      anim: {
+        enable: true,
+        speed: 2,
+        size_min: 0.1,
+        sync: false
+      }
+    },
+    line_linked: {
+      enable: true,
+      distance: 118,
+      color: "#00eeff",
+      opacity: 0.32,
+      width: 1
+    },
+    move: {
+      enable: true,
+      speed: 0.8,
+      direction: "none",
+      random: true,
+      straight: false,
+      out_mode: "out",
+      bounce: false,
+      attract: {
+        enable: true,
+        rotateX: 600,
+        rotateY: 1200
+      }
+    }
+  },
+  interactivity: {
+    detect_on: "canvas",
+    events: {
+      onhover: {
+        enable: true,
+        mode: "grab"       // 手指按住时粒子聚集
+      },
+      onclick: {
+        enable: true,
+        mode: "push"       // 点击时产生新粒子
+      },
+      resize: true
+    },
+    modes: {
+      grab: {
+        distance: 200,
+        line_linked: {
+          opacity: 1
+        }
+      },
+      push: {
+        particles_nb: 6
+      }
+    }
+  },
+  retina_detect: true
+});
+</script>
+<!-- 星座 + 零星闪烁层：与电脑端共用同一份绘制脚本 -->
+<script src="/js/theme/home/starfield.js"></script>
+
+
+  <div class="mb-top">
+    <a class="mb-back" href="/phone/">← 返回手机首页</a>
+    <span class="mb-sub" style="margin:0">2022-11-30</span>
+  </div>
+
+  <h1 class="mb-title">mysql-20-索引失效</h1>
+  <div class="mb-sub">
+    分类：database · mysql
+     ｜ 标签：系统课 · MySQL · 数据库
+  </div>
+
+  <div class="mb-article"><div class="essay-banner essay-database"></div>
+
+<h1 id="索引失效的八种写法"><a href="#索引失效的八种写法" class="headerlink" title="索引失效的八种写法"></a>索引失效的八种写法</h1><p><img src="https://wu4yong.github.io/starry-images/assets/img/mysql/mq-20-fail.svg" alt="八种失效写法，八条改写路径"></p>
+<p><em>索引失效几乎都不是「优化器犯错」，而是 SQL 让 B+Tree 的有序性用不上｜依据 MySQL 8.4 Optimizer 与 Range Optimization 章节自绘</em></p>
+<h2 id="一、学习目标"><a href="#一、学习目标" class="headerlink" title="一、学习目标"></a>一、学习目标</h2><ol>
+<li>记住八种最常见的索引失效写法，看到 SQL 就能判断；</li>
+<li>每种失效都能给出可落地的改写方案，而不是只说「别这么写」；</li>
+<li>会用 <code>EXPLAIN</code> 的 <code>key</code>、<code>type</code>、<code>rows</code>、<code>Extra</code> 四列确认失效是否真的发生。</li>
+</ol>
+<h2 id="二、前置知识"><a href="#二、前置知识" class="headerlink" title="二、前置知识"></a>二、前置知识</h2><p>联合索引的最左前缀、B+Tree 有序性（MQ18&#x2F;MQ19）。知道「索引能用的前提是列的有序性被保留」这一句就够。</p>
+<h2 id="三、理论讲解（官方定义）"><a href="#三、理论讲解（官方定义）" class="headerlink" title="三、理论讲解（官方定义）"></a>三、理论讲解（官方定义）</h2><p>索引（B+Tree）能加速查询的唯一原因是<strong>有序</strong>：给定条件后能定位到一个连续区间。凡是让「列值 → 索引键」的映射被破坏的写法，都会让优化器退回全表扫描或索引全扫。</p>
+<p>官方在 Range Optimization 里明确：范围访问要求条件形如 <code>col op const</code>，且 <code>op</code> 是 <code>=</code>、<code>&lt;=&gt;</code>、<code>&gt;</code>、<code>&lt;</code>、<code>&gt;=</code>、<code>&lt;=</code>、<code>IS NULL</code>、<code>BETWEEN</code>、<code>IN</code>、<code>LIKE &#39;prefix%&#39;</code> 等；列上套函数、类型不匹配、前缀通配都落在这张清单之外。</p>
+<h2 id="四、原理拆解"><a href="#四、原理拆解" class="headerlink" title="四、原理拆解"></a>四、原理拆解</h2><p><img src="https://wu4yong.github.io/starry-images/assets/img/mysql/mq-20b-fail.svg" alt="失效的因果链"></p>
+<p><em>从「列值被改写」到「区间无法定位」，最后表现为 type&#x3D;ALL 或 rows 暴涨｜依据 MySQL 8.4 优化器章节自绘</em></p>
+<h3 id="1-列上做函数或运算"><a href="#1-列上做函数或运算" class="headerlink" title="1. 列上做函数或运算"></a>1. 列上做函数或运算</h3><pre class="line-numbers language-sql" data-language="sql"><code class="language-sql"><span class="token comment">-- 失效：DATE(created_at) 不是索引列本身</span>
+<span class="token keyword">SELECT</span> <span class="token operator">*</span> <span class="token keyword">FROM</span> t_order <span class="token keyword">WHERE</span> <span class="token keyword">DATE</span><span class="token punctuation">(</span>created_at<span class="token punctuation">)</span> <span class="token operator">=</span> <span class="token string">'2022-11-01'</span><span class="token punctuation">;</span>
+
+<span class="token comment">-- 改写：改成半开区间</span>
+<span class="token keyword">SELECT</span> <span class="token operator">*</span> <span class="token keyword">FROM</span> t_order
+<span class="token keyword">WHERE</span> created_at <span class="token operator">>=</span> <span class="token string">'2022-11-01 00:00:00'</span>
+  <span class="token operator">AND</span> created_at <span class="token operator">&lt;</span>  <span class="token string">'2022-11-02 00:00:00'</span><span class="token punctuation">;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<p>同理 <code>LOWER(name)</code>、<code>UPPER(code)</code>、<code>SUBSTR(phone,1,7)</code>、<code>amount + 0</code>、<code>id * 2</code> 都会失效。8.0.13 起可以建<strong>函数索引</strong>兜住这类查询。</p>
+<h3 id="2-隐式类型转换"><a href="#2-隐式类型转换" class="headerlink" title="2. 隐式类型转换"></a>2. 隐式类型转换</h3><pre class="line-numbers language-sql" data-language="sql"><code class="language-sql"><span class="token comment">-- phone 是 VARCHAR(20)，右侧给了数字 → 列被转成数字，索引失效</span>
+<span class="token keyword">SELECT</span> <span class="token operator">*</span> <span class="token keyword">FROM</span> t_user <span class="token keyword">WHERE</span> phone <span class="token operator">=</span> <span class="token number">13800000000</span><span class="token punctuation">;</span>
+
+<span class="token comment">-- 正确：给字符串</span>
+<span class="token keyword">SELECT</span> <span class="token operator">*</span> <span class="token keyword">FROM</span> t_user <span class="token keyword">WHERE</span> phone <span class="token operator">=</span> <span class="token string">'13800000000'</span><span class="token punctuation">;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<p>反过来「数字列 &#x3D; 字符串常量」是安全的（常量被转成数字）。判断口诀：<strong>常量向列的类型靠，靠不过去就失效</strong>。</p>
+<h3 id="3-前导通配符"><a href="#3-前导通配符" class="headerlink" title="3. 前导通配符"></a>3. 前导通配符</h3><pre class="line-numbers language-sql" data-language="sql"><code class="language-sql"><span class="token comment">-- 失效：LIKE '%abc'</span>
+<span class="token keyword">SELECT</span> <span class="token operator">*</span> <span class="token keyword">FROM</span> t_product <span class="token keyword">WHERE</span> title <span class="token operator">LIKE</span> <span class="token string">'%手机%'</span><span class="token punctuation">;</span>
+
+<span class="token comment">-- 可用：只有后缀通配能走范围</span>
+<span class="token keyword">SELECT</span> <span class="token operator">*</span> <span class="token keyword">FROM</span> t_product <span class="token keyword">WHERE</span> title <span class="token operator">LIKE</span> <span class="token string">'手机%'</span><span class="token punctuation">;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<p>真要支持全文模糊匹配，用 <code>FULLTEXT</code> 索引 + <code>MATCH ... AGAINST</code>，或外部搜索引擎。</p>
+<h3 id="4-OR-连接了无索引列"><a href="#4-OR-连接了无索引列" class="headerlink" title="4. OR 连接了无索引列"></a>4. OR 连接了无索引列</h3><pre class="line-numbers language-sql" data-language="sql"><code class="language-sql"><span class="token comment">-- a 有索引，b 没有 → 整体退化为全表扫</span>
+<span class="token keyword">SELECT</span> <span class="token operator">*</span> <span class="token keyword">FROM</span> t <span class="token keyword">WHERE</span> a <span class="token operator">=</span> <span class="token number">1</span> <span class="token operator">OR</span> b <span class="token operator">=</span> <span class="token number">2</span><span class="token punctuation">;</span>
+
+<span class="token comment">-- 改写：UNION ALL 拆开，各自走索引</span>
+<span class="token keyword">SELECT</span> <span class="token operator">*</span> <span class="token keyword">FROM</span> t <span class="token keyword">WHERE</span> a <span class="token operator">=</span> <span class="token number">1</span>
+<span class="token keyword">UNION</span> <span class="token keyword">ALL</span>
+<span class="token keyword">SELECT</span> <span class="token operator">*</span> <span class="token keyword">FROM</span> t <span class="token keyword">WHERE</span> b <span class="token operator">=</span> <span class="token number">2</span> <span class="token operator">AND</span> a <span class="token operator">&lt;></span> <span class="token number">1</span><span class="token punctuation">;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<p>如果 OR 两侧都有索引，优化器可能走 <code>index_merge</code>，但通常仍不如一个合适的联合索引。</p>
+<h3 id="5-联合索引跳过最左前缀"><a href="#5-联合索引跳过最左前缀" class="headerlink" title="5. 联合索引跳过最左前缀"></a>5. 联合索引跳过最左前缀</h3><pre class="line-numbers language-sql" data-language="sql"><code class="language-sql"><span class="token comment">-- idx (a, b, c)，只查 b → 用不了（除非 Skip Scan 条件满足）</span>
+<span class="token keyword">SELECT</span> <span class="token operator">*</span> <span class="token keyword">FROM</span> t <span class="token keyword">WHERE</span> b <span class="token operator">=</span> <span class="token number">2</span><span class="token punctuation">;</span>
+
+<span class="token comment">-- 可用：带上 a</span>
+<span class="token keyword">SELECT</span> <span class="token operator">*</span> <span class="token keyword">FROM</span> t <span class="token keyword">WHERE</span> a <span class="token operator">=</span> <span class="token number">1</span> <span class="token operator">AND</span> b <span class="token operator">=</span> <span class="token number">2</span><span class="token punctuation">;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<h3 id="6-字符集或排序规则不一致"><a href="#6-字符集或排序规则不一致" class="headerlink" title="6. 字符集或排序规则不一致"></a>6. 字符集或排序规则不一致</h3><pre class="line-numbers language-sql" data-language="sql"><code class="language-sql"><span class="token comment">-- 两表连接，一个 utf8mb4_general_ci，一个 utf8mb4_0900_ai_ci</span>
+<span class="token keyword">SELECT</span> <span class="token operator">*</span> <span class="token keyword">FROM</span> t1 <span class="token keyword">JOIN</span> t2 <span class="token keyword">ON</span> t2<span class="token punctuation">.</span>code <span class="token operator">=</span> t1<span class="token punctuation">.</span>code<span class="token punctuation">;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span></span></code></pre>
+
+<p>轻则 <code>Illegal mix of collations</code>，重则列被隐式转换导致索引失效。统一用 <code>utf8mb4_0900_ai_ci</code>（8.4 默认），迁移时把老表的 <code>general_ci</code> 一并改掉。</p>
+<h3 id="7-NOT、-、NOT-IN-与-IS-NOT-NULL"><a href="#7-NOT、-、NOT-IN-与-IS-NOT-NULL" class="headerlink" title="7. NOT、!&#x3D;、NOT IN 与 IS NOT NULL"></a>7. NOT、!&#x3D;、NOT IN 与 IS NOT NULL</h3><pre class="line-numbers language-sql" data-language="sql"><code class="language-sql"><span class="token comment">-- 否定条件要「排除」，无法定位区间，通常全表扫</span>
+<span class="token keyword">SELECT</span> <span class="token operator">*</span> <span class="token keyword">FROM</span> t_order <span class="token keyword">WHERE</span> <span class="token keyword">status</span> <span class="token operator">&lt;></span> <span class="token number">2</span><span class="token punctuation">;</span>
+<span class="token keyword">SELECT</span> <span class="token operator">*</span> <span class="token keyword">FROM</span> t_user <span class="token keyword">WHERE</span> id <span class="token operator">NOT</span> <span class="token operator">IN</span> <span class="token punctuation">(</span><span class="token number">1</span><span class="token punctuation">,</span> <span class="token number">2</span><span class="token punctuation">,</span> <span class="token number">3</span><span class="token punctuation">)</span><span class="token punctuation">;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span></span></code></pre>
+
+<p><code>!=</code> 在选择性极低时（如 99% 的行满足）必然全表扫；<code>NOT IN</code> 还有 NULL 陷阱（右侧含 NULL 时结果恒为空）。改写思路：把否定转成肯定枚举，或加一个能走索引的前置条件。</p>
+<h3 id="8-范围条件之后的列失效"><a href="#8-范围条件之后的列失效" class="headerlink" title="8. 范围条件之后的列失效"></a>8. 范围条件之后的列失效</h3><pre class="line-numbers language-sql" data-language="sql"><code class="language-sql"><span class="token comment">-- idx (a, b)：a 用了范围，b 只能靠 ICP 过滤，无法再缩小扫描</span>
+<span class="token keyword">SELECT</span> <span class="token operator">*</span> <span class="token keyword">FROM</span> t <span class="token keyword">WHERE</span> a <span class="token operator">></span> <span class="token number">10</span> <span class="token operator">AND</span> b <span class="token operator">=</span> <span class="token number">2</span><span class="token punctuation">;</span>
+
+<span class="token comment">-- 更好：把等值列放前</span>
+<span class="token comment">-- idx (b, a) 或 idx (a) + (b) 视查询分布而定</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<p>这类不算「完全失效」，但扫描量下不来，实际表现和失效类似。</p>
+<p>另外两种「看起来失效、其实是排序问题」：<code>SELECT *</code> 破坏覆盖索引；<code>ORDER BY</code> 方向与索引不一致触发 <code>Using filesort</code>（8.0 起降序索引可解）。</p>
+<h2 id="五、场景说明"><a href="#五、场景说明" class="headerlink" title="五、场景说明"></a>五、场景说明</h2><ol>
+<li><strong>时间范围查询</strong>：改成半开区间，别用 <code>DATE()</code>；</li>
+<li><strong>手机号&#x2F;订单号检索</strong>：入参统一转字符串，别让框架按数字绑定；</li>
+<li><strong>后台模糊搜索</strong>：<code>LIKE &#39;xx%&#39;</code> 走索引，<code>%xx%</code> 交 ES；</li>
+<li><strong>多条件筛选</strong>：能拆 UNION ALL 的 OR 就拆，能建联合索引的就不拆；</li>
+<li><strong>老库迁移</strong>：字符集统一，避免连接时隐式转换。</li>
+</ol>
+<h2 id="六、示例代码-实操步骤"><a href="#六、示例代码-实操步骤" class="headerlink" title="六、示例代码&#x2F;实操步骤"></a>六、示例代码&#x2F;实操步骤</h2><h3 id="1-逐条验证"><a href="#1-逐条验证" class="headerlink" title="1. 逐条验证"></a>1. 逐条验证</h3><pre class="line-numbers language-sql" data-language="sql"><code class="language-sql"><span class="token keyword">EXPLAIN</span> <span class="token keyword">SELECT</span> <span class="token operator">*</span> <span class="token keyword">FROM</span> t_order <span class="token keyword">WHERE</span> <span class="token keyword">DATE</span><span class="token punctuation">(</span>created_at<span class="token punctuation">)</span> <span class="token operator">=</span> <span class="token string">'2022-11-01'</span><span class="token punctuation">;</span>   <span class="token comment">-- type=ALL</span>
+<span class="token keyword">EXPLAIN</span> <span class="token keyword">SELECT</span> <span class="token operator">*</span> <span class="token keyword">FROM</span> t_order <span class="token keyword">WHERE</span> created_at <span class="token operator">>=</span> <span class="token string">'2022-11-01'</span> <span class="token operator">AND</span> created_at <span class="token operator">&lt;</span> <span class="token string">'2022-11-02'</span><span class="token punctuation">;</span>  <span class="token comment">-- type=range</span>
+<span class="token keyword">EXPLAIN</span> <span class="token keyword">SELECT</span> <span class="token operator">*</span> <span class="token keyword">FROM</span> t_user <span class="token keyword">WHERE</span> phone <span class="token operator">=</span> <span class="token number">13800000000</span><span class="token punctuation">;</span>   <span class="token comment">-- type=ALL</span>
+<span class="token keyword">EXPLAIN</span> <span class="token keyword">SELECT</span> <span class="token operator">*</span> <span class="token keyword">FROM</span> t_user <span class="token keyword">WHERE</span> phone <span class="token operator">=</span> <span class="token string">'13800000000'</span><span class="token punctuation">;</span> <span class="token comment">-- type=ref</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span></span></code></pre>
+
+<h3 id="2-用-EXPLAIN-ANALYZE-看真实耗时"><a href="#2-用-EXPLAIN-ANALYZE-看真实耗时" class="headerlink" title="2. 用 EXPLAIN ANALYZE 看真实耗时"></a>2. 用 <code>EXPLAIN ANALYZE</code> 看真实耗时</h3><pre class="line-numbers language-sql" data-language="sql"><code class="language-sql"><span class="token keyword">EXPLAIN</span> <span class="token keyword">ANALYZE</span>
+<span class="token keyword">SELECT</span> <span class="token operator">*</span> <span class="token keyword">FROM</span> t_order <span class="token keyword">WHERE</span> <span class="token keyword">status</span> <span class="token operator">=</span> <span class="token number">2</span> <span class="token operator">AND</span> created_at <span class="token operator">>=</span> <span class="token string">'2022-11-01'</span><span class="token punctuation">;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span></span></code></pre>
+
+<p>8.0.18 起可用，输出真实执行时间与行数，比传统 <code>EXPLAIN</code> 的估算更可靠。</p>
+<h3 id="3-函数索引兜住函数查询"><a href="#3-函数索引兜住函数查询" class="headerlink" title="3. 函数索引兜住函数查询"></a>3. 函数索引兜住函数查询</h3><pre class="line-numbers language-sql" data-language="sql"><code class="language-sql"><span class="token keyword">ALTER</span> <span class="token keyword">TABLE</span> t_order <span class="token keyword">ADD</span> <span class="token keyword">INDEX</span> idx_created_day <span class="token punctuation">(</span><span class="token punctuation">(</span><span class="token keyword">DATE</span><span class="token punctuation">(</span>created_at<span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token keyword">EXPLAIN</span> <span class="token keyword">SELECT</span> <span class="token operator">*</span> <span class="token keyword">FROM</span> t_order <span class="token keyword">WHERE</span> <span class="token keyword">DATE</span><span class="token punctuation">(</span>created_at<span class="token punctuation">)</span> <span class="token operator">=</span> <span class="token string">'2022-11-01'</span><span class="token punctuation">;</span>  <span class="token comment">-- 走 idx_created_day</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span></span></code></pre>
+
+<p>注意函数索引的表达式必须与查询里的<strong>完全一致</strong>，否则仍然不匹配。</p>
+<h3 id="4-找出库里的可疑-SQL"><a href="#4-找出库里的可疑-SQL" class="headerlink" title="4. 找出库里的可疑 SQL"></a>4. 找出库里的可疑 SQL</h3><pre class="line-numbers language-sql" data-language="sql"><code class="language-sql"><span class="token comment">-- 慢查询日志里带函数的写法</span>
+<span class="token keyword">SELECT</span> <span class="token operator">*</span> <span class="token keyword">FROM</span> mysql<span class="token punctuation">.</span>slow_log
+<span class="token keyword">WHERE</span> sql_text <span class="token operator">LIKE</span> <span class="token string">'%DATE(%'</span> <span class="token operator">OR</span> sql_text <span class="token operator">LIKE</span> <span class="token string">'%LOWER(%'</span>
+<span class="token keyword">ORDER</span> <span class="token keyword">BY</span> query_time <span class="token keyword">DESC</span> <span class="token keyword">LIMIT</span> <span class="token number">20</span><span class="token punctuation">;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span></span></code></pre>
+
+<h3 id="Java-侧怎么落地：从源头堵住失效"><a href="#Java-侧怎么落地：从源头堵住失效" class="headerlink" title="Java 侧怎么落地：从源头堵住失效"></a>Java 侧怎么落地：从源头堵住失效</h3><ol>
+<li><strong>参数类型由实体决定</strong>：Mapper 方法签名用 <code>String phone</code> 而不是 <code>Long</code>，避免 MyBatis 按数字绑定；</li>
+<li><strong>禁止把函数写进 <code>WHERE</code></strong>：需要按天统计就用半开区间，或在 DAO 层封装 <code>betweenDay()</code>；</li>
+<li><strong>动态 SQL 收口</strong>：<code>&lt;if test&gt;</code> 拼条件时只允许等值、范围、<code>LIKE prefix</code>，禁止拼 <code>OR</code> 与 <code>!=</code>；</li>
+<li><strong><code>ORDER BY</code> 白名单</strong>：字段名映射到固定 SQL 片段，杜绝 <code>${sortField}</code>；</li>
+<li><strong>上线前跑 <code>EXPLAIN</code> 回归</strong>：把核心查询的 <code>EXPLAIN</code> 结果作为用例存进 CI，<code>type</code> 退化即失败。</li>
+</ol>
+<h2 id="七、常见坑"><a href="#七、常见坑" class="headerlink" title="七、常见坑"></a>七、常见坑</h2><ol>
+<li><strong>只给列建索引，不给查询建索引</strong>：索引列对了，写法不对照样失效；</li>
+<li><strong>以为 <code>!=</code> 一定失效</strong>：选择性高时（如排除极少数）仍可能走索引，看 <code>rows</code> 而不是看符号；</li>
+<li><strong><code>LIKE &#39;x%&#39;</code> 用了 <code>_</code> 通配</strong>：<code>LIKE &#39;_bc%&#39;</code> 仍能走范围，但 <code>LIKE &#39;%bc&#39;</code> 不行；</li>
+<li><strong>隐式转换方向搞反</strong>：<code>INT</code> 列 &#x3D; 字符串常量没问题，<code>VARCHAR</code> 列 &#x3D; 数字才失效；</li>
+<li><strong>函数索引与查询表达式不一致</strong>：<code>DATE(created_at)</code> 与 <code>CAST(created_at AS DATE)</code> 是两个不同的索引键；</li>
+<li><strong>OR 拆 UNION ALL 忘了去重</strong>：<code>UNION</code> 会多一次排序去重，用 <code>UNION ALL</code> + 条件互斥；</li>
+<li><strong><code>NOT IN</code> 右侧有 NULL</strong>：结果恒为空，先 <code>IS NOT NULL</code> 过滤。</li>
+</ol>
+<h2 id="八、版本差异"><a href="#八、版本差异" class="headerlink" title="八、版本差异"></a>八、版本差异</h2><ul>
+<li><strong>5.7</strong>：无函数索引、无 <code>EXPLAIN ANALYZE</code>；隐式转换规则一致；</li>
+<li><strong>8.0</strong>：8.0.13 起函数索引；8.0.18 起 <code>EXPLAIN ANALYZE</code>；8.0 起 <code>index_merge</code> 行为有调整；</li>
+<li><strong>8.4</strong>：规则与 8.0 一致；<code>utf8mb4_0900_ai_ci</code> 为默认排序规则，跨库连接时更要注意老表字符集。</li>
+</ul>
+<h2 id="九、课后小结"><a href="#九、课后小结" class="headerlink" title="九、课后小结"></a>九、课后小结</h2><ul>
+<li>失效的本质是「索引列的有序性用不上」；</li>
+<li>八种写法：列上函数、隐式转换、前导通配、无索引列的 OR、跳过最左前缀、字符集不一致、否定条件、范围后列；</li>
+<li>每种都有改写路径：半开区间、类型对齐、UNION ALL、联合索引重排、函数索引；</li>
+<li>判断失效看 <code>type</code> 与 <code>rows</code>，别靠记口诀；</li>
+<li>8.0 起 <code>EXPLAIN ANALYZE</code> 给真实耗时，比估算可靠。</li>
+</ul>
+<h2 id="十、思考题"><a href="#十、思考题" class="headerlink" title="十、思考题"></a>十、思考题</h2><ol>
+<li><p><code>WHERE phone = 13800000000</code>（<code>phone</code> 为 <code>VARCHAR</code>）为什么失效？</p>
+<p><strong>参考回答</strong>：比较时 MySQL 要把 <code>phone</code> 转成数字才能与数字常量比，等于在列上做了一次隐式函数运算，索引键的有序性被破坏，只能逐行转换后比较，退化为全表扫描。</p>
+</li>
+<li><p><code>WHERE a &gt; 10 AND b = 2</code> 在 <code>idx(a, b)</code> 上能用几列？</p>
+<p><strong>参考回答</strong>：只有 <code>a</code> 能定位范围；<code>b</code> 无法继续缩小扫描区间，只能靠 ICP 在引擎层过滤，减少回表次数但不减少索引扫描量。</p>
+</li>
+<li><p>为什么 <code>LIKE &#39;abc%&#39;</code> 能用索引而 <code>LIKE &#39;%abc&#39;</code> 不能？</p>
+<p><strong>参考回答</strong>：B+Tree 按前缀有序，已知前缀就能定位连续区间；前导通配符意味着「结尾未知」，任何位置都可能匹配，无法定位起点。</p>
+</li>
+<li><p><code>OR</code> 两侧都有索引时一定快吗？</p>
+<p><strong>参考回答</strong>：不一定。优化器可能走 <code>index_merge</code>，需要分别扫描两个索引再合并，回表次数可能翻倍；多数情况一个设计良好的联合索引更快。</p>
+</li>
+<li><p>函数索引建了还是不生效，常见原因是什么？</p>
+<p><strong>参考回答</strong>：查询里的表达式与索引定义不完全一致，例如索引是 <code>DATE(created_at)</code> 而查询写的是 <code>CAST(created_at AS DATE)</code>，或函数参数被隐式转换。</p>
+</li>
+</ol>
+<h2 id="十一、官方资料"><a href="#十一、官方资料" class="headerlink" title="十一、官方资料"></a>十一、官方资料</h2><ul>
+<li>范围优化：<a target="_blank" rel="noopener" href="https://dev.mysql.com/doc/refman/8.4/en/range-optimization.html">https://dev.mysql.com/doc/refman/8.4/en/range-optimization.html</a></li>
+<li>索引合并：<a target="_blank" rel="noopener" href="https://dev.mysql.com/doc/refman/8.4/en/index-merge-optimization.html">https://dev.mysql.com/doc/refman/8.4/en/index-merge-optimization.html</a></li>
+<li>函数索引：<a target="_blank" rel="noopener" href="https://dev.mysql.com/doc/refman/8.4/en/create-index.html#create-index-functional-key-parts">https://dev.mysql.com/doc/refman/8.4/en/create-index.html#create-index-functional-key-parts</a></li>
+<li><code>EXPLAIN ANALYZE</code>：<a target="_blank" rel="noopener" href="https://dev.mysql.com/doc/refman/8.4/en/explain.html#explain-analyze">https://dev.mysql.com/doc/refman/8.4/en/explain.html#explain-analyze</a></li>
+</ul>
+<p>上一篇：<a href="/2022/11/29/database/mysql/mysql-19-index-design/">MQ19 索引设计</a> ｜ 下一篇：<a href="/2022/12/01/database/mysql/mysql-21-transaction-acid/">MQ21 事务与 ACID</a> ｜ <a href="/2022/11/10/database/mysql/mysql-0-series-index/">总目录</a></p>
+</div>
+
+  <div class="mb-foot">
+    <a href="/phone/">返回手机首页</a>
+    <a href="/phone/tags/">星迹索引</a>
+  </div>
+</div>
+
+
+<script>
+  /* 作用：懒加载本地 mermaid 库；无 mermaid 代码块时不加载 */
+  function loadLocalMermaid(){
+    return new Promise(function(resolve, reject){
+      if(window.mermaid) return resolve(window.mermaid);
+      var s = document.createElement('script');
+      s.src = '/js/third-party/mermaid/mermaid.min.js?v=10';
+      s.onload = function(){ resolve(window.mermaid); };
+      s.onerror = function(){ reject(new Error('mermaid local load failed')); };
+      document.head.appendChild(s);
+    });
+  }
+
+  /* 作用：把 ```mermaid 代码块替换成 SVG 图（手机端字号略小、图可横向滚动） */
+  async function renderMermaidDiagram(){
+    var blocks = document.querySelectorAll('pre[class*="language-mermaid"]');
+    if(!blocks.length) return;
+    var mermaid;
+    try { mermaid = await loadLocalMermaid(); }
+    catch(e){ console.warn('[mermaid] 本地库加载失败：', e); return; }
+
+    mermaid.initialize({
+      startOnLoad: false,
+      theme: 'base',
+      themeVariables: {
+        darkMode: true,
+        background: 'transparent',
+        fontFamily: '"Microsoft YaHei", "PingFang SC", "Segoe UI", sans-serif',
+        fontSize: '12px',
+        primaryColor: '#062f3d',
+        primaryTextColor: '#d6f6ff',
+        primaryBorderColor: '#00eeff',
+        secondaryColor: '#04222d',
+        tertiaryColor: '#04222d',
+        mainBkg: '#062f3d',
+        nodeBorder: '#00eeff',
+        clusterBkg: '#02161f',
+        clusterBorder: '#00eeff55',
+        lineColor: '#00eeff',
+        textColor: '#c0e8ff',
+        edgeLabelBackground: '#02161f'
+      },
+      flowchart: { curve: 'basis', useMaxWidth: false, htmlLabels: false, nodeSpacing: 30, rankSpacing: 40, padding: 10 }
+    });
+
+    var targets = [];
+    blocks.forEach(function(el){
+      var codeEl = el.querySelector('code');
+      if(!codeEl) return;
+      var div = document.createElement('div');
+      div.className = 'mermaid';
+      div.textContent = codeEl.textContent;
+      el.parentNode.replaceChild(div, el);
+      targets.push(div);
+    });
+    if(!targets.length) return;
+    try { await mermaid.run({ nodes: targets }); }
+    catch(e){ console.warn('[mermaid] 渲染失败：', e); }
+  }
+  /* 作用：多次触发兜底（延迟重试 + DOM 变化），防止某次时机没跑到导致图表留在代码块 */
+  var mmBusy = false;
+  function scheduleMermaid(){
+    if(mmBusy) return;
+    mmBusy = true;
+    renderMermaidDiagram().then(function(){ mmBusy = false; }, function(){ mmBusy = false; });
+  }
+  scheduleMermaid();
+  window.addEventListener('load', scheduleMermaid);
+  [1000, 3000, 8000].forEach(function(ms){ setTimeout(scheduleMermaid, ms); });
+  if(document.readyState !== 'loading') scheduleMermaid();
+  if(window.MutationObserver){
+    var mmTimer = null;
+    var mmObserver = new MutationObserver(function(){
+      clearTimeout(mmTimer);
+      mmTimer = setTimeout(scheduleMermaid, 400);
+    });
+    mmObserver.observe(document.querySelector('.mb-article') || document.body, { childList: true, subtree: true });
+  }
+</script>
+</body>
+</html>

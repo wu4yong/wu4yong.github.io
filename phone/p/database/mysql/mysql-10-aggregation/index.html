@@ -1,0 +1,378 @@
+<!--
+  ============================================
+  手机端 · 文章原文页
+  文件：phone/post.njk
+  适用终端：手机端（路由 /phone/p/<slug>/，由 scripts/phone-routes.js 生成）
+  作用：手机阅读单篇文章；单列布局、无侧栏无雷达，替代电脑端 post.njk
+        数据由生成期算好：page.item = { title, dateStr, content, cats, tags }
+  样式依赖：source/css/theme/phone/common.css、source/css/theme/phone/list.css
+  组件依赖：phone/_components/Particles.njk
+  最后修改：2026-11-11
+  ============================================
+-->
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="color-scheme" content="dark">
+  <meta name="theme-color" content="#020817">
+  <!-- 首帧兜底：浏览器默认画布是白的，样式未解析前会闪一下白。这条规则先锁死深空底色 -->
+  <style>html{background-color:#020817}</style>
+  <title>mysql-10-聚合与分组 - 时空秘境</title>
+  <!-- 手机端样式：基础 + 列表/正文，外链引入（源文件 source/css/theme/phone/） -->
+  <link rel="stylesheet" href="/css/theme/phone/common.css">
+  <link rel="stylesheet" href="/css/theme/phone/list.css">
+<meta name="generator" content="Hexo 8.1.2"></head>
+<body>
+<div class="mb-shell">
+  <!--
+  ============================================
+  手机端星空粒子组件
+  文件：Particles.njk
+  适用终端：手机端
+  作用：Particles.njk 的手机端副本（nunjucks 子目录 include 取不到上级）
+        参数与电脑端 _components/Particles.njk 保持一致：
+        粒子 95 / 连线 118px / opacity 0.32，外加星座层与零星闪烁层
+  最后修改：2026-11-12
+  ============================================
+--><!-- z-index 必须是 0：负层级会被 body 不透明背景盖住，粒子在跑却看不见 -->
+<div id="particles" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 0; pointer-events: none;"></div>
+<!-- 星座层（与首页同一套：随机零星散布星座图形 + 偶尔闪烁的小星） -->
+<div id="constellations" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 1; pointer-events: none;" aria-hidden="true"></div>
+<script src="/js/particles.min.js"></script>
+<script>
+particlesJS("particles", {
+  particles: {
+    number: {
+      value: 95,
+      density: {
+        enable: true,
+        value_area: 800
+      }
+    },
+    color: {
+      value: "#00eeff"
+    },
+    shape: {
+      type: "circle",
+      stroke: {
+        width: 0,
+        color: "#000000"
+      }
+    },
+    opacity: {
+      value: 0.6,
+      random: true,
+      anim: {
+        enable: true,
+        speed: 0.5,
+        opacity_min: 0.1,
+        sync: false
+      }
+    },
+    size: {
+      value: 3,
+      random: true,
+      anim: {
+        enable: true,
+        speed: 2,
+        size_min: 0.1,
+        sync: false
+      }
+    },
+    line_linked: {
+      enable: true,
+      distance: 118,
+      color: "#00eeff",
+      opacity: 0.32,
+      width: 1
+    },
+    move: {
+      enable: true,
+      speed: 0.8,
+      direction: "none",
+      random: true,
+      straight: false,
+      out_mode: "out",
+      bounce: false,
+      attract: {
+        enable: true,
+        rotateX: 600,
+        rotateY: 1200
+      }
+    }
+  },
+  interactivity: {
+    detect_on: "canvas",
+    events: {
+      onhover: {
+        enable: true,
+        mode: "grab"       // 手指按住时粒子聚集
+      },
+      onclick: {
+        enable: true,
+        mode: "push"       // 点击时产生新粒子
+      },
+      resize: true
+    },
+    modes: {
+      grab: {
+        distance: 200,
+        line_linked: {
+          opacity: 1
+        }
+      },
+      push: {
+        particles_nb: 6
+      }
+    }
+  },
+  retina_detect: true
+});
+</script>
+<!-- 星座 + 零星闪烁层：与电脑端共用同一份绘制脚本 -->
+<script src="/js/theme/home/starfield.js"></script>
+
+
+  <div class="mb-top">
+    <a class="mb-back" href="/phone/">← 返回手机首页</a>
+    <span class="mb-sub" style="margin:0">2022-11-20</span>
+  </div>
+
+  <h1 class="mb-title">mysql-10-聚合与分组</h1>
+  <div class="mb-sub">
+    分类：database · mysql
+     ｜ 标签：系统课 · MySQL · 数据库
+  </div>
+
+  <div class="mb-article"><div class="essay-banner essay-database"></div>
+
+<h1 id="聚合与分组：GROUP-BY、HAVING-与-ROLLUP"><a href="#聚合与分组：GROUP-BY、HAVING-与-ROLLUP" class="headerlink" title="聚合与分组：GROUP BY、HAVING 与 ROLLUP"></a>聚合与分组：GROUP BY、HAVING 与 ROLLUP</h1><p><img src="https://wu4yong.github.io/starry-images/assets/img/mysql/mq-10-group.svg" alt="WHERE、GROUP BY、HAVING 的执行位置"></p>
+<p><em>聚合的坑不在函数，而在分组键、隐式排序和「先过滤还是先分组」｜依据 MySQL 8.4 SELECT 与聚合函数章节自绘</em></p>
+<h2 id="一、学习目标"><a href="#一、学习目标" class="headerlink" title="一、学习目标"></a>一、学习目标</h2><ol>
+<li>说清 <code>WHERE</code> &#x2F; <code>GROUP BY</code> &#x2F; <code>HAVING</code> 的执行顺序，知道过滤条件该放哪一层；</li>
+<li>会用 <code>GROUP_CONCAT</code>、<code>WITH ROLLUP</code>、<code>GROUPING()</code> 做出能直接给业务看的分组报表；</li>
+<li>知道 8.0 起 <code>GROUP BY</code> 不再隐式排序，以及 <code>ONLY_FULL_GROUP_BY</code> 为什么必须开着。</li>
+</ol>
+<h2 id="二、前置知识"><a href="#二、前置知识" class="headerlink" title="二、前置知识"></a>二、前置知识</h2><p>上一讲的单表查询与 <code>EXPLAIN</code>。知道索引顺序与 <code>filesort</code> 的关系即可。</p>
+<h2 id="三、理论讲解（官方定义）"><a href="#三、理论讲解（官方定义）" class="headerlink" title="三、理论讲解（官方定义）"></a>三、理论讲解（官方定义）</h2><p>聚合函数把多行压成一行：<code>COUNT</code>、<code>SUM</code>、<code>AVG</code>、<code>MIN</code>、<code>MAX</code>，以及 <code>GROUP_CONCAT</code>、<code>JSON_ARRAYAGG</code> 这类聚合器。<code>GROUP BY</code> 按指定列分组，<code>HAVING</code> 对分组后的结果再过滤。</p>
+<p>几条官方事实：</p>
+<ul>
+<li>执行顺序是 <code>WHERE</code> → <code>GROUP BY</code> → 聚合 → <code>HAVING</code> → <code>ORDER BY</code> → <code>LIMIT</code>，<strong><code>WHERE</code> 里不能出现聚合结果</strong>；</li>
+<li><code>ONLY_FULL_GROUP_BY</code> 从 5.7 起就是默认开启，<code>SELECT</code> 里出现的非聚合列必须在 <code>GROUP BY</code> 中（或满足函数依赖）；</li>
+<li>8.0 起 <strong><code>GROUP BY</code> 不再隐式排序</strong>，要顺序必须显式写 <code>ORDER BY</code>；</li>
+<li><code>WITH ROLLUP</code> 生成汇总行，<code>GROUPING()</code> 用来区分「真实数据的 0」和「汇总行的 0」。</li>
+</ul>
+<h2 id="四、原理拆解"><a href="#四、原理拆解" class="headerlink" title="四、原理拆解"></a>四、原理拆解</h2><p><img src="https://wu4yong.github.io/starry-images/assets/img/mysql/mq-10b-group.svg" alt="分组的两条路径：索引有序 vs 临时表 + 排序"></p>
+<p><em>分组能不能用上索引，取决于 GROUP BY 的列顺序与索引前缀是否一致｜依据 MySQL 8.4 Optimizer 章节自绘</em></p>
+<h3 id="1-过滤放哪一层"><a href="#1-过滤放哪一层" class="headerlink" title="1. 过滤放哪一层"></a>1. 过滤放哪一层</h3><pre class="line-numbers language-sql" data-language="sql"><code class="language-sql"><span class="token keyword">SELECT</span> city<span class="token punctuation">,</span> <span class="token function">COUNT</span><span class="token punctuation">(</span><span class="token operator">*</span><span class="token punctuation">)</span> <span class="token keyword">AS</span> orders<span class="token punctuation">,</span> <span class="token function">SUM</span><span class="token punctuation">(</span>amount<span class="token punctuation">)</span> <span class="token keyword">AS</span> gmv
+<span class="token keyword">FROM</span> t_order
+<span class="token keyword">WHERE</span> <span class="token keyword">status</span> <span class="token operator">=</span> <span class="token number">2</span>            <span class="token comment">-- 行级过滤，能用索引</span>
+<span class="token keyword">GROUP</span> <span class="token keyword">BY</span> city
+<span class="token keyword">HAVING</span> <span class="token function">SUM</span><span class="token punctuation">(</span>amount<span class="token punctuation">)</span> <span class="token operator">></span> <span class="token number">1000</span>   <span class="token comment">-- 分组后过滤，用不了索引</span>
+<span class="token keyword">ORDER</span> <span class="token keyword">BY</span> gmv <span class="token keyword">DESC</span>
+<span class="token keyword">LIMIT</span> <span class="token number">10</span><span class="token punctuation">;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<p>把「能走索引的条件」放 <code>WHERE</code>，把「依赖聚合结果的条件」放 <code>HAVING</code>，是分组查询的第一原则。把 <code>status = 2</code> 写进 <code>HAVING</code> 会让所有行都参与分组，白白多算一遍。</p>
+<h3 id="2-分组能不能用上索引"><a href="#2-分组能不能用上索引" class="headerlink" title="2. 分组能不能用上索引"></a>2. 分组能不能用上索引</h3><p><code>GROUP BY city</code> 且 <code>city</code> 上有索引时，InnoDB 可以按索引顺序扫描，边扫边输出分组，<code>Extra</code> 里没有 <code>Using temporary</code>。一旦出现 <code>Using temporary; Using filesort</code>，说明优化器建了临时表再排序，数据量大时非常贵。</p>
+<p>判断依据：<code>GROUP BY</code> 的列必须是某个索引的<strong>最左前缀</strong>，或者前面已有等值条件把前缀固定住。</p>
+<h3 id="3-ROLLUP-与-GROUPING"><a href="#3-ROLLUP-与-GROUPING" class="headerlink" title="3. ROLLUP 与 GROUPING"></a>3. ROLLUP 与 GROUPING</h3><pre class="line-numbers language-sql" data-language="sql"><code class="language-sql"><span class="token keyword">SELECT</span> city<span class="token punctuation">,</span> <span class="token keyword">IF</span><span class="token punctuation">(</span>GROUPING<span class="token punctuation">(</span>city<span class="token punctuation">)</span> <span class="token operator">=</span> <span class="token number">1</span><span class="token punctuation">,</span> <span class="token string">'全部'</span><span class="token punctuation">,</span> city<span class="token punctuation">)</span> <span class="token keyword">AS</span> city_label<span class="token punctuation">,</span>
+       <span class="token function">COUNT</span><span class="token punctuation">(</span><span class="token operator">*</span><span class="token punctuation">)</span> <span class="token keyword">AS</span> orders
+<span class="token keyword">FROM</span> t_order
+<span class="token keyword">GROUP</span> <span class="token keyword">BY</span> city <span class="token keyword">WITH ROLLUP</span><span class="token punctuation">;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span></span></code></pre>
+
+<p><code>WITH ROLLUP</code> 会在结果末尾追加汇总行；<code>GROUPING(col)</code> 返回 1 表示这一行是汇总行。没有它，你无法区分「这个城市的订单数真的是 0」和「这是总计行」。</p>
+<h3 id="4-聚合的三个陷阱"><a href="#4-聚合的三个陷阱" class="headerlink" title="4. 聚合的三个陷阱"></a>4. 聚合的三个陷阱</h3><ul>
+<li><code>COUNT(*)</code> 统计行数，<code>COUNT(col)</code> 跳过 NULL，<code>COUNT(DISTINCT col)</code> 去重计数；</li>
+<li><code>SUM</code> 遇到全 NULL 返回 NULL，不是 0，报表里要 <code>COALESCE(SUM(x), 0)</code>；</li>
+<li><code>AVG</code> 的分母是非 NULL 行数，和「总行数」不是一回事。</li>
+</ul>
+<h3 id="5-大基数分组"><a href="#5-大基数分组" class="headerlink" title="5. 大基数分组"></a>5. 大基数分组</h3><p><code>GROUP BY user_id</code> 这类高基数分组会产生巨大临时表，内存放不下就落盘。可行做法：先在应用侧按分片键拆分（如 <code>user_id % 16</code>），分别聚合再合并；或把结果预先物化到汇总表，用定时任务增量更新。</p>
+<h2 id="五、场景说明"><a href="#五、场景说明" class="headerlink" title="五、场景说明"></a>五、场景说明</h2><ol>
+<li><strong>日报&#x2F;月报</strong>：按 <code>DATE(created_at)</code> 分组（注意函数包列会让索引失效，建议加生成列）；</li>
+<li><strong>Top N 城市</strong>：<code>GROUP BY city ORDER BY gmv DESC LIMIT 10</code>；</li>
+<li><strong>去重统计</strong>：<code>COUNT(DISTINCT user_id)</code>，大表慎用，可用 HyperLogLog 或近似统计；</li>
+<li><strong>拼接明细</strong>：<code>GROUP_CONCAT(order_no ORDER BY id SEPARATOR &#39;,&#39;)</code>，注意默认 1024 字节上限；</li>
+<li><strong>多维汇总</strong>：<code>WITH ROLLUP</code> 一次出「城市 + 总计」。</li>
+</ol>
+<h2 id="六、示例代码-实操步骤"><a href="#六、示例代码-实操步骤" class="headerlink" title="六、示例代码&#x2F;实操步骤"></a>六、示例代码&#x2F;实操步骤</h2><h3 id="1-一张表跑完四种聚合"><a href="#1-一张表跑完四种聚合" class="headerlink" title="1. 一张表跑完四种聚合"></a>1. 一张表跑完四种聚合</h3><pre class="line-numbers language-sql" data-language="sql"><code class="language-sql"><span class="token keyword">CREATE</span> <span class="token keyword">TABLE</span> t_order <span class="token punctuation">(</span>
+  id         <span class="token keyword">BIGINT</span> <span class="token keyword">UNSIGNED</span> <span class="token operator">NOT</span> <span class="token boolean">NULL</span> <span class="token keyword">AUTO_INCREMENT</span><span class="token punctuation">,</span>
+  city       <span class="token keyword">VARCHAR</span><span class="token punctuation">(</span><span class="token number">32</span><span class="token punctuation">)</span> <span class="token operator">NOT</span> <span class="token boolean">NULL</span><span class="token punctuation">,</span>
+  user_id    <span class="token keyword">BIGINT</span> <span class="token keyword">UNSIGNED</span> <span class="token operator">NOT</span> <span class="token boolean">NULL</span><span class="token punctuation">,</span>
+  amount     <span class="token keyword">DECIMAL</span><span class="token punctuation">(</span><span class="token number">12</span><span class="token punctuation">,</span><span class="token number">2</span><span class="token punctuation">)</span> <span class="token operator">NOT</span> <span class="token boolean">NULL</span><span class="token punctuation">,</span>
+  <span class="token keyword">status</span>     <span class="token keyword">TINYINT</span> <span class="token operator">NOT</span> <span class="token boolean">NULL</span> <span class="token keyword">DEFAULT</span> <span class="token number">0</span><span class="token punctuation">,</span>
+  created_at <span class="token keyword">DATETIME</span><span class="token punctuation">(</span><span class="token number">3</span><span class="token punctuation">)</span> <span class="token operator">NOT</span> <span class="token boolean">NULL</span> <span class="token keyword">DEFAULT</span> <span class="token keyword">CURRENT_TIMESTAMP</span><span class="token punctuation">(</span><span class="token number">3</span><span class="token punctuation">)</span><span class="token punctuation">,</span>
+  <span class="token keyword">PRIMARY</span> <span class="token keyword">KEY</span> <span class="token punctuation">(</span>id<span class="token punctuation">)</span><span class="token punctuation">,</span>
+  <span class="token keyword">KEY</span> idx_city_status <span class="token punctuation">(</span>city<span class="token punctuation">,</span> <span class="token keyword">status</span><span class="token punctuation">)</span><span class="token punctuation">,</span>
+  <span class="token keyword">KEY</span> idx_created <span class="token punctuation">(</span>created_at<span class="token punctuation">)</span>
+<span class="token punctuation">)</span> <span class="token keyword">ENGINE</span><span class="token operator">=</span><span class="token keyword">InnoDB</span> <span class="token keyword">DEFAULT</span> <span class="token keyword">CHARSET</span><span class="token operator">=</span>utf8mb4 <span class="token keyword">COLLATE</span><span class="token operator">=</span>utf8mb4_0900_ai_ci<span class="token punctuation">;</span>
+
+<span class="token keyword">SELECT</span> city<span class="token punctuation">,</span>
+       <span class="token function">COUNT</span><span class="token punctuation">(</span><span class="token operator">*</span><span class="token punctuation">)</span>                          <span class="token keyword">AS</span> orders<span class="token punctuation">,</span>
+       <span class="token function">COUNT</span><span class="token punctuation">(</span><span class="token keyword">DISTINCT</span> user_id<span class="token punctuation">)</span>           <span class="token keyword">AS</span> buyers<span class="token punctuation">,</span>
+       <span class="token keyword">COALESCE</span><span class="token punctuation">(</span><span class="token function">SUM</span><span class="token punctuation">(</span>amount<span class="token punctuation">)</span><span class="token punctuation">,</span> <span class="token number">0</span><span class="token punctuation">)</span>          <span class="token keyword">AS</span> gmv<span class="token punctuation">,</span>
+       <span class="token function">ROUND</span><span class="token punctuation">(</span><span class="token function">AVG</span><span class="token punctuation">(</span>amount<span class="token punctuation">)</span><span class="token punctuation">,</span> <span class="token number">2</span><span class="token punctuation">)</span>             <span class="token keyword">AS</span> avg_amount
+<span class="token keyword">FROM</span> t_order
+<span class="token keyword">WHERE</span> <span class="token keyword">status</span> <span class="token operator">=</span> <span class="token number">2</span>
+<span class="token keyword">GROUP</span> <span class="token keyword">BY</span> city
+<span class="token keyword">ORDER</span> <span class="token keyword">BY</span> gmv <span class="token keyword">DESC</span>
+<span class="token keyword">LIMIT</span> <span class="token number">10</span><span class="token punctuation">;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<h3 id="2-按天统计：别让函数包住索引列"><a href="#2-按天统计：别让函数包住索引列" class="headerlink" title="2. 按天统计：别让函数包住索引列"></a>2. 按天统计：别让函数包住索引列</h3><pre class="line-numbers language-sql" data-language="sql"><code class="language-sql"><span class="token comment">-- 慢：DATE(created_at) 让 idx_created 失效</span>
+<span class="token keyword">SELECT</span> <span class="token keyword">DATE</span><span class="token punctuation">(</span>created_at<span class="token punctuation">)</span> d<span class="token punctuation">,</span> <span class="token function">COUNT</span><span class="token punctuation">(</span><span class="token operator">*</span><span class="token punctuation">)</span> <span class="token keyword">FROM</span> t_order <span class="token keyword">GROUP</span> <span class="token keyword">BY</span> d<span class="token punctuation">;</span>
+<span class="token comment">-- 快：范围条件 + 生成列</span>
+<span class="token keyword">ALTER</span> <span class="token keyword">TABLE</span> t_order <span class="token keyword">ADD</span> <span class="token keyword">COLUMN</span> created_day <span class="token keyword">DATE</span>
+  GENERATED ALWAYS <span class="token keyword">AS</span> <span class="token punctuation">(</span><span class="token keyword">DATE</span><span class="token punctuation">(</span>created_at<span class="token punctuation">)</span><span class="token punctuation">)</span> STORED<span class="token punctuation">,</span>
+  <span class="token keyword">ADD</span> <span class="token keyword">KEY</span> idx_created_day <span class="token punctuation">(</span>created_day<span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+<span class="token keyword">SELECT</span> created_day<span class="token punctuation">,</span> <span class="token function">COUNT</span><span class="token punctuation">(</span><span class="token operator">*</span><span class="token punctuation">)</span> <span class="token keyword">FROM</span> t_order
+<span class="token keyword">WHERE</span> created_at <span class="token operator">>=</span> <span class="token string">'2022-11-01'</span> <span class="token operator">AND</span> created_at <span class="token operator">&lt;</span> <span class="token string">'2022-12-01'</span>
+<span class="token keyword">GROUP</span> <span class="token keyword">BY</span> created_day<span class="token punctuation">;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<h3 id="3-校验分组结果"><a href="#3-校验分组结果" class="headerlink" title="3. 校验分组结果"></a>3. 校验分组结果</h3><pre class="line-numbers language-sql" data-language="sql"><code class="language-sql"><span class="token keyword">SELECT</span> @<span class="token variable">@sql_mode</span><span class="token punctuation">;</span>                       <span class="token comment">-- 确认含 ONLY_FULL_GROUP_BY</span>
+<span class="token keyword">EXPLAIN</span> <span class="token keyword">SELECT</span> city<span class="token punctuation">,</span> <span class="token function">COUNT</span><span class="token punctuation">(</span><span class="token operator">*</span><span class="token punctuation">)</span> <span class="token keyword">FROM</span> t_order <span class="token keyword">WHERE</span> <span class="token keyword">status</span> <span class="token operator">=</span> <span class="token number">2</span> <span class="token keyword">GROUP</span> <span class="token keyword">BY</span> city<span class="token punctuation">;</span>
+<span class="token comment">-- Extra 里出现 Using index 最好，出现 Using temporary 就要评估</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span></span></code></pre>
+
+<h3 id="Java-侧怎么落地：聚合结果的对象与分页"><a href="#Java-侧怎么落地：聚合结果的对象与分页" class="headerlink" title="Java 侧怎么落地：聚合结果的对象与分页"></a>Java 侧怎么落地：聚合结果的对象与分页</h3><ol>
+<li><strong>聚合结果用专用 DTO</strong>，别复用实体：<code>CityStat { String city; long orders; BigDecimal gmv; }</code>，<code>gmv</code> 必须是 <code>BigDecimal</code>；</li>
+<li><strong><code>COUNT</code> 用 <code>long</code></strong>，<code>int</code> 在千万级明细上会溢出；</li>
+<li><strong><code>SUM</code> 的空结果</strong>：SQL 侧 <code>COALESCE</code> 兜住，Java 侧再判空一次，避免 NPE；</li>
+<li><strong>分页聚合</strong>：<code>GROUP BY ... LIMIT</code> 只能截断分组结果，总数要单独 <code>COUNT(DISTINCT col)</code>，别指望 <code>PageHelper</code> 一把算对；</li>
+<li><strong>MyBatis 的 <code>resultMap</code></strong> 要显式映射 <code>DECIMAL</code> 到 <code>BigDecimal</code>，默认映射成 <code>Double</code> 会丢精度。</li>
+</ol>
+<h2 id="七、常见坑"><a href="#七、常见坑" class="headerlink" title="七、常见坑"></a>七、常见坑</h2><ol>
+<li><strong>把行级条件写进 <code>HAVING</code></strong>：全量参与分组，性能白白浪费；</li>
+<li><strong><code>GROUP BY</code> 后依赖隐式排序</strong>：8.0 起不再排序，翻页结果会「随机」；</li>
+<li><strong><code>COUNT(col)</code> 当 <code>COUNT(*)</code></strong>：有 NULL 时数量偏小；</li>
+<li><strong><code>SUM</code> 空集返回 NULL</strong>：报表里出现空白或 NPE；</li>
+<li><strong><code>GROUP_CONCAT</code> 超长</strong>：默认 <code>group_concat_max_len=1024</code>，长列表被静默截断；</li>
+<li><strong><code>DATE(col)</code> 分组</strong>：索引失效，改用生成列或范围条件；</li>
+<li><strong>高基数分组</strong>：临时表落盘，查询从秒级变分钟级。</li>
+</ol>
+<h2 id="八、版本差异"><a href="#八、版本差异" class="headerlink" title="八、版本差异"></a>八、版本差异</h2><ul>
+<li><strong>5.7</strong>：<code>GROUP BY</code> 仍隐式排序；<code>ONLY_FULL_GROUP_BY</code> 已是默认；</li>
+<li><strong>8.0</strong>：取消隐式排序，必须显式 <code>ORDER BY</code>；函数依赖检测更完善；<code>GROUPING()</code> 可用；</li>
+<li><strong>8.4</strong>：聚合语义与 8.0 一致，无破坏性变化。</li>
+</ul>
+<h2 id="九、课后小结"><a href="#九、课后小结" class="headerlink" title="九、课后小结"></a>九、课后小结</h2><ul>
+<li>行级过滤放 <code>WHERE</code>，聚合结果过滤放 <code>HAVING</code>；</li>
+<li>分组想用索引，<code>GROUP BY</code> 列要是索引最左前缀；</li>
+<li>8.0 起分组不再隐式排序，顺序必须显式写；</li>
+<li><code>ROLLUP</code> 配 <code>GROUPING()</code> 才能区分汇总行；</li>
+<li>函数包住列会让索引失效，日期分组用生成列。</li>
+</ul>
+<h2 id="十、思考题"><a href="#十、思考题" class="headerlink" title="十、思考题"></a>十、思考题</h2><ol>
+<li><p><code>WHERE</code> 和 <code>HAVING</code> 都能写条件，怎么分工？</p>
+<p><strong>参考回答</strong>：<code>WHERE</code> 在分组前对行过滤，能用索引，应放所有与聚合无关的条件；<code>HAVING</code> 在分组后对结果过滤，用于依赖 <code>SUM</code> &#x2F; <code>COUNT</code> 等聚合值的条件，无法利用索引。</p>
+</li>
+<li><p>为什么 <code>SELECT city, COUNT(*) ... GROUP BY city</code> 在 8.0 上翻页结果和 5.7 不一样？</p>
+<p><strong>参考回答</strong>：5.7 的 <code>GROUP BY</code> 会隐式按分组列排序，8.0 取消了这一行为，结果顺序由执行计划决定；要稳定顺序必须显式 <code>ORDER BY city</code> 或按聚合值排序。</p>
+</li>
+<li><p><code>COUNT(*)</code>、<code>COUNT(col)</code>、<code>COUNT(DISTINCT col)</code> 三者结果什么时候会不同？</p>
+<p><strong>参考回答</strong>：列中存在 NULL 时 <code>COUNT(col)</code> 小于 <code>COUNT(*)</code>；列中有重复值时 <code>COUNT(DISTINCT col)</code> 小于 <code>COUNT(col)</code>；三者相等只在「无 NULL 且无重复」时成立。</p>
+</li>
+<li><p><code>GROUP BY city WITH ROLLUP</code> 的汇总行为什么不能用 <code>city = &#39;全部&#39;</code> 直接判断？</p>
+<p><strong>参考回答</strong>：汇总行由引擎生成，<code>city</code> 列本身可能是 NULL 也可能是某值，直接判断会混淆；必须用 <code>GROUPING(city)</code> 判断是否为汇总行。</p>
+</li>
+<li><p>千万行表按 <code>user_id</code> 分组统计，查询很慢，你怎么优化？</p>
+<p><strong>参考回答</strong>：先用 <code>EXPLAIN</code> 确认是否 <code>Using temporary</code>；把大查询按分片键拆成多个子查询并行执行后合并；或建汇总表由定时任务增量维护，查询直接读汇总结果。</p>
+</li>
+</ol>
+<h2 id="十一、官方资料"><a href="#十一、官方资料" class="headerlink" title="十一、官方资料"></a>十一、官方资料</h2><ul>
+<li>聚合函数：<a target="_blank" rel="noopener" href="https://dev.mysql.com/doc/refman/8.4/en/aggregate-functions.html">https://dev.mysql.com/doc/refman/8.4/en/aggregate-functions.html</a></li>
+<li><code>GROUP BY</code> 与 <code>HAVING</code>：<a target="_blank" rel="noopener" href="https://dev.mysql.com/doc/refman/8.4/en/select.html">https://dev.mysql.com/doc/refman/8.4/en/select.html</a></li>
+<li><code>WITH ROLLUP</code> 与 <code>GROUPING()</code>：<a target="_blank" rel="noopener" href="https://dev.mysql.com/doc/refman/8.4/en/group-by-modifiers.html">https://dev.mysql.com/doc/refman/8.4/en/group-by-modifiers.html</a></li>
+<li><code>ONLY_FULL_GROUP_BY</code>：<a target="_blank" rel="noopener" href="https://dev.mysql.com/doc/refman/8.4/en/sql-mode.html#sqlmode_only_full_group_by">https://dev.mysql.com/doc/refman/8.4/en/sql-mode.html#sqlmode_only_full_group_by</a></li>
+</ul>
+<p>上一篇：<a href="/2022/11/19/database/mysql/mysql-9-single-table-query/">MQ09 单表查询：WHERE、排序、分页与 NULL 语义</a> ｜ 下一篇：<a href="/2022/11/21/database/mysql/mysql-11-joins/">MQ11 多表连接：INNER &#x2F; LEFT、自连接与连接顺序</a> ｜ <a href="/2022/11/10/database/mysql/mysql-0-series-index/">总目录</a></p>
+</div>
+
+  <div class="mb-foot">
+    <a href="/phone/">返回手机首页</a>
+    <a href="/phone/tags/">星迹索引</a>
+  </div>
+</div>
+
+
+<script>
+  /* 作用：懒加载本地 mermaid 库；无 mermaid 代码块时不加载 */
+  function loadLocalMermaid(){
+    return new Promise(function(resolve, reject){
+      if(window.mermaid) return resolve(window.mermaid);
+      var s = document.createElement('script');
+      s.src = '/js/third-party/mermaid/mermaid.min.js?v=10';
+      s.onload = function(){ resolve(window.mermaid); };
+      s.onerror = function(){ reject(new Error('mermaid local load failed')); };
+      document.head.appendChild(s);
+    });
+  }
+
+  /* 作用：把 ```mermaid 代码块替换成 SVG 图（手机端字号略小、图可横向滚动） */
+  async function renderMermaidDiagram(){
+    var blocks = document.querySelectorAll('pre[class*="language-mermaid"]');
+    if(!blocks.length) return;
+    var mermaid;
+    try { mermaid = await loadLocalMermaid(); }
+    catch(e){ console.warn('[mermaid] 本地库加载失败：', e); return; }
+
+    mermaid.initialize({
+      startOnLoad: false,
+      theme: 'base',
+      themeVariables: {
+        darkMode: true,
+        background: 'transparent',
+        fontFamily: '"Microsoft YaHei", "PingFang SC", "Segoe UI", sans-serif',
+        fontSize: '12px',
+        primaryColor: '#062f3d',
+        primaryTextColor: '#d6f6ff',
+        primaryBorderColor: '#00eeff',
+        secondaryColor: '#04222d',
+        tertiaryColor: '#04222d',
+        mainBkg: '#062f3d',
+        nodeBorder: '#00eeff',
+        clusterBkg: '#02161f',
+        clusterBorder: '#00eeff55',
+        lineColor: '#00eeff',
+        textColor: '#c0e8ff',
+        edgeLabelBackground: '#02161f'
+      },
+      flowchart: { curve: 'basis', useMaxWidth: false, htmlLabels: false, nodeSpacing: 30, rankSpacing: 40, padding: 10 }
+    });
+
+    var targets = [];
+    blocks.forEach(function(el){
+      var codeEl = el.querySelector('code');
+      if(!codeEl) return;
+      var div = document.createElement('div');
+      div.className = 'mermaid';
+      div.textContent = codeEl.textContent;
+      el.parentNode.replaceChild(div, el);
+      targets.push(div);
+    });
+    if(!targets.length) return;
+    try { await mermaid.run({ nodes: targets }); }
+    catch(e){ console.warn('[mermaid] 渲染失败：', e); }
+  }
+  /* 作用：多次触发兜底（延迟重试 + DOM 变化），防止某次时机没跑到导致图表留在代码块 */
+  var mmBusy = false;
+  function scheduleMermaid(){
+    if(mmBusy) return;
+    mmBusy = true;
+    renderMermaidDiagram().then(function(){ mmBusy = false; }, function(){ mmBusy = false; });
+  }
+  scheduleMermaid();
+  window.addEventListener('load', scheduleMermaid);
+  [1000, 3000, 8000].forEach(function(ms){ setTimeout(scheduleMermaid, ms); });
+  if(document.readyState !== 'loading') scheduleMermaid();
+  if(window.MutationObserver){
+    var mmTimer = null;
+    var mmObserver = new MutationObserver(function(){
+      clearTimeout(mmTimer);
+      mmTimer = setTimeout(scheduleMermaid, 400);
+    });
+    mmObserver.observe(document.querySelector('.mb-article') || document.body, { childList: true, subtree: true });
+  }
+</script>
+</body>
+</html>

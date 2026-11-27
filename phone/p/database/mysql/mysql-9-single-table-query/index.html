@@ -1,0 +1,402 @@
+<!--
+  ============================================
+  手机端 · 文章原文页
+  文件：phone/post.njk
+  适用终端：手机端（路由 /phone/p/<slug>/，由 scripts/phone-routes.js 生成）
+  作用：手机阅读单篇文章；单列布局、无侧栏无雷达，替代电脑端 post.njk
+        数据由生成期算好：page.item = { title, dateStr, content, cats, tags }
+  样式依赖：source/css/theme/phone/common.css、source/css/theme/phone/list.css
+  组件依赖：phone/_components/Particles.njk
+  最后修改：2026-11-11
+  ============================================
+-->
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="color-scheme" content="dark">
+  <meta name="theme-color" content="#020817">
+  <!-- 首帧兜底：浏览器默认画布是白的，样式未解析前会闪一下白。这条规则先锁死深空底色 -->
+  <style>html{background-color:#020817}</style>
+  <title>mysql-9-单表查询：WHERE、排序与分页 - 时空秘境</title>
+  <!-- 手机端样式：基础 + 列表/正文，外链引入（源文件 source/css/theme/phone/） -->
+  <link rel="stylesheet" href="/css/theme/phone/common.css">
+  <link rel="stylesheet" href="/css/theme/phone/list.css">
+<meta name="generator" content="Hexo 8.1.2"></head>
+<body>
+<div class="mb-shell">
+  <!--
+  ============================================
+  手机端星空粒子组件
+  文件：Particles.njk
+  适用终端：手机端
+  作用：Particles.njk 的手机端副本（nunjucks 子目录 include 取不到上级）
+        参数与电脑端 _components/Particles.njk 保持一致：
+        粒子 95 / 连线 118px / opacity 0.32，外加星座层与零星闪烁层
+  最后修改：2026-11-12
+  ============================================
+--><!-- z-index 必须是 0：负层级会被 body 不透明背景盖住，粒子在跑却看不见 -->
+<div id="particles" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 0; pointer-events: none;"></div>
+<!-- 星座层（与首页同一套：随机零星散布星座图形 + 偶尔闪烁的小星） -->
+<div id="constellations" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 1; pointer-events: none;" aria-hidden="true"></div>
+<script src="/js/particles.min.js"></script>
+<script>
+particlesJS("particles", {
+  particles: {
+    number: {
+      value: 95,
+      density: {
+        enable: true,
+        value_area: 800
+      }
+    },
+    color: {
+      value: "#00eeff"
+    },
+    shape: {
+      type: "circle",
+      stroke: {
+        width: 0,
+        color: "#000000"
+      }
+    },
+    opacity: {
+      value: 0.6,
+      random: true,
+      anim: {
+        enable: true,
+        speed: 0.5,
+        opacity_min: 0.1,
+        sync: false
+      }
+    },
+    size: {
+      value: 3,
+      random: true,
+      anim: {
+        enable: true,
+        speed: 2,
+        size_min: 0.1,
+        sync: false
+      }
+    },
+    line_linked: {
+      enable: true,
+      distance: 118,
+      color: "#00eeff",
+      opacity: 0.32,
+      width: 1
+    },
+    move: {
+      enable: true,
+      speed: 0.8,
+      direction: "none",
+      random: true,
+      straight: false,
+      out_mode: "out",
+      bounce: false,
+      attract: {
+        enable: true,
+        rotateX: 600,
+        rotateY: 1200
+      }
+    }
+  },
+  interactivity: {
+    detect_on: "canvas",
+    events: {
+      onhover: {
+        enable: true,
+        mode: "grab"       // 手指按住时粒子聚集
+      },
+      onclick: {
+        enable: true,
+        mode: "push"       // 点击时产生新粒子
+      },
+      resize: true
+    },
+    modes: {
+      grab: {
+        distance: 200,
+        line_linked: {
+          opacity: 1
+        }
+      },
+      push: {
+        particles_nb: 6
+      }
+    }
+  },
+  retina_detect: true
+});
+</script>
+<!-- 星座 + 零星闪烁层：与电脑端共用同一份绘制脚本 -->
+<script src="/js/theme/home/starfield.js"></script>
+
+
+  <div class="mb-top">
+    <a class="mb-back" href="/phone/">← 返回手机首页</a>
+    <span class="mb-sub" style="margin:0">2022-11-19</span>
+  </div>
+
+  <h1 class="mb-title">mysql-9-单表查询：WHERE、排序与分页</h1>
+  <div class="mb-sub">
+    分类：database · mysql
+     ｜ 标签：系统课 · MySQL · 数据库
+  </div>
+
+  <div class="mb-article"><div class="essay-banner essay-database"></div>
+
+<h1 id="单表查询：WHERE、排序、分页与-NULL-语义"><a href="#单表查询：WHERE、排序、分页与-NULL-语义" class="headerlink" title="单表查询：WHERE、排序、分页与 NULL 语义"></a>单表查询：WHERE、排序、分页与 NULL 语义</h1><p><img src="https://wu4yong.github.io/starry-images/assets/img/mysql/mq-9-query.svg" alt="单表查询的五类条件与执行顺序"></p>
+<p><em>单表查询的难点不在语法，而在 NULL、隐式转换和分页——三处都让索引悄悄失效｜依据 MySQL 8.4 SELECT 与 Optimizer 章节自绘</em></p>
+<h2 id="一、学习目标"><a href="#一、学习目标" class="headerlink" title="一、学习目标"></a>一、学习目标</h2><ol>
+<li>写出的 <code>WHERE</code> 一定能走索引，识别出五种让索引失效的写法；</li>
+<li>讲清 NULL 在三值逻辑里的行为，知道 <code>NOT IN</code> 为什么可能返回空结果；</li>
+<li>会用两种方式优化深翻页，能解释 <code>ORDER BY ... LIMIT</code> 的执行代价。</li>
+</ol>
+<h2 id="二、前置知识"><a href="#二、前置知识" class="headerlink" title="二、前置知识"></a>二、前置知识</h2><p>前一讲的 DML。看得懂 <code>EXPLAIN</code> 的 <code>type</code>、<code>key</code>、<code>rows</code>、<code>Extra</code> 四列即可。</p>
+<h2 id="三、理论讲解（官方定义）"><a href="#三、理论讲解（官方定义）" class="headerlink" title="三、理论讲解（官方定义）"></a>三、理论讲解（官方定义）</h2><p><code>SELECT</code> 的逻辑执行顺序是：<code>FROM</code> → <code>WHERE</code> → <code>GROUP BY</code> → <code>HAVING</code> → <code>SELECT</code> → <code>ORDER BY</code> → <code>LIMIT</code>。<code>WHERE</code> 在索引层过滤，<code>ORDER BY</code> 与 <code>LIMIT</code> 在结果层处理——这个顺序决定了为什么「排序字段没索引」会全量排序后再截取。</p>
+<p>几条常被忽略的官方事实：</p>
+<ul>
+<li>SQL 的比较是三值逻辑：<code>TRUE</code> &#x2F; <code>FALSE</code> &#x2F; <code>UNKNOWN</code>，<code>NULL</code> 参与任何比较都得 <code>UNKNOWN</code>；</li>
+<li><code>COUNT(*)</code> 统计行数，<code>COUNT(col)</code> <strong>不统计 <code>NULL</code></strong>；</li>
+<li><code>NOT IN (包含 NULL 的列表)</code> 结果恒为空，因为 <code>x &lt;&gt; NULL</code> 是 <code>UNKNOWN</code>；</li>
+<li>字符串列与数字比较时，MySQL 会把<strong>字符串列转成数字</strong>再比，索引直接失效。</li>
+</ul>
+<h2 id="四、原理拆解"><a href="#四、原理拆解" class="headerlink" title="四、原理拆解"></a>四、原理拆解</h2><p><img src="https://wu4yong.github.io/starry-images/assets/img/mysql/mq-9b-null.svg" alt="NULL 三值逻辑与深翻页两种解法"></p>
+<p><em>NULL 不是「空字符串」，它让比较变成未知；深翻页的代价在「丢弃前 N 行」｜依据 MySQL 8.4 SELECT 与 Optimizer 章节自绘</em></p>
+<h3 id="1-NULL-的正确用法"><a href="#1-NULL-的正确用法" class="headerlink" title="1. NULL 的正确用法"></a>1. NULL 的正确用法</h3><pre class="line-numbers language-sql" data-language="sql"><code class="language-sql"><span class="token keyword">SELECT</span> <span class="token operator">*</span> <span class="token keyword">FROM</span> t_user <span class="token keyword">WHERE</span> nickname <span class="token operator">IS</span> <span class="token boolean">NULL</span><span class="token punctuation">;</span>          <span class="token comment">-- 对</span>
+<span class="token keyword">SELECT</span> <span class="token operator">*</span> <span class="token keyword">FROM</span> t_user <span class="token keyword">WHERE</span> nickname <span class="token operator">=</span> <span class="token boolean">NULL</span><span class="token punctuation">;</span>           <span class="token comment">-- 永远空</span>
+<span class="token keyword">SELECT</span> <span class="token operator">*</span> <span class="token keyword">FROM</span> t_user <span class="token keyword">WHERE</span> nickname <span class="token operator">&lt;></span> <span class="token string">'x'</span><span class="token punctuation">;</span>           <span class="token comment">-- 排除了 NULL 行</span>
+<span class="token keyword">SELECT</span> <span class="token function">COUNT</span><span class="token punctuation">(</span><span class="token operator">*</span><span class="token punctuation">)</span><span class="token punctuation">,</span> <span class="token function">COUNT</span><span class="token punctuation">(</span>nickname<span class="token punctuation">)</span> <span class="token keyword">FROM</span> t_user<span class="token punctuation">;</span>         <span class="token comment">-- 5, 3（两列不等）</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span></span></code></pre>
+
+<p><code>IS NULL</code> 和 <code>IS NOT NULL</code> 是可以走索引的（B+Tree 里 NULL 也有位置）。真正会翻车的是 <code>NOT IN</code>：子查询结果里只要有一个 NULL，整个条件就是 <code>UNKNOWN</code>，返回空集。</p>
+<h3 id="2-五种让索引失效的写法"><a href="#2-五种让索引失效的写法" class="headerlink" title="2. 五种让索引失效的写法"></a>2. 五种让索引失效的写法</h3><pre class="line-numbers language-sql" data-language="sql"><code class="language-sql"><span class="token comment">-- 1 函数包住列</span>
+<span class="token keyword">WHERE</span> <span class="token keyword">DATE</span><span class="token punctuation">(</span>created_at<span class="token punctuation">)</span> <span class="token operator">=</span> <span class="token string">'2022-11-19'</span><span class="token punctuation">;</span>          <span class="token comment">-- 改成 created_at >= '2022-11-19' AND created_at &lt; '2022-11-20'</span>
+<span class="token comment">-- 2 隐式类型转换</span>
+<span class="token keyword">WHERE</span> phone <span class="token operator">=</span> <span class="token number">13800000000</span><span class="token punctuation">;</span>                       <span class="token comment">-- phone 是 VARCHAR，改成 phone = '13800000000'</span>
+<span class="token comment">-- 3 前导通配符</span>
+<span class="token keyword">WHERE</span> title <span class="token operator">LIKE</span> <span class="token string">'%mysql%'</span><span class="token punctuation">;</span>                      <span class="token comment">-- 只能后缀匹配：LIKE 'mysql%'</span>
+<span class="token comment">-- 4 排序规则/字符集不一致</span>
+<span class="token keyword">WHERE</span> a<span class="token punctuation">.</span>name <span class="token operator">=</span> b<span class="token punctuation">.</span>name                            <span class="token comment">-- 两列 collation 不同会转换</span>
+<span class="token comment">-- 5 OR 连接不同列</span>
+<span class="token keyword">WHERE</span> <span class="token keyword">status</span> <span class="token operator">=</span> <span class="token number">1</span> <span class="token operator">OR</span> city <span class="token operator">=</span> <span class="token string">'成都'</span><span class="token punctuation">;</span>               <span class="token comment">-- 可能走 index merge，也可能全表</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<p>隐式转换最隐蔽：<code>WHERE id = &#39;1&#39;</code> 是安全的（数字列转字符串常量），但 <code>WHERE varchar_col = 123</code> 是把<strong>整列</strong>转成数字，索引报废。</p>
+<h3 id="3-ORDER-BY-与索引"><a href="#3-ORDER-BY-与索引" class="headerlink" title="3. ORDER BY 与索引"></a>3. ORDER BY 与索引</h3><p>排序能否免掉 <code>filesort</code>，取决于「索引顺序」与「ORDER BY 顺序」是否一致：</p>
+<pre class="line-numbers language-sql" data-language="sql"><code class="language-sql"><span class="token comment">-- 有 KEY idx_status_created (status, created_at)</span>
+<span class="token keyword">SELECT</span> <span class="token operator">*</span> <span class="token keyword">FROM</span> t_order <span class="token keyword">WHERE</span> <span class="token keyword">status</span> <span class="token operator">=</span> <span class="token number">1</span> <span class="token keyword">ORDER</span> <span class="token keyword">BY</span> created_at <span class="token keyword">DESC</span> <span class="token keyword">LIMIT</span> <span class="token number">10</span><span class="token punctuation">;</span>  <span class="token comment">-- 可用索引顺序，无 filesort</span>
+<span class="token keyword">SELECT</span> <span class="token operator">*</span> <span class="token keyword">FROM</span> t_order <span class="token keyword">WHERE</span> <span class="token keyword">status</span> <span class="token operator">=</span> <span class="token number">1</span> <span class="token keyword">ORDER</span> <span class="token keyword">BY</span> amount <span class="token keyword">DESC</span> <span class="token keyword">LIMIT</span> <span class="token number">10</span><span class="token punctuation">;</span>      <span class="token comment">-- 需要 filesort</span>
+<span class="token keyword">SELECT</span> <span class="token operator">*</span> <span class="token keyword">FROM</span> t_order <span class="token keyword">ORDER</span> <span class="token keyword">BY</span> <span class="token keyword">status</span><span class="token punctuation">,</span> created_at <span class="token keyword">DESC</span><span class="token punctuation">;</span>                    <span class="token comment">-- 混合升降序，8.0 起可建降序索引</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span></span></code></pre>
+
+<p><code>Extra</code> 里出现 <code>Using filesort</code> 就意味着要对结果集排序，数据量大时非常贵。8.0 起支持 <code>DESC</code> 索引（<code>KEY idx (a ASC, b DESC)</code>），混合排序也能命中。</p>
+<h3 id="4-深翻页的两种解法"><a href="#4-深翻页的两种解法" class="headerlink" title="4. 深翻页的两种解法"></a>4. 深翻页的两种解法</h3><pre class="line-numbers language-sql" data-language="sql"><code class="language-sql"><span class="token comment">-- 慢：先取 100010 行再丢掉前 100000 行</span>
+<span class="token keyword">SELECT</span> <span class="token operator">*</span> <span class="token keyword">FROM</span> t_order <span class="token keyword">ORDER</span> <span class="token keyword">BY</span> id <span class="token keyword">LIMIT</span> <span class="token number">100000</span><span class="token punctuation">,</span> <span class="token number">10</span><span class="token punctuation">;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span></span></code></pre>
+
+<ul>
+<li><strong>延迟关联</strong>：先用覆盖索引定位主键，再回表取 10 行：</li>
+</ul>
+<pre class="line-numbers language-sql" data-language="sql"><code class="language-sql"><span class="token keyword">SELECT</span> o<span class="token punctuation">.</span><span class="token operator">*</span> <span class="token keyword">FROM</span> t_order o
+<span class="token keyword">JOIN</span> <span class="token punctuation">(</span><span class="token keyword">SELECT</span> id <span class="token keyword">FROM</span> t_order <span class="token keyword">ORDER</span> <span class="token keyword">BY</span> id <span class="token keyword">LIMIT</span> <span class="token number">100000</span><span class="token punctuation">,</span> <span class="token number">10</span><span class="token punctuation">)</span> t <span class="token keyword">ON</span> o<span class="token punctuation">.</span>id <span class="token operator">=</span> t<span class="token punctuation">.</span>id<span class="token punctuation">;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span></span></code></pre>
+
+<ul>
+<li><strong>Keyset 分页</strong>（游标）：记住上一页最后一条的主键，下一页从它之后取，代价恒定：</li>
+</ul>
+<pre class="line-numbers language-sql" data-language="sql"><code class="language-sql"><span class="token keyword">SELECT</span> <span class="token operator">*</span> <span class="token keyword">FROM</span> t_order <span class="token keyword">WHERE</span> id <span class="token operator">></span> <span class="token number">100000</span> <span class="token keyword">ORDER</span> <span class="token keyword">BY</span> id <span class="token keyword">LIMIT</span> <span class="token number">10</span><span class="token punctuation">;</span><span aria-hidden="true" class="line-numbers-rows"><span></span></span></code></pre>
+
+<p>游标分页不适合「跳页」，适合信息流、导出、批量任务。</p>
+<h3 id="5-用-EXPLAIN-读三件事"><a href="#5-用-EXPLAIN-读三件事" class="headerlink" title="5. 用 EXPLAIN 读三件事"></a>5. 用 EXPLAIN 读三件事</h3><pre class="line-numbers language-sql" data-language="sql"><code class="language-sql"><span class="token keyword">EXPLAIN</span> <span class="token keyword">SELECT</span> <span class="token operator">*</span> <span class="token keyword">FROM</span> t_order <span class="token keyword">WHERE</span> <span class="token keyword">status</span> <span class="token operator">=</span> <span class="token number">1</span> <span class="token keyword">ORDER</span> <span class="token keyword">BY</span> created_at <span class="token keyword">DESC</span> <span class="token keyword">LIMIT</span> <span class="token number">10</span><span class="token punctuation">;</span><span aria-hidden="true" class="line-numbers-rows"><span></span></span></code></pre>
+
+<p>看 <code>type</code>（<code>const</code>&#x2F;<code>ref</code>&#x2F;<code>range</code> 好，<code>ALL</code> 差）、<code>key</code>（是否命中预期索引）、<code>Extra</code>（出现 <code>Using filesort</code>、<code>Using temporary</code> 就要注意）。</p>
+<h2 id="五、场景说明"><a href="#五、场景说明" class="headerlink" title="五、场景说明"></a>五、场景说明</h2><ol>
+<li><strong>列表页</strong>：<code>status + created_at</code> 联合索引 + 游标分页；</li>
+<li><strong>条件检索</strong>：多条件等值 + 一个范围，把范围条件放联合索引最后一位；</li>
+<li><strong>导出任务</strong>：按主键区间批量扫，避免 <code>LIMIT offset</code>；</li>
+<li><strong>统计页</strong>：<code>COUNT(*)</code> 在千万行表上很贵，用近似统计或缓存；</li>
+<li><strong>NULL 字段</strong>：可选字段允许 NULL 但查询时统一 <code>IS NULL</code> &#x2F; <code>IS NOT NULL</code>。</li>
+</ol>
+<h2 id="六、示例代码-实操步骤"><a href="#六、示例代码-实操步骤" class="headerlink" title="六、示例代码&#x2F;实操步骤"></a>六、示例代码&#x2F;实操步骤</h2><h3 id="1-建索引并验证"><a href="#1-建索引并验证" class="headerlink" title="1. 建索引并验证"></a>1. 建索引并验证</h3><pre class="line-numbers language-sql" data-language="sql"><code class="language-sql"><span class="token keyword">CREATE</span> <span class="token keyword">TABLE</span> t_order <span class="token punctuation">(</span>
+  id         <span class="token keyword">BIGINT</span> <span class="token keyword">UNSIGNED</span> <span class="token operator">NOT</span> <span class="token boolean">NULL</span> <span class="token keyword">AUTO_INCREMENT</span><span class="token punctuation">,</span>
+  order_no   <span class="token keyword">VARCHAR</span><span class="token punctuation">(</span><span class="token number">32</span><span class="token punctuation">)</span> <span class="token operator">NOT</span> <span class="token boolean">NULL</span><span class="token punctuation">,</span>
+  <span class="token keyword">status</span>     <span class="token keyword">TINYINT</span> <span class="token operator">NOT</span> <span class="token boolean">NULL</span> <span class="token keyword">DEFAULT</span> <span class="token number">0</span><span class="token punctuation">,</span>
+  amount     <span class="token keyword">DECIMAL</span><span class="token punctuation">(</span><span class="token number">12</span><span class="token punctuation">,</span><span class="token number">2</span><span class="token punctuation">)</span> <span class="token operator">NOT</span> <span class="token boolean">NULL</span><span class="token punctuation">,</span>
+  created_at <span class="token keyword">DATETIME</span><span class="token punctuation">(</span><span class="token number">3</span><span class="token punctuation">)</span> <span class="token operator">NOT</span> <span class="token boolean">NULL</span> <span class="token keyword">DEFAULT</span> <span class="token keyword">CURRENT_TIMESTAMP</span><span class="token punctuation">(</span><span class="token number">3</span><span class="token punctuation">)</span><span class="token punctuation">,</span>
+  remark     <span class="token keyword">VARCHAR</span><span class="token punctuation">(</span><span class="token number">64</span><span class="token punctuation">)</span> <span class="token boolean">NULL</span><span class="token punctuation">,</span>
+  <span class="token keyword">PRIMARY</span> <span class="token keyword">KEY</span> <span class="token punctuation">(</span>id<span class="token punctuation">)</span><span class="token punctuation">,</span>
+  <span class="token keyword">KEY</span> idx_status_created <span class="token punctuation">(</span><span class="token keyword">status</span><span class="token punctuation">,</span> created_at<span class="token punctuation">)</span><span class="token punctuation">,</span>
+  <span class="token keyword">KEY</span> idx_order_no <span class="token punctuation">(</span>order_no<span class="token punctuation">)</span>
+<span class="token punctuation">)</span> <span class="token keyword">ENGINE</span><span class="token operator">=</span><span class="token keyword">InnoDB</span> <span class="token keyword">DEFAULT</span> <span class="token keyword">CHARSET</span><span class="token operator">=</span>utf8mb4 <span class="token keyword">COLLATE</span><span class="token operator">=</span>utf8mb4_0900_ai_ci<span class="token punctuation">;</span>
+
+<span class="token keyword">EXPLAIN</span> <span class="token keyword">SELECT</span> id<span class="token punctuation">,</span> order_no <span class="token keyword">FROM</span> t_order <span class="token keyword">WHERE</span> <span class="token keyword">status</span> <span class="token operator">=</span> <span class="token number">1</span> <span class="token keyword">ORDER</span> <span class="token keyword">BY</span> created_at <span class="token keyword">DESC</span> <span class="token keyword">LIMIT</span> <span class="token number">10</span><span class="token punctuation">;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<p><code>id, order_no</code> 都在索引里时是覆盖索引，<code>Extra</code> 会出现 <code>Using index</code>。</p>
+<h3 id="2-游标分页"><a href="#2-游标分页" class="headerlink" title="2. 游标分页"></a>2. 游标分页</h3><pre class="line-numbers language-sql" data-language="sql"><code class="language-sql"><span class="token comment">-- 第一页</span>
+<span class="token keyword">SELECT</span> id<span class="token punctuation">,</span> order_no<span class="token punctuation">,</span> created_at <span class="token keyword">FROM</span> t_order <span class="token keyword">WHERE</span> <span class="token keyword">status</span> <span class="token operator">=</span> <span class="token number">1</span> <span class="token keyword">ORDER</span> <span class="token keyword">BY</span> created_at <span class="token keyword">DESC</span><span class="token punctuation">,</span> id <span class="token keyword">DESC</span> <span class="token keyword">LIMIT</span> <span class="token number">10</span><span class="token punctuation">;</span>
+<span class="token comment">-- 下一页：带上上一页最后一条的 (created_at, id)</span>
+<span class="token keyword">SELECT</span> id<span class="token punctuation">,</span> order_no<span class="token punctuation">,</span> created_at <span class="token keyword">FROM</span> t_order
+<span class="token keyword">WHERE</span> <span class="token keyword">status</span> <span class="token operator">=</span> <span class="token number">1</span> <span class="token operator">AND</span> <span class="token punctuation">(</span>created_at<span class="token punctuation">,</span> id<span class="token punctuation">)</span> <span class="token operator">&lt;</span> <span class="token punctuation">(</span><span class="token string">'2022-11-19 10:00:00.000'</span><span class="token punctuation">,</span> <span class="token number">100234</span><span class="token punctuation">)</span>
+<span class="token keyword">ORDER</span> <span class="token keyword">BY</span> created_at <span class="token keyword">DESC</span><span class="token punctuation">,</span> id <span class="token keyword">DESC</span> <span class="token keyword">LIMIT</span> <span class="token number">10</span><span class="token punctuation">;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<h3 id="3-NULL-与-NOT-IN-的坑"><a href="#3-NULL-与-NOT-IN-的坑" class="headerlink" title="3. NULL 与 NOT IN 的坑"></a>3. NULL 与 NOT IN 的坑</h3><pre class="line-numbers language-sql" data-language="sql"><code class="language-sql"><span class="token keyword">SELECT</span> <span class="token operator">*</span> <span class="token keyword">FROM</span> t_user <span class="token keyword">WHERE</span> nickname <span class="token operator">NOT</span> <span class="token operator">IN</span> <span class="token punctuation">(</span><span class="token keyword">SELECT</span> nickname <span class="token keyword">FROM</span> t_user <span class="token keyword">WHERE</span> id <span class="token operator">&lt;</span> <span class="token number">10</span><span class="token punctuation">)</span><span class="token punctuation">;</span>  <span class="token comment">-- 有 NULL 就空</span>
+<span class="token comment">-- 修正：过滤掉 NULL</span>
+<span class="token keyword">SELECT</span> <span class="token operator">*</span> <span class="token keyword">FROM</span> t_user <span class="token keyword">WHERE</span> nickname <span class="token operator">NOT</span> <span class="token operator">IN</span> <span class="token punctuation">(</span>
+  <span class="token keyword">SELECT</span> nickname <span class="token keyword">FROM</span> t_user <span class="token keyword">WHERE</span> id <span class="token operator">&lt;</span> <span class="token number">10</span> <span class="token operator">AND</span> nickname <span class="token operator">IS</span> <span class="token operator">NOT</span> <span class="token boolean">NULL</span>
+<span class="token punctuation">)</span><span class="token punctuation">;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<h3 id="Java-侧怎么落地：动态-SQL-与分页"><a href="#Java-侧怎么落地：动态-SQL-与分页" class="headerlink" title="Java 侧怎么落地：动态 SQL 与分页"></a>Java 侧怎么落地：动态 SQL 与分页</h3><ol>
+<li><strong><code>#{}</code> 与 <code>${}</code></strong>：<code>#{}</code> 走预编译、能防注入；<code>${}</code> 只用于表名&#x2F;排序字段这类白名单值，绝不接用户输入；</li>
+<li><strong>MyBatis 动态条件</strong>：</li>
+</ol>
+<pre class="line-numbers language-markup" data-language="markup"><code class="language-markup"><span class="token tag"><span class="token tag"><span class="token punctuation">&lt;</span>select</span> <span class="token attr-name">id</span><span class="token attr-value"><span class="token punctuation attr-equals">=</span><span class="token punctuation">"</span>page<span class="token punctuation">"</span></span> <span class="token attr-name">resultType</span><span class="token attr-value"><span class="token punctuation attr-equals">=</span><span class="token punctuation">"</span>Order<span class="token punctuation">"</span></span><span class="token punctuation">></span></span>
+  SELECT id, order_no, amount, created_at FROM t_order
+  <span class="token tag"><span class="token tag"><span class="token punctuation">&lt;</span>where</span><span class="token punctuation">></span></span>
+    <span class="token tag"><span class="token tag"><span class="token punctuation">&lt;</span>if</span> <span class="token attr-name">test</span><span class="token attr-value"><span class="token punctuation attr-equals">=</span><span class="token punctuation">"</span>status != null<span class="token punctuation">"</span></span><span class="token punctuation">></span></span>AND status = #&#123;status&#125;<span class="token tag"><span class="token tag"><span class="token punctuation">&lt;/</span>if</span><span class="token punctuation">></span></span>
+    <span class="token tag"><span class="token tag"><span class="token punctuation">&lt;</span>if</span> <span class="token attr-name">test</span><span class="token attr-value"><span class="token punctuation attr-equals">=</span><span class="token punctuation">"</span>from != null<span class="token punctuation">"</span></span><span class="token punctuation">></span></span>AND created_at <span class="token entity named-entity" title="&gt;">&amp;gt;</span>= #&#123;from&#125;<span class="token tag"><span class="token tag"><span class="token punctuation">&lt;/</span>if</span><span class="token punctuation">></span></span>
+    <span class="token tag"><span class="token tag"><span class="token punctuation">&lt;</span>if</span> <span class="token attr-name">test</span><span class="token attr-value"><span class="token punctuation attr-equals">=</span><span class="token punctuation">"</span>cursorId != null<span class="token punctuation">"</span></span><span class="token punctuation">></span></span>AND id <span class="token entity named-entity" title="&gt;">&amp;gt;</span> #&#123;cursorId&#125;<span class="token tag"><span class="token tag"><span class="token punctuation">&lt;/</span>if</span><span class="token punctuation">></span></span>
+  <span class="token tag"><span class="token tag"><span class="token punctuation">&lt;/</span>where</span><span class="token punctuation">></span></span>
+  ORDER BY id DESC LIMIT #&#123;limit&#125;
+<span class="token tag"><span class="token tag"><span class="token punctuation">&lt;/</span>select</span><span class="token punctuation">></span></span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<ol start="3">
+<li><strong>分页别用 <code>PageHelper</code> 的默认 count</strong>：大表 <code>COUNT(*)</code> 很贵，可让前端改游标分页，或加 <code>count=false</code> 用近似总数；</li>
+<li><strong>NULL 参数</strong>：<code>status != null</code> 这类判空要显式写，否则 <code>WHERE status = NULL</code> 永远空；</li>
+<li><strong>返回对象用包装类型</strong>：<code>Integer amount</code> 才能表达 NULL，<code>int</code> 会把 NULL 变 0，统计口径直接错。</li>
+</ol>
+<h2 id="七、常见坑"><a href="#七、常见坑" class="headerlink" title="七、常见坑"></a>七、常见坑</h2><ol>
+<li><strong><code>= NULL</code></strong>：条件恒假，查不出数据；</li>
+<li><strong><code>NOT IN</code> 遇 NULL</strong>：结果为空，误判「没有数据」；</li>
+<li><strong><code>WHERE varchar = 数字</code></strong>：隐式转换导致索引失效；</li>
+<li><strong><code>ORDER BY</code> 字段不在索引里</strong>：全量 filesort，<code>LIMIT</code> 也救不了；</li>
+<li><strong><code>LIMIT 100000, 10</code></strong>：越翻越慢，第 10 万页可能几十秒；</li>
+<li><strong><code>SELECT *</code></strong>：多读无用列、破坏覆盖索引；</li>
+<li><strong><code>COUNT(col)</code> 当 <code>COUNT(*)</code></strong>：有 NULL 时数量偏小；</li>
+<li><strong><code>OR</code> 拼多列</strong>：优化器可能选 index merge，也可能直接 <code>ALL</code>，要用 EXPLAIN 确认。</li>
+</ol>
+<h2 id="八、版本差异"><a href="#八、版本差异" class="headerlink" title="八、版本差异"></a>八、版本差异</h2><ul>
+<li><strong>8.0</strong>：支持降序索引，<code>ORDER BY a ASC, b DESC</code> 可命中；<code>EXPLAIN ANALYZE</code> 可看真实耗时；</li>
+<li><strong>8.4</strong>：<code>EXPLAIN</code> 输出与优化器行为延续 8.0，无破坏性变化；</li>
+<li><strong>5.7 对比</strong>：5.7 的降序索引只是语法接受、实际仍升序，混合排序一定 filesort。</li>
+</ul>
+<h2 id="九、课后小结"><a href="#九、课后小结" class="headerlink" title="九、课后小结"></a>九、课后小结</h2><ul>
+<li><code>WHERE</code> 要能走索引，五种写法必须避开：函数包列、隐式转换、前导 <code>%</code>、排序规则不一致、跨列 <code>OR</code>；</li>
+<li>NULL 是三值逻辑，<code>= NULL</code> 恒假，<code>NOT IN</code> 遇 NULL 变空；</li>
+<li><code>ORDER BY</code> 顺序与索引顺序一致才免 filesort；</li>
+<li>深翻页用延迟关联或游标分页，别用大 <code>offset</code>；</li>
+<li><code>EXPLAIN</code> 只看三件事：type、key、Extra。</li>
+</ul>
+<h2 id="十、思考题"><a href="#十、思考题" class="headerlink" title="十、思考题"></a>十、思考题</h2><ol>
+<li><p>为什么 <code>WHERE nickname = NULL</code> 查不到任何行？</p>
+<p><strong>参考回答</strong>：SQL 用三值逻辑，<code>NULL</code> 表示「未知」，任何与它的比较结果都是 <code>UNKNOWN</code>，而 <code>WHERE</code> 只保留结果为 <code>TRUE</code> 的行。判断空值必须用 <code>IS NULL</code>。</p>
+</li>
+<li><p><code>WHERE phone = 13800000000</code>（phone 是 <code>VARCHAR</code>）为什么索引失效？</p>
+<p><strong>参考回答</strong>：MySQL 在比较字符串列与数字时会先把字符串列整体转成数字，转换发生在每一行上，B+Tree 的有序性用不上，于是退化为全表扫描。改成 <code>phone = &#39;13800000000&#39;</code> 即可命中索引。</p>
+</li>
+<li><p><code>COUNT(*)</code> 和 <code>COUNT(nickname)</code> 的结果为什么不同？</p>
+<p><strong>参考回答</strong>：<code>COUNT(*)</code> 统计行数；<code>COUNT(expr)</code> 只统计 <code>expr</code> 非 NULL 的行。nickname 为 NULL 的行不会被后者计入。</p>
+</li>
+<li><p>深翻页为什么越翻越慢，两种解法分别适合什么场景？</p>
+<p><strong>参考回答</strong>：<code>LIMIT offset, n</code> 需要先扫描并丢弃前 offset 行，代价随页数线性增长。延迟关联用覆盖索引只取主键再回表，适合仍需跳页的场景；游标分页用上一页末尾主键做条件，代价恒定，适合信息流、导出等顺序浏览场景，但不支持随机跳页。</p>
+</li>
+<li><p>一条 <code>ORDER BY created_at DESC LIMIT 10</code> 的查询，什么情况下不需要 filesort？</p>
+<p><strong>参考回答</strong>：当 <code>created_at</code> 上有索引（或联合索引的最后一列是它且前面的等值条件固定），优化器可以按索引逆序读 10 行就停，<code>Extra</code> 不出现 <code>Using filesort</code>；否则要先取出全部匹配行排序再截取。</p>
+</li>
+</ol>
+<h2 id="十一、官方资料"><a href="#十一、官方资料" class="headerlink" title="十一、官方资料"></a>十一、官方资料</h2><ul>
+<li><code>SELECT</code> 语法：<a target="_blank" rel="noopener" href="https://dev.mysql.com/doc/refman/8.4/en/select.html">https://dev.mysql.com/doc/refman/8.4/en/select.html</a></li>
+<li>优化器与索引使用：<a target="_blank" rel="noopener" href="https://dev.mysql.com/doc/refman/8.4/en/optimization.html">https://dev.mysql.com/doc/refman/8.4/en/optimization.html</a></li>
+<li><code>EXPLAIN</code> 输出说明：<a target="_blank" rel="noopener" href="https://dev.mysql.com/doc/refman/8.4/en/explain-output.html">https://dev.mysql.com/doc/refman/8.4/en/explain-output.html</a></li>
+<li>NULL 值与三值逻辑：<a target="_blank" rel="noopener" href="https://dev.mysql.com/doc/refman/8.4/en/working-with-null.html">https://dev.mysql.com/doc/refman/8.4/en/working-with-null.html</a></li>
+<li>降序索引：<a target="_blank" rel="noopener" href="https://dev.mysql.com/doc/refman/8.4/en/descending-indexes.html">https://dev.mysql.com/doc/refman/8.4/en/descending-indexes.html</a></li>
+</ul>
+<p>上一篇：<a href="/2022/11/18/database/mysql/mysql-8-dml/">MQ08 增删改：INSERT &#x2F; UPDATE &#x2F; DELETE 与批量写入</a> ｜ 下一篇：<a href="/2022/11/20/database/mysql/mysql-10-aggregation/">MQ10 聚合与分组</a> ｜ <a href="/2022/11/10/database/mysql/mysql-0-series-index/">总目录</a></p>
+</div>
+
+  <div class="mb-foot">
+    <a href="/phone/">返回手机首页</a>
+    <a href="/phone/tags/">星迹索引</a>
+  </div>
+</div>
+
+
+<script>
+  /* 作用：懒加载本地 mermaid 库；无 mermaid 代码块时不加载 */
+  function loadLocalMermaid(){
+    return new Promise(function(resolve, reject){
+      if(window.mermaid) return resolve(window.mermaid);
+      var s = document.createElement('script');
+      s.src = '/js/third-party/mermaid/mermaid.min.js?v=10';
+      s.onload = function(){ resolve(window.mermaid); };
+      s.onerror = function(){ reject(new Error('mermaid local load failed')); };
+      document.head.appendChild(s);
+    });
+  }
+
+  /* 作用：把 ```mermaid 代码块替换成 SVG 图（手机端字号略小、图可横向滚动） */
+  async function renderMermaidDiagram(){
+    var blocks = document.querySelectorAll('pre[class*="language-mermaid"]');
+    if(!blocks.length) return;
+    var mermaid;
+    try { mermaid = await loadLocalMermaid(); }
+    catch(e){ console.warn('[mermaid] 本地库加载失败：', e); return; }
+
+    mermaid.initialize({
+      startOnLoad: false,
+      theme: 'base',
+      themeVariables: {
+        darkMode: true,
+        background: 'transparent',
+        fontFamily: '"Microsoft YaHei", "PingFang SC", "Segoe UI", sans-serif',
+        fontSize: '12px',
+        primaryColor: '#062f3d',
+        primaryTextColor: '#d6f6ff',
+        primaryBorderColor: '#00eeff',
+        secondaryColor: '#04222d',
+        tertiaryColor: '#04222d',
+        mainBkg: '#062f3d',
+        nodeBorder: '#00eeff',
+        clusterBkg: '#02161f',
+        clusterBorder: '#00eeff55',
+        lineColor: '#00eeff',
+        textColor: '#c0e8ff',
+        edgeLabelBackground: '#02161f'
+      },
+      flowchart: { curve: 'basis', useMaxWidth: false, htmlLabels: false, nodeSpacing: 30, rankSpacing: 40, padding: 10 }
+    });
+
+    var targets = [];
+    blocks.forEach(function(el){
+      var codeEl = el.querySelector('code');
+      if(!codeEl) return;
+      var div = document.createElement('div');
+      div.className = 'mermaid';
+      div.textContent = codeEl.textContent;
+      el.parentNode.replaceChild(div, el);
+      targets.push(div);
+    });
+    if(!targets.length) return;
+    try { await mermaid.run({ nodes: targets }); }
+    catch(e){ console.warn('[mermaid] 渲染失败：', e); }
+  }
+  /* 作用：多次触发兜底（延迟重试 + DOM 变化），防止某次时机没跑到导致图表留在代码块 */
+  var mmBusy = false;
+  function scheduleMermaid(){
+    if(mmBusy) return;
+    mmBusy = true;
+    renderMermaidDiagram().then(function(){ mmBusy = false; }, function(){ mmBusy = false; });
+  }
+  scheduleMermaid();
+  window.addEventListener('load', scheduleMermaid);
+  [1000, 3000, 8000].forEach(function(ms){ setTimeout(scheduleMermaid, ms); });
+  if(document.readyState !== 'loading') scheduleMermaid();
+  if(window.MutationObserver){
+    var mmTimer = null;
+    var mmObserver = new MutationObserver(function(){
+      clearTimeout(mmTimer);
+      mmTimer = setTimeout(scheduleMermaid, 400);
+    });
+    mmObserver.observe(document.querySelector('.mb-article') || document.body, { childList: true, subtree: true });
+  }
+</script>
+</body>
+</html>

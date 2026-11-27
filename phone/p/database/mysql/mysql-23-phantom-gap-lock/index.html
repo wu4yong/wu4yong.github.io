@@ -1,0 +1,385 @@
+<!--
+  ============================================
+  手机端 · 文章原文页
+  文件：phone/post.njk
+  适用终端：手机端（路由 /phone/p/<slug>/，由 scripts/phone-routes.js 生成）
+  作用：手机阅读单篇文章；单列布局、无侧栏无雷达，替代电脑端 post.njk
+        数据由生成期算好：page.item = { title, dateStr, content, cats, tags }
+  样式依赖：source/css/theme/phone/common.css、source/css/theme/phone/list.css
+  组件依赖：phone/_components/Particles.njk
+  最后修改：2026-11-11
+  ============================================
+-->
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="color-scheme" content="dark">
+  <meta name="theme-color" content="#020817">
+  <!-- 首帧兜底：浏览器默认画布是白的，样式未解析前会闪一下白。这条规则先锁死深空底色 -->
+  <style>html{background-color:#020817}</style>
+  <title>mysql-23-幻读与间隙锁 - 时空秘境</title>
+  <!-- 手机端样式：基础 + 列表/正文，外链引入（源文件 source/css/theme/phone/） -->
+  <link rel="stylesheet" href="/css/theme/phone/common.css">
+  <link rel="stylesheet" href="/css/theme/phone/list.css">
+<meta name="generator" content="Hexo 8.1.2"></head>
+<body>
+<div class="mb-shell">
+  <!--
+  ============================================
+  手机端星空粒子组件
+  文件：Particles.njk
+  适用终端：手机端
+  作用：Particles.njk 的手机端副本（nunjucks 子目录 include 取不到上级）
+        参数与电脑端 _components/Particles.njk 保持一致：
+        粒子 95 / 连线 118px / opacity 0.32，外加星座层与零星闪烁层
+  最后修改：2026-11-12
+  ============================================
+--><!-- z-index 必须是 0：负层级会被 body 不透明背景盖住，粒子在跑却看不见 -->
+<div id="particles" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 0; pointer-events: none;"></div>
+<!-- 星座层（与首页同一套：随机零星散布星座图形 + 偶尔闪烁的小星） -->
+<div id="constellations" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 1; pointer-events: none;" aria-hidden="true"></div>
+<script src="/js/particles.min.js"></script>
+<script>
+particlesJS("particles", {
+  particles: {
+    number: {
+      value: 95,
+      density: {
+        enable: true,
+        value_area: 800
+      }
+    },
+    color: {
+      value: "#00eeff"
+    },
+    shape: {
+      type: "circle",
+      stroke: {
+        width: 0,
+        color: "#000000"
+      }
+    },
+    opacity: {
+      value: 0.6,
+      random: true,
+      anim: {
+        enable: true,
+        speed: 0.5,
+        opacity_min: 0.1,
+        sync: false
+      }
+    },
+    size: {
+      value: 3,
+      random: true,
+      anim: {
+        enable: true,
+        speed: 2,
+        size_min: 0.1,
+        sync: false
+      }
+    },
+    line_linked: {
+      enable: true,
+      distance: 118,
+      color: "#00eeff",
+      opacity: 0.32,
+      width: 1
+    },
+    move: {
+      enable: true,
+      speed: 0.8,
+      direction: "none",
+      random: true,
+      straight: false,
+      out_mode: "out",
+      bounce: false,
+      attract: {
+        enable: true,
+        rotateX: 600,
+        rotateY: 1200
+      }
+    }
+  },
+  interactivity: {
+    detect_on: "canvas",
+    events: {
+      onhover: {
+        enable: true,
+        mode: "grab"       // 手指按住时粒子聚集
+      },
+      onclick: {
+        enable: true,
+        mode: "push"       // 点击时产生新粒子
+      },
+      resize: true
+    },
+    modes: {
+      grab: {
+        distance: 200,
+        line_linked: {
+          opacity: 1
+        }
+      },
+      push: {
+        particles_nb: 6
+      }
+    }
+  },
+  retina_detect: true
+});
+</script>
+<!-- 星座 + 零星闪烁层：与电脑端共用同一份绘制脚本 -->
+<script src="/js/theme/home/starfield.js"></script>
+
+
+  <div class="mb-top">
+    <a class="mb-back" href="/phone/">← 返回手机首页</a>
+    <span class="mb-sub" style="margin:0">2022-12-03</span>
+  </div>
+
+  <h1 class="mb-title">mysql-23-幻读与间隙锁</h1>
+  <div class="mb-sub">
+    分类：database · mysql
+     ｜ 标签：系统课 · MySQL · 数据库
+  </div>
+
+  <div class="mb-article"><div class="essay-banner essay-database"></div>
+
+<h1 id="幻读与间隙锁：RR-下到底解决了什么"><a href="#幻读与间隙锁：RR-下到底解决了什么" class="headerlink" title="幻读与间隙锁：RR 下到底解决了什么"></a>幻读与间隙锁：RR 下到底解决了什么</h1><p><img src="https://wu4yong.github.io/starry-images/assets/img/mysql/mq-23-gap.svg" alt="间隙锁锁的是「缝」"></p>
+<p><em>间隙锁不锁记录，只锁「不让别人插进来」；它纯粹是抑制性的，可以共存｜依据 MySQL 8.4 InnoDB Locking 章节自绘</em></p>
+<h2 id="一、学习目标"><a href="#一、学习目标" class="headerlink" title="一、学习目标"></a>一、学习目标</h2><ol>
+<li>分清「快照读的幻读」与「当前读的幻读」，知道 RR 各解决了哪一种；</li>
+<li>理解 next-key lock &#x3D; 记录锁 + 间隙锁，以及「唯一索引等值查询不加间隙锁」这个例外；</li>
+<li>能判断一条 <code>UPDATE</code> 到底锁了哪几段区间，并用 <code>performance_schema.data_locks</code> 验证。</li>
+</ol>
+<h2 id="二、前置知识"><a href="#二、前置知识" class="headerlink" title="二、前置知识"></a>二、前置知识</h2><p>MVCC 与 ReadView（MQ22）、索引（MQ18）。本节所有锁都是<strong>加在索引记录上</strong>的，没索引就锁不住行——这条前提必须记住。</p>
+<h2 id="三、理论讲解（官方定义）"><a href="#三、理论讲解（官方定义）" class="headerlink" title="三、理论讲解（官方定义）"></a>三、理论讲解（官方定义）</h2><p>幻读：同一事务两次执行同一查询，第二次多出（或少掉）了行。</p>
+<p>官方对间隙锁的几条关键表述：</p>
+<ul>
+<li>间隙锁锁的是索引记录之间的<strong>间隙</strong>，包括第一条之前与最后一条之后；</li>
+<li>间隙锁是<strong>纯粹抑制性</strong>的，唯一目的是阻止其他事务往这个间隙插入；共享间隙锁与排他间隙锁<strong>不冲突</strong>，可以共存；</li>
+<li>唯一索引上用等值条件查<strong>唯一一行</strong>时，只需要记录锁，不需要间隙锁（多列唯一索引只用部分列时仍会加间隙锁）；</li>
+<li>把隔离级别改成 <code>READ COMMITTED</code> 后，间隙锁被关闭（仅保留外键检查与唯一性检查所需的部分）。</li>
+</ul>
+<p>RR 下 InnoDB 对<strong>搜索与索引扫描</strong>使用 next-key lock，从而阻止幻行。</p>
+<h2 id="四、原理拆解"><a href="#四、原理拆解" class="headerlink" title="四、原理拆解"></a>四、原理拆解</h2><p><img src="https://wu4yong.github.io/starry-images/assets/img/mysql/mq-23b-gap.svg" alt="next-key lock 的区间划分"></p>
+<p><em>索引里有 10、11、13、20，就把数轴切成五段；锁一段就是锁住「谁都不能插进来」｜依据 MySQL 8.4 InnoDB Locking 自绘</em></p>
+<h3 id="1-快照读-vs-当前读"><a href="#1-快照读-vs-当前读" class="headerlink" title="1. 快照读 vs 当前读"></a>1. 快照读 vs 当前读</h3><table>
+<thead>
+<tr>
+<th>读法</th>
+<th>语句</th>
+<th>RR 下会幻读吗</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>快照读</td>
+<td>普通 <code>SELECT</code></td>
+<td>不会。ReadView 固定，新插入的行本来就不可见</td>
+</tr>
+<tr>
+<td>当前读</td>
+<td><code>SELECT ... FOR UPDATE</code> &#x2F; <code>UPDATE</code> &#x2F; <code>DELETE</code></td>
+<td>需要间隙锁兜住，否则会</td>
+</tr>
+</tbody></table>
+<p>所以「RR 解决了幻读」这句话要加限定：<strong>快照读靠 MVCC，当前读靠间隙锁</strong>。</p>
+<h3 id="2-next-key-lock-的区间"><a href="#2-next-key-lock-的区间" class="headerlink" title="2. next-key lock 的区间"></a>2. next-key lock 的区间</h3><p>索引值 10、11、13、20，区间被切成：</p>
+<pre class="line-numbers language-none"><code class="language-none">(-∞, 10]  (10, 11]  (11, 13]  (13, 20]  (20, +∞)<span aria-hidden="true" class="line-numbers-rows"><span></span></span></code></pre>
+
+<p>next-key lock 锁住「记录 + 它前面的间隙」。最后一段会额外锁住 <code>supremum</code>（大于所有值的伪记录）。</p>
+<h3 id="3-间隙锁为什么不冲突"><a href="#3-间隙锁为什么不冲突" class="headerlink" title="3. 间隙锁为什么不冲突"></a>3. 间隙锁为什么不冲突</h3><p>间隙锁的功能只有「阻止插入」，它不关心读或写具体行，因此：</p>
+<ul>
+<li>两个事务可以对<strong>同一个间隙</strong>各持一把间隙锁；</li>
+<li>间隙锁与间隙锁之间<strong>不互斥</strong>，只有「插入意向锁」会与间隙锁冲突；</li>
+<li>这也是间隙锁容易引发死锁的原因：大家都拿着不冲突的间隙锁，然后都想插入。</li>
+</ul>
+<h3 id="4-唯一索引等值的例外"><a href="#4-唯一索引等值的例外" class="headerlink" title="4. 唯一索引等值的例外"></a>4. 唯一索引等值的例外</h3><pre class="line-numbers language-sql" data-language="sql"><code class="language-sql"><span class="token comment">-- id 是唯一索引，等值命中唯一行 → 只加记录锁，不加间隙</span>
+<span class="token keyword">SELECT</span> <span class="token operator">*</span> <span class="token keyword">FROM</span> t <span class="token keyword">WHERE</span> id <span class="token operator">=</span> <span class="token number">100</span> <span class="token keyword">FOR</span> <span class="token keyword">UPDATE</span><span class="token punctuation">;</span>
+
+<span class="token comment">-- 非唯一索引，或唯一索引只用部分列 → 会加间隙锁</span>
+<span class="token keyword">SELECT</span> <span class="token operator">*</span> <span class="token keyword">FROM</span> t <span class="token keyword">WHERE</span> code <span class="token operator">=</span> <span class="token string">'A1'</span> <span class="token keyword">FOR</span> <span class="token keyword">UPDATE</span><span class="token punctuation">;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<p>这条例外很实用：能用唯一索引等值定位的加锁读，不会阻塞相邻区间的插入。</p>
+<h3 id="5-插入意向锁"><a href="#5-插入意向锁" class="headerlink" title="5. 插入意向锁"></a>5. 插入意向锁</h3><p>插入前，事务会在目标间隙上加「插入意向锁」（一种特殊的间隙锁）。它与已有间隙锁冲突，于是出现「A 锁了间隙，B 想插入被阻塞」的经典等待。</p>
+<h2 id="五、场景说明"><a href="#五、场景说明" class="headerlink" title="五、场景说明"></a>五、场景说明</h2><ol>
+<li><strong>库存扣减</strong>：<code>UPDATE ... WHERE id = ?</code> 走唯一索引，只锁一行，并发友好；</li>
+<li><strong>按状态批量处理</strong>：<code>UPDATE ... WHERE status = 0 LIMIT 100</code>，会锁住扫描到的区间，注意别让范围过大；</li>
+<li><strong>防重复插入</strong>：先 <code>SELECT ... FOR UPDATE</code> 再插入，非唯一索引下会锁间隙，并发插入互相阻塞；</li>
+<li><strong>RC 业务</strong>：很多高并发系统改 RC，用唯一约束 + 捕获冲突代替间隙锁；</li>
+<li><strong>分页批量任务</strong>：按主键区间推进（<code>WHERE id &gt; last_id ORDER BY id LIMIT n</code>），避免大范围锁。</li>
+</ol>
+<h2 id="六、示例代码-实操步骤"><a href="#六、示例代码-实操步骤" class="headerlink" title="六、示例代码&#x2F;实操步骤"></a>六、示例代码&#x2F;实操步骤</h2><h3 id="1-复现当前读幻读被阻止"><a href="#1-复现当前读幻读被阻止" class="headerlink" title="1. 复现当前读幻读被阻止"></a>1. 复现当前读幻读被阻止</h3><pre class="line-numbers language-sql" data-language="sql"><code class="language-sql"><span class="token comment">-- 索引 idx_user (user_id)，表里 user_id=1 有 2 行</span>
+<span class="token comment">-- 会话 A（RR）</span>
+<span class="token keyword">START</span> <span class="token keyword">TRANSACTION</span><span class="token punctuation">;</span>
+<span class="token keyword">SELECT</span> <span class="token function">COUNT</span><span class="token punctuation">(</span><span class="token operator">*</span><span class="token punctuation">)</span> <span class="token keyword">FROM</span> t_order <span class="token keyword">WHERE</span> user_id <span class="token operator">=</span> <span class="token number">1</span> <span class="token keyword">FOR</span> <span class="token keyword">UPDATE</span><span class="token punctuation">;</span>  <span class="token comment">-- 2，且锁住 (1] 附近间隙</span>
+
+<span class="token comment">-- 会话 B</span>
+<span class="token keyword">INSERT</span> <span class="token keyword">INTO</span> t_order <span class="token punctuation">(</span>user_id<span class="token punctuation">)</span> <span class="token keyword">VALUES</span> <span class="token punctuation">(</span><span class="token number">1</span><span class="token punctuation">)</span><span class="token punctuation">;</span>   <span class="token comment">-- 被阻塞，直到 A 提交</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<p>若换成唯一索引等值（<code>WHERE id = 5</code>），B 插入相邻 id 不会被阻塞。</p>
+<h3 id="2-查看到底锁了什么"><a href="#2-查看到底锁了什么" class="headerlink" title="2. 查看到底锁了什么"></a>2. 查看到底锁了什么</h3><pre class="line-numbers language-sql" data-language="sql"><code class="language-sql"><span class="token comment">-- 会话 A 执行加锁读后，另一会话查锁视图</span>
+<span class="token keyword">SELECT</span> ENGINE_TRANSACTION_ID<span class="token punctuation">,</span> OBJECT_NAME<span class="token punctuation">,</span> INDEX_NAME<span class="token punctuation">,</span> LOCK_TYPE<span class="token punctuation">,</span> LOCK_MODE<span class="token punctuation">,</span> LOCK_DATA
+<span class="token keyword">FROM</span> performance_schema<span class="token punctuation">.</span>data_locks<span class="token punctuation">;</span>
+
+<span class="token comment">-- 谁在等谁</span>
+<span class="token keyword">SELECT</span> <span class="token operator">*</span> <span class="token keyword">FROM</span> performance_schema<span class="token punctuation">.</span>data_lock_waits<span class="token punctuation">;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<p><code>LOCK_MODE</code> 出现 <code>X</code> 是 next-key，<code>X,REC_NOT_GAP</code> 是纯记录锁，<code>X,GAP</code> 是纯间隙锁，<code>X,INSERT_INTENTION</code> 是插入意向锁。</p>
+<h3 id="3-用-RC-关掉间隙锁对比"><a href="#3-用-RC-关掉间隙锁对比" class="headerlink" title="3. 用 RC 关掉间隙锁对比"></a>3. 用 RC 关掉间隙锁对比</h3><pre class="line-numbers language-sql" data-language="sql"><code class="language-sql"><span class="token keyword">SET</span> <span class="token keyword">SESSION</span> transaction_isolation <span class="token operator">=</span> <span class="token string">'READ-COMMITTED'</span><span class="token punctuation">;</span>
+<span class="token keyword">START</span> <span class="token keyword">TRANSACTION</span><span class="token punctuation">;</span>
+<span class="token keyword">SELECT</span> <span class="token function">COUNT</span><span class="token punctuation">(</span><span class="token operator">*</span><span class="token punctuation">)</span> <span class="token keyword">FROM</span> t_order <span class="token keyword">WHERE</span> user_id <span class="token operator">=</span> <span class="token number">1</span> <span class="token keyword">FOR</span> <span class="token keyword">UPDATE</span><span class="token punctuation">;</span>  <span class="token comment">-- 不再锁间隙</span>
+<span class="token comment">-- 另一会话可插入成功 → 当前读出现幻读</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span></span></code></pre>
+
+<h3 id="4-减少间隙锁影响的写法"><a href="#4-减少间隙锁影响的写法" class="headerlink" title="4. 减少间隙锁影响的写法"></a>4. 减少间隙锁影响的写法</h3><pre class="line-numbers language-sql" data-language="sql"><code class="language-sql"><span class="token comment">-- 不好：范围大、锁住大量间隙</span>
+<span class="token keyword">UPDATE</span> t_order <span class="token keyword">SET</span> <span class="token keyword">status</span> <span class="token operator">=</span> <span class="token number">1</span> <span class="token keyword">WHERE</span> created_at <span class="token operator">&lt;</span> <span class="token string">'2022-01-01'</span><span class="token punctuation">;</span>
+
+<span class="token comment">-- 好：按主键区间小批推进</span>
+<span class="token keyword">UPDATE</span> t_order <span class="token keyword">SET</span> <span class="token keyword">status</span> <span class="token operator">=</span> <span class="token number">1</span> <span class="token keyword">WHERE</span> id <span class="token operator">></span> <span class="token number">1000</span> <span class="token operator">AND</span> id <span class="token operator">&lt;=</span> <span class="token number">1100</span><span class="token punctuation">;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<h3 id="Java-侧怎么落地：加锁读的正确姿势"><a href="#Java-侧怎么落地：加锁读的正确姿势" class="headerlink" title="Java 侧怎么落地：加锁读的正确姿势"></a>Java 侧怎么落地：加锁读的正确姿势</h3><ol>
+<li><strong>能用唯一索引等值就用</strong>：<code>WHERE id = ?</code> 只锁一行，不会锁间隙；</li>
+<li><strong>避免「先查后插」防重</strong>：改用唯一约束 + 捕获 <code>1062</code>，比 <code>SELECT FOR UPDATE</code> + <code>INSERT</code> 更省锁；</li>
+<li><strong>批量更新要分批</strong>：每批几十到几百行，按主键推进，缩短持锁时间；</li>
+<li><strong>死锁重试</strong>：捕获 <code>1213</code>（死锁）与 <code>1205</code>（锁等待超时），整事务重试，别只重试单条 SQL；</li>
+<li><strong>监控锁等待</strong>：把 <code>data_lock_waits</code> 的采样做成告警，锁等待数量突增往往先于故障；</li>
+<li><strong>RC + 唯一约束</strong>：高并发写入场景用 RC 减少间隙锁，同时用唯一索引兜住正确性。</li>
+</ol>
+<h2 id="七、常见坑"><a href="#七、常见坑" class="headerlink" title="七、常见坑"></a>七、常见坑</h2><ol>
+<li><strong>以为 RR 完全没有幻读</strong>：当前读在没加间隙锁的场景（如 RC、唯一索引等值）仍可能出现；</li>
+<li><strong>在无索引列上做加锁读</strong>：锁会落到聚簇索引的隐藏行上，实际锁住的范围远超预期；</li>
+<li><strong><code>SELECT FOR UPDATE</code> 当读用</strong>：本来是快照读就够的场景，加了锁定读直接阻塞写入；</li>
+<li><strong>两个事务互相「先查后插」</strong>：各持间隙锁、各等对方释放，典型死锁；</li>
+<li><strong><code>UPDATE ... WHERE 非索引列</code></strong>：扫描全表并锁住所有扫描到的记录，等于全表锁；</li>
+<li><strong>RC 下仍依赖间隙锁防重</strong>：RC 关闭间隙锁，防重必须靠唯一约束；</li>
+<li><strong><code>LOCK TABLES</code> 与事务混用</strong>：表锁与行锁语义交织，容易自锁。</li>
+</ol>
+<h2 id="八、版本差异"><a href="#八、版本差异" class="headerlink" title="八、版本差异"></a>八、版本差异</h2><ul>
+<li><strong>5.7</strong>：间隙锁行为与 8.0 一致；锁视图用 <code>information_schema.INNODB_LOCKS</code> &#x2F; <code>INNODB_LOCK_WAITS</code>；</li>
+<li><strong>8.0</strong>：<code>performance_schema.data_locks</code> &#x2F; <code>data_lock_waits</code> 取代旧视图，字段更全；</li>
+<li><strong>8.4</strong>：锁机制不变；默认 RR，<code>innodb_lock_wait_timeout</code> 默认 50 秒。</li>
+</ul>
+<h2 id="九、课后小结"><a href="#九、课后小结" class="headerlink" title="九、课后小结"></a>九、课后小结</h2><ul>
+<li>幻读分两种：快照读靠 MVCC 天然不幻，当前读靠间隙锁阻止；</li>
+<li>next-key lock &#x3D; 记录锁 + 前面的间隙；唯一索引等值只加记录锁；</li>
+<li>间隙锁是抑制性锁，彼此不冲突，只与插入意向锁冲突；</li>
+<li>RC 关闭间隙锁，能减少死锁但放开幻读；</li>
+<li>锁加在索引上，没索引的加锁读会锁住大量行。</li>
+</ul>
+<h2 id="十、思考题"><a href="#十、思考题" class="headerlink" title="十、思考题"></a>十、思考题</h2><ol>
+<li><p>RR 下普通 <code>SELECT</code> 会幻读吗？</p>
+<p><strong>参考回答</strong>：不会。普通 <code>SELECT</code> 是快照读，用的是事务开始时的 ReadView，期间新插入的行对该快照不可见，所以行数不会变。</p>
+</li>
+<li><p>为什么唯一索引等值查询不需要间隙锁？</p>
+<p><strong>参考回答</strong>：等值且唯一，结果最多一行，插入同值会撞唯一约束，插入其他值落在别的间隙，不会影响本次查询结果，所以只锁记录即可。</p>
+</li>
+<li><p>两个事务对同一间隙都持有间隙锁，会死锁吗？</p>
+<p><strong>参考回答</strong>：间隙锁之间不冲突，本身不会；但如果两者随后都要往这个间隙插入，插入意向锁会与对方的间隙锁冲突，形成互相等待而死锁。</p>
+</li>
+<li><p>为什么 <code>UPDATE ... WHERE 无索引列 = ?</code> 很危险？</p>
+<p><strong>参考回答</strong>：没有索引就只能全表扫描，InnoDB 会对扫描到的每条记录加锁，等于锁住整张表，并发写入全部被阻塞。</p>
+</li>
+<li><p>把隔离级别改成 RC 后，防重复插入该怎么做？</p>
+<p><strong>参考回答</strong>：RC 关闭间隙锁，<code>SELECT FOR UPDATE</code> 拦不住并发插入，必须依赖唯一索引&#x2F;唯一约束，插入冲突时捕获 <code>1062</code> 并做幂等处理。</p>
+</li>
+</ol>
+<h2 id="十一、官方资料"><a href="#十一、官方资料" class="headerlink" title="十一、官方资料"></a>十一、官方资料</h2><ul>
+<li>InnoDB 锁类型：<a target="_blank" rel="noopener" href="https://dev.mysql.com/doc/refman/8.4/en/innodb-locking.html">https://dev.mysql.com/doc/refman/8.4/en/innodb-locking.html</a></li>
+<li>幻行：<a target="_blank" rel="noopener" href="https://dev.mysql.com/doc/refman/8.4/en/innodb-next-key-locking.html">https://dev.mysql.com/doc/refman/8.4/en/innodb-next-key-locking.html</a></li>
+<li>锁视图：<a target="_blank" rel="noopener" href="https://dev.mysql.com/doc/refman/8.4/en/performance-schema-data-locks-table.html">https://dev.mysql.com/doc/refman/8.4/en/performance-schema-data-locks-table.html</a></li>
+<li>隔离级别：<a target="_blank" rel="noopener" href="https://dev.mysql.com/doc/refman/8.4/en/innodb-transaction-isolation-levels.html">https://dev.mysql.com/doc/refman/8.4/en/innodb-transaction-isolation-levels.html</a></li>
+</ul>
+<p>上一篇：<a href="/2022/12/02/database/mysql/mysql-22-mvcc/">MQ22 MVCC</a> ｜ 下一篇：<a href="/2022/12/04/database/mysql/mysql-24-lock-types/">MQ24 锁的类型</a> ｜ <a href="/2022/11/10/database/mysql/mysql-0-series-index/">总目录</a></p>
+</div>
+
+  <div class="mb-foot">
+    <a href="/phone/">返回手机首页</a>
+    <a href="/phone/tags/">星迹索引</a>
+  </div>
+</div>
+
+
+<script>
+  /* 作用：懒加载本地 mermaid 库；无 mermaid 代码块时不加载 */
+  function loadLocalMermaid(){
+    return new Promise(function(resolve, reject){
+      if(window.mermaid) return resolve(window.mermaid);
+      var s = document.createElement('script');
+      s.src = '/js/third-party/mermaid/mermaid.min.js?v=10';
+      s.onload = function(){ resolve(window.mermaid); };
+      s.onerror = function(){ reject(new Error('mermaid local load failed')); };
+      document.head.appendChild(s);
+    });
+  }
+
+  /* 作用：把 ```mermaid 代码块替换成 SVG 图（手机端字号略小、图可横向滚动） */
+  async function renderMermaidDiagram(){
+    var blocks = document.querySelectorAll('pre[class*="language-mermaid"]');
+    if(!blocks.length) return;
+    var mermaid;
+    try { mermaid = await loadLocalMermaid(); }
+    catch(e){ console.warn('[mermaid] 本地库加载失败：', e); return; }
+
+    mermaid.initialize({
+      startOnLoad: false,
+      theme: 'base',
+      themeVariables: {
+        darkMode: true,
+        background: 'transparent',
+        fontFamily: '"Microsoft YaHei", "PingFang SC", "Segoe UI", sans-serif',
+        fontSize: '12px',
+        primaryColor: '#062f3d',
+        primaryTextColor: '#d6f6ff',
+        primaryBorderColor: '#00eeff',
+        secondaryColor: '#04222d',
+        tertiaryColor: '#04222d',
+        mainBkg: '#062f3d',
+        nodeBorder: '#00eeff',
+        clusterBkg: '#02161f',
+        clusterBorder: '#00eeff55',
+        lineColor: '#00eeff',
+        textColor: '#c0e8ff',
+        edgeLabelBackground: '#02161f'
+      },
+      flowchart: { curve: 'basis', useMaxWidth: false, htmlLabels: false, nodeSpacing: 30, rankSpacing: 40, padding: 10 }
+    });
+
+    var targets = [];
+    blocks.forEach(function(el){
+      var codeEl = el.querySelector('code');
+      if(!codeEl) return;
+      var div = document.createElement('div');
+      div.className = 'mermaid';
+      div.textContent = codeEl.textContent;
+      el.parentNode.replaceChild(div, el);
+      targets.push(div);
+    });
+    if(!targets.length) return;
+    try { await mermaid.run({ nodes: targets }); }
+    catch(e){ console.warn('[mermaid] 渲染失败：', e); }
+  }
+  /* 作用：多次触发兜底（延迟重试 + DOM 变化），防止某次时机没跑到导致图表留在代码块 */
+  var mmBusy = false;
+  function scheduleMermaid(){
+    if(mmBusy) return;
+    mmBusy = true;
+    renderMermaidDiagram().then(function(){ mmBusy = false; }, function(){ mmBusy = false; });
+  }
+  scheduleMermaid();
+  window.addEventListener('load', scheduleMermaid);
+  [1000, 3000, 8000].forEach(function(ms){ setTimeout(scheduleMermaid, ms); });
+  if(document.readyState !== 'loading') scheduleMermaid();
+  if(window.MutationObserver){
+    var mmTimer = null;
+    var mmObserver = new MutationObserver(function(){
+      clearTimeout(mmTimer);
+      mmTimer = setTimeout(scheduleMermaid, 400);
+    });
+    mmObserver.observe(document.querySelector('.mb-article') || document.body, { childList: true, subtree: true });
+  }
+</script>
+</body>
+</html>
