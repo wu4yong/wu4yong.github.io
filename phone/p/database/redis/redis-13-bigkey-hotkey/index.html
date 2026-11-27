@@ -143,7 +143,7 @@ particlesJS("particles", {
   <h1 class="mb-title">redis-大 key 与热 key</h1>
   <div class="mb-sub">
     分类：database · redis
-     ｜ 标签：Redis · 系统课 · 性能
+     ｜ 标签：系统课 · Redis · 性能
   </div>
 
   <div class="mb-article"><div class="essay-banner essay-database"></div>
@@ -187,38 +187,11 @@ particlesJS("particles", {
 <li>缓存击穿风险同时放大：这个 key 一失效，请求全部穿透到数据库。</li>
 </ul>
 <p>官方可用的定位手段是 <code>redis-cli --hotkeys</code>，但它依赖 <strong>LFU</strong>：需要把 <code>maxmemory-policy</code> 设为 <code>allkeys-lfu</code> 或 <code>volatile-lfu</code>，否则拿不到频率统计。这一点在官方文档里写明，很多人跑 <code>--hotkeys</code> 拿不到结果是没配 LFU。</p>
-<h3 id="3-四个官方发现入口"><a href="#3-四个官方发现入口" class="headerlink" title="3. 四个官方发现入口"></a>3. 四个官方发现入口</h3><table>
-<thead>
-<tr>
-<th>工具</th>
-<th>能得到什么</th>
-<th>前置条件 &#x2F; 注意</th>
-</tr>
-</thead>
-<tbody><tr>
-<td><code>redis-cli --bigkeys</code></td>
-<td>按类型报出「最大的 key」及元素数&#x2F;长度</td>
-<td>基于 <code>SCAN</code> 遍历，会扫全库；样本期间对线上有压力</td>
-</tr>
-<tr>
-<td><code>MEMORY USAGE key [SAMPLES n]</code></td>
-<td>单 key 实际占用字节数（含内部开销）</td>
-<td>对集合类，<code>SAMPLES</code> 控制抽样数，默认 5</td>
-</tr>
-<tr>
-<td><code>OBJECT ENCODING key</code></td>
-<td>当前编码（listpack &#x2F; hashtable &#x2F; intset…）</td>
-<td>编码降级往往是大 key 的早期信号</td>
-</tr>
-<tr>
-<td><code>redis-cli --hotkeys</code></td>
-<td>访问频率最高的 key</td>
-<td>必须 LFU 策略；否则无法统计</td>
-</tr>
-</tbody></table>
+<h3 id="3-四个官方发现入口"><a href="#3-四个官方发现入口" class="headerlink" title="3. 四个官方发现入口"></a>3. 四个官方发现入口</h3><div class="data-grid data-grid-link-table"><div class="grid-header"><div class="grid-cell">工具</div><div class="grid-cell">能得到什么</div><div class="grid-cell">前置条件 &#x2F; 注意</div></div><div class="grid-row"><div class="grid-cell"><code>redis-cli --bigkeys</code></div><div class="grid-cell">按类型报出「最大的 key」及元素数&#x2F;长度</div><div class="grid-cell">基于 <code>SCAN</code> 遍历，会扫全库；样本期间对线上有压力</div></div><div class="grid-row"><div class="grid-cell"><code>MEMORY USAGE key [SAMPLES n]</code></div><div class="grid-cell">单 key 实际占用字节数（含内部开销）</div><div class="grid-cell">对集合类，<code>SAMPLES</code> 控制抽样数，默认 5</div></div><div class="grid-row"><div class="grid-cell"><code>OBJECT ENCODING key</code></div><div class="grid-cell">当前编码（listpack &#x2F; hashtable &#x2F; intset…）</div><div class="grid-cell">编码降级往往是大 key 的早期信号</div></div><div class="grid-row"><div class="grid-cell"><code>redis-cli --hotkeys</code></div><div class="grid-cell">访问频率最高的 key</div><div class="grid-cell">必须 LFU 策略；否则无法统计</div></div></div>
+
 <p>另外还有 <code>SCAN</code> + <code>STRLEN</code> &#x2F; <code>HLEN</code> &#x2F; <code>LLEN</code> &#x2F; <code>SCARD</code> &#x2F; <code>ZCARD</code> &#x2F; <code>XLEN</code> 的自建巡检：按类型取长度，超过阈值就记录。这是业务口径可控的做法。</p>
 <h3 id="4-五条治理手段的适用前提"><a href="#4-五条治理手段的适用前提" class="headerlink" title="4. 五条治理手段的适用前提"></a>4. 五条治理手段的适用前提</h3><ul>
-<li><strong>拆分</strong>：Hash 按字段名哈希取模拆成 <code>user:1:{0..9}</code>；Set 按成员哈希拆；String 按段拆。前提是业务能接受「读多个 key 再聚合」，否则会引入新的复杂度。</li>
+<li><strong>拆分</strong>：Hash 按字段名哈希取模拆成 <code>user:1:&#123;0..9&#125;</code>；Set 按成员哈希拆；String 按段拆。前提是业务能接受「读多个 key 再聚合」，否则会引入新的复杂度。</li>
 <li><strong>分批读</strong>：<code>HSCAN</code> &#x2F; <code>SSCAN</code> &#x2F; <code>ZSCAN</code> 游标遍历，替代 <code>HGETALL</code> &#x2F; <code>SMEMBERS</code>。这是<strong>不改数据</strong>就能降风险的手段，优先做。</li>
 <li><strong>异步删</strong>：<code>UNLINK</code> 代替 <code>DEL</code>；<code>lazyfree-lazy-user-del</code> 等参数可让部分删除默认走异步（官方有对应配置项）。</li>
 <li><strong>控增长</strong>：List 用 <code>LTRIM</code>、Stream 用 <code>XTRIM MAXLEN/MINID</code>、ZSet 用 <code>ZREMRANGEBYRANK</code> 只留 TOP N。<strong>任何「只追加不裁剪」的结构最终一定是大 key</strong>。</li>

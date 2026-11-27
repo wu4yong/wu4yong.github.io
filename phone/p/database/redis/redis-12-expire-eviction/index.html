@@ -19,7 +19,7 @@
   <meta name="theme-color" content="#020817">
   <!-- 首帧兜底：浏览器默认画布是白的，样式未解析前会闪一下白。这条规则先锁死深空底色 -->
   <style>html{background-color:#020817}</style>
-  <title>redis-过期策略与内存淘汰 - 时空秘境</title>
+  <title>redis-过期与淘汰 - 时空秘境</title>
   <!-- 手机端样式：基础 + 列表/正文，外链引入（源文件 source/css/theme/phone/） -->
   <link rel="stylesheet" href="/css/theme/phone/common.css">
   <link rel="stylesheet" href="/css/theme/phone/list.css">
@@ -140,10 +140,10 @@ particlesJS("particles", {
     <span class="mb-sub" style="margin:0">2023-01-02</span>
   </div>
 
-  <h1 class="mb-title">redis-过期策略与内存淘汰</h1>
+  <h1 class="mb-title">redis-过期与淘汰</h1>
   <div class="mb-sub">
     分类：database · redis
-     ｜ 标签：Redis · 系统课 · 内存管理
+     ｜ 标签：系统课 · Redis · 内存管理
   </div>
 
   <div class="mb-article"><div class="essay-banner essay-database"></div>
@@ -180,55 +180,8 @@ particlesJS("particles", {
 <p>这就是官方描述的「抽样 + 循环」，它是<strong>概率清理</strong>，不是扫全表。所以「所有过期 key 都会准时释放」是一个错误预期——内存里可能长期留着没人访问的过期 key，<code>DBSIZE</code> 也照样统计它们。</p>
 <p><strong>从节点为什么不主动删</strong>：官方明确说明，副本不会自己过期 key，而是等待主节点发来的 <code>DEL</code>。原因是保持主从数据一致——如果副本自己删了、主节点还没删，一主一从就会不一致（读副本会「突然少一个 key」）。所以从节点上的过期 key 在逻辑上是「不可见」的（读它会返回 nil），但物理上仍在内存里。</p>
 <h3 id="2-淘汰：8-种策略，一条开关"><a href="#2-淘汰：8-种策略，一条开关" class="headerlink" title="2. 淘汰：8 种策略，一条开关"></a>2. 淘汰：8 种策略，一条开关</h3><p>淘汰只在<strong>设置了 <code>maxmemory</code></strong> 之后才发生。策略由 <code>maxmemory-policy</code> 决定，官方八种取值：</p>
-<table>
-<thead>
-<tr>
-<th>策略</th>
-<th>从哪个池子挑</th>
-<th>挑选依据</th>
-</tr>
-</thead>
-<tbody><tr>
-<td><code>noeviction</code></td>
-<td>不淘汰</td>
-<td>写命令返回 OOM 错误（默认）</td>
-</tr>
-<tr>
-<td><code>allkeys-lru</code></td>
-<td>全部 key</td>
-<td>最近最少使用</td>
-</tr>
-<tr>
-<td><code>allkeys-lfu</code></td>
-<td>全部 key</td>
-<td>访问频率最低</td>
-</tr>
-<tr>
-<td><code>allkeys-random</code></td>
-<td>全部 key</td>
-<td>随机</td>
-</tr>
-<tr>
-<td><code>volatile-lru</code></td>
-<td>只有带 TTL 的 key</td>
-<td>最近最少使用</td>
-</tr>
-<tr>
-<td><code>volatile-lfu</code></td>
-<td>只有带 TTL 的 key</td>
-<td>访问频率最低</td>
-</tr>
-<tr>
-<td><code>volatile-random</code></td>
-<td>只有带 TTL 的 key</td>
-<td>随机</td>
-</tr>
-<tr>
-<td><code>volatile-ttl</code></td>
-<td>只有带 TTL 的 key</td>
-<td>剩余生存时间最短优先</td>
-</tr>
-</tbody></table>
+<div class="data-grid data-grid-link-table"><div class="grid-header"><div class="grid-cell">策略</div><div class="grid-cell">从哪个池子挑</div><div class="grid-cell">挑选依据</div></div><div class="grid-row"><div class="grid-cell"><code>noeviction</code></div><div class="grid-cell">不淘汰</div><div class="grid-cell">写命令返回 OOM 错误（默认）</div></div><div class="grid-row"><div class="grid-cell"><code>allkeys-lru</code></div><div class="grid-cell">全部 key</div><div class="grid-cell">最近最少使用</div></div><div class="grid-row"><div class="grid-cell"><code>allkeys-lfu</code></div><div class="grid-cell">全部 key</div><div class="grid-cell">访问频率最低</div></div><div class="grid-row"><div class="grid-cell"><code>allkeys-random</code></div><div class="grid-cell">全部 key</div><div class="grid-cell">随机</div></div><div class="grid-row"><div class="grid-cell"><code>volatile-lru</code></div><div class="grid-cell">只有带 TTL 的 key</div><div class="grid-cell">最近最少使用</div></div><div class="grid-row"><div class="grid-cell"><code>volatile-lfu</code></div><div class="grid-cell">只有带 TTL 的 key</div><div class="grid-cell">访问频率最低</div></div><div class="grid-row"><div class="grid-cell"><code>volatile-random</code></div><div class="grid-cell">只有带 TTL 的 key</div><div class="grid-cell">随机</div></div><div class="grid-row"><div class="grid-cell"><code>volatile-ttl</code></div><div class="grid-cell">只有带 TTL 的 key</div><div class="grid-cell">剩余生存时间最短优先</div></div></div>
+
 <p>两个关键细节：</p>
 <ol>
 <li><strong>LRU&#x2F;LFU 是近似的</strong>，不是精确算法。Redis 不维护完整访问时间链，而是<strong>随机采样 <code>maxmemory-samples</code>（默认 5）个 key</strong>，从中挑「最该淘汰」的那个。样本越大越接近真实，CPU 开销也越高。这就是为什么「LRU 有时候会淘汰一个刚刚访问过的 key」——采样没抽到它。</li>

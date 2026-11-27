@@ -19,7 +19,7 @@
   <meta name="theme-color" content="#020817">
   <!-- 首帧兜底：浏览器默认画布是白的，样式未解析前会闪一下白。这条规则先锁死深空底色 -->
   <style>html{background-color:#020817}</style>
-  <title>redis-秒杀：原子扣减与异步下单 - 时空秘境</title>
+  <title>redis-秒杀 - 时空秘境</title>
   <!-- 手机端样式：基础 + 列表/正文，外链引入（源文件 source/css/theme/phone/） -->
   <link rel="stylesheet" href="/css/theme/phone/common.css">
   <link rel="stylesheet" href="/css/theme/phone/list.css">
@@ -140,10 +140,10 @@ particlesJS("particles", {
     <span class="mb-sub" style="margin:0">2023-02-14</span>
   </div>
 
-  <h1 class="mb-title">redis-秒杀：原子扣减与异步下单</h1>
+  <h1 class="mb-title">redis-秒杀</h1>
   <div class="mb-sub">
     分类：database · redis
-     ｜ 标签：Redis · 系统课 · 实战
+     ｜ 标签：系统课 · Redis · 实战
   </div>
 
   <div class="mb-article"><div class="essay-banner essay-database"></div>
@@ -169,7 +169,7 @@ particlesJS("particles", {
 <p>Multi-key commands and scripts must operate on keys in the same hash slot … keys are mapped to slots via <code>CRC16(key) mod 16384</code>.</p>
 <p>—— <a target="_blank" rel="noopener" href="https://redis.io/docs/latest/operate/oss_and_stack/reference/cluster-spec/">https://redis.io/docs/latest/operate/oss_and_stack/reference/cluster-spec/</a></p>
 </blockquote>
-<p>所以在集群里，脚本涉及的所有 key（库存 + 用户标记）必须落在同一个槽，否则报 <code>CROSSSLOT</code>。解法是用 hash tag：<code>stock:{act1}</code> 与 <code>order:{act1}</code> 都会带 <code>{act1}</code> 落到同一个槽。</p>
+<p>所以在集群里，脚本涉及的所有 key（库存 + 用户标记）必须落在同一个槽，否则报 <code>CROSSSLOT</code>。解法是用 hash tag：<code>stock:&#123;act1&#125;</code> 与 <code>order:&#123;act1&#125;</code> 都会带 <code>&#123;act1&#125;</code> 落到同一个槽。</p>
 <h2 id="四、原理拆解"><a href="#四、原理拆解" class="headerlink" title="四、原理拆解"></a>四、原理拆解</h2><h3 id="1-四步链路"><a href="#1-四步链路" class="headerlink" title="1. 四步链路"></a>1. 四步链路</h3><pre class="line-numbers language-none"><code class="language-none">① 预热：把活动库存写入 Redis（stock:act1 &#x3D; 100）
 ② 扣减：Lua 脚本原子地「判断 + 扣减 + 记录用户」
 ③ 入队：扣减成功的请求写入队列（LIST &#x2F; Stream）
@@ -190,30 +190,8 @@ particlesJS("particles", {
   return 1<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
 
 <p>脚本里的三步在一次执行内完成，返回值区分三种结果：<code>1</code> 成功、<code>0</code> 售罄、<code>2</code> 重复请求。</p>
-<h3 id="3-三道防线"><a href="#3-三道防线" class="headerlink" title="3. 三道防线"></a>3. 三道防线</h3><table>
-<thead>
-<tr>
-<th>防线</th>
-<th>作用</th>
-<th>不做会怎样</th>
-</tr>
-</thead>
-<tbody><tr>
-<td>入口限流</td>
-<td>把 99% 请求拒在 Redis 之外</td>
-<td>Redis 被打满，正常用户也抢不到</td>
-</tr>
-<tr>
-<td>幂等</td>
-<td>同一用户只成功一次</td>
-<td>一个人抢到多件，或重复下单</td>
-</tr>
-<tr>
-<td>对账</td>
-<td>比对「Redis 卖出数」与「库中订单数」</td>
-<td>故障时差额无人发现</td>
-</tr>
-</tbody></table>
+<h3 id="3-三道防线"><a href="#3-三道防线" class="headerlink" title="3. 三道防线"></a>3. 三道防线</h3><div class="data-grid data-grid-link-table"><div class="grid-header"><div class="grid-cell">防线</div><div class="grid-cell">作用</div><div class="grid-cell">不做会怎样</div></div><div class="grid-row"><div class="grid-cell">入口限流</div><div class="grid-cell">把 99% 请求拒在 Redis 之外</div><div class="grid-cell">Redis 被打满，正常用户也抢不到</div></div><div class="grid-row"><div class="grid-cell">幂等</div><div class="grid-cell">同一用户只成功一次</div><div class="grid-cell">一个人抢到多件，或重复下单</div></div><div class="grid-row"><div class="grid-cell">对账</div><div class="grid-cell">比对「Redis 卖出数」与「库中订单数」</div><div class="grid-cell">故障时差额无人发现</div></div></div>
+
 <p><strong>对账</strong>是最容易被省掉的一环，但它恰恰是「Redis 不可靠」这一事实的兜底。</p>
 <h3 id="4-失败要能「还库存」"><a href="#4-失败要能「还库存」" class="headerlink" title="4. 失败要能「还库存」"></a>4. 失败要能「还库存」</h3><p>扣减成功后如果异步落库失败（队列消费异常），库存必须能退回：</p>
 <pre class="line-numbers language-none"><code class="language-none">① worker 消费失败 → 记录失败订单
@@ -272,7 +250,7 @@ OK
 <li><strong>用 <code>KEYS</code> 扫活动 key</strong>。O(N) 阻塞主线程（官方明确生产禁用），活动期间等于自杀。</li>
 </ol>
 <h3 id="版本差异（8-x-标注）"><a href="#版本差异（8-x-标注）" class="headerlink" title="版本差异（8.x 标注）"></a>版本差异（8.x 标注）</h3><blockquote>
-<p><code>EVAL</code>、<code>DECRBY</code>、<code>XADD</code>、<code>SISMEMBER</code> 语义在 7.4 与 8.x 一致；集群 hash tag 规则不变（<code>CRC16(key) mod 16384</code>，<code>{...}</code> 参与计算）。8.x 的差异在运维工具与许可，不影响链路设计。</p>
+<p><code>EVAL</code>、<code>DECRBY</code>、<code>XADD</code>、<code>SISMEMBER</code> 语义在 7.4 与 8.x 一致；集群 hash tag 规则不变（<code>CRC16(key) mod 16384</code>，<code>&#123;...&#125;</code> 参与计算）。8.x 的差异在运维工具与许可，不影响链路设计。</p>
 <p>依据：<a target="_blank" rel="noopener" href="https://redis.io/docs/latest/operate/oss_and_stack/reference/cluster-spec/">https://redis.io/docs/latest/operate/oss_and_stack/reference/cluster-spec/</a></p>
 </blockquote>
 <h2 id="八、课后小结"><a href="#八、课后小结" class="headerlink" title="八、课后小结"></a>八、课后小结</h2><ul>

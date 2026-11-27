@@ -19,7 +19,7 @@
   <meta name="theme-color" content="#020817">
   <!-- 首帧兜底：浏览器默认画布是白的，样式未解析前会闪一下白。这条规则先锁死深空底色 -->
   <style>html{background-color:#020817}</style>
-  <title>redis-SDS 与 redisObject：字符串到底怎么存 - 时空秘境</title>
+  <title>redis-SDS 与 redisObject - 时空秘境</title>
   <!-- 手机端样式：基础 + 列表/正文，外链引入（源文件 source/css/theme/phone/） -->
   <link rel="stylesheet" href="/css/theme/phone/common.css">
   <link rel="stylesheet" href="/css/theme/phone/list.css">
@@ -140,10 +140,10 @@ particlesJS("particles", {
     <span class="mb-sub" style="margin:0">2023-01-16</span>
   </div>
 
-  <h1 class="mb-title">redis-SDS 与 redisObject：字符串到底怎么存</h1>
+  <h1 class="mb-title">redis-SDS 与 redisObject</h1>
   <div class="mb-sub">
     分类：database · redis
-     ｜ 标签：Redis · 系统课 · 底层原理
+     ｜ 标签：系统课 · Redis · 底层原理
   </div>
 
   <div class="mb-article"><div class="essay-banner essay-database"></div>
@@ -172,30 +172,8 @@ particlesJS("particles", {
 <li><strong>编码是自动选择的，你无法指定</strong>。它由值的形态与长度决定；</li>
 <li><strong>44 字节不是拍脑袋</strong>：<code>embstr</code> 要求「redisObject 头 + SDS 头 + 数据 + <code>\0</code>」一次分配、总长不超过 64 字节的 jemalloc size class。</li>
 </ul>
-<h2 id="四、原理拆解"><a href="#四、原理拆解" class="headerlink" title="四、原理拆解"></a>四、原理拆解</h2><h3 id="1-C-字符串的三个硬伤与-SDS-的对策"><a href="#1-C-字符串的三个硬伤与-SDS-的对策" class="headerlink" title="1. C 字符串的三个硬伤与 SDS 的对策"></a>1. C 字符串的三个硬伤与 SDS 的对策</h3><table>
-<thead>
-<tr>
-<th>硬伤</th>
-<th>后果</th>
-<th>SDS 的对策</th>
-</tr>
-</thead>
-<tbody><tr>
-<td>取长度要遍历到 <code>\0</code></td>
-<td><code>strlen</code> 是 O(N)，<code>STRLEN</code> 会变慢</td>
-<td>头部存 <code>len</code>，O(1)</td>
-</tr>
-<tr>
-<td><code>\0</code> 就是结尾</td>
-<td>存不了二进制（图片、msgpack）</td>
-<td>用 <code>len</code> 判定结尾，二进制安全</td>
-</tr>
-<tr>
-<td>追加要 realloc + 拷贝</td>
-<td>频繁 <code>APPEND</code> 是 O(N) 放大</td>
-<td>预分配 + 惰性释放</td>
-</tr>
-</tbody></table>
+<h2 id="四、原理拆解"><a href="#四、原理拆解" class="headerlink" title="四、原理拆解"></a>四、原理拆解</h2><h3 id="1-C-字符串的三个硬伤与-SDS-的对策"><a href="#1-C-字符串的三个硬伤与-SDS-的对策" class="headerlink" title="1. C 字符串的三个硬伤与 SDS 的对策"></a>1. C 字符串的三个硬伤与 SDS 的对策</h3><div class="data-grid data-grid-link-table"><div class="grid-header"><div class="grid-cell">硬伤</div><div class="grid-cell">后果</div><div class="grid-cell">SDS 的对策</div></div><div class="grid-row"><div class="grid-cell">取长度要遍历到 <code>\0</code></div><div class="grid-cell"><code>strlen</code> 是 O(N)，<code>STRLEN</code> 会变慢</div><div class="grid-cell">头部存 <code>len</code>，O(1)</div></div><div class="grid-row"><div class="grid-cell"><code>\0</code> 就是结尾</div><div class="grid-cell">存不了二进制（图片、msgpack）</div><div class="grid-cell">用 <code>len</code> 判定结尾，二进制安全</div></div><div class="grid-row"><div class="grid-cell">追加要 realloc + 拷贝</div><div class="grid-cell">频繁 <code>APPEND</code> 是 O(N) 放大</div><div class="grid-cell">预分配 + 惰性释放</div></div></div>
+
 <p>预分配的具体规则（源码注释）：<code>len &lt; 1MB</code> 时按 2 倍扩容；<code>len ≥ 1MB</code> 时每次多留 1MB。缩短字符串时<strong>不立即释放</strong>，把空间留给后续追加——这就是「惰性释放」。代价是内存可能短暂高于实际数据量。</p>
 <h3 id="2-SDS-的四种头部"><a href="#2-SDS-的四种头部" class="headerlink" title="2. SDS 的四种头部"></a>2. SDS 的四种头部</h3><p><code>sdshdr5</code>（已弃用）&#x2F; <code>sdshdr8</code> &#x2F; <code>sdshdr16</code> &#x2F; <code>sdshdr32</code> &#x2F; <code>sdshdr64</code>，按字符串长度选择最小够用的头部：长度 &lt; 256 用 8 位，&lt; 65536 用 16 位，依此类推。<code>flags</code> 的低 3 位记录头部类型，所以同一份数据在内存里的「头部厚度」不同——这也是小字符串省内存的原因之一。</p>
 <h3 id="3-redisObject-的五个字段"><a href="#3-redisObject-的五个字段" class="headerlink" title="3. redisObject 的五个字段"></a>3. redisObject 的五个字段</h3><pre class="line-numbers language-none"><code class="language-none">type      → 数据类型（string &#x2F; list &#x2F; hash &#x2F; set &#x2F; zset &#x2F; stream）
@@ -205,34 +183,8 @@ refcount  → 引用计数（共享对象、释放时机）
 ptr       → 指向真实数据结构<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span></span></code></pre>
 
 <p><code>encoding</code> 是你排查内存问题的入口：同样是 <code>hash</code>，<code>listpack</code> 与 <code>hashtable</code> 的内存差可以到 3–10 倍（RD28 详述）。</p>
-<h3 id="4-三种字符串编码的判定"><a href="#4-三种字符串编码的判定" class="headerlink" title="4. 三种字符串编码的判定"></a>4. 三种字符串编码的判定</h3><table>
-<thead>
-<tr>
-<th>编码</th>
-<th>条件</th>
-<th>内存形态</th>
-<th>可变性</th>
-</tr>
-</thead>
-<tbody><tr>
-<td><code>int</code></td>
-<td>值是整数且能被 <code>long</code> 表示</td>
-<td>直接把数值存在 <code>ptr</code> 里，不额外分配</td>
-<td>可 <code>INCR</code></td>
-</tr>
-<tr>
-<td><code>embstr</code></td>
-<td>长度 ≤ 44 字节</td>
-<td>robj + SDS 一次分配，只读</td>
-<td><code>APPEND</code> 会转 <code>raw</code></td>
-</tr>
-<tr>
-<td><code>raw</code></td>
-<td>长度 &gt; 44 字节，或对 <code>embstr</code> 做过修改</td>
-<td>robj 与 SDS 两次分配</td>
-<td>可变</td>
-</tr>
-</tbody></table>
+<h3 id="4-三种字符串编码的判定"><a href="#4-三种字符串编码的判定" class="headerlink" title="4. 三种字符串编码的判定"></a>4. 三种字符串编码的判定</h3><div class="data-grid data-grid-link-table"><div class="grid-header"><div class="grid-cell">编码</div><div class="grid-cell">条件</div><div class="grid-cell">内存形态</div><div class="grid-cell">可变性</div></div><div class="grid-row"><div class="grid-cell"><code>int</code></div><div class="grid-cell">值是整数且能被 <code>long</code> 表示</div><div class="grid-cell">直接把数值存在 <code>ptr</code> 里，不额外分配</div><div class="grid-cell">可 <code>INCR</code></div></div><div class="grid-row"><div class="grid-cell"><code>embstr</code></div><div class="grid-cell">长度 ≤ 44 字节</div><div class="grid-cell">robj + SDS 一次分配，只读</div><div class="grid-cell"><code>APPEND</code> 会转 <code>raw</code></div></div><div class="grid-row"><div class="grid-cell"><code>raw</code></div><div class="grid-cell">长度 &gt; 44 字节，或对 <code>embstr</code> 做过修改</div><div class="grid-cell">robj 与 SDS 两次分配</div><div class="grid-cell">可变</div></div></div>
+
 <p><code>embstr</code> 是<strong>只读</strong>的：任何修改（<code>APPEND</code>、<code>SETRANGE</code>）都会先转成 <code>raw</code> 再改。原因很简单——一次分配意味着 robj 与 SDS 内存连续，扩容时无法原地完成。</p>
 <h3 id="5-共享整数"><a href="#5-共享整数" class="headerlink" title="5. 共享整数"></a>5. 共享整数</h3><p>Redis 启动时预建 0–9999 的整数对象并复用（<code>shared.integers</code>，默认 10000 个）。所以大量 <code>SET k 1</code> 这类小整数<strong>不额外占内存</strong>——但也带来一个副作用：<code>OBJECT REFCOUNT</code> 会显示一个很大的共享计数，别误以为泄漏。</p>
 <h2 id="五、场景说明"><a href="#五、场景说明" class="headerlink" title="五、场景说明"></a>五、场景说明</h2><ol>

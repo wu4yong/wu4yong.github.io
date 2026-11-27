@@ -19,7 +19,7 @@
   <meta name="theme-color" content="#020817">
   <!-- 首帧兜底：浏览器默认画布是白的，样式未解析前会闪一下白。这条规则先锁死深空底色 -->
   <style>html{background-color:#020817}</style>
-  <title>redis-dict 与渐进式 rehash - 时空秘境</title>
+  <title>redis-dict 与 rehash - 时空秘境</title>
   <!-- 手机端样式：基础 + 列表/正文，外链引入（源文件 source/css/theme/phone/） -->
   <link rel="stylesheet" href="/css/theme/phone/common.css">
   <link rel="stylesheet" href="/css/theme/phone/list.css">
@@ -140,10 +140,10 @@ particlesJS("particles", {
     <span class="mb-sub" style="margin:0">2023-01-17</span>
   </div>
 
-  <h1 class="mb-title">redis-dict 与渐进式 rehash</h1>
+  <h1 class="mb-title">redis-dict 与 rehash</h1>
   <div class="mb-sub">
     分类：database · redis
-     ｜ 标签：Redis · 系统课 · 底层原理
+     ｜ 标签：系统课 · Redis · 底层原理
   </div>
 
   <div class="mb-article"><div class="essay-banner essay-database"></div>
@@ -178,35 +178,8 @@ particlesJS("particles", {
 
 <p><code>rehashidx</code> 是进度游标：<code>-1</code> 表示没在 rehash，<code>≥ 0</code> 表示「已迁移到这个桶」。整张 dict 有且只有一个 <code>rehashidx</code>，这决定了同一时刻只能有一次 rehash 在跑。</p>
 <h3 id="2-为什么要「渐进式」"><a href="#2-为什么要「渐进式」" class="headerlink" title="2. 为什么要「渐进式」"></a>2. 为什么要「渐进式」</h3><p>一次性 rehash 需要遍历所有桶并重新挂链，时间复杂度与元素数成正比。一个千万级 key 的实例，一次扩容可能阻塞几百毫秒到数秒——期间所有命令都排队。Redis 的选择是<strong>把这次搬迁摊到后续的每次读写操作里</strong>：每处理一次请求，顺手迁移一个桶（<code>_dictRehashStep</code>），另加 <code>serverCron</code> 里的定时任务每秒搬一部分（<code>dictRehashMilliseconds</code>）。</p>
-<h3 id="3-迁移期的四个行为变化"><a href="#3-迁移期的四个行为变化" class="headerlink" title="3. 迁移期的四个行为变化"></a>3. 迁移期的四个行为变化</h3><table>
-<thead>
-<tr>
-<th>操作</th>
-<th>行为</th>
-<th>原因</th>
-</tr>
-</thead>
-<tbody><tr>
-<td>查找</td>
-<td>先 <code>ht[0]</code>，再 <code>ht[1]</code></td>
-<td>数据可能在旧表也可能在新表</td>
-</tr>
-<tr>
-<td>写入</td>
-<td>只写 <code>ht[1]</code></td>
-<td>保证新数据不在旧表，避免迁移时重复搬</td>
-</tr>
-<tr>
-<td>删除 &#x2F; 更新</td>
-<td>两张表都要尝试</td>
-<td>元素位置不确定</td>
-</tr>
-<tr>
-<td>遍历（SCAN）</td>
-<td>允许重复、保证不丢</td>
-<td>见下节</td>
-</tr>
-</tbody></table>
+<h3 id="3-迁移期的四个行为变化"><a href="#3-迁移期的四个行为变化" class="headerlink" title="3. 迁移期的四个行为变化"></a>3. 迁移期的四个行为变化</h3><div class="data-grid data-grid-link-table"><div class="grid-header"><div class="grid-cell">操作</div><div class="grid-cell">行为</div><div class="grid-cell">原因</div></div><div class="grid-row"><div class="grid-cell">查找</div><div class="grid-cell">先 <code>ht[0]</code>，再 <code>ht[1]</code></div><div class="grid-cell">数据可能在旧表也可能在新表</div></div><div class="grid-row"><div class="grid-cell">写入</div><div class="grid-cell">只写 <code>ht[1]</code></div><div class="grid-cell">保证新数据不在旧表，避免迁移时重复搬</div></div><div class="grid-row"><div class="grid-cell">删除 &#x2F; 更新</div><div class="grid-cell">两张表都要尝试</div><div class="grid-cell">元素位置不确定</div></div><div class="grid-row"><div class="grid-cell">遍历（SCAN）</div><div class="grid-cell">允许重复、保证不丢</div><div class="grid-cell">见下节</div></div></div>
+
 <p>「写入只写 <code>ht[1]</code>」这一条是关键：它保证 <code>ht[0]</code> 里的元素数量只减不增，rehash 一定能收敛。</p>
 <h3 id="4-扩容与缩容的尺寸"><a href="#4-扩容与缩容的尺寸" class="headerlink" title="4. 扩容与缩容的尺寸"></a>4. 扩容与缩容的尺寸</h3><ul>
 <li>扩容：<code>ht[1]</code> 的大小 &#x3D; 第一个大于等于 <code>used * 2</code> 的 2 的幂；</li>

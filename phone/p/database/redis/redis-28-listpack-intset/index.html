@@ -19,7 +19,7 @@
   <meta name="theme-color" content="#020817">
   <!-- 首帧兜底：浏览器默认画布是白的，样式未解析前会闪一下白。这条规则先锁死深空底色 -->
   <style>html{background-color:#020817}</style>
-  <title>redis-listpack 与 intset：小对象为什么省内存 - 时空秘境</title>
+  <title>redis-listpack 与 intset - 时空秘境</title>
   <!-- 手机端样式：基础 + 列表/正文，外链引入（源文件 source/css/theme/phone/） -->
   <link rel="stylesheet" href="/css/theme/phone/common.css">
   <link rel="stylesheet" href="/css/theme/phone/list.css">
@@ -140,10 +140,10 @@ particlesJS("particles", {
     <span class="mb-sub" style="margin:0">2023-01-18</span>
   </div>
 
-  <h1 class="mb-title">redis-listpack 与 intset：小对象为什么省内存</h1>
+  <h1 class="mb-title">redis-listpack 与 intset</h1>
   <div class="mb-sub">
     分类：database · redis
-     ｜ 标签：Redis · 系统课 · 底层原理
+     ｜ 标签：系统课 · Redis · 底层原理
   </div>
 
   <div class="mb-article"><div class="essay-banner essay-database"></div>
@@ -190,45 +190,8 @@ entry × N（每项 &#x3D; 编码 + 数据 + 回退长度）
 <p><code>entry</code> 的回退长度是 listpack 的关键设计：<strong>从左往右遍历时不需要额外记录每项长度</strong>，从右往左时用回退长度也能走。这一点比老的 <code>ziplist</code>（用「前一项长度」双向维护、级联更新）更简洁。</p>
 <p>限制很明确：<strong>中间插入要整体搬移右侧数据</strong>。所以它只适合小集合（默认上限 128 项），超过就转成 <code>hashtable</code>（Hash&#x2F;Set）或 <code>skiplist</code>（ZSet）。</p>
 <h3 id="3-7-2-起：ziplist-退役"><a href="#3-7-2-起：ziplist-退役" class="headerlink" title="3. 7.2 起：ziplist 退役"></a>3. 7.2 起：ziplist 退役</h3><p>7.2 用 <code>listpack</code> 全面替换 <code>ziplist</code>。老配置项 <code>hash-max-ziplist-entries</code> 等仍然可用（向后兼容），但语义对应到 listpack。如果你的文档或监控脚本还在按 <code>ziplist</code> 判断编码，会读到 <code>listpack</code> 而误判。</p>
-<h3 id="4-四组阈值（redis-conf-官方默认）"><a href="#4-四组阈值（redis-conf-官方默认）" class="headerlink" title="4. 四组阈值（redis.conf 官方默认）"></a>4. 四组阈值（redis.conf 官方默认）</h3><table>
-<thead>
-<tr>
-<th>配置</th>
-<th>默认</th>
-<th>适用类型</th>
-</tr>
-</thead>
-<tbody><tr>
-<td><code>hash-max-listpack-entries</code></td>
-<td>128</td>
-<td>Hash：字段数上限</td>
-</tr>
-<tr>
-<td><code>hash-max-listpack-value</code></td>
-<td>64</td>
-<td>Hash：单字段&#x2F;值字节上限</td>
-</tr>
-<tr>
-<td><code>zset-max-listpack-entries</code></td>
-<td>128</td>
-<td>ZSet：元素数上限</td>
-</tr>
-<tr>
-<td><code>zset-max-listpack-value</code></td>
-<td>64</td>
-<td>ZSet：单元素字节上限</td>
-</tr>
-<tr>
-<td><code>set-max-intset-entries</code></td>
-<td>512</td>
-<td>Set：整数集合元素数上限</td>
-</tr>
-<tr>
-<td><code>list-max-listpack-size</code></td>
-<td>128</td>
-<td>List：quicklist 单节点条目数</td>
-</tr>
-</tbody></table>
+<h3 id="4-四组阈值（redis-conf-官方默认）"><a href="#4-四组阈值（redis-conf-官方默认）" class="headerlink" title="4. 四组阈值（redis.conf 官方默认）"></a>4. 四组阈值（redis.conf 官方默认）</h3><div class="data-grid data-grid-link-table"><div class="grid-header"><div class="grid-cell">配置</div><div class="grid-cell">默认</div><div class="grid-cell">适用类型</div></div><div class="grid-row"><div class="grid-cell"><code>hash-max-listpack-entries</code></div><div class="grid-cell">128</div><div class="grid-cell">Hash：字段数上限</div></div><div class="grid-row"><div class="grid-cell"><code>hash-max-listpack-value</code></div><div class="grid-cell">64</div><div class="grid-cell">Hash：单字段&#x2F;值字节上限</div></div><div class="grid-row"><div class="grid-cell"><code>zset-max-listpack-entries</code></div><div class="grid-cell">128</div><div class="grid-cell">ZSet：元素数上限</div></div><div class="grid-row"><div class="grid-cell"><code>zset-max-listpack-value</code></div><div class="grid-cell">64</div><div class="grid-cell">ZSet：单元素字节上限</div></div><div class="grid-row"><div class="grid-cell"><code>set-max-intset-entries</code></div><div class="grid-cell">512</div><div class="grid-cell">Set：整数集合元素数上限</div></div><div class="grid-row"><div class="grid-cell"><code>list-max-listpack-size</code></div><div class="grid-cell">128</div><div class="grid-cell">List：quicklist 单节点条目数</div></div></div>
+
 <p>判定规则是「<strong>任一条件超标就转换</strong>」：字段数超过 128，或任一字段&#x2F;值超过 64 字节，都会转 <code>hashtable</code>。这条「任一」经常被忽略——业务里一个超长 value 就能把整张 Hash 打成 <code>hashtable</code>。</p>
 <h2 id="五、场景说明"><a href="#五、场景说明" class="headerlink" title="五、场景说明"></a>五、场景说明</h2><ol>
 <li><strong>配置类 Hash</strong>：几十个字段、值都是短字符串，<code>listpack</code> 编码，内存极省；</li>

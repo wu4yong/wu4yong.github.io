@@ -19,7 +19,7 @@
   <meta name="theme-color" content="#020817">
   <!-- 首帧兜底：浏览器默认画布是白的，样式未解析前会闪一下白。这条规则先锁死深空底色 -->
   <style>html{background-color:#020817}</style>
-  <title>redis-List 类型：两端进出与阻塞语义 - 时空秘境</title>
+  <title>redis-List - 时空秘境</title>
   <!-- 手机端样式：基础 + 列表/正文，外链引入（源文件 source/css/theme/phone/） -->
   <link rel="stylesheet" href="/css/theme/phone/common.css">
   <link rel="stylesheet" href="/css/theme/phone/list.css">
@@ -140,10 +140,10 @@ particlesJS("particles", {
     <span class="mb-sub" style="margin:0">2022-12-27</span>
   </div>
 
-  <h1 class="mb-title">redis-List 类型：两端进出与阻塞语义</h1>
+  <h1 class="mb-title">redis-List</h1>
   <div class="mb-sub">
     分类：database · redis
-     ｜ 标签：Redis · 系统课 · 数据结构
+     ｜ 标签：系统课 · Redis · 数据结构
   </div>
 
   <div class="mb-article"><div class="essay-banner essay-database"></div>
@@ -174,30 +174,8 @@ particlesJS("particles", {
 <p>—— <a target="_blank" rel="noopener" href="https://redis.io/docs/latest/develop/data-types/lists/">https://redis.io/docs/latest/develop/data-types/lists/</a></p>
 </blockquote>
 <h2 id="四、原理拆解"><a href="#四、原理拆解" class="headerlink" title="四、原理拆解"></a>四、原理拆解</h2><h3 id="1-方向决定语义：同一份数据，三副面孔"><a href="#1-方向决定语义：同一份数据，三副面孔" class="headerlink" title="1. 方向决定语义：同一份数据，三副面孔"></a>1. 方向决定语义：同一份数据，三副面孔</h3><p>List 只有「靠近队头（head，左侧）」和「靠近队尾（tail，右侧）」两个操作端。组合出来的三种用法：</p>
-<table>
-<thead>
-<tr>
-<th>组合</th>
-<th>语义</th>
-<th>典型场景</th>
-</tr>
-</thead>
-<tbody><tr>
-<td><code>LPUSH</code> 进 + <code>RPOP</code> 出</td>
-<td>FIFO 队列</td>
-<td>任务队列、消息排队</td>
-</tr>
-<tr>
-<td><code>LPUSH</code> 进 + <code>LPOP</code> 出</td>
-<td>LIFO 栈</td>
-<td>撤销栈、最近优先</td>
-</tr>
-<tr>
-<td><code>RPUSH</code> 进 + <code>LPOP</code> 出</td>
-<td>FIFO 队列（另一种写法）</td>
-<td>生产者写右、消费者读左</td>
-</tr>
-</tbody></table>
+<div class="data-grid data-grid-link-table"><div class="grid-header"><div class="grid-cell">组合</div><div class="grid-cell">语义</div><div class="grid-cell">典型场景</div></div><div class="grid-row"><div class="grid-cell"><code>LPUSH</code> 进 + <code>RPOP</code> 出</div><div class="grid-cell">FIFO 队列</div><div class="grid-cell">任务队列、消息排队</div></div><div class="grid-row"><div class="grid-cell"><code>LPUSH</code> 进 + <code>LPOP</code> 出</div><div class="grid-cell">LIFO 栈</div><div class="grid-cell">撤销栈、最近优先</div></div><div class="grid-row"><div class="grid-cell"><code>RPUSH</code> 进 + <code>LPOP</code> 出</div><div class="grid-cell">FIFO 队列（另一种写法）</div><div class="grid-cell">生产者写右、消费者读左</div></div></div>
+
 <p>注意 <code>LPUSH</code> 是「逐个插到头部」：<code>LPUSH k a b c</code> 之后顺序是 <code>c b a</code>，不是 <code>a b c</code>。要顺序进去，用 <code>RPUSH</code>——这个反直觉点是线上 bug 高发区。</p>
 <h3 id="2-阻塞语义：把主线程「让」出去"><a href="#2-阻塞语义：把主线程「让」出去" class="headerlink" title="2. 阻塞语义：把主线程「让」出去"></a>2. 阻塞语义：把主线程「让」出去</h3><p>普通 <code>LPOP</code> 在空 List 上立刻返回 <code>nil</code>。阻塞版的差别在于：</p>
 <pre class="line-numbers language-bash" data-language="bash"><code class="language-bash">BLPOP key <span class="token punctuation">[</span>key <span class="token punctuation">..</span>.<span class="token punctuation">]</span> <span class="token function">timeout</span><span aria-hidden="true" class="line-numbers-rows"><span></span></span></code></pre>
@@ -221,7 +199,7 @@ particlesJS("particles", {
 <p>代价是：<strong>按下标访问仍然要沿着链表数节点</strong>，<code>LINDEX k 1000000</code> 依旧是慢操作。<code>LRANGE</code> 大区间同理。</p>
 <h2 id="五、场景说明"><a href="#五、场景说明" class="headerlink" title="五、场景说明"></a>五、场景说明</h2><p>官方配方里 List 的位置：</p>
 <ol>
-<li><strong>轻量任务队列</strong>：生产者 <code>RPUSH job:queue {...}</code>，消费者 <code>BLPOP job:queue 5</code>；</li>
+<li><strong>轻量任务队列</strong>：生产者 <code>RPUSH job:queue &#123;...&#125;</code>，消费者 <code>BLPOP job:queue 5</code>；</li>
 <li><strong>最新 N 条</strong>：<code>LPUSH feed:uid item</code> + <code>LTRIM feed:uid 0 99</code>，天然只留最近 100 条；</li>
 <li><strong>可靠一点的队列</strong>：<code>LMOVE src dst LEFT RIGHT</code> 把「取出」变成「搬到处理中队列」，处理成功再 <code>LREM</code>，进程崩溃时能从 <code>dst</code> 捞回来（这是一套经典写法，官方在 <code>LMOVE</code> 文档里也这么示范）；</li>
 <li><strong>栈式撤销</strong>：<code>LPUSH undo:uid op</code> &#x2F; <code>LPOP undo:uid</code>。</li>

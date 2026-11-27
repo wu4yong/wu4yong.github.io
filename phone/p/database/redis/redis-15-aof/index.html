@@ -19,7 +19,7 @@
   <meta name="theme-color" content="#020817">
   <!-- 首帧兜底：浏览器默认画布是白的，样式未解析前会闪一下白。这条规则先锁死深空底色 -->
   <style>html{background-color:#020817}</style>
-  <title>redis-AOF 与三种 appendfsync - 时空秘境</title>
+  <title>redis-AOF - 时空秘境</title>
   <!-- 手机端样式：基础 + 列表/正文，外链引入（源文件 source/css/theme/phone/） -->
   <link rel="stylesheet" href="/css/theme/phone/common.css">
   <link rel="stylesheet" href="/css/theme/phone/list.css">
@@ -140,10 +140,10 @@ particlesJS("particles", {
     <span class="mb-sub" style="margin:0">2023-01-05</span>
   </div>
 
-  <h1 class="mb-title">redis-AOF 与三种 appendfsync</h1>
+  <h1 class="mb-title">redis-AOF</h1>
   <div class="mb-sub">
     分类：database · redis
-     ｜ 标签：Redis · 系统课 · 持久化
+     ｜ 标签：系统课 · Redis · 持久化
   </div>
 
   <div class="mb-article"><div class="essay-banner essay-database"></div>
@@ -169,40 +169,8 @@ particlesJS("particles", {
 <li><strong>write operation</strong>：只记写命令，读命令不记（<code>SELECT</code> 这类少数命令除外，官方有说明）。</li>
 </ul>
 <p>开关与默认值：</p>
-<table>
-<thead>
-<tr>
-<th>配置项</th>
-<th>默认值</th>
-<th>含义</th>
-</tr>
-</thead>
-<tbody><tr>
-<td><code>appendonly</code></td>
-<td><code>no</code></td>
-<td>AOF 默认<strong>关闭</strong>，需要显式开启</td>
-</tr>
-<tr>
-<td><code>appendfsync</code></td>
-<td><code>everysec</code></td>
-<td>刷盘策略</td>
-</tr>
-<tr>
-<td><code>appendfilename</code></td>
-<td><code>appendonly.aof</code></td>
-<td>文件名（7.0 起实际是 <code>appendonlydir/</code> 目录）</td>
-</tr>
-<tr>
-<td><code>aof-load-truncated</code></td>
-<td><code>yes</code></td>
-<td>加载时容忍末尾被截断</td>
-</tr>
-<tr>
-<td><code>no-appendfsync-on-rewrite</code></td>
-<td><code>no</code></td>
-<td>重写期间是否暂停 fsync</td>
-</tr>
-</tbody></table>
+<div class="data-grid data-grid-link-table"><div class="grid-header"><div class="grid-cell">配置项</div><div class="grid-cell">默认值</div><div class="grid-cell">含义</div></div><div class="grid-row"><div class="grid-cell"><code>appendonly</code></div><div class="grid-cell"><code>no</code></div><div class="grid-cell">AOF 默认<strong>关闭</strong>，需要显式开启</div></div><div class="grid-row"><div class="grid-cell"><code>appendfsync</code></div><div class="grid-cell"><code>everysec</code></div><div class="grid-cell">刷盘策略</div></div><div class="grid-row"><div class="grid-cell"><code>appendfilename</code></div><div class="grid-cell"><code>appendonly.aof</code></div><div class="grid-cell">文件名（7.0 起实际是 <code>appendonlydir/</code> 目录）</div></div><div class="grid-row"><div class="grid-cell"><code>aof-load-truncated</code></div><div class="grid-cell"><code>yes</code></div><div class="grid-cell">加载时容忍末尾被截断</div></div><div class="grid-row"><div class="grid-cell"><code>no-appendfsync-on-rewrite</code></div><div class="grid-cell"><code>no</code></div><div class="grid-cell">重写期间是否暂停 fsync</div></div></div>
+
 <h2 id="四、原理拆解"><a href="#四、原理拆解" class="headerlink" title="四、原理拆解"></a>四、原理拆解</h2><h3 id="1-写入链路：四个站"><a href="#1-写入链路：四个站" class="headerlink" title="1. 写入链路：四个站"></a>1. 写入链路：四个站</h3><p>一条写命令的执行与落盘路径：</p>
 <ol>
 <li><strong>命令执行</strong>：改内存，同时把这条命令追加到进程内的 <code>aof_buf</code>；</li>
@@ -211,38 +179,8 @@ particlesJS("particles", {
 <li><strong><code>fsync()</code></strong>：内核把页缓存真正刷到磁盘。只有这一步完成，才算「落盘」。</li>
 </ol>
 <p>关键认知：<strong><code>write()</code> 成功 ≠ 数据在磁盘上</strong>。这是理解三种 <code>appendfsync</code> 的前提，也是很多「我明明写了 1 万条只丢了 3 条」现象的解释。</p>
-<h3 id="2-三种-appendfsync-的真实差别"><a href="#2-三种-appendfsync-的真实差别" class="headerlink" title="2. 三种 appendfsync 的真实差别"></a>2. 三种 appendfsync 的真实差别</h3><table>
-<thead>
-<tr>
-<th>策略</th>
-<th>行为</th>
-<th>最坏丢失</th>
-<th>吞吐影响</th>
-<th>官方定位</th>
-</tr>
-</thead>
-<tbody><tr>
-<td><code>always</code></td>
-<td>每条写命令都 <code>fsync</code></td>
-<td>最多丢一条命令（原则上为 0）</td>
-<td>显著下降，通常一个数量级</td>
-<td>极少数「不能丢」的场景</td>
-</tr>
-<tr>
-<td><code>everysec</code></td>
-<td>后台线程每秒 <code>fsync</code> 一次</td>
-<td>约 1 秒的写入</td>
-<td>影响很小</td>
-<td><strong>默认值</strong>，绝大多数业务</td>
-</tr>
-<tr>
-<td><code>no</code></td>
-<td>只 <code>write()</code>，不主动 <code>fsync</code></td>
-<td>由内核决定，通常 30 秒量级，且不可预测</td>
-<td>最快</td>
-<td>可容忍大量丢失的纯缓存</td>
-</tr>
-</tbody></table>
+<h3 id="2-三种-appendfsync-的真实差别"><a href="#2-三种-appendfsync-的真实差别" class="headerlink" title="2. 三种 appendfsync 的真实差别"></a>2. 三种 appendfsync 的真实差别</h3><div class="data-grid data-grid-link-table"><div class="grid-header"><div class="grid-cell">策略</div><div class="grid-cell">行为</div><div class="grid-cell">最坏丢失</div><div class="grid-cell">吞吐影响</div><div class="grid-cell">官方定位</div></div><div class="grid-row"><div class="grid-cell"><code>always</code></div><div class="grid-cell">每条写命令都 <code>fsync</code></div><div class="grid-cell">最多丢一条命令（原则上为 0）</div><div class="grid-cell">显著下降，通常一个数量级</div><div class="grid-cell">极少数「不能丢」的场景</div></div><div class="grid-row"><div class="grid-cell"><code>everysec</code></div><div class="grid-cell">后台线程每秒 <code>fsync</code> 一次</div><div class="grid-cell">约 1 秒的写入</div><div class="grid-cell">影响很小</div><div class="grid-cell"><strong>默认值</strong>，绝大多数业务</div></div><div class="grid-row"><div class="grid-cell"><code>no</code></div><div class="grid-cell">只 <code>write()</code>，不主动 <code>fsync</code></div><div class="grid-cell">由内核决定，通常 30 秒量级，且不可预测</div><div class="grid-cell">最快</div><div class="grid-cell">可容忍大量丢失的纯缓存</div></div></div>
+
 <p><code>everysec</code> 的「约 1 秒」是官方口径，不是精确承诺——它取决于后台线程的调度与磁盘状况，磁盘卡顿时可能超过 1 秒。</p>
 <p><code>no</code> 也不是「不落盘」，而是「交给操作系统」。内核的脏页回写策略决定了最终落盘时间，所以你无法用它承诺任何 RPO。</p>
 <h3 id="3-为什么-AOF-比-RDB-慢、比-RDB-大"><a href="#3-为什么-AOF-比-RDB-慢、比-RDB-大" class="headerlink" title="3. 为什么 AOF 比 RDB 慢、比 RDB 大"></a>3. 为什么 AOF 比 RDB 慢、比 RDB 大</h3><ul>

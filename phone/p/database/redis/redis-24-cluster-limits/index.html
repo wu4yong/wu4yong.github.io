@@ -19,7 +19,7 @@
   <meta name="theme-color" content="#020817">
   <!-- 首帧兜底：浏览器默认画布是白的，样式未解析前会闪一下白。这条规则先锁死深空底色 -->
   <style>html{background-color:#020817}</style>
-  <title>redis-Cluster 的限制与运维边界 - 时空秘境</title>
+  <title>redis-Cluster 边界 - 时空秘境</title>
   <!-- 手机端样式：基础 + 列表/正文，外链引入（源文件 source/css/theme/phone/） -->
   <link rel="stylesheet" href="/css/theme/phone/common.css">
   <link rel="stylesheet" href="/css/theme/phone/list.css">
@@ -140,10 +140,10 @@ particlesJS("particles", {
     <span class="mb-sub" style="margin:0">2023-01-14</span>
   </div>
 
-  <h1 class="mb-title">redis-Cluster 的限制与运维边界</h1>
+  <h1 class="mb-title">redis-Cluster 边界</h1>
   <div class="mb-sub">
     分类：database · redis
-     ｜ 标签：Redis · 系统课 · Cluster
+     ｜ 标签：系统课 · Redis · Cluster
   </div>
 
   <div class="mb-article"><div class="essay-banner essay-database"></div>
@@ -168,40 +168,8 @@ particlesJS("particles", {
 <p>—— 同上</p>
 </blockquote>
 <p>这两条是「上了 Cluster 之后业务代码要改」的根源：不是性能问题，是<strong>模型差异</strong>。</p>
-<h2 id="四、原理拆解"><a href="#四、原理拆解" class="headerlink" title="四、原理拆解"></a>四、原理拆解</h2><h3 id="1-五条硬限制"><a href="#1-五条硬限制" class="headerlink" title="1. 五条硬限制"></a>1. 五条硬限制</h3><table>
-<thead>
-<tr>
-<th>限制</th>
-<th>具体表现</th>
-<th>破法</th>
-</tr>
-</thead>
-<tbody><tr>
-<td>只有 0 号库</td>
-<td><code>SELECT 1</code> 报错</td>
-<td>用 key 前缀区分业务</td>
-</tr>
-<tr>
-<td>多 key 必须同槽</td>
-<td><code>MGET k1 k2</code> 跨槽报 <code>CROSSSLOT</code></td>
-<td>hash tag <code>{tag}</code> 绑定</td>
-</tr>
-<tr>
-<td>事务&#x2F;Lua 只能在单槽</td>
-<td><code>MULTI</code> 跨节点无效</td>
-<td>同槽 + 客户端事务补偿</td>
-</tr>
-<tr>
-<td>扩缩容需人工迁槽</td>
-<td>槽不会自动均摊</td>
-<td><code>reshard</code> &#x2F; <code>rebalance</code></td>
-</tr>
-<tr>
-<td>客户端必须支持重定向</td>
-<td>单机客户端只看得到部分 key</td>
-<td>换 Cluster 客户端或加代理</td>
-</tr>
-</tbody></table>
+<h2 id="四、原理拆解"><a href="#四、原理拆解" class="headerlink" title="四、原理拆解"></a>四、原理拆解</h2><h3 id="1-五条硬限制"><a href="#1-五条硬限制" class="headerlink" title="1. 五条硬限制"></a>1. 五条硬限制</h3><div class="data-grid data-grid-link-table"><div class="grid-header"><div class="grid-cell">限制</div><div class="grid-cell">具体表现</div><div class="grid-cell">破法</div></div><div class="grid-row"><div class="grid-cell">只有 0 号库</div><div class="grid-cell"><code>SELECT 1</code> 报错</div><div class="grid-cell">用 key 前缀区分业务</div></div><div class="grid-row"><div class="grid-cell">多 key 必须同槽</div><div class="grid-cell"><code>MGET k1 k2</code> 跨槽报 <code>CROSSSLOT</code></div><div class="grid-cell">hash tag <code>{tag}</code> 绑定</div></div><div class="grid-row"><div class="grid-cell">事务&#x2F;Lua 只能在单槽</div><div class="grid-cell"><code>MULTI</code> 跨节点无效</div><div class="grid-cell">同槽 + 客户端事务补偿</div></div><div class="grid-row"><div class="grid-cell">扩缩容需人工迁槽</div><div class="grid-cell">槽不会自动均摊</div><div class="grid-cell"><code>reshard</code> &#x2F; <code>rebalance</code></div></div><div class="grid-row"><div class="grid-cell">客户端必须支持重定向</div><div class="grid-cell">单机客户端只看得到部分 key</div><div class="grid-cell">换 Cluster 客户端或加代理</div></div></div>
+
 <p><strong>第一条最容易被低估</strong>。很多旧系统用 <code>SELECT</code> 分库做业务隔离，迁到 Cluster 后必须改造成 key 前缀（如 <code>order:1001:...</code>）。</p>
 <p><strong>第三条要连着 RD33&#x2F;RD34（后面的事务与 Lua）一起理解</strong>：Cluster 不是「事务不能用」，而是「事务的范围被槽切开了」。</p>
 <h3 id="2-hash-tag-的正确用法"><a href="#2-hash-tag-的正确用法" class="headerlink" title="2. hash tag 的正确用法"></a>2. hash tag 的正确用法</h3><pre class="line-numbers language-none"><code class="language-none">&#123;order:1001&#125;:items      ┐
@@ -211,44 +179,12 @@ particlesJS("particles", {
 <p>副作用必须知道：</p>
 <ul>
 <li><strong>分布退化</strong>：所有 key 共享一个 tag 时，它们全落同一槽 → 单节点热点与内存倾斜；</li>
-<li><strong>无法嵌套</strong>：<code>{a{b}}</code> 只取第一个 <code>}</code> 之前的部分，容易算错；</li>
+<li><strong>无法嵌套</strong>：<code>&#123;a&#123;b&#125;&#125;</code> 只取第一个 <code>&#125;</code> 之前的部分，容易算错；</li>
 <li><strong>tag 要稳定</strong>：用会变的值（如时间戳）做 tag，等于把 key 打散到不同槽，多 key 操作照样失败。</li>
 </ul>
 <p>权衡原则：<strong>tag 的粒度 &#x3D; 需要一起操作的 key 的粒度</strong>。订单维度做 tag 可以，全站一个 tag 不行。</p>
-<h3 id="3-Cluster-会做-vs-人要做"><a href="#3-Cluster-会做-vs-人要做" class="headerlink" title="3. Cluster 会做 vs 人要做"></a>3. Cluster 会做 vs 人要做</h3><table>
-<thead>
-<tr>
-<th>事</th>
-<th>谁做</th>
-<th>说明</th>
-</tr>
-</thead>
-<tbody><tr>
-<td>主节点故障自动转移</td>
-<td>Cluster 自做</td>
-<td>从库提升 + 槽接管，靠 <code>cluster-node-timeout</code> 与多数票</td>
-</tr>
-<tr>
-<td>槽的自动均摊</td>
-<td>人做</td>
-<td>只能 <code>reshard</code> &#x2F; <code>rebalance</code></td>
-</tr>
-<tr>
-<td>大 key 治理</td>
-<td>人做</td>
-<td>Cluster 放大了迁移与阻塞的代价</td>
-</tr>
-<tr>
-<td>跨槽多 key 重构</td>
-<td>人做</td>
-<td>业务代码级改造</td>
-</tr>
-<tr>
-<td>客户端重定向</td>
-<td>客户端库做</td>
-<td>服务端只返回 <code>MOVED/ASK</code></td>
-</tr>
-</tbody></table>
+<h3 id="3-Cluster-会做-vs-人要做"><a href="#3-Cluster-会做-vs-人要做" class="headerlink" title="3. Cluster 会做 vs 人要做"></a>3. Cluster 会做 vs 人要做</h3><div class="data-grid data-grid-link-table"><div class="grid-header"><div class="grid-cell">事</div><div class="grid-cell">谁做</div><div class="grid-cell">说明</div></div><div class="grid-row"><div class="grid-cell">主节点故障自动转移</div><div class="grid-cell">Cluster 自做</div><div class="grid-cell">从库提升 + 槽接管，靠 <code>cluster-node-timeout</code> 与多数票</div></div><div class="grid-row"><div class="grid-cell">槽的自动均摊</div><div class="grid-cell">人做</div><div class="grid-cell">只能 <code>reshard</code> &#x2F; <code>rebalance</code></div></div><div class="grid-row"><div class="grid-cell">大 key 治理</div><div class="grid-cell">人做</div><div class="grid-cell">Cluster 放大了迁移与阻塞的代价</div></div><div class="grid-row"><div class="grid-cell">跨槽多 key 重构</div><div class="grid-cell">人做</div><div class="grid-cell">业务代码级改造</div></div><div class="grid-row"><div class="grid-cell">客户端重定向</div><div class="grid-cell">客户端库做</div><div class="grid-cell">服务端只返回 <code>MOVED/ASK</code></div></div></div>
+
 <p>这张表的意义：<strong>Cluster 只解决「可用性与容量」，不解决「你的代码模型」</strong>。上线前的评审要按上面五条逐条对照业务代码。</p>
 <h3 id="4-cluster-node-timeout-与「半死」判定"><a href="#4-cluster-node-timeout-与「半死」判定" class="headerlink" title="4. cluster-node-timeout 与「半死」判定"></a>4. cluster-node-timeout 与「半死」判定</h3><p><code>cluster-node-timeout</code>（默认 15000 ms）决定「多久没响应算节点失败」。这里有个 Cluster 特有的严格规则：如果节点超时但仍存活（半死），Cluster 会<strong>拒绝执行故障转移</strong>，因为拿不到一致的多数判断——这就是某些「集群卡住、明明有从库却不切」的原因。排查时要先看节点是否真的死了（进程、网络、GC 停顿），再看超时配置。</p>
 <h2 id="五、场景说明"><a href="#五、场景说明" class="headerlink" title="五、场景说明"></a>五、场景说明</h2><ol>
