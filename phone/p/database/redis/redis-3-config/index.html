@@ -1,0 +1,371 @@
+<!--
+  ============================================
+  手机端 · 文章原文页
+  文件：phone/post.njk
+  适用终端：手机端（路由 /phone/p/<slug>/，由 scripts/phone-routes.js 生成）
+  作用：手机阅读单篇文章；单列布局、无侧栏无雷达，替代电脑端 post.njk
+        数据由生成期算好：page.item = { title, dateStr, content, cats, tags }
+  样式依赖：source/css/theme/phone/common.css、source/css/theme/phone/list.css
+  组件依赖：phone/_components/Particles.njk
+  最后修改：2026-11-11
+  ============================================
+-->
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="color-scheme" content="dark">
+  <meta name="theme-color" content="#020817">
+  <!-- 首帧兜底：浏览器默认画布是白的，样式未解析前会闪一下白。这条规则先锁死深空底色 -->
+  <style>html{background-color:#020817}</style>
+  <title>redis-配置体系：redis.conf 与运行时 CONFIG 的边界 - 时空秘境</title>
+  <!-- 手机端样式：基础 + 列表/正文，外链引入（源文件 source/css/theme/phone/） -->
+  <link rel="stylesheet" href="/css/theme/phone/common.css">
+  <link rel="stylesheet" href="/css/theme/phone/list.css">
+<meta name="generator" content="Hexo 8.1.2"></head>
+<body>
+<div class="mb-shell">
+  <!--
+  ============================================
+  手机端星空粒子组件
+  文件：Particles.njk
+  适用终端：手机端
+  作用：Particles.njk 的手机端副本（nunjucks 子目录 include 取不到上级）
+        参数与电脑端 _components/Particles.njk 保持一致：
+        粒子 95 / 连线 118px / opacity 0.32，外加星座层与零星闪烁层
+  最后修改：2026-11-12
+  ============================================
+--><!-- z-index 必须是 0：负层级会被 body 不透明背景盖住，粒子在跑却看不见 -->
+<div id="particles" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 0; pointer-events: none;"></div>
+<!-- 星座层（与首页同一套：随机零星散布星座图形 + 偶尔闪烁的小星） -->
+<div id="constellations" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 1; pointer-events: none;" aria-hidden="true"></div>
+<script src="/js/particles.min.js"></script>
+<script>
+particlesJS("particles", {
+  particles: {
+    number: {
+      value: 95,
+      density: {
+        enable: true,
+        value_area: 800
+      }
+    },
+    color: {
+      value: "#00eeff"
+    },
+    shape: {
+      type: "circle",
+      stroke: {
+        width: 0,
+        color: "#000000"
+      }
+    },
+    opacity: {
+      value: 0.6,
+      random: true,
+      anim: {
+        enable: true,
+        speed: 0.5,
+        opacity_min: 0.1,
+        sync: false
+      }
+    },
+    size: {
+      value: 3,
+      random: true,
+      anim: {
+        enable: true,
+        speed: 2,
+        size_min: 0.1,
+        sync: false
+      }
+    },
+    line_linked: {
+      enable: true,
+      distance: 118,
+      color: "#00eeff",
+      opacity: 0.32,
+      width: 1
+    },
+    move: {
+      enable: true,
+      speed: 0.8,
+      direction: "none",
+      random: true,
+      straight: false,
+      out_mode: "out",
+      bounce: false,
+      attract: {
+        enable: true,
+        rotateX: 600,
+        rotateY: 1200
+      }
+    }
+  },
+  interactivity: {
+    detect_on: "canvas",
+    events: {
+      onhover: {
+        enable: true,
+        mode: "grab"       // 手指按住时粒子聚集
+      },
+      onclick: {
+        enable: true,
+        mode: "push"       // 点击时产生新粒子
+      },
+      resize: true
+    },
+    modes: {
+      grab: {
+        distance: 200,
+        line_linked: {
+          opacity: 1
+        }
+      },
+      push: {
+        particles_nb: 6
+      }
+    }
+  },
+  retina_detect: true
+});
+</script>
+<!-- 星座 + 零星闪烁层：与电脑端共用同一份绘制脚本 -->
+<script src="/js/theme/home/starfield.js"></script>
+
+
+  <div class="mb-top">
+    <a class="mb-back" href="/phone/">← 返回手机首页</a>
+    <span class="mb-sub" style="margin:0">2022-12-24</span>
+  </div>
+
+  <h1 class="mb-title">redis-配置体系：redis.conf 与运行时 CONFIG 的边界</h1>
+  <div class="mb-sub">
+    分类：database · redis
+     ｜ 标签：Redis · 缓存 · 系统课
+  </div>
+
+  <div class="mb-article"><div class="essay-banner essay-database"></div>
+
+<h1 id="配置体系：redis-conf-与运行时-CONFIG-的边界"><a href="#配置体系：redis-conf-与运行时-CONFIG-的边界" class="headerlink" title="配置体系：redis.conf 与运行时 CONFIG 的边界"></a>配置体系：redis.conf 与运行时 CONFIG 的边界</h1><p><img src="https://wu4yong.github.io/starry-images/assets/img/redis/rd-03-config.svg" alt="redis.conf 与 CONFIG 运行值的关系"></p>
+<p><em>配置六组必看项 + CONFIG GET&#x2F;SET&#x2F;REWRITE 回路 + 三条边界｜依据 Redis 7.4 Configuration 文档自绘</em></p>
+<h2 id="一、学习目标"><a href="#一、学习目标" class="headerlink" title="一、学习目标"></a>一、学习目标</h2><ol>
+<li>看得懂一份 <code>redis.conf</code>，知道哪六组参数是上线评审必看的；</li>
+<li>讲清「配置文件」和「运行值」是两套东西，以及 <code>CONFIG SET</code> 与 <code>CONFIG REWRITE</code> 各自改了谁；</li>
+<li>记住三条边界：什么时候 <code>REWRITE</code> 会报错、哪些参数改不了、什么时候改动会丢。</li>
+</ol>
+<h2 id="二、前置知识"><a href="#二、前置知识" class="headerlink" title="二、前置知识"></a>二、前置知识</h2><p>RD02：知道启动时读的是 <code>redis.conf</code>，不带文件就用内置默认值。</p>
+<h2 id="三、理论讲解（官方定义）"><a href="#三、理论讲解（官方定义）" class="headerlink" title="三、理论讲解（官方定义）"></a>三、理论讲解（官方定义）</h2><p>官方对配置文件的定义很短，但信息量足：</p>
+<blockquote>
+<p>Redis is able to start without a configuration file using a built-in default configuration… The <code>redis.conf</code> file is a simple text file where each line has the form <code>keyword argument1 argument2 ... argumentN</code>, and comments start with <code>#</code>.</p>
+<p>—— <a target="_blank" rel="noopener" href="https://redis.io/docs/latest/operate/oss_and_stack/management/config/">https://redis.io/docs/latest/operate/oss_and_stack/management/config/</a></p>
+</blockquote>
+<p>配套的运行时接口是 <code>CONFIG</code> 命令族，官方对其定位是「<strong>检查与修改运行中实例的配置</strong>」：</p>
+<blockquote>
+<p>The <code>CONFIG</code> command is used to perform certain operations at runtime… <code>CONFIG GET</code> retrieves the value of a configuration parameter, <code>CONFIG SET</code> sets it, <code>CONFIG REWRITE</code> rewrites the config file.</p>
+<p>—— <a target="_blank" rel="noopener" href="https://redis.io/docs/latest/commands/config-set/">https://redis.io/docs/latest/commands/config-set/</a></p>
+</blockquote>
+<p>注意措辞：<code>REWRITE</code> 改的是「<strong>启动时使用的那个配置文件</strong>」。如果启动时压根没有配置文件，这条命令就没有落地的对象。</p>
+<h2 id="四、原理拆解"><a href="#四、原理拆解" class="headerlink" title="四、原理拆解"></a>四、原理拆解</h2><h3 id="1-三层配置叠加"><a href="#1-三层配置叠加" class="headerlink" title="1. 三层配置叠加"></a>1. 三层配置叠加</h3><p>一个参数最终生效的值，来自三层叠加：</p>
+<ol>
+<li><strong>内置默认值</strong>（编译进二进制）；</li>
+<li><strong>配置文件</strong>里写的（可用 <code>include</code> 拆分子文件）；</li>
+<li><strong>命令行参数</strong>：<code>redis-server /etc/redis/redis.conf --maxmemory 2gb</code>，命令行优先级最高。</li>
+</ol>
+<p>启动时还会覆盖一种特殊情形：如果配置文件里的 <code>port 0</code> 或 <code>unixsocket</code> 组合错误，实例会直接拒绝启动——配置错误是<strong>启动期失败</strong>，不是运行期失败。</p>
+<h3 id="2-六组必看参数（运维评审清单）"><a href="#2-六组必看参数（运维评审清单）" class="headerlink" title="2. 六组必看参数（运维评审清单）"></a>2. 六组必看参数（运维评审清单）</h3><table>
+<thead>
+<tr>
+<th>分组</th>
+<th>代表参数</th>
+<th>为什么必看</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>网络与连接</td>
+<td><code>bind</code>、<code>port</code>、<code>tcp-backlog</code>、<code>timeout</code></td>
+<td>决定谁能连进来，裸奔的第一道门</td>
+</tr>
+<tr>
+<td>内存</td>
+<td><code>maxmemory</code>、<code>maxmemory-policy</code></td>
+<td>不设上限就等于不设防；默认是 <code>noeviction</code></td>
+</tr>
+<tr>
+<td>持久化</td>
+<td><code>save</code>、<code>appendonly</code>、<code>appendfsync</code></td>
+<td>决定宕机丢多少数据（M3 详解）</td>
+</tr>
+<tr>
+<td>复制与集群</td>
+<td><code>replicaof</code>、<code>cluster-enabled</code>、<code>cluster-config-file</code></td>
+<td>决定实例是单机、从节点还是集群成员（M4 详解）</td>
+</tr>
+<tr>
+<td>安全</td>
+<td><code>requirepass</code>、<code>aclfile</code>、<code>tls-port</code></td>
+<td>认证与加密的开关（M8 详解）</td>
+</tr>
+<tr>
+<td>客户端与日志</td>
+<td><code>maxclients</code>、<code>logfile</code>、<code>daemonize</code>、<code>supervised</code></td>
+<td>连接打满时的表现、出事时能不能查日志</td>
+</tr>
+</tbody></table>
+<h3 id="3-CONFIG-命令族的四个动作"><a href="#3-CONFIG-命令族的四个动作" class="headerlink" title="3. CONFIG 命令族的四个动作"></a>3. CONFIG 命令族的四个动作</h3><ul>
+<li><code>CONFIG GET &lt;pattern&gt;</code>：读运行值，支持 <code>*</code> 与 <code>maxmemory*</code> 这种 glob 甚至空格分隔的多参数；</li>
+<li><code>CONFIG SET &lt;param&gt; &lt;value&gt;</code>：改<strong>内存中的运行值</strong>，立即生效，通常<strong>不落盘</strong>；</li>
+<li><code>CONFIG REWRITE</code>：把运行值写回启动配置文件，会<strong>重排文件、丢掉注释</strong>；</li>
+<li><code>CONFIG RESETSTAT</code>：重置 <code>INFO stats</code> 里的统计计数器，和配置无关，排障时常用。</li>
+</ul>
+<p>理清这条链就能避开绝大部分坑：<code>SET</code> 生效但不持久，重启回退；<code>REWRITE</code> 持久但没版本管理就是灾难。</p>
+<h2 id="五、场景说明"><a href="#五、场景说明" class="headerlink" title="五、场景说明"></a>五、场景说明</h2><ul>
+<li>线上临时调整 <code>maxmemory</code> 压测内存水位：<code>CONFIG SET</code> 验证 → 观察 → <code>CONFIG REWRITE</code> 落盘（注意它要求有配置文件）；</li>
+<li>参数调优实验：先在从节点或测试实例上 <code>SET</code>，比对 <code>INFO memory</code> 前后变化；</li>
+<li>版本对齐：把 <code>CONFIG GET *</code> 导出，和上一版本对比，找默认值变更（升级前必做）。</li>
+</ul>
+<h2 id="六、示例代码-实操步骤"><a href="#六、示例代码-实操步骤" class="headerlink" title="六、示例代码&#x2F;实操步骤"></a>六、示例代码&#x2F;实操步骤</h2><pre class="line-numbers language-bash" data-language="bash"><code class="language-bash"><span class="token comment"># 1. 看全部与内存相关的运行值</span>
+<span class="token number">127.0</span>.0.1:637<span class="token operator"><span class="token file-descriptor important">9</span>></span> CONFIG GET maxmemory*
+<span class="token number">1</span><span class="token punctuation">)</span> <span class="token string">"maxmemory"</span>          <span class="token number">2</span><span class="token punctuation">)</span> <span class="token string">"0"</span>
+<span class="token number">3</span><span class="token punctuation">)</span> <span class="token string">"maxmemory-policy"</span>   <span class="token number">4</span><span class="token punctuation">)</span> <span class="token string">"noeviction"</span>
+
+<span class="token comment"># 2. 运行时改一个能改的参数（立即生效，重启会丢）</span>
+<span class="token number">127.0</span>.0.1:637<span class="token operator"><span class="token file-descriptor important">9</span>></span> CONFIG SET maxmemory 2gb
+OK
+<span class="token number">127.0</span>.0.1:637<span class="token operator"><span class="token file-descriptor important">9</span>></span> CONFIG GET maxmemory
+<span class="token number">1</span><span class="token punctuation">)</span> <span class="token string">"maxmemory"</span>   <span class="token number">2</span><span class="token punctuation">)</span> <span class="token string">"2147483648"</span>
+
+<span class="token comment"># 3. 落盘到配置文件（必须启动时带过配置文件）</span>
+<span class="token number">127.0</span>.0.1:637<span class="token operator"><span class="token file-descriptor important">9</span>></span> CONFIG REWRITE
+OK
+
+<span class="token comment"># 4. 复核：文件里应该出现了刚改的那行</span>
+<span class="token comment">#   $ grep -n '^maxmemory' /etc/redis/redis.conf</span>
+<span class="token comment">#   573:maxmemory 2gb</span>
+
+<span class="token comment"># 5. 如果启动时没带配置文件，第 3 步会报错：</span>
+<span class="token comment">#   (error) ERR The server is running without a config file</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<p>验证「重启丢配置」这件事，最稳的做法是做一次演练：<code>CONFIG SET</code> 一个非默认值 → <code>SHUTDOWN</code> → 重启 → <code>CONFIG GET</code> 看它是否回到文件里的值。这个动作在 M3 的恢复演练里还会用到。</p>
+<h2 id="七、常见坑（官方明确说明的限制）"><a href="#七、常见坑（官方明确说明的限制）" class="headerlink" title="七、常见坑（官方明确说明的限制）"></a>七、常见坑（官方明确说明的限制）</h2><ol>
+<li><strong><code>CONFIG REWRITE</code> 要求启动时指定了配置文件</strong>，否则直接返回 <code>ERR The server is running without a config file</code>。容器里用 <code>redis-server</code> 裸启动再想 REWRITE，一定踩这个。</li>
+<li><strong>并非所有参数都能运行时修改</strong>。官方在 <code>CONFIG SET</code> 文档里说明只有一部分参数支持动态设置，其余修改会返回错误、只能改文件后重启。判断方法只有一条：查官方命令页，别靠经验猜。</li>
+<li><strong><code>CONFIG SET</code> 默认不持久化</strong>，忘记 <code>REWRITE</code> 的调优在下次发布后凭空消失，这类问题极难复现。</li>
+<li><strong><code>CONFIG REWRITE</code> 会重写整个文件</strong>：注释、顺序、空行全丢。所以线上配置文件必须先纳入版本管理（git），否则一次 REWRITE 就把别人写的注释吃掉了。</li>
+<li><strong><code>maxmemory 0</code> 表示不限制</strong>（默认值），配合默认的 <code>noeviction</code>，写满内存后是写命令报错 + 可能被 OOM Killer 杀进程，不是「自动清理」。</li>
+</ol>
+<h3 id="版本差异（8-x-标注）"><a href="#版本差异（8-x-标注）" class="headerlink" title="版本差异（8.x 标注）"></a>版本差异（8.x 标注）</h3><blockquote>
+<p>8.x 新增了一批配置项（例如与新增数据类型、集群&#x2F;多线程相关的参数），默认值也有调整。跨 7.4 → 8.x 升级时，官方建议用 <code>CONFIG GET *</code> 做一次全量 diff，再逐项确认，而不是照抄旧 <code>redis.conf</code>。</p>
+<p>依据：<a target="_blank" rel="noopener" href="https://redis.io/docs/latest/operate/oss_and_stack/management/config/">https://redis.io/docs/latest/operate/oss_and_stack/management/config/</a></p>
+</blockquote>
+<h2 id="八、课后小结"><a href="#八、课后小结" class="headerlink" title="八、课后小结"></a>八、课后小结</h2><ul>
+<li>生效值 &#x3D; 内置默认 + 配置文件 + 命令行参数，三者叠加；</li>
+<li><code>CONFIG SET</code> 改运行值（不持久），<code>CONFIG REWRITE</code> 写回启动配置文件（要求有文件）；</li>
+<li>六组必看项：网络、内存、持久化、复制集群、安全、客户端与日志；</li>
+<li>调优三步：SET 验证 → REWRITE 落盘 → git 记录。</li>
+</ul>
+<h2 id="九、思考题"><a href="#九、思考题" class="headerlink" title="九、思考题"></a>九、思考题</h2><ol>
+<li>线上一个实例 <code>maxmemory</code> 从 0 改成了 4gb，但没有 <code>REWRITE</code>，两天后一次发布重启，会发生什么？如何在不重启的前提下确认它已经持久化？</li>
+<li>为什么 <code>CONFIG REWRITE</code> 要设计成「重写整个文件」而不是「在原位改一行」？这个设计带来了什么运维要求？</li>
+<li>你拿到一份别人交接的 <code>redis.conf</code>，只有 40 行，<code>maxmemory</code>、<code>save</code>、<code>appendonly</code> 都没写。这些参数此刻的实际值是多少，依据是什么？</li>
+</ol>
+<h2 id="十、官方资料"><a href="#十、官方资料" class="headerlink" title="十、官方资料"></a>十、官方资料</h2><ul>
+<li>配置与 include 指令说明：<a target="_blank" rel="noopener" href="https://redis.io/docs/latest/operate/oss_and_stack/management/config/">https://redis.io/docs/latest/operate/oss_and_stack/management/config/</a></li>
+<li>CONFIG GET：<a target="_blank" rel="noopener" href="https://redis.io/docs/latest/commands/config-get/">https://redis.io/docs/latest/commands/config-get/</a></li>
+<li>CONFIG SET（含可运行时修改参数的范围说明）：<a target="_blank" rel="noopener" href="https://redis.io/docs/latest/commands/config-set/">https://redis.io/docs/latest/commands/config-set/</a></li>
+<li>CONFIG REWRITE：<a target="_blank" rel="noopener" href="https://redis.io/docs/latest/commands/config-rewrite/">https://redis.io/docs/latest/commands/config-rewrite/</a></li>
+<li>CONFIG RESETSTAT：<a target="_blank" rel="noopener" href="https://redis.io/docs/latest/commands/config-resetstat/">https://redis.io/docs/latest/commands/config-resetstat/</a></li>
+<li>INFO（memory 段与运行状态）：<a target="_blank" rel="noopener" href="https://redis.io/docs/latest/commands/info/">https://redis.io/docs/latest/commands/info/</a></li>
+</ul>
+<p>上一篇：<a href="/2022/12/23/database/redis/redis-2-install/">RD02 安装、启动与 redis-cli 上手</a> ｜ 下一篇：<a href="/2022/12/25/database/redis/redis-4-resp/">RD04 RESP 协议与客户端选型</a> ｜ <a href="/2022/12/21/database/redis/redis-0-series-index/">总目录</a></p>
+</div>
+
+  <div class="mb-foot">
+    <a href="/phone/">返回手机首页</a>
+    <a href="/phone/tags/">星迹索引</a>
+  </div>
+</div>
+
+
+<script>
+  /* 作用：懒加载本地 mermaid 库；无 mermaid 代码块时不加载 */
+  function loadLocalMermaid(){
+    return new Promise(function(resolve, reject){
+      if(window.mermaid) return resolve(window.mermaid);
+      var s = document.createElement('script');
+      s.src = '/js/third-party/mermaid/mermaid.min.js?v=10';
+      s.onload = function(){ resolve(window.mermaid); };
+      s.onerror = function(){ reject(new Error('mermaid local load failed')); };
+      document.head.appendChild(s);
+    });
+  }
+
+  /* 作用：把 ```mermaid 代码块替换成 SVG 图（手机端字号略小、图可横向滚动） */
+  async function renderMermaidDiagram(){
+    var blocks = document.querySelectorAll('pre[class*="language-mermaid"]');
+    if(!blocks.length) return;
+    var mermaid;
+    try { mermaid = await loadLocalMermaid(); }
+    catch(e){ console.warn('[mermaid] 本地库加载失败：', e); return; }
+
+    mermaid.initialize({
+      startOnLoad: false,
+      theme: 'base',
+      themeVariables: {
+        darkMode: true,
+        background: 'transparent',
+        fontFamily: '"Microsoft YaHei", "PingFang SC", "Segoe UI", sans-serif',
+        fontSize: '12px',
+        primaryColor: '#062f3d',
+        primaryTextColor: '#d6f6ff',
+        primaryBorderColor: '#00eeff',
+        secondaryColor: '#04222d',
+        tertiaryColor: '#04222d',
+        mainBkg: '#062f3d',
+        nodeBorder: '#00eeff',
+        clusterBkg: '#02161f',
+        clusterBorder: '#00eeff55',
+        lineColor: '#00eeff',
+        textColor: '#c0e8ff',
+        edgeLabelBackground: '#02161f'
+      },
+      flowchart: { curve: 'basis', useMaxWidth: false, htmlLabels: false, nodeSpacing: 30, rankSpacing: 40, padding: 10 }
+    });
+
+    var targets = [];
+    blocks.forEach(function(el){
+      var codeEl = el.querySelector('code');
+      if(!codeEl) return;
+      var div = document.createElement('div');
+      div.className = 'mermaid';
+      div.textContent = codeEl.textContent;
+      el.parentNode.replaceChild(div, el);
+      targets.push(div);
+    });
+    if(!targets.length) return;
+    try { await mermaid.run({ nodes: targets }); }
+    catch(e){ console.warn('[mermaid] 渲染失败：', e); }
+  }
+  /* 作用：多次触发兜底（延迟重试 + DOM 变化），防止某次时机没跑到导致图表留在代码块 */
+  var mmBusy = false;
+  function scheduleMermaid(){
+    if(mmBusy) return;
+    mmBusy = true;
+    renderMermaidDiagram().then(function(){ mmBusy = false; }, function(){ mmBusy = false; });
+  }
+  scheduleMermaid();
+  window.addEventListener('load', scheduleMermaid);
+  [1000, 3000, 8000].forEach(function(ms){ setTimeout(scheduleMermaid, ms); });
+  if(document.readyState !== 'loading') scheduleMermaid();
+  if(window.MutationObserver){
+    var mmTimer = null;
+    var mmObserver = new MutationObserver(function(){
+      clearTimeout(mmTimer);
+      mmTimer = setTimeout(scheduleMermaid, 400);
+    });
+    mmObserver.observe(document.querySelector('.mb-article') || document.body, { childList: true, subtree: true });
+  }
+</script>
+</body>
+</html>

@@ -1,0 +1,382 @@
+<!--
+  ============================================
+  手机端 · 文章原文页
+  文件：phone/post.njk
+  适用终端：手机端（路由 /phone/p/<slug>/，由 scripts/phone-routes.js 生成）
+  作用：手机阅读单篇文章；单列布局、无侧栏无雷达，替代电脑端 post.njk
+        数据由生成期算好：page.item = { title, dateStr, content, cats, tags }
+  样式依赖：source/css/theme/phone/common.css、source/css/theme/phone/list.css
+  组件依赖：phone/_components/Particles.njk
+  最后修改：2026-11-11
+  ============================================
+-->
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="color-scheme" content="dark">
+  <meta name="theme-color" content="#020817">
+  <!-- 首帧兜底：浏览器默认画布是白的，样式未解析前会闪一下白。这条规则先锁死深空底色 -->
+  <style>html{background-color:#020817}</style>
+  <title>redis-分布式锁 SET NX 与 Lua 释放 - 时空秘境</title>
+  <!-- 手机端样式：基础 + 列表/正文，外链引入（源文件 source/css/theme/phone/） -->
+  <link rel="stylesheet" href="/css/theme/phone/common.css">
+  <link rel="stylesheet" href="/css/theme/phone/list.css">
+<meta name="generator" content="Hexo 8.1.2"></head>
+<body>
+<div class="mb-shell">
+  <!--
+  ============================================
+  手机端星空粒子组件
+  文件：Particles.njk
+  适用终端：手机端
+  作用：Particles.njk 的手机端副本（nunjucks 子目录 include 取不到上级）
+        参数与电脑端 _components/Particles.njk 保持一致：
+        粒子 95 / 连线 118px / opacity 0.32，外加星座层与零星闪烁层
+  最后修改：2026-11-12
+  ============================================
+--><!-- z-index 必须是 0：负层级会被 body 不透明背景盖住，粒子在跑却看不见 -->
+<div id="particles" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 0; pointer-events: none;"></div>
+<!-- 星座层（与首页同一套：随机零星散布星座图形 + 偶尔闪烁的小星） -->
+<div id="constellations" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 1; pointer-events: none;" aria-hidden="true"></div>
+<script src="/js/particles.min.js"></script>
+<script>
+particlesJS("particles", {
+  particles: {
+    number: {
+      value: 95,
+      density: {
+        enable: true,
+        value_area: 800
+      }
+    },
+    color: {
+      value: "#00eeff"
+    },
+    shape: {
+      type: "circle",
+      stroke: {
+        width: 0,
+        color: "#000000"
+      }
+    },
+    opacity: {
+      value: 0.6,
+      random: true,
+      anim: {
+        enable: true,
+        speed: 0.5,
+        opacity_min: 0.1,
+        sync: false
+      }
+    },
+    size: {
+      value: 3,
+      random: true,
+      anim: {
+        enable: true,
+        speed: 2,
+        size_min: 0.1,
+        sync: false
+      }
+    },
+    line_linked: {
+      enable: true,
+      distance: 118,
+      color: "#00eeff",
+      opacity: 0.32,
+      width: 1
+    },
+    move: {
+      enable: true,
+      speed: 0.8,
+      direction: "none",
+      random: true,
+      straight: false,
+      out_mode: "out",
+      bounce: false,
+      attract: {
+        enable: true,
+        rotateX: 600,
+        rotateY: 1200
+      }
+    }
+  },
+  interactivity: {
+    detect_on: "canvas",
+    events: {
+      onhover: {
+        enable: true,
+        mode: "grab"       // 手指按住时粒子聚集
+      },
+      onclick: {
+        enable: true,
+        mode: "push"       // 点击时产生新粒子
+      },
+      resize: true
+    },
+    modes: {
+      grab: {
+        distance: 200,
+        line_linked: {
+          opacity: 1
+        }
+      },
+      push: {
+        particles_nb: 6
+      }
+    }
+  },
+  retina_detect: true
+});
+</script>
+<!-- 星座 + 零星闪烁层：与电脑端共用同一份绘制脚本 -->
+<script src="/js/theme/home/starfield.js"></script>
+
+
+  <div class="mb-top">
+    <a class="mb-back" href="/phone/">← 返回手机首页</a>
+    <span class="mb-sub" style="margin:0">2023-02-01</span>
+  </div>
+
+  <h1 class="mb-title">redis-分布式锁 SET NX 与 Lua 释放</h1>
+  <div class="mb-sub">
+    分类：database · redis
+     ｜ 标签：Redis · 系统课 · 分布式
+  </div>
+
+  <div class="mb-article"><div class="essay-banner essay-database"></div>
+
+<h1 id="分布式锁：SET-NX-与-Lua-释放"><a href="#分布式锁：SET-NX-与-Lua-释放" class="headerlink" title="分布式锁：SET NX 与 Lua 释放"></a>分布式锁：SET NX 与 Lua 释放</h1><p><img src="https://wu4yong.github.io/starry-images/assets/img/redis/rd-42-distlock.svg" alt="SET NX PX 加锁与 Lua 校验解锁"></p>
+<p><em>加锁四步、为什么必须一条命令、解锁的三个坑｜依据 Redis 7.4 官方文档自绘</em></p>
+<h2 id="一、学习目标"><a href="#一、学习目标" class="headerlink" title="一、学习目标"></a>一、学习目标</h2><p>学完这一讲，你能做到：</p>
+<ol>
+<li>用一条 <code>SET key val NX PX ms</code> 完成加锁，而不是 <code>SETNX</code> + <code>EXPIRE</code> 两步；</li>
+<li>写出「比对 val 相同才删除」的 Lua 解锁脚本，并说明为什么必须放在一个脚本里；</li>
+<li>说清这把锁到底保证什么、不保证什么，不把它当成万能的事务替代品。</li>
+</ol>
+<h2 id="二、前置知识"><a href="#二、前置知识" class="headerlink" title="二、前置知识"></a>二、前置知识</h2><p>RD04（RESP 与命令原子性）、RD34（Lua 脚本）、RD41（一致性的窗口）。这一讲是把「单节点上的原子命令」升级成「跨进程的互斥」。</p>
+<h2 id="三、理论讲解（官方定义）"><a href="#三、理论讲解（官方定义）" class="headerlink" title="三、理论讲解（官方定义）"></a>三、理论讲解（官方定义）</h2><p><code>SET</code> 的官方选项定义（原文）：</p>
+<blockquote>
+<p><code>SET key value [NX | XX] [GET] [EX seconds | PX milliseconds | EXAT unix-time-seconds | PXAT unix-time-milliseconds | KEEPTTL]</code></p>
+<ul>
+<li><code>NX</code> – Only set the key if it does not already exist.</li>
+<li><code>PX milliseconds</code> – Set the specified expire time, in milliseconds.</li>
+</ul>
+<p>—— <a target="_blank" rel="noopener" href="https://redis.io/docs/latest/commands/set/">https://redis.io/docs/latest/commands/set/</a></p>
+</blockquote>
+<p>两条关键结论，官方原文已经给出：</p>
+<ol>
+<li><strong><code>SET</code> 是单条命令，执行是原子的</strong>（同一份文档的 Atomicity 段落：<code>SET</code> 的选项组合在一次执行中完成）；</li>
+<li><strong><code>NX</code> 与 <code>PX</code> 可以写在同一条 <code>SET</code> 里</strong>，因此「不存在则写入 + 设置过期」是原子完成的。</li>
+</ol>
+<p>这两点合起来就是分布式锁的基础：<strong>加锁必须是「判断 + 写入 + 设过期」三件事的一次原子动作</strong>。</p>
+<p>关于 Lua 的原子性（原文）：</p>
+<blockquote>
+<p>Scripts are executed atomically … no other script or command will run while a script is running.</p>
+<p>—— <a target="_blank" rel="noopener" href="https://redis.io/docs/latest/develop/interact/programmability/eval-intro/">https://redis.io/docs/latest/develop/interact/programmability/eval-intro/</a></p>
+</blockquote>
+<p>所以「比对值 + 删除」也必须在一次脚本里完成。</p>
+<h2 id="四、原理拆解"><a href="#四、原理拆解" class="headerlink" title="四、原理拆解"></a>四、原理拆解</h2><h3 id="1-为什么要-SET-NX-PX，而不是-SETNX-EXPIRE"><a href="#1-为什么要-SET-NX-PX，而不是-SETNX-EXPIRE" class="headerlink" title="1. 为什么要 SET NX PX，而不是 SETNX + EXPIRE"></a>1. 为什么要 <code>SET NX PX</code>，而不是 <code>SETNX</code> + <code>EXPIRE</code></h3><pre class="line-numbers language-none"><code class="language-none">错误写法：
+  SETNX lock 1        ← 成功
+  （进程在这里崩溃）
+  EXPIRE lock 30      ← 永远执行不到
+→ 这把锁永久存在，所有人都拿不到 → 死锁<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<pre class="line-numbers language-none"><code class="language-none">正确写法：
+  SET lock &lt;token&gt; NX PX 30000
+  → 要么「写入成功且带 30 秒过期」，要么「什么都不做」<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span></span></code></pre>
+
+<p>一条命令的原子性，消灭了「中间态崩溃」这一类故障。这是本讲最重要的一条，其他都是它的推论。</p>
+<h3 id="2-token-的作用：只能删自己的锁"><a href="#2-token-的作用：只能删自己的锁" class="headerlink" title="2. token 的作用：只能删自己的锁"></a>2. token 的作用：只能删自己的锁</h3><pre class="line-numbers language-none"><code class="language-none">A 加锁（token&#x3D;A1，PX 30s）→ 执行业务超过 30s
+  → 锁过期
+B 加锁（token&#x3D;B1）← 成功
+A 业务结束 → DEL lock
+  → 删掉了 B 的锁！现在 C 也能拿到锁 → 两个写者<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<p>所以值必须是<strong>唯一标识</strong>（UUID + 请求 ID + 线程 ID），解锁时先比对：</p>
+<pre class="line-numbers language-none"><code class="language-none">if redis.call(&#39;get&#39;, KEYS[1]) &#x3D;&#x3D; ARGV[1] then
+  return redis.call(&#39;del&#39;, KEYS[1])
+else
+  return 0
+end<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<h3 id="3-为什么校验和删除必须在同一段脚本里"><a href="#3-为什么校验和删除必须在同一段脚本里" class="headerlink" title="3. 为什么校验和删除必须在同一段脚本里"></a>3. 为什么校验和删除必须在同一段脚本里</h3><p>如果你在客户端做「<code>GET</code> 然后判断然后 <code>DEL</code>」，这中间有一个往返窗口：</p>
+<pre class="line-numbers language-none"><code class="language-none">客户端 GET → 值是我的 → （此时锁过期、别人拿到锁）
+客户端 DEL → 删掉的是别人的锁<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span></span></code></pre>
+
+<p>Lua 脚本在服务端一次执行完毕，中间不会插入其他命令，这个窗口就消失了。</p>
+<h3 id="4-锁保证什么、不保证什么"><a href="#4-锁保证什么、不保证什么" class="headerlink" title="4. 锁保证什么、不保证什么"></a>4. 锁保证什么、不保证什么</h3><ul>
+<li><strong>保证</strong>：同一时刻最多一个持有者（在锁未过期、Redis 可用、无主从切换丢锁的前提下）；</li>
+<li><strong>不保证</strong>：业务正确性。业务超时后锁已过期，你仍在写数据，此时「两个写者」事实上已经发生；</li>
+<li><strong>不保证</strong>：Redis 主从异步复制下的强一致。主库写完锁、未同步就宕机，从库升主后这把锁不存在（RD43 讲 Redlock 也是在这个问题上做文章）。</li>
+</ul>
+<h3 id="5-工程上的三条配套"><a href="#5-工程上的三条配套" class="headerlink" title="5. 工程上的三条配套"></a>5. 工程上的三条配套</h3><ul>
+<li><strong>过期时间 &#x3D; 业务最长耗时 + 余量</strong>，并在业务结束时主动释放（不要等它自然过期）；</li>
+<li><strong>获取失败要退避重试</strong>（几十毫秒随机），否则大量线程同时抢锁会产生惊群；</li>
+<li><strong>业务里加版本号或幂等键</strong>，因为锁失效后仍可能并发写，最后一道防线是业务自己。</li>
+</ul>
+<h2 id="五、场景说明"><a href="#五、场景说明" class="headerlink" title="五、场景说明"></a>五、场景说明</h2><ol>
+<li><strong>定时任务防重</strong>：同一任务只允许一个实例执行（效率锁）；</li>
+<li><strong>缓存重建互斥</strong>：RD40 的击穿解法；</li>
+<li><strong>库存扣减</strong>（需谨慎）：锁只是减少冲突，扣减本身仍需数据库条件更新；</li>
+<li><strong>不适合</strong>：需要「绝对正确」的资金操作——应该用数据库行锁&#x2F;事务，锁服务只能减少冲突。</li>
+</ol>
+<h2 id="六、示例代码-实操步骤"><a href="#六、示例代码-实操步骤" class="headerlink" title="六、示例代码&#x2F;实操步骤"></a>六、示例代码&#x2F;实操步骤</h2><pre class="line-numbers language-bash" data-language="bash"><code class="language-bash"><span class="token comment"># 1. 加锁：一条命令，带唯一 token 与 30 秒过期</span>
+<span class="token number">127.0</span>.0.1:637<span class="token operator"><span class="token file-descriptor important">9</span>></span> SET lock:order:1001 <span class="token string">"u-9f3a-4721"</span> NX PX <span class="token number">30000</span>
+OK                             <span class="token comment"># 成功</span>
+<span class="token comment"># 若已被占用，返回 (nil)</span>
+
+<span class="token comment"># 2. 查看锁的持有人与剩余时间（排查用）</span>
+<span class="token number">127.0</span>.0.1:637<span class="token operator"><span class="token file-descriptor important">9</span>></span> GET lock:order:1001
+<span class="token string">"u-9f3a-4721"</span>
+<span class="token number">127.0</span>.0.1:637<span class="token operator"><span class="token file-descriptor important">9</span>></span> PTTL lock:order:1001
+<span class="token punctuation">(</span>integer<span class="token punctuation">)</span> <span class="token number">29876</span>
+
+<span class="token comment"># 3. 解锁：Lua 脚本，比对后删除（原子）</span>
+<span class="token number">127.0</span>.0.1:637<span class="token operator"><span class="token file-descriptor important">9</span>></span> EVAL <span class="token string">"if redis.call('get',KEYS[1])==ARGV[1] then return redis.call('del',KEYS[1]) else return 0 end"</span> <span class="token number">1</span> lock:order:1001 <span class="token string">"u-9f3a-4721"</span>
+<span class="token punctuation">(</span>integer<span class="token punctuation">)</span> <span class="token number">1</span>                    <span class="token comment"># 1=删掉了自己的锁；0=已被别人持有</span>
+
+<span class="token comment"># 4. 反例：这一步不是原子的，不要这么写</span>
+<span class="token number">127.0</span>.0.1:637<span class="token operator"><span class="token file-descriptor important">9</span>></span> GET lock:order:1001
+<span class="token string">"u-9f3a-4721"</span>
+<span class="token number">127.0</span>.0.1:637<span class="token operator"><span class="token file-descriptor important">9</span>></span> DEL lock:order:1001     <span class="token comment"># 中间可能已经易主</span>
+
+<span class="token comment"># 5. 观察锁竞争（多实例并发抢同一把锁）</span>
+<span class="token number">127.0</span>.0.1:637<span class="token operator"><span class="token file-descriptor important">9</span>></span> INFO commandstats
+<span class="token comment"># cmdstat_set:calls=...,usec=...</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<p>业务侧的骨架（任意语言）：</p>
+<pre class="line-numbers language-none"><code class="language-none">for (retry in 1..3):
+    ok &#x3D; SET key token NX PX 30000
+    if ok: try &#123; doWork() &#125; finally &#123; unlockScript(key, token) &#125;
+    sleep(rand(20,80)ms)
+throw TimeoutException<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<h2 id="七、常见坑（官方明确说明的限制）"><a href="#七、常见坑（官方明确说明的限制）" class="headerlink" title="七、常见坑（官方明确说明的限制）"></a>七、常见坑（官方明确说明的限制）</h2><ol>
+<li><strong><code>SETNX</code> + <code>EXPIRE</code> 两步</strong>。中间崩溃就是永久死锁，这是最经典的一类线上事故。</li>
+<li><strong>不加过期时间</strong>。持锁进程被 kill 后，锁永不释放；<code>SET</code> 不带 <code>EX</code>&#x2F;<code>PX</code> 时官方不会自动过期。</li>
+<li><strong>直接 <code>DEL</code> 解锁</strong>。会删掉别人的锁，产生「两个写者」。</li>
+<li><strong><code>GET</code> 后 <code>DEL</code> 两步解锁</strong>。中间有窗口，仍会误删；必须用 Lua。</li>
+<li><strong>token 用固定值（如 <code>1</code>）</strong>。无法区分持有人，比对失去意义。</li>
+<li><strong>过期时间拍脑袋</strong>。太短 → 业务没做完锁就没了；太长 → 持锁进程崩溃后要等很久才恢复。</li>
+<li><strong>锁内做长耗时 IO 或 GC 停顿</strong>。JVM 一次 Full GC 就可能超过锁的 PX，锁已易主而你还在写。</li>
+<li><strong>把锁当成「分布式事务」</strong>。跨多个资源（库存 + 余额 + 订单）时，锁只能串行化，不能保证「都成功或都回滚」。</li>
+</ol>
+<h3 id="版本差异（8-x-标注）"><a href="#版本差异（8-x-标注）" class="headerlink" title="版本差异（8.x 标注）"></a>版本差异（8.x 标注）</h3><blockquote>
+<p><code>SET</code> 的 <code>NX</code>&#x2F;<code>PX</code> 语义在 2.6.12 起就稳定，7.4 与 8.x 完全一致。8.x 的差异在许可条款与集群工具链，不影响本节写法。</p>
+<p>依据：<a target="_blank" rel="noopener" href="https://redis.io/docs/latest/commands/set/">https://redis.io/docs/latest/commands/set/</a></p>
+</blockquote>
+<h2 id="八、课后小结"><a href="#八、课后小结" class="headerlink" title="八、课后小结"></a>八、课后小结</h2><ul>
+<li>加锁一条命令：<code>SET key token NX PX ms</code>；</li>
+<li>解锁一段脚本：比对 token 相等才 <code>DEL</code>；</li>
+<li>锁只保证「同一时刻一个持有者」，不保证业务正确；</li>
+<li>主从异步复制下会丢锁，强一致场景需要额外机制（下一讲）；</li>
+<li>业务侧还要幂等与版本号，锁不是最后一道防线。</li>
+</ul>
+<h2 id="九、思考题"><a href="#九、思考题" class="headerlink" title="九、思考题"></a>九、思考题</h2><ol>
+<li>为什么 <code>SETNX</code> + <code>EXPIRE</code> 会死锁？画出崩溃发生在哪一行。</li>
+<li>锁的 PX 应该怎么定？给出你项目的公式与一个具体数值。</li>
+<li><code>GET</code> + <code>DEL</code> 两步解锁，误删别人锁的窗口有多大？由什么决定？</li>
+<li>业务超时后锁已过期，你还在写库，这时最坏的结果是什么？怎么防？</li>
+<li>主库写完锁后立刻宕机，从库升主，锁还在吗？这会导致什么？</li>
+</ol>
+<h2 id="十、官方资料"><a href="#十、官方资料" class="headerlink" title="十、官方资料"></a>十、官方资料</h2><ul>
+<li>SET（<code>NX</code>&#x2F;<code>PX</code>&#x2F;<code>EXAT</code> 选项定义）：<a target="_blank" rel="noopener" href="https://redis.io/docs/latest/commands/set/">https://redis.io/docs/latest/commands/set/</a></li>
+<li>Lua 脚本与原子性：<a target="_blank" rel="noopener" href="https://redis.io/docs/latest/develop/interact/programmability/eval-intro/">https://redis.io/docs/latest/develop/interact/programmability/eval-intro/</a></li>
+<li>Distributed Locks（官方对基于 Redis 的锁的说明与局限）：<a target="_blank" rel="noopener" href="https://redis.io/docs/latest/develop/clients/patterns/distributed-locks/">https://redis.io/docs/latest/develop/clients/patterns/distributed-locks/</a></li>
+<li>DEL &#x2F; PTTL：<a target="_blank" rel="noopener" href="https://redis.io/docs/latest/commands/pttl/">https://redis.io/docs/latest/commands/pttl/</a></li>
+<li>EVAL &#x2F; EVALSHA：<a target="_blank" rel="noopener" href="https://redis.io/docs/latest/commands/eval/">https://redis.io/docs/latest/commands/eval/</a></li>
+</ul>
+<p>上一篇：<a href="/2023/01/31/database/redis/redis-41-consistency/">RD41 缓存与数据库一致性</a> ｜ 下一篇：<a href="/2023/02/02/database/redis/redis-43-redlock/">RD43 Redlock 与官方立场</a> ｜ <a href="/2022/12/21/database/redis/redis-0-series-index/">总目录</a></p>
+</div>
+
+  <div class="mb-foot">
+    <a href="/phone/">返回手机首页</a>
+    <a href="/phone/tags/">星迹索引</a>
+  </div>
+</div>
+
+
+<script>
+  /* 作用：懒加载本地 mermaid 库；无 mermaid 代码块时不加载 */
+  function loadLocalMermaid(){
+    return new Promise(function(resolve, reject){
+      if(window.mermaid) return resolve(window.mermaid);
+      var s = document.createElement('script');
+      s.src = '/js/third-party/mermaid/mermaid.min.js?v=10';
+      s.onload = function(){ resolve(window.mermaid); };
+      s.onerror = function(){ reject(new Error('mermaid local load failed')); };
+      document.head.appendChild(s);
+    });
+  }
+
+  /* 作用：把 ```mermaid 代码块替换成 SVG 图（手机端字号略小、图可横向滚动） */
+  async function renderMermaidDiagram(){
+    var blocks = document.querySelectorAll('pre[class*="language-mermaid"]');
+    if(!blocks.length) return;
+    var mermaid;
+    try { mermaid = await loadLocalMermaid(); }
+    catch(e){ console.warn('[mermaid] 本地库加载失败：', e); return; }
+
+    mermaid.initialize({
+      startOnLoad: false,
+      theme: 'base',
+      themeVariables: {
+        darkMode: true,
+        background: 'transparent',
+        fontFamily: '"Microsoft YaHei", "PingFang SC", "Segoe UI", sans-serif',
+        fontSize: '12px',
+        primaryColor: '#062f3d',
+        primaryTextColor: '#d6f6ff',
+        primaryBorderColor: '#00eeff',
+        secondaryColor: '#04222d',
+        tertiaryColor: '#04222d',
+        mainBkg: '#062f3d',
+        nodeBorder: '#00eeff',
+        clusterBkg: '#02161f',
+        clusterBorder: '#00eeff55',
+        lineColor: '#00eeff',
+        textColor: '#c0e8ff',
+        edgeLabelBackground: '#02161f'
+      },
+      flowchart: { curve: 'basis', useMaxWidth: false, htmlLabels: false, nodeSpacing: 30, rankSpacing: 40, padding: 10 }
+    });
+
+    var targets = [];
+    blocks.forEach(function(el){
+      var codeEl = el.querySelector('code');
+      if(!codeEl) return;
+      var div = document.createElement('div');
+      div.className = 'mermaid';
+      div.textContent = codeEl.textContent;
+      el.parentNode.replaceChild(div, el);
+      targets.push(div);
+    });
+    if(!targets.length) return;
+    try { await mermaid.run({ nodes: targets }); }
+    catch(e){ console.warn('[mermaid] 渲染失败：', e); }
+  }
+  /* 作用：多次触发兜底（延迟重试 + DOM 变化），防止某次时机没跑到导致图表留在代码块 */
+  var mmBusy = false;
+  function scheduleMermaid(){
+    if(mmBusy) return;
+    mmBusy = true;
+    renderMermaidDiagram().then(function(){ mmBusy = false; }, function(){ mmBusy = false; });
+  }
+  scheduleMermaid();
+  window.addEventListener('load', scheduleMermaid);
+  [1000, 3000, 8000].forEach(function(ms){ setTimeout(scheduleMermaid, ms); });
+  if(document.readyState !== 'loading') scheduleMermaid();
+  if(window.MutationObserver){
+    var mmTimer = null;
+    var mmObserver = new MutationObserver(function(){
+      clearTimeout(mmTimer);
+      mmTimer = setTimeout(scheduleMermaid, 400);
+    });
+    mmObserver.observe(document.querySelector('.mb-article') || document.body, { childList: true, subtree: true });
+  }
+</script>
+</body>
+</html>

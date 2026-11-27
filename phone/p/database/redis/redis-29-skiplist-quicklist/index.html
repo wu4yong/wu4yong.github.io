@@ -1,0 +1,441 @@
+<!--
+  ============================================
+  手机端 · 文章原文页
+  文件：phone/post.njk
+  适用终端：手机端（路由 /phone/p/<slug>/，由 scripts/phone-routes.js 生成）
+  作用：手机阅读单篇文章；单列布局、无侧栏无雷达，替代电脑端 post.njk
+        数据由生成期算好：page.item = { title, dateStr, content, cats, tags }
+  样式依赖：source/css/theme/phone/common.css、source/css/theme/phone/list.css
+  组件依赖：phone/_components/Particles.njk
+  最后修改：2026-11-11
+  ============================================
+-->
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="color-scheme" content="dark">
+  <meta name="theme-color" content="#020817">
+  <!-- 首帧兜底：浏览器默认画布是白的，样式未解析前会闪一下白。这条规则先锁死深空底色 -->
+  <style>html{background-color:#020817}</style>
+  <title>redis-skiplist 与 quicklist：ZSet 与 List 的底层 - 时空秘境</title>
+  <!-- 手机端样式：基础 + 列表/正文，外链引入（源文件 source/css/theme/phone/） -->
+  <link rel="stylesheet" href="/css/theme/phone/common.css">
+  <link rel="stylesheet" href="/css/theme/phone/list.css">
+<meta name="generator" content="Hexo 8.1.2"></head>
+<body>
+<div class="mb-shell">
+  <!--
+  ============================================
+  手机端星空粒子组件
+  文件：Particles.njk
+  适用终端：手机端
+  作用：Particles.njk 的手机端副本（nunjucks 子目录 include 取不到上级）
+        参数与电脑端 _components/Particles.njk 保持一致：
+        粒子 95 / 连线 118px / opacity 0.32，外加星座层与零星闪烁层
+  最后修改：2026-11-12
+  ============================================
+--><!-- z-index 必须是 0：负层级会被 body 不透明背景盖住，粒子在跑却看不见 -->
+<div id="particles" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 0; pointer-events: none;"></div>
+<!-- 星座层（与首页同一套：随机零星散布星座图形 + 偶尔闪烁的小星） -->
+<div id="constellations" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 1; pointer-events: none;" aria-hidden="true"></div>
+<script src="/js/particles.min.js"></script>
+<script>
+particlesJS("particles", {
+  particles: {
+    number: {
+      value: 95,
+      density: {
+        enable: true,
+        value_area: 800
+      }
+    },
+    color: {
+      value: "#00eeff"
+    },
+    shape: {
+      type: "circle",
+      stroke: {
+        width: 0,
+        color: "#000000"
+      }
+    },
+    opacity: {
+      value: 0.6,
+      random: true,
+      anim: {
+        enable: true,
+        speed: 0.5,
+        opacity_min: 0.1,
+        sync: false
+      }
+    },
+    size: {
+      value: 3,
+      random: true,
+      anim: {
+        enable: true,
+        speed: 2,
+        size_min: 0.1,
+        sync: false
+      }
+    },
+    line_linked: {
+      enable: true,
+      distance: 118,
+      color: "#00eeff",
+      opacity: 0.32,
+      width: 1
+    },
+    move: {
+      enable: true,
+      speed: 0.8,
+      direction: "none",
+      random: true,
+      straight: false,
+      out_mode: "out",
+      bounce: false,
+      attract: {
+        enable: true,
+        rotateX: 600,
+        rotateY: 1200
+      }
+    }
+  },
+  interactivity: {
+    detect_on: "canvas",
+    events: {
+      onhover: {
+        enable: true,
+        mode: "grab"       // 手指按住时粒子聚集
+      },
+      onclick: {
+        enable: true,
+        mode: "push"       // 点击时产生新粒子
+      },
+      resize: true
+    },
+    modes: {
+      grab: {
+        distance: 200,
+        line_linked: {
+          opacity: 1
+        }
+      },
+      push: {
+        particles_nb: 6
+      }
+    }
+  },
+  retina_detect: true
+});
+</script>
+<!-- 星座 + 零星闪烁层：与电脑端共用同一份绘制脚本 -->
+<script src="/js/theme/home/starfield.js"></script>
+
+
+  <div class="mb-top">
+    <a class="mb-back" href="/phone/">← 返回手机首页</a>
+    <span class="mb-sub" style="margin:0">2023-01-19</span>
+  </div>
+
+  <h1 class="mb-title">redis-skiplist 与 quicklist：ZSet 与 List 的底层</h1>
+  <div class="mb-sub">
+    分类：database · redis
+     ｜ 标签：Redis · 系统课 · 底层原理
+  </div>
+
+  <div class="mb-article"><div class="essay-banner essay-database"></div>
+
+<h1 id="skiplist-与-quicklist：ZSet-与-List-的底层"><a href="#skiplist-与-quicklist：ZSet-与-List-的底层" class="headerlink" title="skiplist 与 quicklist：ZSet 与 List 的底层"></a>skiplist 与 quicklist：ZSet 与 List 的底层</h1><p><img src="https://wu4yong.github.io/starry-images/assets/img/redis/rd-29-skiplist.svg" alt="skiplist 多层结构、ZSet 双结构与 quicklist 链"></p>
+<p><em>skiplist 的 L2&#x2F;L1&#x2F;L0 分层、ZSet 的 dict + skiplist 双结构与 quicklist 的 listpack 链｜依据 Redis 7.4 源码与官方文档自绘</em></p>
+<h2 id="一、学习目标"><a href="#一、学习目标" class="headerlink" title="一、学习目标"></a>一、学习目标</h2><p>学完这一讲，你要能做到三件事：</p>
+<ol>
+<li>讲清 skiplist 的层高随机机制与它为什么能做到平均 O(log N) 的范围查询；</li>
+<li>说清 ZSet 为什么同时维护 <code>dict</code> 与 <code>skiplist</code>，各自负责哪一类命令；</li>
+<li>说清 List 的 <code>quicklist</code> &#x3D; 双向链表 + listpack 节点，以及节点大小对性能的影响。</li>
+</ol>
+<h2 id="二、前置知识"><a href="#二、前置知识" class="headerlink" title="二、前置知识"></a>二、前置知识</h2><p>RD09（ZSet 命令）、RD06（List 命令）、RD28（listpack）。本讲讨论这两种类型的结构选择：为什么 ZSet 要两份结构、List 为什么不直接用链表。</p>
+<h2 id="三、理论讲解（官方定义）"><a href="#三、理论讲解（官方定义）" class="headerlink" title="三、理论讲解（官方定义）"></a>三、理论讲解（官方定义）</h2><p><code>t_zset.c</code> 注释说明了 ZSet 的双结构（原文要点）：</p>
+<blockquote>
+<p>The elements are added to a hash table … and to a skiplist … The hash table is used to map the element to its score in O(1) … the skiplist is used to get the elements in sorted order.</p>
+<p>—— <a target="_blank" rel="noopener" href="https://github.com/redis/redis/blob/7.4/src/t_zset.c">https://github.com/redis/redis/blob/7.4/src/t_zset.c</a></p>
+</blockquote>
+<p><code>quicklist.c</code> 的定位（原文要点）：</p>
+<blockquote>
+<p>A quicklist is a linked list of ziplists (now listpacks) … it provides a compromise between memory usage and performance.</p>
+<p>—— <a target="_blank" rel="noopener" href="https://github.com/redis/redis/blob/7.4/src/quicklist.c">https://github.com/redis/redis/blob/7.4/src/quicklist.c</a></p>
+</blockquote>
+<p>两条定性：</p>
+<ul>
+<li><strong>ZSet &#x3D; dict（按 member 查 score）+ skiplist（按 score 排序）</strong>，两份结构共享 member 字符串；</li>
+<li><strong>List &#x3D; quicklist（双向链表）</strong>，每个链表节点装一个 <code>listpack</code>，兼顾「插入快」与「内存省」。</li>
+</ul>
+<h2 id="四、原理拆解"><a href="#四、原理拆解" class="headerlink" title="四、原理拆解"></a>四、原理拆解</h2><h3 id="1-skiplist-的四条规则"><a href="#1-skiplist-的四条规则" class="headerlink" title="1. skiplist 的四条规则"></a>1. skiplist 的四条规则</h3><table>
+<thead>
+<tr>
+<th>规则</th>
+<th>值</th>
+<th>含义</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>最大层数</td>
+<td>32</td>
+<td><code>ZSKIPLIST_MAXLEVEL</code>，决定理论上的元素规模上限</td>
+</tr>
+<tr>
+<td>提升概率</td>
+<td>0.25</td>
+<td>每层晋升概率 <code>ZSKIPLIST_P</code>，期望层数随 N 对数增长</td>
+</tr>
+<tr>
+<td>排序</td>
+<td>score 升序，score 相同按 member 字典序</td>
+<td>保证遍历结果确定</td>
+</tr>
+<tr>
+<td>跨度</td>
+<td>每个前进指针记录 <code>span</code></td>
+<td>支撑 <code>ZRANK</code> 的 O(log N)</td>
+</tr>
+</tbody></table>
+<p><code>span</code> 这个字段很容易被忽略：它让「第几名」这类排名查询也能走 skiplist，不必再遍历。没有它，<code>ZRANK</code> 就只能 O(N)。</p>
+<h3 id="2-为什么用-skiplist-而不用平衡树"><a href="#2-为什么用-skiplist-而不用平衡树" class="headerlink" title="2. 为什么用 skiplist 而不用平衡树"></a>2. 为什么用 skiplist 而不用平衡树</h3><p>三个务实理由：</p>
+<ul>
+<li><strong>范围查询友好</strong>：<code>ZRANGEBYSCORE</code> 只需在底层链表上顺序走，不用中序遍历回溯；</li>
+<li><strong>实现简单</strong>：插入删除只改指针，不需要旋转或分裂，代码量与出错概率都低；</li>
+<li><strong>无需维护平衡</strong>：层高随机，不存在「失衡后修复」的额外分支。</li>
+</ul>
+<p>代价是<strong>最坏情况不是严格 O(log N)</strong>（由随机性决定），但期望值很稳定。</p>
+<h3 id="3-ZSet-的两份结构怎么协作"><a href="#3-ZSet-的两份结构怎么协作" class="headerlink" title="3. ZSet 的两份结构怎么协作"></a>3. ZSet 的两份结构怎么协作</h3><table>
+<thead>
+<tr>
+<th>命令</th>
+<th>走哪份结构</th>
+<th>复杂度</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>ZSCORE</code> &#x2F; <code>ZADD</code>（改分值）</td>
+<td>dict</td>
+<td>O(1)</td>
+</tr>
+<tr>
+<td><code>ZRANGE</code> &#x2F; <code>ZRANGEBYSCORE</code></td>
+<td>skiplist</td>
+<td>O(log N + M)</td>
+</tr>
+<tr>
+<td><code>ZRANK</code> &#x2F; <code>ZREVRANK</code></td>
+<td>skiplist（靠 span）</td>
+<td>O(log N)</td>
+</tr>
+<tr>
+<td><code>ZCARD</code></td>
+<td>头部计数</td>
+<td>O(1)</td>
+</tr>
+</tbody></table>
+<p>两份结构共享同一个 member 字符串（用 SDS 指针），所以<strong>不会双份存 member</strong>。这条经常被误解为「ZSet 内存是两倍」——实际翻倍的是指针与 score，不是字符串本身。</p>
+<h3 id="4-quicklist-的节点策略"><a href="#4-quicklist-的节点策略" class="headerlink" title="4. quicklist 的节点策略"></a>4. quicklist 的节点策略</h3><pre class="line-numbers language-none"><code class="language-none">quicklist
+├── node1: listpack（若干 entry）
+├── node2: listpack（若干 entry）
+└── node3: listpack（若干 entry）<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span></span></code></pre>
+
+<p>节点大小由 <code>list-max-listpack-size</code> 控制：</p>
+<ul>
+<li><strong>正数</strong>（默认 128）&#x3D; 每个节点最多装多少个 entry；</li>
+<li><strong>负数</strong> &#x3D; 每个节点最多多少字节：<code>-1</code> 4KB、<code>-2</code> 8KB、<code>-3</code> 16KB、<code>-4</code> 32KB、<code>-5</code> 64KB。</li>
+</ul>
+<p>两个极端都不好：</p>
+<ul>
+<li>节点太大 → 单节点内插入要搬移大量数据，<code>LINSERT</code> 变慢，且大 listpack 释放时会造成延迟毛刺；</li>
+<li>节点太小 → 退化成「纯双向链表」，每个元素都有两个指针，内存暴涨。</li>
+</ul>
+<h2 id="五、场景说明"><a href="#五、场景说明" class="headerlink" title="五、场景说明"></a>五、场景说明</h2><ol>
+<li><strong>排行榜</strong>：ZSet 的典型用法，<code>ZREVRANGE</code> 走 skiplist，几百万成员仍然很快；</li>
+<li><strong>延迟队列</strong>：score 存时间戳，<code>ZRANGEBYSCORE 0 now</code> 取到期任务，靠的就是 skiplist 的范围查询；</li>
+<li><strong>简单消息队列</strong>：List + <code>LPUSH</code>&#x2F;<code>BRPOP</code>，<code>quicklist</code> 的节点大小决定吞吐；</li>
+<li><strong>大 List 的 <code>LINSERT</code></strong>：中间插入是 O(N)（要定位节点 + 节点内搬移），业务上应避免。</li>
+</ol>
+<h2 id="六、示例代码-实操步骤"><a href="#六、示例代码-实操步骤" class="headerlink" title="六、示例代码&#x2F;实操步骤"></a>六、示例代码&#x2F;实操步骤</h2><pre class="line-numbers language-bash" data-language="bash"><code class="language-bash"><span class="token comment"># 1. 观察 ZSet 的编码与结构选择</span>
+<span class="token number">127.0</span>.0.1:637<span class="token operator"><span class="token file-descriptor important">9</span>></span> ZADD rank <span class="token number">100</span> alice <span class="token number">200</span> bob <span class="token number">300</span> carol
+<span class="token punctuation">(</span>integer<span class="token punctuation">)</span> <span class="token number">3</span>
+<span class="token number">127.0</span>.0.1:637<span class="token operator"><span class="token file-descriptor important">9</span>></span> OBJECT ENCODING rank
+<span class="token string">"listpack"</span>                    <span class="token comment"># 小集合用紧凑编码（RD28）</span>
+
+<span class="token comment"># 2. 超过阈值后转 skiplist（此处手动调小阈值演示）</span>
+<span class="token number">127.0</span>.0.1:637<span class="token operator"><span class="token file-descriptor important">9</span>></span> CONFIG SET zset-max-listpack-entries <span class="token number">2</span>
+OK
+<span class="token number">127.0</span>.0.1:637<span class="token operator"><span class="token file-descriptor important">9</span>></span> ZADD rank <span class="token number">400</span> dave
+<span class="token punctuation">(</span>integer<span class="token punctuation">)</span> <span class="token number">1</span>
+<span class="token number">127.0</span>.0.1:637<span class="token operator"><span class="token file-descriptor important">9</span>></span> OBJECT ENCODING rank
+<span class="token string">"skiplist"</span>
+
+<span class="token comment"># 3. 范围查询与排名</span>
+<span class="token number">127.0</span>.0.1:637<span class="token operator"><span class="token file-descriptor important">9</span>></span> ZRANGEBYSCORE rank <span class="token number">150</span> <span class="token number">350</span>
+<span class="token number">1</span><span class="token punctuation">)</span> <span class="token string">"bob"</span>
+<span class="token number">2</span><span class="token punctuation">)</span> <span class="token string">"carol"</span>
+<span class="token number">127.0</span>.0.1:637<span class="token operator"><span class="token file-descriptor important">9</span>></span> ZRANK rank carol
+<span class="token punctuation">(</span>integer<span class="token punctuation">)</span> <span class="token number">2</span>                   <span class="token comment"># O(log N)，靠 span 实现</span>
+<span class="token number">127.0</span>.0.1:637<span class="token operator"><span class="token file-descriptor important">9</span>></span> ZSCORE rank carol
+<span class="token string">"300"</span>                         <span class="token comment"># O(1)，走 dict</span>
+
+<span class="token comment"># 4. List 的节点大小（正数=条目数，负数=字节上限）</span>
+<span class="token number">127.0</span>.0.1:637<span class="token operator"><span class="token file-descriptor important">9</span>></span> CONFIG GET list-max-listpack-size
+<span class="token number">1</span><span class="token punctuation">)</span> <span class="token string">"list-max-listpack-size"</span>
+<span class="token number">2</span><span class="token punctuation">)</span> <span class="token string">"128"</span>
+
+<span class="token number">127.0</span>.0.1:637<span class="token operator"><span class="token file-descriptor important">9</span>></span> CONFIG SET list-max-listpack-size <span class="token parameter variable">-2</span>
+OK                            <span class="token comment"># 改为每节点 8KB</span>
+
+<span class="token comment"># 5. 观察 List 的内存与编码</span>
+<span class="token number">127.0</span>.0.1:637<span class="token operator"><span class="token file-descriptor important">9</span>></span> RPUSH q a b c
+<span class="token punctuation">(</span>integer<span class="token punctuation">)</span> <span class="token number">3</span>
+<span class="token number">127.0</span>.0.1:637<span class="token operator"><span class="token file-descriptor important">9</span>></span> OBJECT ENCODING q
+<span class="token string">"listpack"</span>
+<span class="token number">127.0</span>.0.1:637<span class="token operator"><span class="token file-descriptor important">9</span>></span> MEMORY USAGE q
+<span class="token punctuation">(</span>integer<span class="token punctuation">)</span> <span class="token number">96</span>
+
+<span class="token comment"># 6. 延迟队列的标准写法</span>
+<span class="token number">127.0</span>.0.1:637<span class="token operator"><span class="token file-descriptor important">9</span>></span> ZADD delay <span class="token number">1700000000</span> task:1
+<span class="token punctuation">(</span>integer<span class="token punctuation">)</span> <span class="token number">1</span>
+<span class="token number">127.0</span>.0.1:637<span class="token operator"><span class="token file-descriptor important">9</span>></span> ZRANGEBYSCORE delay <span class="token number">0</span> <span class="token number">1700000000</span> LIMIT <span class="token number">0</span> <span class="token number">10</span>
+<span class="token number">1</span><span class="token punctuation">)</span> <span class="token string">"task:1"</span>
+<span class="token number">127.0</span>.0.1:637<span class="token operator"><span class="token file-descriptor important">9</span>></span> ZREM delay task:1
+<span class="token punctuation">(</span>integer<span class="token punctuation">)</span> <span class="token number">1</span>
+
+<span class="token comment"># 7. 对比节点大小设置对内存的影响</span>
+<span class="token number">127.0</span>.0.1:637<span class="token operator"><span class="token file-descriptor important">9</span>></span> EVAL <span class="token string">"for i=1,500 do redis.call('LPUSH', KEYS[1], 'x'..i..string.rep('y',20)) end return redis.call('LLEN', KEYS[1])"</span> <span class="token number">1</span> q2
+<span class="token punctuation">(</span>integer<span class="token punctuation">)</span> <span class="token number">500</span>
+<span class="token number">127.0</span>.0.1:637<span class="token operator"><span class="token file-descriptor important">9</span>></span> MEMORY USAGE q2<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<h2 id="七、常见坑（官方明确说明的限制）"><a href="#七、常见坑（官方明确说明的限制）" class="headerlink" title="七、常见坑（官方明确说明的限制）"></a>七、常见坑（官方明确说明的限制）</h2><ol>
+<li><strong>以为 ZSet 内存是「两份数据」</strong>。member 字符串是共享的，翻倍的是指针与 score 结构。</li>
+<li><strong>用 ZSet 存超长 member</strong>。member 超过 64 字节会退出 <code>listpack</code>（RD28），并且 skiplist 每个节点都带指针与 span，内存显著上升。</li>
+<li><strong><code>list-max-listpack-size</code> 设成 1</strong>。等价于纯双向链表，内存暴涨数倍。</li>
+<li><strong>把 <code>ZCARD</code> 当 O(N)</strong>。它是 O(1)，读的是头部计数。</li>
+<li><strong>用 <code>ZRANGE 0 -1</code> 拉全量</strong>。几百万成员会一次性构造大回复，阻塞主线程并使网络打满。</li>
+<li><strong>高频 <code>ZRANK</code> 做实时排行榜</strong>。单次是 O(log N) 没问题，但大量请求会争抢「单线程执行权」，P99 会被抬起来。</li>
+<li><strong><code>quicklist</code> 节点过大导致释放慢</strong>。删大 List 时释放 listpack 是一次性动作，会形成延迟毛刺。</li>
+<li><strong>把 <code>list-max-ziplist-size</code> 当现行配置</strong>。7.2 起统一到 <code>list-max-listpack-size</code>，旧名兼容但文档不再提。</li>
+</ol>
+<h3 id="版本差异（8-x-标注）"><a href="#版本差异（8-x-标注）" class="headerlink" title="版本差异（8.x 标注）"></a>版本差异（8.x 标注）</h3><blockquote>
+<p><code>skiplist</code> 的最大层数（32）与提升概率（0.25）在 7.x 与 8.x 一致；<code>quicklist</code> 自 7.2 起节点统一用 <code>listpack</code>，8.x 沿用。8.x 的差异在数据类型扩展与许可，核心结构不变。</p>
+<p>依据：<a target="_blank" rel="noopener" href="https://github.com/redis/redis/blob/7.4/src/t_zset.c">https://github.com/redis/redis/blob/7.4/src/t_zset.c</a></p>
+</blockquote>
+<h2 id="八、课后小结"><a href="#八、课后小结" class="headerlink" title="八、课后小结"></a>八、课后小结</h2><ul>
+<li>skiplist：最大 32 层、晋升概率 0.25、score 升序 + member 字典序、span 支撑 <code>ZRANK</code>；</li>
+<li>选 skiplist 而不是平衡树，是为了范围查询简单、实现轻、无需维护平衡；</li>
+<li>ZSet &#x3D; dict（O(1) 取 score）+ skiplist（有序范围），member 字符串共享；</li>
+<li>List &#x3D; quicklist（双向链表），节点是 listpack，大小由 <code>list-max-listpack-size</code> 控制；</li>
+<li>节点过大插入慢、过小内存涨，默认 128 是折中；</li>
+<li>大 member、大节点是内存与延迟的两个常见坑。</li>
+</ul>
+<h2 id="九、思考题"><a href="#九、思考题" class="headerlink" title="九、思考题"></a>九、思考题</h2><ol>
+<li>skiplist 的 <code>span</code> 字段解决了什么问题？如果没有它，<code>ZRANK</code> 会变成什么复杂度？</li>
+<li>为什么 ZSet 不「只保留 skiplist」？只保留它会失去什么？</li>
+<li><code>list-max-listpack-size</code> 从 128 改成 1，内存与 <code>LINSERT</code> 性能分别怎么变？</li>
+<li>一个 500 万元素的 ZSet，<code>ZRANGE 0 -1</code> 会发生什么？正确做法是什么？</li>
+<li>用 ZSet 做延迟队列，多个消费者同时 <code>ZRANGEBYSCORE</code> 同一条任务会怎样？如何保证只被取一次？</li>
+</ol>
+<h2 id="十、官方资料"><a href="#十、官方资料" class="headerlink" title="十、官方资料"></a>十、官方资料</h2><ul>
+<li>t_zset.c（ZSet 双结构与 skiplist 常量）：<a target="_blank" rel="noopener" href="https://github.com/redis/redis/blob/7.4/src/t_zset.c">https://github.com/redis/redis/blob/7.4/src/t_zset.c</a></li>
+<li>quicklist.c（listpack 节点与大小策略）：<a target="_blank" rel="noopener" href="https://github.com/redis/redis/blob/7.4/src/quicklist.c">https://github.com/redis/redis/blob/7.4/src/quicklist.c</a></li>
+<li>Sorted sets 数据类型（命令与复杂度）：<a target="_blank" rel="noopener" href="https://redis.io/docs/latest/develop/data-types/sorted-sets/">https://redis.io/docs/latest/develop/data-types/sorted-sets/</a></li>
+<li>redis.conf（<code>list-max-listpack-size</code> 正负值语义）：<a target="_blank" rel="noopener" href="https://redis.io/docs/latest/operate/oss_and_stack/management/config-file/">https://redis.io/docs/latest/operate/oss_and_stack/management/config-file/</a></li>
+<li>ZRANK &#x2F; ZRANGEBYSCORE（复杂度说明）：<a target="_blank" rel="noopener" href="https://redis.io/docs/latest/commands/zrank/">https://redis.io/docs/latest/commands/zrank/</a></li>
+</ul>
+<p>上一篇：<a href="/2023/01/18/database/redis/redis-28-listpack-intset/">RD28 listpack 与 intset</a> ｜ 下一篇：<a href="/2023/01/20/database/redis/redis-30-event-loop/">RD30 事件循环与 IO 多线程</a> ｜ <a href="/2022/12/21/database/redis/redis-0-series-index/">总目录</a></p>
+</div>
+
+  <div class="mb-foot">
+    <a href="/phone/">返回手机首页</a>
+    <a href="/phone/tags/">星迹索引</a>
+  </div>
+</div>
+
+
+<script>
+  /* 作用：懒加载本地 mermaid 库；无 mermaid 代码块时不加载 */
+  function loadLocalMermaid(){
+    return new Promise(function(resolve, reject){
+      if(window.mermaid) return resolve(window.mermaid);
+      var s = document.createElement('script');
+      s.src = '/js/third-party/mermaid/mermaid.min.js?v=10';
+      s.onload = function(){ resolve(window.mermaid); };
+      s.onerror = function(){ reject(new Error('mermaid local load failed')); };
+      document.head.appendChild(s);
+    });
+  }
+
+  /* 作用：把 ```mermaid 代码块替换成 SVG 图（手机端字号略小、图可横向滚动） */
+  async function renderMermaidDiagram(){
+    var blocks = document.querySelectorAll('pre[class*="language-mermaid"]');
+    if(!blocks.length) return;
+    var mermaid;
+    try { mermaid = await loadLocalMermaid(); }
+    catch(e){ console.warn('[mermaid] 本地库加载失败：', e); return; }
+
+    mermaid.initialize({
+      startOnLoad: false,
+      theme: 'base',
+      themeVariables: {
+        darkMode: true,
+        background: 'transparent',
+        fontFamily: '"Microsoft YaHei", "PingFang SC", "Segoe UI", sans-serif',
+        fontSize: '12px',
+        primaryColor: '#062f3d',
+        primaryTextColor: '#d6f6ff',
+        primaryBorderColor: '#00eeff',
+        secondaryColor: '#04222d',
+        tertiaryColor: '#04222d',
+        mainBkg: '#062f3d',
+        nodeBorder: '#00eeff',
+        clusterBkg: '#02161f',
+        clusterBorder: '#00eeff55',
+        lineColor: '#00eeff',
+        textColor: '#c0e8ff',
+        edgeLabelBackground: '#02161f'
+      },
+      flowchart: { curve: 'basis', useMaxWidth: false, htmlLabels: false, nodeSpacing: 30, rankSpacing: 40, padding: 10 }
+    });
+
+    var targets = [];
+    blocks.forEach(function(el){
+      var codeEl = el.querySelector('code');
+      if(!codeEl) return;
+      var div = document.createElement('div');
+      div.className = 'mermaid';
+      div.textContent = codeEl.textContent;
+      el.parentNode.replaceChild(div, el);
+      targets.push(div);
+    });
+    if(!targets.length) return;
+    try { await mermaid.run({ nodes: targets }); }
+    catch(e){ console.warn('[mermaid] 渲染失败：', e); }
+  }
+  /* 作用：多次触发兜底（延迟重试 + DOM 变化），防止某次时机没跑到导致图表留在代码块 */
+  var mmBusy = false;
+  function scheduleMermaid(){
+    if(mmBusy) return;
+    mmBusy = true;
+    renderMermaidDiagram().then(function(){ mmBusy = false; }, function(){ mmBusy = false; });
+  }
+  scheduleMermaid();
+  window.addEventListener('load', scheduleMermaid);
+  [1000, 3000, 8000].forEach(function(ms){ setTimeout(scheduleMermaid, ms); });
+  if(document.readyState !== 'loading') scheduleMermaid();
+  if(window.MutationObserver){
+    var mmTimer = null;
+    var mmObserver = new MutationObserver(function(){
+      clearTimeout(mmTimer);
+      mmTimer = setTimeout(scheduleMermaid, 400);
+    });
+    mmObserver.observe(document.querySelector('.mb-article') || document.body, { childList: true, subtree: true });
+  }
+</script>
+</body>
+</html>

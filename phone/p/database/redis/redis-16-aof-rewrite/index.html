@@ -1,0 +1,406 @@
+<!--
+  ============================================
+  手机端 · 文章原文页
+  文件：phone/post.njk
+  适用终端：手机端（路由 /phone/p/<slug>/，由 scripts/phone-routes.js 生成）
+  作用：手机阅读单篇文章；单列布局、无侧栏无雷达，替代电脑端 post.njk
+        数据由生成期算好：page.item = { title, dateStr, content, cats, tags }
+  样式依赖：source/css/theme/phone/common.css、source/css/theme/phone/list.css
+  组件依赖：phone/_components/Particles.njk
+  最后修改：2026-11-11
+  ============================================
+-->
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="color-scheme" content="dark">
+  <meta name="theme-color" content="#020817">
+  <!-- 首帧兜底：浏览器默认画布是白的，样式未解析前会闪一下白。这条规则先锁死深空底色 -->
+  <style>html{background-color:#020817}</style>
+  <title>redis-AOF 重写与混合持久化 - 时空秘境</title>
+  <!-- 手机端样式：基础 + 列表/正文，外链引入（源文件 source/css/theme/phone/） -->
+  <link rel="stylesheet" href="/css/theme/phone/common.css">
+  <link rel="stylesheet" href="/css/theme/phone/list.css">
+<meta name="generator" content="Hexo 8.1.2"></head>
+<body>
+<div class="mb-shell">
+  <!--
+  ============================================
+  手机端星空粒子组件
+  文件：Particles.njk
+  适用终端：手机端
+  作用：Particles.njk 的手机端副本（nunjucks 子目录 include 取不到上级）
+        参数与电脑端 _components/Particles.njk 保持一致：
+        粒子 95 / 连线 118px / opacity 0.32，外加星座层与零星闪烁层
+  最后修改：2026-11-12
+  ============================================
+--><!-- z-index 必须是 0：负层级会被 body 不透明背景盖住，粒子在跑却看不见 -->
+<div id="particles" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 0; pointer-events: none;"></div>
+<!-- 星座层（与首页同一套：随机零星散布星座图形 + 偶尔闪烁的小星） -->
+<div id="constellations" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 1; pointer-events: none;" aria-hidden="true"></div>
+<script src="/js/particles.min.js"></script>
+<script>
+particlesJS("particles", {
+  particles: {
+    number: {
+      value: 95,
+      density: {
+        enable: true,
+        value_area: 800
+      }
+    },
+    color: {
+      value: "#00eeff"
+    },
+    shape: {
+      type: "circle",
+      stroke: {
+        width: 0,
+        color: "#000000"
+      }
+    },
+    opacity: {
+      value: 0.6,
+      random: true,
+      anim: {
+        enable: true,
+        speed: 0.5,
+        opacity_min: 0.1,
+        sync: false
+      }
+    },
+    size: {
+      value: 3,
+      random: true,
+      anim: {
+        enable: true,
+        speed: 2,
+        size_min: 0.1,
+        sync: false
+      }
+    },
+    line_linked: {
+      enable: true,
+      distance: 118,
+      color: "#00eeff",
+      opacity: 0.32,
+      width: 1
+    },
+    move: {
+      enable: true,
+      speed: 0.8,
+      direction: "none",
+      random: true,
+      straight: false,
+      out_mode: "out",
+      bounce: false,
+      attract: {
+        enable: true,
+        rotateX: 600,
+        rotateY: 1200
+      }
+    }
+  },
+  interactivity: {
+    detect_on: "canvas",
+    events: {
+      onhover: {
+        enable: true,
+        mode: "grab"       // 手指按住时粒子聚集
+      },
+      onclick: {
+        enable: true,
+        mode: "push"       // 点击时产生新粒子
+      },
+      resize: true
+    },
+    modes: {
+      grab: {
+        distance: 200,
+        line_linked: {
+          opacity: 1
+        }
+      },
+      push: {
+        particles_nb: 6
+      }
+    }
+  },
+  retina_detect: true
+});
+</script>
+<!-- 星座 + 零星闪烁层：与电脑端共用同一份绘制脚本 -->
+<script src="/js/theme/home/starfield.js"></script>
+
+
+  <div class="mb-top">
+    <a class="mb-back" href="/phone/">← 返回手机首页</a>
+    <span class="mb-sub" style="margin:0">2023-01-06</span>
+  </div>
+
+  <h1 class="mb-title">redis-AOF 重写与混合持久化</h1>
+  <div class="mb-sub">
+    分类：database · redis
+     ｜ 标签：Redis · 系统课 · 持久化
+  </div>
+
+  <div class="mb-article"><div class="essay-banner essay-database"></div>
+
+<h1 id="AOF-重写与混合持久化"><a href="#AOF-重写与混合持久化" class="headerlink" title="AOF 重写与混合持久化"></a>AOF 重写与混合持久化</h1><p><img src="https://wu4yong.github.io/starry-images/assets/img/redis/rd-16-rewrite.svg" alt="AOF 重写的双写结构与混合持久化"></p>
+<p><em>重写期间的双写结构、触发条件、7.0 多文件 AOF 与 RDB preamble｜依据 Redis 7.4 官方文档自绘</em></p>
+<h2 id="一、学习目标"><a href="#一、学习目标" class="headerlink" title="一、学习目标"></a>一、学习目标</h2><p>学完这一讲，你要能做到三件事：</p>
+<ol>
+<li>讲清「重写」不是压缩文件字节，而是<strong>按当前数据状态重算一份最小命令集</strong>；</li>
+<li>理解重写期间为什么不能停服、新写入怎么不丢（双写缓冲 &#x2F; 7.0 的增量文件）；</li>
+<li>掌握 <code>auto-aof-rewrite-percentage</code> 与 <code>min-size</code> 两个触发阈值，以及 <code>aof-use-rdb-preamble</code> 混合持久化的收益与代价。</li>
+</ol>
+<h2 id="二、前置知识"><a href="#二、前置知识" class="headerlink" title="二、前置知识"></a>二、前置知识</h2><p>RD14（RDB）与 RD15（AOF 与 appendfsync）。重写要用到 fork（RDB 那套机制），也要清楚 AOF 为什么「又大又慢」（上一讲）。</p>
+<h2 id="三、理论讲解（官方定义）"><a href="#三、理论讲解（官方定义）" class="headerlink" title="三、理论讲解（官方定义）"></a>三、理论讲解（官方定义）</h2><p>官方对重写的定义（原文）：</p>
+<blockquote>
+<p>AOF rewriting … Redis is able to automatically rewrite the AOF in background when it gets too big. The rewrite is completely safe … while the rewrite is in progress Redis continues to append new commands to the old AOF file.</p>
+<p>—— <a target="_blank" rel="noopener" href="https://redis.io/docs/latest/operate/oss_and_stack/management/persistence/">https://redis.io/docs/latest/operate/oss_and_stack/management/persistence/</a></p>
+</blockquote>
+<p>三个要点：</p>
+<ul>
+<li><strong>rewrite in background</strong>：后台子进程执行，主进程照常服务；</li>
+<li><strong>gets too big</strong>：由体积增长触发，不是定时任务；</li>
+<li><strong>continues to append to old AOF</strong>：期间新命令写进旧文件（并进入重写缓冲 &#x2F; 新的增量文件），重写完成后合并。</li>
+</ul>
+<h2 id="四、原理拆解"><a href="#四、原理拆解" class="headerlink" title="四、原理拆解"></a>四、原理拆解</h2><h3 id="1-重写到底在做什么"><a href="#1-重写到底在做什么" class="headerlink" title="1. 重写到底在做什么"></a>1. 重写到底在做什么</h3><p>一个 key 的历史可能是：</p>
+<pre class="line-numbers language-bash" data-language="bash"><code class="language-bash">SET k v1
+SET k v2
+INCR k            <span class="token comment"># 变成 3</span>
+INCR k            <span class="token comment"># 变成 4</span>
+INCR k            <span class="token comment"># 变成 5</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<p>重写之后，这份历史被压缩成等价的最小命令集：</p>
+<pre class="line-numbers language-bash" data-language="bash"><code class="language-bash">SET k <span class="token number">5</span><span aria-hidden="true" class="line-numbers-rows"><span></span></span></code></pre>
+
+<p>所以重写的本质是：<strong>读当前内存里的最终状态，生成「重放出这个状态所需的最少命令」</strong>，而不是把旧文件打包压缩。</p>
+<h3 id="2-重写期间的双写结构（经典实现）"><a href="#2-重写期间的双写结构（经典实现）" class="headerlink" title="2. 重写期间的双写结构（经典实现）"></a>2. 重写期间的双写结构（经典实现）</h3><ol>
+<li>主进程 <code>fork</code> 出子进程，子进程拿到 fork 时刻的数据视图；</li>
+<li>子进程把这些数据写成<strong>新的 AOF 文件</strong>（临时文件）；</li>
+<li>与此同时，主进程继续处理写命令：既追加到<strong>旧 AOF 文件</strong>（保证一旦子进程失败还能用旧文件恢复），也追加到<strong>重写缓冲区</strong>（<code>aof_rewrite_buf</code>）；</li>
+<li>子进程写完，主进程把重写缓冲区里的内容追加到新文件末尾；</li>
+<li>新文件 <code>rename</code> 替换旧文件，重写结束。</li>
+</ol>
+<p>第 3 步的「双写」是重写安全性的核心：<strong>任何时刻都有一份可用的完整 AOF</strong>。</p>
+<h3 id="3-7-0-的多文件-AOF（MP-AOF）"><a href="#3-7-0-的多文件-AOF（MP-AOF）" class="headerlink" title="3. 7.0 的多文件 AOF（MP-AOF）"></a>3. 7.0 的多文件 AOF（MP-AOF）</h3><p>7.0 起改成目录结构，文件分工如下：</p>
+<table>
+<thead>
+<tr>
+<th>文件</th>
+<th>内容</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>appendonly.aof.1.base.rdb</code>（或 <code>.base.aof</code>）</td>
+<td>基线：全量数据（默认是 RDB 格式，见混合持久化）</td>
+</tr>
+<tr>
+<td><code>appendonly.aof.1.incr.aof</code></td>
+<td>增量：基线之后的所有写命令</td>
+</tr>
+<tr>
+<td><code>appendonly.aof.manifest</code></td>
+<td>清单：记录哪些文件属于当前 AOF，加载顺序是什么</td>
+</tr>
+</tbody></table>
+<p>带来的直接好处：</p>
+<ul>
+<li><strong>重写只需重写 base</strong>，增量文件可以继续追加，不再需要把增量塞进大块内存缓冲（老实现的 <code>aof_rewrite_buf</code> 在写入猛时能吃几百 MB）；</li>
+<li><strong>清单化管理</strong>，加载时按 manifest 顺序读，运维也能一眼看清「谁是谁」；</li>
+<li>备份时<strong>必须整个目录一起拷</strong>，只拷 <code>incr.aof</code> 会丢基线。</li>
+</ul>
+<h3 id="4-触发条件：两个阈值同时满足"><a href="#4-触发条件：两个阈值同时满足" class="headerlink" title="4. 触发条件：两个阈值同时满足"></a>4. 触发条件：两个阈值同时满足</h3><pre class="line-numbers language-ini" data-language="ini"><code class="language-ini">auto-aof-rewrite-percentage 100      # 当前 AOF 比上次重写后「增长一倍」时
+auto-aof-rewrite-min-size 64mb       # 且总体积超过 64 MB<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span></span></code></pre>
+
+<p>判定逻辑是「与」：体积得<strong>先过 64 MB 这个地板</strong>，再看增长率是否达到 100%。所以小实例（几 MB）永远不会自动触发——这是刻意的，避免小文件反复重写浪费 CPU。</p>
+<p>手动触发：<code>BGREWRITEAOF</code>。它也是后台执行，返回 <code>Background append only file rewriting started</code>。</p>
+<h3 id="5-混合持久化：aof-use-rdb-preamble"><a href="#5-混合持久化：aof-use-rdb-preamble" class="headerlink" title="5. 混合持久化：aof-use-rdb-preamble"></a>5. 混合持久化：<code>aof-use-rdb-preamble</code></h3><p>默认 <code>yes</code>。含义是：<strong>AOF 的 base 部分用 RDB 二进制格式存</strong>，后面才是命令日志。</p>
+<ul>
+<li>恢复时先加载 RDB 段（快，直接重建内存），再重放增量命令（少，因为基线已经很新）；</li>
+<li>相比「纯命令重放几十亿条」，恢复时间从「分钟级」降到「秒级」；</li>
+<li>代价：AOF 文件开头不再是可读文本，<code>cat</code> 看不到命令，也不能手工编辑；排查要理解这个结构。</li>
+</ul>
+<h2 id="五、场景说明"><a href="#五、场景说明" class="headerlink" title="五、场景说明"></a>五、场景说明</h2><ol>
+<li><strong>写量大且长期运行的实例</strong>：AOF 会持续膨胀，必须让自动重写生效（默认配置即可，别乱调大 <code>min-size</code>）；</li>
+<li><strong>重启恢复时间敏感</strong>：开混合持久化，把「重放几千万条命令」变成「加载快照 + 少量增量」；</li>
+<li><strong>容器&#x2F;云盘备份</strong>：备份脚本要拷整个 <code>appendonlydir</code>，并校验 manifest；</li>
+<li><strong>迁移</strong>：同版本搬迁时 <code>base.rdb</code> + <code>incr.aof</code> 一起拷，比重放命令快。</li>
+</ol>
+<h2 id="六、示例代码-实操步骤"><a href="#六、示例代码-实操步骤" class="headerlink" title="六、示例代码&#x2F;实操步骤"></a>六、示例代码&#x2F;实操步骤</h2><pre class="line-numbers language-bash" data-language="bash"><code class="language-bash"><span class="token comment"># 1. 手动触发重写</span>
+<span class="token number">127.0</span>.0.1:637<span class="token operator"><span class="token file-descriptor important">9</span>></span> BGREWRITEAOF
+Background append only <span class="token function">file</span> rewriting started
+
+<span class="token comment"># 2. 观察重写状态与结果</span>
+<span class="token number">127.0</span>.0.1:637<span class="token operator"><span class="token file-descriptor important">9</span>></span> INFO persistence
+<span class="token comment"># aof_rewrite_in_progress:1</span>
+<span class="token comment"># aof_rewrite_scheduled:0</span>
+<span class="token comment"># aof_last_bgrewriteaof_status:ok</span>
+<span class="token comment"># aof_last_write_status:ok</span>
+
+<span class="token comment"># 3. 触发阈值是怎么配的</span>
+<span class="token number">127.0</span>.0.1:637<span class="token operator"><span class="token file-descriptor important">9</span>></span> CONFIG GET auto-aof-rewrite-percentage
+<span class="token number">1</span><span class="token punctuation">)</span> <span class="token string">"auto-aof-rewrite-percentage"</span>
+<span class="token number">2</span><span class="token punctuation">)</span> <span class="token string">"100"</span>
+<span class="token number">127.0</span>.0.1:637<span class="token operator"><span class="token file-descriptor important">9</span>></span> CONFIG GET auto-aof-rewrite-min-size
+<span class="token number">1</span><span class="token punctuation">)</span> <span class="token string">"auto-aof-rewrite-min-size"</span>
+<span class="token number">2</span><span class="token punctuation">)</span> <span class="token string">"67108864"</span>                    <span class="token comment"># 64 MB</span>
+
+<span class="token comment"># 4. 体积对比：重写前 vs 重写后</span>
+<span class="token number">127.0</span>.0.1:637<span class="token operator"><span class="token file-descriptor important">9</span>></span> INFO persistence
+<span class="token comment"># aof_current_size:838860800      # 800 MB</span>
+<span class="token comment"># aof_base_size:838860800</span>
+<span class="token comment"># 重写完成后</span>
+<span class="token comment"># aof_current_size:96468992       # 92 MB，同一份数据</span>
+
+<span class="token comment"># 5. 混合持久化开关</span>
+<span class="token number">127.0</span>.0.1:637<span class="token operator"><span class="token file-descriptor important">9</span>></span> CONFIG GET aof-use-rdb-preamble
+<span class="token number">1</span><span class="token punctuation">)</span> <span class="token string">"aof-use-rdb-preamble"</span>
+<span class="token number">2</span><span class="token punctuation">)</span> <span class="token string">"yes"</span>
+
+<span class="token comment"># 6. 目录结构：备份必须整目录拷</span>
+$ <span class="token function">ls</span> <span class="token parameter variable">-l</span> /var/lib/redis/appendonlydir/
+appendonly.aof.manifest
+appendonly.aof.1.base.rdb
+appendonly.aof.1.incr.aof
+$ <span class="token function">cat</span> /var/lib/redis/appendonlydir/appendonly.aof.manifest
+<span class="token function">file</span> appendonly.aof.1.base.rdb <span class="token function">seq</span> <span class="token number">1</span> <span class="token builtin class-name">type</span> b
+<span class="token function">file</span> appendonly.aof.1.incr.aof <span class="token function">seq</span> <span class="token number">1</span> <span class="token builtin class-name">type</span> i
+
+<span class="token comment"># 7. 重写期间别做的事：不要同时跑 BGSAVE</span>
+<span class="token comment"># 同时 fork 两次会显著放大 CoW 内存与磁盘 IO</span>
+<span class="token number">127.0</span>.0.1:637<span class="token operator"><span class="token file-descriptor important">9</span>></span> INFO persistence
+<span class="token comment"># rdb_bgsave_in_progress:1</span>
+<span class="token comment"># aof_rewrite_in_progress:1      # 两者并发，内存风险最高</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<h2 id="七、常见坑（官方明确说明的限制）"><a href="#七、常见坑（官方明确说明的限制）" class="headerlink" title="七、常见坑（官方明确说明的限制）"></a>七、常见坑（官方明确说明的限制）</h2><ol>
+<li><strong>重写也要 <code>fork</code></strong>，同样有 CoW 内存放大的问题。数据 40 GB 的实例，重写期间额外内存可能接近总量的一半以上，<code>maxmemory</code> 必须留余量。</li>
+<li><strong>重写期间新旧文件并存</strong>：磁盘占用会短暂翻倍（旧 AOF + 新 AOF）。磁盘剩余空间不足时重写失败，<code>aof_last_bgrewriteaof_status</code> 会变成 <code>err</code>。</li>
+<li><strong><code>auto-aof-rewrite-percentage 100</code> 是相对「上次重写后大小」</strong>，不是相对「数据量」。数据量小但写入频繁（比如一直在 <code>INCR</code> 同一个小 key）也会触发重写。</li>
+<li><strong><code>min-size</code> 调太大 → 文件长期膨胀</strong>；调太小 → 低峰期反复重写，吃 CPU 与磁盘。默认 64 MB 是经验值，不必追求「更激进」。</li>
+<li><strong>7.0 起备份必须拷整个 <code>appendonlydir</code></strong>。只拷 <code>incr.aof</code> 等于丢全量基线，恢复出来是残缺数据。</li>
+<li><strong>混合持久化让 AOF 不再是纯文本</strong>。脚本里 <code>grep</code>&#x2F;<code>cat</code> 找命令的做法会失效，必须改用 <code>redis-check-aof</code> 或 <code>redis-cli</code> 观察。</li>
+<li><strong>不要同时跑 <code>BGSAVE</code> 与 <code>BGREWRITEAOF</code></strong>：两个 fork 同时存在，CoW 内存与 IO 峰值叠加，是最容易触发 OOM 的时刻。</li>
+<li><strong>重写完成后的旧文件删除是异步的</strong>，磁盘告警可能滞后几秒，监控阈值要给缓冲。</li>
+</ol>
+<h3 id="版本差异（8-x-标注）"><a href="#版本差异（8-x-标注）" class="headerlink" title="版本差异（8.x 标注）"></a>版本差异（8.x 标注）</h3><blockquote>
+<p>7.0 引入 MP-AOF（多文件 + manifest），8.x 沿用；<code>aof-use-rdb-preamble</code> 在 7.x 默认 <code>yes</code>。若环境是 6.x，AOF 仍是单文件 + <code>aof_rewrite_buf</code> 双写，备份脚本与磁盘预估都要按「单文件翻倍」来算。</p>
+<p>依据：<a target="_blank" rel="noopener" href="https://redis.io/docs/latest/operate/oss_and_stack/management/persistence/">https://redis.io/docs/latest/operate/oss_and_stack/management/persistence/</a></p>
+</blockquote>
+<h2 id="八、课后小结"><a href="#八、课后小结" class="headerlink" title="八、课后小结"></a>八、课后小结</h2><ul>
+<li>重写 &#x3D; 按当前数据重算最小命令集，不是压缩字节；</li>
+<li>经典实现靠「双写」（旧 AOF + 重写缓冲）保证任何时刻都有一份可恢复文件；</li>
+<li>7.0 起改为 base + incr + manifest 的多文件结构，重写只换 base，省掉大块内存缓冲；</li>
+<li>自动触发需要 <code>auto-aof-rewrite-percentage</code>（默认 100）与 <code>min-size</code>（默认 64 MB）同时满足；</li>
+<li><code>aof-use-rdb-preamble</code> 默认 <code>yes</code>，base 用 RDB 格式，恢复显著加快，代价是不可读文本；</li>
+<li>重写要 fork，CoW 与磁盘翻倍是必须预留的资源。</li>
+</ul>
+<h2 id="九、思考题"><a href="#九、思考题" class="headerlink" title="九、思考题"></a>九、思考题</h2><ol>
+<li>一个 key 被 <code>INCR</code> 一千万次，重写后 AOF 里还剩几条命令？为什么？</li>
+<li>重写期间主进程写入的命令，如果子进程写完时还没合并进新文件就崩溃了，数据会丢吗？</li>
+<li>为什么 7.0 的多文件 AOF 能省掉「重写缓冲区」？它的增量写到哪去了？</li>
+<li>磁盘只剩 30%、AOF 800 MB，这时自动重写会发生什么？该在监控上加哪条告警？</li>
+<li>同时执行 <code>BGSAVE</code> 与 <code>BGREWRITEAOF</code>，内存与磁盘各会发生什么？为什么这是危险组合？</li>
+</ol>
+<h2 id="十、官方资料"><a href="#十、官方资料" class="headerlink" title="十、官方资料"></a>十、官方资料</h2><ul>
+<li>Persistence（AOF 重写与混合持久化）：<a target="_blank" rel="noopener" href="https://redis.io/docs/latest/operate/oss_and_stack/management/persistence/">https://redis.io/docs/latest/operate/oss_and_stack/management/persistence/</a></li>
+<li>BGREWRITEAOF（手动触发语义）：<a target="_blank" rel="noopener" href="https://redis.io/docs/latest/commands/bgrewriteaof/">https://redis.io/docs/latest/commands/bgrewriteaof/</a></li>
+<li>INFO（aof_current_size &#x2F; aof_base_size 等字段）：<a target="_blank" rel="noopener" href="https://redis.io/docs/latest/commands/info/">https://redis.io/docs/latest/commands/info/</a></li>
+<li>redis.conf（auto-aof-rewrite-* &#x2F; aof-use-rdb-preamble）：<a target="_blank" rel="noopener" href="https://redis.io/docs/latest/operate/oss_and_stack/management/config-file/">https://redis.io/docs/latest/operate/oss_and_stack/management/config-file/</a></li>
+<li>redis-check-aof（多文件 AOF 的校验与修复）：<a target="_blank" rel="noopener" href="https://redis.io/docs/latest/operate/oss_and_stack/management/persistence/">https://redis.io/docs/latest/operate/oss_and_stack/management/persistence/</a></li>
+</ul>
+<p>上一篇：<a href="/2023/01/05/database/redis/redis-15-aof/">RD15 AOF 与三种 appendfsync</a> ｜ 下一篇：<a href="/2023/01/07/database/redis/redis-17-backup-restore/">RD17 备份、迁移与恢复演练</a> ｜ <a href="/2022/12/21/database/redis/redis-0-series-index/">总目录</a></p>
+</div>
+
+  <div class="mb-foot">
+    <a href="/phone/">返回手机首页</a>
+    <a href="/phone/tags/">星迹索引</a>
+  </div>
+</div>
+
+
+<script>
+  /* 作用：懒加载本地 mermaid 库；无 mermaid 代码块时不加载 */
+  function loadLocalMermaid(){
+    return new Promise(function(resolve, reject){
+      if(window.mermaid) return resolve(window.mermaid);
+      var s = document.createElement('script');
+      s.src = '/js/third-party/mermaid/mermaid.min.js?v=10';
+      s.onload = function(){ resolve(window.mermaid); };
+      s.onerror = function(){ reject(new Error('mermaid local load failed')); };
+      document.head.appendChild(s);
+    });
+  }
+
+  /* 作用：把 ```mermaid 代码块替换成 SVG 图（手机端字号略小、图可横向滚动） */
+  async function renderMermaidDiagram(){
+    var blocks = document.querySelectorAll('pre[class*="language-mermaid"]');
+    if(!blocks.length) return;
+    var mermaid;
+    try { mermaid = await loadLocalMermaid(); }
+    catch(e){ console.warn('[mermaid] 本地库加载失败：', e); return; }
+
+    mermaid.initialize({
+      startOnLoad: false,
+      theme: 'base',
+      themeVariables: {
+        darkMode: true,
+        background: 'transparent',
+        fontFamily: '"Microsoft YaHei", "PingFang SC", "Segoe UI", sans-serif',
+        fontSize: '12px',
+        primaryColor: '#062f3d',
+        primaryTextColor: '#d6f6ff',
+        primaryBorderColor: '#00eeff',
+        secondaryColor: '#04222d',
+        tertiaryColor: '#04222d',
+        mainBkg: '#062f3d',
+        nodeBorder: '#00eeff',
+        clusterBkg: '#02161f',
+        clusterBorder: '#00eeff55',
+        lineColor: '#00eeff',
+        textColor: '#c0e8ff',
+        edgeLabelBackground: '#02161f'
+      },
+      flowchart: { curve: 'basis', useMaxWidth: false, htmlLabels: false, nodeSpacing: 30, rankSpacing: 40, padding: 10 }
+    });
+
+    var targets = [];
+    blocks.forEach(function(el){
+      var codeEl = el.querySelector('code');
+      if(!codeEl) return;
+      var div = document.createElement('div');
+      div.className = 'mermaid';
+      div.textContent = codeEl.textContent;
+      el.parentNode.replaceChild(div, el);
+      targets.push(div);
+    });
+    if(!targets.length) return;
+    try { await mermaid.run({ nodes: targets }); }
+    catch(e){ console.warn('[mermaid] 渲染失败：', e); }
+  }
+  /* 作用：多次触发兜底（延迟重试 + DOM 变化），防止某次时机没跑到导致图表留在代码块 */
+  var mmBusy = false;
+  function scheduleMermaid(){
+    if(mmBusy) return;
+    mmBusy = true;
+    renderMermaidDiagram().then(function(){ mmBusy = false; }, function(){ mmBusy = false; });
+  }
+  scheduleMermaid();
+  window.addEventListener('load', scheduleMermaid);
+  [1000, 3000, 8000].forEach(function(ms){ setTimeout(scheduleMermaid, ms); });
+  if(document.readyState !== 'loading') scheduleMermaid();
+  if(window.MutationObserver){
+    var mmTimer = null;
+    var mmObserver = new MutationObserver(function(){
+      clearTimeout(mmTimer);
+      mmTimer = setTimeout(scheduleMermaid, 400);
+    });
+    mmObserver.observe(document.querySelector('.mb-article') || document.body, { childList: true, subtree: true });
+  }
+</script>
+</body>
+</html>

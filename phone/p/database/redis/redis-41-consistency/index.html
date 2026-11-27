@@ -1,0 +1,371 @@
+<!--
+  ============================================
+  手机端 · 文章原文页
+  文件：phone/post.njk
+  适用终端：手机端（路由 /phone/p/<slug>/，由 scripts/phone-routes.js 生成）
+  作用：手机阅读单篇文章；单列布局、无侧栏无雷达，替代电脑端 post.njk
+        数据由生成期算好：page.item = { title, dateStr, content, cats, tags }
+  样式依赖：source/css/theme/phone/common.css、source/css/theme/phone/list.css
+  组件依赖：phone/_components/Particles.njk
+  最后修改：2026-11-11
+  ============================================
+-->
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="color-scheme" content="dark">
+  <meta name="theme-color" content="#020817">
+  <!-- 首帧兜底：浏览器默认画布是白的，样式未解析前会闪一下白。这条规则先锁死深空底色 -->
+  <style>html{background-color:#020817}</style>
+  <title>redis-缓存与数据库一致性 - 时空秘境</title>
+  <!-- 手机端样式：基础 + 列表/正文，外链引入（源文件 source/css/theme/phone/） -->
+  <link rel="stylesheet" href="/css/theme/phone/common.css">
+  <link rel="stylesheet" href="/css/theme/phone/list.css">
+<meta name="generator" content="Hexo 8.1.2"></head>
+<body>
+<div class="mb-shell">
+  <!--
+  ============================================
+  手机端星空粒子组件
+  文件：Particles.njk
+  适用终端：手机端
+  作用：Particles.njk 的手机端副本（nunjucks 子目录 include 取不到上级）
+        参数与电脑端 _components/Particles.njk 保持一致：
+        粒子 95 / 连线 118px / opacity 0.32，外加星座层与零星闪烁层
+  最后修改：2026-11-12
+  ============================================
+--><!-- z-index 必须是 0：负层级会被 body 不透明背景盖住，粒子在跑却看不见 -->
+<div id="particles" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 0; pointer-events: none;"></div>
+<!-- 星座层（与首页同一套：随机零星散布星座图形 + 偶尔闪烁的小星） -->
+<div id="constellations" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 1; pointer-events: none;" aria-hidden="true"></div>
+<script src="/js/particles.min.js"></script>
+<script>
+particlesJS("particles", {
+  particles: {
+    number: {
+      value: 95,
+      density: {
+        enable: true,
+        value_area: 800
+      }
+    },
+    color: {
+      value: "#00eeff"
+    },
+    shape: {
+      type: "circle",
+      stroke: {
+        width: 0,
+        color: "#000000"
+      }
+    },
+    opacity: {
+      value: 0.6,
+      random: true,
+      anim: {
+        enable: true,
+        speed: 0.5,
+        opacity_min: 0.1,
+        sync: false
+      }
+    },
+    size: {
+      value: 3,
+      random: true,
+      anim: {
+        enable: true,
+        speed: 2,
+        size_min: 0.1,
+        sync: false
+      }
+    },
+    line_linked: {
+      enable: true,
+      distance: 118,
+      color: "#00eeff",
+      opacity: 0.32,
+      width: 1
+    },
+    move: {
+      enable: true,
+      speed: 0.8,
+      direction: "none",
+      random: true,
+      straight: false,
+      out_mode: "out",
+      bounce: false,
+      attract: {
+        enable: true,
+        rotateX: 600,
+        rotateY: 1200
+      }
+    }
+  },
+  interactivity: {
+    detect_on: "canvas",
+    events: {
+      onhover: {
+        enable: true,
+        mode: "grab"       // 手指按住时粒子聚集
+      },
+      onclick: {
+        enable: true,
+        mode: "push"       // 点击时产生新粒子
+      },
+      resize: true
+    },
+    modes: {
+      grab: {
+        distance: 200,
+        line_linked: {
+          opacity: 1
+        }
+      },
+      push: {
+        particles_nb: 6
+      }
+    }
+  },
+  retina_detect: true
+});
+</script>
+<!-- 星座 + 零星闪烁层：与电脑端共用同一份绘制脚本 -->
+<script src="/js/theme/home/starfield.js"></script>
+
+
+  <div class="mb-top">
+    <a class="mb-back" href="/phone/">← 返回手机首页</a>
+    <span class="mb-sub" style="margin:0">2023-01-31</span>
+  </div>
+
+  <h1 class="mb-title">redis-缓存与数据库一致性</h1>
+  <div class="mb-sub">
+    分类：database · redis
+     ｜ 标签：Redis · 缓存 · 系统课
+  </div>
+
+  <div class="mb-article"><div class="essay-banner essay-database"></div>
+
+<h1 id="缓存与数据库一致性"><a href="#缓存与数据库一致性" class="headerlink" title="缓存与数据库一致性"></a>缓存与数据库一致性</h1><p><img src="https://wu4yong.github.io/starry-images/assets/img/redis/rd-41-consistency.svg" alt="先删缓存与先更库两种顺序及收窄手段"></p>
+<p><em>两种写入顺序的风险窗口与四种收窄手段｜依据 Redis 7.4 官方文档自绘</em></p>
+<h2 id="一、学习目标"><a href="#一、学习目标" class="headerlink" title="一、学习目标"></a>一、学习目标</h2><p>学完这一讲，你能做到：</p>
+<ol>
+<li>讲清「先删缓存再更库」和「先更库再删缓存」各自的风险窗口长在哪；</li>
+<li>用延迟双删、删除重试、binlog 订阅中的一种把窗口收窄到业务可接受；</li>
+<li>诚实地回答「我的方案能否做到强一致」，而不是含糊地说「基本一致」。</li>
+</ol>
+<h2 id="二、前置知识"><a href="#二、前置知识" class="headerlink" title="二、前置知识"></a>二、前置知识</h2><p>RD39（Cache-Aside 的读写顺序）、RD36（Pipeline，批量失效时用得上）、RD37（Pub&#x2F;Sub，失效广播）。这一讲是 M7 里最容易被低估的一讲：代码写起来只有两行，边界却最多。</p>
+<h2 id="三、理论讲解（官方定义）"><a href="#三、理论讲解（官方定义）" class="headerlink" title="三、理论讲解（官方定义）"></a>三、理论讲解（官方定义）</h2><p>必须先说明事实：<strong>Redis 不提供「缓存与数据库一致」的协议</strong>。官方文档中，Redis 的定位是缓存&#x2F;数据结构服务器，一致性由业务侧负责。</p>
+<p>官方关于原子性的说明（这才是能用得上的部分）：</p>
+<blockquote>
+<p>Redis commands are atomic … a single command is executed atomically. Multiple commands can be grouped into a transaction (MULTI&#x2F;EXEC) or a Lua script, which is also executed atomically.</p>
+<p>—— <a target="_blank" rel="noopener" href="https://redis.io/docs/latest/develop/interact/programmability/eval-intro/">https://redis.io/docs/latest/develop/interact/programmability/eval-intro/</a></p>
+</blockquote>
+<p>这句话的含义是：<strong>Redis 内部的「删缓存」是原子的，但「删缓存」和「更新数据库」是两个系统、两次操作，它们之间没有原子性</strong>。所以不一致窗口必然存在，问题只剩「窗口多长、谁能兜底」。</p>
+<p>一致性的三个等级，先约定清楚：</p>
+<table>
+<thead>
+<tr>
+<th>等级</th>
+<th>定义</th>
+<th>典型手段</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>强一致</td>
+<td>任何时刻读到的都是最新值</td>
+<td>不走缓存，或读写都走主库事务</td>
+</tr>
+<tr>
+<td>最终一致（秒级）</td>
+<td>短窗口内可能是旧值，随后收敛</td>
+<td>先更库再删缓存 + 重试&#x2F;订阅</td>
+</tr>
+<tr>
+<td>最终一致（分钟级）</td>
+<td>窗口更长，靠 TTL 兜底</td>
+<td>只做删除，不补偿</td>
+</tr>
+</tbody></table>
+<h2 id="四、原理拆解"><a href="#四、原理拆解" class="headerlink" title="四、原理拆解"></a>四、原理拆解</h2><h3 id="1-先删缓存、再更新库：窗口为什么最糟"><a href="#1-先删缓存、再更新库：窗口为什么最糟" class="headerlink" title="1. 先删缓存、再更新库：窗口为什么最糟"></a>1. 先删缓存、再更新库：窗口为什么最糟</h3><pre class="line-numbers language-none"><code class="language-none">T1: 写者 DEL cache        → 缓存空了
+T2: 读者 GET 未命中 → 查库拿到【旧值】
+T3: 读者 SET cache（旧值） → 旧值被回填
+T4: 写者 UPDATE db（新值） → 库是新的，缓存是旧的<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span></span></code></pre>
+
+<p>关键在 T3 发生在 T4 之前：<strong>缓存被旧值填满，而且之后再没有任何事件去纠正它</strong>（因为写者的删除已经用掉了）。这个旧值会一直留到 TTL 到期。窗口大小 ≈ 「更新库的耗时 + 读者回填的耗时」，且<strong>后果是「长期不一致」</strong>，不只是短暂。</p>
+<h3 id="2-先更新库、再删缓存：窗口小得多"><a href="#2-先更新库、再删缓存：窗口小得多" class="headerlink" title="2. 先更新库、再删缓存：窗口小得多"></a>2. 先更新库、再删缓存：窗口小得多</h3><pre class="line-numbers language-none"><code class="language-none">T1: 写者 UPDATE db（新值） → 库已是新值
+T2: 读者 GET 未命中（假设缓存恰好在此时失效）→ 读到旧值? 
+    —— 注意：这里读者查库已经能拿到新值，除非它在 T1 之前就开始了查询
+T3: 写者 DEL cache
+T4: 下一次读 → 未命中 → 查库 → 新值回填<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<p>它的风险窗口只有「读者在 T1 之前查库、在 T3 之后回填」这一种交错，概率低、持续时间短，而且<strong>一旦 T3 执行成功，后续读会自然收敛到新值</strong>。所以主流选择是它。</p>
+<h3 id="3-四种收窄手段"><a href="#3-四种收窄手段" class="headerlink" title="3. 四种收窄手段"></a>3. 四种收窄手段</h3><ul>
+<li><strong>延迟双删</strong>：更库 → 删缓存 → sleep(Δt) → 再删一次。Δt 要大于「一次读请求的最大耗时」，目的是把「已经读了旧值但还没回填」的请求的回填结果再删掉。</li>
+<li><strong>删除失败重试</strong>：删缓存可能失败（网络、超时）。把失败的 key 丢进消息队列，异步重试，直到成功（要设最大重试次数，避免死循环）。</li>
+<li><strong>订阅 binlog（变更捕获）</strong>：让「删缓存」由数据库变更事件驱动，而不是业务代码。好处是「所有写路径都被覆盖」，包括没走应用的手工 SQL；坏处是链路更长、延迟更高（通常百毫秒级）。</li>
+<li><strong>关键读绕过缓存</strong>：对「必须最新」的读（如支付结果查询），直接读主库，不进缓存。这不是优化，是取舍。</li>
+</ul>
+<h3 id="4-一个常被忽略的细节：删缓存-vs-改缓存"><a href="#4-一个常被忽略的细节：删缓存-vs-改缓存" class="headerlink" title="4. 一个常被忽略的细节：删缓存 vs 改缓存"></a>4. 一个常被忽略的细节：删缓存 vs 改缓存</h3><p>写的时候一定<strong>删</strong>，不要<strong>改</strong>。原因有两条：</p>
+<ol>
+<li>改缓存需要把「新值」完整组装出来，多一次读库&#x2F;拼装；</li>
+<li>两个并发写者「改缓存」的到达顺序可能与「写库」的顺序相反，缓存被旧值覆盖。</li>
+</ol>
+<p>删掉之后，值由「下一次读」重新加载，天然按库的顺序收敛。</p>
+<h2 id="五、场景说明"><a href="#五、场景说明" class="headerlink" title="五、场景说明"></a>五、场景说明</h2><ol>
+<li><strong>用户资料</strong>：最终一致秒级可接受，先更库再删缓存 + 失败重试；</li>
+<li><strong>商品价格</strong>：要求读最新，用 Write-Through 或关键读绕过缓存；</li>
+<li><strong>订单状态</strong>：绝不能靠缓存，读走主库 + 版本号校验；</li>
+<li><strong>配置开关</strong>：直接用 Pub&#x2F;Sub 广播失效（RD37），延迟容忍度高、语义简单。</li>
+</ol>
+<h2 id="六、示例代码-实操步骤"><a href="#六、示例代码-实操步骤" class="headerlink" title="六、示例代码&#x2F;实操步骤"></a>六、示例代码&#x2F;实操步骤</h2><pre class="line-numbers language-bash" data-language="bash"><code class="language-bash"><span class="token comment"># 标准顺序：先更库，再删缓存</span>
+<span class="token comment"># UPDATE user SET name='jerry' WHERE id=1001;    -- 先完成库更新</span>
+<span class="token number">127.0</span>.0.1:637<span class="token operator"><span class="token file-descriptor important">9</span>></span> DEL user:1001
+<span class="token punctuation">(</span>integer<span class="token punctuation">)</span> <span class="token number">1</span>
+
+<span class="token comment"># 延迟双删</span>
+<span class="token number">127.0</span>.0.1:637<span class="token operator"><span class="token file-descriptor important">9</span>></span> DEL user:1001
+<span class="token punctuation">(</span>integer<span class="token punctuation">)</span> <span class="token number">1</span>
+<span class="token comment"># sleep 300ms（大于一次读请求的最大耗时）</span>
+<span class="token number">127.0</span>.0.1:637<span class="token operator"><span class="token file-descriptor important">9</span>></span> DEL user:1001
+<span class="token punctuation">(</span>integer<span class="token punctuation">)</span> <span class="token number">0</span>                    <span class="token comment"># 第二次通常删不到东西，但能清掉「迟到回填」</span>
+
+<span class="token comment"># 删除失败的补偿：把 key 写入待重试队列（示意）</span>
+<span class="token number">127.0</span>.0.1:637<span class="token operator"><span class="token file-descriptor important">9</span>></span> RPUSH cache:del:retry user:1001
+<span class="token punctuation">(</span>integer<span class="token punctuation">)</span> <span class="token number">1</span>
+
+<span class="token comment"># 判断「缓存里是不是旧值」：对比库与缓存（排查期临时用）</span>
+<span class="token number">127.0</span>.0.1:637<span class="token operator"><span class="token file-descriptor important">9</span>></span> GET user:1001
+<span class="token string">"&#123;<span class="token entity" title="\&quot;">\"</span>id<span class="token entity" title="\&quot;">\"</span>:1001,<span class="token entity" title="\&quot;">\"</span>name<span class="token entity" title="\&quot;">\"</span>:<span class="token entity" title="\&quot;">\"</span>tom<span class="token entity" title="\&quot;">\"</span>&#125;"</span>     <span class="token comment"># 库中已是 jerry，说明缓存过期了</span>
+
+<span class="token comment"># 失效广播（多实例本地缓存场景，RD44 会用到）</span>
+<span class="token number">127.0</span>.0.1:637<span class="token operator"><span class="token file-descriptor important">9</span>></span> PUBLISH cache:invalidate <span class="token string">"user:1001"</span>
+<span class="token punctuation">(</span>integer<span class="token punctuation">)</span> <span class="token number">2</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<h2 id="七、常见坑（官方明确说明的限制）"><a href="#七、常见坑（官方明确说明的限制）" class="headerlink" title="七、常见坑（官方明确说明的限制）"></a>七、常见坑（官方明确说明的限制）</h2><ol>
+<li><strong>「先删缓存再更库」当成标准做法</strong>。它在并发读下会把旧值长期写回缓存，是四种顺序里最差的一种。</li>
+<li><strong>延迟双删的 Δt 拍脑袋</strong>。Δt 小于一次读请求耗时，第二次删除起不到作用；Δt 太大又拖长不一致窗口。</li>
+<li><strong>删除失败不重试</strong>。网络抖动一次，缓存就脏到 TTL 到期。</li>
+<li><strong>用 <code>MULTI</code> 想跨系统事务</strong>。Redis 的 <code>MULTI/EXEC</code> 只在 Redis 内部原子，不能把「更新 MySQL」包进来。</li>
+<li><strong>订阅 binlog 但没做幂等</strong>。同一条变更事件可能重复投递，删除操作本身幂等，但下游其他动作不一定。</li>
+<li><strong>忘了缓存「被删除后又被写入」的顺序</strong>。写者 A 删缓存 → 写者 B 更库并删缓存 → A 的旧值回填，仍会出现，需要版本号或 TTL 兜底。</li>
+<li><strong>以为 TTL 能解决一切</strong>。TTL 只是「最坏情况的上限」，窗口内用户看到的就是旧值，业务是否接受要提前定。</li>
+</ol>
+<h3 id="版本差异（8-x-标注）"><a href="#版本差异（8-x-标注）" class="headerlink" title="版本差异（8.x 标注）"></a>版本差异（8.x 标注）</h3><blockquote>
+<p>一致性方案属于应用层设计，与 Redis 版本无关。8.x 在客户端缓存（tracking）与集群运维上有增强，可作为失效广播的更优载体，但语义不变。</p>
+<p>依据：<a target="_blank" rel="noopener" href="https://redis.io/docs/latest/develop/interact/programmability/eval-intro/">https://redis.io/docs/latest/develop/interact/programmability/eval-intro/</a></p>
+</blockquote>
+<h2 id="八、课后小结"><a href="#八、课后小结" class="headerlink" title="八、课后小结"></a>八、课后小结</h2><ul>
+<li>Redis 不提供跨系统一致性协议，窗口一定存在；</li>
+<li>顺序选「先更库、再删缓存」，不要「先删缓存」；</li>
+<li>写操作只删缓存，不改缓存；</li>
+<li>收窄手段：延迟双删、删除重试、binlog 订阅、关键读绕缓存；</li>
+<li>强一致的读不要进缓存，这是取舍不是缺陷。</li>
+</ul>
+<h2 id="九、思考题"><a href="#九、思考题" class="headerlink" title="九、思考题"></a>九、思考题</h2><ol>
+<li>画出「先删缓存再更库」出错的那条并发时间线，标出旧值被回填的时刻。</li>
+<li>延迟双删的 Δt 应该怎么估算？给出你项目的具体数字与理由。</li>
+<li>为什么「订阅 binlog 删缓存」能覆盖应用之外的写？它的代价是什么？</li>
+<li>如果一个 key 既被写者删、又被读者回填，你还能用什么手段保证收敛？</li>
+<li>你的业务里，哪些读可以接受 1 秒旧值、哪些一秒都不行？列个清单。</li>
+</ol>
+<h2 id="十、官方资料"><a href="#十、官方资料" class="headerlink" title="十、官方资料"></a>十、官方资料</h2><ul>
+<li>Lua 脚本与原子性（<code>EVAL</code> 的原子语义）：<a target="_blank" rel="noopener" href="https://redis.io/docs/latest/develop/interact/programmability/eval-intro/">https://redis.io/docs/latest/develop/interact/programmability/eval-intro/</a></li>
+<li>Transactions（<code>MULTI/EXEC</code> 的边界）：<a target="_blank" rel="noopener" href="https://redis.io/docs/latest/develop/interact/transactions/">https://redis.io/docs/latest/develop/interact/transactions/</a></li>
+<li>Client-side caching（tracking 作为失效通知的官方机制）：<a target="_blank" rel="noopener" href="https://redis.io/docs/latest/develop/clients/client-side-caching/">https://redis.io/docs/latest/develop/clients/client-side-caching/</a></li>
+<li>DEL &#x2F; UNLINK：<a target="_blank" rel="noopener" href="https://redis.io/docs/latest/commands/del/">https://redis.io/docs/latest/commands/del/</a></li>
+<li>Pub&#x2F;Sub（失效广播）：<a target="_blank" rel="noopener" href="https://redis.io/docs/latest/develop/interact/pubsub/">https://redis.io/docs/latest/develop/interact/pubsub/</a></li>
+</ul>
+<p>上一篇：<a href="/2023/01/30/database/redis/redis-40-penetration/">RD40 穿透、击穿与雪崩</a> ｜ 下一篇：<a href="/2023/02/01/database/redis/redis-42-distlock/">RD42 分布式锁</a> ｜ <a href="/2022/12/21/database/redis/redis-0-series-index/">总目录</a></p>
+</div>
+
+  <div class="mb-foot">
+    <a href="/phone/">返回手机首页</a>
+    <a href="/phone/tags/">星迹索引</a>
+  </div>
+</div>
+
+
+<script>
+  /* 作用：懒加载本地 mermaid 库；无 mermaid 代码块时不加载 */
+  function loadLocalMermaid(){
+    return new Promise(function(resolve, reject){
+      if(window.mermaid) return resolve(window.mermaid);
+      var s = document.createElement('script');
+      s.src = '/js/third-party/mermaid/mermaid.min.js?v=10';
+      s.onload = function(){ resolve(window.mermaid); };
+      s.onerror = function(){ reject(new Error('mermaid local load failed')); };
+      document.head.appendChild(s);
+    });
+  }
+
+  /* 作用：把 ```mermaid 代码块替换成 SVG 图（手机端字号略小、图可横向滚动） */
+  async function renderMermaidDiagram(){
+    var blocks = document.querySelectorAll('pre[class*="language-mermaid"]');
+    if(!blocks.length) return;
+    var mermaid;
+    try { mermaid = await loadLocalMermaid(); }
+    catch(e){ console.warn('[mermaid] 本地库加载失败：', e); return; }
+
+    mermaid.initialize({
+      startOnLoad: false,
+      theme: 'base',
+      themeVariables: {
+        darkMode: true,
+        background: 'transparent',
+        fontFamily: '"Microsoft YaHei", "PingFang SC", "Segoe UI", sans-serif',
+        fontSize: '12px',
+        primaryColor: '#062f3d',
+        primaryTextColor: '#d6f6ff',
+        primaryBorderColor: '#00eeff',
+        secondaryColor: '#04222d',
+        tertiaryColor: '#04222d',
+        mainBkg: '#062f3d',
+        nodeBorder: '#00eeff',
+        clusterBkg: '#02161f',
+        clusterBorder: '#00eeff55',
+        lineColor: '#00eeff',
+        textColor: '#c0e8ff',
+        edgeLabelBackground: '#02161f'
+      },
+      flowchart: { curve: 'basis', useMaxWidth: false, htmlLabels: false, nodeSpacing: 30, rankSpacing: 40, padding: 10 }
+    });
+
+    var targets = [];
+    blocks.forEach(function(el){
+      var codeEl = el.querySelector('code');
+      if(!codeEl) return;
+      var div = document.createElement('div');
+      div.className = 'mermaid';
+      div.textContent = codeEl.textContent;
+      el.parentNode.replaceChild(div, el);
+      targets.push(div);
+    });
+    if(!targets.length) return;
+    try { await mermaid.run({ nodes: targets }); }
+    catch(e){ console.warn('[mermaid] 渲染失败：', e); }
+  }
+  /* 作用：多次触发兜底（延迟重试 + DOM 变化），防止某次时机没跑到导致图表留在代码块 */
+  var mmBusy = false;
+  function scheduleMermaid(){
+    if(mmBusy) return;
+    mmBusy = true;
+    renderMermaidDiagram().then(function(){ mmBusy = false; }, function(){ mmBusy = false; });
+  }
+  scheduleMermaid();
+  window.addEventListener('load', scheduleMermaid);
+  [1000, 3000, 8000].forEach(function(ms){ setTimeout(scheduleMermaid, ms); });
+  if(document.readyState !== 'loading') scheduleMermaid();
+  if(window.MutationObserver){
+    var mmTimer = null;
+    var mmObserver = new MutationObserver(function(){
+      clearTimeout(mmTimer);
+      mmTimer = setTimeout(scheduleMermaid, 400);
+    });
+    mmObserver.observe(document.querySelector('.mb-article') || document.body, { childList: true, subtree: true });
+  }
+</script>
+</body>
+</html>

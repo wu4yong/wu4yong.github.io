@@ -1,0 +1,403 @@
+<!--
+  ============================================
+  手机端 · 文章原文页
+  文件：phone/post.njk
+  适用终端：手机端（路由 /phone/p/<slug>/，由 scripts/phone-routes.js 生成）
+  作用：手机阅读单篇文章；单列布局、无侧栏无雷达，替代电脑端 post.njk
+        数据由生成期算好：page.item = { title, dateStr, content, cats, tags }
+  样式依赖：source/css/theme/phone/common.css、source/css/theme/phone/list.css
+  组件依赖：phone/_components/Particles.njk
+  最后修改：2026-11-11
+  ============================================
+-->
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="color-scheme" content="dark">
+  <meta name="theme-color" content="#020817">
+  <!-- 首帧兜底：浏览器默认画布是白的，样式未解析前会闪一下白。这条规则先锁死深空底色 -->
+  <style>html{background-color:#020817}</style>
+  <title>redis-Sentinel 故障转移与客户端接入 - 时空秘境</title>
+  <!-- 手机端样式：基础 + 列表/正文，外链引入（源文件 source/css/theme/phone/） -->
+  <link rel="stylesheet" href="/css/theme/phone/common.css">
+  <link rel="stylesheet" href="/css/theme/phone/list.css">
+<meta name="generator" content="Hexo 8.1.2"></head>
+<body>
+<div class="mb-shell">
+  <!--
+  ============================================
+  手机端星空粒子组件
+  文件：Particles.njk
+  适用终端：手机端
+  作用：Particles.njk 的手机端副本（nunjucks 子目录 include 取不到上级）
+        参数与电脑端 _components/Particles.njk 保持一致：
+        粒子 95 / 连线 118px / opacity 0.32，外加星座层与零星闪烁层
+  最后修改：2026-11-12
+  ============================================
+--><!-- z-index 必须是 0：负层级会被 body 不透明背景盖住，粒子在跑却看不见 -->
+<div id="particles" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 0; pointer-events: none;"></div>
+<!-- 星座层（与首页同一套：随机零星散布星座图形 + 偶尔闪烁的小星） -->
+<div id="constellations" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 1; pointer-events: none;" aria-hidden="true"></div>
+<script src="/js/particles.min.js"></script>
+<script>
+particlesJS("particles", {
+  particles: {
+    number: {
+      value: 95,
+      density: {
+        enable: true,
+        value_area: 800
+      }
+    },
+    color: {
+      value: "#00eeff"
+    },
+    shape: {
+      type: "circle",
+      stroke: {
+        width: 0,
+        color: "#000000"
+      }
+    },
+    opacity: {
+      value: 0.6,
+      random: true,
+      anim: {
+        enable: true,
+        speed: 0.5,
+        opacity_min: 0.1,
+        sync: false
+      }
+    },
+    size: {
+      value: 3,
+      random: true,
+      anim: {
+        enable: true,
+        speed: 2,
+        size_min: 0.1,
+        sync: false
+      }
+    },
+    line_linked: {
+      enable: true,
+      distance: 118,
+      color: "#00eeff",
+      opacity: 0.32,
+      width: 1
+    },
+    move: {
+      enable: true,
+      speed: 0.8,
+      direction: "none",
+      random: true,
+      straight: false,
+      out_mode: "out",
+      bounce: false,
+      attract: {
+        enable: true,
+        rotateX: 600,
+        rotateY: 1200
+      }
+    }
+  },
+  interactivity: {
+    detect_on: "canvas",
+    events: {
+      onhover: {
+        enable: true,
+        mode: "grab"       // 手指按住时粒子聚集
+      },
+      onclick: {
+        enable: true,
+        mode: "push"       // 点击时产生新粒子
+      },
+      resize: true
+    },
+    modes: {
+      grab: {
+        distance: 200,
+        line_linked: {
+          opacity: 1
+        }
+      },
+      push: {
+        particles_nb: 6
+      }
+    }
+  },
+  retina_detect: true
+});
+</script>
+<!-- 星座 + 零星闪烁层：与电脑端共用同一份绘制脚本 -->
+<script src="/js/theme/home/starfield.js"></script>
+
+
+  <div class="mb-top">
+    <a class="mb-back" href="/phone/">← 返回手机首页</a>
+    <span class="mb-sub" style="margin:0">2023-01-11</span>
+  </div>
+
+  <h1 class="mb-title">redis-Sentinel 故障转移与客户端接入</h1>
+  <div class="mb-sub">
+    分类：database · redis
+     ｜ 标签：Redis · 系统课 · 高可用
+  </div>
+
+  <div class="mb-article"><div class="essay-banner essay-database"></div>
+
+<h1 id="Sentinel-故障转移与客户端接入"><a href="#Sentinel-故障转移与客户端接入" class="headerlink" title="Sentinel 故障转移与客户端接入"></a>Sentinel 故障转移与客户端接入</h1><p><img src="https://wu4yong.github.io/starry-images/assets/img/redis/rd-21-failover.svg" alt="故障转移六个动作与客户端三件事"></p>
+<p><em>切换的六步、客户端必须做的三件事与切换期风险｜依据 Redis 7.4 官方文档自绘</em></p>
+<h2 id="一、学习目标"><a href="#一、学习目标" class="headerlink" title="一、学习目标"></a>一、学习目标</h2><p>学完这一讲，你要能做到三件事：</p>
+<ol>
+<li>按顺序说出一次故障转移的六个动作，知道每一步在日志里长什么样；</li>
+<li>让客户端真正「接住」切换：查地址、订阅通知、处理切换窗口的写失败；</li>
+<li>明确切换期必然存在的三类风险（丢最后一段写入、连接全断、脑裂），并给出应对。</li>
+</ol>
+<h2 id="二、前置知识"><a href="#二、前置知识" class="headerlink" title="二、前置知识"></a>二、前置知识</h2><p>RD20（Sentinel 架构与选举）。本篇是它的执行面：票投完了，具体怎么动。</p>
+<h2 id="三、理论讲解（官方定义）"><a href="#三、理论讲解（官方定义）" class="headerlink" title="三、理论讲解（官方定义）"></a>三、理论讲解（官方定义）</h2><p>官方对客户端的要求（原文）：</p>
+<blockquote>
+<p>Clients … need to query the Sentinel … and to subscribe to the <code>+switch-master</code> channel.</p>
+<p>—— <a target="_blank" rel="noopener" href="https://redis.io/docs/latest/operate/oss_and_stack/management/sentinel/">https://redis.io/docs/latest/operate/oss_and_stack/management/sentinel/</a></p>
+</blockquote>
+<p>以及关于选中新主后的行为（原文要点）：Sentinel 会向其余从库发送 <code>REPLICAOF</code>，并发布 <code>+switch-master</code> 消息，通知所有订阅者新主库地址。</p>
+<p>两条关键信息：</p>
+<ul>
+<li><strong>客户端必须能问、也必须能订阅</strong>（只做其中一个，切换时都会漏掉）；</li>
+<li><strong>通知是广播型（Pub&#x2F;Sub）</strong>，错过一次通知就只能靠下一次查询。</li>
+</ul>
+<h2 id="四、原理拆解"><a href="#四、原理拆解" class="headerlink" title="四、原理拆解"></a>四、原理拆解</h2><h3 id="1-六个动作"><a href="#1-六个动作" class="headerlink" title="1. 六个动作"></a>1. 六个动作</h3><ol>
+<li><strong>确认 <code>odown</code></strong>：领导者已选出，故障节点被多数 Sentinel 认定为下线；</li>
+<li><strong>领导者执行切换</strong>：只有选出的那个 Sentinel 真正动手（其他只观察）；</li>
+<li><strong>挑新主</strong>：按 <code>replica-priority</code> → offset → <code>runid</code> 的次序选；</li>
+<li><strong>改配置</strong>：把新主提升（<code>REPLICAOF NO ONE</code>），其余从库改成指向新主；</li>
+<li><strong>发通知</strong>：<code>PUBLISH +switch-master mymaster &lt;old-ip&gt; &lt;old-port&gt; &lt;new-ip&gt; &lt;new-port&gt;</code>；</li>
+<li><strong>旧主归队</strong>：旧主恢复后，Sentinel 会把它降级为从库（<code>REPLICAOF</code> 到新主），注意它可能带着一段「新主没有」的数据。</li>
+</ol>
+<p>第 4 步和第 6 步是数据风险的来源：新主是「某个从库」，它的数据必然比旧主旧一点；旧主回来后会被清空（全量同步）并丢掉那段差异。</p>
+<h3 id="2-客户端三件事"><a href="#2-客户端三件事" class="headerlink" title="2. 客户端三件事"></a>2. 客户端三件事</h3><p><strong>① 启动&#x2F;重连时问地址</strong></p>
+<pre class="line-numbers language-bash" data-language="bash"><code class="language-bash">SENTINEL get-master-addr-by-name mymaster<span aria-hidden="true" class="line-numbers-rows"><span></span></span></code></pre>
+
+<p>返回两个元素：IP 与端口。客户端用它们建立连接。</p>
+<p><strong>② 订阅切换通知</strong></p>
+<pre class="line-numbers language-bash" data-language="bash"><code class="language-bash">SUBSCRIBE +switch-master<span aria-hidden="true" class="line-numbers-rows"><span></span></span></code></pre>
+
+<p>收到消息就重建连接池、切换写入口。注意：<strong>订阅连接本身也要保活与重连</strong>，否则切换通知会漏。</p>
+<p><strong>③ 处理切换窗口的写失败</strong></p>
+<p>切换期间旧主已不可写、新主可能还没被客户端发现，写请求会失败。客户端必须：</p>
+<ul>
+<li>有重试（带幂等）；</li>
+<li>重试前重新问一次主库地址，而不是死磕旧地址；</li>
+<li>把「写失败」与「业务失败」分开上报，避免把切换误报成业务错误。</li>
+</ul>
+<h3 id="3-切换期的三类风险"><a href="#3-切换期的三类风险" class="headerlink" title="3. 切换期的三类风险"></a>3. 切换期的三类风险</h3><table>
+<thead>
+<tr>
+<th>风险</th>
+<th>原因</th>
+<th>应对</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>丢最后一段写入</td>
+<td>异步复制，新主 offset 比旧主小</td>
+<td>业务侧可补偿；关键数据不能只靠 Sentinel</td>
+</tr>
+<tr>
+<td>连接全断</td>
+<td>主库地址变了，旧连接全部失效</td>
+<td>连接池重建 + 短重试 + 熔断</td>
+</tr>
+<tr>
+<td>脑裂</td>
+<td>旧主未死但网络分区，仍在接收写</td>
+<td><code>min-replicas-to-write</code> 保护；分区恢复后人工核对</td>
+</tr>
+</tbody></table>
+<p>「脑裂」这条要特别说明：如果旧主与多数 Sentinel 失去联系，但客户端还能连上它，旧主会<strong>继续接受写入</strong>。等分区恢复，Sentinel 把旧主降级为从库，这段写入会被全量同步<strong>覆盖掉</strong>——数据静默丢失。<code>min-replicas-to-write 1</code> 能在一定程度上阻止这种写入（因为没有健康从库就拒绝写）。</p>
+<h2 id="五、场景说明"><a href="#五、场景说明" class="headerlink" title="五、场景说明"></a>五、场景说明</h2><ol>
+<li><strong>Spring Boot + Lettuce&#x2F;Jedis</strong>：用 Sentinel 模式（配置 master 名 + Sentinel 列表），不要手写 IP；</li>
+<li><strong>Go（go-redis）</strong>：<code>NewFailoverClient</code> 支持 Sentinel，自动订阅切换；</li>
+<li><strong>代理层（如 Twemproxy 不支持，Proxy 类方案要另做）</strong>：如果用自研代理，代理自身要实现 Sentinel 客户端逻辑；</li>
+<li><strong>演练</strong>：<code>SENTINEL FAILOVER</code> 主动切换，量出「写请求失败窗口」的时长，这就是业务要容忍的 RTO。</li>
+</ol>
+<h2 id="六、示例代码-实操步骤"><a href="#六、示例代码-实操步骤" class="headerlink" title="六、示例代码&#x2F;实操步骤"></a>六、示例代码&#x2F;实操步骤</h2><pre class="line-numbers language-bash" data-language="bash"><code class="language-bash"><span class="token comment"># 1. 订阅切换通知（终端 A，观察用）</span>
+<span class="token number">127.0</span>.0.1:2637<span class="token operator"><span class="token file-descriptor important">9</span>></span> SUBSCRIBE +switch-master
+Reading messages<span class="token punctuation">..</span>. <span class="token punctuation">(</span>press Ctrl-C to quit<span class="token punctuation">)</span>
+<span class="token number">1</span><span class="token punctuation">)</span> <span class="token string">"subscribe"</span>
+<span class="token number">2</span><span class="token punctuation">)</span> <span class="token string">"+switch-master"</span>
+<span class="token number">3</span><span class="token punctuation">)</span> <span class="token punctuation">(</span>integer<span class="token punctuation">)</span> <span class="token number">1</span>
+<span class="token number">1</span><span class="token punctuation">)</span> <span class="token string">"message"</span>
+<span class="token number">2</span><span class="token punctuation">)</span> <span class="token string">"+switch-master"</span>
+<span class="token number">3</span><span class="token punctuation">)</span> <span class="token string">"mymaster 10.0.0.5 6379 10.0.0.6 6379"</span>   ← 旧主 → 新主
+
+<span class="token comment"># 2. 客户端每次新建连接池前都问一次</span>
+<span class="token number">127.0</span>.0.1:2637<span class="token operator"><span class="token file-descriptor important">9</span>></span> SENTINEL get-master-addr-by-name mymaster
+<span class="token number">1</span><span class="token punctuation">)</span> <span class="token string">"10.0.0.6"</span>
+<span class="token number">2</span><span class="token punctuation">)</span> <span class="token string">"6379"</span>
+
+<span class="token comment"># 3. 触发一次切换并观察主库变化</span>
+<span class="token number">127.0</span>.0.1:2637<span class="token operator"><span class="token file-descriptor important">9</span>></span> SENTINEL FAILOVER mymaster
+OK
+<span class="token number">127.0</span>.0.1:2637<span class="token operator"><span class="token file-descriptor important">9</span>></span> SENTINEL master mymaster
+<span class="token comment"># flags master</span>
+<span class="token comment"># ip 10.0.0.6</span>
+
+<span class="token comment"># 4. 检查旧主是否已降级（切换完成后）</span>
+<span class="token number">127.0</span>.0.1:2637<span class="token operator"><span class="token file-descriptor important">9</span>></span> SENTINEL replicas mymaster
+<span class="token comment"># 应能看到旧主 10.0.0.5 出现在从库列表里</span>
+<span class="token comment"># flags slave</span>
+
+<span class="token comment"># 5. 连接层验证：新主可写</span>
+<span class="token number">127.0</span>.0.1:637<span class="token operator"><span class="token file-descriptor important">9</span>></span> SET after:failover <span class="token number">1</span>
+OK
+
+<span class="token comment"># 6. 打开脑裂保护（生产建议）</span>
+<span class="token number">127.0</span>.0.1:637<span class="token operator"><span class="token file-descriptor important">9</span>></span> CONFIG SET min-replicas-to-write <span class="token number">1</span> min-replicas-max-lag <span class="token number">10</span>
+OK
+
+<span class="token comment"># 7. Java（Lettuce）关键片段</span>
+<span class="token comment"># RedisClient client = RedisClient.create(</span>
+<span class="token comment">#   RedisURI.builder()</span>
+<span class="token comment">#     .withSentinel("10.0.0.7", 26379)</span>
+<span class="token comment">#     .withSentinel("10.0.0.8", 26379)</span>
+<span class="token comment">#     .withSentinel("10.0.0.9", 26379)</span>
+<span class="token comment">#     .withSentinelMasterId("mymaster")</span>
+<span class="token comment">#     .build());</span>
+
+<span class="token comment"># 8. Go（go-redis）</span>
+<span class="token comment"># rdb := redis.NewFailoverClient(&amp;redis.FailoverOptions&#123;</span>
+<span class="token comment">#   MasterName:    "mymaster",</span>
+<span class="token comment">#   SentinelAddrs: []string&#123;"10.0.0.7:26379", "10.0.0.8:26379", "10.0.0.9:26379"&#125;,</span>
+<span class="token comment"># &#125;)</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<p>客户端用 Sentinel 模式的核心差别只有一句：<strong>地址是「主库名字」而不是「IP:端口」</strong>，解析交给 Sentinel 客户端库。</p>
+<h2 id="七、常见坑（官方明确说明的限制）"><a href="#七、常见坑（官方明确说明的限制）" class="headerlink" title="七、常见坑（官方明确说明的限制）"></a>七、常见坑（官方明确说明的限制）</h2><ol>
+<li><strong>只实现「查地址」，没实现「订阅通知」</strong>。切换后老连接池还在打旧主，直到连接报错才重建——这段时间全部请求失败。</li>
+<li><strong>订阅连接断了不重连</strong>。Pub&#x2F;Sub 连接没保活，切换通知永远收不到。</li>
+<li><strong>把切换失败当成业务失败直接抛给用户</strong>。切换窗口内的写失败应当重试，而不是让用户看到「下单失败」。</li>
+<li><strong>重试仍打旧 IP</strong>。重试逻辑必须「先重新解析主库地址」，否则重试也没有意义。</li>
+<li><strong><code>+switch-master</code> 消息格式要按「空格分隔的 5 段」解析</strong>：<code>&lt;master-name&gt; &lt;old-ip&gt; &lt;old-port&gt; &lt;new-ip&gt; &lt;new-port&gt;</code>。解析写错会读到错误的 IP。</li>
+<li><strong>旧主归队会丢数据</strong>。旧主恢复后是被 <code>REPLICAOF</code> 到新主的，它本地多出来的写入会被全量同步覆盖。不要在切换后「相信旧主上的数据」。</li>
+<li><strong><code>SENTINEL FAILOVER</code> 是人工触发</strong>，跳过 odown 判定直接切——演练可用，但生产误用会造成无谓切换。</li>
+<li><strong>切换不保证「零停机」</strong>。必有一小段连接不可用，RTO 取决于客户端重连策略，而不是 Sentinel 的速度。</li>
+</ol>
+<h3 id="版本差异（8-x-标注）"><a href="#版本差异（8-x-标注）" class="headerlink" title="版本差异（8.x 标注）"></a>版本差异（8.x 标注）</h3><blockquote>
+<p>Sentinel 协议与 <code>+switch-master</code> 消息格式在 7.4 与 8.x 之间一致。8.x 无破坏性变更，客户端库按原有方式接入即可。</p>
+<p>依据：<a target="_blank" rel="noopener" href="https://redis.io/docs/latest/operate/oss_and_stack/management/sentinel/">https://redis.io/docs/latest/operate/oss_and_stack/management/sentinel/</a></p>
+</blockquote>
+<h2 id="八、课后小结"><a href="#八、课后小结" class="headerlink" title="八、课后小结"></a>八、课后小结</h2><ul>
+<li>切换六步：确认 odown → 领导者执行 → 挑新主 → 改配置 → 广播 → 旧主归队；</li>
+<li>客户端三件事：查主库地址、订阅 <code>+switch-master</code>、处理切换窗口写失败；</li>
+<li>消息格式是五段空格分隔，解析要严格；</li>
+<li>三类风险：丢最后一段写入、连接全断、脑裂；</li>
+<li>脑裂靠 <code>min-replicas-to-write</code> 缓解，恢复后要人工核对；</li>
+<li>演练要用真实断网测 RTO，而不是只看 Sentinel 日志。</li>
+</ul>
+<h2 id="九、思考题"><a href="#九、思考题" class="headerlink" title="九、思考题"></a>九、思考题</h2><ol>
+<li>客户端实现了「查地址」但没订阅通知，切换后会发生什么？问题会在什么时候暴露？</li>
+<li><code>+switch-master</code> 消息里两个 IP 分别是谁？解析错位会导致什么后果？</li>
+<li>旧主恢复后为什么可能丢掉自己的写入？这与「异步复制」有什么关系？</li>
+<li>脑裂期间旧主还能接受写，怎么用配置把这种写入挡掉？挡掉之后业务会看到什么错误？</li>
+<li>你的系统允许「30 秒内写不可用」，客户端重试应该怎么设计才既不打死新主、又能尽快恢复？</li>
+</ol>
+<h2 id="十、官方资料"><a href="#十、官方资料" class="headerlink" title="十、官方资料"></a>十、官方资料</h2><ul>
+<li>Sentinel（客户端接入与 <code>+switch-master</code>）：<a target="_blank" rel="noopener" href="https://redis.io/docs/latest/operate/oss_and_stack/management/sentinel/">https://redis.io/docs/latest/operate/oss_and_stack/management/sentinel/</a></li>
+<li>SENTINEL get-master-addr-by-name：<a target="_blank" rel="noopener" href="https://redis.io/docs/latest/commands/sentinel-get-master-addr-by-name/">https://redis.io/docs/latest/commands/sentinel-get-master-addr-by-name/</a></li>
+<li>SENTINEL FAILOVER（人工切换）：<a target="_blank" rel="noopener" href="https://redis.io/docs/latest/commands/sentinel-failover/">https://redis.io/docs/latest/commands/sentinel-failover/</a></li>
+<li>Replication（切换时数据丢失窗口）：<a target="_blank" rel="noopener" href="https://redis.io/docs/latest/operate/oss_and_stack/management/replication/">https://redis.io/docs/latest/operate/oss_and_stack/management/replication/</a></li>
+<li>redis.conf（<code>min-replicas-to-write</code> 脑裂保护）：<a target="_blank" rel="noopener" href="https://redis.io/docs/latest/operate/oss_and_stack/management/config-file/">https://redis.io/docs/latest/operate/oss_and_stack/management/config-file/</a></li>
+</ul>
+<p>上一篇：<a href="/2023/01/10/database/redis/redis-20-sentinel-arch/">RD20 Sentinel 架构与选举</a> ｜ 下一篇：<a href="/2023/01/12/database/redis/redis-22-cluster-slot/">RD22 Cluster 的 hash slot 与请求路由</a> ｜ <a href="/2022/12/21/database/redis/redis-0-series-index/">总目录</a></p>
+</div>
+
+  <div class="mb-foot">
+    <a href="/phone/">返回手机首页</a>
+    <a href="/phone/tags/">星迹索引</a>
+  </div>
+</div>
+
+
+<script>
+  /* 作用：懒加载本地 mermaid 库；无 mermaid 代码块时不加载 */
+  function loadLocalMermaid(){
+    return new Promise(function(resolve, reject){
+      if(window.mermaid) return resolve(window.mermaid);
+      var s = document.createElement('script');
+      s.src = '/js/third-party/mermaid/mermaid.min.js?v=10';
+      s.onload = function(){ resolve(window.mermaid); };
+      s.onerror = function(){ reject(new Error('mermaid local load failed')); };
+      document.head.appendChild(s);
+    });
+  }
+
+  /* 作用：把 ```mermaid 代码块替换成 SVG 图（手机端字号略小、图可横向滚动） */
+  async function renderMermaidDiagram(){
+    var blocks = document.querySelectorAll('pre[class*="language-mermaid"]');
+    if(!blocks.length) return;
+    var mermaid;
+    try { mermaid = await loadLocalMermaid(); }
+    catch(e){ console.warn('[mermaid] 本地库加载失败：', e); return; }
+
+    mermaid.initialize({
+      startOnLoad: false,
+      theme: 'base',
+      themeVariables: {
+        darkMode: true,
+        background: 'transparent',
+        fontFamily: '"Microsoft YaHei", "PingFang SC", "Segoe UI", sans-serif',
+        fontSize: '12px',
+        primaryColor: '#062f3d',
+        primaryTextColor: '#d6f6ff',
+        primaryBorderColor: '#00eeff',
+        secondaryColor: '#04222d',
+        tertiaryColor: '#04222d',
+        mainBkg: '#062f3d',
+        nodeBorder: '#00eeff',
+        clusterBkg: '#02161f',
+        clusterBorder: '#00eeff55',
+        lineColor: '#00eeff',
+        textColor: '#c0e8ff',
+        edgeLabelBackground: '#02161f'
+      },
+      flowchart: { curve: 'basis', useMaxWidth: false, htmlLabels: false, nodeSpacing: 30, rankSpacing: 40, padding: 10 }
+    });
+
+    var targets = [];
+    blocks.forEach(function(el){
+      var codeEl = el.querySelector('code');
+      if(!codeEl) return;
+      var div = document.createElement('div');
+      div.className = 'mermaid';
+      div.textContent = codeEl.textContent;
+      el.parentNode.replaceChild(div, el);
+      targets.push(div);
+    });
+    if(!targets.length) return;
+    try { await mermaid.run({ nodes: targets }); }
+    catch(e){ console.warn('[mermaid] 渲染失败：', e); }
+  }
+  /* 作用：多次触发兜底（延迟重试 + DOM 变化），防止某次时机没跑到导致图表留在代码块 */
+  var mmBusy = false;
+  function scheduleMermaid(){
+    if(mmBusy) return;
+    mmBusy = true;
+    renderMermaidDiagram().then(function(){ mmBusy = false; }, function(){ mmBusy = false; });
+  }
+  scheduleMermaid();
+  window.addEventListener('load', scheduleMermaid);
+  [1000, 3000, 8000].forEach(function(ms){ setTimeout(scheduleMermaid, ms); });
+  if(document.readyState !== 'loading') scheduleMermaid();
+  if(window.MutationObserver){
+    var mmTimer = null;
+    var mmObserver = new MutationObserver(function(){
+      clearTimeout(mmTimer);
+      mmTimer = setTimeout(scheduleMermaid, 400);
+    });
+    mmObserver.observe(document.querySelector('.mb-article') || document.body, { childList: true, subtree: true });
+  }
+</script>
+</body>
+</html>

@@ -1,0 +1,416 @@
+<!--
+  ============================================
+  手机端 · 文章原文页
+  文件：phone/post.njk
+  适用终端：手机端（路由 /phone/p/<slug>/，由 scripts/phone-routes.js 生成）
+  作用：手机阅读单篇文章；单列布局、无侧栏无雷达，替代电脑端 post.njk
+        数据由生成期算好：page.item = { title, dateStr, content, cats, tags }
+  样式依赖：source/css/theme/phone/common.css、source/css/theme/phone/list.css
+  组件依赖：phone/_components/Particles.njk
+  最后修改：2026-11-11
+  ============================================
+-->
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="color-scheme" content="dark">
+  <meta name="theme-color" content="#020817">
+  <!-- 首帧兜底：浏览器默认画布是白的，样式未解析前会闪一下白。这条规则先锁死深空底色 -->
+  <style>html{background-color:#020817}</style>
+  <title>redis-RDB 快照：fork、CoW 与丢数据的边界 - 时空秘境</title>
+  <!-- 手机端样式：基础 + 列表/正文，外链引入（源文件 source/css/theme/phone/） -->
+  <link rel="stylesheet" href="/css/theme/phone/common.css">
+  <link rel="stylesheet" href="/css/theme/phone/list.css">
+<meta name="generator" content="Hexo 8.1.2"></head>
+<body>
+<div class="mb-shell">
+  <!--
+  ============================================
+  手机端星空粒子组件
+  文件：Particles.njk
+  适用终端：手机端
+  作用：Particles.njk 的手机端副本（nunjucks 子目录 include 取不到上级）
+        参数与电脑端 _components/Particles.njk 保持一致：
+        粒子 95 / 连线 118px / opacity 0.32，外加星座层与零星闪烁层
+  最后修改：2026-11-12
+  ============================================
+--><!-- z-index 必须是 0：负层级会被 body 不透明背景盖住，粒子在跑却看不见 -->
+<div id="particles" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 0; pointer-events: none;"></div>
+<!-- 星座层（与首页同一套：随机零星散布星座图形 + 偶尔闪烁的小星） -->
+<div id="constellations" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 1; pointer-events: none;" aria-hidden="true"></div>
+<script src="/js/particles.min.js"></script>
+<script>
+particlesJS("particles", {
+  particles: {
+    number: {
+      value: 95,
+      density: {
+        enable: true,
+        value_area: 800
+      }
+    },
+    color: {
+      value: "#00eeff"
+    },
+    shape: {
+      type: "circle",
+      stroke: {
+        width: 0,
+        color: "#000000"
+      }
+    },
+    opacity: {
+      value: 0.6,
+      random: true,
+      anim: {
+        enable: true,
+        speed: 0.5,
+        opacity_min: 0.1,
+        sync: false
+      }
+    },
+    size: {
+      value: 3,
+      random: true,
+      anim: {
+        enable: true,
+        speed: 2,
+        size_min: 0.1,
+        sync: false
+      }
+    },
+    line_linked: {
+      enable: true,
+      distance: 118,
+      color: "#00eeff",
+      opacity: 0.32,
+      width: 1
+    },
+    move: {
+      enable: true,
+      speed: 0.8,
+      direction: "none",
+      random: true,
+      straight: false,
+      out_mode: "out",
+      bounce: false,
+      attract: {
+        enable: true,
+        rotateX: 600,
+        rotateY: 1200
+      }
+    }
+  },
+  interactivity: {
+    detect_on: "canvas",
+    events: {
+      onhover: {
+        enable: true,
+        mode: "grab"       // 手指按住时粒子聚集
+      },
+      onclick: {
+        enable: true,
+        mode: "push"       // 点击时产生新粒子
+      },
+      resize: true
+    },
+    modes: {
+      grab: {
+        distance: 200,
+        line_linked: {
+          opacity: 1
+        }
+      },
+      push: {
+        particles_nb: 6
+      }
+    }
+  },
+  retina_detect: true
+});
+</script>
+<!-- 星座 + 零星闪烁层：与电脑端共用同一份绘制脚本 -->
+<script src="/js/theme/home/starfield.js"></script>
+
+
+  <div class="mb-top">
+    <a class="mb-back" href="/phone/">← 返回手机首页</a>
+    <span class="mb-sub" style="margin:0">2023-01-04</span>
+  </div>
+
+  <h1 class="mb-title">redis-RDB 快照：fork、CoW 与丢数据的边界</h1>
+  <div class="mb-sub">
+    分类：database · redis
+     ｜ 标签：Redis · 系统课 · 持久化
+  </div>
+
+  <div class="mb-article"><div class="essay-banner essay-database"></div>
+
+<h1 id="RDB-快照：fork、CoW-与丢数据的边界"><a href="#RDB-快照：fork、CoW-与丢数据的边界" class="headerlink" title="RDB 快照：fork、CoW 与丢数据的边界"></a>RDB 快照：fork、CoW 与丢数据的边界</h1><p><img src="https://wu4yong.github.io/starry-images/assets/img/redis/rd-14-rdb.svg" alt="RDB 的三步写入、四类触发与 CoW 代价"></p>
+<p><em>BGSAVE 的三步流程、四类触发方式与四条官方约束｜依据 Redis 7.4 官方文档自绘</em></p>
+<h2 id="一、学习目标"><a href="#一、学习目标" class="headerlink" title="一、学习目标"></a>一、学习目标</h2><p>学完这一讲，你要能做到三件事：</p>
+<ol>
+<li>讲清 RDB 的本质是「某一时刻的全量内存快照」，以及 <code>fork</code> + 写时复制（CoW）是怎么做到「不停服」的；</li>
+<li>记住四类触发方式与关键配置（<code>save</code>、<code>dbfilename</code>、<code>dir</code>、<code>stop-writes-on-bgsave-error</code>），知道每一项在事故里的表现；</li>
+<li>能明确说出 RDB 的丢数据边界：为什么它天然做不到 RPO&#x3D;0，以及什么时候这个代价可以接受。</li>
+</ol>
+<h2 id="二、前置知识"><a href="#二、前置知识" class="headerlink" title="二、前置知识"></a>二、前置知识</h2><p>RD12（过期与淘汰，理解「内存里到底有什么」）。持久化就是把内存里的东西落盘，先清楚内存结构再谈落盘。</p>
+<h2 id="三、理论讲解（官方定义）"><a href="#三、理论讲解（官方定义）" class="headerlink" title="三、理论讲解（官方定义）"></a>三、理论讲解（官方定义）</h2><p>官方对 RDB 的定位（原文）：</p>
+<blockquote>
+<p>RDB persistence performs point-in-time snapshots of your dataset at specified intervals.</p>
+<p>—— <a target="_blank" rel="noopener" href="https://redis.io/docs/latest/operate/oss_and_stack/management/persistence/">https://redis.io/docs/latest/operate/oss_and_stack/management/persistence/</a></p>
+</blockquote>
+<p>这句话有三个词必须咬住：</p>
+<ul>
+<li><strong>point-in-time</strong>：它记录的是某个瞬间的完整状态，不是「逐条变更」；</li>
+<li><strong>snapshot</strong>：快照是整体，不存在「只备份一部分」；</li>
+<li><strong>at specified intervals</strong>：由配置点或手动触发决定，不是每条写都落盘。</li>
+</ul>
+<p>文件与格式（官方默认值）：</p>
+<table>
+<thead>
+<tr>
+<th>配置项</th>
+<th>默认值</th>
+<th>含义</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>dbfilename</code></td>
+<td><code>dump.rdb</code></td>
+<td>快照文件名</td>
+</tr>
+<tr>
+<td><code>dir</code></td>
+<td><code>./</code></td>
+<td>快照存放目录</td>
+</tr>
+<tr>
+<td><code>rdbcompression</code></td>
+<td><code>yes</code></td>
+<td>用 LZF 压缩字符串</td>
+</tr>
+<tr>
+<td><code>rdbchecksum</code></td>
+<td><code>yes</code></td>
+<td>文件末尾写 CRC64 校验和</td>
+</tr>
+<tr>
+<td><code>stop-writes-on-bgsave-error</code></td>
+<td><code>yes</code></td>
+<td>bgsave 失败后拒绝写命令</td>
+</tr>
+</tbody></table>
+<h2 id="四、原理拆解"><a href="#四、原理拆解" class="headerlink" title="四、原理拆解"></a>四、原理拆解</h2><h3 id="1-一次-BGSAVE-的三步"><a href="#1-一次-BGSAVE-的三步" class="headerlink" title="1. 一次 BGSAVE 的三步"></a>1. 一次 BGSAVE 的三步</h3><p><code>BGSAVE</code> 是「后台保存」，它靠 <code>fork</code> 实现，全流程只有三步：</p>
+<ol>
+<li><strong><code>fork()</code></strong>：主进程复制一份自己（子进程），此时父子进程<strong>共享同一份物理内存页</strong>，不复制数据；</li>
+<li><strong>子进程遍历写临时文件</strong>：子进程把内存里的所有 key 按 RDB 格式写到 <code>temp-&lt;pid&gt;.rdb</code>。主进程同时继续处理客户端命令；</li>
+<li><strong><code>rename</code> 原子替换</strong>：写完后把临时文件改名为 <code>dump.rdb</code>。<code>rename</code> 是原子的，所以任何时刻磁盘上都是一个完整文件，不会出现「写了一半的 RDB」。</li>
+</ol>
+<p>这就是「快照能不停服」的全部秘密。但代价藏在第 2 步里，下一节讲。</p>
+<h3 id="2-写时复制（CoW）：为什么内存会涨"><a href="#2-写时复制（CoW）：为什么内存会涨" class="headerlink" title="2. 写时复制（CoW）：为什么内存会涨"></a>2. 写时复制（CoW）：为什么内存会涨</h3><p><code>fork</code> 之后父子共享内存页，但<strong>只要主进程改写了某一页，内核就会为这一页复制一份</strong>给主进程，原页留给子进程继续读。这叫写时复制（Copy-on-Write）。</p>
+<p>于是有两条必须记住的结论：</p>
+<ul>
+<li><strong>子进程看到的内存是 fork 那一刻的固定视图</strong>，所以快照是「时间点」的，不会被后续写入污染；</li>
+<li><strong>主进程每秒写入越多，CoW 复制的页越多，额外内存越多</strong>。极端情况下（全库都在被改），这份额外内存接近数据总量——即「快照期间内存翻倍」。</li>
+</ul>
+<p>官方在 <code>INFO</code> 里专门给了观测字段：</p>
+<pre class="line-numbers language-bash" data-language="bash"><code class="language-bash">INFO persistence
+<span class="token comment"># rdb_bgsave_in_progress:0        —— 是否正在 bgsave</span>
+<span class="token comment"># rdb_last_bgsave_status:ok       —— 上次结果</span>
+<span class="token comment"># rdb_last_bgsave_time_sec:-1     —— 耗时</span>
+<span class="token comment"># rdb_changes_since_last_save:0   —— 距上次快照的写次数</span>
+<span class="token comment"># rdb_last_cow_size:0             —— 上次 fork 期间的 CoW 内存</span>
+<span class="token comment"># latest_fork_usec:0              —— 上次 fork 阻塞主线程的微秒数</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<p><code>latest_fork_usec</code> 与 <code>rdb_last_cow_size</code> 是排查「快照期间变慢 &#x2F; 内存报警」的第一手数据。</p>
+<h3 id="3-四类触发方式"><a href="#3-四类触发方式" class="headerlink" title="3. 四类触发方式"></a>3. 四类触发方式</h3><ol>
+<li><strong>手动 <code>SAVE</code></strong>：在<strong>主线程</strong>完成整个快照，期间完全阻塞，生产环境禁止使用；</li>
+<li><strong>手动 <code>BGSAVE</code></strong>：后台 fork 执行，可用于「打备份点」；</li>
+<li><strong><code>save</code> 配置点自动触发</strong>：7.x 默认是 <code>save 3600 1 300 100 60 10000</code>，含义是「3600 秒内有 1 次写 &#x2F; 300 秒内有 100 次写 &#x2F; 60 秒内有 10000 次写」就触发一次；</li>
+<li><strong>其他隐式触发</strong>：<code>SHUTDOWN</code> 关服务时（有 <code>save</code> 配置才会保存）、主从首次全量同步时主节点自动 <code>BGSAVE</code>。</li>
+</ol>
+<p><code>save &quot;&quot;</code> 可以彻底关闭自动快照，仅保留手动 <code>BGSAVE</code>——很多「只要 AOF」的部署会这么做。</p>
+<h3 id="4-丢数据的边界：RPO-不是-0"><a href="#4-丢数据的边界：RPO-不是-0" class="headerlink" title="4. 丢数据的边界：RPO 不是 0"></a>4. 丢数据的边界：RPO 不是 0</h3><p>RDB 只在快照点落盘，所以：</p>
+<ul>
+<li>两次快照之间的所有写入，如果进程崩溃 &#x2F; 机器掉电，<strong>全部丢失</strong>；</li>
+<li>最坏情况下的丢失窗口 &#x3D; 最大间隔（<code>save</code> 配置里最长的那条，或你手动 <code>BGSAVE</code> 的间隔）。</li>
+</ul>
+<p>这就是「RDB 天然不保证 RPO&#x3D;0」。它适合「能接受几分钟丢失」的场景（缓存重建、可重放的派生数据），不适合账务、订单这类「丢一条就是事故」的数据——那需要 AOF（下一讲）。</p>
+<h2 id="五、场景说明"><a href="#五、场景说明" class="headerlink" title="五、场景说明"></a>五、场景说明</h2><ol>
+<li><strong>缓存层的兜底</strong>：宕机后从 RDB 快速恢复大部分缓存，剩余靠回源，恢复速度最快；</li>
+<li><strong>定期冷备</strong>：每天低峰 <code>BGSAVE</code>，把 <code>dump.rdb</code> 传到对象存储；</li>
+<li><strong>主从全量同步的载体</strong>：从节点首次接入、或复制积压断开后重连，都靠 RDB 全量传输；</li>
+<li><strong>大数据量搬迁</strong>：同版本搬迁直接拷 RDB，比逐条命令重放快得多。</li>
+</ol>
+<p>不适合：要求「最多丢 1 秒」的在线业务（该开 AOF）、需要「精确到某条命令」审计的场景（RDB 是二进制快照，没有命令记录）。</p>
+<h2 id="六、示例代码-实操步骤"><a href="#六、示例代码-实操步骤" class="headerlink" title="六、示例代码&#x2F;实操步骤"></a>六、示例代码&#x2F;实操步骤</h2><pre class="line-numbers language-bash" data-language="bash"><code class="language-bash"><span class="token comment"># 1. 看当前快照配置</span>
+<span class="token number">127.0</span>.0.1:637<span class="token operator"><span class="token file-descriptor important">9</span>></span> CONFIG GET save
+<span class="token number">1</span><span class="token punctuation">)</span> <span class="token string">"save"</span>
+<span class="token number">2</span><span class="token punctuation">)</span> <span class="token string">"3600 1 300 100 60 10000"</span>
+<span class="token number">127.0</span>.0.1:637<span class="token operator"><span class="token file-descriptor important">9</span>></span> CONFIG GET <span class="token function">dir</span>
+<span class="token number">1</span><span class="token punctuation">)</span> <span class="token string">"dir"</span>
+<span class="token number">2</span><span class="token punctuation">)</span> <span class="token string">"/var/lib/redis"</span>
+<span class="token number">127.0</span>.0.1:637<span class="token operator"><span class="token file-descriptor important">9</span>></span> CONFIG GET dbfilename
+<span class="token number">1</span><span class="token punctuation">)</span> <span class="token string">"dbfilename"</span>
+<span class="token number">2</span><span class="token punctuation">)</span> <span class="token string">"dump.rdb"</span>
+
+<span class="token comment"># 2. 手动触发后台快照（生产可用）</span>
+<span class="token number">127.0</span>.0.1:637<span class="token operator"><span class="token file-descriptor important">9</span>></span> BGSAVE
+Background saving started
+
+<span class="token comment"># 3. 观察进度与结果</span>
+<span class="token number">127.0</span>.0.1:637<span class="token operator"><span class="token file-descriptor important">9</span>></span> INFO persistence
+<span class="token comment"># rdb_bgsave_in_progress:1</span>
+<span class="token comment"># rdb_last_bgsave_status:ok</span>
+<span class="token comment"># rdb_last_cow_size:1048576</span>
+<span class="token comment"># latest_fork_usec:2345</span>
+
+<span class="token comment"># 4. 关掉自动快照，只留手动</span>
+<span class="token number">127.0</span>.0.1:637<span class="token operator"><span class="token file-descriptor important">9</span>></span> CONFIG SET save <span class="token string">""</span>
+OK
+
+<span class="token comment"># 5. 校验文件完整性（在 shell 里执行）</span>
+$ redis-check-rdb /var/lib/redis/dump.rdb
+<span class="token punctuation">[</span>offset <span class="token number">0</span><span class="token punctuation">]</span> Checking RDB <span class="token function">file</span> dump.rdb
+<span class="token punctuation">[</span>offset <span class="token number">1234</span><span class="token punctuation">]</span> AUX FIELD redis-ver <span class="token operator">=</span> <span class="token string">'7.4.0'</span>
+<span class="token punctuation">[</span>offset <span class="token number">567890</span><span class="token punctuation">]</span> Checksum OK
+
+<span class="token comment"># 6. 快照失败时的保护行为</span>
+<span class="token number">127.0</span>.0.1:637<span class="token operator"><span class="token file-descriptor important">9</span>></span> CONFIG GET stop-writes-on-bgsave-error
+<span class="token number">1</span><span class="token punctuation">)</span> <span class="token string">"stop-writes-on-bgsave-error"</span>
+<span class="token number">2</span><span class="token punctuation">)</span> <span class="token string">"yes"</span>
+<span class="token comment"># 若 dir 不可写导致 bgsave 失败，接下来的写命令会返回：</span>
+<span class="token comment"># (error) MISCONF Redis is configured to save RDB snapshots, but it's currently unable to persist to disk.</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<p>最后那条 <code>MISCONF</code> 错误是<strong>可观测的保护机制</strong>：它逼你修磁盘问题，而不是让服务「看起来很健康但数据不落盘」。要么修好 <code>dir</code> 权限，要么确认「确实不需要 RDB」后把该配置设为 <code>no</code>。</p>
+<h2 id="七、常见坑（官方明确说明的限制）"><a href="#七、常见坑（官方明确说明的限制）" class="headerlink" title="七、常见坑（官方明确说明的限制）"></a>七、常见坑（官方明确说明的限制）</h2><ol>
+<li><strong><code>SAVE</code> 会阻塞全部客户端</strong>。它在主线程完成整个写盘过程，数据量越大卡得越久。线上只用 <code>BGSAVE</code>。</li>
+<li><strong>快照期间内存可能接近翻倍</strong>。CoW 复制的页数与写入量相关，<code>maxmemory</code> 需要给这部分留余量，否则会被 OOM Killer 干掉。</li>
+<li><strong><code>fork</code> 本身也会阻塞</strong>。虽然不复制数据，但复制页表在百万级 key 上仍需毫秒到数十毫秒，<code>latest_fork_usec</code> 就是它。</li>
+<li><strong><code>stop-writes-on-bgsave-error yes</code> 会让写全部失败</strong>。这不是 bug，是保护；但它会把「磁盘满了」升级成「服务不可写」，运维要监控 <code>rdb_last_bgsave_status</code>。</li>
+<li><strong><code>dir</code> 与 <code>dbfilename</code> 配错会静默不落盘</strong>。尤其是容器里 <code>dir</code> 指向临时目录，重启即丢。</li>
+<li><strong>RDB 是二进制私有格式</strong>。跨大版本恢复要先用同版本 <code>redis-check-rdb</code> 校验；<code>rdbchecksum yes</code> 时校验和不符会拒绝加载。</li>
+<li><strong><code>rdbcompression</code> 只压缩字符串</strong>，不减少结构开销，所以大 Hash 压缩率有限，别指望它解决内存问题。</li>
+<li><strong>RDB 没有增量</strong>。每次都是全量，数据量大时单次快照的耗时与磁盘 IO 都很可观。</li>
+</ol>
+<h3 id="版本差异（8-x-标注）"><a href="#版本差异（8-x-标注）" class="headerlink" title="版本差异（8.x 标注）"></a>版本差异（8.x 标注）</h3><blockquote>
+<p>7.0 起支持多部分 AOF 后，RDB 仍是「全量快照」的唯一格式；8.x 的 RDB 文件格式与 7.x 兼容性需要在目标版本验证。<code>save</code> 默认值在 7.x 已调整为 <code>3600 1 300 100 60 10000</code>，老文档里的 <code>900 1 300 10</code> 属于旧默认值。</p>
+<p>依据：<a target="_blank" rel="noopener" href="https://redis.io/docs/latest/operate/oss_and_stack/management/persistence/">https://redis.io/docs/latest/operate/oss_and_stack/management/persistence/</a></p>
+</blockquote>
+<h2 id="八、课后小结"><a href="#八、课后小结" class="headerlink" title="八、课后小结"></a>八、课后小结</h2><ul>
+<li>RDB 是某一时刻的全量内存快照，靠 <code>fork</code> + CoW 实现「不停服」；</li>
+<li>三步：fork → 子进程写临时文件 → <code>rename</code> 原子替换；</li>
+<li>四类触发：<code>SAVE</code>（阻塞，禁用）&#x2F; <code>BGSAVE</code> &#x2F; <code>save</code> 配置点 &#x2F; 关服务与主从全量同步；</li>
+<li>CoW 让快照期间内存可能接近翻倍，<code>fork</code> 本身也会短暂阻塞；</li>
+<li>RDB 只在快照点落盘，两次快照之间的写入会丢，天然做不到 RPO&#x3D;0；</li>
+<li><code>stop-writes-on-bgsave-error yes</code> 会让写失败，这是保护不是缺陷。</li>
+</ul>
+<h2 id="九、思考题"><a href="#九、思考题" class="headerlink" title="九、思考题"></a>九、思考题</h2><ol>
+<li><code>fork</code> 之后父子进程「共享内存」，为什么子进程写文件时不会看到主进程后来的改动？靠的机制叫什么？</li>
+<li>一次 <code>BGSAVE</code> 期间主进程写了 10 GB 数据，CoW 内存大约会是多少？这对 <code>maxmemory</code> 设置意味着什么？</li>
+<li>一台机器 64 GB 内存、数据 40 GB、<code>maxmemory</code> 设了 45 GB，跑 <code>BGSAVE</code> 时会发生什么？</li>
+<li>为什么线上推荐在<strong>从节点</strong>上做备份，而不是主节点？</li>
+<li>「RDB 恢复比 AOF 快」这句话对不对？为什么？</li>
+</ol>
+<h2 id="十、官方资料"><a href="#十、官方资料" class="headerlink" title="十、官方资料"></a>十、官方资料</h2><ul>
+<li>Persistence（RDB 的定义、优缺点、配置项）：<a target="_blank" rel="noopener" href="https://redis.io/docs/latest/operate/oss_and_stack/management/persistence/">https://redis.io/docs/latest/operate/oss_and_stack/management/persistence/</a></li>
+<li>BGSAVE（后台快照语义）：<a target="_blank" rel="noopener" href="https://redis.io/docs/latest/commands/bgsave/">https://redis.io/docs/latest/commands/bgsave/</a></li>
+<li>SAVE（主线程阻塞的说明）：<a target="_blank" rel="noopener" href="https://redis.io/docs/latest/commands/save/">https://redis.io/docs/latest/commands/save/</a></li>
+<li>INFO（persistence 段各字段含义）：<a target="_blank" rel="noopener" href="https://redis.io/docs/latest/commands/info/">https://redis.io/docs/latest/commands/info/</a></li>
+<li>redis-check-rdb（RDB 文件校验）：<a target="_blank" rel="noopener" href="https://redis.io/docs/latest/operate/oss_and_stack/management/persistence/">https://redis.io/docs/latest/operate/oss_and_stack/management/persistence/</a></li>
+<li>redis.conf（dbfilename &#x2F; dir &#x2F; rdbcompression &#x2F; rdbchecksum）：<a target="_blank" rel="noopener" href="https://redis.io/docs/latest/operate/oss_and_stack/management/config-file/">https://redis.io/docs/latest/operate/oss_and_stack/management/config-file/</a></li>
+</ul>
+<p>上一篇：<a href="/2023/01/03/database/redis/redis-13-bigkey-hotkey/">RD13 大 key 与热 key</a> ｜ 下一篇：<a href="/2023/01/05/database/redis/redis-15-aof/">RD15 AOF 与三种 appendfsync</a> ｜ <a href="/2022/12/21/database/redis/redis-0-series-index/">总目录</a></p>
+</div>
+
+  <div class="mb-foot">
+    <a href="/phone/">返回手机首页</a>
+    <a href="/phone/tags/">星迹索引</a>
+  </div>
+</div>
+
+
+<script>
+  /* 作用：懒加载本地 mermaid 库；无 mermaid 代码块时不加载 */
+  function loadLocalMermaid(){
+    return new Promise(function(resolve, reject){
+      if(window.mermaid) return resolve(window.mermaid);
+      var s = document.createElement('script');
+      s.src = '/js/third-party/mermaid/mermaid.min.js?v=10';
+      s.onload = function(){ resolve(window.mermaid); };
+      s.onerror = function(){ reject(new Error('mermaid local load failed')); };
+      document.head.appendChild(s);
+    });
+  }
+
+  /* 作用：把 ```mermaid 代码块替换成 SVG 图（手机端字号略小、图可横向滚动） */
+  async function renderMermaidDiagram(){
+    var blocks = document.querySelectorAll('pre[class*="language-mermaid"]');
+    if(!blocks.length) return;
+    var mermaid;
+    try { mermaid = await loadLocalMermaid(); }
+    catch(e){ console.warn('[mermaid] 本地库加载失败：', e); return; }
+
+    mermaid.initialize({
+      startOnLoad: false,
+      theme: 'base',
+      themeVariables: {
+        darkMode: true,
+        background: 'transparent',
+        fontFamily: '"Microsoft YaHei", "PingFang SC", "Segoe UI", sans-serif',
+        fontSize: '12px',
+        primaryColor: '#062f3d',
+        primaryTextColor: '#d6f6ff',
+        primaryBorderColor: '#00eeff',
+        secondaryColor: '#04222d',
+        tertiaryColor: '#04222d',
+        mainBkg: '#062f3d',
+        nodeBorder: '#00eeff',
+        clusterBkg: '#02161f',
+        clusterBorder: '#00eeff55',
+        lineColor: '#00eeff',
+        textColor: '#c0e8ff',
+        edgeLabelBackground: '#02161f'
+      },
+      flowchart: { curve: 'basis', useMaxWidth: false, htmlLabels: false, nodeSpacing: 30, rankSpacing: 40, padding: 10 }
+    });
+
+    var targets = [];
+    blocks.forEach(function(el){
+      var codeEl = el.querySelector('code');
+      if(!codeEl) return;
+      var div = document.createElement('div');
+      div.className = 'mermaid';
+      div.textContent = codeEl.textContent;
+      el.parentNode.replaceChild(div, el);
+      targets.push(div);
+    });
+    if(!targets.length) return;
+    try { await mermaid.run({ nodes: targets }); }
+    catch(e){ console.warn('[mermaid] 渲染失败：', e); }
+  }
+  /* 作用：多次触发兜底（延迟重试 + DOM 变化），防止某次时机没跑到导致图表留在代码块 */
+  var mmBusy = false;
+  function scheduleMermaid(){
+    if(mmBusy) return;
+    mmBusy = true;
+    renderMermaidDiagram().then(function(){ mmBusy = false; }, function(){ mmBusy = false; });
+  }
+  scheduleMermaid();
+  window.addEventListener('load', scheduleMermaid);
+  [1000, 3000, 8000].forEach(function(ms){ setTimeout(scheduleMermaid, ms); });
+  if(document.readyState !== 'loading') scheduleMermaid();
+  if(window.MutationObserver){
+    var mmTimer = null;
+    var mmObserver = new MutationObserver(function(){
+      clearTimeout(mmTimer);
+      mmTimer = setTimeout(scheduleMermaid, 400);
+    });
+    mmObserver.observe(document.querySelector('.mb-article') || document.body, { childList: true, subtree: true });
+  }
+</script>
+</body>
+</html>

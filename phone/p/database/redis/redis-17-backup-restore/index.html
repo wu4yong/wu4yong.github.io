@@ -1,0 +1,439 @@
+<!--
+  ============================================
+  手机端 · 文章原文页
+  文件：phone/post.njk
+  适用终端：手机端（路由 /phone/p/<slug>/，由 scripts/phone-routes.js 生成）
+  作用：手机阅读单篇文章；单列布局、无侧栏无雷达，替代电脑端 post.njk
+        数据由生成期算好：page.item = { title, dateStr, content, cats, tags }
+  样式依赖：source/css/theme/phone/common.css、source/css/theme/phone/list.css
+  组件依赖：phone/_components/Particles.njk
+  最后修改：2026-11-11
+  ============================================
+-->
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="color-scheme" content="dark">
+  <meta name="theme-color" content="#020817">
+  <!-- 首帧兜底：浏览器默认画布是白的，样式未解析前会闪一下白。这条规则先锁死深空底色 -->
+  <style>html{background-color:#020817}</style>
+  <title>redis-备份、迁移与恢复演练 - 时空秘境</title>
+  <!-- 手机端样式：基础 + 列表/正文，外链引入（源文件 source/css/theme/phone/） -->
+  <link rel="stylesheet" href="/css/theme/phone/common.css">
+  <link rel="stylesheet" href="/css/theme/phone/list.css">
+<meta name="generator" content="Hexo 8.1.2"></head>
+<body>
+<div class="mb-shell">
+  <!--
+  ============================================
+  手机端星空粒子组件
+  文件：Particles.njk
+  适用终端：手机端
+  作用：Particles.njk 的手机端副本（nunjucks 子目录 include 取不到上级）
+        参数与电脑端 _components/Particles.njk 保持一致：
+        粒子 95 / 连线 118px / opacity 0.32，外加星座层与零星闪烁层
+  最后修改：2026-11-12
+  ============================================
+--><!-- z-index 必须是 0：负层级会被 body 不透明背景盖住，粒子在跑却看不见 -->
+<div id="particles" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 0; pointer-events: none;"></div>
+<!-- 星座层（与首页同一套：随机零星散布星座图形 + 偶尔闪烁的小星） -->
+<div id="constellations" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 1; pointer-events: none;" aria-hidden="true"></div>
+<script src="/js/particles.min.js"></script>
+<script>
+particlesJS("particles", {
+  particles: {
+    number: {
+      value: 95,
+      density: {
+        enable: true,
+        value_area: 800
+      }
+    },
+    color: {
+      value: "#00eeff"
+    },
+    shape: {
+      type: "circle",
+      stroke: {
+        width: 0,
+        color: "#000000"
+      }
+    },
+    opacity: {
+      value: 0.6,
+      random: true,
+      anim: {
+        enable: true,
+        speed: 0.5,
+        opacity_min: 0.1,
+        sync: false
+      }
+    },
+    size: {
+      value: 3,
+      random: true,
+      anim: {
+        enable: true,
+        speed: 2,
+        size_min: 0.1,
+        sync: false
+      }
+    },
+    line_linked: {
+      enable: true,
+      distance: 118,
+      color: "#00eeff",
+      opacity: 0.32,
+      width: 1
+    },
+    move: {
+      enable: true,
+      speed: 0.8,
+      direction: "none",
+      random: true,
+      straight: false,
+      out_mode: "out",
+      bounce: false,
+      attract: {
+        enable: true,
+        rotateX: 600,
+        rotateY: 1200
+      }
+    }
+  },
+  interactivity: {
+    detect_on: "canvas",
+    events: {
+      onhover: {
+        enable: true,
+        mode: "grab"       // 手指按住时粒子聚集
+      },
+      onclick: {
+        enable: true,
+        mode: "push"       // 点击时产生新粒子
+      },
+      resize: true
+    },
+    modes: {
+      grab: {
+        distance: 200,
+        line_linked: {
+          opacity: 1
+        }
+      },
+      push: {
+        particles_nb: 6
+      }
+    }
+  },
+  retina_detect: true
+});
+</script>
+<!-- 星座 + 零星闪烁层：与电脑端共用同一份绘制脚本 -->
+<script src="/js/theme/home/starfield.js"></script>
+
+
+  <div class="mb-top">
+    <a class="mb-back" href="/phone/">← 返回手机首页</a>
+    <span class="mb-sub" style="margin:0">2023-01-07</span>
+  </div>
+
+  <h1 class="mb-title">redis-备份、迁移与恢复演练</h1>
+  <div class="mb-sub">
+    分类：database · redis
+     ｜ 标签：Redis · 系统课 · 运维
+  </div>
+
+  <div class="mb-article"><div class="essay-banner essay-database"></div>
+
+<h1 id="备份、迁移与恢复演练"><a href="#备份、迁移与恢复演练" class="headerlink" title="备份、迁移与恢复演练"></a>备份、迁移与恢复演练</h1><p><img src="https://wu4yong.github.io/starry-images/assets/img/redis/rd-17-backup.svg" alt="备份、恢复与迁移的路径选择"></p>
+<p><em>BGSAVE → 拷贝 → 校验，恢复顺序与四种迁移手段｜依据 Redis 7.4 官方文档自绘</em></p>
+<h2 id="一、学习目标"><a href="#一、学习目标" class="headerlink" title="一、学习目标"></a>一、学习目标</h2><p>学完这一讲，你要能做到三件事：</p>
+<ol>
+<li>独立写出一个「能恢复」的 Redis 备份方案，知道 RDB 与 AOF 各自该拷什么、怎么校验；</li>
+<li>掌握恢复的正确顺序（停服务 → 放文件 → 改配置 → 启动），以及最常见的三个恢复失败原因；</li>
+<li>面对「不停机迁移 &#x2F; 跨版本升级 &#x2F; 单机 ↔ Cluster」三种需求，能选出对应手段并说清风险。</li>
+</ol>
+<h2 id="二、前置知识"><a href="#二、前置知识" class="headerlink" title="二、前置知识"></a>二、前置知识</h2><p>RD14（RDB）、RD15（AOF）、RD16（重写与混合持久化）。备份的本质就是把前面三讲产出的文件搬走并保证可用。</p>
+<h2 id="三、理论讲解（官方定义）"><a href="#三、理论讲解（官方定义）" class="headerlink" title="三、理论讲解（官方定义）"></a>三、理论讲解（官方定义）</h2><p>官方的备份口径（原文要点）：</p>
+<blockquote>
+<p>… you can copy the RDB file … Redis is able to reload it at startup … it is recommended to perform backups from a replica.</p>
+<p>—— <a target="_blank" rel="noopener" href="https://redis.io/docs/latest/operate/oss_and_stack/management/persistence/">https://redis.io/docs/latest/operate/oss_and_stack/management/persistence/</a></p>
+</blockquote>
+<p>以及官方给出的在线拉取方式（原文）：</p>
+<blockquote>
+<p><code>redis-cli --rdb /path/to/dump.rdb</code> … transfer a RDB file from a remote Redis instance.</p>
+<p>—— <a target="_blank" rel="noopener" href="https://redis.io/docs/latest/develop/tools/cli/">https://redis.io/docs/latest/develop/tools/cli/</a></p>
+</blockquote>
+<p>两条要点：</p>
+<ul>
+<li><strong>备份应从副本做</strong>，避免在主节点上额外触发一次 <code>fork</code> 与 CoW；</li>
+<li><strong><code>redis-cli --rdb</code> 是官方支持的远程快照拉取</strong>，不需要登录机器就能拿到一致快照。</li>
+</ul>
+<p>校验工具（官方明确列出）：<code>redis-check-rdb</code> 与 <code>redis-check-aof</code>，后者支持 <code>--fix</code> 修复被截断的尾部。</p>
+<h2 id="四、原理拆解"><a href="#四、原理拆解" class="headerlink" title="四、原理拆解"></a>四、原理拆解</h2><h3 id="1-备份：先有一致的快照，再谈拷贝"><a href="#1-备份：先有一致的快照，再谈拷贝" class="headerlink" title="1. 备份：先有一致的快照，再谈拷贝"></a>1. 备份：先有一致的快照，再谈拷贝</h3><p>RDB 备份的标准流程：</p>
+<ol>
+<li>在<strong>副本</strong>上（或低峰的主节点）执行 <code>BGSAVE</code>；</li>
+<li>等 <code>rdb_bgsave_in_progress</code> 归零、<code>rdb_last_bgsave_status: ok</code>；</li>
+<li>拷贝 <code>dir/dbfilename</code> 到备份介质；</li>
+<li>立刻用 <code>redis-check-rdb</code> 校验一次；</li>
+<li>记录版本号、时间、数据量（<code>DBSIZE</code>），写进备份清单。</li>
+</ol>
+<p><strong>为什么不能直接 <code>cp</code> 正在写的文件</strong>？因为 <code>rename</code> 之前是临时文件、<code>rename</code> 之后才是完整文件；直接拷 <code>dump.rdb</code> 大多没问题（它本身就是原子的），但在 <code>BGSAVE</code> 进行中拷可能拿到旧文件而误以为「已是最新」——所以要等状态归零再拷。</p>
+<p>AOF 备份（7.x）：</p>
+<pre class="line-numbers language-bash" data-language="bash"><code class="language-bash"><span class="token function">ls</span> appendonlydir/            <span class="token comment"># base.rdb + incr.aof + manifest</span><span aria-hidden="true" class="line-numbers-rows"><span></span></span></code></pre>
+
+<p>必须<strong>整个目录一起拷</strong>，<code>manifest</code> 是加载顺序的唯一依据。只拷 <code>incr.aof</code> 等于丢掉全量基线。</p>
+<h3 id="2-恢复：顺序错了就是白忙"><a href="#2-恢复：顺序错了就是白忙" class="headerlink" title="2. 恢复：顺序错了就是白忙"></a>2. 恢复：顺序错了就是白忙</h3><p>RDB 恢复：</p>
+<ol>
+<li>停掉目标实例（不能让它在运行时替换文件）；</li>
+<li>把备份文件放进 <code>dir</code> 目录，改名成 <code>dbfilename</code> 的值；</li>
+<li>启动，日志里应有 <code>DB loaded from disk: ...</code>;</li>
+<li><code>DBSIZE</code> 抽样校验，与备份清单比对。</li>
+</ol>
+<p>AOF 恢复：</p>
+<ol>
+<li>停实例；</li>
+<li><strong>整个 <code>appendonlydir</code> 目录替换</strong>（不是只覆盖某个文件）；</li>
+<li>确认 <code>appendonly yes</code>；</li>
+<li>启动，日志里应出现 <code>DB loaded from append only file</code>;</li>
+<li>若日志报截断，用 <code>redis-check-aof --fix</code> 修复后再启。</li>
+</ol>
+<p>三个最常见的失败原因：</p>
+<ul>
+<li><strong><code>dir</code> 配错</strong>：文件放对位置了，但配置里 <code>dir</code> 指向别处，加载的是空数据；</li>
+<li><strong>同时存在 AOF 与 RDB 且加载了错的那个</strong>：<code>appendonly yes</code> 时优先加载 AOF，你以为加载的是 RDB；</li>
+<li><strong>权限&#x2F;属主错</strong>：文件属主不是 redis 用户，启动报 <code>Permission denied</code>。</li>
+</ul>
+<h3 id="3-迁移：四种手段的适用边界"><a href="#3-迁移：四种手段的适用边界" class="headerlink" title="3. 迁移：四种手段的适用边界"></a>3. 迁移：四种手段的适用边界</h3><table>
+<thead>
+<tr>
+<th>场景</th>
+<th>手段</th>
+<th>风险与前提</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>同版本、可停机</td>
+<td>拷 RDB &#x2F; AOF 文件</td>
+<td>最简单，停机时间 &#x3D; 数据量&#x2F;磁盘速度</td>
+</tr>
+<tr>
+<td>不停机、同版本</td>
+<td><code>REPLICAOF host port</code> 建从库 → 提升为主</td>
+<td>需要目标空库；切换要改客户端地址</td>
+</tr>
+<tr>
+<td>跨版本升级</td>
+<td>先建从库并升级从库，验证后切换</td>
+<td>版本兼容要以官方兼容说明为准，禁止跳跃式升级后直接切</td>
+</tr>
+<tr>
+<td>单机 ↔ Cluster</td>
+<td><code>MIGRATE</code> &#x2F; <code>DUMP</code> + <code>RESTORE</code>，或重放业务数据</td>
+<td>Cluster 只支持 0 号库；<code>MIGRATE</code> 按 key 搬，大 key 会卡住</td>
+</tr>
+</tbody></table>
+<p><code>REPLICAOF</code> 是最常用的「不停机搬家」：新实例先当从库同步全量（这一步走的就是 RDB），再 <code>REPLICAOF NO ONE</code> 提升为主。整个过程几乎不影响线上读，代价是同步期间的网络与磁盘带宽。</p>
+<h2 id="五、场景说明"><a href="#五、场景说明" class="headerlink" title="五、场景说明"></a>五、场景说明</h2><ol>
+<li><strong>每日冷备</strong>：副本上 <code>BGSAVE</code> → 拷 RDB 到对象存储，保留 7–30 天；</li>
+<li><strong>AOF 增量更可靠时的备份</strong>：每天拷一次 <code>appendonlydir</code>，频率可以低但必须整目录；</li>
+<li><strong>上线前的恢复演练</strong>：在隔离环境用生产备份恢复一次，跑通业务读写；</li>
+<li><strong>机房搬迁&#x2F;扩容</strong>：<code>REPLICAOF</code> 同步，切主后改客户端连接串；</li>
+<li><strong>Cluster 扩缩容</strong>：官方工具做 reshard，本质上也是按 slot 搬 key，大 key 会拖慢。</li>
+</ol>
+<h2 id="六、示例代码-实操步骤"><a href="#六、示例代码-实操步骤" class="headerlink" title="六、示例代码&#x2F;实操步骤"></a>六、示例代码&#x2F;实操步骤</h2><pre class="line-numbers language-bash" data-language="bash"><code class="language-bash"><span class="token comment"># ===== 备份（在副本上执行）=====</span>
+<span class="token number">127.0</span>.0.1:637<span class="token operator"><span class="token file-descriptor important">9</span>></span> BGSAVE
+Background saving started
+<span class="token number">127.0</span>.0.1:637<span class="token operator"><span class="token file-descriptor important">9</span>></span> INFO persistence
+<span class="token comment"># rdb_bgsave_in_progress:0</span>
+<span class="token comment"># rdb_last_bgsave_status:ok</span>
+
+$ <span class="token function">cp</span> /var/lib/redis/dump.rdb /backup/redis-<span class="token variable"><span class="token variable">$(</span><span class="token function">date</span> +%F<span class="token variable">)</span></span>.rdb
+$ redis-check-rdb /backup/redis-2023-01-07.rdb
+<span class="token punctuation">[</span>offset <span class="token number">0</span><span class="token punctuation">]</span> Checking RDB <span class="token function">file</span> <span class="token punctuation">..</span>.
+<span class="token punctuation">[</span>offset <span class="token number">987654</span><span class="token punctuation">]</span> Checksum OK
+
+<span class="token comment"># 备份清单里记下这几项</span>
+<span class="token number">127.0</span>.0.1:637<span class="token operator"><span class="token file-descriptor important">9</span>></span> INFO server <span class="token operator">|</span> <span class="token function">grep</span> redis_version
+<span class="token number">127.0</span>.0.1:637<span class="token operator"><span class="token file-descriptor important">9</span>></span> DBSIZE
+
+<span class="token comment"># ===== 远程拉快照（无需登录源机）=====</span>
+$ redis-cli <span class="token parameter variable">-h</span> <span class="token number">10.0</span>.0.5 <span class="token parameter variable">-p</span> <span class="token number">6379</span> <span class="token parameter variable">--rdb</span> /backup/remote.rdb
+Transfer started. Monitor progress with INFO persistence.
+<span class="token punctuation">..</span>.
+Transfer finished with success.
+
+<span class="token comment"># ===== 恢复 RDB =====</span>
+$ systemctl stop redis
+$ <span class="token function">cp</span> /backup/redis-2023-01-07.rdb /var/lib/redis/dump.rdb
+$ <span class="token function">chown</span> redis:redis /var/lib/redis/dump.rdb
+$ systemctl start redis
+$ redis-cli DBSIZE
+<span class="token punctuation">(</span>integer<span class="token punctuation">)</span> <span class="token number">1234567</span>
+<span class="token comment"># 日志核对：DB loaded from disk: 0.123 seconds</span>
+
+<span class="token comment"># ===== 恢复 AOF（7.x 目录）=====</span>
+$ systemctl stop redis
+$ <span class="token function">rm</span> <span class="token parameter variable">-rf</span> /var/lib/redis/appendonlydir
+$ <span class="token function">cp</span> <span class="token parameter variable">-r</span> /backup/appendonlydir /var/lib/redis/
+$ redis-check-aof /var/lib/redis/appendonlydir/appendonly.aof.1.incr.aof
+<span class="token comment"># 若提示文件被截断：</span>
+$ redis-check-aof <span class="token parameter variable">--fix</span> /var/lib/redis/appendonlydir/appendonly.aof.1.incr.aof
+$ systemctl start redis
+
+<span class="token comment"># ===== 不停机迁移：新实例当从库 =====</span>
+<span class="token comment"># 在目标实例（空数据）上执行</span>
+<span class="token number">127.0</span>.0.1:638<span class="token operator"><span class="token file-descriptor important">0</span>></span> REPLICAOF <span class="token number">10.0</span>.0.5 <span class="token number">6379</span>
+OK
+<span class="token number">127.0</span>.0.1:638<span class="token operator"><span class="token file-descriptor important">0</span>></span> INFO replication
+<span class="token comment"># role:slave</span>
+<span class="token comment"># master_host:10.0.0.5</span>
+<span class="token comment"># master_link_status:up          —— 同步完成后才是 up</span>
+
+<span class="token comment"># 验证数据量与抽样 key 后，提升为主</span>
+<span class="token number">127.0</span>.0.1:638<span class="token operator"><span class="token file-descriptor important">0</span>></span> REPLICAOF NO ONE
+OK
+
+<span class="token comment"># ===== 单 key 迁移（Cluster / 定向搬）=====</span>
+<span class="token number">127.0</span>.0.1:637<span class="token operator"><span class="token file-descriptor important">9</span>></span> MIGRATE <span class="token number">10.0</span>.0.6 <span class="token number">6379</span> user:1001 <span class="token number">0</span> <span class="token number">5000</span>
+OK
+<span class="token comment"># 或先序列化再恢复</span>
+<span class="token number">127.0</span>.0.1:637<span class="token operator"><span class="token file-descriptor important">9</span>></span> DUMP user:1001
+<span class="token string">"..."</span>                            <span class="token comment"># 二进制序列化内容</span>
+<span class="token number">127.0</span>.0.1:638<span class="token operator"><span class="token file-descriptor important">0</span>></span> RESTORE user:1001 <span class="token number">0</span> <span class="token string">"..."</span> REPLACE
+OK<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<p><code>master_link_status: up</code> 是切换前的硬性检查点：<code>down</code> 表示全量同步还没完成，此时切主会丢掉同步期间的写入。</p>
+<h2 id="七、常见坑（官方明确说明的限制）"><a href="#七、常见坑（官方明确说明的限制）" class="headerlink" title="七、常见坑（官方明确说明的限制）"></a>七、常见坑（官方明确说明的限制）</h2><ol>
+<li><strong>不要在主节点上拷「正在跑 bgsave 时」的文件</strong>。要等 <code>rdb_bgsave_in_progress: 0</code>；否则可能拿到旧快照而以为是最新。</li>
+<li><strong>AOF 备份必须整目录</strong>。<code>appendonlydir</code> 里的 <code>manifest</code> 决定加载顺序，缺任何文件都可能加载失败或数据残缺。</li>
+<li><strong>恢复前必须停服务</strong>。运行中替换文件，Redis 不会重新加载，你的操作等于无效；下次重启才生效，这时问题会突然爆发。</li>
+<li><strong><code>appendonly yes</code> 时优先加载 AOF</strong>。恢复 RDB 却忘了关 AOF，等于什么都没做。</li>
+<li><strong><code>redis-check-aof --fix</code> 会截断尾部</strong>。它保证「能启动」，但尾部那段命令会被丢弃——这是修复的代价，要记录丢了什么时间窗的数据。</li>
+<li><strong><code>REPLICAOF</code> 会让目标库先清空</strong>。目标实例上已有数据会被全量同步覆盖，别把「从库」建在有数据的实例上。</li>
+<li><strong>跨版本恢复要验证</strong>。RDB&#x2F;AOF 是私有格式，版本兼容有边界；官方建议同版本验证后再迁移，禁止「大版本跳跃直接切」。</li>
+<li><strong><code>MIGRATE</code> 是同步阻塞的</strong>。搬大 key 时源实例和目标实例都会卡住，<code>DUMP</code>+<code>RESTORE</code> 同样要评估 key 体积。</li>
+<li><strong>备份不带校验等于没备份</strong>。<code>redis-check-rdb</code> &#x2F; <code>redis-check-aof</code> 是官方工具，跑一次只要几秒，能挡掉大部分「文件损坏」事故。</li>
+</ol>
+<h3 id="版本差异（8-x-标注）"><a href="#版本差异（8-x-标注）" class="headerlink" title="版本差异（8.x 标注）"></a>版本差异（8.x 标注）</h3><blockquote>
+<p>7.x 的 AOF 目录结构与 8.x 一致；<code>REPLICAOF</code> 自 5.0 起取代 <code>SLAVEOF</code>（后者仍可用但官方推荐前者）。8.x 迁移时需注意许可变更带来的镜像&#x2F;发行版差异，但备份文件格式与命令语义不变。</p>
+<p>依据：<a target="_blank" rel="noopener" href="https://redis.io/docs/latest/commands/replicaof/">https://redis.io/docs/latest/commands/replicaof/</a></p>
+</blockquote>
+<h2 id="八、课后小结"><a href="#八、课后小结" class="headerlink" title="八、课后小结"></a>八、课后小结</h2><ul>
+<li>备份 &#x3D; 一致快照 + 拷贝 + 校验 + 清单记录；官方建议在副本上做；</li>
+<li><code>redis-cli --rdb</code> 可远程拉快照，无需登录源机；</li>
+<li>恢复顺序：停服务 → 放文件（AOF 整目录）→ 改配置 → 启动 → 抽样校验；</li>
+<li><code>appendonly yes</code> 时优先加载 AOF，恢复 RDB 前必须先确认；</li>
+<li>迁移四法：拷文件（可停机）、<code>REPLICAOF</code>（不停机）、升从库（跨版本）、<code>MIGRATE</code>&#x2F;<code>DUMP+RESTORE</code>（单 key &#x2F; Cluster）；</li>
+<li>演练是备份的一部分：没有 RTO&#x2F;RPO 实测的备份，不可信。</li>
+</ul>
+<h2 id="九、思考题"><a href="#九、思考题" class="headerlink" title="九、思考题"></a>九、思考题</h2><ol>
+<li>为什么官方建议在副本上做备份？在主节点上多做一次 <code>BGSAVE</code> 的真实代价是什么？</li>
+<li>恢复后 <code>DBSIZE</code> 比备份清单少了 3 万条，最可能的原因是哪三种？各自的检查点在哪？</li>
+<li><code>REPLICAOF</code> 建从库时，目标实例上原有的数据会怎样？如果你不想丢，该换什么做法？</li>
+<li><code>redis-check-aof --fix</code> 修复后能启动，但业务发现少了 20 分钟数据。这 20 分钟去哪了？</li>
+<li>一次「磁盘满了导致 AOF 写失败」的事故后，你要改哪三处配置或流程，避免下次重演？</li>
+</ol>
+<h2 id="十、官方资料"><a href="#十、官方资料" class="headerlink" title="十、官方资料"></a>十、官方资料</h2><ul>
+<li>Persistence（备份与恢复的官方步骤、副本备份建议）：<a target="_blank" rel="noopener" href="https://redis.io/docs/latest/operate/oss_and_stack/management/persistence/">https://redis.io/docs/latest/operate/oss_and_stack/management/persistence/</a></li>
+<li>redis-cli（<code>--rdb</code> 远程快照拉取）：<a target="_blank" rel="noopener" href="https://redis.io/docs/latest/develop/tools/cli/">https://redis.io/docs/latest/develop/tools/cli/</a></li>
+<li>REPLICAOF（主从切换与不停机迁移）：<a target="_blank" rel="noopener" href="https://redis.io/docs/latest/commands/replicaof/">https://redis.io/docs/latest/commands/replicaof/</a></li>
+<li>MIGRATE（按 key 迁移）：<a target="_blank" rel="noopener" href="https://redis.io/docs/latest/commands/migrate/">https://redis.io/docs/latest/commands/migrate/</a></li>
+<li>DUMP &#x2F; RESTORE（序列化迁移）：<a target="_blank" rel="noopener" href="https://redis.io/docs/latest/commands/dump/">https://redis.io/docs/latest/commands/dump/</a></li>
+<li>redis-check-rdb &#x2F; redis-check-aof（文件校验与截断修复）：<a target="_blank" rel="noopener" href="https://redis.io/docs/latest/operate/oss_and_stack/management/persistence/">https://redis.io/docs/latest/operate/oss_and_stack/management/persistence/</a></li>
+<li>INFO（<code>rdb_last_bgsave_status</code>、<code>master_link_status</code> 等观测字段）：<a target="_blank" rel="noopener" href="https://redis.io/docs/latest/commands/info/">https://redis.io/docs/latest/commands/info/</a></li>
+</ul>
+<p>上一篇：<a href="/2023/01/06/database/redis/redis-16-aof-rewrite/">RD16 AOF 重写与混合持久化</a> ｜ 下一篇：<a href="/2023/01/08/database/redis/redis-18-psync/">RD18 主从复制原理 PSYNC</a> ｜ <a href="/2022/12/21/database/redis/redis-0-series-index/">总目录</a></p>
+</div>
+
+  <div class="mb-foot">
+    <a href="/phone/">返回手机首页</a>
+    <a href="/phone/tags/">星迹索引</a>
+  </div>
+</div>
+
+
+<script>
+  /* 作用：懒加载本地 mermaid 库；无 mermaid 代码块时不加载 */
+  function loadLocalMermaid(){
+    return new Promise(function(resolve, reject){
+      if(window.mermaid) return resolve(window.mermaid);
+      var s = document.createElement('script');
+      s.src = '/js/third-party/mermaid/mermaid.min.js?v=10';
+      s.onload = function(){ resolve(window.mermaid); };
+      s.onerror = function(){ reject(new Error('mermaid local load failed')); };
+      document.head.appendChild(s);
+    });
+  }
+
+  /* 作用：把 ```mermaid 代码块替换成 SVG 图（手机端字号略小、图可横向滚动） */
+  async function renderMermaidDiagram(){
+    var blocks = document.querySelectorAll('pre[class*="language-mermaid"]');
+    if(!blocks.length) return;
+    var mermaid;
+    try { mermaid = await loadLocalMermaid(); }
+    catch(e){ console.warn('[mermaid] 本地库加载失败：', e); return; }
+
+    mermaid.initialize({
+      startOnLoad: false,
+      theme: 'base',
+      themeVariables: {
+        darkMode: true,
+        background: 'transparent',
+        fontFamily: '"Microsoft YaHei", "PingFang SC", "Segoe UI", sans-serif',
+        fontSize: '12px',
+        primaryColor: '#062f3d',
+        primaryTextColor: '#d6f6ff',
+        primaryBorderColor: '#00eeff',
+        secondaryColor: '#04222d',
+        tertiaryColor: '#04222d',
+        mainBkg: '#062f3d',
+        nodeBorder: '#00eeff',
+        clusterBkg: '#02161f',
+        clusterBorder: '#00eeff55',
+        lineColor: '#00eeff',
+        textColor: '#c0e8ff',
+        edgeLabelBackground: '#02161f'
+      },
+      flowchart: { curve: 'basis', useMaxWidth: false, htmlLabels: false, nodeSpacing: 30, rankSpacing: 40, padding: 10 }
+    });
+
+    var targets = [];
+    blocks.forEach(function(el){
+      var codeEl = el.querySelector('code');
+      if(!codeEl) return;
+      var div = document.createElement('div');
+      div.className = 'mermaid';
+      div.textContent = codeEl.textContent;
+      el.parentNode.replaceChild(div, el);
+      targets.push(div);
+    });
+    if(!targets.length) return;
+    try { await mermaid.run({ nodes: targets }); }
+    catch(e){ console.warn('[mermaid] 渲染失败：', e); }
+  }
+  /* 作用：多次触发兜底（延迟重试 + DOM 变化），防止某次时机没跑到导致图表留在代码块 */
+  var mmBusy = false;
+  function scheduleMermaid(){
+    if(mmBusy) return;
+    mmBusy = true;
+    renderMermaidDiagram().then(function(){ mmBusy = false; }, function(){ mmBusy = false; });
+  }
+  scheduleMermaid();
+  window.addEventListener('load', scheduleMermaid);
+  [1000, 3000, 8000].forEach(function(ms){ setTimeout(scheduleMermaid, ms); });
+  if(document.readyState !== 'loading') scheduleMermaid();
+  if(window.MutationObserver){
+    var mmTimer = null;
+    var mmObserver = new MutationObserver(function(){
+      clearTimeout(mmTimer);
+      mmTimer = setTimeout(scheduleMermaid, 400);
+    });
+    mmObserver.observe(document.querySelector('.mb-article') || document.body, { childList: true, subtree: true });
+  }
+</script>
+</body>
+</html>

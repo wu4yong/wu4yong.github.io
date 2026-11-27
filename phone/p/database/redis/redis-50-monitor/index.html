@@ -1,0 +1,426 @@
+<!--
+  ============================================
+  手机端 · 文章原文页
+  文件：phone/post.njk
+  适用终端：手机端（路由 /phone/p/<slug>/，由 scripts/phone-routes.js 生成）
+  作用：手机阅读单篇文章；单列布局、无侧栏无雷达，替代电脑端 post.njk
+        数据由生成期算好：page.item = { title, dateStr, content, cats, tags }
+  样式依赖：source/css/theme/phone/common.css、source/css/theme/phone/list.css
+  组件依赖：phone/_components/Particles.njk
+  最后修改：2026-11-11
+  ============================================
+-->
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="color-scheme" content="dark">
+  <meta name="theme-color" content="#020817">
+  <!-- 首帧兜底：浏览器默认画布是白的，样式未解析前会闪一下白。这条规则先锁死深空底色 -->
+  <style>html{background-color:#020817}</style>
+  <title>redis-监控指标与告警 - 时空秘境</title>
+  <!-- 手机端样式：基础 + 列表/正文，外链引入（源文件 source/css/theme/phone/） -->
+  <link rel="stylesheet" href="/css/theme/phone/common.css">
+  <link rel="stylesheet" href="/css/theme/phone/list.css">
+<meta name="generator" content="Hexo 8.1.2"></head>
+<body>
+<div class="mb-shell">
+  <!--
+  ============================================
+  手机端星空粒子组件
+  文件：Particles.njk
+  适用终端：手机端
+  作用：Particles.njk 的手机端副本（nunjucks 子目录 include 取不到上级）
+        参数与电脑端 _components/Particles.njk 保持一致：
+        粒子 95 / 连线 118px / opacity 0.32，外加星座层与零星闪烁层
+  最后修改：2026-11-12
+  ============================================
+--><!-- z-index 必须是 0：负层级会被 body 不透明背景盖住，粒子在跑却看不见 -->
+<div id="particles" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 0; pointer-events: none;"></div>
+<!-- 星座层（与首页同一套：随机零星散布星座图形 + 偶尔闪烁的小星） -->
+<div id="constellations" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 1; pointer-events: none;" aria-hidden="true"></div>
+<script src="/js/particles.min.js"></script>
+<script>
+particlesJS("particles", {
+  particles: {
+    number: {
+      value: 95,
+      density: {
+        enable: true,
+        value_area: 800
+      }
+    },
+    color: {
+      value: "#00eeff"
+    },
+    shape: {
+      type: "circle",
+      stroke: {
+        width: 0,
+        color: "#000000"
+      }
+    },
+    opacity: {
+      value: 0.6,
+      random: true,
+      anim: {
+        enable: true,
+        speed: 0.5,
+        opacity_min: 0.1,
+        sync: false
+      }
+    },
+    size: {
+      value: 3,
+      random: true,
+      anim: {
+        enable: true,
+        speed: 2,
+        size_min: 0.1,
+        sync: false
+      }
+    },
+    line_linked: {
+      enable: true,
+      distance: 118,
+      color: "#00eeff",
+      opacity: 0.32,
+      width: 1
+    },
+    move: {
+      enable: true,
+      speed: 0.8,
+      direction: "none",
+      random: true,
+      straight: false,
+      out_mode: "out",
+      bounce: false,
+      attract: {
+        enable: true,
+        rotateX: 600,
+        rotateY: 1200
+      }
+    }
+  },
+  interactivity: {
+    detect_on: "canvas",
+    events: {
+      onhover: {
+        enable: true,
+        mode: "grab"       // 手指按住时粒子聚集
+      },
+      onclick: {
+        enable: true,
+        mode: "push"       // 点击时产生新粒子
+      },
+      resize: true
+    },
+    modes: {
+      grab: {
+        distance: 200,
+        line_linked: {
+          opacity: 1
+        }
+      },
+      push: {
+        particles_nb: 6
+      }
+    }
+  },
+  retina_detect: true
+});
+</script>
+<!-- 星座 + 零星闪烁层：与电脑端共用同一份绘制脚本 -->
+<script src="/js/theme/home/starfield.js"></script>
+
+
+  <div class="mb-top">
+    <a class="mb-back" href="/phone/">← 返回手机首页</a>
+    <span class="mb-sub" style="margin:0">2023-02-09</span>
+  </div>
+
+  <h1 class="mb-title">redis-监控指标与告警</h1>
+  <div class="mb-sub">
+    分类：database · redis
+     ｜ 标签：Redis · 系统课 · 运维
+  </div>
+
+  <div class="mb-article"><div class="essay-banner essay-database"></div>
+
+<h1 id="监控指标与告警"><a href="#监控指标与告警" class="headerlink" title="监控指标与告警"></a>监控指标与告警</h1><p><img src="https://wu4yong.github.io/starry-images/assets/img/redis/rd-50-monitor.svg" alt="四组必看指标：内存、连接、性能、复制与持久化"></p>
+<p><em>INFO 各分组里最该盯的字段与告警优先级｜依据 Redis 7.4 官方文档自绘</em></p>
+<h2 id="一、学习目标"><a href="#一、学习目标" class="headerlink" title="一、学习目标"></a>一、学习目标</h2><p>学完这一讲，你能做到：</p>
+<ol>
+<li>从 <code>INFO</code> 的十个分组里挑出真正需要告警的字段，而不是「全部采集」；</li>
+<li>用四个判断顺序（会不会挂 → 是不是慢 → 有没有丢 → 有没有积压）看指标；</li>
+<li>给每一组指标定出可执行的阈值与告警级别。</li>
+</ol>
+<h2 id="二、前置知识"><a href="#二、前置知识" class="headerlink" title="二、前置知识"></a>二、前置知识</h2><p>RD12（淘汰）、RD31（碎片）、RD32（慢日志与延迟）、RD19（复制状态）。这一讲把前面散落的现象汇总成一张「看什么、看多少」的表。</p>
+<h2 id="三、理论讲解（官方定义）"><a href="#三、理论讲解（官方定义）" class="headerlink" title="三、理论讲解（官方定义）"></a>三、理论讲解（官方定义）</h2><p><code>INFO</code> 的官方说明（原文）：</p>
+<blockquote>
+<p>The <code>INFO</code> command returns information and statistics about the server in a format that is simple to parse … you can optionally specify a section: <code>server</code>, <code>clients</code>, <code>memory</code>, <code>persistence</code>, <code>stats</code>, <code>replication</code>, <code>cpu</code>, <code>commandstats</code>, <code>latencystats</code>, <code>cluster</code>, <code>keyspace</code>, <code>errorstats</code>.</p>
+<p>—— <a target="_blank" rel="noopener" href="https://redis.io/docs/latest/commands/info/">https://redis.io/docs/latest/commands/info/</a></p>
+</blockquote>
+<p><strong>「可选 section」这一点很重要</strong>：生产采集应当按段取（<code>INFO memory</code>、<code>INFO stats</code>），而不是每次拉全量 <code>INFO</code>——后者在大实例上本身就有成本。</p>
+<p>关于延迟观测，官方提供了独立机制（原文要点）：</p>
+<blockquote>
+<p>Redis has a latency monitoring feature … <code>LATENCY HISTORY</code> &#x2F; <code>LATENCY LATEST</code> record events that exceed <code>latency-monitor-threshold</code>.</p>
+<p>—— <a target="_blank" rel="noopener" href="https://redis.io/docs/latest/commands/latency-latest/">https://redis.io/docs/latest/commands/latency-latest/</a></p>
+</blockquote>
+<p>默认 <code>latency-monitor-threshold</code> 为 0，表示<strong>关闭</strong>。这是最常见的「监控盲区」：不开启就永远不知道有慢事件。</p>
+<h2 id="四、原理拆解"><a href="#四、原理拆解" class="headerlink" title="四、原理拆解"></a>四、原理拆解</h2><h3 id="1-四组指标的分工"><a href="#1-四组指标的分工" class="headerlink" title="1. 四组指标的分工"></a>1. 四组指标的分工</h3><pre class="line-numbers language-none"><code class="language-none">① 内存：会不会写不进去（used_memory &#x2F; maxmemory &#x2F; evicted_keys）
+② 连接：会不会连不上（connected_clients &#x2F; rejected_connections）
+③ 性能：是不是变慢（instantaneous_ops &#x2F; slowlog &#x2F; latency）
+④ 复制与持久化：会不会丢（master_link_status &#x2F; rdb_last_bgsave_status）<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span></span></code></pre>
+
+<p>顺序不能乱：<strong>先保「可用」，再谈「快」</strong>。一个实例内存打满开始拒绝写，此时看 P99 意义不大。</p>
+<h3 id="2-每个字段的「阈值」怎么定"><a href="#2-每个字段的「阈值」怎么定" class="headerlink" title="2. 每个字段的「阈值」怎么定"></a>2. 每个字段的「阈值」怎么定</h3><table>
+<thead>
+<tr>
+<th>字段</th>
+<th>建议阈值</th>
+<th>含义</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>used_memory</code> &#x2F; <code>maxmemory</code></td>
+<td>≥ 80% 告警</td>
+<td>接近淘汰或写失败</td>
+</tr>
+<tr>
+<td><code>mem_fragmentation_ratio</code></td>
+<td>&gt; 1.5 观察，&gt; 2 处理</td>
+<td>碎片偏高（RD31）</td>
+</tr>
+<tr>
+<td><code>evicted_keys</code> 增速</td>
+<td>持续 &gt; 0</td>
+<td>容量不足，命中率会掉</td>
+</tr>
+<tr>
+<td><code>connected_clients</code> &#x2F; <code>maxclients</code></td>
+<td>≥ 80% 告警</td>
+<td>新连接会被拒</td>
+</tr>
+<tr>
+<td><code>rejected_connections</code></td>
+<td>&gt; 0</td>
+<td>连接被拒，客户端会报错</td>
+</tr>
+<tr>
+<td><code>master_link_status</code></td>
+<td>down 立即告警</td>
+<td>复制断了</td>
+</tr>
+<tr>
+<td><code>rdb_last_bgsave_status</code></td>
+<td>err 立即告警</td>
+<td>快照失败</td>
+</tr>
+<tr>
+<td><code>aof_last_write_status</code></td>
+<td>err 立即告警</td>
+<td>AOF 写失败</td>
+</tr>
+<tr>
+<td><code>latency-monitor-threshold</code></td>
+<td>设为 50–100ms</td>
+<td>否则事件不记录</td>
+</tr>
+</tbody></table>
+<p><strong>「err &#x2F; down &#x2F; 拒绝」这三类是「会不会丢数据」级别的，必须最高优先级。</strong></p>
+<h3 id="3-三个必须自己算的衍生指标"><a href="#3-三个必须自己算的衍生指标" class="headerlink" title="3. 三个必须自己算的衍生指标"></a>3. 三个必须自己算的衍生指标</h3><p>原始字段不够用，要自己算：</p>
+<ul>
+<li><strong>命中率</strong> &#x3D; <code>keyspace_hits / (keyspace_hits + keyspace_misses)</code>，低于 90% 要查为什么；</li>
+<li><strong>回源 QPS</strong> &#x3D; 未命中数 × （1&#x2F;缓存比例），这个数直接对应数据库压力；</li>
+<li><strong>命令延迟均值</strong> &#x3D; <code>commandstats</code> 的 <code>usec_per_call</code>，单命令变慢往往先于整体 P99 恶化。</li>
+</ul>
+<h3 id="4-延迟监控的三件套"><a href="#4-延迟监控的三件套" class="headerlink" title="4. 延迟监控的三件套"></a>4. 延迟监控的三件套</h3><pre class="line-numbers language-none"><code class="language-none">latency-monitor-threshold 100     # 记录超过 100ms 的事件
+LATENCY LATEST                    # 最近一次各事件的最大延迟
+LATENCY HISTORY &lt;event&gt;           # 某事件的时间序列
+LATENCY RESET                     # 清空，用于重置基准<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span></span></code></pre>
+
+<p>常见事件：<code>fork</code>（RDB&#x2F;AOF 重写）、<code>aof-fsync-always</code>、<code>command</code>、<code>expire-cycle</code>。看到 <code>fork</code> 事件频繁且延迟高，就该考虑内存规模（RD51）。</p>
+<h2 id="五、场景说明"><a href="#五、场景说明" class="headerlink" title="五、场景说明"></a>五、场景说明</h2><ol>
+<li><strong>新上线实例</strong>：先开 <code>latency-monitor-threshold</code> 与慢日志，再谈业务指标；</li>
+<li><strong>主从架构</strong>：<code>master_link_status</code> 与 <code>master_last_io_seconds_ago</code> 必须进告警；</li>
+<li><strong>缓存集群</strong>：<code>evicted_keys</code> 与命中率变化趋势比绝对 QPS 更有价值；</li>
+<li><strong>大内存实例</strong>：重点盯 <code>fork</code> 延迟与碎片率，避免 BGSAVE 期间抖动。</li>
+</ol>
+<h2 id="六、示例代码-实操步骤"><a href="#六、示例代码-实操步骤" class="headerlink" title="六、示例代码&#x2F;实操步骤"></a>六、示例代码&#x2F;实操步骤</h2><pre class="line-numbers language-bash" data-language="bash"><code class="language-bash"><span class="token comment"># 1. 按段采集，别拉全量</span>
+<span class="token number">127.0</span>.0.1:637<span class="token operator"><span class="token file-descriptor important">9</span>></span> INFO memory
+<span class="token comment"># used_memory_human:3.21G</span>
+<span class="token comment"># maxmemory_human:4.00G</span>
+<span class="token comment"># mem_fragmentation_ratio:1.42</span>
+
+<span class="token number">127.0</span>.0.1:637<span class="token operator"><span class="token file-descriptor important">9</span>></span> INFO clients
+<span class="token comment"># connected_clients:842</span>
+<span class="token comment"># blocked_clients:0</span>
+<span class="token comment"># rejected_connections:0</span>
+
+<span class="token number">127.0</span>.0.1:637<span class="token operator"><span class="token file-descriptor important">9</span>></span> INFO stats
+<span class="token comment"># total_connections_received:...</span>
+<span class="token comment"># instantaneous_ops_per_sec:15230</span>
+<span class="token comment"># keyspace_hits:8120334</span>
+<span class="token comment"># keyspace_misses:201776</span>
+<span class="token comment"># evicted_keys:0</span>
+
+<span class="token number">127.0</span>.0.1:637<span class="token operator"><span class="token file-descriptor important">9</span>></span> INFO replication
+<span class="token comment"># role:master</span>
+<span class="token comment"># connected_slaves:2</span>
+<span class="token comment"># master_link_status:up</span>
+<span class="token comment"># master_last_io_seconds_ago:1</span>
+
+<span class="token number">127.0</span>.0.1:637<span class="token operator"><span class="token file-descriptor important">9</span>></span> INFO persistence
+<span class="token comment"># rdb_last_bgsave_status:ok</span>
+<span class="token comment"># aof_last_write_status:ok</span>
+<span class="token comment"># rdb_last_bgsave_time_sec:1</span>
+
+<span class="token comment"># 2. 打开延迟监控（默认关闭）</span>
+<span class="token number">127.0</span>.0.1:637<span class="token operator"><span class="token file-descriptor important">9</span>></span> CONFIG SET latency-monitor-threshold <span class="token number">100</span>
+OK
+<span class="token number">127.0</span>.0.1:637<span class="token operator"><span class="token file-descriptor important">9</span>></span> LATENCY LATEST
+<span class="token number">1</span><span class="token punctuation">)</span> <span class="token number">1</span><span class="token punctuation">)</span> <span class="token string">"fork"</span>
+   <span class="token number">2</span><span class="token punctuation">)</span> <span class="token punctuation">(</span>integer<span class="token punctuation">)</span> <span class="token number">1700000000</span>
+   <span class="token number">3</span><span class="token punctuation">)</span> <span class="token punctuation">(</span>integer<span class="token punctuation">)</span> <span class="token number">230</span>
+   <span class="token number">4</span><span class="token punctuation">)</span> <span class="token punctuation">(</span>integer<span class="token punctuation">)</span> <span class="token number">460</span>
+
+<span class="token comment"># 3. 看单命令耗时</span>
+<span class="token number">127.0</span>.0.1:637<span class="token operator"><span class="token file-descriptor important">9</span>></span> INFO commandstats
+<span class="token comment"># cmdstat_get:calls=8120334,usec=...,usec_per_call=12.40</span>
+
+<span class="token comment"># 4. 慢查询与阻塞</span>
+<span class="token number">127.0</span>.0.1:637<span class="token operator"><span class="token file-descriptor important">9</span>></span> SLOWLOG GET <span class="token number">10</span>
+<span class="token number">127.0</span>.0.1:637<span class="token operator"><span class="token file-descriptor important">9</span>></span> CONFIG GET slowlog-log-slower-than
+<span class="token comment"># 10000（微秒，即 10ms）</span>
+
+<span class="token comment"># 5. 内存告警的判据（脚本里算比例）</span>
+<span class="token comment"># 若 used_memory/maxmemory >= 0.8 → 告警；>= 0.95 → 严重</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<h2 id="七、常见坑（官方明确说明的限制）"><a href="#七、常见坑（官方明确说明的限制）" class="headerlink" title="七、常见坑（官方明确说明的限制）"></a>七、常见坑（官方明确说明的限制）</h2><ol>
+<li><strong><code>latency-monitor-threshold</code> 保持 0</strong>。默认关闭，不设置就永远不会记录慢事件。</li>
+<li><strong>采集全量 <code>INFO</code></strong>。大实例上 <code>INFO</code> 有成本；应按段采集并降低频率。</li>
+<li><strong>只看命中率不看回源 QPS</strong>。命中率 99% + 巨大总量，回源依然能打挂库。</li>
+<li><strong>把 <code>evicted_keys</code> 当正常现象</strong>。它意味着「有数据正在被丢」，命中率会随之下降。</li>
+<li><strong>忽略 <code>blocked_clients</code></strong>。阻塞命令（<code>BLPOP</code> 等）堆积会占用连接，最终表现为「客户端超时但 Redis 很闲」。</li>
+<li><strong>不监控 <code>fork</code> 延迟</strong>。BGSAVE 与 AOF 重写时的 fork 停顿是延迟尖刺的常见来源。</li>
+<li><strong>告警阈值照抄别人的</strong>。80% 内存对 4GB 实例和 64GB 实例的处理方式完全不同（RD51）。</li>
+<li><strong>没有基线</strong>。不知道「正常是什么样」，告警只能靠猜；先记录一周再定阈值。</li>
+</ol>
+<h3 id="版本差异（8-x-标注）"><a href="#版本差异（8-x-标注）" class="headerlink" title="版本差异（8.x 标注）"></a>版本差异（8.x 标注）</h3><blockquote>
+<p><code>INFO</code> 的分组与字段在 7.4 与 8.x 基本一致；8.x 增加了若干新字段与指标（如更细的延迟统计），采集脚本应对「未知字段」做容错，不要把字段清单写死。</p>
+<p>依据：<a target="_blank" rel="noopener" href="https://redis.io/docs/latest/commands/info/">https://redis.io/docs/latest/commands/info/</a></p>
+</blockquote>
+<h2 id="八、课后小结"><a href="#八、课后小结" class="headerlink" title="八、课后小结"></a>八、课后小结</h2><ul>
+<li>四组指标：内存、连接、性能、复制与持久化，顺序是「先可用再好用」；</li>
+<li><code>err</code> &#x2F; <code>down</code> &#x2F; <code>rejected</code> 是最高优先级；</li>
+<li>衍生指标：命中率、回源 QPS、单命令耗时；</li>
+<li>延迟监控默认关闭，必须显式设置阈值；</li>
+<li>阈值要有基线，别照抄。</li>
+</ul>
+<h2 id="九、思考题"><a href="#九、思考题" class="headerlink" title="九、思考题"></a>九、思考题</h2><ol>
+<li><code>used_memory</code> 到 80% 时你会先做什么，为什么不是先扩容？</li>
+<li><code>keyspace_misses</code> 增长但命中率没掉，说明什么？</li>
+<li><code>master_last_io_seconds_ago</code> 持续增大，故障链条是怎样的？</li>
+<li><code>fork</code> 延迟 400ms，对线上 P99 有什么影响？</li>
+<li>如果只能上三条告警，你选哪三条？给出理由。</li>
+</ol>
+<h2 id="十、官方资料"><a href="#十、官方资料" class="headerlink" title="十、官方资料"></a>十、官方资料</h2><ul>
+<li>INFO（各分组字段说明）：<a target="_blank" rel="noopener" href="https://redis.io/docs/latest/commands/info/">https://redis.io/docs/latest/commands/info/</a></li>
+<li>LATENCY LATEST &#x2F; HISTORY &#x2F; RESET：<a target="_blank" rel="noopener" href="https://redis.io/docs/latest/commands/latency-latest/">https://redis.io/docs/latest/commands/latency-latest/</a></li>
+<li>SLOWLOG：<a target="_blank" rel="noopener" href="https://redis.io/docs/latest/commands/slowlog-get/">https://redis.io/docs/latest/commands/slowlog-get/</a></li>
+<li>CONFIG SET（<code>latency-monitor-threshold</code> 等运行时参数）：<a target="_blank" rel="noopener" href="https://redis.io/docs/latest/commands/config-set/">https://redis.io/docs/latest/commands/config-set/</a></li>
+<li>延迟排查文档：<a target="_blank" rel="noopener" href="https://redis.io/docs/latest/operate/oss_and_stack/management/optimization/latency/">https://redis.io/docs/latest/operate/oss_and_stack/management/optimization/latency/</a></li>
+</ul>
+<p>上一篇：<a href="/2023/02/08/database/redis/redis-49-tls/">RD49 TLS 与安全加固</a> ｜ 下一篇：<a href="/2023/02/10/database/redis/redis-51-capacity/">RD51 容量规划与压测</a> ｜ <a href="/2022/12/21/database/redis/redis-0-series-index/">总目录</a></p>
+</div>
+
+  <div class="mb-foot">
+    <a href="/phone/">返回手机首页</a>
+    <a href="/phone/tags/">星迹索引</a>
+  </div>
+</div>
+
+
+<script>
+  /* 作用：懒加载本地 mermaid 库；无 mermaid 代码块时不加载 */
+  function loadLocalMermaid(){
+    return new Promise(function(resolve, reject){
+      if(window.mermaid) return resolve(window.mermaid);
+      var s = document.createElement('script');
+      s.src = '/js/third-party/mermaid/mermaid.min.js?v=10';
+      s.onload = function(){ resolve(window.mermaid); };
+      s.onerror = function(){ reject(new Error('mermaid local load failed')); };
+      document.head.appendChild(s);
+    });
+  }
+
+  /* 作用：把 ```mermaid 代码块替换成 SVG 图（手机端字号略小、图可横向滚动） */
+  async function renderMermaidDiagram(){
+    var blocks = document.querySelectorAll('pre[class*="language-mermaid"]');
+    if(!blocks.length) return;
+    var mermaid;
+    try { mermaid = await loadLocalMermaid(); }
+    catch(e){ console.warn('[mermaid] 本地库加载失败：', e); return; }
+
+    mermaid.initialize({
+      startOnLoad: false,
+      theme: 'base',
+      themeVariables: {
+        darkMode: true,
+        background: 'transparent',
+        fontFamily: '"Microsoft YaHei", "PingFang SC", "Segoe UI", sans-serif',
+        fontSize: '12px',
+        primaryColor: '#062f3d',
+        primaryTextColor: '#d6f6ff',
+        primaryBorderColor: '#00eeff',
+        secondaryColor: '#04222d',
+        tertiaryColor: '#04222d',
+        mainBkg: '#062f3d',
+        nodeBorder: '#00eeff',
+        clusterBkg: '#02161f',
+        clusterBorder: '#00eeff55',
+        lineColor: '#00eeff',
+        textColor: '#c0e8ff',
+        edgeLabelBackground: '#02161f'
+      },
+      flowchart: { curve: 'basis', useMaxWidth: false, htmlLabels: false, nodeSpacing: 30, rankSpacing: 40, padding: 10 }
+    });
+
+    var targets = [];
+    blocks.forEach(function(el){
+      var codeEl = el.querySelector('code');
+      if(!codeEl) return;
+      var div = document.createElement('div');
+      div.className = 'mermaid';
+      div.textContent = codeEl.textContent;
+      el.parentNode.replaceChild(div, el);
+      targets.push(div);
+    });
+    if(!targets.length) return;
+    try { await mermaid.run({ nodes: targets }); }
+    catch(e){ console.warn('[mermaid] 渲染失败：', e); }
+  }
+  /* 作用：多次触发兜底（延迟重试 + DOM 变化），防止某次时机没跑到导致图表留在代码块 */
+  var mmBusy = false;
+  function scheduleMermaid(){
+    if(mmBusy) return;
+    mmBusy = true;
+    renderMermaidDiagram().then(function(){ mmBusy = false; }, function(){ mmBusy = false; });
+  }
+  scheduleMermaid();
+  window.addEventListener('load', scheduleMermaid);
+  [1000, 3000, 8000].forEach(function(ms){ setTimeout(scheduleMermaid, ms); });
+  if(document.readyState !== 'loading') scheduleMermaid();
+  if(window.MutationObserver){
+    var mmTimer = null;
+    var mmObserver = new MutationObserver(function(){
+      clearTimeout(mmTimer);
+      mmTimer = setTimeout(scheduleMermaid, 400);
+    });
+    mmObserver.observe(document.querySelector('.mb-article') || document.body, { childList: true, subtree: true });
+  }
+</script>
+</body>
+</html>

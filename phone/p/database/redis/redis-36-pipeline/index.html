@@ -1,0 +1,389 @@
+<!--
+  ============================================
+  手机端 · 文章原文页
+  文件：phone/post.njk
+  适用终端：手机端（路由 /phone/p/<slug>/，由 scripts/phone-routes.js 生成）
+  作用：手机阅读单篇文章；单列布局、无侧栏无雷达，替代电脑端 post.njk
+        数据由生成期算好：page.item = { title, dateStr, content, cats, tags }
+  样式依赖：source/css/theme/phone/common.css、source/css/theme/phone/list.css
+  组件依赖：phone/_components/Particles.njk
+  最后修改：2026-11-11
+  ============================================
+-->
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="color-scheme" content="dark">
+  <meta name="theme-color" content="#020817">
+  <!-- 首帧兜底：浏览器默认画布是白的，样式未解析前会闪一下白。这条规则先锁死深空底色 -->
+  <style>html{background-color:#020817}</style>
+  <title>redis-Pipeline 与批量命令 - 时空秘境</title>
+  <!-- 手机端样式：基础 + 列表/正文，外链引入（源文件 source/css/theme/phone/） -->
+  <link rel="stylesheet" href="/css/theme/phone/common.css">
+  <link rel="stylesheet" href="/css/theme/phone/list.css">
+<meta name="generator" content="Hexo 8.1.2"></head>
+<body>
+<div class="mb-shell">
+  <!--
+  ============================================
+  手机端星空粒子组件
+  文件：Particles.njk
+  适用终端：手机端
+  作用：Particles.njk 的手机端副本（nunjucks 子目录 include 取不到上级）
+        参数与电脑端 _components/Particles.njk 保持一致：
+        粒子 95 / 连线 118px / opacity 0.32，外加星座层与零星闪烁层
+  最后修改：2026-11-12
+  ============================================
+--><!-- z-index 必须是 0：负层级会被 body 不透明背景盖住，粒子在跑却看不见 -->
+<div id="particles" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 0; pointer-events: none;"></div>
+<!-- 星座层（与首页同一套：随机零星散布星座图形 + 偶尔闪烁的小星） -->
+<div id="constellations" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 1; pointer-events: none;" aria-hidden="true"></div>
+<script src="/js/particles.min.js"></script>
+<script>
+particlesJS("particles", {
+  particles: {
+    number: {
+      value: 95,
+      density: {
+        enable: true,
+        value_area: 800
+      }
+    },
+    color: {
+      value: "#00eeff"
+    },
+    shape: {
+      type: "circle",
+      stroke: {
+        width: 0,
+        color: "#000000"
+      }
+    },
+    opacity: {
+      value: 0.6,
+      random: true,
+      anim: {
+        enable: true,
+        speed: 0.5,
+        opacity_min: 0.1,
+        sync: false
+      }
+    },
+    size: {
+      value: 3,
+      random: true,
+      anim: {
+        enable: true,
+        speed: 2,
+        size_min: 0.1,
+        sync: false
+      }
+    },
+    line_linked: {
+      enable: true,
+      distance: 118,
+      color: "#00eeff",
+      opacity: 0.32,
+      width: 1
+    },
+    move: {
+      enable: true,
+      speed: 0.8,
+      direction: "none",
+      random: true,
+      straight: false,
+      out_mode: "out",
+      bounce: false,
+      attract: {
+        enable: true,
+        rotateX: 600,
+        rotateY: 1200
+      }
+    }
+  },
+  interactivity: {
+    detect_on: "canvas",
+    events: {
+      onhover: {
+        enable: true,
+        mode: "grab"       // 手指按住时粒子聚集
+      },
+      onclick: {
+        enable: true,
+        mode: "push"       // 点击时产生新粒子
+      },
+      resize: true
+    },
+    modes: {
+      grab: {
+        distance: 200,
+        line_linked: {
+          opacity: 1
+        }
+      },
+      push: {
+        particles_nb: 6
+      }
+    }
+  },
+  retina_detect: true
+});
+</script>
+<!-- 星座 + 零星闪烁层：与电脑端共用同一份绘制脚本 -->
+<script src="/js/theme/home/starfield.js"></script>
+
+
+  <div class="mb-top">
+    <a class="mb-back" href="/phone/">← 返回手机首页</a>
+    <span class="mb-sub" style="margin:0">2023-01-26</span>
+  </div>
+
+  <h1 class="mb-title">redis-Pipeline 与批量命令</h1>
+  <div class="mb-sub">
+    分类：database · redis
+     ｜ 标签：Redis · 系统课 · 性能
+  </div>
+
+  <div class="mb-article"><div class="essay-banner essay-database"></div>
+
+<h1 id="Pipeline-与批量命令"><a href="#Pipeline-与批量命令" class="headerlink" title="Pipeline 与批量命令"></a>Pipeline 与批量命令</h1><p><img src="https://wu4yong.github.io/starry-images/assets/img/redis/rd-36-pipeline.svg" alt="逐条请求与 Pipeline 的 RTT 对比"></p>
+<p><em>N 次 RTT 与 1 次 RTT 的差别、一次管道的时间构成与两条边界｜依据 Redis 7.4 官方文档自绘</em></p>
+<h2 id="一、学习目标"><a href="#一、学习目标" class="headerlink" title="一、学习目标"></a>一、学习目标</h2><p>学完这一讲，你要能做到三件事：</p>
+<ol>
+<li>说清 Pipeline 省下来的是「网络往返」，不是「服务端执行时间」；</li>
+<li>判断什么时候该用 Pipeline、什么时候直接用 <code>MGET</code>&#x2F;<code>MSET</code> 这类批量命令；</li>
+<li>知道 Pipeline 的两条边界（不保证原子性、批量过大撑内存），并能给出分批标准。</li>
+</ol>
+<h2 id="二、前置知识"><a href="#二、前置知识" class="headerlink" title="二、前置知识"></a>二、前置知识</h2><p>RD04（RESP 与客户端选型）、RD33（事务）。Pipeline 是「客户端侧的批量技巧」，不是服务端特性。</p>
+<h2 id="三、理论讲解（官方定义）"><a href="#三、理论讲解（官方定义）" class="headerlink" title="三、理论讲解（官方定义）"></a>三、理论讲解（官方定义）</h2><p>官方对 Pipelining 的定义（原文）：</p>
+<blockquote>
+<p>Pipelining is a technique … a client can send multiple requests to the server without waiting for the replies … and finally read the replies in a single step.</p>
+<p>—— <a target="_blank" rel="noopener" href="https://redis.io/docs/latest/develop/using-commands/pipelining/">https://redis.io/docs/latest/develop/using-commands/pipelining/</a></p>
+</blockquote>
+<p>以及它省掉的是什么（原文要点）：</p>
+<blockquote>
+<p>The cost of … RTT (round trip time) … is paid once instead of N times.</p>
+<p>—— 同上</p>
+</blockquote>
+<p>两条定性：</p>
+<ul>
+<li><strong>服务端执行时间不变</strong>：命令仍然逐条串行执行；</li>
+<li><strong>原子性也不会因为管道而获得</strong>：中间的请求照样能被其他客户端插入。</li>
+</ul>
+<h2 id="四、原理拆解"><a href="#四、原理拆解" class="headerlink" title="四、原理拆解"></a>四、原理拆解</h2><h3 id="1-两条路线的时间账"><a href="#1-两条路线的时间账" class="headerlink" title="1. 两条路线的时间账"></a>1. 两条路线的时间账</h3><p>逐条发送（N 条命令）：</p>
+<pre class="line-numbers language-none"><code class="language-none">T_total &#x3D; N × (RTT + T_exec)<span aria-hidden="true" class="line-numbers-rows"><span></span></span></code></pre>
+
+<p>Pipeline（N 条一次性发出）：</p>
+<pre class="line-numbers language-none"><code class="language-none">T_total &#x3D; RTT + N × T_exec + T_parse<span aria-hidden="true" class="line-numbers-rows"><span></span></span></code></pre>
+
+<p>差别就在那个 <code>N × RTT</code> 变成了 <code>1 × RTT</code>。在 1ms RTT、1000 条命令的场景下，这几乎是 1 秒的差距——<strong>Pipeline 的收益与 RTT 成正比，与命令数成正比</strong>。</p>
+<p>反过来，如果 RTT 只有 0.05ms，或者命令本身很慢，Pipeline 的收益就很有限。</p>
+<h3 id="2-Pipeline-与批量命令不是一回事"><a href="#2-Pipeline-与批量命令不是一回事" class="headerlink" title="2. Pipeline 与批量命令不是一回事"></a>2. Pipeline 与批量命令不是一回事</h3><table>
+<thead>
+<tr>
+<th>方式</th>
+<th>原子性</th>
+<th>适用</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>MGET</code> &#x2F; <code>MSET</code> &#x2F; <code>HMGET</code></td>
+<td>单条命令，服务端一次处理</td>
+<td>同类型、同结构的批量读写</td>
+</tr>
+<tr>
+<td>Pipeline</td>
+<td>无（只是打包发送）</td>
+<td>异构命令、需要混合读写</td>
+</tr>
+<tr>
+<td><code>MULTI</code> + Pipeline</td>
+<td>有（事务包裹）</td>
+<td>需要「不被打断」的批量写</td>
+</tr>
+</tbody></table>
+<p><code>MGET</code> 是<strong>一条命令</strong>，服务端一次遍历完成，比 Pipeline 里发 100 个 <code>GET</code> 更省（省的是命令调度与协议开销）。所以规则是：<strong>能用批量命令就不用 Pipeline，能 Pipeline 就不用逐条</strong>。</p>
+<h3 id="3-一次管道的时间构成"><a href="#3-一次管道的时间构成" class="headerlink" title="3. 一次管道的时间构成"></a>3. 一次管道的时间构成</h3><pre class="line-numbers language-none"><code class="language-none">1 次往返（RTT）
+  ↓
+N 条命令串行执行（T_exec × N）
+  ↓
+1 次批量回复读取（解析 N 个回复）<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<p>注意最后一步：回复也是打包回来的，客户端要<strong>一次性读入并解析全部</strong>。这就是内存风险的来源——管道越长，客户端与服务端的缓冲区压力越大。</p>
+<h3 id="4-分批的经验值"><a href="#4-分批的经验值" class="headerlink" title="4. 分批的经验值"></a>4. 分批的经验值</h3><p>官方没有强制上限，工程上的常见做法：</p>
+<ul>
+<li>按<strong>条数</strong>：500–1000 条一批；</li>
+<li>按<strong>字节</strong>：单批不超过几 MB（大 value 场景尤其要按字节算）；</li>
+<li>按<strong>耗时</strong>：一批的预期执行时间不要超过几十毫秒，否则会明显抬高其他客户端延迟。</li>
+</ul>
+<p>高并发下还要注意：Pipeline 会把「N 条命令」变成一个「大请求」，服务端要一次性读完再逐条执行，<strong>大请求会占用主线程更久</strong>，所以别把 10 万条塞进一个管道。</p>
+<h2 id="五、场景说明"><a href="#五、场景说明" class="headerlink" title="五、场景说明"></a>五、场景说明</h2><ol>
+<li><strong>数据导入</strong>：把 CSV 批量灌库，Pipeline 是最直接的手段；</li>
+<li><strong>批量写缓存</strong>：一次预热几千个 key，分 1000 条一批；</li>
+<li><strong>混合读写</strong>：需要 <code>SET</code> + <code>EXPIRE</code> 成对操作时，Pipeline 比逐条省一个 RTT；</li>
+<li><strong>不适合</strong>：需要「读到结果再决定下一条」的链路（Pipeline 拿不到中间结果）、需要原子性的场景（要包 <code>MULTI</code> 或 Lua）。</li>
+</ol>
+<h2 id="六、示例代码-实操步骤"><a href="#六、示例代码-实操步骤" class="headerlink" title="六、示例代码&#x2F;实操步骤"></a>六、示例代码&#x2F;实操步骤</h2><pre class="line-numbers language-bash" data-language="bash"><code class="language-bash"><span class="token comment"># 1. 用 redis-cli 的 --pipe 模式灌数据（最快的方式）</span>
+$ redis-cli <span class="token parameter variable">--pipe</span> <span class="token operator">&lt;</span> commands.txt
+<span class="token comment"># commands.txt 内容形如：</span>
+<span class="token comment"># SET k1 v1</span>
+<span class="token comment"># SET k2 v2</span>
+
+<span class="token comment"># 2. 观察逐条 vs 批量命令的耗时差</span>
+<span class="token number">127.0</span>.0.1:637<span class="token operator"><span class="token file-descriptor important">9</span>></span> MULTI
+OK
+<span class="token comment"># 对比：1000 次 GET 逐条执行（客户端要循环 1000 次往返）</span>
+<span class="token comment"># 与一次 MGET 1000 个 key：一条命令、一次往返</span>
+
+<span class="token comment"># 3. 客户端库示例：Python redis-py</span>
+<span class="token comment"># pipe = r.pipeline(transaction=False)</span>
+<span class="token comment"># for i in range(1000):</span>
+<span class="token comment">#     pipe.set(f"k&#123;i&#125;", i)</span>
+<span class="token comment"># pipe.execute()          # 一次写出、一次读回</span>
+
+<span class="token comment"># 4. 带事务的管道（要原子性就包 MULTI）</span>
+<span class="token comment"># pipe = r.pipeline(transaction=True)</span>
+<span class="token comment"># pipe.incr("counter")</span>
+<span class="token comment"># pipe.expire("counter", 60)</span>
+<span class="token comment"># pipe.execute()</span>
+
+<span class="token comment"># 5. 用 INFO 观察命令量与网络</span>
+<span class="token number">127.0</span>.0.1:637<span class="token operator"><span class="token file-descriptor important">9</span>></span> INFO stats
+<span class="token comment"># total_net_input_bytes:...</span>
+<span class="token comment"># instantaneous_ops_per_sec:...</span>
+
+<span class="token comment"># 6. 验证 Pipeline 不保证原子性</span>
+<span class="token comment"># 客户端 A：管道里连发 100 条 SET</span>
+<span class="token comment"># 客户端 B：在管道执行期间读同一个 key</span>
+<span class="token comment"># → B 可能读到「执行到一半」的中间状态，这是允许的</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<p>第 6 步是关键实验：它不是「偶发问题」，而是<strong>官方明确不保证</strong>的行为。</p>
+<h2 id="七、常见坑（官方明确说明的限制）"><a href="#七、常见坑（官方明确说明的限制）" class="headerlink" title="七、常见坑（官方明确说明的限制）"></a>七、常见坑（官方明确说明的限制）</h2><ol>
+<li><strong>以为 Pipeline 提升的是服务端性能</strong>。服务端执行时间一分没少，省的是 RTT。</li>
+<li><strong>以为 Pipeline 有原子性</strong>。中间可能插入其他客户端的命令；要原子请包 <code>MULTI</code> 或用 Lua。</li>
+<li><strong>一次塞太多</strong>。客户端与服务端都要缓冲全部请求与回复，容易把内存顶上去，甚至触发 <code>maxmemory</code> 淘汰。</li>
+<li><strong>用 Pipeline 替代批量命令</strong>。100 个 <code>GET</code> 打包不如 1 个 <code>MGET</code>，后者省掉命令调度与协议头。</li>
+<li><strong>在 Pipeline 里塞慢命令</strong>。整个管道是一次大请求，主线程要连续处理完，慢命令会把延迟放大。</li>
+<li><strong>Pipeline 中用 <code>BRPOP</code> 这类阻塞命令</strong>。阻塞命令会卡住整个管道，后续命令全部等它。</li>
+<li><strong>Cluster 下跨槽</strong>。Pipeline 里的 key 分散在多个节点时，客户端要自己按节点拆分管道，否则会收到大量 <code>MOVED</code>。</li>
+<li><strong>把批大小写死成 10 万</strong>。应按「条数 + 字节 + 预期耗时」三个维度设上限，而不是只看条数。</li>
+</ol>
+<h3 id="版本差异（8-x-标注）"><a href="#版本差异（8-x-标注）" class="headerlink" title="版本差异（8.x 标注）"></a>版本差异（8.x 标注）</h3><blockquote>
+<p>Pipeline 是客户端协议层的技巧，服务端不需要任何配置；7.x 与 8.x 行为一致。差异只在客户端库的实现细节（如自动分片、自动重试）。</p>
+<p>依据：<a target="_blank" rel="noopener" href="https://redis.io/docs/latest/develop/using-commands/pipelining/">https://redis.io/docs/latest/develop/using-commands/pipelining/</a></p>
+</blockquote>
+<h2 id="八、课后小结"><a href="#八、课后小结" class="headerlink" title="八、课后小结"></a>八、课后小结</h2><ul>
+<li>Pipeline 把 N 次 RTT 压成 1 次，服务端执行时间不变；</li>
+<li>收益与 RTT、命令数成正比，RTT 低或命令慢时收益有限；</li>
+<li>批量命令（<code>MGET</code>&#x2F;<code>MSET</code>）优于 Pipeline，Pipeline 优于逐条；</li>
+<li>不保证原子性，要原子包 <code>MULTI</code> 或改用 Lua；</li>
+<li>分批按条数 + 字节 + 预期耗时三个维度设限；</li>
+<li>Cluster 下需要按节点拆分管道。</li>
+</ul>
+<h2 id="九、思考题"><a href="#九、思考题" class="headerlink" title="九、思考题"></a>九、思考题</h2><ol>
+<li>1ms RTT、1000 条命令，逐条与 Pipeline 的时间差是多少？如果 RTT 是 0.1ms 呢？</li>
+<li>为什么 100 个 <code>GET</code> 打包，不如 1 个 <code>MGET</code>？省掉的具体是什么开销？</li>
+<li>Pipeline 里放一条 <code>BRPOP</code> 会发生什么？为什么？</li>
+<li>Cluster 下把 1000 个不同槽的 key 塞进一个管道，客户端会遇到什么？怎么改？</li>
+<li>你的导入任务要灌 500 万条数据，批大小怎么定？给出三个约束条件。</li>
+</ol>
+<h2 id="十、官方资料"><a href="#十、官方资料" class="headerlink" title="十、官方资料"></a>十、官方资料</h2><ul>
+<li>Pipelining（RTT 与批量发送的原文说明）：<a target="_blank" rel="noopener" href="https://redis.io/docs/latest/develop/using-commands/pipelining/">https://redis.io/docs/latest/develop/using-commands/pipelining/</a></li>
+<li>MGET &#x2F; MSET（单命令批量语义）：<a target="_blank" rel="noopener" href="https://redis.io/docs/latest/commands/mget/">https://redis.io/docs/latest/commands/mget/</a></li>
+<li>MULTI &#x2F; EXEC（把管道包成事务）：<a target="_blank" rel="noopener" href="https://redis.io/docs/latest/commands/multi/">https://redis.io/docs/latest/commands/multi/</a></li>
+<li>redis-cli –pipe（批量导入工具）：<a target="_blank" rel="noopener" href="https://redis.io/docs/latest/operate/oss_and_stack/management/optimization/benchmarks/">https://redis.io/docs/latest/operate/oss_and_stack/management/optimization/benchmarks/</a></li>
+<li>INFO stats（网络与命令量观测）：<a target="_blank" rel="noopener" href="https://redis.io/docs/latest/commands/info/">https://redis.io/docs/latest/commands/info/</a></li>
+</ul>
+<p>上一篇：<a href="/2023/01/25/database/redis/redis-35-functions/">RD35 Redis Functions</a> ｜ 下一篇：<a href="/2023/01/27/database/redis/redis-37-pubsub/">RD37 Pub&#x2F;Sub 的投递语义</a> ｜ <a href="/2022/12/21/database/redis/redis-0-series-index/">总目录</a></p>
+</div>
+
+  <div class="mb-foot">
+    <a href="/phone/">返回手机首页</a>
+    <a href="/phone/tags/">星迹索引</a>
+  </div>
+</div>
+
+
+<script>
+  /* 作用：懒加载本地 mermaid 库；无 mermaid 代码块时不加载 */
+  function loadLocalMermaid(){
+    return new Promise(function(resolve, reject){
+      if(window.mermaid) return resolve(window.mermaid);
+      var s = document.createElement('script');
+      s.src = '/js/third-party/mermaid/mermaid.min.js?v=10';
+      s.onload = function(){ resolve(window.mermaid); };
+      s.onerror = function(){ reject(new Error('mermaid local load failed')); };
+      document.head.appendChild(s);
+    });
+  }
+
+  /* 作用：把 ```mermaid 代码块替换成 SVG 图（手机端字号略小、图可横向滚动） */
+  async function renderMermaidDiagram(){
+    var blocks = document.querySelectorAll('pre[class*="language-mermaid"]');
+    if(!blocks.length) return;
+    var mermaid;
+    try { mermaid = await loadLocalMermaid(); }
+    catch(e){ console.warn('[mermaid] 本地库加载失败：', e); return; }
+
+    mermaid.initialize({
+      startOnLoad: false,
+      theme: 'base',
+      themeVariables: {
+        darkMode: true,
+        background: 'transparent',
+        fontFamily: '"Microsoft YaHei", "PingFang SC", "Segoe UI", sans-serif',
+        fontSize: '12px',
+        primaryColor: '#062f3d',
+        primaryTextColor: '#d6f6ff',
+        primaryBorderColor: '#00eeff',
+        secondaryColor: '#04222d',
+        tertiaryColor: '#04222d',
+        mainBkg: '#062f3d',
+        nodeBorder: '#00eeff',
+        clusterBkg: '#02161f',
+        clusterBorder: '#00eeff55',
+        lineColor: '#00eeff',
+        textColor: '#c0e8ff',
+        edgeLabelBackground: '#02161f'
+      },
+      flowchart: { curve: 'basis', useMaxWidth: false, htmlLabels: false, nodeSpacing: 30, rankSpacing: 40, padding: 10 }
+    });
+
+    var targets = [];
+    blocks.forEach(function(el){
+      var codeEl = el.querySelector('code');
+      if(!codeEl) return;
+      var div = document.createElement('div');
+      div.className = 'mermaid';
+      div.textContent = codeEl.textContent;
+      el.parentNode.replaceChild(div, el);
+      targets.push(div);
+    });
+    if(!targets.length) return;
+    try { await mermaid.run({ nodes: targets }); }
+    catch(e){ console.warn('[mermaid] 渲染失败：', e); }
+  }
+  /* 作用：多次触发兜底（延迟重试 + DOM 变化），防止某次时机没跑到导致图表留在代码块 */
+  var mmBusy = false;
+  function scheduleMermaid(){
+    if(mmBusy) return;
+    mmBusy = true;
+    renderMermaidDiagram().then(function(){ mmBusy = false; }, function(){ mmBusy = false; });
+  }
+  scheduleMermaid();
+  window.addEventListener('load', scheduleMermaid);
+  [1000, 3000, 8000].forEach(function(ms){ setTimeout(scheduleMermaid, ms); });
+  if(document.readyState !== 'loading') scheduleMermaid();
+  if(window.MutationObserver){
+    var mmTimer = null;
+    var mmObserver = new MutationObserver(function(){
+      clearTimeout(mmTimer);
+      mmTimer = setTimeout(scheduleMermaid, 400);
+    });
+    mmObserver.observe(document.querySelector('.mb-article') || document.body, { childList: true, subtree: true });
+  }
+</script>
+</body>
+</html>

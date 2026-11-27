@@ -1,0 +1,394 @@
+<!--
+  ============================================
+  手机端 · 文章原文页
+  文件：phone/post.njk
+  适用终端：手机端（路由 /phone/p/<slug>/，由 scripts/phone-routes.js 生成）
+  作用：手机阅读单篇文章；单列布局、无侧栏无雷达，替代电脑端 post.njk
+        数据由生成期算好：page.item = { title, dateStr, content, cats, tags }
+  样式依赖：source/css/theme/phone/common.css、source/css/theme/phone/list.css
+  组件依赖：phone/_components/Particles.njk
+  最后修改：2026-11-11
+  ============================================
+-->
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="color-scheme" content="dark">
+  <meta name="theme-color" content="#020817">
+  <!-- 首帧兜底：浏览器默认画布是白的，样式未解析前会闪一下白。这条规则先锁死深空底色 -->
+  <style>html{background-color:#020817}</style>
+  <title>redis-会话存储：登录态放哪 - 时空秘境</title>
+  <!-- 手机端样式：基础 + 列表/正文，外链引入（源文件 source/css/theme/phone/） -->
+  <link rel="stylesheet" href="/css/theme/phone/common.css">
+  <link rel="stylesheet" href="/css/theme/phone/list.css">
+<meta name="generator" content="Hexo 8.1.2"></head>
+<body>
+<div class="mb-shell">
+  <!--
+  ============================================
+  手机端星空粒子组件
+  文件：Particles.njk
+  适用终端：手机端
+  作用：Particles.njk 的手机端副本（nunjucks 子目录 include 取不到上级）
+        参数与电脑端 _components/Particles.njk 保持一致：
+        粒子 95 / 连线 118px / opacity 0.32，外加星座层与零星闪烁层
+  最后修改：2026-11-12
+  ============================================
+--><!-- z-index 必须是 0：负层级会被 body 不透明背景盖住，粒子在跑却看不见 -->
+<div id="particles" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 0; pointer-events: none;"></div>
+<!-- 星座层（与首页同一套：随机零星散布星座图形 + 偶尔闪烁的小星） -->
+<div id="constellations" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 1; pointer-events: none;" aria-hidden="true"></div>
+<script src="/js/particles.min.js"></script>
+<script>
+particlesJS("particles", {
+  particles: {
+    number: {
+      value: 95,
+      density: {
+        enable: true,
+        value_area: 800
+      }
+    },
+    color: {
+      value: "#00eeff"
+    },
+    shape: {
+      type: "circle",
+      stroke: {
+        width: 0,
+        color: "#000000"
+      }
+    },
+    opacity: {
+      value: 0.6,
+      random: true,
+      anim: {
+        enable: true,
+        speed: 0.5,
+        opacity_min: 0.1,
+        sync: false
+      }
+    },
+    size: {
+      value: 3,
+      random: true,
+      anim: {
+        enable: true,
+        speed: 2,
+        size_min: 0.1,
+        sync: false
+      }
+    },
+    line_linked: {
+      enable: true,
+      distance: 118,
+      color: "#00eeff",
+      opacity: 0.32,
+      width: 1
+    },
+    move: {
+      enable: true,
+      speed: 0.8,
+      direction: "none",
+      random: true,
+      straight: false,
+      out_mode: "out",
+      bounce: false,
+      attract: {
+        enable: true,
+        rotateX: 600,
+        rotateY: 1200
+      }
+    }
+  },
+  interactivity: {
+    detect_on: "canvas",
+    events: {
+      onhover: {
+        enable: true,
+        mode: "grab"       // 手指按住时粒子聚集
+      },
+      onclick: {
+        enable: true,
+        mode: "push"       // 点击时产生新粒子
+      },
+      resize: true
+    },
+    modes: {
+      grab: {
+        distance: 200,
+        line_linked: {
+          opacity: 1
+        }
+      },
+      push: {
+        particles_nb: 6
+      }
+    }
+  },
+  retina_detect: true
+});
+</script>
+<!-- 星座 + 零星闪烁层：与电脑端共用同一份绘制脚本 -->
+<script src="/js/theme/home/starfield.js"></script>
+
+
+  <div class="mb-top">
+    <a class="mb-back" href="/phone/">← 返回手机首页</a>
+    <span class="mb-sub" style="margin:0">2023-02-13</span>
+  </div>
+
+  <h1 class="mb-title">redis-会话存储：登录态放哪</h1>
+  <div class="mb-sub">
+    分类：database · redis
+     ｜ 标签：Redis · 系统课 · 实战
+  </div>
+
+  <div class="mb-article"><div class="essay-banner essay-database"></div>
+
+<h1 id="会话存储：登录态放哪"><a href="#会话存储：登录态放哪" class="headerlink" title="会话存储：登录态放哪"></a>会话存储：登录态放哪</h1><p><img src="https://wu4yong.github.io/starry-images/assets/img/redis/rd-54-session.svg" alt="登录写入、校验续期、登出删除四个动作"></p>
+<p><em>会话的写入、校验、续期、失效四步与两条边界｜依据 Redis 7.4 官方文档自绘</em></p>
+<h2 id="一、学习目标"><a href="#一、学习目标" class="headerlink" title="一、学习目标"></a>一、学习目标</h2><p>学完这一讲，你能做到：</p>
+<ol>
+<li>用一个 HASH 存下会话所需字段，并用 <code>EXPIRE</code> 决定「多久无操作要重登」；</li>
+<li>说清「每次请求都续期」带来的写放大，以及如何只在必要时续期；</li>
+<li>说清 Redis 成为登录链路单点时，降级策略必须先定。</li>
+</ol>
+<h2 id="二、前置知识"><a href="#二、前置知识" class="headerlink" title="二、前置知识"></a>二、前置知识</h2><p>RD05（String）、RD07（HASH）、RD12（过期机制）、RD45（客户端缓存，可选）。M9 进入实战串讲，这一讲把「数据结构 + 过期 + 可用性」三件事拼到一起。</p>
+<h2 id="三、理论讲解（官方定义）"><a href="#三、理论讲解（官方定义）" class="headerlink" title="三、理论讲解（官方定义）"></a>三、理论讲解（官方定义）</h2><p>官方对 HASH 与过期的定义（原文要点）：</p>
+<blockquote>
+<p><code>HSET key field value</code> — Sets the specified fields to their respective values in the hash stored at key.</p>
+<p><code>EXPIRE key seconds</code> — Set a timeout on key. After the timeout has expired, the key will automatically be deleted.</p>
+<p>—— <a target="_blank" rel="noopener" href="https://redis.io/docs/latest/commands/hset/">https://redis.io/docs/latest/commands/hset/</a>、<a target="_blank" rel="noopener" href="https://redis.io/docs/latest/commands/expire/">https://redis.io/docs/latest/commands/expire/</a></p>
+</blockquote>
+<p>两条关键结论：</p>
+<ul>
+<li><strong>整个 HASH 共享一个 TTL</strong>。你不能「只让某个字段过期」，会话里的字段是同生共死的；</li>
+<li><strong>过期是「到期后不再可用」，不一定立刻消失</strong>。机制是惰性删除 + 定期抽样（RD12），但对业务而言语义就是「过期即失效」。</li>
+</ul>
+<p>Redis 不是会话存储的唯一选择（JWT 把状态放在客户端），但它的价值是<strong>服务端可撤销</strong>：登出、踢人、改权限都能立刻生效。</p>
+<h2 id="四、原理拆解"><a href="#四、原理拆解" class="headerlink" title="四、原理拆解"></a>四、原理拆解</h2><h3 id="1-数据结构"><a href="#1-数据结构" class="headerlink" title="1. 数据结构"></a>1. 数据结构</h3><pre class="line-numbers language-none"><code class="language-none">session:&#123;sid&#125;  → HASH
+  uid: 1001
+  role: admin
+  login_at: 1700000000
+  ip: 10.0.1.20
+  ua: Mozilla&#x2F;5.0 ...
+
+EXPIRE session:&#123;sid&#125; 1800    # 30 分钟无操作即失效<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<p>三个设计要点：</p>
+<ul>
+<li><strong>sid 必须是随机不可猜的字符串</strong>（32 字节以上），不能用自增 ID 或手机号；</li>
+<li><strong>HASH 字段少而小</strong>，比整块 JSON 更省内存，也便于局部更新；</li>
+<li><strong>TTL 是业务语义</strong>（如「30 分钟无操作」），不是随手写的数字。</li>
+</ul>
+<h3 id="2-校验与续期"><a href="#2-校验与续期" class="headerlink" title="2. 校验与续期"></a>2. 校验与续期</h3><pre class="line-numbers language-none"><code class="language-none">每次请求：
+① GETALL session:&#123;sid&#125;     → 不存在则跳登录
+② 判断「是否快到续期阈值」
+③ 满足条件才 EXPIRE 重置<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span></span></code></pre>
+
+<p>为什么不是每次都 <code>EXPIRE</code>：高频接口下，每个请求一次写命令会让主线程多一份写压力，并且产生大量无意义的复制流量。常见做法是「剩余 TTL 小于阈值（如 1&#x2F;3）时才续期」，用一次读换多次写。</p>
+<h3 id="3-撤销与多端"><a href="#3-撤销与多端" class="headerlink" title="3. 撤销与多端"></a>3. 撤销与多端</h3><ul>
+<li><strong>登出</strong>：<code>DEL session:{sid}</code>，立刻失效；</li>
+<li><strong>踢人</strong>：维护 <code>uid → sid 列表</code>（一个 SET），或直接删掉该用户所有 sid；</li>
+<li><strong>多端登录</strong>：每个端一个独立 sid，互不影响；「只允许一个端」则要在登录时删掉旧 sid。</li>
+</ul>
+<h3 id="4-可用性：Redis-是登录链路的单点"><a href="#4-可用性：Redis-是登录链路的单点" class="headerlink" title="4. 可用性：Redis 是登录链路的单点"></a>4. 可用性：Redis 是登录链路的单点</h3><p>这是本讲最该提前回答的问题。缓存&#x2F;会话层故障时，业务只有三种选择：</p>
+<table>
+<thead>
+<tr>
+<th>策略</th>
+<th>行为</th>
+<th>代价</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>全部跳登录</td>
+<td>立刻要求重新认证</td>
+<td>用户体验断崖，可能压垮登录接口</td>
+</tr>
+<tr>
+<td>只读接口放行</td>
+<td>无会话时降级为匿名</td>
+<td>权限判断必须另有兜底</td>
+</tr>
+<tr>
+<td>本地短期缓存</td>
+<td>进程内保留最近会话</td>
+<td>多实例不一致（RD44）</td>
+</tr>
+</tbody></table>
+<p>选哪一种，必须在设计阶段定，而不是故障当天现场决定。</p>
+<h2 id="五、场景说明"><a href="#五、场景说明" class="headerlink" title="五、场景说明"></a>五、场景说明</h2><ol>
+<li><strong>后台管理系统</strong>：会话量小、要求「改权限立刻生效」，Redis 会话是最合适的；</li>
+<li><strong>App 登录态</strong>：sid 长期有效 + 定期刷新，注意「续期策略」别写成每次请求都写；</li>
+<li><strong>多端并存</strong>：每端独立 sid，配上「踢下线」能力；</li>
+<li><strong>不适合</strong>：完全无状态、可容忍令牌到期的公开 API——JWT 更省。</li>
+</ol>
+<h2 id="六、示例代码-实操步骤"><a href="#六、示例代码-实操步骤" class="headerlink" title="六、示例代码&#x2F;实操步骤"></a>六、示例代码&#x2F;实操步骤</h2><pre class="line-numbers language-bash" data-language="bash"><code class="language-bash"><span class="token comment"># 1. 登录成功：写入会话（HASH + TTL）</span>
+<span class="token number">127.0</span>.0.1:637<span class="token operator"><span class="token file-descriptor important">9</span>></span> HSET session:9f3a4721 uid <span class="token number">1001</span> role user login_at <span class="token number">1700000000</span> <span class="token function">ip</span> <span class="token number">10.0</span>.1.20
+<span class="token punctuation">(</span>integer<span class="token punctuation">)</span> <span class="token number">4</span>
+<span class="token number">127.0</span>.0.1:637<span class="token operator"><span class="token file-descriptor important">9</span>></span> EXPIRE session:9f3a4721 <span class="token number">1800</span>
+<span class="token punctuation">(</span>integer<span class="token punctuation">)</span> <span class="token number">1</span>
+
+<span class="token comment"># 2. 请求校验：整块读出</span>
+<span class="token number">127.0</span>.0.1:637<span class="token operator"><span class="token file-descriptor important">9</span>></span> HGETALL session:9f3a4721
+<span class="token number">1</span><span class="token punctuation">)</span> <span class="token string">"uid"</span>
+<span class="token number">2</span><span class="token punctuation">)</span> <span class="token string">"1001"</span>
+<span class="token number">3</span><span class="token punctuation">)</span> <span class="token string">"role"</span>
+<span class="token number">4</span><span class="token punctuation">)</span> <span class="token string">"user"</span>
+<span class="token punctuation">..</span>.
+
+<span class="token comment"># 3. 只读剩余 TTL，决定是否续期</span>
+<span class="token number">127.0</span>.0.1:637<span class="token operator"><span class="token file-descriptor important">9</span>></span> TTL session:9f3a4721
+<span class="token punctuation">(</span>integer<span class="token punctuation">)</span> <span class="token number">1620</span>                  <span class="token comment"># 还剩 27 分钟，超过阈值就不续</span>
+
+<span class="token comment"># 4. 需要续期时重置</span>
+<span class="token number">127.0</span>.0.1:637<span class="token operator"><span class="token file-descriptor important">9</span>></span> EXPIRE session:9f3a4721 <span class="token number">1800</span>
+<span class="token punctuation">(</span>integer<span class="token punctuation">)</span> <span class="token number">1</span>
+
+<span class="token comment"># 5. 局部更新（如角色变化）</span>
+<span class="token number">127.0</span>.0.1:637<span class="token operator"><span class="token file-descriptor important">9</span>></span> HSET session:9f3a4721 role admin
+<span class="token punctuation">(</span>integer<span class="token punctuation">)</span> <span class="token number">0</span>                     <span class="token comment"># 0 表示字段已存在、值被覆盖</span>
+
+<span class="token comment"># 6. 登出 / 踢人</span>
+<span class="token number">127.0</span>.0.1:637<span class="token operator"><span class="token file-descriptor important">9</span>></span> DEL session:9f3a4721
+<span class="token punctuation">(</span>integer<span class="token punctuation">)</span> <span class="token number">1</span>
+
+<span class="token comment"># 7. 单端登录：维护 uid 到 sid 的映射</span>
+<span class="token number">127.0</span>.0.1:637<span class="token operator"><span class="token file-descriptor important">9</span>></span> SADD user:1001:sids 9f3a4721
+<span class="token punctuation">(</span>integer<span class="token punctuation">)</span> <span class="token number">1</span>
+<span class="token number">127.0</span>.0.1:637<span class="token operator"><span class="token file-descriptor important">9</span>></span> SMEMBERS user:1001:sids
+
+<span class="token comment"># 8. 观察会话规模</span>
+<span class="token number">127.0</span>.0.1:637<span class="token operator"><span class="token file-descriptor important">9</span>></span> DBSIZE
+<span class="token number">127.0</span>.0.1:637<span class="token operator"><span class="token file-descriptor important">9</span>></span> INFO keyspace<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<h2 id="七、常见坑（官方明确说明的限制）"><a href="#七、常见坑（官方明确说明的限制）" class="headerlink" title="七、常见坑（官方明确说明的限制）"></a>七、常见坑（官方明确说明的限制）</h2><ol>
+<li><strong>sid 用可预测的值</strong>。自增 ID 或手机号做 sid，等于把会话交给攻击者枚举。</li>
+<li><strong>只存 uid 不存角色&#x2F;权限</strong>。每次请求都去查库，会话的价值就只剩「是否登录」。</li>
+<li><strong>每次请求都 <code>EXPIRE</code></strong>。写放大明显，高 QPS 接口会推高主线程压力与复制流量。</li>
+<li><strong>TTL 设成「永久」</strong>。用户离职、设备丢失后会话永不失效。</li>
+<li><strong>以为 HASH 字段能单独过期</strong>。TTL 属于整个 key，字段只能一起过期（RD07 讲的字段级过期是 7.4 新特性，会话场景一般不用）。</li>
+<li><strong>没做撤销机制</strong>。JWT 的痛点是「无法立刻踢人」，用 Redis 会话却不实现撤销，等于白换。</li>
+<li><strong>会话 key 不分片</strong>。会话量到千万级时单实例内存吃紧，应按 <code>uid</code> 或 <code>sid</code> 前缀分片。</li>
+<li><strong>没定义降级策略</strong>。Redis 故障时「全部跳登录」会引发雪崩式重登（RD47 的三道闸）。</li>
+</ol>
+<h3 id="版本差异（8-x-标注）"><a href="#版本差异（8-x-标注）" class="headerlink" title="版本差异（8.x 标注）"></a>版本差异（8.x 标注）</h3><blockquote>
+<p><code>HSET</code>&#x2F;<code>HGETALL</code>&#x2F;<code>EXPIRE</code> 语义在 7.4 与 8.x 一致。7.4 起 HASH 支持字段级过期（<code>HEXPIRE</code>），但会话场景通常整 key 过期更简单。</p>
+<p>依据：<a target="_blank" rel="noopener" href="https://redis.io/docs/latest/commands/hset/">https://redis.io/docs/latest/commands/hset/</a></p>
+</blockquote>
+<h2 id="八、课后小结"><a href="#八、课后小结" class="headerlink" title="八、课后小结"></a>八、课后小结</h2><ul>
+<li>会话 &#x3D; 一个 HASH + 一个 TTL，sid 必须随机不可猜；</li>
+<li>校验是读，续期是写，别让每个请求都写；</li>
+<li>撤销靠 <code>DEL</code>，多端靠多个 sid；</li>
+<li>Redis 会话的价值是「服务端可撤销」，代价是「多一个单点」；</li>
+<li>降级策略在设计阶段就要定。</li>
+</ul>
+<h2 id="九、思考题"><a href="#九、思考题" class="headerlink" title="九、思考题"></a>九、思考题</h2><ol>
+<li>会话里为什么建议存 role 而不只是 uid？</li>
+<li>「剩余 TTL 小于 1&#x2F;3 才续期」相比每次续期，省下了什么？</li>
+<li>一个用户三个端登录，你要怎么实现「登录新端踢掉旧端」？</li>
+<li>Redis 故障导致会话全丢，你的系统会怎样？给出三条降级动作。</li>
+<li>会话量 5000 万、平均 300 字节，需要多少内存？要不要分片？</li>
+</ol>
+<h2 id="十、官方资料"><a href="#十、官方资料" class="headerlink" title="十、官方资料"></a>十、官方资料</h2><ul>
+<li>HSET &#x2F; HGETALL：<a target="_blank" rel="noopener" href="https://redis.io/docs/latest/commands/hset/">https://redis.io/docs/latest/commands/hset/</a></li>
+<li>EXPIRE &#x2F; TTL：<a target="_blank" rel="noopener" href="https://redis.io/docs/latest/commands/expire/">https://redis.io/docs/latest/commands/expire/</a></li>
+<li>DEL：<a target="_blank" rel="noopener" href="https://redis.io/docs/latest/commands/del/">https://redis.io/docs/latest/commands/del/</a></li>
+<li>过期机制（惰性删除与定期抽样）：<a target="_blank" rel="noopener" href="https://redis.io/docs/latest/develop/reference/keyspace-notifications/">https://redis.io/docs/latest/develop/reference/keyspace-notifications/</a></li>
+<li>INFO keyspace：<a target="_blank" rel="noopener" href="https://redis.io/docs/latest/commands/info/">https://redis.io/docs/latest/commands/info/</a></li>
+</ul>
+<p>上一篇：<a href="/2023/02/12/database/redis/redis-53-incident/">RD53 生产故障剧本</a> ｜ 下一篇：<a href="/2023/02/14/database/redis/redis-55-seckill/">RD55 秒杀：原子扣减与异步下单</a> ｜ <a href="/2022/12/21/database/redis/redis-0-series-index/">总目录</a></p>
+</div>
+
+  <div class="mb-foot">
+    <a href="/phone/">返回手机首页</a>
+    <a href="/phone/tags/">星迹索引</a>
+  </div>
+</div>
+
+
+<script>
+  /* 作用：懒加载本地 mermaid 库；无 mermaid 代码块时不加载 */
+  function loadLocalMermaid(){
+    return new Promise(function(resolve, reject){
+      if(window.mermaid) return resolve(window.mermaid);
+      var s = document.createElement('script');
+      s.src = '/js/third-party/mermaid/mermaid.min.js?v=10';
+      s.onload = function(){ resolve(window.mermaid); };
+      s.onerror = function(){ reject(new Error('mermaid local load failed')); };
+      document.head.appendChild(s);
+    });
+  }
+
+  /* 作用：把 ```mermaid 代码块替换成 SVG 图（手机端字号略小、图可横向滚动） */
+  async function renderMermaidDiagram(){
+    var blocks = document.querySelectorAll('pre[class*="language-mermaid"]');
+    if(!blocks.length) return;
+    var mermaid;
+    try { mermaid = await loadLocalMermaid(); }
+    catch(e){ console.warn('[mermaid] 本地库加载失败：', e); return; }
+
+    mermaid.initialize({
+      startOnLoad: false,
+      theme: 'base',
+      themeVariables: {
+        darkMode: true,
+        background: 'transparent',
+        fontFamily: '"Microsoft YaHei", "PingFang SC", "Segoe UI", sans-serif',
+        fontSize: '12px',
+        primaryColor: '#062f3d',
+        primaryTextColor: '#d6f6ff',
+        primaryBorderColor: '#00eeff',
+        secondaryColor: '#04222d',
+        tertiaryColor: '#04222d',
+        mainBkg: '#062f3d',
+        nodeBorder: '#00eeff',
+        clusterBkg: '#02161f',
+        clusterBorder: '#00eeff55',
+        lineColor: '#00eeff',
+        textColor: '#c0e8ff',
+        edgeLabelBackground: '#02161f'
+      },
+      flowchart: { curve: 'basis', useMaxWidth: false, htmlLabels: false, nodeSpacing: 30, rankSpacing: 40, padding: 10 }
+    });
+
+    var targets = [];
+    blocks.forEach(function(el){
+      var codeEl = el.querySelector('code');
+      if(!codeEl) return;
+      var div = document.createElement('div');
+      div.className = 'mermaid';
+      div.textContent = codeEl.textContent;
+      el.parentNode.replaceChild(div, el);
+      targets.push(div);
+    });
+    if(!targets.length) return;
+    try { await mermaid.run({ nodes: targets }); }
+    catch(e){ console.warn('[mermaid] 渲染失败：', e); }
+  }
+  /* 作用：多次触发兜底（延迟重试 + DOM 变化），防止某次时机没跑到导致图表留在代码块 */
+  var mmBusy = false;
+  function scheduleMermaid(){
+    if(mmBusy) return;
+    mmBusy = true;
+    renderMermaidDiagram().then(function(){ mmBusy = false; }, function(){ mmBusy = false; });
+  }
+  scheduleMermaid();
+  window.addEventListener('load', scheduleMermaid);
+  [1000, 3000, 8000].forEach(function(ms){ setTimeout(scheduleMermaid, ms); });
+  if(document.readyState !== 'loading') scheduleMermaid();
+  if(window.MutationObserver){
+    var mmTimer = null;
+    var mmObserver = new MutationObserver(function(){
+      clearTimeout(mmTimer);
+      mmTimer = setTimeout(scheduleMermaid, 400);
+    });
+    mmObserver.observe(document.querySelector('.mb-article') || document.body, { childList: true, subtree: true });
+  }
+</script>
+</body>
+</html>

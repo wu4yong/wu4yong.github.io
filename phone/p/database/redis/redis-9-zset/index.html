@@ -1,0 +1,440 @@
+<!--
+  ============================================
+  手机端 · 文章原文页
+  文件：phone/post.njk
+  适用终端：手机端（路由 /phone/p/<slug>/，由 scripts/phone-routes.js 生成）
+  作用：手机阅读单篇文章；单列布局、无侧栏无雷达，替代电脑端 post.njk
+        数据由生成期算好：page.item = { title, dateStr, content, cats, tags }
+  样式依赖：source/css/theme/phone/common.css、source/css/theme/phone/list.css
+  组件依赖：phone/_components/Particles.njk
+  最后修改：2026-11-11
+  ============================================
+-->
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="color-scheme" content="dark">
+  <meta name="theme-color" content="#020817">
+  <!-- 首帧兜底：浏览器默认画布是白的，样式未解析前会闪一下白。这条规则先锁死深空底色 -->
+  <style>html{background-color:#020817}</style>
+  <title>redis-Sorted Set：分值排序与范围查询 - 时空秘境</title>
+  <!-- 手机端样式：基础 + 列表/正文，外链引入（源文件 source/css/theme/phone/） -->
+  <link rel="stylesheet" href="/css/theme/phone/common.css">
+  <link rel="stylesheet" href="/css/theme/phone/list.css">
+<meta name="generator" content="Hexo 8.1.2"></head>
+<body>
+<div class="mb-shell">
+  <!--
+  ============================================
+  手机端星空粒子组件
+  文件：Particles.njk
+  适用终端：手机端
+  作用：Particles.njk 的手机端副本（nunjucks 子目录 include 取不到上级）
+        参数与电脑端 _components/Particles.njk 保持一致：
+        粒子 95 / 连线 118px / opacity 0.32，外加星座层与零星闪烁层
+  最后修改：2026-11-12
+  ============================================
+--><!-- z-index 必须是 0：负层级会被 body 不透明背景盖住，粒子在跑却看不见 -->
+<div id="particles" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 0; pointer-events: none;"></div>
+<!-- 星座层（与首页同一套：随机零星散布星座图形 + 偶尔闪烁的小星） -->
+<div id="constellations" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 1; pointer-events: none;" aria-hidden="true"></div>
+<script src="/js/particles.min.js"></script>
+<script>
+particlesJS("particles", {
+  particles: {
+    number: {
+      value: 95,
+      density: {
+        enable: true,
+        value_area: 800
+      }
+    },
+    color: {
+      value: "#00eeff"
+    },
+    shape: {
+      type: "circle",
+      stroke: {
+        width: 0,
+        color: "#000000"
+      }
+    },
+    opacity: {
+      value: 0.6,
+      random: true,
+      anim: {
+        enable: true,
+        speed: 0.5,
+        opacity_min: 0.1,
+        sync: false
+      }
+    },
+    size: {
+      value: 3,
+      random: true,
+      anim: {
+        enable: true,
+        speed: 2,
+        size_min: 0.1,
+        sync: false
+      }
+    },
+    line_linked: {
+      enable: true,
+      distance: 118,
+      color: "#00eeff",
+      opacity: 0.32,
+      width: 1
+    },
+    move: {
+      enable: true,
+      speed: 0.8,
+      direction: "none",
+      random: true,
+      straight: false,
+      out_mode: "out",
+      bounce: false,
+      attract: {
+        enable: true,
+        rotateX: 600,
+        rotateY: 1200
+      }
+    }
+  },
+  interactivity: {
+    detect_on: "canvas",
+    events: {
+      onhover: {
+        enable: true,
+        mode: "grab"       // 手指按住时粒子聚集
+      },
+      onclick: {
+        enable: true,
+        mode: "push"       // 点击时产生新粒子
+      },
+      resize: true
+    },
+    modes: {
+      grab: {
+        distance: 200,
+        line_linked: {
+          opacity: 1
+        }
+      },
+      push: {
+        particles_nb: 6
+      }
+    }
+  },
+  retina_detect: true
+});
+</script>
+<!-- 星座 + 零星闪烁层：与电脑端共用同一份绘制脚本 -->
+<script src="/js/theme/home/starfield.js"></script>
+
+
+  <div class="mb-top">
+    <a class="mb-back" href="/phone/">← 返回手机首页</a>
+    <span class="mb-sub" style="margin:0">2022-12-30</span>
+  </div>
+
+  <h1 class="mb-title">redis-Sorted Set：分值排序与范围查询</h1>
+  <div class="mb-sub">
+    分类：database · redis
+     ｜ 标签：Redis · 系统课 · 数据结构
+  </div>
+
+  <div class="mb-article"><div class="essay-banner essay-database"></div>
+
+<h1 id="Sorted-Set：分值排序与范围查询"><a href="#Sorted-Set：分值排序与范围查询" class="headerlink" title="Sorted Set：分值排序与范围查询"></a>Sorted Set：分值排序与范围查询</h1><p><img src="https://wu4yong.github.io/starry-images/assets/img/redis/rd-09-zset.svg" alt="Sorted Set 的 dict + skiplist 双结构与常用命令"></p>
+<p><em>dict 定位成员、skiplist 维持有序，以及六条高频命令｜依据 Redis 7.4 官方文档自绘</em></p>
+<h2 id="一、学习目标"><a href="#一、学习目标" class="headerlink" title="一、学习目标"></a>一、学习目标</h2><p>学完这一讲，你要能做到三件事：</p>
+<ol>
+<li>讲清 Sorted Set 的「成员唯一 + 分值可排序」双重约束，以及 score 是 double 意味着什么；</li>
+<li>掌握 <code>ZADD</code> 的选项、<code>ZRANGE</code> 的三种取数方式（按排名 &#x2F; 按分数 &#x2F; 按字典序），不再用已废弃的命令；</li>
+<li>理解 dict + skiplist 双结构的代价，能判断排行榜、延时队列、范围检索各自的实现成本。</li>
+</ol>
+<h2 id="二、前置知识"><a href="#二、前置知识" class="headerlink" title="二、前置知识"></a>二、前置知识</h2><p>RD08（Set）。Sorted Set 相当于「给 Set 的每个成员挂一个分值」，所以先理解 Set 的唯一性，再来理解排序。</p>
+<h2 id="三、理论讲解（官方定义）"><a href="#三、理论讲解（官方定义）" class="headerlink" title="三、理论讲解（官方定义）"></a>三、理论讲解（官方定义）</h2><p>官方定义（原文）：</p>
+<blockquote>
+<p>A Redis sorted set is a collection of unique strings (members) ordered by an associated score. … If multiple elements have the same score, they are ordered lexicographically by their member string.</p>
+<p>—— <a target="_blank" rel="noopener" href="https://redis.io/docs/latest/develop/data-types/sorted-sets/">https://redis.io/docs/latest/develop/data-types/sorted-sets/</a></p>
+</blockquote>
+<p>三个硬信息：</p>
+<ul>
+<li><strong>members 唯一</strong>：和 Set 一样，成员不能重复；</li>
+<li><strong>按 score 排序</strong>：排序依据是分值，不是插入顺序；</li>
+<li><strong>同分按 member 字典序</strong>：这是一条容易忽略但影响结果稳定性的规则。</li>
+</ul>
+<p>score 的类型（原文要点）：score 是<strong>双精度浮点（double）</strong>，可以是负数，也支持 <code>+inf</code> &#x2F; <code>-inf</code> 表示无穷。所以它不是一个「整数排行榜」，而是一个浮点排序键——精度问题（后面讲坑）就出在这里。</p>
+<h2 id="四、原理拆解"><a href="#四、原理拆解" class="headerlink" title="四、原理拆解"></a>四、原理拆解</h2><h3 id="1-双结构：为什么要存两份"><a href="#1-双结构：为什么要存两份" class="headerlink" title="1. 双结构：为什么要存两份"></a>1. 双结构：为什么要存两份</h3><p>Sorted Set 内部同时维护：</p>
+<ul>
+<li><strong>dict（哈希表）</strong>：<code>member → score</code>，让 <code>ZSCORE</code> 是 O(1)；</li>
+<li><strong>skiplist（跳跃表）</strong>：按 <code>(score, member)</code> 排序，让范围查询与排名是 O(log N)。</li>
+</ul>
+<p>这解释了为什么相同数据要存两遍：<strong>一份用于「按成员找分」，一份用于「按分找成员」</strong>。内存开销约为同等规模 Set 的 2 倍上下，这是 Sorted Set 贵的原因，也是「能用 Set 就别用 ZSet」的依据。</p>
+<h3 id="2-三种取数方式，别再用废弃命令"><a href="#2-三种取数方式，别再用废弃命令" class="headerlink" title="2. 三种取数方式，别再用废弃命令"></a>2. 三种取数方式，别再用废弃命令</h3><p><code>ZRANGE</code>（6.2 起统一）覆盖了老的三条命令：</p>
+<pre class="line-numbers language-bash" data-language="bash"><code class="language-bash">ZRANGE key start stop <span class="token punctuation">[</span>BYSCORE <span class="token operator">|</span> BYLEX<span class="token punctuation">]</span> <span class="token punctuation">[</span>REV<span class="token punctuation">]</span> <span class="token punctuation">[</span>LIMIT offset count<span class="token punctuation">]</span> <span class="token punctuation">[</span>WITHSCORES<span class="token punctuation">]</span><span aria-hidden="true" class="line-numbers-rows"><span></span></span></code></pre>
+
+<p>三种模式：</p>
+<table>
+<thead>
+<tr>
+<th>模式</th>
+<th>参数含义</th>
+<th>典型用途</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>默认（按排名）</td>
+<td>start&#x2F;stop 是下标，0 是最低分，-1 是最高分</td>
+<td><code>ZRANGE rank 0 9</code> 取 TOP 10</td>
+</tr>
+<tr>
+<td><code>BYSCORE</code></td>
+<td>start&#x2F;stop 是分数区间，<code>(1.5</code> 表示不含</td>
+<td>取 80–100 分段</td>
+</tr>
+<tr>
+<td><code>BYLEX</code></td>
+<td>start&#x2F;stop 是成员字典序，<code>[a</code>、<code>(b</code></td>
+<td>同分内的字典序检索</td>
+</tr>
+</tbody></table>
+<p>关键约束：<strong><code>BYLEX</code> 只在「所有成员同分」时结果才被官方定义为有意义</strong>。分数不同时，<code>BYLEX</code> 的结果是未指定的（unspecified）。这条不是可选的注意事项，而是使用前提。</p>
+<p><code>REV</code> 反转方向；<code>LIMIT offset count</code> 只对 <code>BYSCORE</code> &#x2F; <code>BYLEX</code> 生效（按排名时用下标就够了）。</p>
+<p>被替代的旧命令：<code>ZRANGEBYSCORE</code>、<code>ZREVRANGEBYSCORE</code>、<code>ZRANGEBYLEX</code>、<code>ZREVRANGEBYLEX</code> 在 6.2 起标记为废弃（deprecated），仍可用但官方建议换 <code>ZRANGE ... BYSCORE/BYLEX</code>。</p>
+<h3 id="3-ZADD-的选项：每个都在解决一个真实问题"><a href="#3-ZADD-的选项：每个都在解决一个真实问题" class="headerlink" title="3. ZADD 的选项：每个都在解决一个真实问题"></a>3. ZADD 的选项：每个都在解决一个真实问题</h3><pre class="line-numbers language-bash" data-language="bash"><code class="language-bash">ZADD key <span class="token punctuation">[</span>NX <span class="token operator">|</span> XX<span class="token punctuation">]</span> <span class="token punctuation">[</span>GT <span class="token operator">|</span> LT<span class="token punctuation">]</span> <span class="token punctuation">[</span>CH<span class="token punctuation">]</span> <span class="token punctuation">[</span>INCR<span class="token punctuation">]</span> score member <span class="token punctuation">[</span>score member <span class="token punctuation">..</span>.<span class="token punctuation">]</span><span aria-hidden="true" class="line-numbers-rows"><span></span></span></code></pre>
+
+<ul>
+<li><code>NX</code>：成员不存在才加；<code>XX</code>：成员存在才更新。二者互斥。</li>
+<li><code>GT</code>：只有新分数更大时才更新；<code>LT</code>：更小才更新。<ul>
+<li>注意：<code>GT</code>&#x2F;<code>LT</code> 与 <code>NX</code> 不能同时使用（官方明确限制）。</li>
+<li>这一点让 <code>GT</code> 成为「排行榜只涨不跌」的正确实现：重复上报分数不会把名次打下来。</li>
+</ul>
+</li>
+<li><code>CH</code>：返回值从「新增成员数」变为「新增 + 变化成员数」。默认返回值只统计新增，很多人因此误判「更新没成功」。</li>
+<li><code>INCR</code>：把 <code>ZADD</code> 变成 <code>ZINCRBY</code> 的语义，对单个成员做增量并返回新分数。</li>
+</ul>
+<p><code>ZINCRBY</code> 本身就是原子的「加分」：<code>ZINCRBY rank 1 alice</code>。这就是直播间热度、文章点赞排行的标准写法——它比「<code>ZSCORE</code> 读 + <code>ZADD</code> 写」安全，因为后者在并发下会丢更新。</p>
+<h3 id="4-范围删除与弹出"><a href="#4-范围删除与弹出" class="headerlink" title="4. 范围删除与弹出"></a>4. 范围删除与弹出</h3><ul>
+<li><code>ZREMRANGEBYRANK</code> &#x2F; <code>ZREMRANGEBYSCORE</code> &#x2F; <code>ZREMRANGEBYLEX</code>：按三种维度批量删，O(log N + M)；</li>
+<li><code>ZPOPMIN</code> &#x2F; <code>ZPOPMAX</code>（可带 count）：弹出最小&#x2F;最大；</li>
+<li><code>BZPOPMIN</code> &#x2F; <code>BZPOPMAX</code>：阻塞版，<strong>这才是「延时队列」的可用形态</strong>——空集合上阻塞等待，到点前一直等。</li>
+</ul>
+<p>延时队列的经典做法不是「轮询 <code>ZRANGEBYSCORE</code>」，而是用阻塞弹出配合「下一个到期时间」判断；但要注意 <code>BZPOPMIN</code> 只能阻塞到有数据，不能阻塞到「某个时间点」，所以工程上常用「短超时轮询 + 小批量弹出」。</p>
+<h2 id="五、场景说明"><a href="#五、场景说明" class="headerlink" title="五、场景说明"></a>五、场景说明</h2><ol>
+<li><strong>排行榜</strong>：<code>ZINCRBY rank:hot 1 post1001</code>，<code>ZREVRANGE rank:hot 0 9 WITHSCORES</code> 取 TOP 10；</li>
+<li><strong>延时任务</strong>：score 存「到期时间戳（毫秒）」，<code>ZRANGEBYSCORE</code>&#x2F;<code>ZRANGE ... BYSCORE</code> 捞到期任务，<code>ZREM</code> 后执行；</li>
+<li><strong>滑动窗口限流</strong>：<code>ZADD rate:uid now uid:reqId</code> + <code>ZREMRANGEBYSCORE rate:uid 0 now-window</code> + <code>ZCARD</code>；</li>
+<li><strong>分数区间筛选</strong>（比如价格区间）：<code>ZRANGE products BYSCORE 100 200</code>；</li>
+<li><strong>同分内的字典序分页</strong>：所有成员同分时用 <code>BYLEX</code>，比如「按手机号前缀找用户」；</li>
+<li><strong>带权重的抽奖&#x2F;加权队列</strong>：score 是权重，<code>ZPOPMAX</code> 取权重最高者。</li>
+</ol>
+<p>不适合：需要存重复成员（用 List&#x2F;Stream）、需要集合运算但不需要排序（用 Set，内存省一半）、成员分值会频繁抖动且总量极大（跳跃表维护成本高，考虑换成「分段桶 + 局部排序」）。</p>
+<h2 id="六、示例代码-实操步骤"><a href="#六、示例代码-实操步骤" class="headerlink" title="六、示例代码&#x2F;实操步骤"></a>六、示例代码&#x2F;实操步骤</h2><pre class="line-numbers language-bash" data-language="bash"><code class="language-bash"><span class="token comment"># 1. 基础写入与读取</span>
+<span class="token number">127.0</span>.0.1:637<span class="token operator"><span class="token file-descriptor important">9</span>></span> ZADD rank <span class="token number">98</span> alice <span class="token number">88</span> bob <span class="token number">76</span> carl
+<span class="token punctuation">(</span>integer<span class="token punctuation">)</span> <span class="token number">3</span>
+<span class="token number">127.0</span>.0.1:637<span class="token operator"><span class="token file-descriptor important">9</span>></span> ZRANGE rank <span class="token number">0</span> <span class="token parameter variable">-1</span> WITHSCORES
+<span class="token number">1</span><span class="token punctuation">)</span> <span class="token string">"carl"</span>
+<span class="token number">2</span><span class="token punctuation">)</span> <span class="token string">"76"</span>
+<span class="token number">3</span><span class="token punctuation">)</span> <span class="token string">"bob"</span>
+<span class="token number">4</span><span class="token punctuation">)</span> <span class="token string">"88"</span>
+<span class="token number">5</span><span class="token punctuation">)</span> <span class="token string">"alice"</span>
+<span class="token number">6</span><span class="token punctuation">)</span> <span class="token string">"98"</span>
+<span class="token number">127.0</span>.0.1:637<span class="token operator"><span class="token file-descriptor important">9</span>></span> ZREVRANGE rank <span class="token number">0</span> <span class="token number">1</span> WITHSCORES    <span class="token comment"># 取前两名</span>
+<span class="token number">1</span><span class="token punctuation">)</span> <span class="token string">"alice"</span>
+<span class="token number">2</span><span class="token punctuation">)</span> <span class="token string">"98"</span>
+<span class="token number">3</span><span class="token punctuation">)</span> <span class="token string">"bob"</span>
+<span class="token number">4</span><span class="token punctuation">)</span> <span class="token string">"88"</span>
+
+<span class="token comment"># 2. 单人分数与排名</span>
+<span class="token number">127.0</span>.0.1:637<span class="token operator"><span class="token file-descriptor important">9</span>></span> ZSCORE rank alice
+<span class="token string">"98"</span>
+<span class="token number">127.0</span>.0.1:637<span class="token operator"><span class="token file-descriptor important">9</span>></span> ZRANK rank alice
+<span class="token punctuation">(</span>integer<span class="token punctuation">)</span> <span class="token number">2</span>                     <span class="token comment"># 从 0 开始，升序排名</span>
+<span class="token number">127.0</span>.0.1:637<span class="token operator"><span class="token file-descriptor important">9</span>></span> ZREVRANK rank alice
+<span class="token punctuation">(</span>integer<span class="token punctuation">)</span> <span class="token number">0</span>                     <span class="token comment"># 从高到低是第 1 名</span>
+
+<span class="token comment"># 3. 原子加分（排行榜标准写法）</span>
+<span class="token number">127.0</span>.0.1:637<span class="token operator"><span class="token file-descriptor important">9</span>></span> ZINCRBY rank <span class="token number">5</span> bob
+<span class="token string">"93"</span>
+<span class="token number">127.0</span>.0.1:637<span class="token operator"><span class="token file-descriptor important">9</span>></span> ZREVRANGE rank <span class="token number">0</span> <span class="token number">0</span> WITHSCORES
+<span class="token number">1</span><span class="token punctuation">)</span> <span class="token string">"alice"</span>
+<span class="token number">2</span><span class="token punctuation">)</span> <span class="token string">"98"</span>
+
+<span class="token comment"># 4. 只涨不跌：GT</span>
+<span class="token number">127.0</span>.0.1:637<span class="token operator"><span class="token file-descriptor important">9</span>></span> ZADD rank GT <span class="token number">90</span> bob
+<span class="token punctuation">(</span>integer<span class="token punctuation">)</span> <span class="token number">0</span>                     <span class="token comment"># 90 &lt; 93，不更新</span>
+<span class="token number">127.0</span>.0.1:637<span class="token operator"><span class="token file-descriptor important">9</span>></span> ZADD rank LT <span class="token number">90</span> bob
+<span class="token punctuation">(</span>integer<span class="token punctuation">)</span> <span class="token number">0</span>                     <span class="token comment"># 90 &lt; 93，LT 命中，更新了，但默认返回 0</span>
+<span class="token number">127.0</span>.0.1:637<span class="token operator"><span class="token file-descriptor important">9</span>></span> ZADD rank CH LT <span class="token number">80</span> bob
+<span class="token punctuation">(</span>integer<span class="token punctuation">)</span> <span class="token number">1</span>                     <span class="token comment"># 加 CH 才把「变化」计入返回值</span>
+<span class="token number">127.0</span>.0.1:637<span class="token operator"><span class="token file-descriptor important">9</span>></span> ZSCORE rank bob
+<span class="token string">"80"</span>
+
+<span class="token comment"># 5. 按分数区间取</span>
+<span class="token number">127.0</span>.0.1:637<span class="token operator"><span class="token file-descriptor important">9</span>></span> ZRANGE rank <span class="token number">80</span> <span class="token number">100</span> BYSCORE WITHSCORES
+<span class="token number">1</span><span class="token punctuation">)</span> <span class="token string">"bob"</span>
+<span class="token number">2</span><span class="token punctuation">)</span> <span class="token string">"80"</span>
+<span class="token number">3</span><span class="token punctuation">)</span> <span class="token string">"alice"</span>
+<span class="token number">4</span><span class="token punctuation">)</span> <span class="token string">"98"</span>
+<span class="token number">127.0</span>.0.1:637<span class="token operator"><span class="token file-descriptor important">9</span>></span> ZRANGE rank <span class="token punctuation">(</span><span class="token number">80</span> +inf BYSCORE LIMIT <span class="token number">0</span> <span class="token number">1</span>
+<span class="token number">1</span><span class="token punctuation">)</span> <span class="token string">"alice"</span>                      <span class="token comment"># 左括号表示不包含 80</span>
+
+<span class="token comment"># 6. 同分时的字典序</span>
+<span class="token number">127.0</span>.0.1:637<span class="token operator"><span class="token file-descriptor important">9</span>></span> DEL lex
+<span class="token number">127.0</span>.0.1:637<span class="token operator"><span class="token file-descriptor important">9</span>></span> ZADD lex <span class="token number">0</span> a <span class="token number">0</span> b <span class="token number">0</span> c <span class="token number">0</span> d
+<span class="token punctuation">(</span>integer<span class="token punctuation">)</span> <span class="token number">4</span>
+<span class="token number">127.0</span>.0.1:637<span class="token operator"><span class="token file-descriptor important">9</span>></span> ZRANGE lex <span class="token punctuation">[</span>b <span class="token punctuation">(</span>d BYLEX
+<span class="token number">1</span><span class="token punctuation">)</span> <span class="token string">"b"</span>
+<span class="token number">2</span><span class="token punctuation">)</span> <span class="token string">"c"</span>                          <span class="token comment"># [d 不含，所以到 c 为止</span>
+
+<span class="token comment"># 7. 计数与区间删除</span>
+<span class="token number">127.0</span>.0.1:637<span class="token operator"><span class="token file-descriptor important">9</span>></span> ZCOUNT rank <span class="token number">80</span> <span class="token number">100</span>
+<span class="token punctuation">(</span>integer<span class="token punctuation">)</span> <span class="token number">2</span>
+<span class="token number">127.0</span>.0.1:637<span class="token operator"><span class="token file-descriptor important">9</span>></span> ZCARD rank
+<span class="token punctuation">(</span>integer<span class="token punctuation">)</span> <span class="token number">3</span>
+<span class="token number">127.0</span>.0.1:637<span class="token operator"><span class="token file-descriptor important">9</span>></span> ZREMRANGEBYSCORE rank <span class="token parameter variable">-inf</span> <span class="token number">79</span>
+<span class="token punctuation">(</span>integer<span class="token punctuation">)</span> <span class="token number">0</span>
+
+<span class="token comment"># 8. 弹出与阻塞弹出（延时队列片段）</span>
+<span class="token number">127.0</span>.0.1:637<span class="token operator"><span class="token file-descriptor important">9</span>></span> ZADD delay:queue <span class="token number">1700000000000</span> taskA
+<span class="token number">127.0</span>.0.1:637<span class="token operator"><span class="token file-descriptor important">9</span>></span> ZPOPMIN delay:queue
+<span class="token number">1</span><span class="token punctuation">)</span> <span class="token string">"taskA"</span>
+<span class="token number">2</span><span class="token punctuation">)</span> <span class="token string">"1700000000000"</span>
+<span class="token comment"># 终端 A（阻塞版）：</span>
+<span class="token number">127.0</span>.0.1:637<span class="token operator"><span class="token file-descriptor important">9</span>></span> BZPOPMIN delay:queue <span class="token number">3</span>
+<span class="token comment"># 3 秒内有数据则立即返回，否则 nil</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<h2 id="七、常见坑（官方明确说明的限制）"><a href="#七、常见坑（官方明确说明的限制）" class="headerlink" title="七、常见坑（官方明确说明的限制）"></a>七、常见坑（官方明确说明的限制）</h2><ol>
+<li><strong>score 是 double，不是整数</strong>。<code>0.1 + 0.2</code> 这类浮点累加会积累误差，导致「明明该并列第一却差了一位」。要精确计数，score 存整数（比如以「分为单位」的整数）。</li>
+<li><strong>同分时按 member 字典序排</strong>。所以「同分随机顺序」是不存在的；需要随机就自己加扰动（如 <code>score*1000 + random</code>）。</li>
+<li><strong><code>BYLEX</code> 要求所有成员同分</strong>，分数不同时官方明确说结果是未指定的。把 <code>BYLEX</code> 用在「分数各不相同的排行榜」上是误用。</li>
+<li><strong><code>ZADD</code> 默认返回值只统计新增</strong>，不含更新。以为「更新失败」其实是返回值语义没搞清，加 <code>CH</code> 即可。</li>
+<li><strong><code>GT</code>&#x2F;<code>LT</code> 不能与 <code>NX</code> 同时用</strong>（官方限制）。想同时表达「不存在则加、存在则只涨」，需要两步或 Lua。</li>
+<li><strong><code>ZRANGEBYSCORE</code> 等旧命令 6.2 起废弃</strong>，新代码统一用 <code>ZRANGE ... BYSCORE/BYLEX/REV</code>。</li>
+<li><strong>内存成本约为 Set 的两倍</strong>。十万成员的排行榜没问题，千万成员要评估；分片或定期裁剪（<code>ZREMRANGEBYRANK</code> 只留 TOP N）是常规手段。</li>
+<li><strong><code>ZRANGE</code> 大区间是 O(log N + M)</strong>，一次取十万成员会阻塞主线程；分页请用小 <code>LIMIT</code>。</li>
+</ol>
+<h3 id="版本差异（8-x-标注）"><a href="#版本差异（8-x-标注）" class="headerlink" title="版本差异（8.x 标注）"></a>版本差异（8.x 标注）</h3><blockquote>
+<p>7.4 与 8.x 在 Sorted Set 语义上一致。历史节点：6.2 统一 <code>ZRANGE</code> 系列并废弃 <code>ZRANGEBY*</code>，7.2 起 <code>ZRANK</code> &#x2F; <code>ZREVRANK</code> 支持 <code>WITHSCORE</code>。旧项目升级时优先替换废弃命令，行为差异主要在返回值。</p>
+<p>依据：<a target="_blank" rel="noopener" href="https://redis.io/docs/latest/develop/data-types/sorted-sets/">https://redis.io/docs/latest/develop/data-types/sorted-sets/</a></p>
+</blockquote>
+<h2 id="八、课后小结"><a href="#八、课后小结" class="headerlink" title="八、课后小结"></a>八、课后小结</h2><ul>
+<li>Sorted Set &#x3D; 唯一成员 + double 分值，同分按 member 字典序排；</li>
+<li>内部是 dict（成员→分值，O(1)）与 skiplist（有序范围，O(log N)）双结构，内存约为 Set 的两倍；</li>
+<li><code>ZRANGE</code> 三模式：默认按排名、<code>BYSCORE</code> 按分数、<code>BYLEX</code> 按字典序（须同分）；</li>
+<li><code>ZADD</code> 的 <code>GT</code>&#x2F;<code>LT</code> 是「只涨&#x2F;只跌」的正解，<code>CH</code> 才把更新计入返回值；</li>
+<li><code>ZINCRBY</code> 是并发安全的加分方式，别用「读+写」；</li>
+<li>旧 <code>ZRANGEBYSCORE</code> 系列自 6.2 废弃。</li>
+</ul>
+<h2 id="九、思考题"><a href="#九、思考题" class="headerlink" title="九、思考题"></a>九、思考题</h2><ol>
+<li>排行榜用「<code>ZSCORE</code> 读 + <code>ZADD</code> 写」实现加分，两个客户端同时加分会发生什么？<code>ZINCRBY</code> 为什么没这个问题？</li>
+<li>一个「按手机号前缀查用户」的需求，成员分数各不相同，能不能用 <code>BYLEX</code>？官方对此怎么说？</li>
+<li>用 score 存毫秒时间戳做延时队列，2038 年之后会出问题吗？score 的 double 精度能精确表示到多少位？</li>
+<li>千万级成员的排行榜，内存怎么估？有哪两种「只留 TOP N」的裁剪策略，各自的代价是什么？</li>
+<li><code>ZADD key GT score member</code> 在成员不存在时会怎样？这与 <code>NX</code> 组合为什么被官方禁止？</li>
+</ol>
+<h2 id="十、官方资料"><a href="#十、官方资料" class="headerlink" title="十、官方资料"></a>十、官方资料</h2><ul>
+<li>Sorted sets（类型定义、同分排序规则、典型用法）：<a target="_blank" rel="noopener" href="https://redis.io/docs/latest/develop/data-types/sorted-sets/">https://redis.io/docs/latest/develop/data-types/sorted-sets/</a></li>
+<li>ZADD（NX&#x2F;XX&#x2F;GT&#x2F;LT&#x2F;CH&#x2F;INCR 全部选项与限制）：<a target="_blank" rel="noopener" href="https://redis.io/docs/latest/commands/zadd/">https://redis.io/docs/latest/commands/zadd/</a></li>
+<li>ZRANGE（6.2 起的 BYSCORE&#x2F;BYLEX&#x2F;REV&#x2F;LIMIT）：<a target="_blank" rel="noopener" href="https://redis.io/docs/latest/commands/zrange/">https://redis.io/docs/latest/commands/zrange/</a></li>
+<li>ZRANGEBYLEX（同分前提与未指定行为）：<a target="_blank" rel="noopener" href="https://redis.io/docs/latest/commands/zrangebylex/">https://redis.io/docs/latest/commands/zrangebylex/</a></li>
+<li>ZINCRBY（原子加分）：<a target="_blank" rel="noopener" href="https://redis.io/docs/latest/commands/zincrby/">https://redis.io/docs/latest/commands/zincrby/</a></li>
+<li>ZRANK（7.2 起 WITHSCORE）：<a target="_blank" rel="noopener" href="https://redis.io/docs/latest/commands/zrank/">https://redis.io/docs/latest/commands/zrank/</a></li>
+<li>BZPOPMIN（阻塞弹出的超时语义）：<a target="_blank" rel="noopener" href="https://redis.io/docs/latest/commands/bzpopmin/">https://redis.io/docs/latest/commands/bzpopmin/</a></li>
+</ul>
+<p>上一篇：<a href="/2022/12/29/database/redis/redis-8-set/">RD08 Set 类型：唯一性与集合运算</a> ｜ 下一篇：<a href="/2022/12/31/database/redis/redis-10-stream/">RD10 Stream 类型：追加日志与消费组入门</a> ｜ <a href="/2022/12/21/database/redis/redis-0-series-index/">总目录</a></p>
+</div>
+
+  <div class="mb-foot">
+    <a href="/phone/">返回手机首页</a>
+    <a href="/phone/tags/">星迹索引</a>
+  </div>
+</div>
+
+
+<script>
+  /* 作用：懒加载本地 mermaid 库；无 mermaid 代码块时不加载 */
+  function loadLocalMermaid(){
+    return new Promise(function(resolve, reject){
+      if(window.mermaid) return resolve(window.mermaid);
+      var s = document.createElement('script');
+      s.src = '/js/third-party/mermaid/mermaid.min.js?v=10';
+      s.onload = function(){ resolve(window.mermaid); };
+      s.onerror = function(){ reject(new Error('mermaid local load failed')); };
+      document.head.appendChild(s);
+    });
+  }
+
+  /* 作用：把 ```mermaid 代码块替换成 SVG 图（手机端字号略小、图可横向滚动） */
+  async function renderMermaidDiagram(){
+    var blocks = document.querySelectorAll('pre[class*="language-mermaid"]');
+    if(!blocks.length) return;
+    var mermaid;
+    try { mermaid = await loadLocalMermaid(); }
+    catch(e){ console.warn('[mermaid] 本地库加载失败：', e); return; }
+
+    mermaid.initialize({
+      startOnLoad: false,
+      theme: 'base',
+      themeVariables: {
+        darkMode: true,
+        background: 'transparent',
+        fontFamily: '"Microsoft YaHei", "PingFang SC", "Segoe UI", sans-serif',
+        fontSize: '12px',
+        primaryColor: '#062f3d',
+        primaryTextColor: '#d6f6ff',
+        primaryBorderColor: '#00eeff',
+        secondaryColor: '#04222d',
+        tertiaryColor: '#04222d',
+        mainBkg: '#062f3d',
+        nodeBorder: '#00eeff',
+        clusterBkg: '#02161f',
+        clusterBorder: '#00eeff55',
+        lineColor: '#00eeff',
+        textColor: '#c0e8ff',
+        edgeLabelBackground: '#02161f'
+      },
+      flowchart: { curve: 'basis', useMaxWidth: false, htmlLabels: false, nodeSpacing: 30, rankSpacing: 40, padding: 10 }
+    });
+
+    var targets = [];
+    blocks.forEach(function(el){
+      var codeEl = el.querySelector('code');
+      if(!codeEl) return;
+      var div = document.createElement('div');
+      div.className = 'mermaid';
+      div.textContent = codeEl.textContent;
+      el.parentNode.replaceChild(div, el);
+      targets.push(div);
+    });
+    if(!targets.length) return;
+    try { await mermaid.run({ nodes: targets }); }
+    catch(e){ console.warn('[mermaid] 渲染失败：', e); }
+  }
+  /* 作用：多次触发兜底（延迟重试 + DOM 变化），防止某次时机没跑到导致图表留在代码块 */
+  var mmBusy = false;
+  function scheduleMermaid(){
+    if(mmBusy) return;
+    mmBusy = true;
+    renderMermaidDiagram().then(function(){ mmBusy = false; }, function(){ mmBusy = false; });
+  }
+  scheduleMermaid();
+  window.addEventListener('load', scheduleMermaid);
+  [1000, 3000, 8000].forEach(function(ms){ setTimeout(scheduleMermaid, ms); });
+  if(document.readyState !== 'loading') scheduleMermaid();
+  if(window.MutationObserver){
+    var mmTimer = null;
+    var mmObserver = new MutationObserver(function(){
+      clearTimeout(mmTimer);
+      mmTimer = setTimeout(scheduleMermaid, 400);
+    });
+    mmObserver.observe(document.querySelector('.mb-article') || document.body, { childList: true, subtree: true });
+  }
+</script>
+</body>
+</html>

@@ -1,0 +1,374 @@
+<!--
+  ============================================
+  手机端 · 文章原文页
+  文件：phone/post.njk
+  适用终端：手机端（路由 /phone/p/<slug>/，由 scripts/phone-routes.js 生成）
+  作用：手机阅读单篇文章；单列布局、无侧栏无雷达，替代电脑端 post.njk
+        数据由生成期算好：page.item = { title, dateStr, content, cats, tags }
+  样式依赖：source/css/theme/phone/common.css、source/css/theme/phone/list.css
+  组件依赖：phone/_components/Particles.njk
+  最后修改：2026-11-11
+  ============================================
+-->
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="color-scheme" content="dark">
+  <meta name="theme-color" content="#020817">
+  <!-- 首帧兜底：浏览器默认画布是白的，样式未解析前会闪一下白。这条规则先锁死深空底色 -->
+  <style>html{background-color:#020817}</style>
+  <title>redis-四种缓存模式与选型 - 时空秘境</title>
+  <!-- 手机端样式：基础 + 列表/正文，外链引入（源文件 source/css/theme/phone/） -->
+  <link rel="stylesheet" href="/css/theme/phone/common.css">
+  <link rel="stylesheet" href="/css/theme/phone/list.css">
+<meta name="generator" content="Hexo 8.1.2"></head>
+<body>
+<div class="mb-shell">
+  <!--
+  ============================================
+  手机端星空粒子组件
+  文件：Particles.njk
+  适用终端：手机端
+  作用：Particles.njk 的手机端副本（nunjucks 子目录 include 取不到上级）
+        参数与电脑端 _components/Particles.njk 保持一致：
+        粒子 95 / 连线 118px / opacity 0.32，外加星座层与零星闪烁层
+  最后修改：2026-11-12
+  ============================================
+--><!-- z-index 必须是 0：负层级会被 body 不透明背景盖住，粒子在跑却看不见 -->
+<div id="particles" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 0; pointer-events: none;"></div>
+<!-- 星座层（与首页同一套：随机零星散布星座图形 + 偶尔闪烁的小星） -->
+<div id="constellations" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 1; pointer-events: none;" aria-hidden="true"></div>
+<script src="/js/particles.min.js"></script>
+<script>
+particlesJS("particles", {
+  particles: {
+    number: {
+      value: 95,
+      density: {
+        enable: true,
+        value_area: 800
+      }
+    },
+    color: {
+      value: "#00eeff"
+    },
+    shape: {
+      type: "circle",
+      stroke: {
+        width: 0,
+        color: "#000000"
+      }
+    },
+    opacity: {
+      value: 0.6,
+      random: true,
+      anim: {
+        enable: true,
+        speed: 0.5,
+        opacity_min: 0.1,
+        sync: false
+      }
+    },
+    size: {
+      value: 3,
+      random: true,
+      anim: {
+        enable: true,
+        speed: 2,
+        size_min: 0.1,
+        sync: false
+      }
+    },
+    line_linked: {
+      enable: true,
+      distance: 118,
+      color: "#00eeff",
+      opacity: 0.32,
+      width: 1
+    },
+    move: {
+      enable: true,
+      speed: 0.8,
+      direction: "none",
+      random: true,
+      straight: false,
+      out_mode: "out",
+      bounce: false,
+      attract: {
+        enable: true,
+        rotateX: 600,
+        rotateY: 1200
+      }
+    }
+  },
+  interactivity: {
+    detect_on: "canvas",
+    events: {
+      onhover: {
+        enable: true,
+        mode: "grab"       // 手指按住时粒子聚集
+      },
+      onclick: {
+        enable: true,
+        mode: "push"       // 点击时产生新粒子
+      },
+      resize: true
+    },
+    modes: {
+      grab: {
+        distance: 200,
+        line_linked: {
+          opacity: 1
+        }
+      },
+      push: {
+        particles_nb: 6
+      }
+    }
+  },
+  retina_detect: true
+});
+</script>
+<!-- 星座 + 零星闪烁层：与电脑端共用同一份绘制脚本 -->
+<script src="/js/theme/home/starfield.js"></script>
+
+
+  <div class="mb-top">
+    <a class="mb-back" href="/phone/">← 返回手机首页</a>
+    <span class="mb-sub" style="margin:0">2023-01-29</span>
+  </div>
+
+  <h1 class="mb-title">redis-四种缓存模式与选型</h1>
+  <div class="mb-sub">
+    分类：database · redis
+     ｜ 标签：Redis · 缓存 · 系统课
+  </div>
+
+  <div class="mb-article"><div class="essay-banner essay-database"></div>
+
+<h1 id="四种缓存模式与选型"><a href="#四种缓存模式与选型" class="headerlink" title="四种缓存模式与选型"></a>四种缓存模式与选型</h1><p><img src="https://wu4yong.github.io/starry-images/assets/img/redis/rd-39-cache-patterns.svg" alt="四种缓存模式对照"></p>
+<p><em>Cache-Aside &#x2F; Read-Through &#x2F; Write-Through &#x2F; Write-Behind 的职责分工｜依据 Redis 7.4 官方文档自绘</em></p>
+<h2 id="一、学习目标"><a href="#一、学习目标" class="headerlink" title="一、学习目标"></a>一、学习目标</h2><p>学完这一讲，你要能做到三件事：</p>
+<ol>
+<li>用一句话说清四种缓存模式各自「谁负责加载、何时写回」；</li>
+<li>拿到一个业务场景，能按「能不能接受旧值、能不能接受丢写」两问选出模式；</li>
+<li>说出任何一种模式下「Redis 整体不可用」时业务怎么办，而不是等出事才想。</li>
+</ol>
+<h2 id="二、前置知识"><a href="#二、前置知识" class="headerlink" title="二、前置知识"></a>二、前置知识</h2><p>RD05（String 是最常用的缓存载体）、RD12（过期与淘汰策略）、RD37（Pub&#x2F;Sub，本模块后续会用到）。这一讲开始进入 M7 缓存工程，重点从「Redis 怎么用」转向「Redis 放在哪一层」。</p>
+<h2 id="三、理论讲解（官方定义）"><a href="#三、理论讲解（官方定义）" class="headerlink" title="三、理论讲解（官方定义）"></a>三、理论讲解（官方定义）</h2><p>先明确一件事：<strong>四种缓存模式不是 Redis 的规范</strong>，它们是数据库缓存领域的通用工程范式。Redis 官方文档只规定「Redis 作为缓存时如何配置与运维」（缓存淘汰、<code>maxmemory-policy</code>、客户端缓存等），不规定业务如何组织读写顺序。</p>
+<p>官方的定位表述（原文要点）：</p>
+<blockquote>
+<p>Redis is often used as a caching layer … you can configure Redis to evict keys when reaching the max memory limit, and choose an eviction policy.</p>
+<p>—— <a target="_blank" rel="noopener" href="https://redis.io/docs/latest/develop/reference/eviction/">https://redis.io/docs/latest/develop/reference/eviction/</a></p>
+</blockquote>
+<p>也就是说：<strong>Redis 负责「存 + 淘汰」，业务负责「一致性 + 回源」</strong>。这一讲讲的四种模式，全部属于后者的范畴。</p>
+<p>四种模式的定义，用一句话各自概括：</p>
+<table>
+<thead>
+<tr>
+<th>模式</th>
+<th>谁负责加载</th>
+<th>写入顺序</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Cache-Aside（旁路）</td>
+<td>业务代码</td>
+<td>先写库，再删缓存</td>
+</tr>
+<tr>
+<td>Read-Through（读穿）</td>
+<td>缓存层（loader）</td>
+<td>同上</td>
+</tr>
+<tr>
+<td>Write-Through（写穿）</td>
+<td>业务代码</td>
+<td>同时写缓存和库</td>
+</tr>
+<tr>
+<td>Write-Behind（写回）</td>
+<td>业务代码 + 异步刷库</td>
+<td>先写缓存，异步写库</td>
+</tr>
+</tbody></table>
+<h2 id="四、原理拆解"><a href="#四、原理拆解" class="headerlink" title="四、原理拆解"></a>四、原理拆解</h2><h3 id="1-Cache-Aside：最常见的那一种"><a href="#1-Cache-Aside：最常见的那一种" class="headerlink" title="1. Cache-Aside：最常见的那一种"></a>1. Cache-Aside：最常见的那一种</h3><pre class="line-numbers language-none"><code class="language-none">读：GET key ──命中──→ 返回
+        └─未命中──→ 查库 ──→ SET key（带 TTL）──→ 返回
+
+写：UPDATE db ──→ DEL key（不是 SET 新值）<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span></span></code></pre>
+
+<p>关键点有两个：</p>
+<ul>
+<li><strong>写的时候删缓存，而不是更新缓存。</strong> 因为「更新缓存」需要把新值重新组装出来（可能来自多表 JOIN），既多一次计算，又可能与并发写的顺序错乱；删掉让下一次读自然回填，语义更干净。</li>
+<li><strong>缓存是旁路，不是主路。</strong> Redis 挂了，读请求直接落到库上（变慢但可用），这是 Cache-Aside 最大的优点。</li>
+</ul>
+<h3 id="2-Read-Through：把回源逻辑放进缓存层"><a href="#2-Read-Through：把回源逻辑放进缓存层" class="headerlink" title="2. Read-Through：把回源逻辑放进缓存层"></a>2. Read-Through：把回源逻辑放进缓存层</h3><p>业务只调 <code>cache.get(key)</code>，缓存层内部发现未命中就去查库、回填、再返回。Java 生态里 Spring Cache 的 <code>@Cacheable</code>、Go 生态里的各种 cache 封装都是这个思路。</p>
+<p>代价是：<strong>缓存层必须有访问数据库的能力</strong>（连接、SQL、序列化规则），它从「一个 KV 客户端」变成了「一个数据访问层」。分层上更整洁，耦合上更重。</p>
+<h3 id="3-Write-Through：写路径双写"><a href="#3-Write-Through：写路径双写" class="headerlink" title="3. Write-Through：写路径双写"></a>3. Write-Through：写路径双写</h3><pre class="line-numbers language-none"><code class="language-none">写：SET cache（新值）──→ UPDATE db<span aria-hidden="true" class="line-numbers-rows"><span></span></span></code></pre>
+
+<p>好处是读永远是热的、读到的永远是最新值；坏处是写延迟翻倍，而且<strong>缓存故障会放大成写失败</strong>（写缓存失败要不要回滚库？这就是分布式事务问题）。所以它通常用在「写少读多、且读必须最新」的场景，比如商品基础信息。</p>
+<h3 id="4-Write-Behind：写缓存即返回，异步刷库"><a href="#4-Write-Behind：写缓存即返回，异步刷库" class="headerlink" title="4. Write-Behind：写缓存即返回，异步刷库"></a>4. Write-Behind：写缓存即返回，异步刷库</h3><pre class="line-numbers language-none"><code class="language-none">写：SET cache（并把变更丢进队列）──→ 立即返回
+    后台批量刷库<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span></span></code></pre>
+
+<p>写吞吐最高，适合计数、点击流、点赞这类「允许短暂丢失」的数据。代价必须说清：<strong>缓存宕机时，队列里未落库的写会丢</strong>。如果这批数据是钱，就不能用这个模式。</p>
+<h3 id="5-两个判断问题"><a href="#5-两个判断问题" class="headerlink" title="5. 两个判断问题"></a>5. 两个判断问题</h3><p>把选型压缩成两问：</p>
+<ul>
+<li><strong>能不能接受「缓存里是旧值」？</strong> 能 → Cache-Aside &#x2F; Read-Through；不能 → Write-Through，或者干脆绕过缓存读主库。</li>
+<li><strong>能不能接受「丢一批写」？</strong> 不能 → Cache-Aside &#x2F; Write-Through；能 → Write-Behind。</li>
+</ul>
+<p>两个都「不能」的场景（比如扣库存），说明这个数据根本不该用「缓存 + 异步」来承载，应该走数据库事务 + 分布式锁（RD42）。</p>
+<h2 id="五、场景说明"><a href="#五、场景说明" class="headerlink" title="五、场景说明"></a>五、场景说明</h2><ol>
+<li><strong>Cache-Aside</strong>：绝大多数读多写少的业务数据（用户资料、配置、文章详情）；</li>
+<li><strong>Read-Through</strong>：框架层统一封装缓存，希望业务代码零侵入；</li>
+<li><strong>Write-Through</strong>：商品价格、库存快照这类「读必须最新、写不频繁」的数据；</li>
+<li><strong>Write-Behind</strong>：浏览量、点赞数、在线人数、埋点计数；</li>
+<li><strong>不适合任何缓存模式</strong>：强一致的账户余额——它需要事务，不需要缓存。</li>
+</ol>
+<h2 id="六、示例代码-实操步骤"><a href="#六、示例代码-实操步骤" class="headerlink" title="六、示例代码&#x2F;实操步骤"></a>六、示例代码&#x2F;实操步骤</h2><pre class="line-numbers language-bash" data-language="bash"><code class="language-bash"><span class="token comment"># Cache-Aside 的读（伪代码语义，用 redis-cli 演示命令形态）</span>
+<span class="token number">127.0</span>.0.1:637<span class="token operator"><span class="token file-descriptor important">9</span>></span> GET user:1001
+<span class="token punctuation">(</span>nil<span class="token punctuation">)</span>                                  <span class="token comment"># 未命中 → 业务去查库</span>
+
+<span class="token number">127.0</span>.0.1:637<span class="token operator"><span class="token file-descriptor important">9</span>></span> SET user:1001 <span class="token string">'&#123;"id":1001,"name":"tom"&#125;'</span> EX <span class="token number">3600</span>
+OK                                     <span class="token comment"># 回填，务必带 TTL</span>
+
+<span class="token comment"># Cache-Aside 的写：先更新库，再删缓存</span>
+<span class="token comment"># UPDATE user SET name='jerry' WHERE id=1001;   -- 库操作</span>
+<span class="token number">127.0</span>.0.1:637<span class="token operator"><span class="token file-descriptor important">9</span>></span> DEL user:1001
+<span class="token punctuation">(</span>integer<span class="token punctuation">)</span> <span class="token number">1</span>
+
+<span class="token comment"># Write-Through：写的时候同时写缓存（带 TTL，避免成为「永久脏数据」）</span>
+<span class="token number">127.0</span>.0.1:637<span class="token operator"><span class="token file-descriptor important">9</span>></span> SET user:1001 <span class="token string">'&#123;"id":1001,"name":"jerry"&#125;'</span> EX <span class="token number">3600</span>
+OK
+
+<span class="token comment"># Write-Behind：先写缓存，再异步刷库</span>
+<span class="token number">127.0</span>.0.1:637<span class="token operator"><span class="token file-descriptor important">9</span>></span> INCR post:2001:views
+<span class="token punctuation">(</span>integer<span class="token punctuation">)</span> <span class="token number">1</span>
+<span class="token comment"># 后台任务每 N 秒把增量批量写回数据库</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<p>TTL 是这四种模式的<strong>共同底线</strong>：即使一致性逻辑写错了，TTL 也能把「永久脏数据」变成「一段时间内的旧数据」。</p>
+<h2 id="七、常见坑（官方明确说明的限制）"><a href="#七、常见坑（官方明确说明的限制）" class="headerlink" title="七、常见坑（官方明确说明的限制）"></a>七、常见坑（官方明确说明的限制）</h2><ol>
+<li><strong>写的时候更新缓存而不是删缓存</strong>。并发写时两次「更新缓存」的到达顺序可能与库不一致，缓存被旧值覆盖且不会自愈。</li>
+<li><strong>回填不带 TTL</strong>。一旦某个环节出错，脏数据永远留在缓存里；官方在淘汰策略文档中明确，只有配了 <code>maxmemory</code> 与 <code>maxmemory-policy</code> 才会淘汰，否则内存会一直涨。</li>
+<li><strong>把缓存当存储</strong>。Redis 的持久化（RD14–RD16）不保证零丢失，缓存层的数据必须能被重建。</li>
+<li><strong>Write-Through 没考虑缓存故障</strong>。写缓存失败时业务是否继续？不定义清楚就会变成「有时写成功有时失败」。</li>
+<li><strong>Write-Behind 丢了写还不知道</strong>。异步队列要有落盘或补偿机制，否则重启即丢。</li>
+<li><strong>没给缓存层设降级</strong>。Redis 挂掉后所有请求直达库，大概率把库打挂——这是 M7 后面几讲反复出现的主题（RD40、RD47）。</li>
+</ol>
+<h3 id="版本差异（8-x-标注）"><a href="#版本差异（8-x-标注）" class="headerlink" title="版本差异（8.x 标注）"></a>版本差异（8.x 标注）</h3><blockquote>
+<p>缓存模式的工程范式不随 Redis 版本变化。8.x 与 7.4 的差别在运维侧（如 8.0 起许可改为 AGPLv3&#x2F;SSPL 双许可、集群与工具链调整），不影响本节内容。</p>
+<p>依据：<a target="_blank" rel="noopener" href="https://redis.io/docs/latest/">https://redis.io/docs/latest/</a></p>
+</blockquote>
+<h2 id="八、课后小结"><a href="#八、课后小结" class="headerlink" title="八、课后小结"></a>八、课后小结</h2><ul>
+<li>四种模式的差别只有两点：<strong>谁加载</strong>、<strong>何时写回</strong>；</li>
+<li>生产上 90% 是 Cache-Aside：读未命中回填、写更新库后删缓存、全部带 TTL；</li>
+<li>选型两问：能不能接受旧值、能不能接受丢写；</li>
+<li>两个都不能的强一致数据，不要套缓存模式；</li>
+<li>任何模式都要回答「缓存整体不可用时业务怎么活」。</li>
+</ul>
+<h2 id="九、思考题"><a href="#九、思考题" class="headerlink" title="九、思考题"></a>九、思考题</h2><ol>
+<li>为什么写的时候推荐「删缓存」而不是「更新缓存」？举一个「更新缓存」出错的并发顺序。</li>
+<li>Write-Through 下，写缓存成功但写库失败，缓存里是什么？你打算怎么处理？</li>
+<li>Write-Behind 的「丢写」窗口有多大？由什么决定？</li>
+<li>如果业务要求「读到的必须是 1 秒内的最新值」，你会选哪种模式，还需要什么额外机制？</li>
+<li>你能给你的项目画出「请求 → 缓存 → 库」的完整链路，并标出 Redis 挂掉时每一步的变化吗？</li>
+</ol>
+<h2 id="十、官方资料"><a href="#十、官方资料" class="headerlink" title="十、官方资料"></a>十、官方资料</h2><ul>
+<li>Eviction policies（<code>maxmemory</code> 与淘汰策略）：<a target="_blank" rel="noopener" href="https://redis.io/docs/latest/develop/reference/eviction/">https://redis.io/docs/latest/develop/reference/eviction/</a></li>
+<li>Redis as a cache（缓存定位与配置建议）：<a target="_blank" rel="noopener" href="https://redis.io/docs/latest/develop/clients/patterns/">https://redis.io/docs/latest/develop/clients/patterns/</a></li>
+<li>SET（<code>EX</code>&#x2F;<code>PX</code> 过期设置）：<a target="_blank" rel="noopener" href="https://redis.io/docs/latest/commands/set/">https://redis.io/docs/latest/commands/set/</a></li>
+<li>DEL &#x2F; UNLINK（删除与异步删除）：<a target="_blank" rel="noopener" href="https://redis.io/docs/latest/commands/unlink/">https://redis.io/docs/latest/commands/unlink/</a></li>
+<li>Client-side caching（本模块 RD45 的前置）：<a target="_blank" rel="noopener" href="https://redis.io/docs/latest/develop/clients/client-side-caching/">https://redis.io/docs/latest/develop/clients/client-side-caching/</a></li>
+</ul>
+<p>上一篇：<a href="/2023/01/28/database/redis/redis-38-stream-consumer/">RD38 Stream 消费组与 pending</a> ｜ 下一篇：<a href="/2023/01/30/database/redis/redis-40-penetration/">RD40 穿透、击穿、雪崩</a> ｜ <a href="/2022/12/21/database/redis/redis-0-series-index/">总目录</a></p>
+</div>
+
+  <div class="mb-foot">
+    <a href="/phone/">返回手机首页</a>
+    <a href="/phone/tags/">星迹索引</a>
+  </div>
+</div>
+
+
+<script>
+  /* 作用：懒加载本地 mermaid 库；无 mermaid 代码块时不加载 */
+  function loadLocalMermaid(){
+    return new Promise(function(resolve, reject){
+      if(window.mermaid) return resolve(window.mermaid);
+      var s = document.createElement('script');
+      s.src = '/js/third-party/mermaid/mermaid.min.js?v=10';
+      s.onload = function(){ resolve(window.mermaid); };
+      s.onerror = function(){ reject(new Error('mermaid local load failed')); };
+      document.head.appendChild(s);
+    });
+  }
+
+  /* 作用：把 ```mermaid 代码块替换成 SVG 图（手机端字号略小、图可横向滚动） */
+  async function renderMermaidDiagram(){
+    var blocks = document.querySelectorAll('pre[class*="language-mermaid"]');
+    if(!blocks.length) return;
+    var mermaid;
+    try { mermaid = await loadLocalMermaid(); }
+    catch(e){ console.warn('[mermaid] 本地库加载失败：', e); return; }
+
+    mermaid.initialize({
+      startOnLoad: false,
+      theme: 'base',
+      themeVariables: {
+        darkMode: true,
+        background: 'transparent',
+        fontFamily: '"Microsoft YaHei", "PingFang SC", "Segoe UI", sans-serif',
+        fontSize: '12px',
+        primaryColor: '#062f3d',
+        primaryTextColor: '#d6f6ff',
+        primaryBorderColor: '#00eeff',
+        secondaryColor: '#04222d',
+        tertiaryColor: '#04222d',
+        mainBkg: '#062f3d',
+        nodeBorder: '#00eeff',
+        clusterBkg: '#02161f',
+        clusterBorder: '#00eeff55',
+        lineColor: '#00eeff',
+        textColor: '#c0e8ff',
+        edgeLabelBackground: '#02161f'
+      },
+      flowchart: { curve: 'basis', useMaxWidth: false, htmlLabels: false, nodeSpacing: 30, rankSpacing: 40, padding: 10 }
+    });
+
+    var targets = [];
+    blocks.forEach(function(el){
+      var codeEl = el.querySelector('code');
+      if(!codeEl) return;
+      var div = document.createElement('div');
+      div.className = 'mermaid';
+      div.textContent = codeEl.textContent;
+      el.parentNode.replaceChild(div, el);
+      targets.push(div);
+    });
+    if(!targets.length) return;
+    try { await mermaid.run({ nodes: targets }); }
+    catch(e){ console.warn('[mermaid] 渲染失败：', e); }
+  }
+  /* 作用：多次触发兜底（延迟重试 + DOM 变化），防止某次时机没跑到导致图表留在代码块 */
+  var mmBusy = false;
+  function scheduleMermaid(){
+    if(mmBusy) return;
+    mmBusy = true;
+    renderMermaidDiagram().then(function(){ mmBusy = false; }, function(){ mmBusy = false; });
+  }
+  scheduleMermaid();
+  window.addEventListener('load', scheduleMermaid);
+  [1000, 3000, 8000].forEach(function(ms){ setTimeout(scheduleMermaid, ms); });
+  if(document.readyState !== 'loading') scheduleMermaid();
+  if(window.MutationObserver){
+    var mmTimer = null;
+    var mmObserver = new MutationObserver(function(){
+      clearTimeout(mmTimer);
+      mmTimer = setTimeout(scheduleMermaid, 400);
+    });
+    mmObserver.observe(document.querySelector('.mb-article') || document.body, { childList: true, subtree: true });
+  }
+</script>
+</body>
+</html>

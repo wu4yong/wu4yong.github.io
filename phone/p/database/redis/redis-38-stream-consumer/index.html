@@ -1,0 +1,432 @@
+<!--
+  ============================================
+  手机端 · 文章原文页
+  文件：phone/post.njk
+  适用终端：手机端（路由 /phone/p/<slug>/，由 scripts/phone-routes.js 生成）
+  作用：手机阅读单篇文章；单列布局、无侧栏无雷达，替代电脑端 post.njk
+        数据由生成期算好：page.item = { title, dateStr, content, cats, tags }
+  样式依赖：source/css/theme/phone/common.css、source/css/theme/phone/list.css
+  组件依赖：phone/_components/Particles.njk
+  最后修改：2026-11-11
+  ============================================
+-->
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="color-scheme" content="dark">
+  <meta name="theme-color" content="#020817">
+  <!-- 首帧兜底：浏览器默认画布是白的，样式未解析前会闪一下白。这条规则先锁死深空底色 -->
+  <style>html{background-color:#020817}</style>
+  <title>redis-Stream 消费组与 pending - 时空秘境</title>
+  <!-- 手机端样式：基础 + 列表/正文，外链引入（源文件 source/css/theme/phone/） -->
+  <link rel="stylesheet" href="/css/theme/phone/common.css">
+  <link rel="stylesheet" href="/css/theme/phone/list.css">
+<meta name="generator" content="Hexo 8.1.2"></head>
+<body>
+<div class="mb-shell">
+  <!--
+  ============================================
+  手机端星空粒子组件
+  文件：Particles.njk
+  适用终端：手机端
+  作用：Particles.njk 的手机端副本（nunjucks 子目录 include 取不到上级）
+        参数与电脑端 _components/Particles.njk 保持一致：
+        粒子 95 / 连线 118px / opacity 0.32，外加星座层与零星闪烁层
+  最后修改：2026-11-12
+  ============================================
+--><!-- z-index 必须是 0：负层级会被 body 不透明背景盖住，粒子在跑却看不见 -->
+<div id="particles" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 0; pointer-events: none;"></div>
+<!-- 星座层（与首页同一套：随机零星散布星座图形 + 偶尔闪烁的小星） -->
+<div id="constellations" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 1; pointer-events: none;" aria-hidden="true"></div>
+<script src="/js/particles.min.js"></script>
+<script>
+particlesJS("particles", {
+  particles: {
+    number: {
+      value: 95,
+      density: {
+        enable: true,
+        value_area: 800
+      }
+    },
+    color: {
+      value: "#00eeff"
+    },
+    shape: {
+      type: "circle",
+      stroke: {
+        width: 0,
+        color: "#000000"
+      }
+    },
+    opacity: {
+      value: 0.6,
+      random: true,
+      anim: {
+        enable: true,
+        speed: 0.5,
+        opacity_min: 0.1,
+        sync: false
+      }
+    },
+    size: {
+      value: 3,
+      random: true,
+      anim: {
+        enable: true,
+        speed: 2,
+        size_min: 0.1,
+        sync: false
+      }
+    },
+    line_linked: {
+      enable: true,
+      distance: 118,
+      color: "#00eeff",
+      opacity: 0.32,
+      width: 1
+    },
+    move: {
+      enable: true,
+      speed: 0.8,
+      direction: "none",
+      random: true,
+      straight: false,
+      out_mode: "out",
+      bounce: false,
+      attract: {
+        enable: true,
+        rotateX: 600,
+        rotateY: 1200
+      }
+    }
+  },
+  interactivity: {
+    detect_on: "canvas",
+    events: {
+      onhover: {
+        enable: true,
+        mode: "grab"       // 手指按住时粒子聚集
+      },
+      onclick: {
+        enable: true,
+        mode: "push"       // 点击时产生新粒子
+      },
+      resize: true
+    },
+    modes: {
+      grab: {
+        distance: 200,
+        line_linked: {
+          opacity: 1
+        }
+      },
+      push: {
+        particles_nb: 6
+      }
+    }
+  },
+  retina_detect: true
+});
+</script>
+<!-- 星座 + 零星闪烁层：与电脑端共用同一份绘制脚本 -->
+<script src="/js/theme/home/starfield.js"></script>
+
+
+  <div class="mb-top">
+    <a class="mb-back" href="/phone/">← 返回手机首页</a>
+    <span class="mb-sub" style="margin:0">2023-01-28</span>
+  </div>
+
+  <h1 class="mb-title">redis-Stream 消费组与 pending</h1>
+  <div class="mb-sub">
+    分类：database · redis
+     ｜ 标签：Redis · 系统课 · 消息
+  </div>
+
+  <div class="mb-article"><div class="essay-banner essay-database"></div>
+
+<h1 id="Stream-消费组与-pending"><a href="#Stream-消费组与-pending" class="headerlink" title="Stream 消费组与 pending"></a>Stream 消费组与 pending</h1><p><img src="https://wu4yong.github.io/starry-images/assets/img/redis/rd-38-stream-consumer.svg" alt="XADD 到 XACK 的消费组流程与 PEL"></p>
+<p><em>XADD → XGROUP CREATE → XREADGROUP → XACK 四步与 PEL 的构成｜依据 Redis 7.4 官方文档自绘</em></p>
+<h2 id="一、学习目标"><a href="#一、学习目标" class="headerlink" title="一、学习目标"></a>一、学习目标</h2><p>学完这一讲，你要能做到三件事：</p>
+<ol>
+<li>用 <code>XADD</code> + <code>XGROUP CREATE</code> + <code>XREADGROUP</code> + <code>XACK</code> 跑通一条「至少一次」的消息链路；</li>
+<li>说清 PEL（pending entries list）的四个字段，以及它为什么是这套机制的骨架；</li>
+<li>用 <code>XPENDING</code> 与 <code>XAUTOCLAIM</code> 处理「消费者崩溃后消息没人确认」的问题。</li>
+</ol>
+<h2 id="二、前置知识"><a href="#二、前置知识" class="headerlink" title="二、前置知识"></a>二、前置知识</h2><p>RD10（Stream 类型入门）、RD37（Pub&#x2F;Sub 的「至多一次」）。本讲要解决的就是 Pub&#x2F;Sub 解决不了的那部分：<strong>不丢、可回放、能确认</strong>。</p>
+<h2 id="三、理论讲解（官方定义）"><a href="#三、理论讲解（官方定义）" class="headerlink" title="三、理论讲解（官方定义）"></a>三、理论讲解（官方定义）</h2><p>官方对消费组的说明（原文）：</p>
+<blockquote>
+<p>Consumer groups … allow a group of clients to cooperate consuming a stream … each message is delivered to a single consumer in the group … the message stays in the PEL until acknowledged.</p>
+<p>—— <a target="_blank" rel="noopener" href="https://redis.io/docs/latest/develop/data-types/streams/">https://redis.io/docs/latest/develop/data-types/streams/</a></p>
+</blockquote>
+<p>以及 PEL 的定义（原文要点）：</p>
+<blockquote>
+<p>The PEL … stores the IDs of the messages that were delivered to a consumer but not yet acknowledged.</p>
+<p>—— 同上</p>
+</blockquote>
+<p>两条定性：</p>
+<ul>
+<li><strong>组内一条消息只投给一个消费者</strong>（这点和 Pub&#x2F;Sub 的广播完全不同）；</li>
+<li><strong>未 <code>XACK</code> 的消息永远留在 PEL</strong>，不会自动重投、不会自动消失。</li>
+</ul>
+<h2 id="四、原理拆解"><a href="#四、原理拆解" class="headerlink" title="四、原理拆解"></a>四、原理拆解</h2><h3 id="1-四步链路"><a href="#1-四步链路" class="headerlink" title="1. 四步链路"></a>1. 四步链路</h3><pre class="line-numbers language-none"><code class="language-none">XADD orders * type&#x3D;created order&#x3D;1001
+  → 返回消息 ID（毫秒时间戳-序号，如 1700000000000-0）
+
+XGROUP CREATE orders g1 0
+  → 建立消费组 g1，从 ID 0 开始（也要读历史）
+
+XREADGROUP GROUP g1 consumer-a COUNT 10 STREAMS orders &gt;
+  → 「&gt;」表示只读新消息，并把它们写进 consumer-a 的 PEL
+
+XACK orders g1 1700000000000-0
+  → 从 PEL 移除，表示「已处理完」<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<p>四个符号要记死：<code>&gt;</code> 读新消息、<code>0</code> 重读<strong>自己</strong>的待确认消息、<code>XACK</code> 确认、<code>XGROUP CREATE</code> 需要 <code>MKSTREAM</code> 才能对不存在的 stream 建组。</p>
+<h3 id="2-PEL-的四个字段"><a href="#2-PEL-的四个字段" class="headerlink" title="2. PEL 的四个字段"></a>2. PEL 的四个字段</h3><table>
+<thead>
+<tr>
+<th>字段</th>
+<th>含义</th>
+<th>用途</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>消息 ID</td>
+<td>唯一的 <code>ms-seq</code></td>
+<td>定位与确认</td>
+</tr>
+<tr>
+<td>消费者名</td>
+<td>谁领走了这条</td>
+<td>判断归属、接管</td>
+</tr>
+<tr>
+<td>投递时间</td>
+<td>什么时候投的</td>
+<td>判断「卡了多久」</td>
+</tr>
+<tr>
+<td>投递次数</td>
+<td>被投了几次</td>
+<td>判断「反复失败」</td>
+</tr>
+</tbody></table>
+<p><code>XPENDING</code> 的摘要模式给出「总数 + 最小 ID + 最大 ID + 各消费者积压数」，扩展模式给出每条消息的四个字段。<strong>只有看过扩展模式，才知道消息卡在谁手里、卡了多久。</strong></p>
+<h3 id="3-「至少一次」是怎么成立的"><a href="#3-「至少一次」是怎么成立的" class="headerlink" title="3. 「至少一次」是怎么成立的"></a>3. 「至少一次」是怎么成立的</h3><pre class="line-numbers language-none"><code class="language-none">投递 → 写 PEL（消息不会消失）
+  → 消费者处理业务
+  → 成功 → XACK（从 PEL 移除）
+  → 失败&#x2F;崩溃 → 消息仍在 PEL，可被再次领取<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span></span></code></pre>
+
+<p>所以语义是「至少一次」：<strong>可能重复投递</strong>（消费者处理成功但 <code>XACK</code> 之前崩了），业务必须幂等。</p>
+<h3 id="4-崩溃后的接管"><a href="#4-崩溃后的接管" class="headerlink" title="4. 崩溃后的接管"></a>4. 崩溃后的接管</h3><p>消费者 A 崩溃，它的 PEL 条目没人处理。两种接管方式：</p>
+<ul>
+<li><code>XCLAIM</code>：手工指定「把某条消息转给 B」，可带 <code>IDLE</code> 条件（闲置超过多少毫秒才转）；</li>
+<li><code>XAUTOCLAIM</code>（6.2+）：一次扫描一批闲置消息并自动转给当前消费者，返回「下个游标 + 被接管的消息 + 已删除的失效 ID」。</li>
+</ul>
+<p><code>XAUTOCLAIM</code> 是生产上更实用的那个，因为它不用你遍历整个 PEL。</p>
+<h3 id="5-裁剪与保留"><a href="#5-裁剪与保留" class="headerlink" title="5. 裁剪与保留"></a>5. 裁剪与保留</h3><p>Stream 是「日志」，会一直增长。三个手段：</p>
+<ul>
+<li><code>XADD ... MAXLEN ~ 100000</code>：写入时近似裁剪（<code>~</code> 允许按节点边界裁剪，效率高）；</li>
+<li><code>XTRIM</code>：手工裁剪；</li>
+<li><code>XDEL</code>：删单条（注意：<strong>删了消息，PEL 里可能还有它的 ID</strong>，会形成「幽灵条目」，<code>XAUTOCLAIM</code> 会把它们清理掉）。</li>
+</ul>
+<h2 id="五、场景说明"><a href="#五、场景说明" class="headerlink" title="五、场景说明"></a>五、场景说明</h2><ol>
+<li><strong>订单事件流</strong>：下单 → 库存 → 通知，多个消费组各自消费同一份日志；</li>
+<li><strong>任务分发</strong>：一组 worker 竞争消费，天然负载均衡（组内不重复投递）；</li>
+<li><strong>审计与回放</strong>：消息留在日志里，可按 ID 重新读；</li>
+<li><strong>不适合</strong>：超高吞吐（Stream 单 key 写入仍是单线程）、需要跨机房强一致（异步复制）。</li>
+</ol>
+<h2 id="六、示例代码-实操步骤"><a href="#六、示例代码-实操步骤" class="headerlink" title="六、示例代码&#x2F;实操步骤"></a>六、示例代码&#x2F;实操步骤</h2><pre class="line-numbers language-bash" data-language="bash"><code class="language-bash"><span class="token comment"># 1. 写入三条消息</span>
+<span class="token number">127.0</span>.0.1:637<span class="token operator"><span class="token file-descriptor important">9</span>></span> XADD orders * <span class="token assign-left variable">type</span><span class="token operator">=</span>created <span class="token assign-left variable">order</span><span class="token operator">=</span><span class="token number">1001</span>
+<span class="token string">"1700000000000-0"</span>
+<span class="token number">127.0</span>.0.1:637<span class="token operator"><span class="token file-descriptor important">9</span>></span> XADD orders * <span class="token assign-left variable">type</span><span class="token operator">=</span>paid <span class="token assign-left variable">order</span><span class="token operator">=</span><span class="token number">1001</span>
+<span class="token string">"1700000000001-0"</span>
+<span class="token number">127.0</span>.0.1:637<span class="token operator"><span class="token file-descriptor important">9</span>></span> XADD orders * <span class="token assign-left variable">type</span><span class="token operator">=</span>shipped <span class="token assign-left variable">order</span><span class="token operator">=</span><span class="token number">1001</span>
+<span class="token string">"1700000000002-0"</span>
+
+<span class="token comment"># 2. 建组（对不存在的 key 要加 MKSTREAM）</span>
+<span class="token number">127.0</span>.0.1:637<span class="token operator"><span class="token file-descriptor important">9</span>></span> XGROUP CREATE orders g1 <span class="token number">0</span>
+OK
+<span class="token number">127.0</span>.0.1:637<span class="token operator"><span class="token file-descriptor important">9</span>></span> XGROUP CREATE orders g2 $ MKSTREAM
+OK                            <span class="token comment"># $ 表示只消费「从现在开始」的新消息</span>
+
+<span class="token comment"># 3. 消费者 A 领取新消息</span>
+<span class="token number">127.0</span>.0.1:637<span class="token operator"><span class="token file-descriptor important">9</span>></span> XREADGROUP GROUP g1 consumer-a COUNT <span class="token number">10</span> STREAMS orders <span class="token operator">></span>
+<span class="token number">1</span><span class="token punctuation">)</span> <span class="token number">1</span><span class="token punctuation">)</span> <span class="token string">"orders"</span>
+   <span class="token number">2</span><span class="token punctuation">)</span> <span class="token number">1</span><span class="token punctuation">)</span> <span class="token number">1</span><span class="token punctuation">)</span> <span class="token string">"1700000000000-0"</span>
+         <span class="token number">2</span><span class="token punctuation">)</span> <span class="token number">1</span><span class="token punctuation">)</span> <span class="token string">"type"</span>
+            <span class="token number">2</span><span class="token punctuation">)</span> <span class="token string">"created"</span>
+            <span class="token number">3</span><span class="token punctuation">)</span> <span class="token string">"order"</span>
+            <span class="token number">4</span><span class="token punctuation">)</span> <span class="token string">"1001"</span>
+
+<span class="token comment"># 4. 看看 PEL 里积压了什么</span>
+<span class="token number">127.0</span>.0.1:637<span class="token operator"><span class="token file-descriptor important">9</span>></span> XPENDING orders g1
+<span class="token number">1</span><span class="token punctuation">)</span> <span class="token punctuation">(</span>integer<span class="token punctuation">)</span> <span class="token number">1</span>                <span class="token comment"># 总数</span>
+<span class="token number">2</span><span class="token punctuation">)</span> <span class="token string">"1700000000000-0"</span>          <span class="token comment"># 最小 ID</span>
+<span class="token number">3</span><span class="token punctuation">)</span> <span class="token string">"1700000000000-0"</span>          <span class="token comment"># 最大 ID</span>
+<span class="token number">4</span><span class="token punctuation">)</span> <span class="token number">1</span><span class="token punctuation">)</span> <span class="token number">1</span><span class="token punctuation">)</span> <span class="token string">"consumer-a"</span>
+      <span class="token number">2</span><span class="token punctuation">)</span> <span class="token string">"1"</span>                  <span class="token comment"># 该消费者的积压数</span>
+
+<span class="token comment"># 5. 扩展模式：谁领的、卡了多久、投过几次</span>
+<span class="token number">127.0</span>.0.1:637<span class="token operator"><span class="token file-descriptor important">9</span>></span> XPENDING orders g1 - + <span class="token number">10</span>
+<span class="token number">1</span><span class="token punctuation">)</span> <span class="token number">1</span><span class="token punctuation">)</span> <span class="token string">"1700000000000-0"</span>
+   <span class="token number">2</span><span class="token punctuation">)</span> <span class="token string">"consumer-a"</span>
+   <span class="token number">3</span><span class="token punctuation">)</span> <span class="token punctuation">(</span>integer<span class="token punctuation">)</span> <span class="token number">120000</span>        <span class="token comment"># 闲置毫秒数</span>
+   <span class="token number">4</span><span class="token punctuation">)</span> <span class="token punctuation">(</span>integer<span class="token punctuation">)</span> <span class="token number">1</span>             <span class="token comment"># 投递次数</span>
+
+<span class="token comment"># 6. 确认</span>
+<span class="token number">127.0</span>.0.1:637<span class="token operator"><span class="token file-descriptor important">9</span>></span> XACK orders g1 <span class="token number">1700000000000</span>-0
+<span class="token punctuation">(</span>integer<span class="token punctuation">)</span> <span class="token number">1</span>
+<span class="token number">127.0</span>.0.1:637<span class="token operator"><span class="token file-descriptor important">9</span>></span> XPENDING orders g1
+<span class="token number">1</span><span class="token punctuation">)</span> <span class="token punctuation">(</span>integer<span class="token punctuation">)</span> <span class="token number">0</span>
+
+<span class="token comment"># 7. 模拟崩溃：consumer-a 领了不确认，consumer-b 接管</span>
+<span class="token number">127.0</span>.0.1:637<span class="token operator"><span class="token file-descriptor important">9</span>></span> XREADGROUP GROUP g1 consumer-a COUNT <span class="token number">1</span> STREAMS orders <span class="token operator">></span>
+<span class="token comment"># 不 XACK，直接换消费者</span>
+<span class="token number">127.0</span>.0.1:637<span class="token operator"><span class="token file-descriptor important">9</span>></span> XAUTOCLAIM orders g1 consumer-b <span class="token number">0</span> <span class="token number">0</span>-0 COUNT <span class="token number">10</span>
+<span class="token number">1</span><span class="token punctuation">)</span> <span class="token string">"0-0"</span>                      <span class="token comment"># 下个游标</span>
+<span class="token number">2</span><span class="token punctuation">)</span> <span class="token number">1</span><span class="token punctuation">)</span> <span class="token number">1</span><span class="token punctuation">)</span> <span class="token string">"1700000000001-0"</span>
+      <span class="token number">2</span><span class="token punctuation">)</span> <span class="token number">1</span><span class="token punctuation">)</span> <span class="token string">"type"</span>
+         <span class="token number">2</span><span class="token punctuation">)</span> <span class="token string">"paid"</span>
+<span class="token number">3</span><span class="token punctuation">)</span> <span class="token punctuation">(</span>empty array<span class="token punctuation">)</span>              <span class="token comment"># 被清理的失效 ID</span>
+
+<span class="token comment"># 8. 重读自己的待确认消息（用 0 而不是 >）</span>
+<span class="token number">127.0</span>.0.1:637<span class="token operator"><span class="token file-descriptor important">9</span>></span> XREADGROUP GROUP g1 consumer-b COUNT <span class="token number">10</span> STREAMS orders <span class="token number">0</span>
+
+<span class="token comment"># 9. 裁剪防止无限增长</span>
+<span class="token number">127.0</span>.0.1:637<span class="token operator"><span class="token file-descriptor important">9</span>></span> XADD orders MAXLEN ~ <span class="token number">100000</span> * <span class="token assign-left variable">type</span><span class="token operator">=</span>created <span class="token assign-left variable">order</span><span class="token operator">=</span><span class="token number">1002</span>
+<span class="token number">127.0</span>.0.1:637<span class="token operator"><span class="token file-descriptor important">9</span>></span> XLEN orders
+<span class="token punctuation">(</span>integer<span class="token punctuation">)</span> <span class="token number">3</span>
+<span class="token number">127.0</span>.0.1:637<span class="token operator"><span class="token file-descriptor important">9</span>></span> XINFO <span class="token environment constant">GROUPS</span> orders
+<span class="token comment"># name g1 / consumers 2 / pending 0 / last-delivered-id ...</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<h2 id="七、常见坑（官方明确说明的限制）"><a href="#七、常见坑（官方明确说明的限制）" class="headerlink" title="七、常见坑（官方明确说明的限制）"></a>七、常见坑（官方明确说明的限制）</h2><ol>
+<li><strong>以为消费组是广播</strong>。组内一条消息只投给一个消费者，要广播就建多个组。</li>
+<li><strong>投递了不 <code>XACK</code></strong>。消息永远留在 PEL，<code>XPENDING</code> 越积越多，最终无法判断「哪些真没处理」。</li>
+<li><strong>把 <code>&gt;</code> 当「重读」</strong>。<code>&gt;</code> 只返回新消息；重读自己的待确认消息要用 <code>0</code>。</li>
+<li><strong>消费者名随机生成</strong>。每次重启换名字，PEL 会散落在无数「已消失的消费者」名下，接管时难以判断归属。</li>
+<li><strong><code>XDEL</code> 收了消息但 PEL 仍有 ID</strong>。这会产生「幽灵条目」，要定期用 <code>XAUTOCLAIM</code> 清理（它返回的第三项就是被清理的 ID）。</li>
+<li><strong>不裁剪 Stream</strong>。消息无限增长，内存与 <code>XLEN</code> 一起涨；用 <code>MAXLEN ~</code> 近似裁剪。</li>
+<li><strong>业务不幂等</strong>。「至少一次」意味着可能重复投递（处理成功但 <code>XACK</code> 前崩溃），必须靠业务侧去重。</li>
+<li><strong><code>XAUTOCLAIM</code> 的 <code>min-idle-time</code> 设成 0</strong>。会把「正在处理中」的消息抢走，造成并发处理同一条；应按业务最长处理时间设置。</li>
+</ol>
+<h3 id="版本差异（8-x-标注）"><a href="#版本差异（8-x-标注）" class="headerlink" title="版本差异（8.x 标注）"></a>版本差异（8.x 标注）</h3><blockquote>
+<p><code>XAUTOCLAIM</code> 自 6.2 引入，7.x 与 8.x 沿用；Stream 数据结构与消费组语义未变。8.x 的差异主要在周边工具与许可条款。</p>
+<p>依据：<a target="_blank" rel="noopener" href="https://redis.io/docs/latest/develop/data-types/streams/">https://redis.io/docs/latest/develop/data-types/streams/</a></p>
+</blockquote>
+<h2 id="八、课后小结"><a href="#八、课后小结" class="headerlink" title="八、课后小结"></a>八、课后小结</h2><ul>
+<li>四步：<code>XADD</code> 写 → <code>XGROUP CREATE</code> 建组 → <code>XREADGROUP</code> 领（写 PEL）→ <code>XACK</code> 确认；</li>
+<li>组内不重复投递，一条消息只给一个消费者；要广播就建多个组；</li>
+<li>PEL 四字段：消息 ID、消费者名、投递时间、投递次数；</li>
+<li>语义是「至少一次」，业务必须幂等；</li>
+<li>崩溃接管用 <code>XAUTOCLAIM</code>（<code>min-idle-time</code> 要按处理时长设）；</li>
+<li>Stream 是日志，必须用 <code>MAXLEN ~</code> 或 <code>XTRIM</code> 控制增长。</li>
+</ul>
+<h2 id="九、思考题"><a href="#九、思考题" class="headerlink" title="九、思考题"></a>九、思考题</h2><ol>
+<li>为什么说消费组是「至少一次」而不是「恰好一次」？重复投递发生在哪个窗口？</li>
+<li><code>XREADGROUP</code> 的 <code>&gt;</code> 和 <code>0</code> 分别读什么？用错了会出现什么现象？</li>
+<li>消费者名每次重启都变，会带来什么运维问题？</li>
+<li><code>XDEL</code> 之后 PEL 里的 ID 会怎样？怎么清理？</li>
+<li><code>XAUTOCLAIM</code> 的 <code>min-idle-time</code> 设成 0 有什么风险？你会怎么定这个值？</li>
+</ol>
+<h2 id="十、官方资料"><a href="#十、官方资料" class="headerlink" title="十、官方资料"></a>十、官方资料</h2><ul>
+<li>Streams（消费组与 PEL 原文说明）：<a target="_blank" rel="noopener" href="https://redis.io/docs/latest/develop/data-types/streams/">https://redis.io/docs/latest/develop/data-types/streams/</a></li>
+<li>XADD（ID 生成与 MAXLEN）：<a target="_blank" rel="noopener" href="https://redis.io/docs/latest/commands/xadd/">https://redis.io/docs/latest/commands/xadd/</a></li>
+<li>XREADGROUP（<code>&gt;</code> &#x2F; <code>0</code> 语义）：<a target="_blank" rel="noopener" href="https://redis.io/docs/latest/commands/xreadgroup/">https://redis.io/docs/latest/commands/xreadgroup/</a></li>
+<li>XPENDING（摘要与扩展模式）：<a target="_blank" rel="noopener" href="https://redis.io/docs/latest/commands/xpending/">https://redis.io/docs/latest/commands/xpending/</a></li>
+<li>XAUTOCLAIM &#x2F; XACK：<a target="_blank" rel="noopener" href="https://redis.io/docs/latest/commands/xautoclaim/">https://redis.io/docs/latest/commands/xautoclaim/</a></li>
+</ul>
+<p>上一篇：<a href="/2023/01/27/database/redis/redis-37-pubsub/">RD37 Pub&#x2F;Sub 的投递语义</a> ｜ 下一篇：<a href="/2023/01/29/database/redis/redis-39-cache-patterns/">RD39 四种缓存模式</a> ｜ <a href="/2022/12/21/database/redis/redis-0-series-index/">总目录</a></p>
+</div>
+
+  <div class="mb-foot">
+    <a href="/phone/">返回手机首页</a>
+    <a href="/phone/tags/">星迹索引</a>
+  </div>
+</div>
+
+
+<script>
+  /* 作用：懒加载本地 mermaid 库；无 mermaid 代码块时不加载 */
+  function loadLocalMermaid(){
+    return new Promise(function(resolve, reject){
+      if(window.mermaid) return resolve(window.mermaid);
+      var s = document.createElement('script');
+      s.src = '/js/third-party/mermaid/mermaid.min.js?v=10';
+      s.onload = function(){ resolve(window.mermaid); };
+      s.onerror = function(){ reject(new Error('mermaid local load failed')); };
+      document.head.appendChild(s);
+    });
+  }
+
+  /* 作用：把 ```mermaid 代码块替换成 SVG 图（手机端字号略小、图可横向滚动） */
+  async function renderMermaidDiagram(){
+    var blocks = document.querySelectorAll('pre[class*="language-mermaid"]');
+    if(!blocks.length) return;
+    var mermaid;
+    try { mermaid = await loadLocalMermaid(); }
+    catch(e){ console.warn('[mermaid] 本地库加载失败：', e); return; }
+
+    mermaid.initialize({
+      startOnLoad: false,
+      theme: 'base',
+      themeVariables: {
+        darkMode: true,
+        background: 'transparent',
+        fontFamily: '"Microsoft YaHei", "PingFang SC", "Segoe UI", sans-serif',
+        fontSize: '12px',
+        primaryColor: '#062f3d',
+        primaryTextColor: '#d6f6ff',
+        primaryBorderColor: '#00eeff',
+        secondaryColor: '#04222d',
+        tertiaryColor: '#04222d',
+        mainBkg: '#062f3d',
+        nodeBorder: '#00eeff',
+        clusterBkg: '#02161f',
+        clusterBorder: '#00eeff55',
+        lineColor: '#00eeff',
+        textColor: '#c0e8ff',
+        edgeLabelBackground: '#02161f'
+      },
+      flowchart: { curve: 'basis', useMaxWidth: false, htmlLabels: false, nodeSpacing: 30, rankSpacing: 40, padding: 10 }
+    });
+
+    var targets = [];
+    blocks.forEach(function(el){
+      var codeEl = el.querySelector('code');
+      if(!codeEl) return;
+      var div = document.createElement('div');
+      div.className = 'mermaid';
+      div.textContent = codeEl.textContent;
+      el.parentNode.replaceChild(div, el);
+      targets.push(div);
+    });
+    if(!targets.length) return;
+    try { await mermaid.run({ nodes: targets }); }
+    catch(e){ console.warn('[mermaid] 渲染失败：', e); }
+  }
+  /* 作用：多次触发兜底（延迟重试 + DOM 变化），防止某次时机没跑到导致图表留在代码块 */
+  var mmBusy = false;
+  function scheduleMermaid(){
+    if(mmBusy) return;
+    mmBusy = true;
+    renderMermaidDiagram().then(function(){ mmBusy = false; }, function(){ mmBusy = false; });
+  }
+  scheduleMermaid();
+  window.addEventListener('load', scheduleMermaid);
+  [1000, 3000, 8000].forEach(function(ms){ setTimeout(scheduleMermaid, ms); });
+  if(document.readyState !== 'loading') scheduleMermaid();
+  if(window.MutationObserver){
+    var mmTimer = null;
+    var mmObserver = new MutationObserver(function(){
+      clearTimeout(mmTimer);
+      mmTimer = setTimeout(scheduleMermaid, 400);
+    });
+    mmObserver.observe(document.querySelector('.mb-article') || document.body, { childList: true, subtree: true });
+  }
+</script>
+</body>
+</html>

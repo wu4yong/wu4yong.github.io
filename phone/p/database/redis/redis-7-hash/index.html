@@ -1,0 +1,459 @@
+<!--
+  ============================================
+  手机端 · 文章原文页
+  文件：phone/post.njk
+  适用终端：手机端（路由 /phone/p/<slug>/，由 scripts/phone-routes.js 生成）
+  作用：手机阅读单篇文章；单列布局、无侧栏无雷达，替代电脑端 post.njk
+        数据由生成期算好：page.item = { title, dateStr, content, cats, tags }
+  样式依赖：source/css/theme/phone/common.css、source/css/theme/phone/list.css
+  组件依赖：phone/_components/Particles.njk
+  最后修改：2026-11-11
+  ============================================
+-->
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="color-scheme" content="dark">
+  <meta name="theme-color" content="#020817">
+  <!-- 首帧兜底：浏览器默认画布是白的，样式未解析前会闪一下白。这条规则先锁死深空底色 -->
+  <style>html{background-color:#020817}</style>
+  <title>redis-Hash 类型：字段级读写与字段级过期 - 时空秘境</title>
+  <!-- 手机端样式：基础 + 列表/正文，外链引入（源文件 source/css/theme/phone/） -->
+  <link rel="stylesheet" href="/css/theme/phone/common.css">
+  <link rel="stylesheet" href="/css/theme/phone/list.css">
+<meta name="generator" content="Hexo 8.1.2"></head>
+<body>
+<div class="mb-shell">
+  <!--
+  ============================================
+  手机端星空粒子组件
+  文件：Particles.njk
+  适用终端：手机端
+  作用：Particles.njk 的手机端副本（nunjucks 子目录 include 取不到上级）
+        参数与电脑端 _components/Particles.njk 保持一致：
+        粒子 95 / 连线 118px / opacity 0.32，外加星座层与零星闪烁层
+  最后修改：2026-11-12
+  ============================================
+--><!-- z-index 必须是 0：负层级会被 body 不透明背景盖住，粒子在跑却看不见 -->
+<div id="particles" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 0; pointer-events: none;"></div>
+<!-- 星座层（与首页同一套：随机零星散布星座图形 + 偶尔闪烁的小星） -->
+<div id="constellations" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 1; pointer-events: none;" aria-hidden="true"></div>
+<script src="/js/particles.min.js"></script>
+<script>
+particlesJS("particles", {
+  particles: {
+    number: {
+      value: 95,
+      density: {
+        enable: true,
+        value_area: 800
+      }
+    },
+    color: {
+      value: "#00eeff"
+    },
+    shape: {
+      type: "circle",
+      stroke: {
+        width: 0,
+        color: "#000000"
+      }
+    },
+    opacity: {
+      value: 0.6,
+      random: true,
+      anim: {
+        enable: true,
+        speed: 0.5,
+        opacity_min: 0.1,
+        sync: false
+      }
+    },
+    size: {
+      value: 3,
+      random: true,
+      anim: {
+        enable: true,
+        speed: 2,
+        size_min: 0.1,
+        sync: false
+      }
+    },
+    line_linked: {
+      enable: true,
+      distance: 118,
+      color: "#00eeff",
+      opacity: 0.32,
+      width: 1
+    },
+    move: {
+      enable: true,
+      speed: 0.8,
+      direction: "none",
+      random: true,
+      straight: false,
+      out_mode: "out",
+      bounce: false,
+      attract: {
+        enable: true,
+        rotateX: 600,
+        rotateY: 1200
+      }
+    }
+  },
+  interactivity: {
+    detect_on: "canvas",
+    events: {
+      onhover: {
+        enable: true,
+        mode: "grab"       // 手指按住时粒子聚集
+      },
+      onclick: {
+        enable: true,
+        mode: "push"       // 点击时产生新粒子
+      },
+      resize: true
+    },
+    modes: {
+      grab: {
+        distance: 200,
+        line_linked: {
+          opacity: 1
+        }
+      },
+      push: {
+        particles_nb: 6
+      }
+    }
+  },
+  retina_detect: true
+});
+</script>
+<!-- 星座 + 零星闪烁层：与电脑端共用同一份绘制脚本 -->
+<script src="/js/theme/home/starfield.js"></script>
+
+
+  <div class="mb-top">
+    <a class="mb-back" href="/phone/">← 返回手机首页</a>
+    <span class="mb-sub" style="margin:0">2022-12-28</span>
+  </div>
+
+  <h1 class="mb-title">redis-Hash 类型：字段级读写与字段级过期</h1>
+  <div class="mb-sub">
+    分类：database · redis
+     ｜ 标签：Redis · 系统课 · 数据结构
+  </div>
+
+  <div class="mb-article"><div class="essay-banner essay-database"></div>
+
+<h1 id="Hash-类型：字段级读写与字段级过期"><a href="#Hash-类型：字段级读写与字段级过期" class="headerlink" title="Hash 类型：字段级读写与字段级过期"></a>Hash 类型：字段级读写与字段级过期</h1><p><img src="https://wu4yong.github.io/starry-images/assets/img/redis/rd-07-hash.svg" alt="Hash 的字段字典、编码转换与 7.4 字段级过期"></p>
+<p><em>Hash 的字段结构、listpack&#x2F;hashtable 编码阈值与 7.4 字段级 TTL｜依据 Redis 7.4 官方文档自绘</em></p>
+<h2 id="一、学习目标"><a href="#一、学习目标" class="headerlink" title="一、学习目标"></a>一、学习目标</h2><p>学完这一讲，你要能做到三件事：</p>
+<ol>
+<li>说清 Hash 是「一个 key 下的字段字典」，以及它和「把一个对象序列化成 String」的本质差别；</li>
+<li>掌握 <code>HSET</code> &#x2F; <code>HGET</code> &#x2F; <code>HMGET</code> &#x2F; <code>HINCRBY</code> &#x2F; <code>HSCAN</code> 的用法与复杂度，能判断什么时候 <code>HGETALL</code> 会出事；</li>
+<li>知道 listpack 与 hashtable 的转换阈值及其「不可逆」特性，并会用 7.4 新增的 <code>HEXPIRE</code> 系列做字段级过期。</li>
+</ol>
+<h2 id="二、前置知识"><a href="#二、前置知识" class="headerlink" title="二、前置知识"></a>二、前置知识</h2><p>RD05（String）与 RD06（List）。理解「命令级原子」与「O(N) 命令会阻塞主线程」这两点，是本讲判断风险的前提。</p>
+<h2 id="三、理论讲解（官方定义）"><a href="#三、理论讲解（官方定义）" class="headerlink" title="三、理论讲解（官方定义）"></a>三、理论讲解（官方定义）</h2><p>官方定义（原文）：</p>
+<blockquote>
+<p>Redis hashes are record types structured as collections of field-value pairs. … Every hash can store up to 4,294,967,295 (2^32 - 1) field-value pairs.</p>
+<p>—— <a target="_blank" rel="noopener" href="https://redis.io/docs/latest/develop/data-types/hashes/">https://redis.io/docs/latest/develop/data-types/hashes/</a></p>
+</blockquote>
+<p>三个硬信息：</p>
+<ul>
+<li><strong>record type</strong>：字段-值对的集合，语义上就是一个「小对象 &#x2F; 一行记录」；</li>
+<li><strong>field 与 value 都是字符串</strong>，没有嵌套；</li>
+<li><strong>单 Hash 最多 2^32-1 组字段</strong>。</li>
+</ul>
+<p>注意「最多」不等于「应该」。下文的编码阈值会把这个问题讲透。</p>
+<h2 id="四、原理拆解"><a href="#四、原理拆解" class="headerlink" title="四、原理拆解"></a>四、原理拆解</h2><h3 id="1-Hash-vs-序列化成-String：先想清楚差异"><a href="#1-Hash-vs-序列化成-String：先想清楚差异" class="headerlink" title="1. Hash vs 序列化成 String：先想清楚差异"></a>1. Hash vs 序列化成 String：先想清楚差异</h3><p>同一个用户资料，两种存法：</p>
+<table>
+<thead>
+<tr>
+<th>存储方式</th>
+<th>改一个字段</th>
+<th>取全部</th>
+<th>取一个字段</th>
+<th>风险</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>SET user:1 &quot;{json}&quot;</code></td>
+<td>读 → 改 → 写回（三步，非原子）</td>
+<td>反序列化</td>
+<td>反序列化整个对象</td>
+<td>并发写覆盖</td>
+</tr>
+<tr>
+<td><code>HSET user:1 name ...</code></td>
+<td>一条命令改一个字段</td>
+<td><code>HGETALL</code></td>
+<td><code>HGET</code> 一个字段</td>
+<td>字段太多时 <code>HGETALL</code> 阻塞</td>
+</tr>
+</tbody></table>
+<p>结论：<strong>要按字段改、按字段读，用 Hash；要整对象读写、且对象很小，String 更省事</strong>。这是选型的第一原则。</p>
+<h3 id="2-编码：listpack-与-hashtable"><a href="#2-编码：listpack-与-hashtable" class="headerlink" title="2. 编码：listpack 与 hashtable"></a>2. 编码：listpack 与 hashtable</h3><p>官方给的阈值（<code>redis.conf</code> 默认值）：</p>
+<pre class="line-numbers language-ini" data-language="ini"><code class="language-ini">hash-max-listpack-entries 128     # 字段数上限
+hash-max-listpack-value 64        # 单字段/单值字节数上限<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span></span></code></pre>
+
+<p>规则是「与」的关系：<strong>字段数 ≤ 128 且每个字段名与值的长度都不超过 64 字节</strong>，才用 listpack；任一条件被突破，立刻转成 hashtable。</p>
+<p>两个必须记住的结论：</p>
+<ol>
+<li><strong>转换是单向的</strong>。数据删回 100 个字段，编码仍是 hashtable，不会回退——因为回退需要重排整块内存。</li>
+<li><strong>编码影响内存与性能</strong>。listpack 省内存但插入是 O(N)（要重排），hashtable 插入 O(1) 但指针开销大。所以「小对象用 Hash 特别省内存」这句话的前提是编码还在 listpack。</li>
+</ol>
+<p>查当前编码：<code>OBJECT ENCODING user:1</code>。</p>
+<h3 id="3-7-4-新增：字段级过期"><a href="#3-7-4-新增：字段级过期" class="headerlink" title="3. 7.4 新增：字段级过期"></a>3. 7.4 新增：字段级过期</h3><p>这是 7.4 相对旧版本最重要的 Hash 变化。旧版本里 <code>EXPIRE</code> 只作用于<strong>整个 key</strong>，想让「会话里每个 token 各自倒计时」只能拆成多个 key，或者自己维护一个 ZSet 记时间。</p>
+<p>7.4 起提供了一组字段级命令：</p>
+<ul>
+<li><code>HEXPIRE key seconds FIELDS n field...</code>（相对秒）&#x2F; <code>HPEXPIRE</code>（相对毫秒）</li>
+<li><code>HEXPIREAT</code> &#x2F; <code>HPEXPIREAT</code>（绝对时间点）</li>
+<li><code>HTTL</code> &#x2F; <code>HPTTL</code>（查剩余时间，同样用 <code>FIELDS</code> 指定字段）</li>
+<li><code>HPERSIST</code>（去掉字段过期）</li>
+<li><code>HGETEX</code>（读字段的同时设置&#x2F;清除过期，<code>EX</code>&#x2F;<code>PX</code>&#x2F;<code>EXAT</code>&#x2F;<code>PERSIST</code> 选项）</li>
+</ul>
+<p>语义要点：过期到点的字段在逻辑上「不存在」——<code>HGET</code> 返回 nil、<code>HLEN</code> 不计、<code>HKEYS</code> 不列，但内存空间要等后续操作或主动清理才真正回收。别指望它像独立 key 一样被淘汰策略立刻扫到。</p>
+<h3 id="4-复杂度清单"><a href="#4-复杂度清单" class="headerlink" title="4. 复杂度清单"></a>4. 复杂度清单</h3><table>
+<thead>
+<tr>
+<th>命令</th>
+<th>复杂度</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>HSET</code> &#x2F; <code>HGET</code> &#x2F; <code>HDEL</code></td>
+<td>O(1)</td>
+<td>字段级操作</td>
+</tr>
+<tr>
+<td><code>HMGET</code></td>
+<td>O(N)，N &#x3D; 请求字段数</td>
+<td>一次往返取多个字段</td>
+</tr>
+<tr>
+<td><code>HGETALL</code> &#x2F; <code>HKEYS</code> &#x2F; <code>HVALS</code></td>
+<td>O(N)，N &#x3D; 全部字段</td>
+<td><strong>大 Hash 上是事故级操作</strong></td>
+</tr>
+<tr>
+<td><code>HINCRBY</code> &#x2F; <code>HINCRBYFLOAT</code></td>
+<td>O(1)</td>
+<td>字段级原子计数</td>
+</tr>
+<tr>
+<td><code>HSCAN</code></td>
+<td>每次 O(1) 摊销</td>
+<td>游标分批遍历，替代 <code>HGETALL</code></td>
+</tr>
+<tr>
+<td><code>HRANDFIELD</code></td>
+<td>O(1)（带 count 时 O(N)）</td>
+<td>6.2 新增，随机取字段</td>
+</tr>
+</tbody></table>
+<h2 id="五、场景说明"><a href="#五、场景说明" class="headerlink" title="五、场景说明"></a>五、场景说明</h2><ol>
+<li><strong>对象缓存</strong>：<code>HSET user:1 name 阿勇 age 30 vip 1</code> + <code>EXPIRE user:1 3600</code>，改昵称只发一条 <code>HSET</code>；</li>
+<li><strong>购物车</strong>：<code>HINCRBY cart:u1 sku:100 2</code>，同一 SKU 数量累加是原子的；</li>
+<li><strong>多维计数</strong>：<code>HINCRBY stat:2022-12-28 pv 1</code> &#x2F; <code>hits 1</code>，一天一个 Hash，字段是各维度；</li>
+<li><strong>配置&#x2F;开关集合</strong>：<code>HSET feature:flags newCheckout 1</code>，一次 <code>HMGET</code> 取需要的开关；</li>
+<li><strong>限流窗口</strong>：<code>HINCRBY rate:uid:minute /api/order 1</code>，配合 <code>EXPIRE</code> 整 key 过期。</li>
+</ol>
+<p>不适合：需要按字段值排序或检索（Hash 没有索引）、需要集合运算（用 Set）、字段数量无上界且经常全量读（该拆成多个 key）。</p>
+<h2 id="六、示例代码-实操步骤"><a href="#六、示例代码-实操步骤" class="headerlink" title="六、示例代码&#x2F;实操步骤"></a>六、示例代码&#x2F;实操步骤</h2><pre class="line-numbers language-bash" data-language="bash"><code class="language-bash"><span class="token comment"># 1. 基本字段读写</span>
+<span class="token number">127.0</span>.0.1:637<span class="token operator"><span class="token file-descriptor important">9</span>></span> HSET user:1 name 阿勇 age <span class="token number">30</span> vip <span class="token number">1</span>
+<span class="token punctuation">(</span>integer<span class="token punctuation">)</span> <span class="token number">3</span>                  <span class="token comment"># 返回新增字段数</span>
+<span class="token number">127.0</span>.0.1:637<span class="token operator"><span class="token file-descriptor important">9</span>></span> HGET user:1 name
+<span class="token string">"阿勇"</span>
+<span class="token number">127.0</span>.0.1:637<span class="token operator"><span class="token file-descriptor important">9</span>></span> HMGET user:1 name age city
+<span class="token number">1</span><span class="token punctuation">)</span> <span class="token string">"阿勇"</span>
+<span class="token number">2</span><span class="token punctuation">)</span> <span class="token string">"30"</span>
+<span class="token number">3</span><span class="token punctuation">)</span> <span class="token punctuation">(</span>nil<span class="token punctuation">)</span>                     <span class="token comment"># 不存在的字段返回 nil，不是报错</span>
+<span class="token number">127.0</span>.0.1:637<span class="token operator"><span class="token file-descriptor important">9</span>></span> HLEN user:1
+<span class="token punctuation">(</span>integer<span class="token punctuation">)</span> <span class="token number">3</span>
+<span class="token number">127.0</span>.0.1:637<span class="token operator"><span class="token file-descriptor important">9</span>></span> HEXISTS user:1 vip
+<span class="token punctuation">(</span>integer<span class="token punctuation">)</span> <span class="token number">1</span>
+
+<span class="token comment"># 2. 改一个字段不动其他字段</span>
+<span class="token number">127.0</span>.0.1:637<span class="token operator"><span class="token file-descriptor important">9</span>></span> HSET user:1 name 阿勇2
+<span class="token punctuation">(</span>integer<span class="token punctuation">)</span> <span class="token number">0</span>                  <span class="token comment"># 0 表示是更新而非新增</span>
+<span class="token number">127.0</span>.0.1:637<span class="token operator"><span class="token file-descriptor important">9</span>></span> HGETALL user:1
+<span class="token number">1</span><span class="token punctuation">)</span> <span class="token string">"name"</span>
+<span class="token number">2</span><span class="token punctuation">)</span> <span class="token string">"阿勇2"</span>
+<span class="token number">3</span><span class="token punctuation">)</span> <span class="token string">"age"</span>
+<span class="token number">4</span><span class="token punctuation">)</span> <span class="token string">"30"</span>
+<span class="token number">5</span><span class="token punctuation">)</span> <span class="token string">"vip"</span>
+<span class="token number">6</span><span class="token punctuation">)</span> <span class="token string">"1"</span>
+
+<span class="token comment"># 3. 字段级原子计数</span>
+<span class="token number">127.0</span>.0.1:637<span class="token operator"><span class="token file-descriptor important">9</span>></span> HINCRBY cart:u1 sku100 <span class="token number">2</span>
+<span class="token punctuation">(</span>integer<span class="token punctuation">)</span> <span class="token number">2</span>
+<span class="token number">127.0</span>.0.1:637<span class="token operator"><span class="token file-descriptor important">9</span>></span> HINCRBY cart:u1 sku100 <span class="token number">3</span>
+<span class="token punctuation">(</span>integer<span class="token punctuation">)</span> <span class="token number">5</span>
+<span class="token number">127.0</span>.0.1:637<span class="token operator"><span class="token file-descriptor important">9</span>></span> HINCRBY cart:u1 sku100 <span class="token parameter variable">-5</span>
+<span class="token punctuation">(</span>integer<span class="token punctuation">)</span> <span class="token number">0</span>                  <span class="token comment"># 减到 0 字段仍存在（值为 "0"）</span>
+
+<span class="token comment"># 4. 看编码与阈值</span>
+<span class="token number">127.0</span>.0.1:637<span class="token operator"><span class="token file-descriptor important">9</span>></span> OBJECT ENCODING user:1
+<span class="token string">"listpack"</span>
+<span class="token number">127.0</span>.0.1:637<span class="token operator"><span class="token file-descriptor important">9</span>></span> CONFIG GET hash-max-listpack-entries
+<span class="token number">1</span><span class="token punctuation">)</span> <span class="token string">"hash-max-listpack-entries"</span>
+<span class="token number">2</span><span class="token punctuation">)</span> <span class="token string">"128"</span>
+<span class="token comment"># 塞到 129 个字段，编码立刻降级且不可逆</span>
+<span class="token number">127.0</span>.0.1:637<span class="token operator"><span class="token file-descriptor important">9</span>></span> EVAL <span class="token string">"for i=1,129 do redis.call('HSET', KEYS[1], 'f'..i, 'v') end return redis.call('OBJECT', 'ENCODING', KEYS[1])"</span> <span class="token number">1</span> big:hash
+<span class="token string">"hashtable"</span>
+
+<span class="token comment"># 5. 分批遍历，别 HGETALL</span>
+<span class="token number">127.0</span>.0.1:637<span class="token operator"><span class="token file-descriptor important">9</span>></span> HSCAN big:hash <span class="token number">0</span> COUNT <span class="token number">10</span>
+<span class="token number">1</span><span class="token punctuation">)</span> <span class="token string">"12"</span>
+<span class="token number">2</span><span class="token punctuation">)</span> <span class="token number">1</span><span class="token punctuation">)</span> <span class="token string">"f1"</span>
+   <span class="token number">2</span><span class="token punctuation">)</span> <span class="token string">"v"</span>
+   <span class="token punctuation">..</span>.
+
+<span class="token comment"># 6. 7.4 字段级过期（旧版本没有）</span>
+<span class="token number">127.0</span>.0.1:637<span class="token operator"><span class="token file-descriptor important">9</span>></span> HSET session:s1 token1 abc token2 def
+<span class="token punctuation">(</span>integer<span class="token punctuation">)</span> <span class="token number">2</span>
+<span class="token number">127.0</span>.0.1:637<span class="token operator"><span class="token file-descriptor important">9</span>></span> HEXPIRE session:s1 <span class="token number">60</span> FIELDS <span class="token number">1</span> token1
+<span class="token number">1</span><span class="token punctuation">)</span> <span class="token punctuation">(</span>integer<span class="token punctuation">)</span> <span class="token number">1</span>               <span class="token comment"># 1=设置成功，2=字段不存在，0=条件未满足</span>
+<span class="token number">127.0</span>.0.1:637<span class="token operator"><span class="token file-descriptor important">9</span>></span> HTTL session:s1 FIELDS <span class="token number">2</span> token1 token2
+<span class="token number">1</span><span class="token punctuation">)</span> <span class="token punctuation">(</span>integer<span class="token punctuation">)</span> <span class="token number">58</span>
+<span class="token number">2</span><span class="token punctuation">)</span> <span class="token punctuation">(</span>integer<span class="token punctuation">)</span> <span class="token parameter variable">-1</span>              <span class="token comment"># -1 表示该字段没有过期时间</span>
+<span class="token number">127.0</span>.0.1:637<span class="token operator"><span class="token file-descriptor important">9</span>></span> HPERSIST session:s1 FIELDS <span class="token number">1</span> token1
+<span class="token number">1</span><span class="token punctuation">)</span> <span class="token punctuation">(</span>integer<span class="token punctuation">)</span> <span class="token number">1</span>
+
+<span class="token comment"># 7. HGETEX：读字段并顺手改过期</span>
+<span class="token number">127.0</span>.0.1:637<span class="token operator"><span class="token file-descriptor important">9</span>></span> HGETEX session:s1 EX <span class="token number">30</span> FIELDS <span class="token number">1</span> token1
+<span class="token number">1</span><span class="token punctuation">)</span> <span class="token string">"abc"</span>                     <span class="token comment"># 返回旧值，同时把 token1 的 TTL 设为 30 秒</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<p><code>HEXPIRE</code> 的返回值是「每个字段一个状态码」，多字段时是一个数组——这一点和 <code>EXPIRE</code> 只返回一个整数完全不同，写代码时不能沿用旧判断。</p>
+<h2 id="七、常见坑（官方明确说明的限制）"><a href="#七、常见坑（官方明确说明的限制）" class="headerlink" title="七、常见坑（官方明确说明的限制）"></a>七、常见坑（官方明确说明的限制）</h2><ol>
+<li><strong><code>HGETALL</code> 是 O(N)</strong>。字段几千以上就会明显阻塞主线程，字段几万直接是事故。读全量请用 <code>HSCAN</code> 分批，或改成按需 <code>HMGET</code>。</li>
+<li><strong>编码降级不可逆</strong>。一旦超过 <code>hash-max-listpack-entries</code> 或单值超 64 字节，就永久变成 hashtable，内存占用会显著上涨。大量「本来很小」的 Hash 被一个超长字段（比如塞了个 base64 图片）整体拖降级，是典型翻车现场。</li>
+<li><strong><code>HDEL</code> 删完所有字段后 key 会自动消失</strong>，此时再 <code>EXPIRE</code> 会返回 0（key 不存在）。写「先删字段再设过期」的代码要注意顺序。</li>
+<li><strong><code>HINCRBY</code> 的字段必须能解析成整数</strong>，否则报错；且同样受 64 位有符号溢出限制。</li>
+<li><strong>字段级过期是 7.4 才有的能力</strong>。7.4 之前必须拆 key 或自建 ZSet 索引——很多老项目文档里写的「Hash 不支持字段过期」指的是旧版本，别照抄结论。</li>
+<li><strong>Hash 不能按 value 检索</strong>，也没有二级索引。需要「查 age &gt; 30 的用户」这种条件，Redis 帮不了你。</li>
+<li><strong>一个 Hash 的字段数没有业务上限</strong>，只有 2^32-1 的硬上限；但工程上要自己定阈值，否则会长成「大 key」（RD13 详讲）。</li>
+</ol>
+<h3 id="版本差异（8-x-标注）"><a href="#版本差异（8-x-标注）" class="headerlink" title="版本差异（8.x 标注）"></a>版本差异（8.x 标注）</h3><blockquote>
+<p>7.4 引入的字段级过期（<code>HEXPIRE</code> &#x2F; <code>HPEXPIRE</code> &#x2F; <code>HEXPIREAT</code> &#x2F; <code>HPEXPIREAT</code> &#x2F; <code>HTTL</code> &#x2F; <code>HPTTL</code> &#x2F; <code>HPERSIST</code> &#x2F; <code>HGETEX</code>）在 8.x 继续沿用，语法未变。若你的环境仍是 6.x&#x2F;7.0–7.2，本节第 3、4 小节的内容不适用，请按「整 key 过期 + 拆 key」的方案设计。</p>
+<p>依据：<a target="_blank" rel="noopener" href="https://redis.io/docs/latest/commands/hexpire/">https://redis.io/docs/latest/commands/hexpire/</a></p>
+</blockquote>
+<h2 id="八、课后小结"><a href="#八、课后小结" class="headerlink" title="八、课后小结"></a>八、课后小结</h2><ul>
+<li>Hash 是字段字典，一条命令改一个字段，天然避免「读改写」的覆盖问题；</li>
+<li>编码规则是「字段数 ≤ 128 且单字段&#x2F;值 ≤ 64 字节 → listpack」，突破即降级且不可逆；</li>
+<li><code>HSET</code>&#x2F;<code>HGET</code>&#x2F;<code>HINCRBY</code> 是 O(1)，<code>HGETALL</code> 是 O(N)，大 Hash 必须用 <code>HSCAN</code>；</li>
+<li>7.4 才支持字段级过期，<code>HEXPIRE</code> 系列返回的是「每字段状态码」；</li>
+<li><code>HDEL</code> 删空后 key 会消失，后续过期设置要重新判断存在性。</li>
+</ul>
+<h2 id="九、思考题"><a href="#九、思考题" class="headerlink" title="九、思考题"></a>九、思考题</h2><ol>
+<li>同一个用户资料，用 String 存 JSON 和用 Hash 存字段，在「并发更新不同字段」时差在哪里？举一个 String 方案会丢更新的具体时序。</li>
+<li>一个本该很小的 Hash，因为某个字段存了 200 字节的 token 而整体变成 hashtable。内存大概会涨多少倍？怎么在不改数据的前提下救回来？</li>
+<li><code>HGETALL</code> 与 <code>HSCAN</code> 遍历，都能拿到全部字段。前者什么时候可以用，什么时候绝对不能用？</li>
+<li>7.4 的字段级过期，字段过期后「逻辑不存在但内存未回收」。这对 <code>HLEN</code> 的返回值有什么影响？对内存监控有什么影响？</li>
+<li>设计一个「购物车」Hash，字段是 SKU，值是数量。用户清空购物车后 key 会怎样？<code>EXPIRE</code> 放在什么时候设最合适？</li>
+</ol>
+<h2 id="十、官方资料"><a href="#十、官方资料" class="headerlink" title="十、官方资料"></a>十、官方资料</h2><ul>
+<li>Hashes（类型定义、2^32-1 上限、典型用法）：<a target="_blank" rel="noopener" href="https://redis.io/docs/latest/develop/data-types/hashes/">https://redis.io/docs/latest/develop/data-types/hashes/</a></li>
+<li>HSET（多字段设置与返回值语义）：<a target="_blank" rel="noopener" href="https://redis.io/docs/latest/commands/hset/">https://redis.io/docs/latest/commands/hset/</a></li>
+<li>HGETALL（O(N) 说明）：<a target="_blank" rel="noopener" href="https://redis.io/docs/latest/commands/hgetall/">https://redis.io/docs/latest/commands/hgetall/</a></li>
+<li>HSCAN（分批遍历）：<a target="_blank" rel="noopener" href="https://redis.io/docs/latest/commands/hscan/">https://redis.io/docs/latest/commands/hscan/</a></li>
+<li>HEXPIRE（7.4 字段级过期与状态码）：<a target="_blank" rel="noopener" href="https://redis.io/docs/latest/commands/hexpire/">https://redis.io/docs/latest/commands/hexpire/</a></li>
+<li>HGETEX（读字段并设置&#x2F;清除过期）：<a target="_blank" rel="noopener" href="https://redis.io/docs/latest/commands/hgetex/">https://redis.io/docs/latest/commands/hgetex/</a></li>
+<li>编码阈值（hash-max-listpack-entries &#x2F; hash-max-listpack-value）：<a target="_blank" rel="noopener" href="https://redis.io/docs/latest/develop/data-types/hashes/">https://redis.io/docs/latest/develop/data-types/hashes/</a></li>
+</ul>
+<p>上一篇：<a href="/2022/12/27/database/redis/redis-6-list/">RD06 List 类型：两端进出与阻塞语义</a> ｜ 下一篇：<a href="/2022/12/29/database/redis/redis-8-set/">RD08 Set 类型：唯一性与集合运算</a> ｜ <a href="/2022/12/21/database/redis/redis-0-series-index/">总目录</a></p>
+</div>
+
+  <div class="mb-foot">
+    <a href="/phone/">返回手机首页</a>
+    <a href="/phone/tags/">星迹索引</a>
+  </div>
+</div>
+
+
+<script>
+  /* 作用：懒加载本地 mermaid 库；无 mermaid 代码块时不加载 */
+  function loadLocalMermaid(){
+    return new Promise(function(resolve, reject){
+      if(window.mermaid) return resolve(window.mermaid);
+      var s = document.createElement('script');
+      s.src = '/js/third-party/mermaid/mermaid.min.js?v=10';
+      s.onload = function(){ resolve(window.mermaid); };
+      s.onerror = function(){ reject(new Error('mermaid local load failed')); };
+      document.head.appendChild(s);
+    });
+  }
+
+  /* 作用：把 ```mermaid 代码块替换成 SVG 图（手机端字号略小、图可横向滚动） */
+  async function renderMermaidDiagram(){
+    var blocks = document.querySelectorAll('pre[class*="language-mermaid"]');
+    if(!blocks.length) return;
+    var mermaid;
+    try { mermaid = await loadLocalMermaid(); }
+    catch(e){ console.warn('[mermaid] 本地库加载失败：', e); return; }
+
+    mermaid.initialize({
+      startOnLoad: false,
+      theme: 'base',
+      themeVariables: {
+        darkMode: true,
+        background: 'transparent',
+        fontFamily: '"Microsoft YaHei", "PingFang SC", "Segoe UI", sans-serif',
+        fontSize: '12px',
+        primaryColor: '#062f3d',
+        primaryTextColor: '#d6f6ff',
+        primaryBorderColor: '#00eeff',
+        secondaryColor: '#04222d',
+        tertiaryColor: '#04222d',
+        mainBkg: '#062f3d',
+        nodeBorder: '#00eeff',
+        clusterBkg: '#02161f',
+        clusterBorder: '#00eeff55',
+        lineColor: '#00eeff',
+        textColor: '#c0e8ff',
+        edgeLabelBackground: '#02161f'
+      },
+      flowchart: { curve: 'basis', useMaxWidth: false, htmlLabels: false, nodeSpacing: 30, rankSpacing: 40, padding: 10 }
+    });
+
+    var targets = [];
+    blocks.forEach(function(el){
+      var codeEl = el.querySelector('code');
+      if(!codeEl) return;
+      var div = document.createElement('div');
+      div.className = 'mermaid';
+      div.textContent = codeEl.textContent;
+      el.parentNode.replaceChild(div, el);
+      targets.push(div);
+    });
+    if(!targets.length) return;
+    try { await mermaid.run({ nodes: targets }); }
+    catch(e){ console.warn('[mermaid] 渲染失败：', e); }
+  }
+  /* 作用：多次触发兜底（延迟重试 + DOM 变化），防止某次时机没跑到导致图表留在代码块 */
+  var mmBusy = false;
+  function scheduleMermaid(){
+    if(mmBusy) return;
+    mmBusy = true;
+    renderMermaidDiagram().then(function(){ mmBusy = false; }, function(){ mmBusy = false; });
+  }
+  scheduleMermaid();
+  window.addEventListener('load', scheduleMermaid);
+  [1000, 3000, 8000].forEach(function(ms){ setTimeout(scheduleMermaid, ms); });
+  if(document.readyState !== 'loading') scheduleMermaid();
+  if(window.MutationObserver){
+    var mmTimer = null;
+    var mmObserver = new MutationObserver(function(){
+      clearTimeout(mmTimer);
+      mmTimer = setTimeout(scheduleMermaid, 400);
+    });
+    mmObserver.observe(document.querySelector('.mb-article') || document.body, { childList: true, subtree: true });
+  }
+</script>
+</body>
+</html>

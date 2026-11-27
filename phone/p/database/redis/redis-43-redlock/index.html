@@ -1,0 +1,374 @@
+<!--
+  ============================================
+  手机端 · 文章原文页
+  文件：phone/post.njk
+  适用终端：手机端（路由 /phone/p/<slug>/，由 scripts/phone-routes.js 生成）
+  作用：手机阅读单篇文章；单列布局、无侧栏无雷达，替代电脑端 post.njk
+        数据由生成期算好：page.item = { title, dateStr, content, cats, tags }
+  样式依赖：source/css/theme/phone/common.css、source/css/theme/phone/list.css
+  组件依赖：phone/_components/Particles.njk
+  最后修改：2026-11-11
+  ============================================
+-->
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="color-scheme" content="dark">
+  <meta name="theme-color" content="#020817">
+  <!-- 首帧兜底：浏览器默认画布是白的，样式未解析前会闪一下白。这条规则先锁死深空底色 -->
+  <style>html{background-color:#020817}</style>
+  <title>redis-Redlock 与官方立场 - 时空秘境</title>
+  <!-- 手机端样式：基础 + 列表/正文，外链引入（源文件 source/css/theme/phone/） -->
+  <link rel="stylesheet" href="/css/theme/phone/common.css">
+  <link rel="stylesheet" href="/css/theme/phone/list.css">
+<meta name="generator" content="Hexo 8.1.2"></head>
+<body>
+<div class="mb-shell">
+  <!--
+  ============================================
+  手机端星空粒子组件
+  文件：Particles.njk
+  适用终端：手机端
+  作用：Particles.njk 的手机端副本（nunjucks 子目录 include 取不到上级）
+        参数与电脑端 _components/Particles.njk 保持一致：
+        粒子 95 / 连线 118px / opacity 0.32，外加星座层与零星闪烁层
+  最后修改：2026-11-12
+  ============================================
+--><!-- z-index 必须是 0：负层级会被 body 不透明背景盖住，粒子在跑却看不见 -->
+<div id="particles" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 0; pointer-events: none;"></div>
+<!-- 星座层（与首页同一套：随机零星散布星座图形 + 偶尔闪烁的小星） -->
+<div id="constellations" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 1; pointer-events: none;" aria-hidden="true"></div>
+<script src="/js/particles.min.js"></script>
+<script>
+particlesJS("particles", {
+  particles: {
+    number: {
+      value: 95,
+      density: {
+        enable: true,
+        value_area: 800
+      }
+    },
+    color: {
+      value: "#00eeff"
+    },
+    shape: {
+      type: "circle",
+      stroke: {
+        width: 0,
+        color: "#000000"
+      }
+    },
+    opacity: {
+      value: 0.6,
+      random: true,
+      anim: {
+        enable: true,
+        speed: 0.5,
+        opacity_min: 0.1,
+        sync: false
+      }
+    },
+    size: {
+      value: 3,
+      random: true,
+      anim: {
+        enable: true,
+        speed: 2,
+        size_min: 0.1,
+        sync: false
+      }
+    },
+    line_linked: {
+      enable: true,
+      distance: 118,
+      color: "#00eeff",
+      opacity: 0.32,
+      width: 1
+    },
+    move: {
+      enable: true,
+      speed: 0.8,
+      direction: "none",
+      random: true,
+      straight: false,
+      out_mode: "out",
+      bounce: false,
+      attract: {
+        enable: true,
+        rotateX: 600,
+        rotateY: 1200
+      }
+    }
+  },
+  interactivity: {
+    detect_on: "canvas",
+    events: {
+      onhover: {
+        enable: true,
+        mode: "grab"       // 手指按住时粒子聚集
+      },
+      onclick: {
+        enable: true,
+        mode: "push"       // 点击时产生新粒子
+      },
+      resize: true
+    },
+    modes: {
+      grab: {
+        distance: 200,
+        line_linked: {
+          opacity: 1
+        }
+      },
+      push: {
+        particles_nb: 6
+      }
+    }
+  },
+  retina_detect: true
+});
+</script>
+<!-- 星座 + 零星闪烁层：与电脑端共用同一份绘制脚本 -->
+<script src="/js/theme/home/starfield.js"></script>
+
+
+  <div class="mb-top">
+    <a class="mb-back" href="/phone/">← 返回手机首页</a>
+    <span class="mb-sub" style="margin:0">2023-02-02</span>
+  </div>
+
+  <h1 class="mb-title">redis-Redlock 与官方立场</h1>
+  <div class="mb-sub">
+    分类：database · redis
+     ｜ 标签：Redis · 系统课 · 分布式
+  </div>
+
+  <div class="mb-article"><div class="essay-banner essay-database"></div>
+
+<h1 id="Redlock-与官方立场"><a href="#Redlock-与官方立场" class="headerlink" title="Redlock 与官方立场"></a>Redlock 与官方立场</h1><p><img src="https://wu4yong.github.io/starry-images/assets/img/redis/rd-43-redlock.svg" alt="Redlock 五步流程、它能解决什么与争议点"></p>
+<p><em>Redlock 算法五步、它想解决的故障与时钟&#x2F;停顿争议｜依据 Redis 7.4 官方文档自绘</em></p>
+<h2 id="一、学习目标"><a href="#一、学习目标" class="headerlink" title="一、学习目标"></a>一、学习目标</h2><p>学完这一讲，你能做到：</p>
+<ol>
+<li>按官方文档复述 Redlock 的五个步骤，包括「多数节点」与「耗时扣除」；</li>
+<li>说清它解决的问题（单点故障导致丢锁）与它解决不了的问题（时钟漂移、GC 停顿）；</li>
+<li>判断你的业务到底需要「效率锁」还是「正确性锁」，并给出对应选型。</li>
+</ol>
+<h2 id="二、前置知识"><a href="#二、前置知识" class="headerlink" title="二、前置知识"></a>二、前置知识</h2><p>RD42（单节点 <code>SET NX PX</code> 锁）、RD18（PSYNC 与主从异步复制）、RD19（复制运维）。Redlock 的出现正是因为「主从切换会丢锁」这个具体缺陷。</p>
+<h2 id="三、理论讲解（官方定义）"><a href="#三、理论讲解（官方定义）" class="headerlink" title="三、理论讲解（官方定义）"></a>三、理论讲解（官方定义）</h2><p>官方 <code>Distributed Locks</code> 文档对 Redlock 的描述（原文要点）：</p>
+<blockquote>
+<p>The Redlock algorithm … assumes we have N independent Redis masters (usually 5). To acquire the lock, the client:</p>
+<ol>
+<li>gets the current time in milliseconds;</li>
+<li>tries to acquire the lock in all N instances sequentially, using the same key name and random value, with a timeout;</li>
+<li>the lock is considered acquired only if it was acquired in the majority of instances (N&#x2F;2+1) and the total time elapsed is less than the validity time;</li>
+<li>if failed, it tries to unlock all the instances;</li>
+<li>the effective validity time is the initial validity minus the time elapsed to acquire.</li>
+</ol>
+<p>—— <a target="_blank" rel="noopener" href="https://redis.io/docs/latest/develop/clients/patterns/distributed-locks/">https://redis.io/docs/latest/develop/clients/patterns/distributed-locks/</a></p>
+</blockquote>
+<p>同一份文档也明确写出了局限（原文要点）：</p>
+<blockquote>
+<p>The algorithm does not assume a synchronized clock … but it relies on bounded clock drift … a client that pauses for longer than the validity time (e.g. a GC pause) may hold the lock while another client already acquired it.</p>
+<p>—— 同上</p>
+</blockquote>
+<p>所以「官方立场」可以概括为：<strong>Redis 官方文档把 Redlock 列为一种基于 Redis 的分布式锁实现，同时在文档里如实写明了它的失效前提</strong>。它不是「官方保证的强一致锁」。</p>
+<h2 id="四、原理拆解"><a href="#四、原理拆解" class="headerlink" title="四、原理拆解"></a>四、原理拆解</h2><h3 id="1-五个步骤的工程含义"><a href="#1-五个步骤的工程含义" class="headerlink" title="1. 五个步骤的工程含义"></a>1. 五个步骤的工程含义</h3><pre class="line-numbers language-none"><code class="language-none">N&#x3D;5，有效期 validity&#x3D;10s
+① T1 &#x3D; now()
+② 依次向 5 个节点 SET key val NX PX 10s（每个都有短超时，如 50ms）
+③ 成功数 ≥ 3，且 now() - T1 &lt; 10s → 认为加锁成功
+④ 失败 → 向 5 个节点都发删除（哪怕有的没成功）
+⑤ 实际有效期 &#x3D; 10s - (now() - T1)<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<p>三个细节必须记：</p>
+<ul>
+<li><strong>顺序加锁，不是并发</strong>。并发加锁会让「总耗时」无法判断；</li>
+<li><strong>要扣掉加锁耗时</strong>。如果加锁花了 3 秒，你只剩 7 秒有效期，而不是 10 秒；</li>
+<li><strong>失败也要向所有节点发删除</strong>。否则残留的锁会让下一次加锁更困难。</li>
+</ul>
+<h3 id="2-它想解决什么"><a href="#2-它想解决什么" class="headerlink" title="2. 它想解决什么"></a>2. 它想解决什么</h3><p>单节点 Redis 的根本问题：<strong>主从是异步复制</strong>。主库加了锁、还没同步到从库就宕机，从库升主后这把锁不存在 → 两个客户端同时持锁。</p>
+<p>Redlock 的思路是「不依赖单点」：5 个独立主节点，任意 1–2 个挂掉仍能达成多数。它的目标是<strong>降低「丢锁」概率</strong>，而不是消除它。</p>
+<h3 id="3-争议点在哪"><a href="#3-争议点在哪" class="headerlink" title="3. 争议点在哪"></a>3. 争议点在哪</h3><p>Antirez 与 Martin Kleppmann 的那场著名争论，核心是三个物理事实：</p>
+<ul>
+<li><strong>时钟漂移</strong>：节点系统时间被 NTP 或人工改动，<code>PX</code> 的过期判断基于服务端时间，多节点时间不一致时「多数成功」的语义就松动；</li>
+<li><strong>网络延迟</strong>：客户端与节点之间的延迟不确定，加锁&#x2F;解锁的到达时间可能远超预期；</li>
+<li><strong>进程停顿</strong>：客户端 GC、虚拟机暂停、CPU 抢占，可能停顿超过有效期。醒来时锁已被别人持有，而你并不知道。</li>
+</ul>
+<p>结论：<strong>Redlock 不提供「绝对安全」，它降低概率但不消除</strong>。任何声称「加了 Redlock 就绝对不会有并发写」的说法都是错的。</p>
+<h3 id="4-正确的用法：按锁的用途选"><a href="#4-正确的用法：按锁的用途选" class="headerlink" title="4. 正确的用法：按锁的用途选"></a>4. 正确的用法：按锁的用途选</h3><table>
+<thead>
+<tr>
+<th>锁的用途</th>
+<th>后果如果失效</th>
+<th>建议方案</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>效率锁（防重复劳动）</td>
+<td>多做一次工作，无数据损坏</td>
+<td>单节点 <code>SET NX PX</code> + 幂等</td>
+</tr>
+<tr>
+<td>正确性锁（资金、库存）</td>
+<td>数据错乱、资损</td>
+<td>数据库行锁&#x2F;事务、或带 fencing token 的方案</td>
+</tr>
+</tbody></table>
+<p><strong>fencing token</strong>（防伪令牌）的思路：锁服务每次授予锁时返回一个单调递增的编号，写入存储时带上编号，存储侧只接受「编号比上次大」的写。这样即使锁失效、两个客户端同时持有，后到的旧编号写会被存储拒绝。</p>
+<h2 id="五、场景说明"><a href="#五、场景说明" class="headerlink" title="五、场景说明"></a>五、场景说明</h2><ol>
+<li><strong>定时任务防重</strong>：效率锁，单节点足够，不需要 Redlock；</li>
+<li><strong>多机房同一任务互斥</strong>：可用 Redlock 降低单机房故障导致的重复执行；</li>
+<li><strong>库存扣减</strong>：正确性锁，用数据库 <code>UPDATE ... WHERE stock &gt; 0</code> 的条件更新，锁只做流量削峰；</li>
+<li><strong>不适合</strong>：任何「错一次就资损」的场景把 Redlock 当唯一防线。</li>
+</ol>
+<h2 id="六、示例代码-实操步骤"><a href="#六、示例代码-实操步骤" class="headerlink" title="六、示例代码&#x2F;实操步骤"></a>六、示例代码&#x2F;实操步骤</h2><pre class="line-numbers language-bash" data-language="bash"><code class="language-bash"><span class="token comment"># Redlock 的原子单元，就是每个节点上一次 SET NX PX（这里用单机演示）</span>
+<span class="token number">127.0</span>.0.1:637<span class="token operator"><span class="token file-descriptor important">9</span>></span> SET lock:job:daily <span class="token string">"node-A-uuid"</span> NX PX <span class="token number">10000</span>
+OK                             <span class="token comment"># 节点 1 成功</span>
+<span class="token comment"># 依次对节点 2、3、4、5 执行同样的命令，统计成功数</span>
+
+<span class="token comment"># 失败回滚：向所有节点发删除（幂等，删不到也无所谓）</span>
+<span class="token number">127.0</span>.0.1:637<span class="token operator"><span class="token file-descriptor important">9</span>></span> EVAL <span class="token string">"if redis.call('get',KEYS[1])==ARGV[1] then return redis.call('del',KEYS[1]) else return 0 end"</span> <span class="token number">1</span> lock:job:daily <span class="token string">"node-A-uuid"</span>
+<span class="token punctuation">(</span>integer<span class="token punctuation">)</span> <span class="token number">1</span>
+
+<span class="token comment"># 观察节点健康状况（Redlock 要求各节点独立，不能互为从属）</span>
+<span class="token number">127.0</span>.0.1:637<span class="token operator"><span class="token file-descriptor important">9</span>></span> INFO replication
+<span class="token comment"># role:master</span>
+<span class="token comment"># connected_slaves:0            ← 必须是独立 master</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<p>客户端侧的伪代码（强调「顺序 + 计时」）：</p>
+<pre class="line-numbers language-none"><code class="language-none">t1 &#x3D; now_ms()
+ok &#x3D; 0
+for node in nodes:
+    if node.SET(key, token, NX, PX&#x3D;validity, timeout&#x3D;50ms) &#x3D;&#x3D; OK: ok++
+if ok &gt;&#x3D; N&#x2F;2+1 and now_ms() - t1 &lt; validity:
+    effective &#x3D; validity - (now_ms() - t1)
+    doWork(effective, fencingToken &#x3D; token)
+else:
+    for node in nodes: unlockScript(node, key, token)<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<h2 id="七、常见坑（官方明确说明的限制）"><a href="#七、常见坑（官方明确说明的限制）" class="headerlink" title="七、常见坑（官方明确说明的限制）"></a>七、常见坑（官方明确说明的限制）</h2><ol>
+<li><strong>把 N 个节点做成主从关系</strong>。Redlock 要求节点<strong>相互独立</strong>，否则「多数」失去意义。</li>
+<li><strong>并发向 N 个节点加锁</strong>。总耗时无法判断，<code>validity</code> 扣除失效。</li>
+<li><strong>不扣加锁耗时</strong>。业务实际可用的有效期比你以为的短。</li>
+<li><strong>失败后不清理</strong>。残留锁会让下一次加锁的多节点判断漂移。</li>
+<li><strong>用 Redlock 保护资金类写</strong>。文档已明示停顿超过有效期会导致「两个持有者」，这类场景必须靠存储侧条件更新或 fencing token。</li>
+<li><strong>忽略时钟同步</strong>。虽然算法不要求严格同步时钟，但要求「有界的时钟漂移」；容器&#x2F;NTP 抖动大时要评估。</li>
+<li><strong>以为「多数成功 &#x3D; 强一致」</strong>。多数只代表「此刻多数节点有这条锁」，不代表「未来一段时间内不会丢」。</li>
+</ol>
+<h3 id="版本差异（8-x-标注）"><a href="#版本差异（8-x-标注）" class="headerlink" title="版本差异（8.x 标注）"></a>版本差异（8.x 标注）</h3><blockquote>
+<p>Redlock 是客户端算法，官方文档在 7.x 与 8.x 中表述一致；8.x 的变化在许可条款（AGPLv3&#x2F;SSPL）与集群工具链，不影响算法本身。若采用第三方客户端库，注意库是否已按文档实现「扣除耗时」与「失败全量解锁」。</p>
+<p>依据：<a target="_blank" rel="noopener" href="https://redis.io/docs/latest/develop/clients/patterns/distributed-locks/">https://redis.io/docs/latest/develop/clients/patterns/distributed-locks/</a></p>
+</blockquote>
+<h2 id="八、课后小结"><a href="#八、课后小结" class="headerlink" title="八、课后小结"></a>八、课后小结</h2><ul>
+<li>Redlock 五步：取时间 → 顺序加锁 N 个独立节点 → 多数成功且耗时未超 → 失败全删 → 有效期扣耗时；</li>
+<li>它降低「单点故障丢锁」的概率，不消除「时钟&#x2F;停顿」导致的双持有；</li>
+<li>效率锁用单节点足够，正确性锁要靠存储侧条件更新或 fencing token；</li>
+<li>官方文档已如实写明前提与局限，选型要以这些前提为准。</li>
+</ul>
+<h2 id="九、思考题"><a href="#九、思考题" class="headerlink" title="九、思考题"></a>九、思考题</h2><ol>
+<li>为什么 Redlock 必须「顺序」而不是「并发」向 N 个节点加锁？</li>
+<li>加锁花了 3 秒、validity 是 10 秒，实际可用多久？为什么要扣？</li>
+<li>GC 停顿 12 秒后醒来，你手里的锁还有效吗？会发生什么？</li>
+<li>fencing token 是怎么防住「两个持有者」的？存储侧要做什么判断？</li>
+<li>你的项目里哪些锁是效率锁、哪些是正确性锁？列出来对照选型表。</li>
+</ol>
+<h2 id="十、官方资料"><a href="#十、官方资料" class="headerlink" title="十、官方资料"></a>十、官方资料</h2><ul>
+<li>Distributed Locks（Redlock 算法与已知局限，官方原文）：<a target="_blank" rel="noopener" href="https://redis.io/docs/latest/develop/clients/patterns/distributed-locks/">https://redis.io/docs/latest/develop/clients/patterns/distributed-locks/</a></li>
+<li>SET（<code>NX</code>&#x2F;<code>PX</code> 基础）：<a target="_blank" rel="noopener" href="https://redis.io/docs/latest/commands/set/">https://redis.io/docs/latest/commands/set/</a></li>
+<li>Replication（异步复制与丢数据的说明）：<a target="_blank" rel="noopener" href="https://redis.io/docs/latest/operate/oss_and_stack/management/replication/">https://redis.io/docs/latest/operate/oss_and_stack/management/replication/</a></li>
+<li>INFO replication：<a target="_blank" rel="noopener" href="https://redis.io/docs/latest/commands/info/">https://redis.io/docs/latest/commands/info/</a></li>
+<li>Lua 脚本原子性：<a target="_blank" rel="noopener" href="https://redis.io/docs/latest/develop/interact/programmability/eval-intro/">https://redis.io/docs/latest/develop/interact/programmability/eval-intro/</a></li>
+</ul>
+<p>上一篇：<a href="/2023/02/01/database/redis/redis-42-distlock/">RD42 分布式锁</a> ｜ 下一篇：<a href="/2023/02/03/database/redis/redis-44-multilevel/">RD44 多级缓存</a> ｜ <a href="/2022/12/21/database/redis/redis-0-series-index/">总目录</a></p>
+</div>
+
+  <div class="mb-foot">
+    <a href="/phone/">返回手机首页</a>
+    <a href="/phone/tags/">星迹索引</a>
+  </div>
+</div>
+
+
+<script>
+  /* 作用：懒加载本地 mermaid 库；无 mermaid 代码块时不加载 */
+  function loadLocalMermaid(){
+    return new Promise(function(resolve, reject){
+      if(window.mermaid) return resolve(window.mermaid);
+      var s = document.createElement('script');
+      s.src = '/js/third-party/mermaid/mermaid.min.js?v=10';
+      s.onload = function(){ resolve(window.mermaid); };
+      s.onerror = function(){ reject(new Error('mermaid local load failed')); };
+      document.head.appendChild(s);
+    });
+  }
+
+  /* 作用：把 ```mermaid 代码块替换成 SVG 图（手机端字号略小、图可横向滚动） */
+  async function renderMermaidDiagram(){
+    var blocks = document.querySelectorAll('pre[class*="language-mermaid"]');
+    if(!blocks.length) return;
+    var mermaid;
+    try { mermaid = await loadLocalMermaid(); }
+    catch(e){ console.warn('[mermaid] 本地库加载失败：', e); return; }
+
+    mermaid.initialize({
+      startOnLoad: false,
+      theme: 'base',
+      themeVariables: {
+        darkMode: true,
+        background: 'transparent',
+        fontFamily: '"Microsoft YaHei", "PingFang SC", "Segoe UI", sans-serif',
+        fontSize: '12px',
+        primaryColor: '#062f3d',
+        primaryTextColor: '#d6f6ff',
+        primaryBorderColor: '#00eeff',
+        secondaryColor: '#04222d',
+        tertiaryColor: '#04222d',
+        mainBkg: '#062f3d',
+        nodeBorder: '#00eeff',
+        clusterBkg: '#02161f',
+        clusterBorder: '#00eeff55',
+        lineColor: '#00eeff',
+        textColor: '#c0e8ff',
+        edgeLabelBackground: '#02161f'
+      },
+      flowchart: { curve: 'basis', useMaxWidth: false, htmlLabels: false, nodeSpacing: 30, rankSpacing: 40, padding: 10 }
+    });
+
+    var targets = [];
+    blocks.forEach(function(el){
+      var codeEl = el.querySelector('code');
+      if(!codeEl) return;
+      var div = document.createElement('div');
+      div.className = 'mermaid';
+      div.textContent = codeEl.textContent;
+      el.parentNode.replaceChild(div, el);
+      targets.push(div);
+    });
+    if(!targets.length) return;
+    try { await mermaid.run({ nodes: targets }); }
+    catch(e){ console.warn('[mermaid] 渲染失败：', e); }
+  }
+  /* 作用：多次触发兜底（延迟重试 + DOM 变化），防止某次时机没跑到导致图表留在代码块 */
+  var mmBusy = false;
+  function scheduleMermaid(){
+    if(mmBusy) return;
+    mmBusy = true;
+    renderMermaidDiagram().then(function(){ mmBusy = false; }, function(){ mmBusy = false; });
+  }
+  scheduleMermaid();
+  window.addEventListener('load', scheduleMermaid);
+  [1000, 3000, 8000].forEach(function(ms){ setTimeout(scheduleMermaid, ms); });
+  if(document.readyState !== 'loading') scheduleMermaid();
+  if(window.MutationObserver){
+    var mmTimer = null;
+    var mmObserver = new MutationObserver(function(){
+      clearTimeout(mmTimer);
+      mmTimer = setTimeout(scheduleMermaid, 400);
+    });
+    mmObserver.observe(document.querySelector('.mb-article') || document.body, { childList: true, subtree: true });
+  }
+</script>
+</body>
+</html>

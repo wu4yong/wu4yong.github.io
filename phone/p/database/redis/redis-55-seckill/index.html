@@ -1,0 +1,389 @@
+<!--
+  ============================================
+  手机端 · 文章原文页
+  文件：phone/post.njk
+  适用终端：手机端（路由 /phone/p/<slug>/，由 scripts/phone-routes.js 生成）
+  作用：手机阅读单篇文章；单列布局、无侧栏无雷达，替代电脑端 post.njk
+        数据由生成期算好：page.item = { title, dateStr, content, cats, tags }
+  样式依赖：source/css/theme/phone/common.css、source/css/theme/phone/list.css
+  组件依赖：phone/_components/Particles.njk
+  最后修改：2026-11-11
+  ============================================
+-->
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="color-scheme" content="dark">
+  <meta name="theme-color" content="#020817">
+  <!-- 首帧兜底：浏览器默认画布是白的，样式未解析前会闪一下白。这条规则先锁死深空底色 -->
+  <style>html{background-color:#020817}</style>
+  <title>redis-秒杀：原子扣减与异步下单 - 时空秘境</title>
+  <!-- 手机端样式：基础 + 列表/正文，外链引入（源文件 source/css/theme/phone/） -->
+  <link rel="stylesheet" href="/css/theme/phone/common.css">
+  <link rel="stylesheet" href="/css/theme/phone/list.css">
+<meta name="generator" content="Hexo 8.1.2"></head>
+<body>
+<div class="mb-shell">
+  <!--
+  ============================================
+  手机端星空粒子组件
+  文件：Particles.njk
+  适用终端：手机端
+  作用：Particles.njk 的手机端副本（nunjucks 子目录 include 取不到上级）
+        参数与电脑端 _components/Particles.njk 保持一致：
+        粒子 95 / 连线 118px / opacity 0.32，外加星座层与零星闪烁层
+  最后修改：2026-11-12
+  ============================================
+--><!-- z-index 必须是 0：负层级会被 body 不透明背景盖住，粒子在跑却看不见 -->
+<div id="particles" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 0; pointer-events: none;"></div>
+<!-- 星座层（与首页同一套：随机零星散布星座图形 + 偶尔闪烁的小星） -->
+<div id="constellations" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 1; pointer-events: none;" aria-hidden="true"></div>
+<script src="/js/particles.min.js"></script>
+<script>
+particlesJS("particles", {
+  particles: {
+    number: {
+      value: 95,
+      density: {
+        enable: true,
+        value_area: 800
+      }
+    },
+    color: {
+      value: "#00eeff"
+    },
+    shape: {
+      type: "circle",
+      stroke: {
+        width: 0,
+        color: "#000000"
+      }
+    },
+    opacity: {
+      value: 0.6,
+      random: true,
+      anim: {
+        enable: true,
+        speed: 0.5,
+        opacity_min: 0.1,
+        sync: false
+      }
+    },
+    size: {
+      value: 3,
+      random: true,
+      anim: {
+        enable: true,
+        speed: 2,
+        size_min: 0.1,
+        sync: false
+      }
+    },
+    line_linked: {
+      enable: true,
+      distance: 118,
+      color: "#00eeff",
+      opacity: 0.32,
+      width: 1
+    },
+    move: {
+      enable: true,
+      speed: 0.8,
+      direction: "none",
+      random: true,
+      straight: false,
+      out_mode: "out",
+      bounce: false,
+      attract: {
+        enable: true,
+        rotateX: 600,
+        rotateY: 1200
+      }
+    }
+  },
+  interactivity: {
+    detect_on: "canvas",
+    events: {
+      onhover: {
+        enable: true,
+        mode: "grab"       // 手指按住时粒子聚集
+      },
+      onclick: {
+        enable: true,
+        mode: "push"       // 点击时产生新粒子
+      },
+      resize: true
+    },
+    modes: {
+      grab: {
+        distance: 200,
+        line_linked: {
+          opacity: 1
+        }
+      },
+      push: {
+        particles_nb: 6
+      }
+    }
+  },
+  retina_detect: true
+});
+</script>
+<!-- 星座 + 零星闪烁层：与电脑端共用同一份绘制脚本 -->
+<script src="/js/theme/home/starfield.js"></script>
+
+
+  <div class="mb-top">
+    <a class="mb-back" href="/phone/">← 返回手机首页</a>
+    <span class="mb-sub" style="margin:0">2023-02-14</span>
+  </div>
+
+  <h1 class="mb-title">redis-秒杀：原子扣减与异步下单</h1>
+  <div class="mb-sub">
+    分类：database · redis
+     ｜ 标签：Redis · 系统课 · 实战
+  </div>
+
+  <div class="mb-article"><div class="essay-banner essay-database"></div>
+
+<h1 id="秒杀：原子扣减与异步下单"><a href="#秒杀：原子扣减与异步下单" class="headerlink" title="秒杀：原子扣减与异步下单"></a>秒杀：原子扣减与异步下单</h1><p><img src="https://wu4yong.github.io/starry-images/assets/img/redis/rd-55-seckill.svg" alt="预热、Lua 扣减、入队、异步落库四步"></p>
+<p><em>Redis 做漏斗、队列做缓冲、库做出库的四步链路｜依据 Redis 7.4 官方文档自绘</em></p>
+<h2 id="一、学习目标"><a href="#一、学习目标" class="headerlink" title="一、学习目标"></a>一、学习目标</h2><p>学完这一讲，你能做到：</p>
+<ol>
+<li>用一段 Lua 脚本完成「查库存 → 判断 → 扣减 → 记录用户」一条原子操作；</li>
+<li>说清为什么 Redis 只做漏斗、订单必须异步落库；</li>
+<li>找出秒杀链路里必须存在的三道防线（限流、幂等、对账）。</li>
+</ol>
+<h2 id="二、前置知识"><a href="#二、前置知识" class="headerlink" title="二、前置知识"></a>二、前置知识</h2><p>RD05（<code>DECRBY</code>）、RD34（Lua 原子性）、RD46（限流）、RD22&#x2F;RD24（集群 hash tag）。秒杀是「原子性 + 分布式 + 高并发」三件事交叠的典型场景。</p>
+<h2 id="三、理论讲解（官方定义）"><a href="#三、理论讲解（官方定义）" class="headerlink" title="三、理论讲解（官方定义）"></a>三、理论讲解（官方定义）</h2><p>两条用得上的官方定义。</p>
+<p><strong>脚本原子性</strong>（原文要点）：</p>
+<blockquote>
+<p>Scripts are executed atomically … no other script or command will run while a script is running.</p>
+<p>—— <a target="_blank" rel="noopener" href="https://redis.io/docs/latest/develop/interact/programmability/eval-intro/">https://redis.io/docs/latest/develop/interact/programmability/eval-intro/</a></p>
+</blockquote>
+<p>这意味着「读库存 → 判断 → 扣减」可以在一段脚本里完成，中间不会有别的命令插入——这是不超卖的技术前提。</p>
+<p><strong>集群的多 key 限制</strong>（原文要点）：</p>
+<blockquote>
+<p>Multi-key commands and scripts must operate on keys in the same hash slot … keys are mapped to slots via <code>CRC16(key) mod 16384</code>.</p>
+<p>—— <a target="_blank" rel="noopener" href="https://redis.io/docs/latest/operate/oss_and_stack/reference/cluster-spec/">https://redis.io/docs/latest/operate/oss_and_stack/reference/cluster-spec/</a></p>
+</blockquote>
+<p>所以在集群里，脚本涉及的所有 key（库存 + 用户标记）必须落在同一个槽，否则报 <code>CROSSSLOT</code>。解法是用 hash tag：<code>stock:{act1}</code> 与 <code>order:{act1}</code> 都会带 <code>{act1}</code> 落到同一个槽。</p>
+<h2 id="四、原理拆解"><a href="#四、原理拆解" class="headerlink" title="四、原理拆解"></a>四、原理拆解</h2><h3 id="1-四步链路"><a href="#1-四步链路" class="headerlink" title="1. 四步链路"></a>1. 四步链路</h3><pre class="line-numbers language-none"><code class="language-none">① 预热：把活动库存写入 Redis（stock:act1 &#x3D; 100）
+② 扣减：Lua 脚本原子地「判断 + 扣减 + 记录用户」
+③ 入队：扣减成功的请求写入队列（LIST &#x2F; Stream）
+④ 落库：worker 消费队列、创建订单、扣减数据库库存（幂等）<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span></span></code></pre>
+
+<p><strong>Redis 只承担「谁有资格下单」</strong>，订单的真实性由数据库与对账保证。把 Redis 当成「账簿」是秒杀最常见的设计错误。</p>
+<h3 id="2-为什么必须用-Lua"><a href="#2-为什么必须用-Lua" class="headerlink" title="2. 为什么必须用 Lua"></a>2. 为什么必须用 Lua</h3><pre class="line-numbers language-none"><code class="language-none">错误写法：
+  GET stock        → 100
+  （1000 个请求都读到 100）
+  DECRBY stock 1   → 变成负数，超卖
+
+正确写法：
+  local s &#x3D; tonumber(redis.call(&#39;get&#39;, KEYS[1]))
+  if s &lt;&#x3D; 0 then return 0 end
+  if redis.call(&#39;sismember&#39;, KEYS[2], ARGV[1]) &#x3D;&#x3D; 1 then return 2 end
+  redis.call(&#39;decrby&#39;, KEYS[1], 1)
+  redis.call(&#39;sadd&#39;, KEYS[2], ARGV[1])
+  return 1<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<p>脚本里的三步在一次执行内完成，返回值区分三种结果：<code>1</code> 成功、<code>0</code> 售罄、<code>2</code> 重复请求。</p>
+<h3 id="3-三道防线"><a href="#3-三道防线" class="headerlink" title="3. 三道防线"></a>3. 三道防线</h3><table>
+<thead>
+<tr>
+<th>防线</th>
+<th>作用</th>
+<th>不做会怎样</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>入口限流</td>
+<td>把 99% 请求拒在 Redis 之外</td>
+<td>Redis 被打满，正常用户也抢不到</td>
+</tr>
+<tr>
+<td>幂等</td>
+<td>同一用户只成功一次</td>
+<td>一个人抢到多件，或重复下单</td>
+</tr>
+<tr>
+<td>对账</td>
+<td>比对「Redis 卖出数」与「库中订单数」</td>
+<td>故障时差额无人发现</td>
+</tr>
+</tbody></table>
+<p><strong>对账</strong>是最容易被省掉的一环，但它恰恰是「Redis 不可靠」这一事实的兜底。</p>
+<h3 id="4-失败要能「还库存」"><a href="#4-失败要能「还库存」" class="headerlink" title="4. 失败要能「还库存」"></a>4. 失败要能「还库存」</h3><p>扣减成功后如果异步落库失败（队列消费异常），库存必须能退回：</p>
+<pre class="line-numbers language-none"><code class="language-none">① worker 消费失败 → 记录失败订单
+② 定时任务扫描失败单 → INCRBY 归还库存 + 清理用户标记
+③ 或由 TTL 兜底：活动结束后统一校对<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span></span></code></pre>
+
+<p>没有归还机制，一次消费失败就会永久吃掉一件库存。</p>
+<h2 id="五、场景说明"><a href="#五、场景说明" class="headerlink" title="五、场景说明"></a>五、场景说明</h2><ol>
+<li><strong>限量抢购</strong>：库存有限、并发极高，典型秒杀；</li>
+<li><strong>优惠券发放</strong>：与秒杀同构，券码数量就是库存；</li>
+<li><strong>预约名额</strong>：量小但要求严格不超发；</li>
+<li><strong>不适合</strong>：普通下单（不需要抢）——直接走数据库事务即可，别引入复杂度。</li>
+</ol>
+<h2 id="六、示例代码-实操步骤"><a href="#六、示例代码-实操步骤" class="headerlink" title="六、示例代码&#x2F;实操步骤"></a>六、示例代码&#x2F;实操步骤</h2><pre class="line-numbers language-bash" data-language="bash"><code class="language-bash"><span class="token comment"># 1. 预热库存（活动开始前）</span>
+<span class="token number">127.0</span>.0.1:637<span class="token operator"><span class="token file-descriptor important">9</span>></span> SET stock:act1 <span class="token number">100</span>
+OK
+<span class="token number">127.0</span>.0.1:637<span class="token operator"><span class="token file-descriptor important">9</span>></span> DEL order:act1
+<span class="token punctuation">(</span>integer<span class="token punctuation">)</span> <span class="token number">0</span>
+
+<span class="token comment"># 2. 扣减脚本（库存 + 用户标记同槽，集群下用 hash tag）</span>
+<span class="token number">127.0</span>.0.1:637<span class="token operator"><span class="token file-descriptor important">9</span>></span> EVAL <span class="token string">"local s=tonumber(redis.call('get',KEYS[1])) if s==nil or s&lt;=0 then return 0 end if redis.call('sismember',KEYS[2],ARGV[1])==1 then return 2 end redis.call('decrby',KEYS[1],1) redis.call('sadd',KEYS[2],ARGV[1]) return 1"</span> <span class="token number">2</span> stock:<span class="token punctuation">&#123;</span>act1<span class="token punctuation">&#125;</span> order:<span class="token punctuation">&#123;</span>act1<span class="token punctuation">&#125;</span> u1001
+<span class="token punctuation">(</span>integer<span class="token punctuation">)</span> <span class="token number">1</span>                     <span class="token comment"># 1=成功，0=售罄，2=重复</span>
+
+<span class="token comment"># 3. 同一个用户再抢（应返回 2）</span>
+<span class="token number">127.0</span>.0.1:637<span class="token operator"><span class="token file-descriptor important">9</span>></span> EVAL <span class="token string">"..."</span> <span class="token number">2</span> stock:<span class="token punctuation">&#123;</span>act1<span class="token punctuation">&#125;</span> order:<span class="token punctuation">&#123;</span>act1<span class="token punctuation">&#125;</span> u1001
+<span class="token punctuation">(</span>integer<span class="token punctuation">)</span> <span class="token number">2</span>
+
+<span class="token comment"># 4. 扣减成功后入队（Stream 可回溯，比 LIST 更稳）</span>
+<span class="token number">127.0</span>.0.1:637<span class="token operator"><span class="token file-descriptor important">9</span>></span> XADD queue:act1 * uid u1001 act act1
+<span class="token string">"1700000000000-0"</span>
+
+<span class="token comment"># 5. worker 消费（示例：读一条并确认）</span>
+<span class="token number">127.0</span>.0.1:637<span class="token operator"><span class="token file-descriptor important">9</span>></span> XREADGROUP GROUP g1 worker1 COUNT <span class="token number">1</span> STREAMS queue:act1 <span class="token operator">></span>
+<span class="token number">127.0</span>.0.1:637<span class="token operator"><span class="token file-descriptor important">9</span>></span> XACK queue:act1 g1 <span class="token number">1700000000000</span>-0
+
+<span class="token comment"># 6. 查看剩余库存与已抢人数</span>
+<span class="token number">127.0</span>.0.1:637<span class="token operator"><span class="token file-descriptor important">9</span>></span> GET stock:<span class="token punctuation">&#123;</span>act1<span class="token punctuation">&#125;</span>
+<span class="token string">"98"</span>
+<span class="token number">127.0</span>.0.1:637<span class="token operator"><span class="token file-descriptor important">9</span>></span> SCARD order:<span class="token punctuation">&#123;</span>act1<span class="token punctuation">&#125;</span>
+<span class="token punctuation">(</span>integer<span class="token punctuation">)</span> <span class="token number">2</span>
+
+<span class="token comment"># 7. 失败归还库存（补偿脚本）</span>
+<span class="token number">127.0</span>.0.1:637<span class="token operator"><span class="token file-descriptor important">9</span>></span> INCRBY stock:<span class="token punctuation">&#123;</span>act1<span class="token punctuation">&#125;</span> <span class="token number">1</span>
+<span class="token punctuation">(</span>integer<span class="token punctuation">)</span> <span class="token number">99</span>
+<span class="token number">127.0</span>.0.1:637<span class="token operator"><span class="token file-descriptor important">9</span>></span> SREM order:<span class="token punctuation">&#123;</span>act1<span class="token punctuation">&#125;</span> u1001
+<span class="token punctuation">(</span>integer<span class="token punctuation">)</span> <span class="token number">1</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<h2 id="七、常见坑（官方明确说明的限制）"><a href="#七、常见坑（官方明确说明的限制）" class="headerlink" title="七、常见坑（官方明确说明的限制）"></a>七、常见坑（官方明确说明的限制）</h2><ol>
+<li><strong><code>GET</code> 再 <code>DECR</code> 两步扣减</strong>。并发下必然超卖，必须走 Lua。</li>
+<li><strong>把 Redis 当唯一账簿</strong>。实例故障、主从切换丢写都会让「卖出数」失真，必须有对账。</li>
+<li><strong>集群里 key 不带 hash tag</strong>。脚本涉及多 key 时报 <code>CROSSSLOT</code>，秒杀直接不可用。</li>
+<li><strong>没有幂等标记</strong>。同一用户重试或连点会成功多次。</li>
+<li><strong>不做入口限流</strong>。Redis 被无效请求打满，正常用户也抢不到，反而放大故障面。</li>
+<li><strong>扣减成功但入队失败</strong>。库存已减、订单没生成，且没有补偿路径。</li>
+<li><strong>活动结束不清理 key</strong>。<code>stock:*</code> 与 <code>order:*</code> 会长期占内存，靠 TTL 或定时任务清理。</li>
+<li><strong>用 <code>KEYS</code> 扫活动 key</strong>。O(N) 阻塞主线程（官方明确生产禁用），活动期间等于自杀。</li>
+</ol>
+<h3 id="版本差异（8-x-标注）"><a href="#版本差异（8-x-标注）" class="headerlink" title="版本差异（8.x 标注）"></a>版本差异（8.x 标注）</h3><blockquote>
+<p><code>EVAL</code>、<code>DECRBY</code>、<code>XADD</code>、<code>SISMEMBER</code> 语义在 7.4 与 8.x 一致；集群 hash tag 规则不变（<code>CRC16(key) mod 16384</code>，<code>{...}</code> 参与计算）。8.x 的差异在运维工具与许可，不影响链路设计。</p>
+<p>依据：<a target="_blank" rel="noopener" href="https://redis.io/docs/latest/operate/oss_and_stack/reference/cluster-spec/">https://redis.io/docs/latest/operate/oss_and_stack/reference/cluster-spec/</a></p>
+</blockquote>
+<h2 id="八、课后小结"><a href="#八、课后小结" class="headerlink" title="八、课后小结"></a>八、课后小结</h2><ul>
+<li>Redis 只做漏斗：原子扣减 + 记录用户，出库交给队列与数据库；</li>
+<li>扣减必须 Lua：判断、扣减、标记一次完成；</li>
+<li>三道防线：限流、幂等、对账，缺一不可；</li>
+<li>集群多 key 必须同槽（hash tag）；</li>
+<li>失败要能归还库存，否则一件库存永久丢失。</li>
+</ul>
+<h2 id="九、思考题"><a href="#九、思考题" class="headerlink" title="九、思考题"></a>九、思考题</h2><ol>
+<li>为什么 <code>GET</code> + <code>DECR</code> 会超卖？画出并发交错的时间线。</li>
+<li>脚本返回 <code>2</code> 表示什么？客户端应该怎么处理？</li>
+<li>库存 100、入口 QPS 10 万，Redis 需要承担多少扣减操作？怎么算？</li>
+<li>扣减成功、落库失败，你的补偿路径是什么？</li>
+<li>集群里库存与用户标记不在同一槽，会报什么错误？怎么改 key 命名？</li>
+</ol>
+<h2 id="十、官方资料"><a href="#十、官方资料" class="headerlink" title="十、官方资料"></a>十、官方资料</h2><ul>
+<li>Lua 脚本与原子性：<a target="_blank" rel="noopener" href="https://redis.io/docs/latest/develop/interact/programmability/eval-intro/">https://redis.io/docs/latest/develop/interact/programmability/eval-intro/</a></li>
+<li>EVAL：<a target="_blank" rel="noopener" href="https://redis.io/docs/latest/commands/eval/">https://redis.io/docs/latest/commands/eval/</a></li>
+<li>DECRBY &#x2F; INCRBY：<a target="_blank" rel="noopener" href="https://redis.io/docs/latest/commands/decrby/">https://redis.io/docs/latest/commands/decrby/</a></li>
+<li>Cluster spec（hash slot 与 hash tag）：<a target="_blank" rel="noopener" href="https://redis.io/docs/latest/operate/oss_and_stack/reference/cluster-spec/">https://redis.io/docs/latest/operate/oss_and_stack/reference/cluster-spec/</a></li>
+<li>Streams（<code>XADD</code> &#x2F; <code>XREADGROUP</code> 作为队列）：<a target="_blank" rel="noopener" href="https://redis.io/docs/latest/develop/data-types/streams/">https://redis.io/docs/latest/develop/data-types/streams/</a></li>
+</ul>
+<p>上一篇：<a href="/2023/02/13/database/redis/redis-54-session/">RD54 会话存储</a> ｜ 下一篇：<a href="/2023/02/15/database/redis/redis-56-feed/">RD56 关注与 Feed</a> ｜ <a href="/2022/12/21/database/redis/redis-0-series-index/">总目录</a></p>
+</div>
+
+  <div class="mb-foot">
+    <a href="/phone/">返回手机首页</a>
+    <a href="/phone/tags/">星迹索引</a>
+  </div>
+</div>
+
+
+<script>
+  /* 作用：懒加载本地 mermaid 库；无 mermaid 代码块时不加载 */
+  function loadLocalMermaid(){
+    return new Promise(function(resolve, reject){
+      if(window.mermaid) return resolve(window.mermaid);
+      var s = document.createElement('script');
+      s.src = '/js/third-party/mermaid/mermaid.min.js?v=10';
+      s.onload = function(){ resolve(window.mermaid); };
+      s.onerror = function(){ reject(new Error('mermaid local load failed')); };
+      document.head.appendChild(s);
+    });
+  }
+
+  /* 作用：把 ```mermaid 代码块替换成 SVG 图（手机端字号略小、图可横向滚动） */
+  async function renderMermaidDiagram(){
+    var blocks = document.querySelectorAll('pre[class*="language-mermaid"]');
+    if(!blocks.length) return;
+    var mermaid;
+    try { mermaid = await loadLocalMermaid(); }
+    catch(e){ console.warn('[mermaid] 本地库加载失败：', e); return; }
+
+    mermaid.initialize({
+      startOnLoad: false,
+      theme: 'base',
+      themeVariables: {
+        darkMode: true,
+        background: 'transparent',
+        fontFamily: '"Microsoft YaHei", "PingFang SC", "Segoe UI", sans-serif',
+        fontSize: '12px',
+        primaryColor: '#062f3d',
+        primaryTextColor: '#d6f6ff',
+        primaryBorderColor: '#00eeff',
+        secondaryColor: '#04222d',
+        tertiaryColor: '#04222d',
+        mainBkg: '#062f3d',
+        nodeBorder: '#00eeff',
+        clusterBkg: '#02161f',
+        clusterBorder: '#00eeff55',
+        lineColor: '#00eeff',
+        textColor: '#c0e8ff',
+        edgeLabelBackground: '#02161f'
+      },
+      flowchart: { curve: 'basis', useMaxWidth: false, htmlLabels: false, nodeSpacing: 30, rankSpacing: 40, padding: 10 }
+    });
+
+    var targets = [];
+    blocks.forEach(function(el){
+      var codeEl = el.querySelector('code');
+      if(!codeEl) return;
+      var div = document.createElement('div');
+      div.className = 'mermaid';
+      div.textContent = codeEl.textContent;
+      el.parentNode.replaceChild(div, el);
+      targets.push(div);
+    });
+    if(!targets.length) return;
+    try { await mermaid.run({ nodes: targets }); }
+    catch(e){ console.warn('[mermaid] 渲染失败：', e); }
+  }
+  /* 作用：多次触发兜底（延迟重试 + DOM 变化），防止某次时机没跑到导致图表留在代码块 */
+  var mmBusy = false;
+  function scheduleMermaid(){
+    if(mmBusy) return;
+    mmBusy = true;
+    renderMermaidDiagram().then(function(){ mmBusy = false; }, function(){ mmBusy = false; });
+  }
+  scheduleMermaid();
+  window.addEventListener('load', scheduleMermaid);
+  [1000, 3000, 8000].forEach(function(ms){ setTimeout(scheduleMermaid, ms); });
+  if(document.readyState !== 'loading') scheduleMermaid();
+  if(window.MutationObserver){
+    var mmTimer = null;
+    var mmObserver = new MutationObserver(function(){
+      clearTimeout(mmTimer);
+      mmTimer = setTimeout(scheduleMermaid, 400);
+    });
+    mmObserver.observe(document.querySelector('.mb-article') || document.body, { childList: true, subtree: true });
+  }
+</script>
+</body>
+</html>

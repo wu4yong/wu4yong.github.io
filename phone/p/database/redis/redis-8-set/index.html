@@ -1,0 +1,471 @@
+<!--
+  ============================================
+  手机端 · 文章原文页
+  文件：phone/post.njk
+  适用终端：手机端（路由 /phone/p/<slug>/，由 scripts/phone-routes.js 生成）
+  作用：手机阅读单篇文章；单列布局、无侧栏无雷达，替代电脑端 post.njk
+        数据由生成期算好：page.item = { title, dateStr, content, cats, tags }
+  样式依赖：source/css/theme/phone/common.css、source/css/theme/phone/list.css
+  组件依赖：phone/_components/Particles.njk
+  最后修改：2026-11-11
+  ============================================
+-->
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="color-scheme" content="dark">
+  <meta name="theme-color" content="#020817">
+  <!-- 首帧兜底：浏览器默认画布是白的，样式未解析前会闪一下白。这条规则先锁死深空底色 -->
+  <style>html{background-color:#020817}</style>
+  <title>redis-Set 类型：唯一性与集合运算 - 时空秘境</title>
+  <!-- 手机端样式：基础 + 列表/正文，外链引入（源文件 source/css/theme/phone/） -->
+  <link rel="stylesheet" href="/css/theme/phone/common.css">
+  <link rel="stylesheet" href="/css/theme/phone/list.css">
+<meta name="generator" content="Hexo 8.1.2"></head>
+<body>
+<div class="mb-shell">
+  <!--
+  ============================================
+  手机端星空粒子组件
+  文件：Particles.njk
+  适用终端：手机端
+  作用：Particles.njk 的手机端副本（nunjucks 子目录 include 取不到上级）
+        参数与电脑端 _components/Particles.njk 保持一致：
+        粒子 95 / 连线 118px / opacity 0.32，外加星座层与零星闪烁层
+  最后修改：2026-11-12
+  ============================================
+--><!-- z-index 必须是 0：负层级会被 body 不透明背景盖住，粒子在跑却看不见 -->
+<div id="particles" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 0; pointer-events: none;"></div>
+<!-- 星座层（与首页同一套：随机零星散布星座图形 + 偶尔闪烁的小星） -->
+<div id="constellations" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 1; pointer-events: none;" aria-hidden="true"></div>
+<script src="/js/particles.min.js"></script>
+<script>
+particlesJS("particles", {
+  particles: {
+    number: {
+      value: 95,
+      density: {
+        enable: true,
+        value_area: 800
+      }
+    },
+    color: {
+      value: "#00eeff"
+    },
+    shape: {
+      type: "circle",
+      stroke: {
+        width: 0,
+        color: "#000000"
+      }
+    },
+    opacity: {
+      value: 0.6,
+      random: true,
+      anim: {
+        enable: true,
+        speed: 0.5,
+        opacity_min: 0.1,
+        sync: false
+      }
+    },
+    size: {
+      value: 3,
+      random: true,
+      anim: {
+        enable: true,
+        speed: 2,
+        size_min: 0.1,
+        sync: false
+      }
+    },
+    line_linked: {
+      enable: true,
+      distance: 118,
+      color: "#00eeff",
+      opacity: 0.32,
+      width: 1
+    },
+    move: {
+      enable: true,
+      speed: 0.8,
+      direction: "none",
+      random: true,
+      straight: false,
+      out_mode: "out",
+      bounce: false,
+      attract: {
+        enable: true,
+        rotateX: 600,
+        rotateY: 1200
+      }
+    }
+  },
+  interactivity: {
+    detect_on: "canvas",
+    events: {
+      onhover: {
+        enable: true,
+        mode: "grab"       // 手指按住时粒子聚集
+      },
+      onclick: {
+        enable: true,
+        mode: "push"       // 点击时产生新粒子
+      },
+      resize: true
+    },
+    modes: {
+      grab: {
+        distance: 200,
+        line_linked: {
+          opacity: 1
+        }
+      },
+      push: {
+        particles_nb: 6
+      }
+    }
+  },
+  retina_detect: true
+});
+</script>
+<!-- 星座 + 零星闪烁层：与电脑端共用同一份绘制脚本 -->
+<script src="/js/theme/home/starfield.js"></script>
+
+
+  <div class="mb-top">
+    <a class="mb-back" href="/phone/">← 返回手机首页</a>
+    <span class="mb-sub" style="margin:0">2022-12-29</span>
+  </div>
+
+  <h1 class="mb-title">redis-Set 类型：唯一性与集合运算</h1>
+  <div class="mb-sub">
+    分类：database · redis
+     ｜ 标签：Redis · 系统课 · 数据结构
+  </div>
+
+  <div class="mb-article"><div class="essay-banner essay-database"></div>
+
+<h1 id="Set-类型：唯一性与集合运算"><a href="#Set-类型：唯一性与集合运算" class="headerlink" title="Set 类型：唯一性与集合运算"></a>Set 类型：唯一性与集合运算</h1><p><img src="https://wu4yong.github.io/starry-images/assets/img/redis/rd-08-set.svg" alt="Set 的集合运算、常用命令与编码演进"></p>
+<p><em>SINTER&#x2F;SUNION&#x2F;SDIFF 的语义、六条高频命令与 intset&#x2F;listpack&#x2F;hashtable 编码｜依据 Redis 7.4 官方文档自绘</em></p>
+<h2 id="一、学习目标"><a href="#一、学习目标" class="headerlink" title="一、学习目标"></a>一、学习目标</h2><p>学完这一讲，你要能做到三件事：</p>
+<ol>
+<li>讲清 Set 的两个核心能力：<strong>成员唯一</strong>与<strong>服务端集合运算</strong>；</li>
+<li>会用 <code>SADD</code> &#x2F; <code>SISMEMBER</code> &#x2F; <code>SINTER</code> &#x2F; <code>SPOP</code> &#x2F; <code>SSCAN</code>，并知道每条命令的复杂度代价；</li>
+<li>理解 intset → listpack → hashtable 的编码演进与阈值，能判断什么数据会导致编码降级。</li>
+</ol>
+<h2 id="二、前置知识"><a href="#二、前置知识" class="headerlink" title="二、前置知识"></a>二、前置知识</h2><p>RD05–RD07。需要理解「O(N) 命令阻塞主线程」和「编码阈值不可逆」这两个概念，它们在 Set 里同样成立。</p>
+<h2 id="三、理论讲解（官方定义）"><a href="#三、理论讲解（官方定义）" class="headerlink" title="三、理论讲解（官方定义）"></a>三、理论讲解（官方定义）</h2><p>官方定义（原文）：</p>
+<blockquote>
+<p>A Redis set is an unordered collection of unique strings (members). You can use Redis sets to efficiently: Track unique items; Represent relations; Perform common set operations such as intersection, unions, and differences.</p>
+<p>—— <a target="_blank" rel="noopener" href="https://redis.io/docs/latest/develop/data-types/sets/">https://redis.io/docs/latest/develop/data-types/sets/</a></p>
+</blockquote>
+<p>三句话对应三个能力：</p>
+<ul>
+<li><strong>unordered + unique</strong>：无序、去重，重复 <code>SADD</code> 同一成员不改变集合；</li>
+<li><strong>track unique items</strong>：天然适合 UV 计数、去重名单；</li>
+<li><strong>set operations</strong>：交集、并集、差集在<strong>服务端</strong>完成，不需要把数据拉到客户端再算。</li>
+</ul>
+<p>容量上限（原文）：单个 Set 最多 <code>2^32 - 1</code> 个成员。</p>
+<h2 id="四、原理拆解"><a href="#四、原理拆解" class="headerlink" title="四、原理拆解"></a>四、原理拆解</h2><h3 id="1-唯一性是怎么保证的"><a href="#1-唯一性是怎么保证的" class="headerlink" title="1. 唯一性是怎么保证的"></a>1. 唯一性是怎么保证的</h3><p>Set 的底层是哈希表（或 intset&#x2F;listpack），成员本身是 key。所以：</p>
+<ul>
+<li><code>SADD s a</code> 执行两次，第二次返回 0，集合里只有一个 <code>a</code>；</li>
+<li><code>SCARD</code> 返回不重复成员数量；</li>
+<li><strong>成员相等的判定是二进制相等</strong>，<code>&quot;1&quot;</code> 和 <code>1</code> 在协议层是不同的字节序列，会被当成两个成员（客户端一般会做类型转换，但要知道底层规则）。</li>
+</ul>
+<h3 id="2-三个运算的语义与优先级"><a href="#2-三个运算的语义与优先级" class="headerlink" title="2. 三个运算的语义与优先级"></a>2. 三个运算的语义与优先级</h3><table>
+<thead>
+<tr>
+<th>命令</th>
+<th>语义</th>
+<th>是否保留顺序&#x2F;分值</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>SINTER</code></td>
+<td>交集：同时属于所有集合</td>
+<td>无序</td>
+</tr>
+<tr>
+<td><code>SUNION</code></td>
+<td>并集：属于任一集合</td>
+<td>无序</td>
+</tr>
+<tr>
+<td><code>SDIFF</code></td>
+<td>差集：属于第一个但不在后面任何一个</td>
+<td>无序</td>
+</tr>
+</tbody></table>
+<p>工程上最容易搞错的是 <code>SDIFF</code>：它是<strong>有序参数</strong>的运算，<code>SDIFF A B</code> 与 <code>SDIFF B A</code> 结果完全不同。写「我关注的人里他没关注的」就属于这种单向差集。</p>
+<p>三个运算都有 <code>*STORE</code> 变体（<code>SINTERSTORE</code> &#x2F; <code>SUNIONSTORE</code> &#x2F; <code>SDIFFSTORE</code>），把结果写进一个新 key——<strong>这是缓存运算结果的标准手段</strong>：结果是稳定的，就没必要每次重算 O(N)。</p>
+<p>7.0 起还有 <code>SINTERCARD numkeys key... [LIMIT n]</code>，只求交集<strong>基数</strong>而不返回成员。判断「两个大集合有没有交集 &#x2F; 交集是否超过阈值」时，它比 <code>SINTER</code> 省一个数量级的内存。</p>
+<h3 id="3-编码演进：intset-→-listpack-→-hashtable"><a href="#3-编码演进：intset-→-listpack-→-hashtable" class="headerlink" title="3. 编码演进：intset → listpack → hashtable"></a>3. 编码演进：intset → listpack → hashtable</h3><p>官方三档编码，看数据自动选择：</p>
+<ol>
+<li><strong>intset</strong>：所有成员都是整数，且数量 ≤ <code>set-max-intset-entries</code>（默认 512）——紧凑的整数数组，有序存放，内存极省；</li>
+<li><strong>listpack</strong>：7.2 起支持，用于「非整数但规模不大」的集合，阈值 <code>set-max-listpack-entries</code>（默认 128）；</li>
+<li><strong>hashtable</strong>：规模或类型超出阈值后的通用结构。</li>
+</ol>
+<p>规则是「不满足就降级，降级不回退」。所以一个 Set 一旦混进一个字符串成员，intset 立刻不成立；一旦数量超过阈值，也回不去。</p>
+<p>这也是 Set 与 Hash 最容易混淆的地方：两者都用 listpack&#x2F;hashtable，但 Set 多了一档 intset——因为「全整数集合」是最常见的场景（用户 ID、标签 ID），值得单独优化。</p>
+<h3 id="4-复杂度与风险"><a href="#4-复杂度与风险" class="headerlink" title="4. 复杂度与风险"></a>4. 复杂度与风险</h3><table>
+<thead>
+<tr>
+<th>命令</th>
+<th>复杂度</th>
+<th>风险点</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>SADD</code> &#x2F; <code>SREM</code> &#x2F; <code>SISMEMBER</code></td>
+<td>O(1)</td>
+<td>无</td>
+</tr>
+<tr>
+<td><code>SMISMEMBER</code></td>
+<td>O(N)，N &#x3D; 成员数</td>
+<td>6.2 新增，批量判断</td>
+</tr>
+<tr>
+<td><code>SCARD</code></td>
+<td>O(1)</td>
+<td>无</td>
+</tr>
+<tr>
+<td><code>SMEMBERS</code></td>
+<td>O(N)</td>
+<td>大集合直接阻塞，改用 <code>SSCAN</code></td>
+</tr>
+<tr>
+<td><code>SINTER</code> &#x2F; <code>SUNION</code> &#x2F; <code>SDIFF</code></td>
+<td>O(N)，最坏 O(N*M)</td>
+<td>大集合运算是事故级</td>
+</tr>
+<tr>
+<td><code>SPOP count</code></td>
+<td>O(N)，N &#x3D; 弹出数</td>
+<td>一次弹出过多会阻塞</td>
+</tr>
+<tr>
+<td><code>SRANDMEMBER</code></td>
+<td>不带 count 为 O(1)</td>
+<td>带负 count 可返回重复成员</td>
+</tr>
+</tbody></table>
+<p><code>SPOP</code> 与 <code>SRANDMEMBER</code> 的区别必须记牢：<strong><code>SPOP</code> 会删除成员，<code>SRANDMEMBER</code> 只读不删</strong>；<code>SRANDMEMBER</code> 传负数 count 表示「允许重复」，用于抽样放回的场景。</p>
+<h2 id="五、场景说明"><a href="#五、场景说明" class="headerlink" title="五、场景说明"></a>五、场景说明</h2><ol>
+<li><strong>去重名单</strong>：<code>SADD article:1001:likers uid</code>，天然幂等，<code>SCARD</code> 即点赞数（注意这不是 UV 精确统计的唯一方案，超大基数用 HLL 更省）；</li>
+<li><strong>标签&#x2F;关系</strong>：<code>SADD user:1:follows uid2 uid3</code>，共同关注 &#x3D; <code>SINTER</code>；</li>
+<li><strong>黑白名单</strong>：<code>SISMEMBER blacklist:ip 1.2.3.4</code>，O(1) 判断；</li>
+<li><strong>抽奖</strong>：<code>SRANDMEMBER draw:pool 3</code> 抽 3 个不重复；<code>SPOP draw:pool 1</code> 抽中即移除（防重复中奖）；</li>
+<li><strong>随机推荐</strong>：<code>SRANDMEMBER pool 10</code> 每次不同；</li>
+<li><strong>UV 精确统计（小规模）</strong>：一个 Set 存一天的去重用户，规模可控时准确无误——相比 HLL 的 0.81% 误差，这是「要精确」时的选择。</li>
+</ol>
+<p>不适合：需要排序或按分值取范围（用 ZSet）、需要计数但基数极大（用 HLL）、需要存重复出现的记录（用 List 或 Stream）。</p>
+<h2 id="六、示例代码-实操步骤"><a href="#六、示例代码-实操步骤" class="headerlink" title="六、示例代码&#x2F;实操步骤"></a>六、示例代码&#x2F;实操步骤</h2><pre class="line-numbers language-bash" data-language="bash"><code class="language-bash"><span class="token comment"># 1. 唯一性：重复 SADD 返回 0</span>
+<span class="token number">127.0</span>.0.1:637<span class="token operator"><span class="token file-descriptor important">9</span>></span> SADD tags:post1 <span class="token function">java</span> redis
+<span class="token punctuation">(</span>integer<span class="token punctuation">)</span> <span class="token number">2</span>
+<span class="token number">127.0</span>.0.1:637<span class="token operator"><span class="token file-descriptor important">9</span>></span> SADD tags:post1 redis
+<span class="token punctuation">(</span>integer<span class="token punctuation">)</span> <span class="token number">0</span>
+<span class="token number">127.0</span>.0.1:637<span class="token operator"><span class="token file-descriptor important">9</span>></span> SCARD tags:post1
+<span class="token punctuation">(</span>integer<span class="token punctuation">)</span> <span class="token number">2</span>
+<span class="token number">127.0</span>.0.1:637<span class="token operator"><span class="token file-descriptor important">9</span>></span> SMEMBERS tags:post1
+<span class="token number">1</span><span class="token punctuation">)</span> <span class="token string">"java"</span>
+<span class="token number">2</span><span class="token punctuation">)</span> <span class="token string">"redis"</span>
+<span class="token comment"># 注意：无序，别依赖返回顺序</span>
+
+<span class="token comment"># 2. 成员判断</span>
+<span class="token number">127.0</span>.0.1:637<span class="token operator"><span class="token file-descriptor important">9</span>></span> SISMEMBER tags:post1 <span class="token function">java</span>
+<span class="token punctuation">(</span>integer<span class="token punctuation">)</span> <span class="token number">1</span>
+<span class="token number">127.0</span>.0.1:637<span class="token operator"><span class="token file-descriptor important">9</span>></span> SISMEMBER tags:post1 python
+<span class="token punctuation">(</span>integer<span class="token punctuation">)</span> <span class="token number">0</span>
+<span class="token number">127.0</span>.0.1:637<span class="token operator"><span class="token file-descriptor important">9</span>></span> SMISMEMBER tags:post1 <span class="token function">java</span> python    <span class="token comment"># 6.2+</span>
+<span class="token number">1</span><span class="token punctuation">)</span> <span class="token punctuation">(</span>integer<span class="token punctuation">)</span> <span class="token number">1</span>
+<span class="token number">2</span><span class="token punctuation">)</span> <span class="token punctuation">(</span>integer<span class="token punctuation">)</span> <span class="token number">0</span>
+
+<span class="token comment"># 3. 集合运算</span>
+<span class="token number">127.0</span>.0.1:637<span class="token operator"><span class="token file-descriptor important">9</span>></span> SADD follows:u1 u2 u3 u4
+<span class="token number">127.0</span>.0.1:637<span class="token operator"><span class="token file-descriptor important">9</span>></span> SADD follows:u2 u3 u4 u5
+<span class="token number">127.0</span>.0.1:637<span class="token operator"><span class="token file-descriptor important">9</span>></span> SINTER follows:u1 follows:u2
+<span class="token number">1</span><span class="token punctuation">)</span> <span class="token string">"u3"</span>
+<span class="token number">2</span><span class="token punctuation">)</span> <span class="token string">"u4"</span>
+<span class="token number">127.0</span>.0.1:637<span class="token operator"><span class="token file-descriptor important">9</span>></span> SUNION follows:u1 follows:u2
+<span class="token number">1</span><span class="token punctuation">)</span> <span class="token string">"u2"</span>
+<span class="token number">2</span><span class="token punctuation">)</span> <span class="token string">"u3"</span>
+<span class="token number">3</span><span class="token punctuation">)</span> <span class="token string">"u4"</span>
+<span class="token number">4</span><span class="token punctuation">)</span> <span class="token string">"u5"</span>
+<span class="token number">5</span><span class="token punctuation">)</span> <span class="token string">"u1"</span>
+<span class="token number">127.0</span>.0.1:637<span class="token operator"><span class="token file-descriptor important">9</span>></span> SDIFF follows:u1 follows:u2
+<span class="token number">1</span><span class="token punctuation">)</span> <span class="token string">"u2"</span>                      <span class="token comment"># u1 关注但 u2 没关注的</span>
+<span class="token number">127.0</span>.0.1:637<span class="token operator"><span class="token file-descriptor important">9</span>></span> SDIFF follows:u2 follows:u1
+<span class="token number">1</span><span class="token punctuation">)</span> <span class="token string">"u5"</span>                      <span class="token comment"># 反过来的结果完全不同</span>
+
+<span class="token comment"># 4. 只求交集基数，不取成员</span>
+<span class="token number">127.0</span>.0.1:637<span class="token operator"><span class="token file-descriptor important">9</span>></span> SINTERCARD <span class="token number">2</span> follows:u1 follows:u2
+<span class="token punctuation">(</span>integer<span class="token punctuation">)</span> <span class="token number">2</span>
+<span class="token number">127.0</span>.0.1:637<span class="token operator"><span class="token file-descriptor important">9</span>></span> SINTERCARD <span class="token number">2</span> follows:u1 follows:u2 LIMIT <span class="token number">1</span>
+<span class="token punctuation">(</span>integer<span class="token punctuation">)</span> <span class="token number">1</span>                  <span class="token comment"># 触达 LIMIT 就停，省算力</span>
+
+<span class="token comment"># 5. 运算结果落盘，避免重复计算</span>
+<span class="token number">127.0</span>.0.1:637<span class="token operator"><span class="token file-descriptor important">9</span>></span> SINTERSTORE common:u1u2 follows:u1 follows:u2
+<span class="token punctuation">(</span>integer<span class="token punctuation">)</span> <span class="token number">2</span>
+<span class="token number">127.0</span>.0.1:637<span class="token operator"><span class="token file-descriptor important">9</span>></span> SMEMBERS common:u1u2
+<span class="token number">1</span><span class="token punctuation">)</span> <span class="token string">"u3"</span>
+<span class="token number">2</span><span class="token punctuation">)</span> <span class="token string">"u4"</span>
+
+<span class="token comment"># 6. 抽奖：不重复 vs 允许重复</span>
+<span class="token number">127.0</span>.0.1:637<span class="token operator"><span class="token file-descriptor important">9</span>></span> SADD draw:pool a b c d e
+<span class="token number">127.0</span>.0.1:637<span class="token operator"><span class="token file-descriptor important">9</span>></span> SRANDMEMBER draw:pool <span class="token number">3</span>
+<span class="token number">1</span><span class="token punctuation">)</span> <span class="token string">"c"</span>
+<span class="token number">2</span><span class="token punctuation">)</span> <span class="token string">"a"</span>
+<span class="token number">3</span><span class="token punctuation">)</span> <span class="token string">"e"</span>                      <span class="token comment"># 三个不重复</span>
+<span class="token number">127.0</span>.0.1:637<span class="token operator"><span class="token file-descriptor important">9</span>></span> SRANDMEMBER draw:pool <span class="token parameter variable">-3</span>
+<span class="token number">1</span><span class="token punctuation">)</span> <span class="token string">"b"</span>
+<span class="token number">2</span><span class="token punctuation">)</span> <span class="token string">"b"</span>
+<span class="token number">3</span><span class="token punctuation">)</span> <span class="token string">"a"</span>                      <span class="token comment"># 负 count 允许重复</span>
+<span class="token number">127.0</span>.0.1:637<span class="token operator"><span class="token file-descriptor important">9</span>></span> SPOP draw:pool <span class="token number">1</span>
+<span class="token string">"d"</span>                          <span class="token comment"># 真的从集合里删掉了</span>
+
+<span class="token comment"># 7. 编码与阈值</span>
+<span class="token number">127.0</span>.0.1:637<span class="token operator"><span class="token file-descriptor important">9</span>></span> SADD ids:user <span class="token number">1001</span> <span class="token number">1002</span> <span class="token number">1003</span>
+<span class="token punctuation">(</span>integer<span class="token punctuation">)</span> <span class="token number">3</span>
+<span class="token number">127.0</span>.0.1:637<span class="token operator"><span class="token file-descriptor important">9</span>></span> OBJECT ENCODING ids:user
+<span class="token string">"intset"</span>
+<span class="token number">127.0</span>.0.1:637<span class="token operator"><span class="token file-descriptor important">9</span>></span> SADD ids:user abc
+<span class="token punctuation">(</span>integer<span class="token punctuation">)</span> <span class="token number">1</span>
+<span class="token number">127.0</span>.0.1:637<span class="token operator"><span class="token file-descriptor important">9</span>></span> OBJECT ENCODING ids:user
+<span class="token string">"listpack"</span>                   <span class="token comment"># 混入字符串，intset 立刻失效</span>
+<span class="token number">127.0</span>.0.1:637<span class="token operator"><span class="token file-descriptor important">9</span>></span> CONFIG GET set-max-intset-entries
+<span class="token number">1</span><span class="token punctuation">)</span> <span class="token string">"set-max-intset-entries"</span>
+<span class="token number">2</span><span class="token punctuation">)</span> <span class="token string">"512"</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<h2 id="七、常见坑（官方明确说明的限制）"><a href="#七、常见坑（官方明确说明的限制）" class="headerlink" title="七、常见坑（官方明确说明的限制）"></a>七、常见坑（官方明确说明的限制）</h2><ol>
+<li><strong><code>SMEMBERS</code> 是 O(N)</strong>。集合上万成员时就会阻塞主线程，遍历请用 <code>SSCAN</code>；「我要全部成员」和「我要遍历全部成员」是两种需求，后者不该用 <code>SMEMBERS</code>。</li>
+<li><strong><code>SDIFF</code> 参数有序</strong>，<code>SDIFF A B ≠ SDIFF B A</code>。写「差集」时务必确认方向，这是最容易出逻辑错误的一条。</li>
+<li><strong>编码降级不可逆</strong>。intset 里塞一个非整数成员就永久变 listpack&#x2F;hashtable，之后内存占用和 CPU 都用不上 intset 的优势。ID 类集合要保证「只存整数」。</li>
+<li><strong><code>SPOP</code> 会真的删除数据</strong>。想「抽一次但保留」请用 <code>SRANDMEMBER</code>。两者名字很像，误用会直接丢业务数据。</li>
+<li><strong>大集合上的 <code>SINTER</code> &#x2F; <code>SUNION</code> 是 O(N*M) 量级</strong>，多集合交集在百万级成员时会长时间占用主线程。要么预计算落盘（<code>SINTERSTORE</code> + TTL），要么用 <code>SINTERCARD ... LIMIT</code>。</li>
+<li><strong>Set 无序</strong>，<code>SMEMBERS</code> 返回顺序不代表任何语义。需要顺序就必须换 ZSet。</li>
+<li><strong>Set 不能存重复值</strong>，也就不适合「记录每次访问」这类明细场景；UV 与 PV 的存储选择要分开。</li>
+</ol>
+<h3 id="版本差异（8-x-标注）"><a href="#版本差异（8-x-标注）" class="headerlink" title="版本差异（8.x 标注）"></a>版本差异（8.x 标注）</h3><blockquote>
+<p>7.2 引入 listpack 编码的 Set（<code>set-max-listpack-entries</code>），7.0 引入 <code>SINTERCARD</code>，6.2 引入 <code>SMISMEMBER</code>。8.x 语义未变。若环境为 6.x，则 listpack 与 <code>SINTERCARD</code> 都不可用，请按 intset&#x2F;hashtable 两档理解。</p>
+<p>依据：<a target="_blank" rel="noopener" href="https://redis.io/docs/latest/develop/data-types/sets/">https://redis.io/docs/latest/develop/data-types/sets/</a></p>
+</blockquote>
+<h2 id="八、课后小结"><a href="#八、课后小结" class="headerlink" title="八、课后小结"></a>八、课后小结</h2><ul>
+<li>Set 是无序不重复的字符串集合，核心价值是去重与服务端集合运算；</li>
+<li><code>SINTER</code> &#x2F; <code>SUNION</code> &#x2F; <code>SDIFF</code> 语义不同，<code>SDIFF</code> 参数有序；</li>
+<li><code>SINTERCARD</code>（7.0）只算基数，配合 <code>LIMIT</code> 可省算力；<code>*STORE</code> 变体用于缓存结果；</li>
+<li><code>SPOP</code> 删除、<code>SRANDMEMBER</code> 不删，负 count 表示允许重复；</li>
+<li>编码三档 intset → listpack → hashtable，降级不可逆；</li>
+<li><code>SMEMBERS</code> 与大集合运算都是 O(N)，线上必须用 <code>SSCAN</code> 与预计算替代。</li>
+</ul>
+<h2 id="九、思考题"><a href="#九、思考题" class="headerlink" title="九、思考题"></a>九、思考题</h2><ol>
+<li>「共同关注」用 <code>SINTER</code>，「他关注但我没关注」用哪个命令？为什么参数顺序不能反？</li>
+<li>点赞人数用 <code>SCARD</code> 得到，和用 HLL 的 <code>PFCOUNT</code> 得到，差别在哪？什么规模下你会选哪个？</li>
+<li>一个 Set 存的是用户 ID，本来是 intset，某天有人写进了一个空字符串成员。内存和 CPU 各会发生什么变化？怎么避免？</li>
+<li>两个各有 100 万成员的集合求交集，主线程会被占多久？有哪三种降低影响的做法？</li>
+<li><code>SPOP</code> 与 <code>SRANDMEMBER</code> 在抽奖场景里分别对应什么规则？「每人只能中一次」该用哪个？</li>
+</ol>
+<h2 id="十、官方资料"><a href="#十、官方资料" class="headerlink" title="十、官方资料"></a>十、官方资料</h2><ul>
+<li>Sets（类型定义、2^32-1 上限、典型用法）：<a target="_blank" rel="noopener" href="https://redis.io/docs/latest/develop/data-types/sets/">https://redis.io/docs/latest/develop/data-types/sets/</a></li>
+<li>SADD（唯一性与返回值）：<a target="_blank" rel="noopener" href="https://redis.io/docs/latest/commands/sadd/">https://redis.io/docs/latest/commands/sadd/</a></li>
+<li>SINTER &#x2F; SUNION &#x2F; SDIFF（三种运算语义）：<a target="_blank" rel="noopener" href="https://redis.io/docs/latest/commands/sinter/">https://redis.io/docs/latest/commands/sinter/</a></li>
+<li>SINTERCARD（7.0，基数与 LIMIT）：<a target="_blank" rel="noopener" href="https://redis.io/docs/latest/commands/sintercard/">https://redis.io/docs/latest/commands/sintercard/</a></li>
+<li>SMEMBERS（O(N) 说明）：<a target="_blank" rel="noopener" href="https://redis.io/docs/latest/commands/smembers/">https://redis.io/docs/latest/commands/smembers/</a></li>
+<li>SPOP &#x2F; SRANDMEMBER（删除与只读的区别）：<a target="_blank" rel="noopener" href="https://redis.io/docs/latest/commands/spop/">https://redis.io/docs/latest/commands/spop/</a></li>
+<li>SSCAN（分批遍历）：<a target="_blank" rel="noopener" href="https://redis.io/docs/latest/commands/sscan/">https://redis.io/docs/latest/commands/sscan/</a></li>
+</ul>
+<p>上一篇：<a href="/2022/12/28/database/redis/redis-7-hash/">RD07 Hash 类型：字段级读写与字段级过期</a> ｜ 下一篇：<a href="/2022/12/30/database/redis/redis-9-zset/">RD09 Sorted Set：分值排序与范围查询</a> ｜ <a href="/2022/12/21/database/redis/redis-0-series-index/">总目录</a></p>
+</div>
+
+  <div class="mb-foot">
+    <a href="/phone/">返回手机首页</a>
+    <a href="/phone/tags/">星迹索引</a>
+  </div>
+</div>
+
+
+<script>
+  /* 作用：懒加载本地 mermaid 库；无 mermaid 代码块时不加载 */
+  function loadLocalMermaid(){
+    return new Promise(function(resolve, reject){
+      if(window.mermaid) return resolve(window.mermaid);
+      var s = document.createElement('script');
+      s.src = '/js/third-party/mermaid/mermaid.min.js?v=10';
+      s.onload = function(){ resolve(window.mermaid); };
+      s.onerror = function(){ reject(new Error('mermaid local load failed')); };
+      document.head.appendChild(s);
+    });
+  }
+
+  /* 作用：把 ```mermaid 代码块替换成 SVG 图（手机端字号略小、图可横向滚动） */
+  async function renderMermaidDiagram(){
+    var blocks = document.querySelectorAll('pre[class*="language-mermaid"]');
+    if(!blocks.length) return;
+    var mermaid;
+    try { mermaid = await loadLocalMermaid(); }
+    catch(e){ console.warn('[mermaid] 本地库加载失败：', e); return; }
+
+    mermaid.initialize({
+      startOnLoad: false,
+      theme: 'base',
+      themeVariables: {
+        darkMode: true,
+        background: 'transparent',
+        fontFamily: '"Microsoft YaHei", "PingFang SC", "Segoe UI", sans-serif',
+        fontSize: '12px',
+        primaryColor: '#062f3d',
+        primaryTextColor: '#d6f6ff',
+        primaryBorderColor: '#00eeff',
+        secondaryColor: '#04222d',
+        tertiaryColor: '#04222d',
+        mainBkg: '#062f3d',
+        nodeBorder: '#00eeff',
+        clusterBkg: '#02161f',
+        clusterBorder: '#00eeff55',
+        lineColor: '#00eeff',
+        textColor: '#c0e8ff',
+        edgeLabelBackground: '#02161f'
+      },
+      flowchart: { curve: 'basis', useMaxWidth: false, htmlLabels: false, nodeSpacing: 30, rankSpacing: 40, padding: 10 }
+    });
+
+    var targets = [];
+    blocks.forEach(function(el){
+      var codeEl = el.querySelector('code');
+      if(!codeEl) return;
+      var div = document.createElement('div');
+      div.className = 'mermaid';
+      div.textContent = codeEl.textContent;
+      el.parentNode.replaceChild(div, el);
+      targets.push(div);
+    });
+    if(!targets.length) return;
+    try { await mermaid.run({ nodes: targets }); }
+    catch(e){ console.warn('[mermaid] 渲染失败：', e); }
+  }
+  /* 作用：多次触发兜底（延迟重试 + DOM 变化），防止某次时机没跑到导致图表留在代码块 */
+  var mmBusy = false;
+  function scheduleMermaid(){
+    if(mmBusy) return;
+    mmBusy = true;
+    renderMermaidDiagram().then(function(){ mmBusy = false; }, function(){ mmBusy = false; });
+  }
+  scheduleMermaid();
+  window.addEventListener('load', scheduleMermaid);
+  [1000, 3000, 8000].forEach(function(ms){ setTimeout(scheduleMermaid, ms); });
+  if(document.readyState !== 'loading') scheduleMermaid();
+  if(window.MutationObserver){
+    var mmTimer = null;
+    var mmObserver = new MutationObserver(function(){
+      clearTimeout(mmTimer);
+      mmTimer = setTimeout(scheduleMermaid, 400);
+    });
+    mmObserver.observe(document.querySelector('.mb-article') || document.body, { childList: true, subtree: true });
+  }
+</script>
+</body>
+</html>

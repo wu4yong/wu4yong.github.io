@@ -1,0 +1,416 @@
+<!--
+  ============================================
+  手机端 · 文章原文页
+  文件：phone/post.njk
+  适用终端：手机端（路由 /phone/p/<slug>/，由 scripts/phone-routes.js 生成）
+  作用：手机阅读单篇文章；单列布局、无侧栏无雷达，替代电脑端 post.njk
+        数据由生成期算好：page.item = { title, dateStr, content, cats, tags }
+  样式依赖：source/css/theme/phone/common.css、source/css/theme/phone/list.css
+  组件依赖：phone/_components/Particles.njk
+  最后修改：2026-11-11
+  ============================================
+-->
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="color-scheme" content="dark">
+  <meta name="theme-color" content="#020817">
+  <!-- 首帧兜底：浏览器默认画布是白的，样式未解析前会闪一下白。这条规则先锁死深空底色 -->
+  <style>html{background-color:#020817}</style>
+  <title>redis-高可用选型：主从、Sentinel 与 Cluster - 时空秘境</title>
+  <!-- 手机端样式：基础 + 列表/正文，外链引入（源文件 source/css/theme/phone/） -->
+  <link rel="stylesheet" href="/css/theme/phone/common.css">
+  <link rel="stylesheet" href="/css/theme/phone/list.css">
+<meta name="generator" content="Hexo 8.1.2"></head>
+<body>
+<div class="mb-shell">
+  <!--
+  ============================================
+  手机端星空粒子组件
+  文件：Particles.njk
+  适用终端：手机端
+  作用：Particles.njk 的手机端副本（nunjucks 子目录 include 取不到上级）
+        参数与电脑端 _components/Particles.njk 保持一致：
+        粒子 95 / 连线 118px / opacity 0.32，外加星座层与零星闪烁层
+  最后修改：2026-11-12
+  ============================================
+--><!-- z-index 必须是 0：负层级会被 body 不透明背景盖住，粒子在跑却看不见 -->
+<div id="particles" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 0; pointer-events: none;"></div>
+<!-- 星座层（与首页同一套：随机零星散布星座图形 + 偶尔闪烁的小星） -->
+<div id="constellations" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 1; pointer-events: none;" aria-hidden="true"></div>
+<script src="/js/particles.min.js"></script>
+<script>
+particlesJS("particles", {
+  particles: {
+    number: {
+      value: 95,
+      density: {
+        enable: true,
+        value_area: 800
+      }
+    },
+    color: {
+      value: "#00eeff"
+    },
+    shape: {
+      type: "circle",
+      stroke: {
+        width: 0,
+        color: "#000000"
+      }
+    },
+    opacity: {
+      value: 0.6,
+      random: true,
+      anim: {
+        enable: true,
+        speed: 0.5,
+        opacity_min: 0.1,
+        sync: false
+      }
+    },
+    size: {
+      value: 3,
+      random: true,
+      anim: {
+        enable: true,
+        speed: 2,
+        size_min: 0.1,
+        sync: false
+      }
+    },
+    line_linked: {
+      enable: true,
+      distance: 118,
+      color: "#00eeff",
+      opacity: 0.32,
+      width: 1
+    },
+    move: {
+      enable: true,
+      speed: 0.8,
+      direction: "none",
+      random: true,
+      straight: false,
+      out_mode: "out",
+      bounce: false,
+      attract: {
+        enable: true,
+        rotateX: 600,
+        rotateY: 1200
+      }
+    }
+  },
+  interactivity: {
+    detect_on: "canvas",
+    events: {
+      onhover: {
+        enable: true,
+        mode: "grab"       // 手指按住时粒子聚集
+      },
+      onclick: {
+        enable: true,
+        mode: "push"       // 点击时产生新粒子
+      },
+      resize: true
+    },
+    modes: {
+      grab: {
+        distance: 200,
+        line_linked: {
+          opacity: 1
+        }
+      },
+      push: {
+        particles_nb: 6
+      }
+    }
+  },
+  retina_detect: true
+});
+</script>
+<!-- 星座 + 零星闪烁层：与电脑端共用同一份绘制脚本 -->
+<script src="/js/theme/home/starfield.js"></script>
+
+
+  <div class="mb-top">
+    <a class="mb-back" href="/phone/">← 返回手机首页</a>
+    <span class="mb-sub" style="margin:0">2023-01-15</span>
+  </div>
+
+  <h1 class="mb-title">redis-高可用选型：主从、Sentinel 与 Cluster</h1>
+  <div class="mb-sub">
+    分类：database · redis
+     ｜ 标签：Redis · 系统课 · 高可用 · 架构
+  </div>
+
+  <div class="mb-article"><div class="essay-banner essay-database"></div>
+
+<h1 id="高可用选型：主从、Sentinel-与-Cluster"><a href="#高可用选型：主从、Sentinel-与-Cluster" class="headerlink" title="高可用选型：主从、Sentinel 与 Cluster"></a>高可用选型：主从、Sentinel 与 Cluster</h1><p><img src="https://wu4yong.github.io/starry-images/assets/img/redis/rd-25-ha-choice.svg" alt="四种形态对照与决策顺序"></p>
+<p><em>单机 &#x2F; 主从 &#x2F; Sentinel &#x2F; Cluster 四种形态的容量、写入、故障与适用场景｜依据 Redis 7.4 官方文档自绘</em></p>
+<h2 id="一、学习目标"><a href="#一、学习目标" class="headerlink" title="一、学习目标"></a>一、学习目标</h2><p>学完这一讲，你要能做到三件事：</p>
+<ol>
+<li>用「容量、写入、故障、成本」四个维度把四种形态摆在一起对比，而不是凭印象选；</li>
+<li>按固定的三个问题（装得下吗、写得动吗、能接受人工切换吗）做出可辩护的选型；</li>
+<li>说清每种方案的「隐性成本」，在评审时把这些成本摆到桌面上。</li>
+</ol>
+<h2 id="二、前置知识"><a href="#二、前置知识" class="headerlink" title="二、前置知识"></a>二、前置知识</h2><p>RD14–RD24 全部。本篇是 M4 的收口：把复制、Sentinel、Cluster 三套机制收敛成决策。</p>
+<h2 id="三、理论讲解（官方定义）"><a href="#三、理论讲解（官方定义）" class="headerlink" title="三、理论讲解（官方定义）"></a>三、理论讲解（官方定义）</h2><p>官方明确把两种方案分开定位（原文）：</p>
+<blockquote>
+<p>Redis Sentinel provides high availability for Redis when not using Redis Cluster.</p>
+<p>—— <a target="_blank" rel="noopener" href="https://redis.io/docs/latest/operate/oss_and_stack/management/sentinel/">https://redis.io/docs/latest/operate/oss_and_stack/management/sentinel/</a></p>
+</blockquote>
+<blockquote>
+<p>Redis Cluster … allows you to shard your data automatically across multiple Redis nodes, and to continue operations when a subset of the nodes are experiencing failures.</p>
+<p>—— <a target="_blank" rel="noopener" href="https://redis.io/docs/latest/operate/oss_and_stack/management/scaling/">https://redis.io/docs/latest/operate/oss_and_stack/management/scaling/</a></p>
+</blockquote>
+<p>两句话划清了界线：</p>
+<ul>
+<li><strong>Sentinel 解决「可用性」</strong>，一个主库的数据模型不变；</li>
+<li><strong>Cluster 解决「容量 + 写入扩展 + 可用性」</strong>，但代价是数据模型变成分片。</li>
+</ul>
+<p>关键结论：<strong>这不是「高级 vs 低级」，而是「要不要分片」</strong>。不需要分片的业务上 Cluster，只会白拿一堆限制和运维成本。</p>
+<h2 id="四、原理拆解"><a href="#四、原理拆解" class="headerlink" title="四、原理拆解"></a>四、原理拆解</h2><h3 id="1-四种形态横向对比"><a href="#1-四种形态横向对比" class="headerlink" title="1. 四种形态横向对比"></a>1. 四种形态横向对比</h3><table>
+<thead>
+<tr>
+<th>维度</th>
+<th>单机</th>
+<th>主从</th>
+<th>Sentinel</th>
+<th>Cluster</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>容量</td>
+<td>单机内存上限</td>
+<td>读可水平扩，写仍是单点</td>
+<td>同主从</td>
+<td>水平扩（多主分片）</td>
+</tr>
+<tr>
+<td>写入</td>
+<td>单点</td>
+<td>单点</td>
+<td>单点</td>
+<td>多主分片</td>
+</tr>
+<tr>
+<td>故障切换</td>
+<td>无</td>
+<td>人工</td>
+<td>自动</td>
+<td>节点级接管</td>
+</tr>
+<tr>
+<td>数据模型</td>
+<td>完整</td>
+<td>完整</td>
+<td>完整</td>
+<td>分片（多 key 同槽）</td>
+</tr>
+<tr>
+<td>客户端</td>
+<td>简单</td>
+<td>简单&#x2F;只读</td>
+<td>需 Sentinel 协议</td>
+<td>需重定向支持</td>
+</tr>
+<tr>
+<td>运维成本</td>
+<td>低</td>
+<td>中</td>
+<td>中高</td>
+<td>高</td>
+</tr>
+</tbody></table>
+<p>这张表的读法：<strong>从「单机」到「主从」买的是备份与读扩展，从「主从」到「Sentinel」买的是自动切换，从「Sentinel」到「Cluster」买的是写入与容量水平扩展</strong>。每一步都是「花钱买能力」，不是「升级」。</p>
+<h3 id="2-决策顺序（按优先级问三个问题）"><a href="#2-决策顺序（按优先级问三个问题）" class="headerlink" title="2. 决策顺序（按优先级问三个问题）"></a>2. 决策顺序（按优先级问三个问题）</h3><p><strong>问题一：数据量能不能装进一台机器？</strong></p>
+<ul>
+<li>能 → 不进 Cluster 的讨论范围；</li>
+<li>不能，或未来 12 个月会超 → 继续问第二、第三题，指向 Cluster。</li>
+</ul>
+<p>注意「装得下」要按<strong>实际内存 + 副本 + 碎片 + fork 峰值</strong>算，不是「理论内存」。RD28 会讲碎片率，RD14 讲了 CoW，这两项都要留余量。</p>
+<p><strong>问题二：写入是否超过单节点能力？</strong></p>
+<ul>
+<li>没有 → Sentinel 足够（读靠加从库，写靠单主）；</li>
+<li>超过（QPS 或带宽打满单主）→ Cluster 的唯一理由就是这个。</li>
+</ul>
+<p>很多团队误以为「数据大就必须 Cluster」，其实只有<strong>写入</strong>才是 Cluster 的硬需求；纯读多、数据大的场景，Sentinel + 多从库往往更省事。</p>
+<p><strong>问题三：能不能接受分钟级人工切换？</strong></p>
+<ul>
+<li>能接受（如内部工具、可停机窗口）→ 主从就够；</li>
+<li>不能 → 至少要 Sentinel；</li>
+<li>连「节点故障导致部分槽不可用」都不能接受 → Cluster 的多数票机制本身就是你要的。</li>
+</ul>
+<h3 id="3-每种方案的隐性成本"><a href="#3-每种方案的隐性成本" class="headerlink" title="3. 每种方案的隐性成本"></a>3. 每种方案的隐性成本</h3><ul>
+<li><strong>Sentinel</strong>：多一套进程与配置要维护；客户端必须支持 Sentinel 协议；切换窗口仍有写失败；</li>
+<li><strong>Cluster</strong>：跨槽限制要改代码；迁移与扩容是人工活；客户端要处理 <code>MOVED/ASK</code>；监控要按节点聚合；</li>
+<li><strong>任何异步复制方案</strong>：切换都可能丢最后一段写入，关键数据要靠业务补偿；</li>
+<li><strong>单机</strong>：没有隐性成本，但也没有任何容错。</li>
+</ul>
+<p>把这些成本写进技术方案，比「我们上了 Cluster 所以高可用」更可信。</p>
+<h2 id="五、场景说明"><a href="#五、场景说明" class="headerlink" title="五、场景说明"></a>五、场景说明</h2><ol>
+<li><strong>缓存 + 中小数据量 + 读多写少</strong>：主从或 Sentinel，简单可靠；</li>
+<li><strong>单主写入顶到瓶颈（QPS 高、带宽满）</strong>：Cluster，且必须接受跨槽限制；</li>
+<li><strong>数据量 200 GB、写入不高</strong>：优先 Sentinel + 多从库（读扩展），再评估是否真要 Cluster；</li>
+<li><strong>强事务&#x2F;多 key 原子操作密集</strong>：留在 Sentinel 形态，或把相关 key 用 hash tag 收敛后再上 Cluster；</li>
+<li><strong>灾备</strong>：无论哪种形态，异地备份文件都是最后一道防线（RD17）。</li>
+</ol>
+<h2 id="六、示例代码-实操步骤"><a href="#六、示例代码-实操步骤" class="headerlink" title="六、示例代码&#x2F;实操步骤"></a>六、示例代码&#x2F;实操步骤</h2><pre class="line-numbers language-bash" data-language="bash"><code class="language-bash"><span class="token comment"># 判断「装不装得下」——看真实内存与碎片</span>
+<span class="token number">127.0</span>.0.1:637<span class="token operator"><span class="token file-descriptor important">9</span>></span> INFO memory
+<span class="token comment"># used_memory_human:12.50G</span>
+<span class="token comment"># used_memory_peak_human:15.20G          ← 峰值才是参考</span>
+<span class="token comment"># mem_fragmentation_ratio:1.35           ← 碎片率偏高</span>
+
+<span class="token comment"># 判断「写得动吗」——看单主写入压力</span>
+<span class="token number">127.0</span>.0.1:637<span class="token operator"><span class="token file-descriptor important">9</span>></span> INFO stats
+<span class="token comment"># instantaneous_ops_per_sec:45000        ← 单主当前 QPS</span>
+<span class="token comment"># total_net_input_bytes:...</span>
+
+<span class="token comment"># 判断「网络是否打满」——看复制流量</span>
+<span class="token number">127.0</span>.0.1:637<span class="token operator"><span class="token file-descriptor important">9</span>></span> INFO replication
+<span class="token comment"># master_repl_offset:987654321</span>
+<span class="token comment"># slave0:...,lag=0</span>
+
+<span class="token comment"># 判断「切换要不要人」——看是否已有 Sentinel</span>
+<span class="token number">127.0</span>.0.1:2637<span class="token operator"><span class="token file-descriptor important">9</span>></span> SENTINEL masters
+<span class="token comment"># 有输出 → 已具备自动切换能力</span>
+
+<span class="token comment"># 判断「是否已在 Cluster」</span>
+<span class="token number">127.0</span>.0.1:637<span class="token operator"><span class="token file-descriptor important">9</span>></span> INFO cluster
+<span class="token comment"># cluster_enabled:0                      ← 0 表示单机/主从/Sentinel 形态</span>
+
+<span class="token comment"># 典型结论写法（技术方案里的三句话）</span>
+<span class="token comment"># 1) 数据 12.5G，峰值 15.2G，单机 32G 可容纳 → 不需要分片</span>
+<span class="token comment"># 2) 单主 QPS 4.5 万，未打满 → 写入不需要水平扩展</span>
+<span class="token comment"># 3) 允许 30 秒内切换完成 → Sentinel 3 节点足够</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<h2 id="七、常见坑（官方明确说明的限制）"><a href="#七、常见坑（官方明确说明的限制）" class="headerlink" title="七、常见坑（官方明确说明的限制）"></a>七、常见坑（官方明确说明的限制）</h2><ol>
+<li><strong>「数据大就上 Cluster」</strong>。容量不是 Cluster 的唯一理由，写入才是；数据大而写不多时，Sentinel + 多从库更省心。</li>
+<li><strong>「上了 Cluster 就高可用」</strong>。Cluster 只解决节点级可用性，业务层的多 key、事务、客户端改造都要自己做。</li>
+<li><strong>Sentinel 与 Cluster 混用</strong>。Cluster 自带故障转移，不需要外面再套 Sentinel；两套机制一起上只会打架。</li>
+<li><strong>忽略「写单点」</strong>。Sentinel 形态下写始终是单点，主库打满时加从库没有帮助。</li>
+<li><strong>不评估客户端改造成本</strong>。Cluster 要求客户端支持重定向，这个改造成本常被漏算。</li>
+<li><strong>不给切换做演练</strong>。无论哪种形态，没演练过的切换等于不存在；用 <code>SENTINEL FAILOVER</code> 或手工 kill 主节点做真实演练。</li>
+<li><strong>忘记「数据可能丢」</strong>。三种形态都是异步复制，切换都可能丢最后一段写入；关键数据必须能补偿。</li>
+<li><strong>忽略监控聚合</strong>。Cluster 下要看「每个节点 + 每段槽」，只看一个节点的 <code>INFO</code> 会漏问题。</li>
+</ol>
+<h3 id="版本差异（8-x-标注）"><a href="#版本差异（8-x-标注）" class="headerlink" title="版本差异（8.x 标注）"></a>版本差异（8.x 标注）</h3><blockquote>
+<p>选型逻辑不随版本变化；8.x 的差异在于许可（AGPLv3&#x2F;SSPL，商业使用需合规评估）与部分集群运维改进。7.4 是可作为「长期稳定主线」的版本，8.x 的新特性按需引入。</p>
+<p>依据：<a target="_blank" rel="noopener" href="https://redis.io/docs/latest/operate/oss_and_stack/management/scaling/">https://redis.io/docs/latest/operate/oss_and_stack/management/scaling/</a>、<a target="_blank" rel="noopener" href="https://redis.io/docs/latest/operate/oss_and_stack/management/sentinel/">https://redis.io/docs/latest/operate/oss_and_stack/management/sentinel/</a></p>
+</blockquote>
+<h2 id="八、课后小结"><a href="#八、课后小结" class="headerlink" title="八、课后小结"></a>八、课后小结</h2><ul>
+<li>Sentinel 解决可用性，Cluster 解决容量与写入水平扩展，两者不是升级关系；</li>
+<li>决策三问：装得下吗 → 写得动吗 → 能接受人工切换吗；</li>
+<li>只有「写入超过单节点」才是 Cluster 的硬需求；</li>
+<li>每种方案都有隐性成本，写进方案才可信；</li>
+<li>Cluster 与 Sentinel 不要混用；</li>
+<li>切换必须演练，异步复制的丢数据窗口必须业务侧兜。</li>
+</ul>
+<h2 id="九、思考题"><a href="#九、思考题" class="headerlink" title="九、思考题"></a>九、思考题</h2><ol>
+<li>数据 300 GB、写入只有 8000 QPS，你会选 Sentinel 还是 Cluster？给出三条理由。</li>
+<li>「数据大就必须 Cluster」错在哪？什么指标才是 Cluster 的判据？</li>
+<li>Sentinel 形态下主库 QPS 打满，加三个从库有用吗？为什么？</li>
+<li>为什么 Cluster 里不需要再部署 Sentinel？如果强行一起上会发生什么？</li>
+<li>三种形态都会丢数据，那「高可用」这个词到底保证了什么？请用一句话精确表述。</li>
+</ol>
+<h2 id="十、官方资料"><a href="#十、官方资料" class="headerlink" title="十、官方资料"></a>十、官方资料</h2><ul>
+<li>Sentinel（可用性方案定位）：<a target="_blank" rel="noopener" href="https://redis.io/docs/latest/operate/oss_and_stack/management/sentinel/">https://redis.io/docs/latest/operate/oss_and_stack/management/sentinel/</a></li>
+<li>Scaling with Redis Cluster（分片与容量扩展）：<a target="_blank" rel="noopener" href="https://redis.io/docs/latest/operate/oss_and_stack/management/scaling/">https://redis.io/docs/latest/operate/oss_and_stack/management/scaling/</a></li>
+<li>Replication（异步复制与数据丢失窗口）：<a target="_blank" rel="noopener" href="https://redis.io/docs/latest/operate/oss_and_stack/management/replication/">https://redis.io/docs/latest/operate/oss_and_stack/management/replication/</a></li>
+<li>Cluster specification（一致性保证的边界）：<a target="_blank" rel="noopener" href="https://redis.io/docs/latest/operate/oss_and_stack/reference/cluster-spec/">https://redis.io/docs/latest/operate/oss_and_stack/reference/cluster-spec/</a></li>
+<li>INFO（memory &#x2F; stats &#x2F; cluster 字段）：<a target="_blank" rel="noopener" href="https://redis.io/docs/latest/commands/info/">https://redis.io/docs/latest/commands/info/</a></li>
+</ul>
+<p>上一篇：<a href="/2023/01/14/database/redis/redis-24-cluster-limits/">RD24 Cluster 的限制与运维边界</a> ｜ 下一篇：<a href="/2023/01/16/database/redis/redis-26-sds/">RD26 SDS 与 redisObject</a> ｜ <a href="/2022/12/21/database/redis/redis-0-series-index/">总目录</a></p>
+</div>
+
+  <div class="mb-foot">
+    <a href="/phone/">返回手机首页</a>
+    <a href="/phone/tags/">星迹索引</a>
+  </div>
+</div>
+
+
+<script>
+  /* 作用：懒加载本地 mermaid 库；无 mermaid 代码块时不加载 */
+  function loadLocalMermaid(){
+    return new Promise(function(resolve, reject){
+      if(window.mermaid) return resolve(window.mermaid);
+      var s = document.createElement('script');
+      s.src = '/js/third-party/mermaid/mermaid.min.js?v=10';
+      s.onload = function(){ resolve(window.mermaid); };
+      s.onerror = function(){ reject(new Error('mermaid local load failed')); };
+      document.head.appendChild(s);
+    });
+  }
+
+  /* 作用：把 ```mermaid 代码块替换成 SVG 图（手机端字号略小、图可横向滚动） */
+  async function renderMermaidDiagram(){
+    var blocks = document.querySelectorAll('pre[class*="language-mermaid"]');
+    if(!blocks.length) return;
+    var mermaid;
+    try { mermaid = await loadLocalMermaid(); }
+    catch(e){ console.warn('[mermaid] 本地库加载失败：', e); return; }
+
+    mermaid.initialize({
+      startOnLoad: false,
+      theme: 'base',
+      themeVariables: {
+        darkMode: true,
+        background: 'transparent',
+        fontFamily: '"Microsoft YaHei", "PingFang SC", "Segoe UI", sans-serif',
+        fontSize: '12px',
+        primaryColor: '#062f3d',
+        primaryTextColor: '#d6f6ff',
+        primaryBorderColor: '#00eeff',
+        secondaryColor: '#04222d',
+        tertiaryColor: '#04222d',
+        mainBkg: '#062f3d',
+        nodeBorder: '#00eeff',
+        clusterBkg: '#02161f',
+        clusterBorder: '#00eeff55',
+        lineColor: '#00eeff',
+        textColor: '#c0e8ff',
+        edgeLabelBackground: '#02161f'
+      },
+      flowchart: { curve: 'basis', useMaxWidth: false, htmlLabels: false, nodeSpacing: 30, rankSpacing: 40, padding: 10 }
+    });
+
+    var targets = [];
+    blocks.forEach(function(el){
+      var codeEl = el.querySelector('code');
+      if(!codeEl) return;
+      var div = document.createElement('div');
+      div.className = 'mermaid';
+      div.textContent = codeEl.textContent;
+      el.parentNode.replaceChild(div, el);
+      targets.push(div);
+    });
+    if(!targets.length) return;
+    try { await mermaid.run({ nodes: targets }); }
+    catch(e){ console.warn('[mermaid] 渲染失败：', e); }
+  }
+  /* 作用：多次触发兜底（延迟重试 + DOM 变化），防止某次时机没跑到导致图表留在代码块 */
+  var mmBusy = false;
+  function scheduleMermaid(){
+    if(mmBusy) return;
+    mmBusy = true;
+    renderMermaidDiagram().then(function(){ mmBusy = false; }, function(){ mmBusy = false; });
+  }
+  scheduleMermaid();
+  window.addEventListener('load', scheduleMermaid);
+  [1000, 3000, 8000].forEach(function(ms){ setTimeout(scheduleMermaid, ms); });
+  if(document.readyState !== 'loading') scheduleMermaid();
+  if(window.MutationObserver){
+    var mmTimer = null;
+    var mmObserver = new MutationObserver(function(){
+      clearTimeout(mmTimer);
+      mmTimer = setTimeout(scheduleMermaid, 400);
+    });
+    mmObserver.observe(document.querySelector('.mb-article') || document.body, { childList: true, subtree: true });
+  }
+</script>
+</body>
+</html>

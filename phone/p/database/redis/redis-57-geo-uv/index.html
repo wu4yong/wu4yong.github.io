@@ -1,0 +1,405 @@
+<!--
+  ============================================
+  手机端 · 文章原文页
+  文件：phone/post.njk
+  适用终端：手机端（路由 /phone/p/<slug>/，由 scripts/phone-routes.js 生成）
+  作用：手机阅读单篇文章；单列布局、无侧栏无雷达，替代电脑端 post.njk
+        数据由生成期算好：page.item = { title, dateStr, content, cats, tags }
+  样式依赖：source/css/theme/phone/common.css、source/css/theme/phone/list.css
+  组件依赖：phone/_components/Particles.njk
+  最后修改：2026-11-11
+  ============================================
+-->
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="color-scheme" content="dark">
+  <meta name="theme-color" content="#020817">
+  <!-- 首帧兜底：浏览器默认画布是白的，样式未解析前会闪一下白。这条规则先锁死深空底色 -->
+  <style>html{background-color:#020817}</style>
+  <title>redis-附近商户、签到与 UV - 时空秘境</title>
+  <!-- 手机端样式：基础 + 列表/正文，外链引入（源文件 source/css/theme/phone/） -->
+  <link rel="stylesheet" href="/css/theme/phone/common.css">
+  <link rel="stylesheet" href="/css/theme/phone/list.css">
+<meta name="generator" content="Hexo 8.1.2"></head>
+<body>
+<div class="mb-shell">
+  <!--
+  ============================================
+  手机端星空粒子组件
+  文件：Particles.njk
+  适用终端：手机端
+  作用：Particles.njk 的手机端副本（nunjucks 子目录 include 取不到上级）
+        参数与电脑端 _components/Particles.njk 保持一致：
+        粒子 95 / 连线 118px / opacity 0.32，外加星座层与零星闪烁层
+  最后修改：2026-11-12
+  ============================================
+--><!-- z-index 必须是 0：负层级会被 body 不透明背景盖住，粒子在跑却看不见 -->
+<div id="particles" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 0; pointer-events: none;"></div>
+<!-- 星座层（与首页同一套：随机零星散布星座图形 + 偶尔闪烁的小星） -->
+<div id="constellations" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 1; pointer-events: none;" aria-hidden="true"></div>
+<script src="/js/particles.min.js"></script>
+<script>
+particlesJS("particles", {
+  particles: {
+    number: {
+      value: 95,
+      density: {
+        enable: true,
+        value_area: 800
+      }
+    },
+    color: {
+      value: "#00eeff"
+    },
+    shape: {
+      type: "circle",
+      stroke: {
+        width: 0,
+        color: "#000000"
+      }
+    },
+    opacity: {
+      value: 0.6,
+      random: true,
+      anim: {
+        enable: true,
+        speed: 0.5,
+        opacity_min: 0.1,
+        sync: false
+      }
+    },
+    size: {
+      value: 3,
+      random: true,
+      anim: {
+        enable: true,
+        speed: 2,
+        size_min: 0.1,
+        sync: false
+      }
+    },
+    line_linked: {
+      enable: true,
+      distance: 118,
+      color: "#00eeff",
+      opacity: 0.32,
+      width: 1
+    },
+    move: {
+      enable: true,
+      speed: 0.8,
+      direction: "none",
+      random: true,
+      straight: false,
+      out_mode: "out",
+      bounce: false,
+      attract: {
+        enable: true,
+        rotateX: 600,
+        rotateY: 1200
+      }
+    }
+  },
+  interactivity: {
+    detect_on: "canvas",
+    events: {
+      onhover: {
+        enable: true,
+        mode: "grab"       // 手指按住时粒子聚集
+      },
+      onclick: {
+        enable: true,
+        mode: "push"       // 点击时产生新粒子
+      },
+      resize: true
+    },
+    modes: {
+      grab: {
+        distance: 200,
+        line_linked: {
+          opacity: 1
+        }
+      },
+      push: {
+        particles_nb: 6
+      }
+    }
+  },
+  retina_detect: true
+});
+</script>
+<!-- 星座 + 零星闪烁层：与电脑端共用同一份绘制脚本 -->
+<script src="/js/theme/home/starfield.js"></script>
+
+
+  <div class="mb-top">
+    <a class="mb-back" href="/phone/">← 返回手机首页</a>
+    <span class="mb-sub" style="margin:0">2023-02-16</span>
+  </div>
+
+  <h1 class="mb-title">redis-附近商户、签到与 UV</h1>
+  <div class="mb-sub">
+    分类：database · redis
+     ｜ 标签：Redis · 系统课 · 实战
+  </div>
+
+  <div class="mb-article"><div class="essay-banner essay-database"></div>
+
+<h1 id="附近商户、签到与-UV"><a href="#附近商户、签到与-UV" class="headerlink" title="附近商户、签到与 UV"></a>附近商户、签到与 UV</h1><p><img src="https://wu4yong.github.io/starry-images/assets/img/redis/rd-57-geo-uv.svg" alt="GEO、Bitmap 签到、HyperLogLog UV 三种结构"></p>
+<p><em>三个典型业务场景各自对应的数据结构与坑｜依据 Redis 7.4 官方文档自绘</em></p>
+<h2 id="一、学习目标"><a href="#一、学习目标" class="headerlink" title="一、学习目标"></a>一、学习目标</h2><p>学完这一讲，你能做到：</p>
+<ol>
+<li>用 <code>GEOADD</code> + <code>GEOSEARCH</code> 做「附近的商户」，并说清坐标顺序；</li>
+<li>用 <code>SETBIT</code> 做签到、<code>BITCOUNT</code> 统计当日人数，并估算位图内存；</li>
+<li>用 <code>PFADD</code> &#x2F; <code>PFCOUNT</code> 做 UV 统计，说清 0.81% 误差意味着什么。</li>
+</ol>
+<h2 id="二、前置知识"><a href="#二、前置知识" class="headerlink" title="二、前置知识"></a>二、前置知识</h2><p>RD09（ZSet，GEO 的底层）、RD11（Bitmap 与 HLL 入门）、RD12（TTL 清理）。这一讲是系列最后一讲，把「结构选型」落到三个具体业务上。</p>
+<h2 id="三、理论讲解（官方定义）"><a href="#三、理论讲解（官方定义）" class="headerlink" title="三、理论讲解（官方定义）"></a>三、理论讲解（官方定义）</h2><p><strong>GEO</strong> 的官方说明（原文要点）：</p>
+<blockquote>
+<p>Redis GEO commands … store longitude&#x2F;latitude pairs in a sorted set … <code>GEOADD</code> adds members, <code>GEOSEARCH</code> queries within a radius or box … the underlying representation uses a 52-bit geohash integer score.</p>
+<p>—— <a target="_blank" rel="noopener" href="https://redis.io/docs/latest/commands/geoadd/">https://redis.io/docs/latest/commands/geoadd/</a></p>
+</blockquote>
+<p>两点要注意：<strong>参数顺序是「经度、纬度、成员」</strong>（longitude first）；底层是 ZSet，所以 GEO key 也能用 ZSet 命令，但不要混用（会破坏 score 语义）。</p>
+<p><strong>HyperLogLog</strong> 的官方说明（原文要点）：</p>
+<blockquote>
+<p>HyperLogLog is a probabilistic data structure used to estimate the cardinality of a set … standard error is 0.81% … the maximum memory used is about 12 KB per key.</p>
+<p>—— <a target="_blank" rel="noopener" href="https://redis.io/docs/latest/commands/pfadd/">https://redis.io/docs/latest/commands/pfadd/</a></p>
+</blockquote>
+<p>「0.81% 误差」意味着：真实 UV 100 万时，估计值可能差 ±8 千。用于「看趋势、算大盘」完全够，用于「精确对账、算钱」不行。</p>
+<p><strong>Bitmap</strong> 的官方说明（原文要点）：</p>
+<blockquote>
+<p><code>SETBIT key offset value</code> … bit operations on strings … offsets are counted from 0.</p>
+<p>—— <a target="_blank" rel="noopener" href="https://redis.io/docs/latest/commands/setbit/">https://redis.io/docs/latest/commands/setbit/</a></p>
+</blockquote>
+<p>位图的内存 &#x3D; 最大 offset &#x2F; 8 字节。用用户 ID 做 offset，如果 ID 是 10 亿级，位图会非常稀疏且非常大。</p>
+<h2 id="四、原理拆解"><a href="#四、原理拆解" class="headerlink" title="四、原理拆解"></a>四、原理拆解</h2><h3 id="1-GEO：底层就是-ZSet"><a href="#1-GEO：底层就是-ZSet" class="headerlink" title="1. GEO：底层就是 ZSet"></a>1. GEO：底层就是 ZSet</h3><pre class="line-numbers language-none"><code class="language-none">GEOADD shop:city 104.06 30.67 shop_1     # 经度 104.06，纬度 30.67
+GEOSEARCH shop:city FROMMEMBER shop_1 BYRADIUS 1 km ASC COUNT 20<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span></span></code></pre>
+
+<ul>
+<li><code>FROMMEMBER</code> 以某个已存在成员为圆心，<code>FROMLONLAT</code> 用坐标；</li>
+<li><code>BYRADIUS</code> 半径 &#x2F; <code>BYBOX</code> 矩形；</li>
+<li>返回的是「按距离排序的成员列表」，距离要用 <code>GEODIST</code> 单独取。</li>
+</ul>
+<p><strong>坑的根源</strong>：把经纬度写反。写反不会报错（只要数值在合法范围内），但结果会跑到地球另一端。</p>
+<h3 id="2-签到：Bitmap-的本质是「按天分-key」"><a href="#2-签到：Bitmap-的本质是「按天分-key」" class="headerlink" title="2. 签到：Bitmap 的本质是「按天分 key」"></a>2. 签到：Bitmap 的本质是「按天分 key」</h3><pre class="line-numbers language-none"><code class="language-none">SETBIT sign:20230216 1001 1      # 用户 1001 今天签到
+GETBIT sign:20230216 1001        # 是否已签到
+BITCOUNT sign:20230216           # 今天签到人数<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span></span></code></pre>
+
+<ul>
+<li>一天一个 key，<code>EXPIRE</code> 让它自动过期；</li>
+<li><code>BITCOUNT</code> 是 O(N) 但 N 是位图字节数，百万级用户也就百来 KB，很快；</li>
+<li><strong>offset 用用户 ID</strong> 的前提是 ID 连续且量级可控；ID 稀疏时改用「分配序号」或改用 SET。</li>
+</ul>
+<h3 id="3-UV：HyperLogLog-只给「数量」，不给「是谁」"><a href="#3-UV：HyperLogLog-只给「数量」，不给「是谁」" class="headerlink" title="3. UV：HyperLogLog 只给「数量」，不给「是谁」"></a>3. UV：HyperLogLog 只给「数量」，不给「是谁」</h3><pre class="line-numbers language-none"><code class="language-none">PFADD uv:20230216 u1001 u1002 u1003
+PFCOUNT uv:20230216              # 近似基数<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span></span></code></pre>
+
+<ul>
+<li>内存固定约 12KB，跟用户规模无关——这是它最大的价值；</li>
+<li>不能删元素、不能列出成员；</li>
+<li><code>PFMERGE</code> 可以合并多个 HLL（比如合并一周的 UV），但合并也是近似。</li>
+</ul>
+<h3 id="4-三个结构的选择逻辑"><a href="#4-三个结构的选择逻辑" class="headerlink" title="4. 三个结构的选择逻辑"></a>4. 三个结构的选择逻辑</h3><table>
+<thead>
+<tr>
+<th>需求</th>
+<th>结构</th>
+<th>为什么</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>按距离排序找商户</td>
+<td>GEO（ZSet）</td>
+<td>天然有序 + 半径查询</td>
+</tr>
+<tr>
+<td>今天谁签到了（要精确名单）</td>
+<td>Bitmap &#x2F; Set</td>
+<td>需要精确到人</td>
+</tr>
+<tr>
+<td>今天来了多少人（只要数量）</td>
+<td>HyperLogLog</td>
+<td>内存固定、误差可接受</td>
+</tr>
+</tbody></table>
+<h2 id="五、场景说明"><a href="#五、场景说明" class="headerlink" title="五、场景说明"></a>五、场景说明</h2><ol>
+<li><strong>本地生活</strong>：GEO 找附近商户，配合分页与业务过滤；</li>
+<li><strong>签到打卡</strong>：Bitmap 按天分 key，连续签到天数另用 HASH 或计数器维护；</li>
+<li><strong>内容 UV &#x2F; 大盘统计</strong>：HLL 按天分 key，<code>PFMERGE</code> 汇总周&#x2F;月；</li>
+<li><strong>不适合</strong>：要求「精确去重名单」的抽奖——必须用 Set&#x2F;Bitmap，HLL 给不出名单。</li>
+</ol>
+<h2 id="六、示例代码-实操步骤"><a href="#六、示例代码-实操步骤" class="headerlink" title="六、示例代码&#x2F;实操步骤"></a>六、示例代码&#x2F;实操步骤</h2><pre class="line-numbers language-bash" data-language="bash"><code class="language-bash"><span class="token comment"># 1. GEO：添加三家商户（经度在前，纬度在后）</span>
+<span class="token number">127.0</span>.0.1:637<span class="token operator"><span class="token file-descriptor important">9</span>></span> GEOADD shop:leshan <span class="token number">103.76</span> <span class="token number">29.55</span> shop_1
+<span class="token punctuation">(</span>integer<span class="token punctuation">)</span> <span class="token number">1</span>
+<span class="token number">127.0</span>.0.1:637<span class="token operator"><span class="token file-descriptor important">9</span>></span> GEOADD shop:leshan <span class="token number">103.77</span> <span class="token number">29.56</span> shop_2 <span class="token number">103.75</span> <span class="token number">29.54</span> shop_3
+<span class="token punctuation">(</span>integer<span class="token punctuation">)</span> <span class="token number">2</span>
+
+<span class="token comment"># 2. 查附近 2 公里内的商户，按距离升序</span>
+<span class="token number">127.0</span>.0.1:637<span class="token operator"><span class="token file-descriptor important">9</span>></span> GEOSEARCH shop:leshan FROMMEMBER shop_1 BYRADIUS <span class="token number">2</span> km ASC COUNT <span class="token number">10</span>
+<span class="token number">1</span><span class="token punctuation">)</span> <span class="token string">"shop_1"</span>
+<span class="token number">2</span><span class="token punctuation">)</span> <span class="token string">"shop_2"</span>
+
+<span class="token comment"># 3. 用坐标查（不依赖已有成员）</span>
+<span class="token number">127.0</span>.0.1:637<span class="token operator"><span class="token file-descriptor important">9</span>></span> GEOSEARCH shop:leshan FROMLONLAT <span class="token number">103.76</span> <span class="token number">29.55</span> BYBOX <span class="token number">4</span> <span class="token number">4</span> km ASC
+
+<span class="token comment"># 4. 两地距离（单位可选 m/km/mi/ft）</span>
+<span class="token number">127.0</span>.0.1:637<span class="token operator"><span class="token file-descriptor important">9</span>></span> GEODIST shop:leshan shop_1 shop_2 km
+<span class="token string">"1.4142"</span>
+
+<span class="token comment"># 5. 签到：位图按天分 key</span>
+<span class="token number">127.0</span>.0.1:637<span class="token operator"><span class="token file-descriptor important">9</span>></span> SETBIT sign:20230216 <span class="token number">1001</span> <span class="token number">1</span>
+<span class="token punctuation">(</span>integer<span class="token punctuation">)</span> <span class="token number">0</span>                    <span class="token comment"># 返回该位原来的值</span>
+<span class="token number">127.0</span>.0.1:637<span class="token operator"><span class="token file-descriptor important">9</span>></span> SETBIT sign:20230216 <span class="token number">1002</span> <span class="token number">1</span>
+<span class="token punctuation">(</span>integer<span class="token punctuation">)</span> <span class="token number">0</span>
+<span class="token number">127.0</span>.0.1:637<span class="token operator"><span class="token file-descriptor important">9</span>></span> GETBIT sign:20230216 <span class="token number">1001</span>
+<span class="token punctuation">(</span>integer<span class="token punctuation">)</span> <span class="token number">1</span>
+<span class="token number">127.0</span>.0.1:637<span class="token operator"><span class="token file-descriptor important">9</span>></span> BITCOUNT sign:20230216
+<span class="token punctuation">(</span>integer<span class="token punctuation">)</span> <span class="token number">2</span>
+<span class="token number">127.0</span>.0.1:637<span class="token operator"><span class="token file-descriptor important">9</span>></span> EXPIRE sign:20230216 <span class="token number">2592000</span>
+<span class="token punctuation">(</span>integer<span class="token punctuation">)</span> <span class="token number">1</span>                    <span class="token comment"># 保留 30 天后自动清理</span>
+
+<span class="token comment"># 6. UV：HyperLogLog</span>
+<span class="token number">127.0</span>.0.1:637<span class="token operator"><span class="token file-descriptor important">9</span>></span> PFADD uv:20230216 u1001 u1002 u1003
+<span class="token punctuation">(</span>integer<span class="token punctuation">)</span> <span class="token number">1</span>                    <span class="token comment"># 1 表示基数发生变化</span>
+<span class="token number">127.0</span>.0.1:637<span class="token operator"><span class="token file-descriptor important">9</span>></span> PFCOUNT uv:20230216
+<span class="token punctuation">(</span>integer<span class="token punctuation">)</span> <span class="token number">3</span>
+<span class="token number">127.0</span>.0.1:637<span class="token operator"><span class="token file-descriptor important">9</span>></span> PFADD uv:20230216 u1001
+<span class="token punctuation">(</span>integer<span class="token punctuation">)</span> <span class="token number">0</span>                    <span class="token comment"># 已存在，基数不变</span>
+
+<span class="token comment"># 7. 合并一周 UV（近似，不精确）</span>
+<span class="token number">127.0</span>.0.1:637<span class="token operator"><span class="token file-descriptor important">9</span>></span> PFMERGE uv:week uv:20230213 uv:20230214 uv:20230215 uv:20230216
+<span class="token number">127.0</span>.0.1:637<span class="token operator"><span class="token file-descriptor important">9</span>></span> PFCOUNT uv:week
+
+<span class="token comment"># 8. 观察内存（HLL 应稳定在 12KB 左右）</span>
+<span class="token number">127.0</span>.0.1:637<span class="token operator"><span class="token file-descriptor important">9</span>></span> MEMORY USAGE uv:20230216
+<span class="token punctuation">(</span>integer<span class="token punctuation">)</span> <span class="token number">12336</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<h2 id="七、常见坑（官方明确说明的限制）"><a href="#七、常见坑（官方明确说明的限制）" class="headerlink" title="七、常见坑（官方明确说明的限制）"></a>七、常见坑（官方明确说明的限制）</h2><ol>
+<li><strong><code>GEOADD</code> 经纬度写反</strong>。不报错，但结果在地球另一端；记住「经度在前」。</li>
+<li><strong>对 GEO key 用普通 ZSet 命令</strong>。会破坏 score 语义，导致距离查询失效。</li>
+<li><strong>Bitmap 用超大用户 ID 做 offset</strong>。位图稀疏且巨大，内存按「最大 offset &#x2F; 8」算。</li>
+<li><strong>签到 key 不设 TTL</strong>。一年后你会有一堆没人管的日 key。</li>
+<li><strong>以为 HLL 能列出成员</strong>。它只给基数，不给名单（官方明确是概率型结构）。</li>
+<li><strong>用 HLL 做需要精确的业务</strong>。0.81% 误差在百万级就是几千人的偏差，算钱不能用。</li>
+<li><strong><code>PFADD</code> 返回值误解</strong>。返回 1 只表示「基数可能变化」，不是「新增了一个用户」。</li>
+<li><strong><code>KEYS sign:*</code> 做清理</strong>。O(N) 阻塞主线程，必须用 <code>SCAN</code> 或依赖 TTL。</li>
+</ol>
+<h3 id="版本差异（8-x-标注）"><a href="#版本差异（8-x-标注）" class="headerlink" title="版本差异（8.x 标注）"></a>版本差异（8.x 标注）</h3><blockquote>
+<p>GEO 命令（<code>GEOSEARCH</code> 自 6.2 取代 <code>GEORADIUS</code>）在 7.4 与 8.x 语义一致；Bitmap 与 HLL 的命令与误差说明未变。做「附近」功能优先用 <code>GEOSEARCH</code>，<code>GEORADIUS</code> 已被标记为弃用方向。</p>
+<p>依据：<a target="_blank" rel="noopener" href="https://redis.io/docs/latest/commands/geosearch/">https://redis.io/docs/latest/commands/geosearch/</a></p>
+</blockquote>
+<h2 id="八、课后小结"><a href="#八、课后小结" class="headerlink" title="八、课后小结"></a>八、课后小结</h2><ul>
+<li>GEO 底层是 ZSet + 52 位 geohash，参数顺序「经度、纬度、成员」；</li>
+<li>签到用 Bitmap 按天分 key，精确到人，注意 offset 量级；</li>
+<li>UV 用 HyperLogLog，12KB 固定内存、0.81% 误差，只给数量；</li>
+<li>三个结构都按日期分 key + TTL，避免历史 key 堆积；</li>
+<li>要精确名单就别用 HLL。</li>
+</ul>
+<h2 id="九、思考题"><a href="#九、思考题" class="headerlink" title="九、思考题"></a>九、思考题</h2><ol>
+<li>用户 ID 最大 10 亿，用 Bitmap 做签到，位图多大？你会怎么优化？</li>
+<li><code>GEOSEARCH</code> 返回的顺序由什么决定？要按距离排序需要加什么参数？</li>
+<li>HLL 估计 100 万 UV，误差范围是多少？什么业务不能接受？</li>
+<li>一周 UV 用 <code>PFMERGE</code> 合并，与「把一周数据都 <code>PFADD</code> 进一个 key」等价吗？</li>
+<li>三个场景的 key 都会按日期分，你打算怎么设计清理策略？</li>
+</ol>
+<h2 id="十、官方资料"><a href="#十、官方资料" class="headerlink" title="十、官方资料"></a>十、官方资料</h2><ul>
+<li>GEOADD &#x2F; GEOSEARCH &#x2F; GEODIST：<a target="_blank" rel="noopener" href="https://redis.io/docs/latest/commands/geosearch/">https://redis.io/docs/latest/commands/geosearch/</a></li>
+<li>SETBIT &#x2F; GETBIT &#x2F; BITCOUNT：<a target="_blank" rel="noopener" href="https://redis.io/docs/latest/commands/setbit/">https://redis.io/docs/latest/commands/setbit/</a></li>
+<li>PFADD &#x2F; PFCOUNT &#x2F; PFMERGE：<a target="_blank" rel="noopener" href="https://redis.io/docs/latest/commands/pfadd/">https://redis.io/docs/latest/commands/pfadd/</a></li>
+<li>Bitmaps 数据类型说明：<a target="_blank" rel="noopener" href="https://redis.io/docs/latest/develop/data-types/bitmaps/">https://redis.io/docs/latest/develop/data-types/bitmaps/</a></li>
+<li>HyperLogLog 误差与内存说明：<a target="_blank" rel="noopener" href="https://redis.io/docs/latest/develop/data-types/probabilistic/hyperloglogs/">https://redis.io/docs/latest/develop/data-types/probabilistic/hyperloglogs/</a></li>
+</ul>
+<p>上一篇：<a href="/2023/02/15/database/redis/redis-56-feed/">RD56 关注与 Feed</a> ｜ 下一篇：<a href="/2022/12/21/database/redis/redis-0-series-index/">总目录：从第 1 讲重新读</a> ｜ <a href="/2022/12/21/database/redis/redis-0-series-index/">总目录</a></p>
+</div>
+
+  <div class="mb-foot">
+    <a href="/phone/">返回手机首页</a>
+    <a href="/phone/tags/">星迹索引</a>
+  </div>
+</div>
+
+
+<script>
+  /* 作用：懒加载本地 mermaid 库；无 mermaid 代码块时不加载 */
+  function loadLocalMermaid(){
+    return new Promise(function(resolve, reject){
+      if(window.mermaid) return resolve(window.mermaid);
+      var s = document.createElement('script');
+      s.src = '/js/third-party/mermaid/mermaid.min.js?v=10';
+      s.onload = function(){ resolve(window.mermaid); };
+      s.onerror = function(){ reject(new Error('mermaid local load failed')); };
+      document.head.appendChild(s);
+    });
+  }
+
+  /* 作用：把 ```mermaid 代码块替换成 SVG 图（手机端字号略小、图可横向滚动） */
+  async function renderMermaidDiagram(){
+    var blocks = document.querySelectorAll('pre[class*="language-mermaid"]');
+    if(!blocks.length) return;
+    var mermaid;
+    try { mermaid = await loadLocalMermaid(); }
+    catch(e){ console.warn('[mermaid] 本地库加载失败：', e); return; }
+
+    mermaid.initialize({
+      startOnLoad: false,
+      theme: 'base',
+      themeVariables: {
+        darkMode: true,
+        background: 'transparent',
+        fontFamily: '"Microsoft YaHei", "PingFang SC", "Segoe UI", sans-serif',
+        fontSize: '12px',
+        primaryColor: '#062f3d',
+        primaryTextColor: '#d6f6ff',
+        primaryBorderColor: '#00eeff',
+        secondaryColor: '#04222d',
+        tertiaryColor: '#04222d',
+        mainBkg: '#062f3d',
+        nodeBorder: '#00eeff',
+        clusterBkg: '#02161f',
+        clusterBorder: '#00eeff55',
+        lineColor: '#00eeff',
+        textColor: '#c0e8ff',
+        edgeLabelBackground: '#02161f'
+      },
+      flowchart: { curve: 'basis', useMaxWidth: false, htmlLabels: false, nodeSpacing: 30, rankSpacing: 40, padding: 10 }
+    });
+
+    var targets = [];
+    blocks.forEach(function(el){
+      var codeEl = el.querySelector('code');
+      if(!codeEl) return;
+      var div = document.createElement('div');
+      div.className = 'mermaid';
+      div.textContent = codeEl.textContent;
+      el.parentNode.replaceChild(div, el);
+      targets.push(div);
+    });
+    if(!targets.length) return;
+    try { await mermaid.run({ nodes: targets }); }
+    catch(e){ console.warn('[mermaid] 渲染失败：', e); }
+  }
+  /* 作用：多次触发兜底（延迟重试 + DOM 变化），防止某次时机没跑到导致图表留在代码块 */
+  var mmBusy = false;
+  function scheduleMermaid(){
+    if(mmBusy) return;
+    mmBusy = true;
+    renderMermaidDiagram().then(function(){ mmBusy = false; }, function(){ mmBusy = false; });
+  }
+  scheduleMermaid();
+  window.addEventListener('load', scheduleMermaid);
+  [1000, 3000, 8000].forEach(function(ms){ setTimeout(scheduleMermaid, ms); });
+  if(document.readyState !== 'loading') scheduleMermaid();
+  if(window.MutationObserver){
+    var mmTimer = null;
+    var mmObserver = new MutationObserver(function(){
+      clearTimeout(mmTimer);
+      mmTimer = setTimeout(scheduleMermaid, 400);
+    });
+    mmObserver.observe(document.querySelector('.mb-article') || document.body, { childList: true, subtree: true });
+  }
+</script>
+</body>
+</html>

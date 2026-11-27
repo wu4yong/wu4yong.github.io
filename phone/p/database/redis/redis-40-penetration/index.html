@@ -1,0 +1,407 @@
+<!--
+  ============================================
+  手机端 · 文章原文页
+  文件：phone/post.njk
+  适用终端：手机端（路由 /phone/p/<slug>/，由 scripts/phone-routes.js 生成）
+  作用：手机阅读单篇文章；单列布局、无侧栏无雷达，替代电脑端 post.njk
+        数据由生成期算好：page.item = { title, dateStr, content, cats, tags }
+  样式依赖：source/css/theme/phone/common.css、source/css/theme/phone/list.css
+  组件依赖：phone/_components/Particles.njk
+  最后修改：2026-11-11
+  ============================================
+-->
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="color-scheme" content="dark">
+  <meta name="theme-color" content="#020817">
+  <!-- 首帧兜底：浏览器默认画布是白的，样式未解析前会闪一下白。这条规则先锁死深空底色 -->
+  <style>html{background-color:#020817}</style>
+  <title>redis-穿透、击穿与雪崩 - 时空秘境</title>
+  <!-- 手机端样式：基础 + 列表/正文，外链引入（源文件 source/css/theme/phone/） -->
+  <link rel="stylesheet" href="/css/theme/phone/common.css">
+  <link rel="stylesheet" href="/css/theme/phone/list.css">
+<meta name="generator" content="Hexo 8.1.2"></head>
+<body>
+<div class="mb-shell">
+  <!--
+  ============================================
+  手机端星空粒子组件
+  文件：Particles.njk
+  适用终端：手机端
+  作用：Particles.njk 的手机端副本（nunjucks 子目录 include 取不到上级）
+        参数与电脑端 _components/Particles.njk 保持一致：
+        粒子 95 / 连线 118px / opacity 0.32，外加星座层与零星闪烁层
+  最后修改：2026-11-12
+  ============================================
+--><!-- z-index 必须是 0：负层级会被 body 不透明背景盖住，粒子在跑却看不见 -->
+<div id="particles" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 0; pointer-events: none;"></div>
+<!-- 星座层（与首页同一套：随机零星散布星座图形 + 偶尔闪烁的小星） -->
+<div id="constellations" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 1; pointer-events: none;" aria-hidden="true"></div>
+<script src="/js/particles.min.js"></script>
+<script>
+particlesJS("particles", {
+  particles: {
+    number: {
+      value: 95,
+      density: {
+        enable: true,
+        value_area: 800
+      }
+    },
+    color: {
+      value: "#00eeff"
+    },
+    shape: {
+      type: "circle",
+      stroke: {
+        width: 0,
+        color: "#000000"
+      }
+    },
+    opacity: {
+      value: 0.6,
+      random: true,
+      anim: {
+        enable: true,
+        speed: 0.5,
+        opacity_min: 0.1,
+        sync: false
+      }
+    },
+    size: {
+      value: 3,
+      random: true,
+      anim: {
+        enable: true,
+        speed: 2,
+        size_min: 0.1,
+        sync: false
+      }
+    },
+    line_linked: {
+      enable: true,
+      distance: 118,
+      color: "#00eeff",
+      opacity: 0.32,
+      width: 1
+    },
+    move: {
+      enable: true,
+      speed: 0.8,
+      direction: "none",
+      random: true,
+      straight: false,
+      out_mode: "out",
+      bounce: false,
+      attract: {
+        enable: true,
+        rotateX: 600,
+        rotateY: 1200
+      }
+    }
+  },
+  interactivity: {
+    detect_on: "canvas",
+    events: {
+      onhover: {
+        enable: true,
+        mode: "grab"       // 手指按住时粒子聚集
+      },
+      onclick: {
+        enable: true,
+        mode: "push"       // 点击时产生新粒子
+      },
+      resize: true
+    },
+    modes: {
+      grab: {
+        distance: 200,
+        line_linked: {
+          opacity: 1
+        }
+      },
+      push: {
+        particles_nb: 6
+      }
+    }
+  },
+  retina_detect: true
+});
+</script>
+<!-- 星座 + 零星闪烁层：与电脑端共用同一份绘制脚本 -->
+<script src="/js/theme/home/starfield.js"></script>
+
+
+  <div class="mb-top">
+    <a class="mb-back" href="/phone/">← 返回手机首页</a>
+    <span class="mb-sub" style="margin:0">2023-01-30</span>
+  </div>
+
+  <h1 class="mb-title">redis-穿透、击穿与雪崩</h1>
+  <div class="mb-sub">
+    分类：database · redis
+     ｜ 标签：Redis · 缓存 · 系统课
+  </div>
+
+  <div class="mb-article"><div class="essay-banner essay-database"></div>
+
+<h1 id="穿透、击穿与雪崩"><a href="#穿透、击穿与雪崩" class="headerlink" title="穿透、击穿与雪崩"></a>穿透、击穿与雪崩</h1><p><img src="https://wu4yong.github.io/starry-images/assets/img/redis/rd-40-penetration.svg" alt="穿透、击穿、雪崩的根因与解法"></p>
+<p><em>三种缓存异常现象的根因、典型来源与对应解法｜依据 Redis 7.4 官方文档自绘</em></p>
+<h2 id="一、学习目标"><a href="#一、学习目标" class="headerlink" title="一、学习目标"></a>一、学习目标</h2><p>学完这一讲，你能做到：</p>
+<ol>
+<li>用一句话区分穿透、击穿、雪崩，并说出各自的根因；</li>
+<li>为每种现象给出至少两种解法，并说清解法之间的取舍；</li>
+<li>用 <code>INFO stats</code> 里的 <code>keyspace_misses</code> 判断线上到底发生的是哪一种。</li>
+</ol>
+<h2 id="二、前置知识"><a href="#二、前置知识" class="headerlink" title="二、前置知识"></a>二、前置知识</h2><p>RD39（缓存模式）、RD12（过期与淘汰）。这一讲是 M7 里「问题诊断」的第一讲：这三个名词经常被混用，但它们对应的根因、监控指标和解法完全不同。</p>
+<h2 id="三、理论讲解（官方定义）"><a href="#三、理论讲解（官方定义）" class="headerlink" title="三、理论讲解（官方定义）"></a>三、理论讲解（官方定义）</h2><p>这三个概念都不是 Redis 官方文档定义的术语，而是缓存工程的通用命名。Redis 官方文档能提供的支撑是<strong>机制层面</strong>的说明：</p>
+<blockquote>
+<p><strong>过期删除</strong>：Redis 采用「惰性删除 + 定期抽样删除」，key 到期后并不保证立刻消失，而是下次访问时发现过期才删，或被定期任务抽样删掉。</p>
+<p>—— <a target="_blank" rel="noopener" href="https://redis.io/docs/latest/develop/reference/keyspace-notifications/">https://redis.io/docs/latest/develop/reference/keyspace-notifications/</a>（keyspace 事件与过期相关说明）</p>
+<p><strong>淘汰</strong>：当内存达到 <code>maxmemory</code> 时，按 <code>maxmemory-policy</code> 淘汰 key。</p>
+<p>—— <a target="_blank" rel="noopener" href="https://redis.io/docs/latest/develop/reference/eviction/">https://redis.io/docs/latest/develop/reference/eviction/</a></p>
+</blockquote>
+<p>理解这两条，才能明白为什么「同一时刻大批 key 失效」是可能发生的：<strong>过期不是均匀发生的</strong>。</p>
+<p>三个现象的通用定义：</p>
+<ul>
+<li><strong>穿透（penetration）</strong>：请求的 key 在缓存与库里<strong>都不存在</strong>，缓存永远不命中；</li>
+<li><strong>击穿（breakdown）</strong>：<strong>单个热点 key</strong> 失效的瞬间，大量并发同时回源；</li>
+<li><strong>雪崩（avalanche）</strong>：<strong>大批 key 同时失效</strong>，或缓存整体不可用，流量全部压到库上。</li>
+</ul>
+<h2 id="四、原理拆解"><a href="#四、原理拆解" class="headerlink" title="四、原理拆解"></a>四、原理拆解</h2><h3 id="1-穿透为什么发生"><a href="#1-穿透为什么发生" class="headerlink" title="1. 穿透为什么发生"></a>1. 穿透为什么发生</h3><pre class="line-numbers language-none"><code class="language-none">请求 key&#x3D;999999（不存在）
+  → GET 未命中
+  → 查库，库里也没有
+  → 不写缓存（因为没数据可写）
+  → 下次同样的请求，重复上面三步<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<p>它的本质是「<strong>缓存无法缓存「不存在」</strong>」。来源通常是爬虫遍历 ID、攻击者构造随机 key、上游传错参数。</p>
+<h3 id="2-击穿为什么发生"><a href="#2-击穿为什么发生" class="headerlink" title="2. 击穿为什么发生"></a>2. 击穿为什么发生</h3><pre class="line-numbers language-none"><code class="language-none">热点 key 到期（或被人为删除）
+  → 瞬间 N 个并发全部 GET 未命中
+  → N 个请求同时查库<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span></span></code></pre>
+
+<p>关键在于「<strong>N 个请求里只需要 1 个去查库</strong>」，其余应该等它回填。所以解法的核心是「互斥」：让第一个请求去重建，其余等待或读旧值。</p>
+<h3 id="3-雪崩为什么发生"><a href="#3-雪崩为什么发生" class="headerlink" title="3. 雪崩为什么发生"></a>3. 雪崩为什么发生</h3><p>两种触发方式：</p>
+<ul>
+<li><strong>时间性雪崩</strong>：一批 key 在同一时刻被写入、TTL 又相同，于是同一时刻集体过期；</li>
+<li><strong>容量性雪崩</strong>：Redis 实例宕机、主从切换、集群大面积故障，缓存层整体消失。</li>
+</ul>
+<p>前者靠「TTL 加随机抖动 + 分批预热」解决；后者靠「多级缓存 + 熔断限流 + 数据库保护」解决，<strong>不是靠改缓存代码能解决的</strong>。</p>
+<h3 id="4-三种解法的作用边界"><a href="#4-三种解法的作用边界" class="headerlink" title="4. 三种解法的作用边界"></a>4. 三种解法的作用边界</h3><table>
+<thead>
+<tr>
+<th>现象</th>
+<th>首选解法</th>
+<th>为什么有效</th>
+<th>副作用</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>穿透</td>
+<td>空值缓存（短 TTL）</td>
+<td>让「不存在」也变成一个可命中的结果</td>
+<td>占用 key 空间；删除后可能被旧空值挡住</td>
+</tr>
+<tr>
+<td>穿透</td>
+<td>布隆过滤器前置</td>
+<td>不存在的 key 在缓存层之前就被拦下</td>
+<td>有误判率，且不支持删除</td>
+</tr>
+<tr>
+<td>击穿</td>
+<td>互斥重建（<code>SET NX</code>）</td>
+<td>只让一个请求回源</td>
+<td>拿锁的请求挂了会阻塞其他人</td>
+</tr>
+<tr>
+<td>击穿</td>
+<td>逻辑过期</td>
+<td>过期不删数据，只标记，后台异步刷新</td>
+<td>读到的是旧值</td>
+</tr>
+<tr>
+<td>雪崩</td>
+<td>TTL 抖动</td>
+<td>把「同时过期」摊平成「陆续过期」</td>
+<td>只能缓解时间性雪崩</td>
+</tr>
+<tr>
+<td>雪崩</td>
+<td>多级缓存 + 限流</td>
+<td>缓存层缺失时仍有本地缓存与入口保护</td>
+<td>架构复杂度上升</td>
+</tr>
+</tbody></table>
+<h3 id="5-互斥重建的标准写法"><a href="#5-互斥重建的标准写法" class="headerlink" title="5. 互斥重建的标准写法"></a>5. 互斥重建的标准写法</h3><pre class="line-numbers language-bash" data-language="bash"><code class="language-bash"><span class="token comment"># 1. 未命中，先抢锁（锁 key 与被缓存的 key 分开）</span>
+SET lock:user:1001 <span class="token number">1</span> NX PX <span class="token number">5000</span>
+<span class="token comment"># 2. 抢到锁 → 查库 → 回填缓存 → 释放锁</span>
+<span class="token comment"># 3. 没抢到 → 短暂 sleep 后重试 GET（或直接返回降级值）</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span></span></code></pre>
+
+<p>注意第 2 步里「<strong>拿到锁后必须再查一次缓存</strong>」：在你抢锁的时间里，别人可能已经把值写进去了。少了这次二次检查，就是「串行回源」，热点 key 下延迟会明显上升。</p>
+<h2 id="五、场景说明"><a href="#五、场景说明" class="headerlink" title="五、场景说明"></a>五、场景说明</h2><ol>
+<li><strong>商品详情页 ID 遍历攻击</strong>：典型穿透，用空值缓存 + 网关限流；</li>
+<li><strong>首页推荐的聚合 key</strong>：典型击穿，用互斥重建 + 热点 key 不设过期、后台定时刷新；</li>
+<li><strong>大促开场瞬间</strong>：典型时间性雪崩，TTL 加抖动 + 提前预热；</li>
+<li><strong>Redis 集群主从切换的 30 秒</strong>：典型容量性雪崩，靠本地缓存 + 熔断撑过去（RD44、RD47）。</li>
+</ol>
+<h2 id="六、示例代码-实操步骤"><a href="#六、示例代码-实操步骤" class="headerlink" title="六、示例代码&#x2F;实操步骤"></a>六、示例代码&#x2F;实操步骤</h2><pre class="line-numbers language-bash" data-language="bash"><code class="language-bash"><span class="token comment"># 现象一：穿透。查看未命中率</span>
+<span class="token number">127.0</span>.0.1:637<span class="token operator"><span class="token file-descriptor important">9</span>></span> INFO stats
+<span class="token comment"># keyspace_hits:998765</span>
+<span class="token comment"># keyspace_misses:120034        ← 未命中数持续增长，且库里也查不到</span>
+
+<span class="token comment"># 解法 A：空值缓存（短 TTL，避免长期占位）</span>
+<span class="token number">127.0</span>.0.1:637<span class="token operator"><span class="token file-descriptor important">9</span>></span> SET user:999999 <span class="token string">"__NULL__"</span> EX <span class="token number">60</span>
+OK
+
+<span class="token comment"># 解法 B：布隆过滤器（Redis 提供 Bloom 模块；无模块时用 SETBIT 近似）</span>
+<span class="token number">127.0</span>.0.1:637<span class="token operator"><span class="token file-descriptor important">9</span>></span> BF.ADD user_filter <span class="token number">1001</span>
+<span class="token punctuation">(</span>integer<span class="token punctuation">)</span> <span class="token number">1</span>
+<span class="token number">127.0</span>.0.1:637<span class="token operator"><span class="token file-descriptor important">9</span>></span> BF.EXISTS user_filter <span class="token number">999999</span>
+<span class="token punctuation">(</span>integer<span class="token punctuation">)</span> <span class="token number">0</span>                    <span class="token comment"># 一定不存在 → 直接返回，不查库</span>
+
+<span class="token comment"># 现象二：击穿。互斥重建</span>
+<span class="token number">127.0</span>.0.1:637<span class="token operator"><span class="token file-descriptor important">9</span>></span> SET lock:hot:home <span class="token number">1</span> NX PX <span class="token number">5000</span>
+OK                             <span class="token comment"># 抢到锁的唯一请求去查库</span>
+<span class="token comment"># ... 查库、回填 ...</span>
+<span class="token number">127.0</span>.0.1:637<span class="token operator"><span class="token file-descriptor important">9</span>></span> DEL lock:hot:home
+<span class="token punctuation">(</span>integer<span class="token punctuation">)</span> <span class="token number">1</span>
+
+<span class="token comment"># 现象三：雪崩的预防 —— 写入时就给 TTL 加抖动</span>
+<span class="token number">127.0</span>.0.1:637<span class="token operator"><span class="token file-descriptor important">9</span>></span> SET cfg:shop:1 <span class="token string">'...'</span> EX <span class="token number">3600</span>
+<span class="token comment"># 实际代码里 TTL 取 3600 + random(0, 600)，把过期时刻摊开</span>
+
+<span class="token comment"># 观察 key 的生命周期（排查「是不是同时过期」）</span>
+<span class="token number">127.0</span>.0.1:637<span class="token operator"><span class="token file-descriptor important">9</span>></span> TTL cfg:shop:1
+<span class="token punctuation">(</span>integer<span class="token punctuation">)</span> <span class="token number">3598</span>
+<span class="token number">127.0</span>.0.1:637<span class="token operator"><span class="token file-descriptor important">9</span>></span> DBSIZE
+<span class="token punctuation">(</span>integer<span class="token punctuation">)</span> <span class="token number">120345</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<h2 id="七、常见坑（官方明确说明的限制）"><a href="#七、常见坑（官方明确说明的限制）" class="headerlink" title="七、常见坑（官方明确说明的限制）"></a>七、常见坑（官方明确说明的限制）</h2><ol>
+<li><strong>空值缓存不设 TTL 或设太长</strong>。用户在别处创建了这条数据后，缓存里仍是「不存在」，被挡住很久。</li>
+<li><strong>布隆过滤器当「删除」用</strong>。官方 Bloom 模块的过滤器<strong>不支持删除</strong>（只能重建），把已存在的数据删掉后它会持续误判。</li>
+<li><strong>互斥锁没有超时</strong>。持有锁的请求卡死，其他请求全部阻塞，比直接查库更糟。</li>
+<li><strong>拿到锁不二次检查缓存</strong>。退化成串行回源，热点 key 下 P99 飙升。</li>
+<li><strong>以为 <code>EXPIRE</code> 是精确到点失效</strong>。官方机制是惰性 + 定期抽样，<strong>大量 key 同一时刻过期时，删除本身也会占用主线程时间</strong>。</li>
+<li><strong>雪崩只做缓存侧优化</strong>。数据库前的连接池上限、入口限流、熔断才是最后一道防线；缓存侧优化只是把问题延后。</li>
+<li><strong>监控只看命中率不看回源 QPS</strong>。命中率 99% 但总量极大时，1% 的回源也可能打挂库；要看的是「库上的 QPS」。</li>
+<li><strong>热点 key 用「永不过期」但忘了更新</strong>。数据变了没人刷新，缓存里就是永久旧值。</li>
+</ol>
+<h3 id="版本差异（8-x-标注）"><a href="#版本差异（8-x-标注）" class="headerlink" title="版本差异（8.x 标注）"></a>版本差异（8.x 标注）</h3><blockquote>
+<p>Bloom 过滤器属于 Redis Stack &#x2F; RedisBloom 模块能力，不在 Redis 7.4 核心命令集内；8.x 的模块分发方式有调整，但 <code>BF.ADD</code> &#x2F; <code>BF.EXISTS</code> 语义不变。若环境无模块，可用 <code>SETBIT</code>&#x2F;<code>GETBIT</code> 自行实现位图过滤。</p>
+<p>依据：<a target="_blank" rel="noopener" href="https://redis.io/docs/latest/develop/data-types/probabilistic/bloom-filter/">https://redis.io/docs/latest/develop/data-types/probabilistic/bloom-filter/</a></p>
+</blockquote>
+<h2 id="八、课后小结"><a href="#八、课后小结" class="headerlink" title="八、课后小结"></a>八、课后小结</h2><ul>
+<li>穿透 &#x3D; key 根本不存在；击穿 &#x3D; 单个热点 key 失效；雪崩 &#x3D; 大批 key 同时失效或缓存整体不可用；</li>
+<li>穿透靠「空值缓存 + 布隆过滤器 + 参数校验」；</li>
+<li>击穿靠「互斥重建 + 逻辑过期」，锁必须有超时且要二次检查；</li>
+<li>雪崩靠「TTL 抖动 + 预热 + 多级缓存 + 熔断限流」；</li>
+<li>判断线上是哪种，先看 <code>keyspace_misses</code> 与「库上的 QPS」，别看感觉。</li>
+</ul>
+<h2 id="九、思考题"><a href="#九、思考题" class="headerlink" title="九、思考题"></a>九、思考题</h2><ol>
+<li>一个「不存在的 ID」被反复请求，空值缓存和布隆过滤器各自的代价是什么？</li>
+<li>互斥重建时，为什么拿到锁后要再查一次缓存？不查会发生什么？</li>
+<li>逻辑过期读到旧值，业务能接受吗？怎么决定「能」还是「不能」？</li>
+<li>TTL 抖动只能缓解时间性雪崩，容量性雪崩怎么办？</li>
+<li>如果让你给「缓存层不可用」设计一个 30 秒的兜底方案，你会写哪三条？</li>
+</ol>
+<h2 id="十、官方资料"><a href="#十、官方资料" class="headerlink" title="十、官方资料"></a>十、官方资料</h2><ul>
+<li>Eviction policies（<code>maxmemory-policy</code> 与淘汰）：<a target="_blank" rel="noopener" href="https://redis.io/docs/latest/develop/reference/eviction/">https://redis.io/docs/latest/develop/reference/eviction/</a></li>
+<li>Keyspace notifications（过期事件机制与惰性删除说明）：<a target="_blank" rel="noopener" href="https://redis.io/docs/latest/develop/reference/keyspace-notifications/">https://redis.io/docs/latest/develop/reference/keyspace-notifications/</a></li>
+<li>Bloom filter（概率型过滤器，含「不支持删除」说明）：<a target="_blank" rel="noopener" href="https://redis.io/docs/latest/develop/data-types/probabilistic/bloom-filter/">https://redis.io/docs/latest/develop/data-types/probabilistic/bloom-filter/</a></li>
+<li>SET（<code>NX</code>&#x2F;<code>PX</code> 用于互斥重建）：<a target="_blank" rel="noopener" href="https://redis.io/docs/latest/commands/set/">https://redis.io/docs/latest/commands/set/</a></li>
+<li>INFO（<code>stats</code> 中的命中&#x2F;未命中指标）：<a target="_blank" rel="noopener" href="https://redis.io/docs/latest/commands/info/">https://redis.io/docs/latest/commands/info/</a></li>
+</ul>
+<p>上一篇：<a href="/2023/01/29/database/redis/redis-39-cache-patterns/">RD39 四种缓存模式与选型</a> ｜ 下一篇：<a href="/2023/01/31/database/redis/redis-41-consistency/">RD41 缓存与数据库一致性</a> ｜ <a href="/2022/12/21/database/redis/redis-0-series-index/">总目录</a></p>
+</div>
+
+  <div class="mb-foot">
+    <a href="/phone/">返回手机首页</a>
+    <a href="/phone/tags/">星迹索引</a>
+  </div>
+</div>
+
+
+<script>
+  /* 作用：懒加载本地 mermaid 库；无 mermaid 代码块时不加载 */
+  function loadLocalMermaid(){
+    return new Promise(function(resolve, reject){
+      if(window.mermaid) return resolve(window.mermaid);
+      var s = document.createElement('script');
+      s.src = '/js/third-party/mermaid/mermaid.min.js?v=10';
+      s.onload = function(){ resolve(window.mermaid); };
+      s.onerror = function(){ reject(new Error('mermaid local load failed')); };
+      document.head.appendChild(s);
+    });
+  }
+
+  /* 作用：把 ```mermaid 代码块替换成 SVG 图（手机端字号略小、图可横向滚动） */
+  async function renderMermaidDiagram(){
+    var blocks = document.querySelectorAll('pre[class*="language-mermaid"]');
+    if(!blocks.length) return;
+    var mermaid;
+    try { mermaid = await loadLocalMermaid(); }
+    catch(e){ console.warn('[mermaid] 本地库加载失败：', e); return; }
+
+    mermaid.initialize({
+      startOnLoad: false,
+      theme: 'base',
+      themeVariables: {
+        darkMode: true,
+        background: 'transparent',
+        fontFamily: '"Microsoft YaHei", "PingFang SC", "Segoe UI", sans-serif',
+        fontSize: '12px',
+        primaryColor: '#062f3d',
+        primaryTextColor: '#d6f6ff',
+        primaryBorderColor: '#00eeff',
+        secondaryColor: '#04222d',
+        tertiaryColor: '#04222d',
+        mainBkg: '#062f3d',
+        nodeBorder: '#00eeff',
+        clusterBkg: '#02161f',
+        clusterBorder: '#00eeff55',
+        lineColor: '#00eeff',
+        textColor: '#c0e8ff',
+        edgeLabelBackground: '#02161f'
+      },
+      flowchart: { curve: 'basis', useMaxWidth: false, htmlLabels: false, nodeSpacing: 30, rankSpacing: 40, padding: 10 }
+    });
+
+    var targets = [];
+    blocks.forEach(function(el){
+      var codeEl = el.querySelector('code');
+      if(!codeEl) return;
+      var div = document.createElement('div');
+      div.className = 'mermaid';
+      div.textContent = codeEl.textContent;
+      el.parentNode.replaceChild(div, el);
+      targets.push(div);
+    });
+    if(!targets.length) return;
+    try { await mermaid.run({ nodes: targets }); }
+    catch(e){ console.warn('[mermaid] 渲染失败：', e); }
+  }
+  /* 作用：多次触发兜底（延迟重试 + DOM 变化），防止某次时机没跑到导致图表留在代码块 */
+  var mmBusy = false;
+  function scheduleMermaid(){
+    if(mmBusy) return;
+    mmBusy = true;
+    renderMermaidDiagram().then(function(){ mmBusy = false; }, function(){ mmBusy = false; });
+  }
+  scheduleMermaid();
+  window.addEventListener('load', scheduleMermaid);
+  [1000, 3000, 8000].forEach(function(ms){ setTimeout(scheduleMermaid, ms); });
+  if(document.readyState !== 'loading') scheduleMermaid();
+  if(window.MutationObserver){
+    var mmTimer = null;
+    var mmObserver = new MutationObserver(function(){
+      clearTimeout(mmTimer);
+      mmTimer = setTimeout(scheduleMermaid, 400);
+    });
+    mmObserver.observe(document.querySelector('.mb-article') || document.body, { childList: true, subtree: true });
+  }
+</script>
+</body>
+</html>
