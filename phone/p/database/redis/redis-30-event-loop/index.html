@@ -19,7 +19,7 @@
   <meta name="theme-color" content="#020817">
   <!-- 首帧兜底：浏览器默认画布是白的，样式未解析前会闪一下白。这条规则先锁死深空底色 -->
   <style>html{background-color:#020817}</style>
-  <title>redis-事件循环 - 时空秘境</title>
+  <title>redis-30-网络模型与事件循环 - 时空秘境</title>
   <!-- 手机端样式：基础 + 列表/正文，外链引入（源文件 source/css/theme/phone/） -->
   <link rel="stylesheet" href="/css/theme/phone/common.css">
   <link rel="stylesheet" href="/css/theme/phone/list.css">
@@ -140,23 +140,24 @@ particlesJS("particles", {
     <span class="mb-sub" style="margin:0">2023-01-20</span>
   </div>
 
-  <h1 class="mb-title">redis-事件循环</h1>
+  <h1 class="mb-title">redis-30-网络模型与事件循环</h1>
   <div class="mb-sub">
     分类：database · redis
-     ｜ 标签：Redis · 系统课 · 性能 · 底层原理
+     ｜ 标签：系统课 · Redis · 性能 · 底层原理
   </div>
 
   <div class="mb-article"><div class="essay-banner essay-database"></div>
 
-<h1 id="事件循环与-IO-多线程"><a href="#事件循环与-IO-多线程" class="headerlink" title="事件循环与 IO 多线程"></a>事件循环与 IO 多线程</h1><p><img src="https://wu4yong.github.io/starry-images/assets/img/redis/rd-30-event-loop.svg" alt="单线程事件循环一圈与 IO 多线程的边界"></p>
+<h1 id="网络模型：从-epoll-到事件循环"><a href="#网络模型：从-epoll-到事件循环" class="headerlink" title="网络模型：从 epoll 到事件循环"></a>网络模型：从 epoll 到事件循环</h1><p><img src="https://wu4yong.github.io/starry-images/assets/img/redis/rd-30-event-loop.svg" alt="单线程事件循环一圈与 IO 多线程的边界"></p>
 <p><em>ae 事件循环的四步、io-threads 能并行什么、不能并行什么｜依据 Redis 7.4 官方文档与源码自绘</em></p>
-<h2 id="一、学习目标"><a href="#一、学习目标" class="headerlink" title="一、学习目标"></a>一、学习目标</h2><p>学完这一讲，你要能做到三件事：</p>
+<h2 id="一、学习目标"><a href="#一、学习目标" class="headerlink" title="一、学习目标"></a>一、学习目标</h2><p>学完这一讲，你能做到：</p>
 <ol>
-<li>讲清一次事件循环的完整路径（<code>beforeSleep</code> → <code>epoll_wait</code> → 文件事件 → 时间事件）；</li>
-<li>分清「IO 多线程」与「命令多线程」：前者只并行读写与解析，后者不存在；</li>
-<li>判断自己的实例该不该开 <code>io-threads</code>，以及开了之后为什么慢命令还是慢。</li>
+<li>用「等待数据 &#x2F; 拷贝数据」两个阶段，讲清 Linux 五种 IO 模型的区别；</li>
+<li>讲清 <code>select</code> → <code>poll</code> → <code>epoll</code> 各自的结构与代价，以及 epoll 为什么不需要遍历；</li>
+<li>画出 Redis 单线程网络模型的一次请求路径（<code>ssfd</code> → <code>acceptTcpHandler</code> → <code>readQueryFromClient</code> → <code>pending_write</code>）；</li>
+<li>分清「IO 多线程」与「命令多线程」，判断自己的实例该不该开 <code>io-threads</code>。</li>
 </ol>
-<h2 id="二、前置知识"><a href="#二、前置知识" class="headerlink" title="二、前置知识"></a>二、前置知识</h2><p>RD04（RESP 协议）、RD32 之后会讲的慢查询。本讲解释一个所有人都困惑过的问题：Redis 明明「单线程」，为什么还能扛十万 QPS？</p>
+<h2 id="二、前置知识"><a href="#二、前置知识" class="headerlink" title="二、前置知识"></a>二、前置知识</h2><p>RD04（RESP 协议）、RD36（Pipeline 与 RTT）。本讲回答一个所有人都困惑过的问题：Redis 明明「单线程」，为什么还能扛十万 QPS？</p>
 <h2 id="三、理论讲解（官方定义）"><a href="#三、理论讲解（官方定义）" class="headerlink" title="三、理论讲解（官方定义）"></a>三、理论讲解（官方定义）</h2><p>官方对 6.0 引入 IO 多线程的说明（原文要点）：</p>
 <blockquote>
 <p>Redis 6.0 introduces threaded I&#x2F;O … the main thread still executes commands … the threads are used to read from and write to sockets.</p>
@@ -167,12 +168,99 @@ particlesJS("particles", {
 <p>The ae event loop is a simple event-driven programming library … it can handle file events and time events.</p>
 <p>—— <a target="_blank" rel="noopener" href="https://github.com/redis/redis/blob/7.4/src/ae.c">https://github.com/redis/redis/blob/7.4/src/ae.c</a></p>
 </blockquote>
-<p>两条定性：</p>
+<p>Linux <code>epoll</code> 手册对「为什么快」的定义（原文要点）：</p>
+<blockquote>
+<p>The performance of epoll scales with the number of file descriptors that are ready, not with the total number that are being monitored.</p>
+<p>—— <a target="_blank" rel="noopener" href="https://man7.org/linux/man-pages/man7/epoll.7.html">https://man7.org/linux/man-pages/man7/epoll.7.html</a></p>
+</blockquote>
+<p>三条定性：</p>
 <ul>
 <li><strong>命令执行永远是主线程单线串行</strong>，这一点从 1.0 到 8.x 都没变；</li>
-<li><strong>多线程只接管「socket 读写 + 协议解析 + 回复组装」</strong>，也就是 CPU 不重但量大的那部分。</li>
+<li><strong>多线程只接管「socket 读写 + 协议解析 + 回复组装」</strong>，也就是 CPU 不重但量大的那部分；</li>
+<li><strong>「快」来自多路复用，不来自线程数</strong>——一个线程能同时盯上万个 fd，才有后面的一切。</li>
 </ul>
-<h2 id="四、原理拆解"><a href="#四、原理拆解" class="headerlink" title="四、原理拆解"></a>四、原理拆解</h2><h3 id="1-事件循环的一圈"><a href="#1-事件循环的一圈" class="headerlink" title="1. 事件循环的一圈"></a>1. 事件循环的一圈</h3><pre class="line-numbers language-none"><code class="language-none">beforeSleep          ← 处理待办：把 AOF 缓冲刷盘、处理阻塞客户端
+<h2 id="四、原理拆解"><a href="#四、原理拆解" class="headerlink" title="四、原理拆解"></a>四、原理拆解</h2><h3 id="1-Linux-的五种-IO-模型"><a href="#1-Linux-的五种-IO-模型" class="headerlink" title="1. Linux 的五种 IO 模型"></a>1. Linux 的五种 IO 模型</h3><p>任何一次网络读，都可以拆成两个阶段：</p>
+<ol>
+<li><strong>阶段一：等数据就绪</strong>——数据从网卡进到内核的 socket 接收缓冲；</li>
+<li><strong>阶段二：拷到用户空间</strong>——<code>read</code> 把内核缓冲里的字节复制到你的进程内存。</li>
+</ol>
+<p>五种 IO 模型的区别，全在这两个阶段上做文章：</p>
+<div class="data-grid data-grid-link-table"><div class="grid-header"><div class="grid-cell">模型</div><div class="grid-cell">阶段一</div><div class="grid-cell">阶段二</div><div class="grid-cell">一句话</div></div><div class="grid-row"><div class="grid-cell">阻塞 IO</div><div class="grid-cell">进程阻塞在 <code>read</code> 上</div><div class="grid-cell">阻塞</div><div class="grid-cell">一线程一连接，撑不住高并发</div></div><div class="grid-row"><div class="grid-cell">非阻塞 IO</div><div class="grid-cell">立刻返回 <code>EAGAIN</code>，靠轮询</div><div class="grid-cell">阻塞</div><div class="grid-cell">轮询烧 CPU，还要自己管多连接</div></div><div class="grid-row"><div class="grid-cell">IO 多路复用</div><div class="grid-cell">一个线程同时等多个 fd，就绪后返回</div><div class="grid-cell">阻塞</div><div class="grid-cell"><strong>Redis 的选择</strong>：epoll + 水平触发</div></div><div class="grid-row"><div class="grid-cell">信号驱动 IO</div><div class="grid-cell">数据就绪发 <code>SIGIO</code></div><div class="grid-cell">在信号处理函数里阻塞</div><div class="grid-cell">信号队列易溢出，服务器少用</div></div><div class="grid-row"><div class="grid-cell">异步 IO</div><div class="grid-cell">内核代劳</div><div class="grid-cell">内核代劳，完成后通知</div><div class="grid-cell">真异步，Linux 上是 io_uring &#x2F; AIO</div></div></div>
+
+<p><img src="https://wu4yong.github.io/starry-images/assets/img/redis/rd-30d-io-models.svg" alt="Linux 五种 IO 模型的两个阶段"></p>
+<p><em>五种模型在「等待数据就绪」与「拷贝到用户空间」两个阶段的不同处理，以及 Redis 为什么停在「多路复用 + 阻塞拷贝」｜依据 epoll(7) 与 ae.c 自绘</em></p>
+<p>两句话概括这张图：</p>
+<ul>
+<li><strong>同步&#x2F;异步，看阶段二由谁做</strong>：自己调 <code>read</code> 就是同步，交给内核并等通知才是异步；</li>
+<li><strong>阻塞&#x2F;非阻塞，看阶段一进程在不在</strong>：睡着等是阻塞，转一圈回来问一次是非阻塞。</li>
+</ul>
+<p>Redis 没有走「异步 IO」那条路：它的阶段二仍然是阻塞拷贝，但因为「数据已在内存里、拷贝量小」，这个阻塞是纳秒到微秒级，换来的是实现极简——这是它敢用单线程的底气。</p>
+<h3 id="2-从-select-到-epoll：多路复用怎么演进"><a href="#2-从-select-到-epoll：多路复用怎么演进" class="headerlink" title="2. 从 select 到 epoll：多路复用怎么演进"></a>2. 从 select 到 epoll：多路复用怎么演进</h3><p>「多路复用」解决的是<strong>一个人怎么同时等很多个 fd</strong>。三代实现，代价完全不同：</p>
+<div class="data-grid data-grid-link-table"><div class="grid-header"><div class="grid-cell">维度</div><div class="grid-cell">select</div><div class="grid-cell">poll</div><div class="grid-cell">epoll</div></div><div class="grid-row"><div class="grid-cell">数据结构</div><div class="grid-cell">fd_set 位图</div><div class="grid-cell">pollfd 数组（内核用链表）</div><div class="grid-cell">内核红黑树 + 就绪链表</div></div><div class="grid-row"><div class="grid-cell">每次调用</div><div class="grid-cell">全量拷贝 + O(N) 遍历</div><div class="grid-cell">全量拷贝 + O(N) 遍历</div><div class="grid-cell">只取就绪链表，O(就绪数)</div></div><div class="grid-row"><div class="grid-cell">fd 上限</div><div class="grid-cell"><code>FD_SETSIZE</code>，默认 1024</div><div class="grid-cell">无硬上限，受内存限制</div><div class="grid-cell">无硬上限</div></div><div class="grid-row"><div class="grid-cell">通知方式</div><div class="grid-cell">每次返回后自己遍历</div><div class="grid-cell">每次返回后自己遍历</div><div class="grid-cell">回调把 fd 挂进就绪链表</div></div><div class="grid-row"><div class="grid-cell">触发模式</div><div class="grid-cell">仅水平触发</div><div class="grid-cell">仅水平触发</div><div class="grid-cell">水平触发 &#x2F; 边沿触发</div></div><div class="grid-row"><div class="grid-cell">适用</div><div class="grid-cell">少量连接、跨平台</div><div class="grid-cell">中等连接数</div><div class="grid-cell">万级连接，Redis 的选择</div></div></div>
+
+<p><code>select</code> 的三个硬伤，正是 epoll 存在的理由：</p>
+<ol>
+<li><strong>监听上限 1024</strong>：<code>fd_set</code> 是定长位图，连接数一多就装不下；</li>
+<li><strong>每次调用都要全量拷贝</strong>：把整个 fd 集合从用户态拷进内核，再拷回来；</li>
+<li><strong>每次返回都要遍历</strong>：内核不知道「谁就绪」，只能挨个查，N 越大越慢。</li>
+</ol>
+<p><code>poll</code> 只解决了第 1 点（改成数组&#x2F;链表），第 2、3 点照旧——所以连接数上千后，<code>poll</code> 的耗时仍随 N 线性增长。</p>
+<p>epoll 换了个思路：<strong>把「查」变成「推」</strong>。</p>
+<ul>
+<li><code>epoll_ctl</code> 时给 fd 注册一个回调 <code>ep_poll_callback</code>；</li>
+<li>数据到达时内核主动调这个回调，把 fd 挂进就绪链表 <code>rdllist</code>；</li>
+<li><code>epoll_wait</code> 只把就绪链表里的 fd 拷回用户态，<strong>监听 1 万个 fd 和监听 10 个 fd，只要就绪数一样，耗时一样</strong>。</li>
+</ul>
+<h3 id="3-epoll-的三段调用：fd、红黑树与-LT-ET"><a href="#3-epoll-的三段调用：fd、红黑树与-LT-ET" class="headerlink" title="3. epoll 的三段调用：fd、红黑树与 LT&#x2F;ET"></a>3. epoll 的三段调用：fd、红黑树与 LT&#x2F;ET</h3><p><code>aeApiPoll</code> 只是一层包装，真正干活的是内核的 <code>epoll</code>。拆开看：</p>
+<ul>
+<li><strong>fd 是进程内的整数索引</strong>，指向内核的 <code>struct file</code>；一个客户端连接对应一个 socket，socket 在内核里有接收缓冲与发送缓冲两块内存；</li>
+<li><strong>可读 &#x3D; 接收缓冲里有数据</strong>（或对端发了 FIN），<strong>可写 &#x3D; 发送缓冲还有空间</strong>。后者几乎永远成立，所以 Redis 只在「确实有回复要写」时才把 fd 注册进可写事件，否则 <code>epoll_wait</code> 会一直空转返回；</li>
+<li>三段调用各管一件事：<code>epoll_create</code> 建 <code>eventpoll</code>（红黑树 + 就绪链表）→ <code>epoll_ctl</code> 增删改监听（<code>ADD</code>&#x2F;<code>MOD</code>&#x2F;<code>DEL</code>）→ <code>epoll_wait</code> 取就绪链表，返回就绪个数。</li>
+</ul>
+<p><img src="https://wu4yong.github.io/starry-images/assets/img/redis/rd-30c-epoll.svg" alt="socket 缓冲、内核 rdllist 与 ae 分发"></p>
+<p><em>网卡→协议栈→rdllist→epoll_wait→ae 分发四段链路、eventpoll 的红黑树与就绪链表，以及 LT&#x2F;ET 与三条内核参数｜依据 Linux epoll(7) 手册页与 ae.c、ae_epoll.c 自绘</em></p>
+<p>两个容易忽略的细节：</p>
+<ol>
+<li><strong>水平触发（LT）与边沿触发（ET）</strong>：LT 只要缓冲里还有数据就反复通知，允许「这次不读完」；ET 只在状态变化的那一刻通知一次，必须自己循环读到 <code>EAGAIN</code>。Redis 用 LT，并且在读事件里一次最多读固定配额的字节，读完配额就返回事件循环——<strong>用一点点效率换公平</strong>，避免一个超大请求把其他客户端饿死。</li>
+<li><strong>内核参数会直接变成线上故障</strong>：<code>net.core.somaxconn</code> 小于 Redis 的 <code>tcp-backlog</code>（默认 511）时，accept 队列溢出，现象是客户端连接超时而不是命令报错；<code>ulimit -n</code> 决定进程能开多少 fd，<code>maxclients</code> 配得再大也开不出来；<code>epoll_wait</code> 的超时由最近的时间事件决定（<code>hz=10</code> 即 100ms），所以 <code>serverCron</code> 的精度就是 100ms 级。</li>
+</ol>
+<h3 id="4-服务端流程：ssfd、accept-与客户端-fd"><a href="#4-服务端流程：ssfd、accept-与客户端-fd" class="headerlink" title="4. 服务端流程：ssfd、accept 与客户端 fd"></a>4. 服务端流程：ssfd、accept 与客户端 fd</h3><p>任何一个 epoll 服务器都是同一套骨架，Redis 只是把它包进了 <code>ae</code>：</p>
+<pre class="line-numbers language-none"><code class="language-none">① epoll_create      →  建红黑树 + 就绪链表
+② listen 端口        →  得到 ssfd（服务端监听 fd），注册 EPOLLIN
+③ epoll_wait        →  等 ssfd 可读（&#x3D; 有客户端连上来）
+④ accept()          →  得到客户端 fd，epoll_ctl 注册它的读事件
+⑤ 客户端 fd 可读     →  read&#x2F;recv 读命令，处理后 write 回复
+⑥ EPOLLERR &#x2F; 关闭    →  close(fd)，并从红黑树里删掉<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<p>关键认知：<strong><code>ssfd</code> 和客户端 fd 挂在同一个 epoll 实例里</strong>，返回的事件里怎么区分？靠事件携带的 fd——是 <code>ssfd</code> 就走 accept，是客户端 fd 就走读命令。所以「一个线程同时接连接 + 处理命令」在结构上是成立的。</p>
+<h3 id="5-Redis-单线程网络模型：从-main-到-aeMain"><a href="#5-Redis-单线程网络模型：从-main-到-aeMain" class="headerlink" title="5. Redis 单线程网络模型：从 main 到 aeMain"></a>5. Redis 单线程网络模型：从 main 到 aeMain</h3><p>把上面的骨架换成 Redis 的函数名，就是它的网络模型：</p>
+<pre class="line-numbers language-none"><code class="language-none">main()                                  server.c
+  └─ initServer()
+       ├─ aeApiCreate()                 建 epoll 实例（≈ epoll_create）
+       ├─ listen() 得到 ssfd，注册读事件 → acceptTcpHandler
+       └─ 注册 beforeSleep 钩子
+  └─ aeMain()                           死循环
+       ├─ beforeSleep()                 处理 clients_pending_write、AOF 刷盘
+       ├─ aeApiPoll()                   ≈ epoll_wait，超时由最近的时间事件决定
+       ├─ 就绪 fd → 对应 handler
+       │    ├─ ssfd 可读      → acceptTcpHandler  → accept 得客户端 fd，注册读事件
+       │    └─ 客户端 fd 可读  → readQueryFromClient
+       │           ├─ 读进 c-&gt;querybuf（字节）
+       │           ├─ 解析成 c-&gt;argv（命令 + 参数）
+       │           ├─ 查命令表 → 执行 setCommand 之类的函数
+       │           ├─ 回复写进 c-&gt;buf（小）或 c-&gt;reply（链表，大）
+       │           └─ 客户端进 clients_pending_write 队列
+       └─ 处理时间事件 serverCron（过期清理、rehash、统计）<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<p><img src="https://wu4yong.github.io/starry-images/assets/img/redis/rd-30e-net-flow.svg" alt="一次请求的路径：ssfd → acceptTcpHandler → readQueryFromClient → pending_write"></p>
+<p><em>一条命令的八步：注册 ssfd、accept 得客户端 fd、读进 querybuf、解析 argv、查表执行、写输出缓冲、入 pending_write，最后由 beforeSleep 的 sendReplyToClient 批量写回｜依据 server.c 与 networking.c 自绘</em></p>
+<p>三个必须记住的设计取舍：</p>
+<ol>
+<li><strong>回复不当场写回 socket</strong>。写 socket 可能因为对端接收窗口满而阻塞，会把整条单线程卡住；于是统一丢进 <code>clients_pending_write</code>，在下一圈的 <code>beforeSleep</code> 里由 <code>sendReplyToClient</code> 批量写——<strong>写失败只影响那一个客户端，不影响命令执行</strong>。</li>
+<li><strong>解析与执行分离在时间上，但不分离在线程上</strong>（默认配置下）。<code>querybuf → argv → command</code> 全在主线程，所以协议解析再快也救不了慢命令。</li>
+<li><strong>时间事件和文件事件在同一圈里</strong>。这就是「一条慢命令会让过期清理、rehash 一起延后」的根源。</li>
+</ol>
+<h3 id="6-事件循环的一圈与-io-threads-的边界"><a href="#6-事件循环的一圈与-io-threads-的边界" class="headerlink" title="6. 事件循环的一圈与 io-threads 的边界"></a>6. 事件循环的一圈与 io-threads 的边界</h3><pre class="line-numbers language-none"><code class="language-none">beforeSleep          ← 处理待办：把 AOF 缓冲刷盘、把 pending_write 写回、处理阻塞客户端
     ↓
 aeApiPoll (epoll_wait) ← 等待可读&#x2F;可写的 fd，超时由最近的时间事件决定
     ↓
@@ -180,31 +268,26 @@ aeApiPoll (epoll_wait) ← 等待可读&#x2F;可写的 fd，超时由最近的�
     ↓
 处理时间事件         ← serverCron：过期清理、rehash 推进、统计更新<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
 
-<p>关键在第三步：<strong>读、执行、写都在这一圈里完成</strong>。这正是「单线程为什么够快」的原因——没有线程切换、没有锁竞争，命令在内存里执行，路径极短。</p>
-<h3 id="2-多路复用解决的是什么"><a href="#2-多路复用解决的是什么" class="headerlink" title="2. 多路复用解决的是什么"></a>2. 多路复用解决的是什么</h3><p><code>epoll</code>（Linux）&#x2F; <code>kqueue</code>（macOS）&#x2F; <code>evport</code>（Solaris）让一个线程同时监听成千上万个连接。没有多路复用，就只能「一个连接一个线程」，线程数与内存都撑不住。所以：</p>
-<ul>
-<li><strong>不是「多线程让 Redis 快」，而是「多路复用让单线程能扛多连接」</strong>；</li>
-<li>6.0 的 IO 多线程是在此基础上再加一层：把「读&#x2F;解析&#x2F;写」分摊给几个线程，减轻主线程的 CPU 压力。</li>
-</ul>
-<h3 id="3-io-threads-的真实边界"><a href="#3-io-threads-的真实边界" class="headerlink" title="3. io-threads 的真实边界"></a>3. io-threads 的真实边界</h3><div class="data-grid data-grid-link-table"><div class="grid-header"><div class="grid-cell">能做</div><div class="grid-cell">不能做</div></div><div class="grid-row"><div class="grid-cell">并行读 socket、解析 RESP</div><div class="grid-cell">并行执行命令</div></div><div class="grid-row"><div class="grid-cell">并行组装并写回复</div><div class="grid-cell">让单条慢命令变快</div></div><div class="grid-row"><div class="grid-cell">降低主线程的 CPU 占用</div><div class="grid-cell">突破单实例吞吐上限</div></div><div class="grid-row"><div class="grid-cell">改善高带宽、小命令场景</div><div class="grid-cell">改变 Lua &#x2F; MULTI 的原子性</div></div></div>
+<p>6.0 的 IO 多线程只在这圈的「读写 + 解析」上加并行，边界非常清楚：</p>
+<div class="data-grid data-grid-link-table"><div class="grid-header"><div class="grid-cell">能做</div><div class="grid-cell">不能做</div></div><div class="grid-row"><div class="grid-cell">并行读 socket、解析 RESP</div><div class="grid-cell">并行执行命令</div></div><div class="grid-row"><div class="grid-cell">并行组装并写回复</div><div class="grid-cell">让单条慢命令变快</div></div><div class="grid-row"><div class="grid-cell">降低主线程的 CPU 占用</div><div class="grid-cell">突破单实例吞吐上限</div></div><div class="grid-row"><div class="grid-cell">改善高带宽、小命令场景</div><div class="grid-cell">改变 Lua &#x2F; MULTI 的原子性</div></div></div>
 
-<p>配置要点：</p>
 <pre class="line-numbers language-conf" data-language="conf"><code class="language-conf">io-threads 4          # 默认 1 &#x3D; 关闭；一般不超过 8<span aria-hidden="true" class="line-numbers-rows"><span></span></span></code></pre>
 
 <p>官方建议：<strong>只有当实例确实被网络 IO 的 CPU 占用卡住时才开</strong>，且线程数不超过 CPU 核数。盲目开大反而因为线程切换与锁开销变慢。</p>
-<h3 id="4-为什么坚持单线程执行"><a href="#4-为什么坚持单线程执行" class="headerlink" title="4. 为什么坚持单线程执行"></a>4. 为什么坚持单线程执行</h3><p>三个官方与工程上的理由：</p>
+<p><img src="https://wu4yong.github.io/starry-images/assets/img/redis/rd-30b-event-loop.svg" alt="事件循环与 io-threads 的边界"></p>
+<p><em>事件循环一圈的四个阶段、io-threads 能做与不能做的事情，以及单线程的三条底气｜依据 ae.c、server.c 与 redis.conf io-threads 注释自绘</em></p>
+<h3 id="7-为什么坚持单线程执行"><a href="#7-为什么坚持单线程执行" class="headerlink" title="7. 为什么坚持单线程执行"></a>7. 为什么坚持单线程执行</h3><p>三个官方与工程上的理由：</p>
 <ul>
 <li><strong>原子性天然成立</strong>：单线程执行意味着每条命令不会被其他命令插入，<code>MULTI</code>、Lua、<code>INCR</code> 都不需要额外加锁；</li>
 <li><strong>CPU 一般不是瓶颈</strong>：内存操作极快，瓶颈通常在网络带宽、内存容量、慢命令；</li>
 <li><strong>加线程解决不了真问题</strong>：真问题是「单条命令太慢」（大 key、<code>KEYS *</code>、大范围 <code>ZRANGE</code>），多线程只会让多个慢命令一起慢。</li>
 </ul>
-<p><img src="https://wu4yong.github.io/starry-images/assets/img/redis/rd-30b-event-loop.svg" alt="事件循环与 io-threads 的边界"></p>
-<p><em>事件循环一圈的四个阶段、io-threads 能做与不能做的事情，以及单线程的三条底气｜依据 ae.c、server.c 与 redis.conf io-threads 注释自绘</em></p>
 <h2 id="五、场景说明"><a href="#五、场景说明" class="headerlink" title="五、场景说明"></a>五、场景说明</h2><ol>
 <li><strong>高 QPS 小命令</strong>（GET&#x2F;SET 为主）：开 <code>io-threads</code> 有收益，主线程不再被协议解析占满；</li>
 <li><strong>大 value 传输</strong>：网络写是瓶颈，多线程写回复能提升吞吐；</li>
 <li><strong>慢命令为主</strong>（大 key 操作）：开线程没用，必须治理命令；</li>
-<li><strong>CPU 核数少的机器</strong>：<code>io-threads</code> 开到等于核数就够，别超过。</li>
+<li><strong>CPU 核数少的机器</strong>：<code>io-threads</code> 开到等于核数就够，别超过；</li>
+<li><strong>连接数暴涨、<code>somaxconn</code> 没调</strong>：先调内核参数（<code>somaxconn ≥ tcp-backlog</code>）与 <code>ulimit -n</code>，否则客户端连不上，跟 Redis 配置无关。</li>
 </ol>
 <h2 id="六、示例代码-实操步骤"><a href="#六、示例代码-实操步骤" class="headerlink" title="六、示例代码&#x2F;实操步骤"></a>六、示例代码&#x2F;实操步骤</h2><pre class="line-numbers language-bash" data-language="bash"><code class="language-bash"><span class="token comment"># 1. 查看当前线程配置</span>
 <span class="token number">127.0</span>.0.1:637<span class="token operator"><span class="token file-descriptor important">9</span>></span> CONFIG GET io-threads
@@ -231,12 +314,10 @@ $ redis-benchmark <span class="token parameter variable">-h</span> <span class="
 <span class="token number">127.0</span>.0.1:637<span class="token operator"><span class="token file-descriptor important">9</span>></span> ZRANGE bigz <span class="token number">0</span> <span class="token parameter variable">-1</span> WITHSCORES
 <span class="token comment"># 这一条执行期间，其他客户端全部等待——io-threads 帮不上忙</span>
 
-<span class="token comment"># 6. INFO 里看线程相关与命令统计</span>
-<span class="token number">127.0</span>.0.1:637<span class="token operator"><span class="token file-descriptor important">9</span>></span> INFO stats
-<span class="token comment"># instantaneous_ops_per_sec:...</span>
-<span class="token comment"># total_net_input_bytes:...</span>
-<span class="token number">127.0</span>.0.1:637<span class="token operator"><span class="token file-descriptor important">9</span>></span> INFO commandstats
-<span class="token comment"># cmdstat_get:calls=...,usec=...,usec_per_call=...</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<span class="token comment"># 6. 从宿主机看「一个线程盯多少 fd」：确认 epoll 在干活</span>
+$ <span class="token function">ls</span> <span class="token parameter variable">-l</span> /proc/<span class="token variable"><span class="token variable">$(</span>pgrep <span class="token parameter variable">-f</span> redis-server<span class="token variable">)</span></span>/fd <span class="token operator">|</span> <span class="token function">wc</span> <span class="token parameter variable">-l</span>     <span class="token comment"># 进程打开了多少 fd</span>
+$ <span class="token function">cat</span> /proc/sys/net/core/somaxconn                     <span class="token comment"># 必须 ≥ tcp-backlog(511)</span>
+$ <span class="token builtin class-name">ulimit</span> <span class="token parameter variable">-n</span>                                            <span class="token comment"># 必须 ≥ maxclients + 预留</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
 
 <p>第 5 步是这一讲最重要的实验：它证明「<code>io-threads</code> 提高的是 IO 吞吐，不是命令执行能力」。</p>
 <h3 id="Java-侧怎么落地：别让客户端堵住那条单线程"><a href="#Java-侧怎么落地：别让客户端堵住那条单线程" class="headerlink" title="Java 侧怎么落地：别让客户端堵住那条单线程"></a>Java 侧怎么落地：别让客户端堵住那条单线程</h3><p>执行是单线程的，所以 Java 侧要做的是「少发慢命令、别排长队」，而不是「多开线程压上去」。</p>
@@ -283,11 +364,13 @@ $ redis-benchmark <span class="token parameter variable">-h</span> <span class="
 <h2 id="七、常见坑（官方明确说明的限制）"><a href="#七、常见坑（官方明确说明的限制）" class="headerlink" title="七、常见坑（官方明确说明的限制）"></a>七、常见坑（官方明确说明的限制）</h2><ol>
 <li><strong>以为开了 <code>io-threads</code> 就是「多线程 Redis」</strong>。命令执行仍是单线程，语义完全不变。</li>
 <li><strong>把 <code>io-threads</code> 开得很大</strong>。超过核数只增加切换与竞争开销，官方建议一般不超过 8。</li>
+<li><strong>把 Redis 说成「异步 IO」</strong>。它用的是多路复用 + 阻塞拷贝，阶段二由自己完成，属于同步 IO。</li>
 <li><strong>指望它解决慢查询</strong>。慢命令依旧阻塞所有人，这是单线程执行的必然结果。</li>
 <li><strong>以为单线程就不能扛高并发</strong>。多路复用 + 内存操作让单线程也能到十万级 QPS，瓶颈是网络与内存而不是「单线程」这个标签。</li>
 <li><strong><code>serverCron</code> 被慢命令拖住</strong>。时间事件在同一圈里执行，慢命令会让过期清理、rehash 推进都延后。</li>
 <li><strong><code>beforeSleep</code> 里的刷盘被忽略</strong>。AOF <code>everysec</code> 的刷盘发生在 <code>beforeSleep</code>，磁盘抖动会直接体现为命令延迟。</li>
 <li><strong>在容器里限制 CPU 却仍开多线程</strong>。CPU quota 小于 <code>io-threads</code> 数时，线程抢不到核，吞吐反而下降。</li>
+<li><strong>只调 Redis 不调内核</strong>。<code>somaxconn</code> &lt; <code>tcp-backlog</code> 时连接被丢在 accept 队列里，表现为「客户端连不上、Redis 没报错」。</li>
 <li><strong>只看 QPS 不看 P99</strong>。开线程后平均 QPS 涨了，但 P99 可能因为线程同步而变差，必须两个指标一起看。</li>
 </ol>
 <h3 id="版本差异（8-x-标注）"><a href="#版本差异（8-x-标注）" class="headerlink" title="版本差异（8.x 标注）"></a>版本差异（8.x 标注）</h3><blockquote>
@@ -295,36 +378,46 @@ $ redis-benchmark <span class="token parameter variable">-h</span> <span class="
 <p>依据：<a target="_blank" rel="noopener" href="https://redis.io/docs/latest/operate/oss_and_stack/management/optimization/latency/">https://redis.io/docs/latest/operate/oss_and_stack/management/optimization/latency/</a></p>
 </blockquote>
 <h2 id="八、课后小结"><a href="#八、课后小结" class="headerlink" title="八、课后小结"></a>八、课后小结</h2><ul>
+<li>网络读分两阶段：等数据就绪、拷到用户空间；五种 IO 模型的差别都在这两段上；</li>
+<li>Redis 是「多路复用 + 阻塞拷贝」：同步 IO，不是异步 IO；</li>
+<li><code>select</code> 三硬伤（1024 上限、全量拷贝、全量遍历），<code>poll</code> 只解了第一条，epoll 用「回调 + 就绪链表」把开销变成 O(就绪数)；</li>
+<li>epoll 三段：<code>epoll_create</code>（红黑树 + 就绪链表）、<code>epoll_ctl</code>（注册回调）、<code>epoll_wait</code>（取就绪链表）；</li>
+<li>服务端骨架：<code>ssfd</code> 与客户端 fd 同挂一个 epoll，靠返回的 fd 区分「接连接」还是「读命令」；</li>
+<li>Redis 一次请求八步：<code>acceptTcpHandler</code> → <code>readQueryFromClient</code> → <code>querybuf</code> → <code>argv</code> → 命令表 → <code>buf/reply</code> → <code>pending_write</code> → <code>beforeSleep</code> 写回；</li>
 <li>事件循环一圈：<code>beforeSleep</code> → <code>epoll_wait</code> → 文件事件 → 时间事件（<code>serverCron</code>）；</li>
-<li>单线程够快的原因是「多路复用 + 内存操作 + 无锁」，不是「线程多」；</li>
-<li><code>io-threads</code> 只并行 socket 读写、协议解析、回复组装，默认 1（关闭）；</li>
-<li>命令执行永远串行，<code>MULTI</code>&#x2F;Lua 的原子性因此天然成立；</li>
-<li>慢命令只能靠治理，开线程无效；</li>
-<li>开 <code>io-threads</code> 要看 P99，不只看 QPS。</li>
+<li><code>io-threads</code> 只并行 socket 读写、协议解析、回复组装，默认 1（关闭）；命令执行永远串行，慢命令只能靠治理。</li>
 </ul>
 <h2 id="九、思考题"><a href="#九、思考题" class="headerlink" title="九、思考题"></a>九、思考题</h2><ol>
 <li><p>单线程为什么能扛十万 QPS？请从「多路复用 + 内存操作 + 无锁」三点各说一句。</p>
 <p><strong>参考回答</strong>：多路复用——epoll 让一个线程同时盯上万个 fd，省掉「一连接一线程」的切换与内存；内存操作——命令在内存里执行，没有磁盘 IO 与解析开销，单条路径极短；无锁——串行执行天然原子，没有锁竞争与临界区。真实十万 QPS 通常是 pipeline 或多实例叠加的结果，单连接 RTT 仍是瓶颈。</p>
 </li>
+<li><p><code>epoll_wait</code> 为什么不随监听 fd 数变慢？<code>select</code> 慢在哪里？</p>
+<p><strong>参考回答</strong>：epoll 在 <code>epoll_ctl</code> 时给 fd 注册回调，数据到达由内核把 fd 推进就绪链表，<code>epoll_wait</code> 只拷就绪链表，开销是 O(就绪数)。<code>select</code> 每次都要把整个 fd 集合拷进内核、内核线性扫描一遍、返回后用户态再遍历一遍，三个 O(N) 全压在同一调用里。</p>
+</li>
+<li><p>Redis 用 LT 为什么还要「一次只读一部分」？改成 ET 会怎样？</p>
+<p><strong>参考回答</strong>：LT 下只要还有数据就会反复通知，所以「这次读不完」是允许的；但若真把几 MB 一次读完，这一圈就全被一个客户端占住，其他人饿死。改 ET 则必须循环读到 <code>EAGAIN</code>，否则剩余数据不再通知、客户端超时——实现更复杂，收益也不大。</p>
+</li>
+<li><p><code>ssfd</code> 与客户端 fd 都在同一个 epoll 实例里，Redis 怎么区分两类事件？</p>
+<p><strong>参考回答</strong>：靠事件里带的 fd 判断：等于 <code>ssfd</code> 就走 <code>acceptTcpHandler</code> 接新连接，其余是客户端 fd，走 <code>readQueryFromClient</code> 读命令；出现 <code>EPOLLERR</code>&#x2F;<code>EPOLLHUP</code> 就 <code>close</code> 并从 epoll 里删掉。</p>
+</li>
+<li><p>为什么回复不直接 <code>write</code> 回 socket，而要先放进 <code>clients_pending_write</code>？</p>
+<p><strong>参考回答</strong>：<code>write</code> 可能因为对端接收窗口满而阻塞，一阻塞就把整条单线程卡住，所有人都等这一个慢客户端。放进队列后由 <code>beforeSleep</code> 的 <code>sendReplyToClient</code> 统一写，写不完留到下次，个别客户端慢只影响它自己。</p>
+</li>
 <li><p><code>io-threads</code> 开了 8，一条 <code>KEYS *</code> 会变快吗？为什么？</p>
 <p><strong>参考回答</strong>：不会。io-threads 只并行「读 socket、解析 RESP、组装写回复」，命令执行仍是单线程；<code>KEYS *</code> 的耗时全在遍历键空间这一步。</p>
 </li>
-<li><p>为什么说「原子性天然成立」？如果命令改成多线程执行，<code>INCR</code> 会出什么问题？</p>
-<p><strong>参考回答</strong>：因为执行永远串行，命令之间没有插入点。改成多线程后，<code>INCR</code> 的「读—加—写」三步可能被其他线程插入，两个线程都读到 10 都写成 11，产生丢失更新。</p>
-</li>
-<li><p><code>serverCron</code> 里的过期清理被慢命令延后，会带来什么业务影响？</p>
-<p><strong>参考回答</strong>：过期 key 继续占内存、继续被读到（逻辑上已过期但仍有值），内存上涨甚至触发淘汰；同时 rehash 推进、统计刷新也一起延后，监控数据会失真。</p>
-</li>
-<li><p>你的实例 CPU 使用率 60%、QPS 已打满、平均延迟 1ms、P99 30ms，该不该开 <code>io-threads</code>？判断依据是什么？</p>
-<p><strong>参考回答</strong>：先别开。CPU 才 60%，说明瓶颈不在网络 IO 的 CPU 开销；P99 30ms 与均值 1ms 的巨大差距，更像慢命令&#x2F;大 key&#x2F;客户端排队。判断依据：看 <code>INFO cpu</code> 里是否主要耗在 IO、带宽是否打满、<code>SLOWLOG</code>&#x2F;<code>LATENCY</code> 是否有周期事件；只有「带宽打满 + IO 吃满 CPU」才值得开。</p>
+<li><p>你的实例 CPU 使用率 60%、QPS 已打满、平均延迟 1ms、P99 30ms，该不该开 <code>io-threads</code>？怎么判断？</p>
+<p><strong>参考回答</strong>：先别开。CPU 才 60%，说明瓶颈不在网络 IO 的 CPU 开销；P99 30ms 与均值 1ms 的差距更像慢命令&#x2F;大 key&#x2F;客户端排队。看 <code>INFO cpu</code> 是否主要耗在 IO、带宽是否打满、<code>SLOWLOG</code>&#x2F;<code>LATENCY</code> 是否有周期事件；只有「带宽打满 + IO 吃满 CPU」才值得开。</p>
 </li>
 </ol>
 <h2 id="十、官方资料"><a href="#十、官方资料" class="headerlink" title="十、官方资料"></a>十、官方资料</h2><ul>
 <li>Latency 与 IO 多线程说明：<a target="_blank" rel="noopener" href="https://redis.io/docs/latest/operate/oss_and_stack/management/optimization/latency/">https://redis.io/docs/latest/operate/oss_and_stack/management/optimization/latency/</a></li>
 <li>ae.c（事件循环实现）：<a target="_blank" rel="noopener" href="https://github.com/redis/redis/blob/7.4/src/ae.c">https://github.com/redis/redis/blob/7.4/src/ae.c</a></li>
-<li>INFO commandstats（命令耗时统计）：<a target="_blank" rel="noopener" href="https://redis.io/docs/latest/commands/info/">https://redis.io/docs/latest/commands/info/</a></li>
-<li>redis.conf（<code>io-threads</code> 配置与建议）：<a target="_blank" rel="noopener" href="https://redis.io/docs/latest/operate/oss_and_stack/management/config-file/">https://redis.io/docs/latest/operate/oss_and_stack/management/config-file/</a></li>
-<li>redis-benchmark（吞吐压测工具）：<a target="_blank" rel="noopener" href="https://redis.io/docs/latest/operate/oss_and_stack/management/optimization/benchmarks/">https://redis.io/docs/latest/operate/oss_and_stack/management/optimization/benchmarks/</a></li>
+<li>ae_epoll.c（Linux 下的 epoll 封装）：<a target="_blank" rel="noopener" href="https://github.com/redis/redis/blob/7.4/src/ae_epoll.c">https://github.com/redis/redis/blob/7.4/src/ae_epoll.c</a></li>
+<li>server.c（<code>initServer</code> &#x2F; <code>acceptTcpHandler</code>）：<a target="_blank" rel="noopener" href="https://github.com/redis/redis/blob/7.4/src/server.c">https://github.com/redis/redis/blob/7.4/src/server.c</a></li>
+<li>networking.c（<code>readQueryFromClient</code> 与输出缓冲）：<a target="_blank" rel="noopener" href="https://github.com/redis/redis/blob/7.4/src/networking.c">https://github.com/redis/redis/blob/7.4/src/networking.c</a></li>
+<li>Linux epoll 手册页：<a target="_blank" rel="noopener" href="https://man7.org/linux/man-pages/man7/epoll.7.html">https://man7.org/linux/man-pages/man7/epoll.7.html</a></li>
+<li>redis.conf（<code>io-threads</code>、<code>tcp-backlog</code>、<code>hz</code>）：<a target="_blank" rel="noopener" href="https://redis.io/docs/latest/operate/oss_and_stack/management/config-file/">https://redis.io/docs/latest/operate/oss_and_stack/management/config-file/</a></li>
 </ul>
 <p>上一篇：<a href="/2023/01/19/database/redis/redis-29-skiplist-quicklist/">RD29 skiplist 与 quicklist</a> ｜ 下一篇：<a href="/2023/01/21/database/redis/redis-31-fragmentation/">RD31 内存碎片与 jemalloc</a> ｜ <a href="/2022/12/21/database/redis/redis-0-series-index/">总目录</a></p>
 </div>
