@@ -1,0 +1,421 @@
+<!--
+  ============================================
+  手机端 · 文章原文页
+  文件：phone/post.njk
+  适用终端：手机端（路由 /phone/p/<slug>/，由 scripts/phone-routes.js 生成）
+  作用：手机阅读单篇文章；单列布局、无侧栏无雷达，替代电脑端 post.njk
+        数据由生成期算好：page.item = { title, dateStr, content, cats, tags }
+  样式依赖：source/css/theme/phone/common.css、source/css/theme/phone/list.css
+  组件依赖：phone/_components/Particles.njk
+  最后修改：2026-11-11
+  ============================================
+-->
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="color-scheme" content="dark">
+  <meta name="theme-color" content="#020817">
+  <!-- 首帧兜底：浏览器默认画布是白的，样式未解析前会闪一下白。这条规则先锁死深空底色 -->
+  <style>html{background-color:#020817}</style>
+  <title>LangGraph 10 · 子图与状态传递 - 时空秘境</title>
+  <!-- 手机端样式：基础 + 列表/正文，外链引入（源文件 source/css/theme/phone/） -->
+  <link rel="stylesheet" href="/css/theme/phone/common.css">
+  <link rel="stylesheet" href="/css/theme/phone/list.css">
+<meta name="generator" content="Hexo 8.1.2"></head>
+<body>
+<div class="mb-shell">
+  <!--
+  ============================================
+  手机端星空粒子组件
+  文件：Particles.njk
+  适用终端：手机端
+  作用：Particles.njk 的手机端副本（nunjucks 子目录 include 取不到上级）
+        参数与电脑端 _components/Particles.njk 保持一致：
+        粒子 95 / 连线 118px / opacity 0.32，外加星座层与零星闪烁层
+  最后修改：2026-11-12
+  ============================================
+--><!-- z-index 必须是 0：负层级会被 body 不透明背景盖住，粒子在跑却看不见 -->
+<div id="particles" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 0; pointer-events: none;"></div>
+<!-- 星座层（与首页同一套：随机零星散布星座图形 + 偶尔闪烁的小星） -->
+<div id="constellations" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 1; pointer-events: none;" aria-hidden="true"></div>
+<script src="/js/particles.min.js"></script>
+<script>
+particlesJS("particles", {
+  particles: {
+    number: {
+      value: 95,
+      density: {
+        enable: true,
+        value_area: 800
+      }
+    },
+    color: {
+      value: "#00eeff"
+    },
+    shape: {
+      type: "circle",
+      stroke: {
+        width: 0,
+        color: "#000000"
+      }
+    },
+    opacity: {
+      value: 0.6,
+      random: true,
+      anim: {
+        enable: true,
+        speed: 0.5,
+        opacity_min: 0.1,
+        sync: false
+      }
+    },
+    size: {
+      value: 3,
+      random: true,
+      anim: {
+        enable: true,
+        speed: 2,
+        size_min: 0.1,
+        sync: false
+      }
+    },
+    line_linked: {
+      enable: true,
+      distance: 118,
+      color: "#00eeff",
+      opacity: 0.32,
+      width: 1
+    },
+    move: {
+      enable: true,
+      speed: 0.8,
+      direction: "none",
+      random: true,
+      straight: false,
+      out_mode: "out",
+      bounce: false,
+      attract: {
+        enable: true,
+        rotateX: 600,
+        rotateY: 1200
+      }
+    }
+  },
+  interactivity: {
+    detect_on: "canvas",
+    events: {
+      onhover: {
+        enable: true,
+        mode: "grab"       // 手指按住时粒子聚集
+      },
+      onclick: {
+        enable: true,
+        mode: "push"       // 点击时产生新粒子
+      },
+      resize: true
+    },
+    modes: {
+      grab: {
+        distance: 200,
+        line_linked: {
+          opacity: 1
+        }
+      },
+      push: {
+        particles_nb: 6
+      }
+    }
+  },
+  retina_detect: true
+});
+</script>
+<!-- 星座 + 零星闪烁层：与电脑端共用同一份绘制脚本 -->
+<script src="/js/theme/home/starfield.js"></script>
+
+
+  <div class="mb-top">
+    <a class="mb-back" href="/phone/">← 返回手机首页</a>
+    <span class="mb-sub" style="margin:0">2026-12-23</span>
+  </div>
+
+  <h1 class="mb-title">LangGraph 10 · 子图与状态传递</h1>
+  <div class="mb-sub">
+    分类：ai · langgraph
+     ｜ 标签：AI · 系统课 · LangGraph
+  </div>
+
+  <div class="mb-article"><div class="essay-banner essay-langgraph"></div>
+
+<h1 id="10-子图与状态传递"><a href="#10-子图与状态传递" class="headerlink" title="10 子图与状态传递"></a>10 子图与状态传递</h1><p><img src="https://wu4yong.github.io/starry-images/assets/img/langgraph/v1/lg-10-subgraph-state.svg" alt="两种接法：共享 key 直接把编译好的图挂成节点；schema 不同就写包装节点做映射｜依据官方 Subgraphs 页自绘"></p>
+<p><em>子图的 <code>checkpointer</code> 三档：<code>None</code> 每次从头、<code>True</code> 按线程累积、<code>False</code> 完全无状态｜依据官方 Subgraphs · Persistence 自绘</em></p>
+
+<div class="ver-note"><p><strong>版本不一致提示</strong></p>
+<ul>
+<li>本篇基线是 <strong>LangGraph 1.2.x + Python 3.13</strong>，示例不调用模型，纯本地可跑；</li>
+<li>官方把子图的持久化写成三档：<code>compile()</code>（<code>None</code>，默认）&#x2F; <code>compile(checkpointer=True)</code> &#x2F; <code>compile(checkpointer=False)</code>，含义与旧文档不完全一样，本篇按现行口径；</li>
+<li>子图事件的 <code>ns</code> 形如 <code>(&quot;节点名:task_id&quot;,)</code>，嵌套时继续往后拼，流式分栏全靠它；</li>
+<li><code>Command(graph=Command.PARENT)</code> 用于「子图里跳到父图的节点」，1.x 保留，但只在子图被当节点挂载时成立。</li>
+</ul>
+</div>
+
+
+<h2 id="一、学习目标"><a href="#一、学习目标" class="headerlink" title="一、学习目标"></a>一、学习目标</h2><p>学完这一讲，你要能做到三件事：</p>
+<ol>
+<li>会用两种接法挂子图：共享 key 直接 <code>add_node(compiled)</code>、schema 不同写包装节点；</li>
+<li>知道子图 checkpointer 三档的区别，能选出「每次从头」还是「按线程累积」；</li>
+<li>会在子图里 <code>interrupt</code>、在父图恢复，并用 <code>ns</code> 把子图输出分栏。</li>
+</ol>
+<h2 id="二、前置知识"><a href="#二、前置知识" class="headerlink" title="二、前置知识"></a>二、前置知识</h2><ul>
+<li>读完 LG09，认识 <code>ns</code> 与 <code>subgraphs=True</code>；</li>
+<li>读完 LG05，知道 checkpointer 与命名空间；</li>
+<li>读完 LG02，知道父子 key 的类型必须一致，否则 reducer 会炸。</li>
+</ul>
+<h2 id="三、理论讲解（官方定义）"><a href="#三、理论讲解（官方定义）" class="headerlink" title="三、理论讲解（官方定义）"></a>三、理论讲解（官方定义）</h2><h3 id="1-子图就是「当节点用的图」"><a href="#1-子图就是「当节点用的图」" class="headerlink" title="1. 子图就是「当节点用的图」"></a>1. 子图就是「当节点用的图」</h3><p>官方定义很短：subgraph 是被当作另一个图的节点使用的图。好处三条：搭多 Agent、复用一组节点、多团队并行开发（只要接口（输入输出 schema）对得上）。</p>
+<h3 id="2-两种通信方式"><a href="#2-两种通信方式" class="headerlink" title="2. 两种通信方式"></a>2. 两种通信方式</h3><div class="data-grid data-grid-link-table"><div class="grid-header"><div class="grid-cell">接法</div><div class="grid-cell">什么时候用</div><div class="grid-cell">怎么做</div></div><div class="grid-row"><div class="grid-cell">直接挂</div><div class="grid-cell">父子<strong>共享 key</strong>，子图读写同一批 channel</div><div class="grid-cell"><code>add_node(&quot;sub&quot;, sub)</code></div></div><div class="grid-row"><div class="grid-cell">包装节点</div><div class="grid-cell">父子 <strong>schema 不同</strong>，或需要在中间做转换</div><div class="grid-cell">在节点函数里 <code>sub.invoke(...)</code>，手写映射</div></div></div>
+
+<p>直接挂最省事，但要求「key 名字与类型都对得上」；包装节点最灵活，代价是映射代码要自己维护。</p>
+<h3 id="3-子图的持久化三档"><a href="#3-子图的持久化三档" class="headerlink" title="3. 子图的持久化三档"></a>3. 子图的持久化三档</h3><div class="data-grid data-grid-link-table"><div class="grid-header"><div class="grid-cell">写法</div><div class="grid-cell">语义</div><div class="grid-cell">适合</div></div><div class="grid-row"><div class="grid-cell"><code>compile()</code>（<code>None</code>，默认）</div><div class="grid-cell">每次调用从头开始，继承父图 checkpointer 以支持 <code>interrupt</code> 与断点续跑</div><div class="grid-cell">大多数场景、多数多 Agent</div></div><div class="grid-row"><div class="grid-cell"><code>compile(checkpointer=True)</code></div><div class="grid-cell">同一线程内状态<strong>累积</strong>，下次接着上次</div><div class="grid-cell">需要多轮记忆的子 Agent（如研究助手）</div></div><div class="grid-row"><div class="grid-cell"><code>compile(checkpointer=False)</code></div><div class="grid-cell">完全不检查点，像普通函数调用</div><div class="grid-cell">纯计算、不需要中断</div></div></div>
+
+<p>官方还提醒：多个<strong>不同的</strong>按线程子图要各自有稳定命名空间，否则会互相覆盖。稳妥做法是「每个子 Agent 包一层 <code>StateGraph</code> 并给唯一节点名」。</p>
+<h3 id="4-子图里中断、父图恢复"><a href="#4-子图里中断、父图恢复" class="headerlink" title="4. 子图里中断、父图恢复"></a>4. 子图里中断、父图恢复</h3><p>子图继承父图 checkpointer 时，<code>interrupt()</code> 照常工作：恢复仍在父图的 <code>config</code>（同一个 <code>thread_id</code>）上做，不是拿子图单独 <code>invoke</code>。</p>
+<h3 id="5-跨层跳转"><a href="#5-跨层跳转" class="headerlink" title="5. 跨层跳转"></a>5. 跨层跳转</h3><p>子图里要直接跳父图的节点，用 <code>Command(graph=Command.PARENT, goto=&quot;父图节点&quot;)</code>。多 Agent 交接常用这招（LG12 细讲）。</p>
+<h2 id="四、原理拆解"><a href="#四、原理拆解" class="headerlink" title="四、原理拆解"></a>四、原理拆解</h2><p>把子图想成<strong>总装厂里的一个分包车间</strong>：</p>
+<ul>
+<li>直接挂＝这个车间和总厂共用一套工位编号（channel），原料直接流进去；</li>
+<li>包装节点＝车间有自己的工位编号，进出都要在门口搬运（写映射函数）；</li>
+<li>检查点＝车间的进度记录：<code>None</code> 表示「这次干完就清空、下次重新开工」，<code>True</code> 表示「记在本子上，下次接着干」。</li>
+</ul>
+<p>三个关键判断：</p>
+<ol>
+<li><strong>key 不匹配是最常见的静默 bug</strong>：子图写了父图没有的 key，字段直接消失，不报错；</li>
+<li><strong>子图是「一个 super-step」</strong>：父图只在子图整体结束后提交一次检查点，所以默认回放只能从子图之前；</li>
+<li><strong>命名空间是隔离手段</strong>：同一个子图被调用两次，默认按调用顺序分配命名空间，重排调用就会串状态。</li>
+</ol>
+<h2 id="五、场景说明"><a href="#五、场景说明" class="headerlink" title="五、场景说明"></a>五、场景说明</h2><ol>
+<li><strong>检索 → 摘要</strong>：把「查资料 + 压缩」封成子图，父图只管编排；</li>
+<li><strong>专家 Agent</strong>：计费专家、物流专家各是一张子图，主管按需调用；</li>
+<li><strong>复用组件</strong>：同一段「校验 → 改写」在多个图里复用；</li>
+<li><strong>多团队并行</strong>：接口定好，各自编译自己的子图。</li>
+</ol>
+<h2 id="六、示例代码"><a href="#六、示例代码" class="headerlink" title="六、示例代码"></a>六、示例代码</h2><h3 id="步骤-1：环境准备"><a href="#步骤-1：环境准备" class="headerlink" title="步骤 1：环境准备"></a>步骤 1：环境准备</h3><pre class="line-numbers language-bash" data-language="bash"><code class="language-bash">uv init lg10-subgraph
+<span class="token builtin class-name">cd</span> lg10-subgraph
+uv <span class="token function">add</span> langgraph<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span></span></code></pre>
+
+<h3 id="步骤-2：凭证配置"><a href="#步骤-2：凭证配置" class="headerlink" title="步骤 2：凭证配置"></a>步骤 2：凭证配置</h3><p>无。两个示例都用纯函数节点。</p>
+<h3 id="步骤-3：导入"><a href="#步骤-3：导入" class="headerlink" title="步骤 3：导入"></a>步骤 3：导入</h3><pre class="line-numbers language-python" data-language="python"><code class="language-python"><span class="token keyword">from</span> typing_extensions <span class="token keyword">import</span> TypedDict
+<span class="token keyword">from</span> langgraph<span class="token punctuation">.</span>graph <span class="token keyword">import</span> StateGraph<span class="token punctuation">,</span> START<span class="token punctuation">,</span> END
+<span class="token keyword">from</span> langgraph<span class="token punctuation">.</span>checkpoint<span class="token punctuation">.</span>memory <span class="token keyword">import</span> InMemorySaver<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span></span></code></pre>
+
+<h3 id="步骤-4：最小可运行代码"><a href="#步骤-4：最小可运行代码" class="headerlink" title="步骤 4：最小可运行代码"></a>步骤 4：最小可运行代码</h3><p>存成 <code>subgraph_demo.py</code>，<code>uv run subgraph_demo.py</code>。</p>
+<pre class="line-numbers language-python" data-language="python"><code class="language-python"><span class="token keyword">from</span> typing_extensions <span class="token keyword">import</span> TypedDict
+<span class="token keyword">from</span> langgraph<span class="token punctuation">.</span>graph <span class="token keyword">import</span> StateGraph<span class="token punctuation">,</span> START<span class="token punctuation">,</span> END
+<span class="token keyword">from</span> langgraph<span class="token punctuation">.</span>checkpoint<span class="token punctuation">.</span>memory <span class="token keyword">import</span> InMemorySaver
+
+<span class="token comment"># ---------- 接法一：共享 key，直接挂 ----------</span>
+<span class="token keyword">class</span> <span class="token class-name">SharedState</span><span class="token punctuation">(</span>TypedDict<span class="token punctuation">)</span><span class="token punctuation">:</span>
+    question<span class="token punctuation">:</span> <span class="token builtin">str</span>
+    docs<span class="token punctuation">:</span> <span class="token builtin">list</span><span class="token punctuation">[</span><span class="token builtin">str</span><span class="token punctuation">]</span>
+    answer<span class="token punctuation">:</span> <span class="token builtin">str</span>
+
+<span class="token keyword">def</span> <span class="token function">retrieve</span><span class="token punctuation">(</span>state<span class="token punctuation">:</span> SharedState<span class="token punctuation">)</span><span class="token punctuation">:</span>
+    <span class="token keyword">return</span> <span class="token punctuation">&#123;</span><span class="token string">"docs"</span><span class="token punctuation">:</span> <span class="token punctuation">[</span><span class="token string">"文档 A"</span><span class="token punctuation">,</span> <span class="token string">"文档 B"</span><span class="token punctuation">]</span><span class="token punctuation">&#125;</span>
+
+<span class="token keyword">def</span> <span class="token function">summarize</span><span class="token punctuation">(</span>state<span class="token punctuation">:</span> SharedState<span class="token punctuation">)</span><span class="token punctuation">:</span>
+    <span class="token keyword">return</span> <span class="token punctuation">&#123;</span><span class="token string">"answer"</span><span class="token punctuation">:</span> <span class="token string-interpolation"><span class="token string">f"基于 </span><span class="token interpolation"><span class="token punctuation">&#123;</span><span class="token builtin">len</span><span class="token punctuation">(</span>state<span class="token punctuation">[</span><span class="token string">'docs'</span><span class="token punctuation">]</span><span class="token punctuation">)</span><span class="token punctuation">&#125;</span></span><span class="token string"> 篇资料回答：</span><span class="token interpolation"><span class="token punctuation">&#123;</span>state<span class="token punctuation">[</span><span class="token string">'question'</span><span class="token punctuation">]</span><span class="token punctuation">&#125;</span></span><span class="token string">"</span></span><span class="token punctuation">&#125;</span>
+
+sub_builder <span class="token operator">=</span> StateGraph<span class="token punctuation">(</span>SharedState<span class="token punctuation">)</span>
+sub_builder<span class="token punctuation">.</span>add_node<span class="token punctuation">(</span><span class="token string">"retrieve"</span><span class="token punctuation">,</span> retrieve<span class="token punctuation">)</span>
+sub_builder<span class="token punctuation">.</span>add_node<span class="token punctuation">(</span><span class="token string">"summarize"</span><span class="token punctuation">,</span> summarize<span class="token punctuation">)</span>
+sub_builder<span class="token punctuation">.</span>add_edge<span class="token punctuation">(</span>START<span class="token punctuation">,</span> <span class="token string">"retrieve"</span><span class="token punctuation">)</span>
+sub_builder<span class="token punctuation">.</span>add_edge<span class="token punctuation">(</span><span class="token string">"retrieve"</span><span class="token punctuation">,</span> <span class="token string">"summarize"</span><span class="token punctuation">)</span>
+sub_builder<span class="token punctuation">.</span>add_edge<span class="token punctuation">(</span><span class="token string">"summarize"</span><span class="token punctuation">,</span> END<span class="token punctuation">)</span>
+sub <span class="token operator">=</span> sub_builder<span class="token punctuation">.</span><span class="token builtin">compile</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+
+parent_builder <span class="token operator">=</span> StateGraph<span class="token punctuation">(</span>SharedState<span class="token punctuation">)</span>
+parent_builder<span class="token punctuation">.</span>add_node<span class="token punctuation">(</span><span class="token string">"rag"</span><span class="token punctuation">,</span> sub<span class="token punctuation">)</span>              <span class="token comment"># 直接当节点</span>
+parent_builder<span class="token punctuation">.</span>add_edge<span class="token punctuation">(</span>START<span class="token punctuation">,</span> <span class="token string">"rag"</span><span class="token punctuation">)</span>
+parent_builder<span class="token punctuation">.</span>add_edge<span class="token punctuation">(</span><span class="token string">"rag"</span><span class="token punctuation">,</span> END<span class="token punctuation">)</span>
+graph <span class="token operator">=</span> parent_builder<span class="token punctuation">.</span><span class="token builtin">compile</span><span class="token punctuation">(</span>checkpointer<span class="token operator">=</span>InMemorySaver<span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span>
+
+cfg <span class="token operator">=</span> <span class="token punctuation">&#123;</span><span class="token string">"configurable"</span><span class="token punctuation">:</span> <span class="token punctuation">&#123;</span><span class="token string">"thread_id"</span><span class="token punctuation">:</span> <span class="token string">"sub-1"</span><span class="token punctuation">&#125;</span><span class="token punctuation">&#125;</span>
+r <span class="token operator">=</span> graph<span class="token punctuation">.</span>invoke<span class="token punctuation">(</span><span class="token punctuation">&#123;</span><span class="token string">"question"</span><span class="token punctuation">:</span> <span class="token string">"LangGraph 有什么用"</span><span class="token punctuation">,</span> <span class="token string">"docs"</span><span class="token punctuation">:</span> <span class="token punctuation">[</span><span class="token punctuation">]</span><span class="token punctuation">,</span> <span class="token string">"answer"</span><span class="token punctuation">:</span> <span class="token string">""</span><span class="token punctuation">&#125;</span><span class="token punctuation">,</span> cfg<span class="token punctuation">,</span> version<span class="token operator">=</span><span class="token string">"v2"</span><span class="token punctuation">)</span>
+<span class="token keyword">print</span><span class="token punctuation">(</span><span class="token string">"接法一 answer ="</span><span class="token punctuation">,</span> r<span class="token punctuation">.</span>value<span class="token punctuation">[</span><span class="token string">"answer"</span><span class="token punctuation">]</span><span class="token punctuation">)</span>
+
+<span class="token comment"># 看子图输出带命名空间</span>
+<span class="token keyword">for</span> part <span class="token keyword">in</span> graph<span class="token punctuation">.</span>stream<span class="token punctuation">(</span><span class="token punctuation">&#123;</span><span class="token string">"question"</span><span class="token punctuation">:</span> <span class="token string">"再问一次"</span><span class="token punctuation">,</span> <span class="token string">"docs"</span><span class="token punctuation">:</span> <span class="token punctuation">[</span><span class="token punctuation">]</span><span class="token punctuation">,</span> <span class="token string">"answer"</span><span class="token punctuation">:</span> <span class="token string">""</span><span class="token punctuation">&#125;</span><span class="token punctuation">,</span> cfg<span class="token punctuation">,</span>
+                         stream_mode<span class="token operator">=</span><span class="token string">"updates"</span><span class="token punctuation">,</span> subgraphs<span class="token operator">=</span><span class="token boolean">True</span><span class="token punctuation">,</span> version<span class="token operator">=</span><span class="token string">"v2"</span><span class="token punctuation">)</span><span class="token punctuation">:</span>
+    <span class="token keyword">print</span><span class="token punctuation">(</span>part<span class="token punctuation">[</span><span class="token string">"type"</span><span class="token punctuation">]</span><span class="token punctuation">,</span> part<span class="token punctuation">[</span><span class="token string">"ns"</span><span class="token punctuation">]</span><span class="token punctuation">,</span> part<span class="token punctuation">[</span><span class="token string">"data"</span><span class="token punctuation">]</span><span class="token punctuation">)</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<h3 id="步骤-5：预期输出"><a href="#步骤-5：预期输出" class="headerlink" title="步骤 5：预期输出"></a>步骤 5：预期输出</h3><pre class="line-numbers language-text" data-language="text"><code class="language-text">接法一 answer = 基于 2 篇资料回答：LangGraph 有什么用
+updates ('rag:&lt;task_id>',) &#123;'retrieve': &#123;'docs': ['文档 A', '文档 B']&#125;&#125;
+updates ('rag:&lt;task_id>',) &#123;'summarize': &#123;'answer': '基于 2 篇资料回答：再问一次'&#125;&#125;
+updates () &#123;'rag': &#123;'answer': '基于 2 篇资料回答：再问一次'&#125;&#125;<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span></span></code></pre>
+
+<p>读法：子图内部两个节点的更新带 <code>ns</code>，父图只看到「<code>rag</code> 这个节点整体写了什么」——父图把子图当<strong>一个 super-step</strong>。</p>
+<h3 id="步骤-6：验证是否成功"><a href="#步骤-6：验证是否成功" class="headerlink" title="步骤 6：验证是否成功"></a>步骤 6：验证是否成功</h3><ul>
+<li>把子图的 key 改成 <code>documents</code>（父图仍是 <code>docs</code>）：<code>answer</code> 里的篇数变成 0，字段静默消失；</li>
+<li>把 <code>add_node(&quot;rag&quot;, sub)</code> 换成包装函数 <code>lambda s: sub.invoke(&#123;&quot;question&quot;: s[&quot;question&quot;], &quot;docs&quot;: [], &quot;answer&quot;: &quot;&quot;&#125;)</code>：需要自己把返回值映射回去，这就是接法二（写法 A）；</li>
+<li>把子图 <code>compile(checkpointer=True)</code> 再跑两轮：子图自己的状态会跨轮累积（<code>docs</code> 越攒越多）。</li>
+</ul>
+<h3 id="写法-A-·-接法二：父子-schema-不同，写包装节点"><a href="#写法-A-·-接法二：父子-schema-不同，写包装节点" class="headerlink" title="写法 A · 接法二：父子 schema 不同，写包装节点"></a>写法 A · 接法二：父子 schema 不同，写包装节点</h3><pre class="line-numbers language-python" data-language="python"><code class="language-python"><span class="token keyword">class</span> <span class="token class-name">ParentState</span><span class="token punctuation">(</span>TypedDict<span class="token punctuation">)</span><span class="token punctuation">:</span>
+    user_input<span class="token punctuation">:</span> <span class="token builtin">str</span>
+    final<span class="token punctuation">:</span> <span class="token builtin">str</span>
+
+<span class="token keyword">class</span> <span class="token class-name">ChildState</span><span class="token punctuation">(</span>TypedDict<span class="token punctuation">)</span><span class="token punctuation">:</span>
+    query<span class="token punctuation">:</span> <span class="token builtin">str</span>
+    hits<span class="token punctuation">:</span> <span class="token builtin">list</span><span class="token punctuation">[</span><span class="token builtin">str</span><span class="token punctuation">]</span>
+    digest<span class="token punctuation">:</span> <span class="token builtin">str</span>
+
+<span class="token keyword">def</span> <span class="token function">child_node</span><span class="token punctuation">(</span>state<span class="token punctuation">:</span> ParentState<span class="token punctuation">)</span><span class="token punctuation">:</span>
+    child_cfg <span class="token operator">=</span> <span class="token punctuation">&#123;</span><span class="token string">"configurable"</span><span class="token punctuation">:</span> <span class="token punctuation">&#123;</span><span class="token string">"thread_id"</span><span class="token punctuation">:</span> <span class="token string">"child"</span><span class="token punctuation">&#125;</span><span class="token punctuation">&#125;</span>
+    out <span class="token operator">=</span> sub<span class="token punctuation">.</span>invoke<span class="token punctuation">(</span><span class="token punctuation">&#123;</span><span class="token string">"query"</span><span class="token punctuation">:</span> state<span class="token punctuation">[</span><span class="token string">"user_input"</span><span class="token punctuation">]</span><span class="token punctuation">,</span> <span class="token string">"hits"</span><span class="token punctuation">:</span> <span class="token punctuation">[</span><span class="token punctuation">]</span><span class="token punctuation">,</span> <span class="token string">"digest"</span><span class="token punctuation">:</span> <span class="token string">""</span><span class="token punctuation">&#125;</span><span class="token punctuation">,</span>
+                     child_cfg<span class="token punctuation">,</span> version<span class="token operator">=</span><span class="token string">"v2"</span><span class="token punctuation">)</span>
+    <span class="token keyword">return</span> <span class="token punctuation">&#123;</span><span class="token string">"final"</span><span class="token punctuation">:</span> out<span class="token punctuation">.</span>value<span class="token punctuation">[</span><span class="token string">"digest"</span><span class="token punctuation">]</span><span class="token punctuation">&#125;</span>     <span class="token comment"># 只把需要的字段搬回父图</span>
+
+parent <span class="token operator">=</span> <span class="token punctuation">(</span>StateGraph<span class="token punctuation">(</span>ParentState<span class="token punctuation">)</span>
+          <span class="token punctuation">.</span>add_node<span class="token punctuation">(</span><span class="token string">"child"</span><span class="token punctuation">,</span> child_node<span class="token punctuation">)</span>
+          <span class="token punctuation">.</span>add_edge<span class="token punctuation">(</span>START<span class="token punctuation">,</span> <span class="token string">"child"</span><span class="token punctuation">)</span>
+          <span class="token punctuation">.</span>add_edge<span class="token punctuation">(</span><span class="token string">"child"</span><span class="token punctuation">,</span> END<span class="token punctuation">)</span>
+          <span class="token punctuation">.</span><span class="token builtin">compile</span><span class="token punctuation">(</span>checkpointer<span class="token operator">=</span>InMemorySaver<span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<p>映射只搬必要字段，别整份 state 往回塞——这是「父子 key 不一致」时最稳的边界。</p>
+<h3 id="子图里-interrupt、父图恢复"><a href="#子图里-interrupt、父图恢复" class="headerlink" title="子图里 interrupt、父图恢复"></a>子图里 interrupt、父图恢复</h3><pre class="line-numbers language-python" data-language="python"><code class="language-python"><span class="token keyword">def</span> <span class="token function">approve</span><span class="token punctuation">(</span>state<span class="token punctuation">:</span> ChildState<span class="token punctuation">)</span><span class="token punctuation">:</span>
+    ok <span class="token operator">=</span> interrupt<span class="token punctuation">(</span><span class="token string">"子图里也要人点头"</span><span class="token punctuation">)</span>
+    <span class="token keyword">return</span> <span class="token punctuation">&#123;</span><span class="token string">"digest"</span><span class="token punctuation">:</span> <span class="token string">"已通过"</span> <span class="token keyword">if</span> ok <span class="token keyword">else</span> <span class="token string">"被拒"</span><span class="token punctuation">&#125;</span>
+
+<span class="token comment"># 恢复仍在父图 config 上做</span>
+graph<span class="token punctuation">.</span>invoke<span class="token punctuation">(</span>Command<span class="token punctuation">(</span>resume<span class="token operator">=</span><span class="token boolean">True</span><span class="token punctuation">)</span><span class="token punctuation">,</span> cfg<span class="token punctuation">,</span> version<span class="token operator">=</span><span class="token string">"v2"</span><span class="token punctuation">)</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<h3 id="跨层跳转"><a href="#跨层跳转" class="headerlink" title="跨层跳转"></a>跨层跳转</h3><pre class="line-numbers language-python" data-language="python"><code class="language-python"><span class="token keyword">from</span> langgraph<span class="token punctuation">.</span>types <span class="token keyword">import</span> Command
+
+<span class="token keyword">def</span> <span class="token function">escalate</span><span class="token punctuation">(</span>state<span class="token punctuation">:</span> ChildState<span class="token punctuation">)</span><span class="token punctuation">:</span>
+    <span class="token keyword">return</span> Command<span class="token punctuation">(</span>graph<span class="token operator">=</span>Command<span class="token punctuation">.</span>PARENT<span class="token punctuation">,</span> goto<span class="token operator">=</span><span class="token string">"notify"</span><span class="token punctuation">,</span> update<span class="token operator">=</span><span class="token punctuation">&#123;</span><span class="token string">"digest"</span><span class="token punctuation">:</span> <span class="token string">"已升级"</span><span class="token punctuation">&#125;</span><span class="token punctuation">)</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span></span></code></pre>
+
+<h3 id="换-provider-速查（本篇不涉及模型）"><a href="#换-provider-速查（本篇不涉及模型）" class="headerlink" title="换 provider 速查（本篇不涉及模型）"></a>换 provider 速查（本篇不涉及模型）</h3><div class="data-grid data-grid-link-table"><div class="grid-header"><div class="grid-cell">涉及点</div><div class="grid-cell">本篇写法</div><div class="grid-cell">接模型时</div><div class="grid-cell">替换方式</div></div><div class="grid-row"><div class="grid-cell">子图节点</div><div class="grid-cell">纯函数</div><div class="grid-cell"><code>init_chat_model(...)</code></div><div class="grid-cell">节点内加一行</div></div><div class="grid-row"><div class="grid-cell">持久化</div><div class="grid-cell"><code>InMemorySaver</code></div><div class="grid-cell"><code>PostgresSaver</code></div><div class="grid-cell">换构造</div></div><div class="grid-row"><div class="grid-cell">状态映射</div><div class="grid-cell">—</div><div class="grid-cell">完全相同</div><div class="grid-cell">不改</div></div></div>
+
+<h2 id="七、常见坑（官方明确限制-版本差异）"><a href="#七、常见坑（官方明确限制-版本差异）" class="headerlink" title="七、常见坑（官方明确限制&#x2F;版本差异）"></a>七、常见坑（官方明确限制&#x2F;版本差异）</h2><ol>
+<li><strong>父子 key 名字对不上</strong>。字段静默丢失，不报错；类型对不上则 reducer 直接炸。</li>
+<li><strong>在子图自己的 <code>config</code> 上恢复 <code>interrupt</code></strong>。恢复要用父图的 <code>thread_id</code>，否则找不到待恢复任务。</li>
+<li><strong>同一个子图调用两次不隔离</strong>。默认按调用顺序分命名空间，重排调用就串状态；给每个子 Agent 唯一节点名。</li>
+<li><strong>想让子图内部可回放却没开检查点</strong>。默认继承父图，父图把子图当一个 super-step。</li>
+<li><strong><code>compile(checkpointer=False)</code> 还想用 <code>interrupt</code></strong>。官方明确：完全无检查点就没有中断与断点续跑。</li>
+<li><strong>把子图当 API 边界</strong>。子图不是服务，别指望它自带鉴权、限流；那些是部署层的事（LG15）。</li>
+</ol>
+<h2 id="八、课后小结"><a href="#八、课后小结" class="headerlink" title="八、课后小结"></a>八、课后小结</h2><ul>
+<li>子图＝当节点用的图，两种接法：共享 key 直接挂、schema 不同写包装；</li>
+<li>子图默认被父图当成一个 super-step，流式里靠 <code>ns</code> 区分；</li>
+<li>checkpointer 三档：<code>None</code> 每次从头、<code>True</code> 按线程累积、<code>False</code> 完全无状态；</li>
+<li>子图 <code>interrupt</code> 在父图 <code>config</code> 上恢复；跨层跳转用 <code>Command(graph=Command.PARENT)</code>；</li>
+<li>多子图要稳定命名空间，否则互相覆盖。</li>
+</ul>
+<h2 id="九、思考题"><a href="#九、思考题" class="headerlink" title="九、思考题"></a>九、思考题</h2><p><strong>1、为什么共享 key 时可以直接 <code>add_node(compiled)</code>，而不同 schema 就不行？</strong></p>
+<p>参考回答：直接挂的前提是「子图读写的就是父图的 channel」，运行时按 key 对接；schema 不同就没有公共 channel，必须有人在中间搬数据，只能写包装节点。</p>
+<p><strong>2、默认（<code>None</code>）档下，为什么父子状态不会自动累积？</strong></p>
+<p>参考回答：默认每次调用从头开始，只为支持本次调用内的 <code>interrupt</code> 与续跑；跨调用记忆要显式 <code>checkpointer=True</code>。</p>
+<p><strong>3、子图里 <code>interrupt</code> 之后，父图的 <code>next</code> 会显示什么？</strong></p>
+<p>参考回答：父图会看到子图这个任务处于「未完成」，<code>next</code> 里是子图所在的那个节点名；恢复后从该任务继续，而不是从父图入口重来。</p>
+<p><strong>4、为什么官方警告「同一个子图调用两次」有命名空间风险？</strong></p>
+<p>参考回答：命名空间按调用顺序（第一次、第二次）分配，重排调用顺序后旧检查点会被新调用读到，状态就串了；固定唯一节点名能避免。</p>
+<h2 id="十、下一篇预告"><a href="#十、下一篇预告" class="headerlink" title="十、下一篇预告"></a>十、下一篇预告</h2><p><strong>下一篇标题</strong>：11 节点级可靠性：重试、超时、补偿。</p>
+<p><strong>一句话内容</strong>：图能拆能拼了，接下来管「节点挂了怎么办」——<code>RetryPolicy</code> 重试、<code>timeout</code> 掐时间、<code>error_handler</code> 拿 <code>NodeError</code> 走补偿、<code>request_drain()</code> 优雅停机。</p>
+<p><strong>承接关系</strong>：本篇管结构与状态边界，LG11 管单个节点的失败边界；M3 到此收尾。</p>
+<p><strong>跳转位置</strong>：M3 第三讲。</p>
+<h2 id="十一、官方资料"><a href="#十一、官方资料" class="headerlink" title="十一、官方资料"></a>十一、官方资料</h2><ul>
+<li>Subgraphs（两种接法、持久化三档、命名空间隔离）：<a target="_blank" rel="noopener" href="https://docs.langchain.com/oss/python/langgraph/use-subgraphs">https://docs.langchain.com/oss/python/langgraph/use-subgraphs</a></li>
+<li>Streaming（<code>subgraphs=True</code> 与 <code>ns</code>）：<a target="_blank" rel="noopener" href="https://docs.langchain.com/oss/python/langgraph/streaming">https://docs.langchain.com/oss/python/langgraph/streaming</a></li>
+<li>Checkpointers（<code>checkpoint_ns</code> 的含义）：<a target="_blank" rel="noopener" href="https://docs.langchain.com/oss/python/langgraph/checkpointers">https://docs.langchain.com/oss/python/langgraph/checkpointers</a></li>
+<li>LangChain LC08（<code>create_agent</code> 本身就是编译好的图）：<a href="https://wu4yong.github.io/2026/12/06/ai/langchain/langchain-8-create-agent/">https://wu4yong.github.io/2026/12/06/ai/langchain/langchain-8-create-agent/</a></li>
+</ul>
+<p>上一篇：<a href="/2026/12/22/ai/langgraph/langgraph-9-streaming/">LG09 流式输出：五种模式</a> ｜ 下一篇：<a href="/2026/12/24/ai/langgraph/langgraph-11-node-reliability/">LG11 节点级可靠性：重试、超时、补偿</a> ｜ <a href="/2026/12/13/ai/langgraph/langgraph-0-series-index/">总目录</a></p>
+</div>
+
+  <div class="mb-foot">
+    <a href="/phone/">返回手机首页</a>
+    <a href="/phone/tags/">星迹索引</a>
+  </div>
+</div>
+
+
+<script>
+  /* 作用：懒加载本地 mermaid 库；无 mermaid 代码块时不加载 */
+  function loadLocalMermaid(){
+    return new Promise(function(resolve, reject){
+      if(window.mermaid) return resolve(window.mermaid);
+      var s = document.createElement('script');
+      s.src = '/js/third-party/mermaid/mermaid.min.js?v=10';
+      s.onload = function(){ resolve(window.mermaid); };
+      s.onerror = function(){ reject(new Error('mermaid local load failed')); };
+      document.head.appendChild(s);
+    });
+  }
+
+  /* 作用：把 ```mermaid 代码块替换成 SVG 图（手机端字号略小、图可横向滚动） */
+  async function renderMermaidDiagram(){
+    var blocks = document.querySelectorAll('pre[class*="language-mermaid"]');
+    if(!blocks.length) return;
+    var mermaid;
+    try { mermaid = await loadLocalMermaid(); }
+    catch(e){ console.warn('[mermaid] 本地库加载失败：', e); return; }
+
+    mermaid.initialize({
+      startOnLoad: false,
+      theme: 'base',
+      themeVariables: {
+        darkMode: true,
+        background: 'transparent',
+        fontFamily: '"Microsoft YaHei", "PingFang SC", "Segoe UI", sans-serif',
+        fontSize: '12px',
+        primaryColor: '#062f3d',
+        primaryTextColor: '#d6f6ff',
+        primaryBorderColor: '#00eeff',
+        secondaryColor: '#04222d',
+        tertiaryColor: '#04222d',
+        mainBkg: '#062f3d',
+        nodeBorder: '#00eeff',
+        clusterBkg: '#02161f',
+        clusterBorder: '#00eeff55',
+        lineColor: '#00eeff',
+        textColor: '#c0e8ff',
+        edgeLabelBackground: '#02161f'
+      },
+      flowchart: { curve: 'basis', useMaxWidth: false, htmlLabels: false, nodeSpacing: 30, rankSpacing: 40, padding: 10 }
+    });
+
+    var targets = [];
+    blocks.forEach(function(el){
+      var codeEl = el.querySelector('code');
+      if(!codeEl) return;
+      var div = document.createElement('div');
+      div.className = 'mermaid';
+      div.textContent = codeEl.textContent;
+      el.parentNode.replaceChild(div, el);
+      targets.push(div);
+    });
+    if(!targets.length) return;
+    try { await mermaid.run({ nodes: targets }); }
+    catch(e){ console.warn('[mermaid] 渲染失败：', e); }
+  }
+  /* 作用：多次触发兜底（延迟重试 + DOM 变化），防止某次时机没跑到导致图表留在代码块 */
+  var mmBusy = false;
+  function scheduleMermaid(){
+    if(mmBusy) return;
+    mmBusy = true;
+    renderMermaidDiagram().then(function(){ mmBusy = false; }, function(){ mmBusy = false; });
+  }
+  scheduleMermaid();
+  window.addEventListener('load', scheduleMermaid);
+  [1000, 3000, 8000].forEach(function(ms){ setTimeout(scheduleMermaid, ms); });
+  if(document.readyState !== 'loading') scheduleMermaid();
+  if(window.MutationObserver){
+    var mmTimer = null;
+    var mmObserver = new MutationObserver(function(){
+      clearTimeout(mmTimer);
+      mmTimer = setTimeout(scheduleMermaid, 400);
+    });
+    mmObserver.observe(document.querySelector('.mb-article') || document.body, { childList: true, subtree: true });
+  }
+</script>
+</body>
+</html>

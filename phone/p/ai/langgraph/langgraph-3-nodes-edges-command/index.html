@@ -1,0 +1,471 @@
+<!--
+  ============================================
+  手机端 · 文章原文页
+  文件：phone/post.njk
+  适用终端：手机端（路由 /phone/p/<slug>/，由 scripts/phone-routes.js 生成）
+  作用：手机阅读单篇文章；单列布局、无侧栏无雷达，替代电脑端 post.njk
+        数据由生成期算好：page.item = { title, dateStr, content, cats, tags }
+  样式依赖：source/css/theme/phone/common.css、source/css/theme/phone/list.css
+  组件依赖：phone/_components/Particles.njk
+  最后修改：2026-11-11
+  ============================================
+-->
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="color-scheme" content="dark">
+  <meta name="theme-color" content="#020817">
+  <!-- 首帧兜底：浏览器默认画布是白的，样式未解析前会闪一下白。这条规则先锁死深空底色 -->
+  <style>html{background-color:#020817}</style>
+  <title>LangGraph 03 · 节点、边、Command 与 Send - 时空秘境</title>
+  <!-- 手机端样式：基础 + 列表/正文，外链引入（源文件 source/css/theme/phone/） -->
+  <link rel="stylesheet" href="/css/theme/phone/common.css">
+  <link rel="stylesheet" href="/css/theme/phone/list.css">
+<meta name="generator" content="Hexo 8.1.2"></head>
+<body>
+<div class="mb-shell">
+  <!--
+  ============================================
+  手机端星空粒子组件
+  文件：Particles.njk
+  适用终端：手机端
+  作用：Particles.njk 的手机端副本（nunjucks 子目录 include 取不到上级）
+        参数与电脑端 _components/Particles.njk 保持一致：
+        粒子 95 / 连线 118px / opacity 0.32，外加星座层与零星闪烁层
+  最后修改：2026-11-12
+  ============================================
+--><!-- z-index 必须是 0：负层级会被 body 不透明背景盖住，粒子在跑却看不见 -->
+<div id="particles" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 0; pointer-events: none;"></div>
+<!-- 星座层（与首页同一套：随机零星散布星座图形 + 偶尔闪烁的小星） -->
+<div id="constellations" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 1; pointer-events: none;" aria-hidden="true"></div>
+<script src="/js/particles.min.js"></script>
+<script>
+particlesJS("particles", {
+  particles: {
+    number: {
+      value: 95,
+      density: {
+        enable: true,
+        value_area: 800
+      }
+    },
+    color: {
+      value: "#00eeff"
+    },
+    shape: {
+      type: "circle",
+      stroke: {
+        width: 0,
+        color: "#000000"
+      }
+    },
+    opacity: {
+      value: 0.6,
+      random: true,
+      anim: {
+        enable: true,
+        speed: 0.5,
+        opacity_min: 0.1,
+        sync: false
+      }
+    },
+    size: {
+      value: 3,
+      random: true,
+      anim: {
+        enable: true,
+        speed: 2,
+        size_min: 0.1,
+        sync: false
+      }
+    },
+    line_linked: {
+      enable: true,
+      distance: 118,
+      color: "#00eeff",
+      opacity: 0.32,
+      width: 1
+    },
+    move: {
+      enable: true,
+      speed: 0.8,
+      direction: "none",
+      random: true,
+      straight: false,
+      out_mode: "out",
+      bounce: false,
+      attract: {
+        enable: true,
+        rotateX: 600,
+        rotateY: 1200
+      }
+    }
+  },
+  interactivity: {
+    detect_on: "canvas",
+    events: {
+      onhover: {
+        enable: true,
+        mode: "grab"       // 手指按住时粒子聚集
+      },
+      onclick: {
+        enable: true,
+        mode: "push"       // 点击时产生新粒子
+      },
+      resize: true
+    },
+    modes: {
+      grab: {
+        distance: 200,
+        line_linked: {
+          opacity: 1
+        }
+      },
+      push: {
+        particles_nb: 6
+      }
+    }
+  },
+  retina_detect: true
+});
+</script>
+<!-- 星座 + 零星闪烁层：与电脑端共用同一份绘制脚本 -->
+<script src="/js/theme/home/starfield.js"></script>
+
+
+  <div class="mb-top">
+    <a class="mb-back" href="/phone/">← 返回手机首页</a>
+    <span class="mb-sub" style="margin:0">2026-12-16</span>
+  </div>
+
+  <h1 class="mb-title">LangGraph 03 · 节点、边、Command 与 Send</h1>
+  <div class="mb-sub">
+    分类：ai · langgraph
+     ｜ 标签：AI · 系统课 · LangGraph
+  </div>
+
+  <div class="mb-article"><div class="essay-banner essay-langgraph"></div>
+
+<h1 id="03-节点、边、Command-与-Send"><a href="#03-节点、边、Command-与-Send" class="headerlink" title="03 节点、边、Command 与 Send"></a>03 节点、边、Command 与 Send</h1><p><img src="https://wu4yong.github.io/starry-images/assets/img/langgraph/v1/lg-3-nodes-edges.svg" alt="三种边：固定边、条件边、条件入口"></p>
+<p><em>边只决定「下一步是谁」；要同时改状态，才轮得到 <code>Command</code>｜依据官方 Graph API · Edges 自绘</em></p>
+
+<div class="ver-note"><p><strong>版本不一致提示</strong></p>
+<ul>
+<li>本篇基线是 <strong>LangGraph 1.2.x + Python 3.13</strong>，示例用规则路由，不调模型，全部可离线验证；</li>
+<li>官方明确：同一个节点要么用静态边、要么用动态路由（条件边 &#x2F; <code>Command</code>），<strong>混着写两路都会跑</strong>；</li>
+<li><code>Command</code> 除了 <code>update</code> &#x2F; <code>goto</code>，还能带 <code>graph=</code>（跨子图）与 <code>resume=</code>（恢复中断），后两者分别在 LG10、LG06 用；</li>
+<li><code>Send</code> 的并行写回依赖 reducer 合并，没配 reducer 的 key 会互相覆盖（LG02）。</li>
+</ul>
+</div>
+
+
+<h2 id="一、学习目标"><a href="#一、学习目标" class="headerlink" title="一、学习目标"></a>一、学习目标</h2><p>学完这一讲，你要能做到三件事：</p>
+<ol>
+<li>分清三种边（固定边、条件边、条件入口）各自适用什么形状的流程，路由函数的返回值有哪几种合法形态；</li>
+<li>判断什么时候该用 <code>Command</code>——「路由依赖本节点刚算出来的结果」时；</li>
+<li>用 <code>Send</code> 做 map-reduce：条目数运行时才知道、要并行处理、结果靠 reducer 合回来。</li>
+</ol>
+<h2 id="二、前置知识"><a href="#二、前置知识" class="headerlink" title="二、前置知识"></a>二、前置知识</h2><ul>
+<li>读完 LG01、LG02：会写节点、知道 reducer 怎么合并；</li>
+<li>知道「一个节点有多条出边时，下一轮并行跑」；</li>
+<li>不需要模型，路由用规则写，先把控制流搞清楚。</li>
+</ul>
+<h2 id="三、理论讲解（官方定义）"><a href="#三、理论讲解（官方定义）" class="headerlink" title="三、理论讲解（官方定义）"></a>三、理论讲解（官方定义）</h2><p>顺序照官方 Graph API 的 Nodes → Edges → <code>Send</code> → <code>Command</code> 四节。</p>
+<h3 id="1-节点函数的三种参数"><a href="#1-节点函数的三种参数" class="headerlink" title="1. 节点函数的三种参数"></a>1. 节点函数的三种参数</h3><p>官方说节点可以接：<code>state</code>、<code>config</code>（<code>RunnableConfig</code>，里面有 <code>thread_id</code> &#x2F; <code>tags</code>）、<code>runtime</code>（<code>Runtime</code>，含 context、store、stream_writer）。函数签名按需取，不用全写。</p>
+<p>省略节点名时用函数名：</p>
+<pre class="line-numbers language-python" data-language="python"><code class="language-python">builder<span class="token punctuation">.</span>add_node<span class="token punctuation">(</span>answer_node<span class="token punctuation">)</span>        <span class="token comment"># 节点名就是 "answer_node"</span>
+builder<span class="token punctuation">.</span>add_node<span class="token punctuation">(</span><span class="token string">"answer"</span><span class="token punctuation">,</span> answer_node<span class="token punctuation">)</span>   <span class="token comment"># 显式命名，等价</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span></span></code></pre>
+
+<h3 id="2-三种边"><a href="#2-三种边" class="headerlink" title="2. 三种边"></a>2. 三种边</h3><div class="data-grid data-grid-link-table"><div class="grid-header"><div class="grid-cell">形态</div><div class="grid-cell">API</div><div class="grid-cell">用在哪</div></div><div class="grid-row"><div class="grid-cell">固定边</div><div class="grid-cell"><code>add_edge(a, b)</code></div><div class="grid-cell">顺序确定的流程</div></div><div class="grid-row"><div class="grid-cell">条件边</div><div class="grid-cell"><code>add_conditional_edges(a, fn)</code></div><div class="grid-cell">跑完 a 后按 state 决定分支</div></div><div class="grid-row"><div class="grid-cell">条件入口</div><div class="grid-cell"><code>add_conditional_edges</code></div><div class="grid-cell">源写 <code>START</code>，连第一个节点都按输入决定</div></div><div class="grid-row"><div class="grid-cell">入口 &#x2F; 终点</div><div class="grid-cell"><code>add_edge</code></div><div class="grid-cell"><code>START</code> &#x2F; <code>END</code> 是虚拟节点</div></div></div>
+
+<p>路由函数<strong>只读 state</strong>，返回四种东西之一：节点名、<code>END</code>、名称列表（扇出到多个节点并行）、<code>Send</code> 对象列表。也可以再给一个「返回值 → 节点名」的映射字典，把路由函数的输出收敛成有限枚举。</p>
+<h3 id="3-不能混用"><a href="#3-不能混用" class="headerlink" title="3. 不能混用"></a>3. 不能混用</h3><p>官方写得很直接：对同一个节点，<strong>静态边和动态路由只能选一种</strong>。既 <code>add_edge(&quot;a&quot;, &quot;b&quot;)</code> 又在 <code>a</code> 里返回 <code>Command(goto=&quot;c&quot;)</code>，两条路径都会跑。</p>
+<h3 id="4-Command：更新与路由合成一步"><a href="#4-Command：更新与路由合成一步" class="headerlink" title="4. Command：更新与路由合成一步"></a>4. <code>Command</code>：更新与路由合成一步</h3><p><code>Command</code> 的字段：<code>update</code>（状态更新）、<code>goto</code>（下一跳）、<code>graph</code>（父图目标）、<code>resume</code>（中断恢复值）。</p>
+<p>什么时候必须用：<strong>下一跳取决于你这个函数里刚算出来的东西</strong>。典型是「分类节点自己算出类别，然后直接去对应处理节点」——用条件边也行，但要多写一个只读 state 的路由函数；<code>Command</code> 把它合成一步。</p>
+<p>官方同时提醒：<strong>只路由不改状态时优先条件边</strong>，<code>Command</code> 是给「两件事一起做」的场景。</p>
+<p>返回类型建议标上 <code>Command[Literal[&quot;a&quot;, &quot;b&quot;]]</code>，否则可视化里画不出边。</p>
+<h3 id="5-Send：map-reduce"><a href="#5-Send：map-reduce" class="headerlink" title="5. Send：map-reduce"></a>5. <code>Send</code>：map-reduce</h3><p><code>Send(node, arg)</code> 用在「同一个节点要按条目跑多次，条目数运行时才知道」的场景。从条件边返回一组 <code>Send</code>，每个 <code>Send</code> 指定目标节点和<strong>这一次的输入</strong>——注意它拿到的是你给的那份数据，不是整份 state。</p>
+<p>并行写回同一个 key 时，靠 reducer 合并（LG02）。这也是 map-reduce 在 LangGraph 里的标准写法：split → N 个 worker → merge。</p>
+<h3 id="6-边与-super-step-的关系"><a href="#6-边与-super-step-的关系" class="headerlink" title="6. 边与 super-step 的关系"></a>6. 边与 super-step 的关系</h3><p>一个节点有多条出边、或路由函数返回名称列表时，这些目标在<strong>下一个 super-step 并行执行</strong>。所以「扇出」不是并发调用，是同一轮的多个分支（LG04 讲执行顺序）。</p>
+<h2 id="四、原理拆解"><a href="#四、原理拆解" class="headerlink" title="四、原理拆解"></a>四、原理拆解</h2><p><img src="https://wu4yong.github.io/starry-images/assets/img/langgraph/v1/lg-3b-command-send.svg" alt="Command 把改状态与选下一步合成一步；Send 把同一节点按条目拆开并行"></p>
+<p>把图想成<strong>快递分拣中心</strong>：</p>
+<ul>
+<li><strong>固定边</strong>是传送带，包裹只能往一个方向走；</li>
+<li><strong>条件边</strong>是分拣员，看一眼面单（state）决定丢进哪个滑槽；</li>
+<li><strong>条件入口</strong>是门口的分流：进来就先判断，走快速通道还是普通通道；</li>
+<li><strong><code>Command</code></strong> 是「分拣员自己就是打包员」：他刚封好箱（改了状态），顺手就把箱子推去对应滑槽，不需要另一个人再看一眼；</li>
+<li><strong><code>Send</code></strong> 是「一份清单上有 N 个包裹」：分拣员照着清单给每个包裹开一张工单，N 个工位同时处理，最后按规则汇总。</li>
+</ul>
+<p>三个关键判断：</p>
+<ol>
+<li><strong>谁决定走向</strong>：边（或路由函数）、<code>Command</code>，二者取其一；</li>
+<li><strong>扇出是不是并行</strong>：是同一 super-step 的多分支，不是线程池；</li>
+<li><strong><code>Send</code> 的输入是定制的</strong>：每个 worker 只拿到自己的那一份，所以它适合「按条目拆分」而不是「共享上下文」。</li>
+</ol>
+<h2 id="五、场景说明"><a href="#五、场景说明" class="headerlink" title="五、场景说明"></a>五、场景说明</h2><ol>
+<li><strong>客服分流</strong>：退款 &#x2F; 技术 &#x2F; 人工三条路——条件边或 <code>Command</code>；</li>
+<li><strong>有缓存走缓存</strong>：条件入口，第一个节点就要判断；</li>
+<li><strong>批量处理（每份文档分别摘要）</strong>：<code>Send</code> + merge；</li>
+<li><strong>多 Agent 交接</strong>：<code>Command(goto=..., graph=Command.PARENT)</code>（LG12 展开）；</li>
+<li><strong>不该用的场景</strong>：只有一条固定路径时别硬套条件边，多写一个路由函数只是增加故障点。</li>
+</ol>
+<h2 id="六、示例代码"><a href="#六、示例代码" class="headerlink" title="六、示例代码"></a>六、示例代码</h2><h3 id="步骤-1：环境准备"><a href="#步骤-1：环境准备" class="headerlink" title="步骤 1：环境准备"></a>步骤 1：环境准备</h3><pre class="line-numbers language-bash" data-language="bash"><code class="language-bash"><span class="token comment"># 03 节点、边、Command 与 Send</span>
+uv python pin <span class="token number">3.13</span>
+uv init lg-flow
+<span class="token builtin class-name">cd</span> lg-flow
+uv <span class="token function">add</span> langgraph<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<h3 id="步骤-2：凭证配置"><a href="#步骤-2：凭证配置" class="headerlink" title="步骤 2：凭证配置"></a>步骤 2：凭证配置</h3><p>无。本篇三个图都是纯规则，不调模型。</p>
+<h3 id="步骤-3：导入"><a href="#步骤-3：导入" class="headerlink" title="步骤 3：导入"></a>步骤 3：导入</h3><pre class="line-numbers language-python" data-language="python"><code class="language-python"><span class="token keyword">import</span> operator
+<span class="token keyword">from</span> typing <span class="token keyword">import</span> Annotated<span class="token punctuation">,</span> Literal
+<span class="token keyword">from</span> typing_extensions <span class="token keyword">import</span> TypedDict
+<span class="token keyword">from</span> langgraph<span class="token punctuation">.</span>graph <span class="token keyword">import</span> StateGraph<span class="token punctuation">,</span> START<span class="token punctuation">,</span> END
+<span class="token keyword">from</span> langgraph<span class="token punctuation">.</span>types <span class="token keyword">import</span> Command<span class="token punctuation">,</span> Send<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<h3 id="步骤-4：最小可运行代码"><a href="#步骤-4：最小可运行代码" class="headerlink" title="步骤 4：最小可运行代码"></a>步骤 4：最小可运行代码</h3><p>存成 <code>flow_demo.py</code>，<code>uv run flow_demo.py</code>。三个图共用一套 state：</p>
+<pre class="line-numbers language-python" data-language="python"><code class="language-python"><span class="token keyword">import</span> operator
+<span class="token keyword">from</span> typing <span class="token keyword">import</span> Annotated<span class="token punctuation">,</span> Literal
+<span class="token keyword">from</span> typing_extensions <span class="token keyword">import</span> TypedDict
+<span class="token keyword">from</span> langgraph<span class="token punctuation">.</span>graph <span class="token keyword">import</span> StateGraph<span class="token punctuation">,</span> START<span class="token punctuation">,</span> END
+<span class="token keyword">from</span> langgraph<span class="token punctuation">.</span>types <span class="token keyword">import</span> Command<span class="token punctuation">,</span> Send
+
+<span class="token keyword">class</span> <span class="token class-name">Ticket</span><span class="token punctuation">(</span>TypedDict<span class="token punctuation">)</span><span class="token punctuation">:</span>
+    text<span class="token punctuation">:</span> <span class="token builtin">str</span>
+    route<span class="token punctuation">:</span> <span class="token builtin">str</span>
+    replies<span class="token punctuation">:</span> Annotated<span class="token punctuation">[</span><span class="token builtin">list</span><span class="token punctuation">[</span><span class="token builtin">str</span><span class="token punctuation">]</span><span class="token punctuation">,</span> operator<span class="token punctuation">.</span>add<span class="token punctuation">]</span>
+
+<span class="token keyword">def</span> <span class="token function">refund</span><span class="token punctuation">(</span>state<span class="token punctuation">:</span> Ticket<span class="token punctuation">)</span><span class="token punctuation">:</span>    <span class="token keyword">return</span> <span class="token punctuation">&#123;</span><span class="token string">"route"</span><span class="token punctuation">:</span> <span class="token string">"退款"</span><span class="token punctuation">,</span> <span class="token string">"replies"</span><span class="token punctuation">:</span> <span class="token punctuation">[</span><span class="token string">"已为你登记退款"</span><span class="token punctuation">]</span><span class="token punctuation">&#125;</span>
+<span class="token keyword">def</span> <span class="token function">technical</span><span class="token punctuation">(</span>state<span class="token punctuation">:</span> Ticket<span class="token punctuation">)</span><span class="token punctuation">:</span> <span class="token keyword">return</span> <span class="token punctuation">&#123;</span><span class="token string">"route"</span><span class="token punctuation">:</span> <span class="token string">"技术"</span><span class="token punctuation">,</span> <span class="token string">"replies"</span><span class="token punctuation">:</span> <span class="token punctuation">[</span><span class="token string">"请重启后重试"</span><span class="token punctuation">]</span><span class="token punctuation">&#125;</span>
+<span class="token keyword">def</span> <span class="token function">human</span><span class="token punctuation">(</span>state<span class="token punctuation">:</span> Ticket<span class="token punctuation">)</span><span class="token punctuation">:</span>     <span class="token keyword">return</span> <span class="token punctuation">&#123;</span><span class="token string">"route"</span><span class="token punctuation">:</span> <span class="token string">"人工"</span><span class="token punctuation">,</span> <span class="token string">"replies"</span><span class="token punctuation">:</span> <span class="token punctuation">[</span><span class="token string">"已转人工客服"</span><span class="token punctuation">]</span><span class="token punctuation">&#125;</span>
+
+<span class="token comment"># 图 A：条件边 + 映射字典</span>
+<span class="token keyword">def</span> <span class="token function">classify</span><span class="token punctuation">(</span>state<span class="token punctuation">:</span> Ticket<span class="token punctuation">)</span> <span class="token operator">-</span><span class="token operator">></span> <span class="token builtin">str</span><span class="token punctuation">:</span>
+    <span class="token keyword">if</span> <span class="token string">"退款"</span> <span class="token keyword">in</span> state<span class="token punctuation">[</span><span class="token string">"text"</span><span class="token punctuation">]</span><span class="token punctuation">:</span>
+        <span class="token keyword">return</span> <span class="token string">"refund"</span>
+    <span class="token keyword">if</span> <span class="token string">"报错"</span> <span class="token keyword">in</span> state<span class="token punctuation">[</span><span class="token string">"text"</span><span class="token punctuation">]</span> <span class="token keyword">or</span> <span class="token string">"失败"</span> <span class="token keyword">in</span> state<span class="token punctuation">[</span><span class="token string">"text"</span><span class="token punctuation">]</span><span class="token punctuation">:</span>
+        <span class="token keyword">return</span> <span class="token string">"technical"</span>
+    <span class="token keyword">return</span> <span class="token string">"human"</span>
+
+<span class="token keyword">def</span> <span class="token function">build_with_edges</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">:</span>
+    b <span class="token operator">=</span> StateGraph<span class="token punctuation">(</span>Ticket<span class="token punctuation">)</span>
+    b<span class="token punctuation">.</span>add_node<span class="token punctuation">(</span><span class="token string">"classify"</span><span class="token punctuation">,</span> classify<span class="token punctuation">)</span>
+    b<span class="token punctuation">.</span>add_node<span class="token punctuation">(</span><span class="token string">"refund"</span><span class="token punctuation">,</span> refund<span class="token punctuation">)</span>
+    b<span class="token punctuation">.</span>add_node<span class="token punctuation">(</span><span class="token string">"technical"</span><span class="token punctuation">,</span> technical<span class="token punctuation">)</span>
+    b<span class="token punctuation">.</span>add_node<span class="token punctuation">(</span><span class="token string">"human"</span><span class="token punctuation">,</span> human<span class="token punctuation">)</span>
+    b<span class="token punctuation">.</span>add_edge<span class="token punctuation">(</span>START<span class="token punctuation">,</span> <span class="token string">"classify"</span><span class="token punctuation">)</span>
+    b<span class="token punctuation">.</span>add_conditional_edges<span class="token punctuation">(</span><span class="token string">"classify"</span><span class="token punctuation">,</span> classify<span class="token punctuation">,</span> <span class="token punctuation">&#123;</span><span class="token string">"refund"</span><span class="token punctuation">:</span> <span class="token string">"refund"</span><span class="token punctuation">,</span> <span class="token string">"technical"</span><span class="token punctuation">:</span> <span class="token string">"technical"</span><span class="token punctuation">,</span> <span class="token string">"human"</span><span class="token punctuation">:</span> <span class="token string">"human"</span><span class="token punctuation">&#125;</span><span class="token punctuation">)</span>
+    <span class="token keyword">for</span> n <span class="token keyword">in</span> <span class="token punctuation">(</span><span class="token string">"refund"</span><span class="token punctuation">,</span> <span class="token string">"technical"</span><span class="token punctuation">,</span> <span class="token string">"human"</span><span class="token punctuation">)</span><span class="token punctuation">:</span>
+        b<span class="token punctuation">.</span>add_edge<span class="token punctuation">(</span>n<span class="token punctuation">,</span> END<span class="token punctuation">)</span>
+    <span class="token keyword">return</span> b<span class="token punctuation">.</span><span class="token builtin">compile</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+
+<span class="token comment"># 图 B：同一逻辑改用 Command</span>
+<span class="token keyword">def</span> <span class="token function">dispatch</span><span class="token punctuation">(</span>state<span class="token punctuation">:</span> Ticket<span class="token punctuation">)</span> <span class="token operator">-</span><span class="token operator">></span> Command<span class="token punctuation">[</span>Literal<span class="token punctuation">[</span><span class="token string">"refund"</span><span class="token punctuation">,</span> <span class="token string">"technical"</span><span class="token punctuation">,</span> <span class="token string">"human"</span><span class="token punctuation">]</span><span class="token punctuation">]</span><span class="token punctuation">:</span>
+    text <span class="token operator">=</span> state<span class="token punctuation">[</span><span class="token string">"text"</span><span class="token punctuation">]</span>
+    <span class="token keyword">if</span> <span class="token string">"退款"</span> <span class="token keyword">in</span> text<span class="token punctuation">:</span>
+        <span class="token keyword">return</span> Command<span class="token punctuation">(</span>update<span class="token operator">=</span><span class="token punctuation">&#123;</span><span class="token string">"route"</span><span class="token punctuation">:</span> <span class="token string">"退款"</span><span class="token punctuation">&#125;</span><span class="token punctuation">,</span> goto<span class="token operator">=</span><span class="token string">"refund"</span><span class="token punctuation">)</span>
+    <span class="token keyword">if</span> <span class="token string">"报错"</span> <span class="token keyword">in</span> text <span class="token keyword">or</span> <span class="token string">"失败"</span> <span class="token keyword">in</span> text<span class="token punctuation">:</span>
+        <span class="token keyword">return</span> Command<span class="token punctuation">(</span>update<span class="token operator">=</span><span class="token punctuation">&#123;</span><span class="token string">"route"</span><span class="token punctuation">:</span> <span class="token string">"技术"</span><span class="token punctuation">&#125;</span><span class="token punctuation">,</span> goto<span class="token operator">=</span><span class="token string">"technical"</span><span class="token punctuation">)</span>
+    <span class="token keyword">return</span> Command<span class="token punctuation">(</span>update<span class="token operator">=</span><span class="token punctuation">&#123;</span><span class="token string">"route"</span><span class="token punctuation">:</span> <span class="token string">"人工"</span><span class="token punctuation">&#125;</span><span class="token punctuation">,</span> goto<span class="token operator">=</span><span class="token string">"human"</span><span class="token punctuation">)</span>
+
+<span class="token keyword">def</span> <span class="token function">build_with_command</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">:</span>
+    b <span class="token operator">=</span> StateGraph<span class="token punctuation">(</span>Ticket<span class="token punctuation">)</span>
+    b<span class="token punctuation">.</span>add_node<span class="token punctuation">(</span><span class="token string">"dispatch"</span><span class="token punctuation">,</span> dispatch<span class="token punctuation">)</span>
+    <span class="token keyword">for</span> n<span class="token punctuation">,</span> f <span class="token keyword">in</span> <span class="token punctuation">(</span><span class="token punctuation">(</span><span class="token string">"refund"</span><span class="token punctuation">,</span> refund<span class="token punctuation">)</span><span class="token punctuation">,</span> <span class="token punctuation">(</span><span class="token string">"technical"</span><span class="token punctuation">,</span> technical<span class="token punctuation">)</span><span class="token punctuation">,</span> <span class="token punctuation">(</span><span class="token string">"human"</span><span class="token punctuation">,</span> human<span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">:</span>
+        b<span class="token punctuation">.</span>add_node<span class="token punctuation">(</span>n<span class="token punctuation">,</span> f<span class="token punctuation">)</span>
+        b<span class="token punctuation">.</span>add_edge<span class="token punctuation">(</span>n<span class="token punctuation">,</span> END<span class="token punctuation">)</span>
+    b<span class="token punctuation">.</span>add_edge<span class="token punctuation">(</span>START<span class="token punctuation">,</span> <span class="token string">"dispatch"</span><span class="token punctuation">)</span>
+    <span class="token keyword">return</span> b<span class="token punctuation">.</span><span class="token builtin">compile</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+
+<span class="token comment"># 图 C：Send 并行</span>
+<span class="token keyword">class</span> <span class="token class-name">Batch</span><span class="token punctuation">(</span>TypedDict<span class="token punctuation">)</span><span class="token punctuation">:</span>
+    items<span class="token punctuation">:</span> <span class="token builtin">list</span><span class="token punctuation">[</span><span class="token builtin">str</span><span class="token punctuation">]</span>
+    replies<span class="token punctuation">:</span> Annotated<span class="token punctuation">[</span><span class="token builtin">list</span><span class="token punctuation">[</span><span class="token builtin">str</span><span class="token punctuation">]</span><span class="token punctuation">,</span> operator<span class="token punctuation">.</span>add<span class="token punctuation">]</span>
+    route<span class="token punctuation">:</span> <span class="token builtin">str</span>
+
+<span class="token keyword">def</span> <span class="token function">split</span><span class="token punctuation">(</span>state<span class="token punctuation">:</span> Batch<span class="token punctuation">)</span><span class="token punctuation">:</span>
+    <span class="token keyword">return</span> <span class="token punctuation">[</span>Send<span class="token punctuation">(</span><span class="token string">"worker"</span><span class="token punctuation">,</span> <span class="token punctuation">&#123;</span><span class="token string">"item"</span><span class="token punctuation">:</span> x<span class="token punctuation">&#125;</span><span class="token punctuation">)</span> <span class="token keyword">for</span> x <span class="token keyword">in</span> state<span class="token punctuation">[</span><span class="token string">"items"</span><span class="token punctuation">]</span><span class="token punctuation">]</span>
+
+<span class="token keyword">def</span> <span class="token function">worker</span><span class="token punctuation">(</span>state<span class="token punctuation">:</span> <span class="token builtin">dict</span><span class="token punctuation">)</span><span class="token punctuation">:</span>
+    <span class="token keyword">return</span> <span class="token punctuation">&#123;</span><span class="token string">"replies"</span><span class="token punctuation">:</span> <span class="token punctuation">[</span><span class="token string-interpolation"><span class="token string">f"处理完：</span><span class="token interpolation"><span class="token punctuation">&#123;</span>state<span class="token punctuation">[</span><span class="token string">'item'</span><span class="token punctuation">]</span><span class="token punctuation">&#125;</span></span><span class="token string">"</span></span><span class="token punctuation">]</span><span class="token punctuation">&#125;</span>
+
+<span class="token keyword">def</span> <span class="token function">merge</span><span class="token punctuation">(</span>state<span class="token punctuation">:</span> Batch<span class="token punctuation">)</span><span class="token punctuation">:</span>
+    <span class="token keyword">return</span> <span class="token punctuation">&#123;</span><span class="token string">"route"</span><span class="token punctuation">:</span> <span class="token string-interpolation"><span class="token string">f"共 </span><span class="token interpolation"><span class="token punctuation">&#123;</span><span class="token builtin">len</span><span class="token punctuation">(</span>state<span class="token punctuation">[</span><span class="token string">'replies'</span><span class="token punctuation">]</span><span class="token punctuation">)</span><span class="token punctuation">&#125;</span></span><span class="token string"> 份"</span></span><span class="token punctuation">&#125;</span>
+
+<span class="token keyword">def</span> <span class="token function">build_fanout</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">:</span>
+    b <span class="token operator">=</span> StateGraph<span class="token punctuation">(</span>Batch<span class="token punctuation">)</span>
+    b<span class="token punctuation">.</span>add_node<span class="token punctuation">(</span><span class="token string">"split"</span><span class="token punctuation">,</span> <span class="token keyword">lambda</span> state<span class="token punctuation">:</span> <span class="token punctuation">&#123;</span><span class="token punctuation">&#125;</span><span class="token punctuation">)</span>
+    b<span class="token punctuation">.</span>add_node<span class="token punctuation">(</span><span class="token string">"worker"</span><span class="token punctuation">,</span> worker<span class="token punctuation">)</span>
+    b<span class="token punctuation">.</span>add_node<span class="token punctuation">(</span><span class="token string">"merge"</span><span class="token punctuation">,</span> merge<span class="token punctuation">)</span>
+    b<span class="token punctuation">.</span>add_edge<span class="token punctuation">(</span>START<span class="token punctuation">,</span> <span class="token string">"split"</span><span class="token punctuation">)</span>
+    b<span class="token punctuation">.</span>add_conditional_edges<span class="token punctuation">(</span><span class="token string">"split"</span><span class="token punctuation">,</span> split<span class="token punctuation">)</span>     <span class="token comment"># 返回 Send 列表</span>
+    b<span class="token punctuation">.</span>add_edge<span class="token punctuation">(</span><span class="token string">"worker"</span><span class="token punctuation">,</span> <span class="token string">"merge"</span><span class="token punctuation">)</span>
+    b<span class="token punctuation">.</span>add_edge<span class="token punctuation">(</span><span class="token string">"merge"</span><span class="token punctuation">,</span> END<span class="token punctuation">)</span>
+    <span class="token keyword">return</span> b<span class="token punctuation">.</span><span class="token builtin">compile</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+
+<span class="token keyword">if</span> __name__ <span class="token operator">==</span> <span class="token string">"__main__"</span><span class="token punctuation">:</span>
+    g1 <span class="token operator">=</span> build_with_edges<span class="token punctuation">(</span><span class="token punctuation">)</span>
+    <span class="token keyword">print</span><span class="token punctuation">(</span><span class="token string">"条件边 :"</span><span class="token punctuation">,</span> g1<span class="token punctuation">.</span>invoke<span class="token punctuation">(</span><span class="token punctuation">&#123;</span><span class="token string">"text"</span><span class="token punctuation">:</span> <span class="token string">"我要退款"</span><span class="token punctuation">,</span> <span class="token string">"route"</span><span class="token punctuation">:</span> <span class="token string">""</span><span class="token punctuation">,</span> <span class="token string">"replies"</span><span class="token punctuation">:</span> <span class="token punctuation">[</span><span class="token punctuation">]</span><span class="token punctuation">&#125;</span><span class="token punctuation">,</span> version<span class="token operator">=</span><span class="token string">"v2"</span><span class="token punctuation">)</span><span class="token punctuation">.</span>value<span class="token punctuation">)</span>
+
+    g2 <span class="token operator">=</span> build_with_command<span class="token punctuation">(</span><span class="token punctuation">)</span>
+    <span class="token keyword">print</span><span class="token punctuation">(</span><span class="token string">"Command:"</span><span class="token punctuation">,</span> g2<span class="token punctuation">.</span>invoke<span class="token punctuation">(</span><span class="token punctuation">&#123;</span><span class="token string">"text"</span><span class="token punctuation">:</span> <span class="token string">"接口一直报错"</span><span class="token punctuation">,</span> <span class="token string">"route"</span><span class="token punctuation">:</span> <span class="token string">""</span><span class="token punctuation">,</span> <span class="token string">"replies"</span><span class="token punctuation">:</span> <span class="token punctuation">[</span><span class="token punctuation">]</span><span class="token punctuation">&#125;</span><span class="token punctuation">,</span> version<span class="token operator">=</span><span class="token string">"v2"</span><span class="token punctuation">)</span><span class="token punctuation">.</span>value<span class="token punctuation">)</span>
+
+    g3 <span class="token operator">=</span> build_fanout<span class="token punctuation">(</span><span class="token punctuation">)</span>
+    <span class="token keyword">print</span><span class="token punctuation">(</span><span class="token string">"Send    :"</span><span class="token punctuation">,</span> g3<span class="token punctuation">.</span>invoke<span class="token punctuation">(</span><span class="token punctuation">&#123;</span><span class="token string">"items"</span><span class="token punctuation">:</span> <span class="token punctuation">[</span><span class="token string">"a.docx"</span><span class="token punctuation">,</span> <span class="token string">"b.pdf"</span><span class="token punctuation">,</span> <span class="token string">"c.txt"</span><span class="token punctuation">]</span><span class="token punctuation">,</span> <span class="token string">"replies"</span><span class="token punctuation">:</span> <span class="token punctuation">[</span><span class="token punctuation">]</span><span class="token punctuation">,</span> <span class="token string">"route"</span><span class="token punctuation">:</span> <span class="token string">""</span><span class="token punctuation">&#125;</span><span class="token punctuation">,</span> version<span class="token operator">=</span><span class="token string">"v2"</span><span class="token punctuation">)</span><span class="token punctuation">.</span>value<span class="token punctuation">)</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<blockquote>
+<p>图 C 里 <code>split</code> 节点本身不写状态，只负责「被条件边调用后返回 <code>Send</code> 列表」。官方写法也是把 <code>Send</code> 从条件边里返回，<code>split</code> 的返回值会被忽略。</p>
+</blockquote>
+<h3 id="步骤-5：预期输出"><a href="#步骤-5：预期输出" class="headerlink" title="步骤 5：预期输出"></a>步骤 5：预期输出</h3><pre class="line-numbers language-text" data-language="text"><code class="language-text">条件边 : &#123;'text': '我要退款', 'route': '退款', 'replies': ['已为你登记退款']&#125;
+Command: &#123;'text': '接口一直报错', 'route': '技术', 'replies': ['请重启后重试']&#125;
+Send    : &#123;'items': [...], 'replies': ['处理完：a.docx', '处理完：b.pdf', '处理完：c.txt'], 'route': '共 3 份'&#125;<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span></span></code></pre>
+
+<p><code>replies</code> 的顺序在 <code>Send</code> 场景下<strong>不保证</strong>，只保证三条都在。</p>
+<h3 id="步骤-6：验证是否成功"><a href="#步骤-6：验证是否成功" class="headerlink" title="步骤 6：验证是否成功"></a>步骤 6：验证是否成功</h3><ul>
+<li>把图 A 的 <code>add_conditional_edges</code> 删掉、只留 <code>add_edge(&quot;classify&quot;, &quot;refund&quot;)</code>：所有工单都进退款，说明走向完全由边决定；</li>
+<li>给 <code>dispatch</code> 同时加 <code>b.add_edge(&quot;dispatch&quot;, &quot;human&quot;)</code>：技术工单会<strong>同时</strong>进 <code>technical</code> 和 <code>human</code>，<code>replies</code> 两条都在——这就是官方说的「混用两路都跑」；</li>
+<li>把 <code>Ticket</code> 的 <code>replies</code> 去掉 reducer 再跑图 C：只会剩一条，<code>Send</code> 的并行写回被覆盖。</li>
+</ul>
+<h3 id="写法-A-·-把规则路由换成模型路由"><a href="#写法-A-·-把规则路由换成模型路由" class="headerlink" title="写法 A · 把规则路由换成模型路由"></a>写法 A · 把规则路由换成模型路由</h3><p>规则路由换成模型时，只换 <code>classify</code> 这一个节点，边不动。用结构化输出让模型直接给出枚举（细节见 LC06）：</p>
+<pre class="line-numbers language-python" data-language="python"><code class="language-python"><span class="token keyword">from</span> typing <span class="token keyword">import</span> Literal
+<span class="token keyword">from</span> pydantic <span class="token keyword">import</span> BaseModel
+<span class="token keyword">from</span> langchain<span class="token punctuation">.</span>chat_models <span class="token keyword">import</span> init_chat_model
+
+<span class="token keyword">class</span> <span class="token class-name">Route</span><span class="token punctuation">(</span>BaseModel<span class="token punctuation">)</span><span class="token punctuation">:</span>
+    route<span class="token punctuation">:</span> Literal<span class="token punctuation">[</span><span class="token string">"refund"</span><span class="token punctuation">,</span> <span class="token string">"technical"</span><span class="token punctuation">,</span> <span class="token string">"human"</span><span class="token punctuation">]</span>
+
+model <span class="token operator">=</span> init_chat_model<span class="token punctuation">(</span><span class="token string">"deepseek:deepseek-chat"</span><span class="token punctuation">)</span>
+router <span class="token operator">=</span> model<span class="token punctuation">.</span>with_structured_output<span class="token punctuation">(</span>Route<span class="token punctuation">)</span>
+
+<span class="token keyword">def</span> <span class="token function">classify</span><span class="token punctuation">(</span>state<span class="token punctuation">:</span> Ticket<span class="token punctuation">)</span> <span class="token operator">-</span><span class="token operator">></span> <span class="token builtin">str</span><span class="token punctuation">:</span>
+    <span class="token keyword">return</span> router<span class="token punctuation">.</span>invoke<span class="token punctuation">(</span><span class="token string-interpolation"><span class="token string">f"判断这张工单该走哪条路：</span><span class="token interpolation"><span class="token punctuation">&#123;</span>state<span class="token punctuation">[</span><span class="token string">'text'</span><span class="token punctuation">]</span><span class="token punctuation">&#125;</span></span><span class="token string">"</span></span><span class="token punctuation">)</span><span class="token punctuation">.</span>route<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<p><code>add_conditional_edges</code> 的映射字典不变——模型只是把「读 state 得到分支名」这件事做得更通用。</p>
+<h3 id="换-provider-速查（本篇只涉及路由节点）"><a href="#换-provider-速查（本篇只涉及路由节点）" class="headerlink" title="换 provider 速查（本篇只涉及路由节点）"></a>换 provider 速查（本篇只涉及路由节点）</h3><div class="data-grid data-grid-link-table"><div class="grid-header"><div class="grid-cell">涉及点</div><div class="grid-cell">OpenAI</div><div class="grid-cell">DeepSeek</div><div class="grid-cell">替换方式</div></div><div class="grid-row"><div class="grid-cell">模型入口</div><div class="grid-cell"><code>&quot;openai:gpt-5-nano&quot;</code></div><div class="grid-cell"><code>&quot;deepseek:deepseek-chat&quot;</code></div><div class="grid-cell">换字符串</div></div><div class="grid-row"><div class="grid-cell"><code>.with_structured_output</code></div><div class="grid-cell">支持</div><div class="grid-cell"><code>deepseek-chat</code> 支持，<code>deepseek-reasoner</code> 不支持</div><div class="grid-cell">选对档位</div></div><div class="grid-row"><div class="grid-cell">装包 &#x2F; 凭证</div><div class="grid-cell"><code>langchain[openai]</code> &#x2F; <code>OPENAI_API_KEY</code></div><div class="grid-cell"><code>langchain-deepseek</code> &#x2F; <code>DEEPSEEK_API_KEY</code></div><div class="grid-cell">换包与 key</div></div><div class="grid-row"><div class="grid-cell">边 &#x2F; <code>Command</code> &#x2F; <code>Send</code></div><div class="grid-cell">—</div><div class="grid-cell">完全相同</div><div class="grid-cell">不改</div></div></div>
+
+<p><strong>智谱 &#x2F; 通义 &#x2F; Claude 在这一层要注意</strong>：智谱、通义不在 <code>init_chat_model</code> 的统一入口里，要直接实例化 <code>ChatZhipuAI</code> &#x2F; <code>ChatTongyi</code>；Claude 走 <code>anthropic:</code>，但 <code>with_structured_output</code> 的底层策略与 OpenAI 不同，枚举字段偶尔会被包一层，必要时在节点里做一次归一化。</p>
+<h2 id="七、常见坑（官方明确限制-版本差异）"><a href="#七、常见坑（官方明确限制-版本差异）" class="headerlink" title="七、常见坑（官方明确限制&#x2F;版本差异）"></a>七、常见坑（官方明确限制&#x2F;版本差异）</h2><ol>
+<li><strong>同一节点既加静态边又返回 <code>Command</code></strong>：两路都跑，症状是「莫名其妙多执行了一个节点」。</li>
+<li><strong>路由函数返回不存在的节点名</strong>：运行时直接报错，且错误信息只给名字，不给候选列表。</li>
+<li><strong>在路由函数里改状态</strong>：路由函数的返回值被当成「去哪」，返回的 dict 不是状态更新。</li>
+<li><strong><code>Send</code> 的输入写成整份 state</strong>：每个 worker 拿到同一份数据，等于没拆；<code>Send</code> 第二个参数要放这一条的数据。</li>
+<li><strong><code>Send</code> 并行写回没 reducer</strong>：只剩最后一条（LG02）。</li>
+<li><strong><code>Command</code> 不标返回类型</strong>：可视化与部分校验拿不到目标节点，排错时很难看出边在哪。</li>
+</ol>
+<h2 id="八、课后小结"><a href="#八、课后小结" class="headerlink" title="八、课后小结"></a>八、课后小结</h2><ul>
+<li>节点可接 <code>state</code> &#x2F; <code>config</code> &#x2F; <code>runtime</code> 三种参数，省略名字时用函数名；</li>
+<li>边有三种形态，路由函数返回节点名 &#x2F; <code>END</code> &#x2F; 名称列表 &#x2F; <code>Send</code>；</li>
+<li>同一节点只能选静态边或动态路由，不能混；</li>
+<li><code>Command</code> 用于「更新 + 路由一起做」，纯路由优先条件边；</li>
+<li><code>Send</code> 用于 map-reduce，并行写回靠 reducer。</li>
+</ul>
+<h2 id="九、思考题"><a href="#九、思考题" class="headerlink" title="九、思考题"></a>九、思考题</h2><p><strong>1、什么情况下必须用 <code>Command</code>，用条件边做不到？</strong></p>
+<p>参考回答：下一跳依赖本节点算出来的中间结果、且这个结果不打算落进 state 时。用条件边就得把结果写进 state 再让路由函数读一遍，多一次状态往返，也更容易出现「路由函数与节点逻辑不一致」。</p>
+<p><strong>2、<code>Send</code> 和「一个节点有多条出边」有什么区别？</strong></p>
+<p>参考回答：多条出边是「固定的几个目标并行」；<code>Send</code> 是「同一个目标节点按运行时条目数跑 N 次，每次输入不同」。前者拓扑写在图上，后者拓扑由数据决定。</p>
+<p><strong>3、为什么路由函数不该改状态？</strong></p>
+<p>参考回答：它的返回值语义是「去哪」，不是「改什么」。要改状态就在节点里改，路由只读——这样图的可视化和调试都能对上。</p>
+<p><strong>4、混用静态边和 <code>Command</code> 会怎样，怎么排查？</strong></p>
+<p>参考回答：两条路径都会执行，表现为某个节点被额外触发、或同一轮出现两份结果。排查方式是先注释掉 <code>add_edge</code>，看行为是否只剩一条路径。</p>
+<h2 id="十、下一篇预告"><a href="#十、下一篇预告" class="headerlink" title="十、下一篇预告"></a>十、下一篇预告</h2><p><strong>下一篇标题</strong>：04 编译、super-step 与运行配置。</p>
+<p><strong>一句话内容</strong>：图会画了，接下来讲它怎么跑——一轮 super-step 里发生了什么、并行分支为什么互相看不见、<code>recursion_limit</code> 数的是轮次还是节点、<code>version=&quot;v2&quot;</code> 的返回对象到底长什么样。</p>
+<p><strong>承接关系</strong>：本篇的扇出与 <code>Send</code> 都会产生并行分支，下一篇解释它们的执行与合并顺序，也是后面所有「为什么顺序不对」问题的答案。</p>
+<p><strong>跳转位置</strong>：M1 第四讲，M1 收尾。</p>
+<h2 id="十一、官方资料"><a href="#十一、官方资料" class="headerlink" title="十一、官方资料"></a>十一、官方资料</h2><ul>
+<li>Graph API · Nodes &#x2F; Edges：<a target="_blank" rel="noopener" href="https://docs.langchain.com/oss/python/langgraph/graph-api">https://docs.langchain.com/oss/python/langgraph/graph-api</a></li>
+<li>Graph API · <code>Send</code>（map-reduce）：<a target="_blank" rel="noopener" href="https://docs.langchain.com/oss/python/langgraph/graph-api">https://docs.langchain.com/oss/python/langgraph/graph-api</a></li>
+<li>Graph API · <code>Command</code>（update &#x2F; goto &#x2F; graph &#x2F; resume）：<a target="_blank" rel="noopener" href="https://docs.langchain.com/oss/python/langgraph/graph-api">https://docs.langchain.com/oss/python/langgraph/graph-api</a></li>
+<li>LangChain LC06 结构化输出（本篇写法 A 用到的 <code>with_structured_output</code>）：<a href="https://wu4yong.github.io/2026/12/04/ai/langchain/langchain-6-structured-output/">https://wu4yong.github.io/2026/12/04/ai/langchain/langchain-6-structured-output/</a></li>
+</ul>
+<p>上一篇：<a href="/2026/12/15/ai/langgraph/langgraph-2-state-reducer/">LG02 状态、channel 与 reducer</a> ｜ 下一篇：<a href="/2026/12/17/ai/langgraph/langgraph-4-compile-runtime/">LG04 编译、super-step 与运行配置</a> ｜ <a href="/2026/12/13/ai/langgraph/langgraph-0-series-index/">总目录</a></p>
+</div>
+
+  <div class="mb-foot">
+    <a href="/phone/">返回手机首页</a>
+    <a href="/phone/tags/">星迹索引</a>
+  </div>
+</div>
+
+
+<script>
+  /* 作用：懒加载本地 mermaid 库；无 mermaid 代码块时不加载 */
+  function loadLocalMermaid(){
+    return new Promise(function(resolve, reject){
+      if(window.mermaid) return resolve(window.mermaid);
+      var s = document.createElement('script');
+      s.src = '/js/third-party/mermaid/mermaid.min.js?v=10';
+      s.onload = function(){ resolve(window.mermaid); };
+      s.onerror = function(){ reject(new Error('mermaid local load failed')); };
+      document.head.appendChild(s);
+    });
+  }
+
+  /* 作用：把 ```mermaid 代码块替换成 SVG 图（手机端字号略小、图可横向滚动） */
+  async function renderMermaidDiagram(){
+    var blocks = document.querySelectorAll('pre[class*="language-mermaid"]');
+    if(!blocks.length) return;
+    var mermaid;
+    try { mermaid = await loadLocalMermaid(); }
+    catch(e){ console.warn('[mermaid] 本地库加载失败：', e); return; }
+
+    mermaid.initialize({
+      startOnLoad: false,
+      theme: 'base',
+      themeVariables: {
+        darkMode: true,
+        background: 'transparent',
+        fontFamily: '"Microsoft YaHei", "PingFang SC", "Segoe UI", sans-serif',
+        fontSize: '12px',
+        primaryColor: '#062f3d',
+        primaryTextColor: '#d6f6ff',
+        primaryBorderColor: '#00eeff',
+        secondaryColor: '#04222d',
+        tertiaryColor: '#04222d',
+        mainBkg: '#062f3d',
+        nodeBorder: '#00eeff',
+        clusterBkg: '#02161f',
+        clusterBorder: '#00eeff55',
+        lineColor: '#00eeff',
+        textColor: '#c0e8ff',
+        edgeLabelBackground: '#02161f'
+      },
+      flowchart: { curve: 'basis', useMaxWidth: false, htmlLabels: false, nodeSpacing: 30, rankSpacing: 40, padding: 10 }
+    });
+
+    var targets = [];
+    blocks.forEach(function(el){
+      var codeEl = el.querySelector('code');
+      if(!codeEl) return;
+      var div = document.createElement('div');
+      div.className = 'mermaid';
+      div.textContent = codeEl.textContent;
+      el.parentNode.replaceChild(div, el);
+      targets.push(div);
+    });
+    if(!targets.length) return;
+    try { await mermaid.run({ nodes: targets }); }
+    catch(e){ console.warn('[mermaid] 渲染失败：', e); }
+  }
+  /* 作用：多次触发兜底（延迟重试 + DOM 变化），防止某次时机没跑到导致图表留在代码块 */
+  var mmBusy = false;
+  function scheduleMermaid(){
+    if(mmBusy) return;
+    mmBusy = true;
+    renderMermaidDiagram().then(function(){ mmBusy = false; }, function(){ mmBusy = false; });
+  }
+  scheduleMermaid();
+  window.addEventListener('load', scheduleMermaid);
+  [1000, 3000, 8000].forEach(function(ms){ setTimeout(scheduleMermaid, ms); });
+  if(document.readyState !== 'loading') scheduleMermaid();
+  if(window.MutationObserver){
+    var mmTimer = null;
+    var mmObserver = new MutationObserver(function(){
+      clearTimeout(mmTimer);
+      mmTimer = setTimeout(scheduleMermaid, 400);
+    });
+    mmObserver.observe(document.querySelector('.mb-article') || document.body, { childList: true, subtree: true });
+  }
+</script>
+</body>
+</html>

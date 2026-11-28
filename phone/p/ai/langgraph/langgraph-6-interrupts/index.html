@@ -1,0 +1,433 @@
+<!--
+  ============================================
+  手机端 · 文章原文页
+  文件：phone/post.njk
+  适用终端：手机端（路由 /phone/p/<slug>/，由 scripts/phone-routes.js 生成）
+  作用：手机阅读单篇文章；单列布局、无侧栏无雷达，替代电脑端 post.njk
+        数据由生成期算好：page.item = { title, dateStr, content, cats, tags }
+  样式依赖：source/css/theme/phone/common.css、source/css/theme/phone/list.css
+  组件依赖：phone/_components/Particles.njk
+  最后修改：2026-11-11
+  ============================================
+-->
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="color-scheme" content="dark">
+  <meta name="theme-color" content="#020817">
+  <!-- 首帧兜底：浏览器默认画布是白的，样式未解析前会闪一下白。这条规则先锁死深空底色 -->
+  <style>html{background-color:#020817}</style>
+  <title>LangGraph 06 · 人工介入：interrupt 与恢复 - 时空秘境</title>
+  <!-- 手机端样式：基础 + 列表/正文，外链引入（源文件 source/css/theme/phone/） -->
+  <link rel="stylesheet" href="/css/theme/phone/common.css">
+  <link rel="stylesheet" href="/css/theme/phone/list.css">
+<meta name="generator" content="Hexo 8.1.2"></head>
+<body>
+<div class="mb-shell">
+  <!--
+  ============================================
+  手机端星空粒子组件
+  文件：Particles.njk
+  适用终端：手机端
+  作用：Particles.njk 的手机端副本（nunjucks 子目录 include 取不到上级）
+        参数与电脑端 _components/Particles.njk 保持一致：
+        粒子 95 / 连线 118px / opacity 0.32，外加星座层与零星闪烁层
+  最后修改：2026-11-12
+  ============================================
+--><!-- z-index 必须是 0：负层级会被 body 不透明背景盖住，粒子在跑却看不见 -->
+<div id="particles" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 0; pointer-events: none;"></div>
+<!-- 星座层（与首页同一套：随机零星散布星座图形 + 偶尔闪烁的小星） -->
+<div id="constellations" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 1; pointer-events: none;" aria-hidden="true"></div>
+<script src="/js/particles.min.js"></script>
+<script>
+particlesJS("particles", {
+  particles: {
+    number: {
+      value: 95,
+      density: {
+        enable: true,
+        value_area: 800
+      }
+    },
+    color: {
+      value: "#00eeff"
+    },
+    shape: {
+      type: "circle",
+      stroke: {
+        width: 0,
+        color: "#000000"
+      }
+    },
+    opacity: {
+      value: 0.6,
+      random: true,
+      anim: {
+        enable: true,
+        speed: 0.5,
+        opacity_min: 0.1,
+        sync: false
+      }
+    },
+    size: {
+      value: 3,
+      random: true,
+      anim: {
+        enable: true,
+        speed: 2,
+        size_min: 0.1,
+        sync: false
+      }
+    },
+    line_linked: {
+      enable: true,
+      distance: 118,
+      color: "#00eeff",
+      opacity: 0.32,
+      width: 1
+    },
+    move: {
+      enable: true,
+      speed: 0.8,
+      direction: "none",
+      random: true,
+      straight: false,
+      out_mode: "out",
+      bounce: false,
+      attract: {
+        enable: true,
+        rotateX: 600,
+        rotateY: 1200
+      }
+    }
+  },
+  interactivity: {
+    detect_on: "canvas",
+    events: {
+      onhover: {
+        enable: true,
+        mode: "grab"       // 手指按住时粒子聚集
+      },
+      onclick: {
+        enable: true,
+        mode: "push"       // 点击时产生新粒子
+      },
+      resize: true
+    },
+    modes: {
+      grab: {
+        distance: 200,
+        line_linked: {
+          opacity: 1
+        }
+      },
+      push: {
+        particles_nb: 6
+      }
+    }
+  },
+  retina_detect: true
+});
+</script>
+<!-- 星座 + 零星闪烁层：与电脑端共用同一份绘制脚本 -->
+<script src="/js/theme/home/starfield.js"></script>
+
+
+  <div class="mb-top">
+    <a class="mb-back" href="/phone/">← 返回手机首页</a>
+    <span class="mb-sub" style="margin:0">2026-12-19</span>
+  </div>
+
+  <h1 class="mb-title">LangGraph 06 · 人工介入：interrupt 与恢复</h1>
+  <div class="mb-sub">
+    分类：ai · langgraph
+     ｜ 标签：AI · 系统课 · LangGraph
+  </div>
+
+  <div class="mb-article"><div class="essay-banner essay-langgraph"></div>
+
+<h1 id="06-人工介入：interrupt-与恢复"><a href="#06-人工介入：interrupt-与恢复" class="headerlink" title="06 人工介入：interrupt 与恢复"></a>06 人工介入：interrupt 与恢复</h1><p><img src="https://wu4yong.github.io/starry-images/assets/img/langgraph/v1/lg-6-interrupt-flow.svg" alt="运行到 &#96;interrupt()&#96; 就停、状态落检查点、&#96;Command(resume&#x3D;...)&#96; 再把值交回去｜依据官方 Interrupts 页自绘"></p>
+<p><em>恢复时节点从头重跑，<code>interrupt()</code> 之前的代码会再执行一遍｜依据官方 Interrupts · Rules of interrupts 自绘</em></p>
+
+<div class="ver-note"><p><strong>版本不一致提示</strong></p>
+<ul>
+<li>本篇基线是 <strong>LangGraph 1.2.x + Python 3.13</strong>，示例不调用模型，纯本地可跑；</li>
+<li><code>interrupt</code> 暂停后<strong>必须</strong>用 checkpointer 才能恢复，官方示例统一用持久化后端，本篇用 <code>InMemorySaver</code> 演示；</li>
+<li><code>response_schema</code>（给人工输入做类型校验）需要 <strong>langgraph ≥ 1.2.12</strong>，本篇只提能力，不把它当主路径；</li>
+<li>官方明确：<code>Command(resume=...)</code> 是唯一「作为输入传给 <code>invoke</code>」的 Command；<code>update</code> &#x2F; <code>goto</code> &#x2F; <code>graph</code> 是用来从节点返回的。</li>
+</ul>
+</div>
+
+
+<h2 id="一、学习目标"><a href="#一、学习目标" class="headerlink" title="一、学习目标"></a>一、学习目标</h2><p>学完这一讲，你要能做到三件事：</p>
+<ol>
+<li>会用 <code>interrupt(payload)</code> 暂停、用 <code>Command(resume=...)</code> 恢复，并知道恢复必须同 <code>thread_id</code>；</li>
+<li>记住「节点恢复时从头重跑」这条规则，能判断哪些代码放在 <code>interrupt</code> 前后；</li>
+<li>会用「一节点一次 <code>interrupt</code> + 条件边回环」做输入校验，而不是写 <code>while True</code>。</li>
+</ol>
+<h2 id="二、前置知识"><a href="#二、前置知识" class="headerlink" title="二、前置知识"></a>二、前置知识</h2><ul>
+<li>读完 LG05，会挂 checkpointer、知道 <code>thread_id</code> 是指针；</li>
+<li>知道 <code>Command(goto=...)</code> 能决定下一步（LG03）；</li>
+<li>知道 <code>invoke(..., version=&quot;v2&quot;)</code> 返回 <code>GraphOutput</code>，带 <code>.value</code> &#x2F; <code>.interrupts</code>。</li>
+</ul>
+<h2 id="三、理论讲解（官方定义）"><a href="#三、理论讲解（官方定义）" class="headerlink" title="三、理论讲解（官方定义）"></a>三、理论讲解（官方定义）</h2><h3 id="1-interrupt-是什么"><a href="#1-interrupt-是什么" class="headerlink" title="1. interrupt 是什么"></a>1. interrupt 是什么</h3><p>官方定义：在节点的<strong>任意位置</strong>调用 <code>interrupt()</code>，图就暂停，把传入的值交给调用方，然后用持久化层把状态存住，<strong>无限期等</strong>恢复。</p>
+<p>三个要素：</p>
+<ul>
+<li><strong>动态断点</strong>：跟 <code>interrupt_before/after</code> 那种「编译期定死的静态断点」不同，<code>interrupt()</code> 可以按业务条件触发；</li>
+<li><strong>状态落盘</strong>：靠 checkpointer；内存版重启就没了；</li>
+<li><strong>恢复靠 thread</strong>：<code>thread_id</code> 就是游标，复用同一个才会接上。</li>
+</ul>
+<h3 id="2-恢复的机制"><a href="#2-恢复的机制" class="headerlink" title="2. 恢复的机制"></a>2. 恢复的机制</h3><pre class="line-numbers language-python" data-language="python"><code class="language-python">decision <span class="token operator">=</span> interrupt<span class="token punctuation">(</span><span class="token punctuation">&#123;</span><span class="token string">"question"</span><span class="token punctuation">:</span> <span class="token string">"批准吗？"</span><span class="token punctuation">,</span> <span class="token string">"details"</span><span class="token punctuation">:</span> <span class="token string">"..."</span><span class="token punctuation">&#125;</span><span class="token punctuation">)</span>   <span class="token comment"># 返回值 = resume 传进来的东西</span><span aria-hidden="true" class="line-numbers-rows"><span></span></span></code></pre>
+
+<p>恢复时：</p>
+<pre class="line-numbers language-python" data-language="python"><code class="language-python">graph<span class="token punctuation">.</span>invoke<span class="token punctuation">(</span>Command<span class="token punctuation">(</span>resume<span class="token operator">=</span><span class="token boolean">True</span><span class="token punctuation">)</span><span class="token punctuation">,</span> config<span class="token operator">=</span>cfg<span class="token punctuation">,</span> version<span class="token operator">=</span><span class="token string">"v2"</span><span class="token punctuation">)</span><span aria-hidden="true" class="line-numbers-rows"><span></span></span></code></pre>
+
+<p><code>True</code> 就成了 <code>interrupt()</code> 的返回值，节点继续往下走。</p>
+<p>官方给了三条硬规则：</p>
+<ol>
+<li>恢复必须用<strong>同一个</strong> <code>thread_id</code>；</li>
+<li><code>Command(resume=...)</code> 的值可以是任何 JSON 可序列化对象；</li>
+<li><strong>节点会从头重跑</strong>——<code>interrupt()</code> 之前的代码再执行一遍。</li>
+</ol>
+<h3 id="3-为什么要「一节点一次」"><a href="#3-为什么要「一节点一次」" class="headerlink" title="3. 为什么要「一节点一次」"></a>3. 为什么要「一节点一次」</h3><p>一个节点里可以调多次 <code>interrupt()</code>，但恢复时是按<strong>下标</strong>匹配 resume 值的：</p>
+<ul>
+<li>每次恢复都从节点开头重放；</li>
+<li>第 N 次恢复会把前 N−1 次 <code>interrupt</code> 全部重放一遍；</li>
+<li>如果两次执行之间 <code>interrupt</code> 的<strong>个数或顺序</strong>变了（条件跳过、循环里按数据长度调），下标就错位。</li>
+</ul>
+<p>所以官方给了标准姿势：<strong>一个节点只调一次 <code>interrupt()</code>，用条件边回环重问</strong>。</p>
+<h3 id="4-静态断点只用于调试"><a href="#4-静态断点只用于调试" class="headerlink" title="4. 静态断点只用于调试"></a>4. 静态断点只用于调试</h3><p><code>compile(interrupt_before=[&quot;a&quot;])</code> &#x2F; <code>interrupt_after=[&quot;b&quot;]</code> 能在节点前后停住，恢复用 <code>invoke(None, config)</code>。官方原话：<strong>不推荐用于人工介入流程</strong>，它是单步调试用的。</p>
+<h2 id="四、原理拆解"><a href="#四、原理拆解" class="headerlink" title="四、原理拆解"></a>四、原理拆解</h2><p>把 <code>interrupt()</code> 想成<strong>在流水线上按了暂停键，还顺手把当班进度拍了张照</strong>：</p>
+<ul>
+<li>暂停键按下时，运行时抛一个内部异常，把控制权交回调用方，同时把「当前检查点 + 待恢复的任务」写进 checkpointer；</li>
+<li>恢复不是「从暂停那一行继续」，而是「把这一整个工位重新做一遍」——机器重新启动，人在旁边把答案递进去；</li>
+<li>所以 <code>interrupt()</code> <strong>之前</strong>的代码必须是可重复执行的（幂等）：查库、写库、发邮件的动作要么放 <code>interrupt()</code> 之后，要么自己保证重复执行不出事。</li>
+</ul>
+<p>三个关键判断：</p>
+<ol>
+<li><strong>暂停点越靠后越好</strong>：把贵操作放 <code>interrupt()</code> 之后，省得每次恢复都重算；</li>
+<li><strong>状态里要留「问题」</strong>：校验失败时把新问题写回 state，下一次进来读它，才能问出不一样的话；</li>
+<li><strong>恢复值不是输入</strong>：<code>Command(resume=x)</code> 只回答当前这个暂停点，不要拿它当「用户新一轮消息」续聊。</li>
+</ol>
+<h2 id="五、场景说明"><a href="#五、场景说明" class="headerlink" title="五、场景说明"></a>五、场景说明</h2><ol>
+<li><strong>审批闸门</strong>：发邮件、扣款、写库前让人点一次确认；</li>
+<li><strong>改稿后放行</strong>：模型起草完，人改完内容再继续；</li>
+<li><strong>输入校验</strong>：年龄、金额这类必须合格的字段，不合格就重问；</li>
+<li><strong>工具调用前审核</strong>：把 <code>tool_calls</code> 摊给人看，允许改参数再执行。</li>
+</ol>
+<h2 id="六、示例代码"><a href="#六、示例代码" class="headerlink" title="六、示例代码"></a>六、示例代码</h2><h3 id="步骤-1：环境准备"><a href="#步骤-1：环境准备" class="headerlink" title="步骤 1：环境准备"></a>步骤 1：环境准备</h3><pre class="line-numbers language-bash" data-language="bash"><code class="language-bash">uv init lg06-interrupt
+<span class="token builtin class-name">cd</span> lg06-interrupt
+uv <span class="token function">add</span> langgraph<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span></span></code></pre>
+
+<h3 id="步骤-2：凭证配置"><a href="#步骤-2：凭证配置" class="headerlink" title="步骤 2：凭证配置"></a>步骤 2：凭证配置</h3><p>无。审批流是纯状态机。</p>
+<h3 id="步骤-3：导入"><a href="#步骤-3：导入" class="headerlink" title="步骤 3：导入"></a>步骤 3：导入</h3><pre class="line-numbers language-python" data-language="python"><code class="language-python"><span class="token keyword">from</span> typing <span class="token keyword">import</span> Literal
+<span class="token keyword">from</span> typing_extensions <span class="token keyword">import</span> TypedDict
+<span class="token keyword">from</span> langgraph<span class="token punctuation">.</span>graph <span class="token keyword">import</span> StateGraph<span class="token punctuation">,</span> START<span class="token punctuation">,</span> END
+<span class="token keyword">from</span> langgraph<span class="token punctuation">.</span>checkpoint<span class="token punctuation">.</span>memory <span class="token keyword">import</span> InMemorySaver
+<span class="token keyword">from</span> langgraph<span class="token punctuation">.</span>types <span class="token keyword">import</span> Command<span class="token punctuation">,</span> interrupt<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<h3 id="步骤-4：最小可运行代码"><a href="#步骤-4：最小可运行代码" class="headerlink" title="步骤 4：最小可运行代码"></a>步骤 4：最小可运行代码</h3><p>存成 <code>approval_demo.py</code>，<code>uv run approval_demo.py</code>。</p>
+<pre class="line-numbers language-python" data-language="python"><code class="language-python"><span class="token keyword">from</span> typing <span class="token keyword">import</span> Literal<span class="token punctuation">,</span> Optional
+<span class="token keyword">from</span> typing_extensions <span class="token keyword">import</span> TypedDict
+<span class="token keyword">from</span> langgraph<span class="token punctuation">.</span>graph <span class="token keyword">import</span> StateGraph<span class="token punctuation">,</span> START<span class="token punctuation">,</span> END
+<span class="token keyword">from</span> langgraph<span class="token punctuation">.</span>checkpoint<span class="token punctuation">.</span>memory <span class="token keyword">import</span> InMemorySaver
+<span class="token keyword">from</span> langgraph<span class="token punctuation">.</span>types <span class="token keyword">import</span> Command<span class="token punctuation">,</span> interrupt
+
+<span class="token keyword">class</span> <span class="token class-name">State</span><span class="token punctuation">(</span>TypedDict<span class="token punctuation">)</span><span class="token punctuation">:</span>
+    action<span class="token punctuation">:</span> <span class="token builtin">str</span>
+    status<span class="token punctuation">:</span> Optional<span class="token punctuation">[</span>Literal<span class="token punctuation">[</span><span class="token string">"pending"</span><span class="token punctuation">,</span> <span class="token string">"approved"</span><span class="token punctuation">,</span> <span class="token string">"rejected"</span><span class="token punctuation">]</span><span class="token punctuation">]</span>
+    audit<span class="token punctuation">:</span> <span class="token builtin">list</span><span class="token punctuation">[</span><span class="token builtin">str</span><span class="token punctuation">]</span>
+
+<span class="token keyword">def</span> <span class="token function">draft</span><span class="token punctuation">(</span>state<span class="token punctuation">:</span> State<span class="token punctuation">)</span><span class="token punctuation">:</span>
+    <span class="token keyword">return</span> <span class="token punctuation">&#123;</span><span class="token string">"status"</span><span class="token punctuation">:</span> <span class="token string">"pending"</span><span class="token punctuation">,</span> <span class="token string">"audit"</span><span class="token punctuation">:</span> <span class="token punctuation">[</span><span class="token string-interpolation"><span class="token string">f"起草：</span><span class="token interpolation"><span class="token punctuation">&#123;</span>state<span class="token punctuation">[</span><span class="token string">'action'</span><span class="token punctuation">]</span><span class="token punctuation">&#125;</span></span><span class="token string">"</span></span><span class="token punctuation">]</span><span class="token punctuation">&#125;</span>
+
+<span class="token keyword">def</span> <span class="token function">approval</span><span class="token punctuation">(</span>state<span class="token punctuation">:</span> State<span class="token punctuation">)</span> <span class="token operator">-</span><span class="token operator">></span> Command<span class="token punctuation">[</span>Literal<span class="token punctuation">[</span><span class="token string">"publish"</span><span class="token punctuation">,</span> <span class="token string">"cancel"</span><span class="token punctuation">]</span><span class="token punctuation">]</span><span class="token punctuation">:</span>
+    <span class="token comment"># 一个节点只调一次 interrupt</span>
+    decision <span class="token operator">=</span> interrupt<span class="token punctuation">(</span><span class="token punctuation">&#123;</span><span class="token string">"question"</span><span class="token punctuation">:</span> <span class="token string">"批准这个动作吗？"</span><span class="token punctuation">,</span> <span class="token string">"details"</span><span class="token punctuation">:</span> state<span class="token punctuation">[</span><span class="token string">"action"</span><span class="token punctuation">]</span><span class="token punctuation">&#125;</span><span class="token punctuation">)</span>
+    <span class="token keyword">return</span> Command<span class="token punctuation">(</span>goto<span class="token operator">=</span><span class="token string">"publish"</span> <span class="token keyword">if</span> decision <span class="token keyword">else</span> <span class="token string">"cancel"</span><span class="token punctuation">)</span>
+
+<span class="token keyword">def</span> <span class="token function">publish</span><span class="token punctuation">(</span>state<span class="token punctuation">:</span> State<span class="token punctuation">)</span><span class="token punctuation">:</span>
+    <span class="token keyword">return</span> <span class="token punctuation">&#123;</span><span class="token string">"status"</span><span class="token punctuation">:</span> <span class="token string">"approved"</span><span class="token punctuation">,</span> <span class="token string">"audit"</span><span class="token punctuation">:</span> <span class="token punctuation">[</span><span class="token string">"已发布"</span><span class="token punctuation">]</span><span class="token punctuation">&#125;</span>
+
+<span class="token keyword">def</span> <span class="token function">cancel</span><span class="token punctuation">(</span>state<span class="token punctuation">:</span> State<span class="token punctuation">)</span><span class="token punctuation">:</span>
+    <span class="token keyword">return</span> <span class="token punctuation">&#123;</span><span class="token string">"status"</span><span class="token punctuation">:</span> <span class="token string">"rejected"</span><span class="token punctuation">,</span> <span class="token string">"audit"</span><span class="token punctuation">:</span> <span class="token punctuation">[</span><span class="token string">"已取消"</span><span class="token punctuation">]</span><span class="token punctuation">&#125;</span>
+
+builder <span class="token operator">=</span> StateGraph<span class="token punctuation">(</span>State<span class="token punctuation">)</span>
+builder<span class="token punctuation">.</span>add_node<span class="token punctuation">(</span><span class="token string">"draft"</span><span class="token punctuation">,</span> draft<span class="token punctuation">)</span>
+builder<span class="token punctuation">.</span>add_node<span class="token punctuation">(</span><span class="token string">"approval"</span><span class="token punctuation">,</span> approval<span class="token punctuation">)</span>
+builder<span class="token punctuation">.</span>add_node<span class="token punctuation">(</span><span class="token string">"publish"</span><span class="token punctuation">,</span> publish<span class="token punctuation">)</span>
+builder<span class="token punctuation">.</span>add_node<span class="token punctuation">(</span><span class="token string">"cancel"</span><span class="token punctuation">,</span> cancel<span class="token punctuation">)</span>
+builder<span class="token punctuation">.</span>add_edge<span class="token punctuation">(</span>START<span class="token punctuation">,</span> <span class="token string">"draft"</span><span class="token punctuation">)</span>
+builder<span class="token punctuation">.</span>add_edge<span class="token punctuation">(</span><span class="token string">"draft"</span><span class="token punctuation">,</span> <span class="token string">"approval"</span><span class="token punctuation">)</span>
+builder<span class="token punctuation">.</span>add_edge<span class="token punctuation">(</span><span class="token string">"publish"</span><span class="token punctuation">,</span> END<span class="token punctuation">)</span>
+builder<span class="token punctuation">.</span>add_edge<span class="token punctuation">(</span><span class="token string">"cancel"</span><span class="token punctuation">,</span> END<span class="token punctuation">)</span>
+
+graph <span class="token operator">=</span> builder<span class="token punctuation">.</span><span class="token builtin">compile</span><span class="token punctuation">(</span>checkpointer<span class="token operator">=</span>InMemorySaver<span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span>
+cfg <span class="token operator">=</span> <span class="token punctuation">&#123;</span><span class="token string">"configurable"</span><span class="token punctuation">:</span> <span class="token punctuation">&#123;</span><span class="token string">"thread_id"</span><span class="token punctuation">:</span> <span class="token string">"approval-1"</span><span class="token punctuation">&#125;</span><span class="token punctuation">&#125;</span>
+
+run1 <span class="token operator">=</span> graph<span class="token punctuation">.</span>invoke<span class="token punctuation">(</span><span class="token punctuation">&#123;</span><span class="token string">"action"</span><span class="token punctuation">:</span> <span class="token string">"给客户发报价单"</span><span class="token punctuation">,</span> <span class="token string">"audit"</span><span class="token punctuation">:</span> <span class="token punctuation">[</span><span class="token punctuation">]</span><span class="token punctuation">&#125;</span><span class="token punctuation">,</span> cfg<span class="token punctuation">,</span> version<span class="token operator">=</span><span class="token string">"v2"</span><span class="token punctuation">)</span>
+<span class="token keyword">print</span><span class="token punctuation">(</span><span class="token string">"第一次："</span><span class="token punctuation">,</span> run1<span class="token punctuation">.</span>value<span class="token punctuation">[</span><span class="token string">"status"</span><span class="token punctuation">]</span><span class="token punctuation">,</span> run1<span class="token punctuation">.</span>interrupts<span class="token punctuation">)</span>
+
+run2 <span class="token operator">=</span> graph<span class="token punctuation">.</span>invoke<span class="token punctuation">(</span>Command<span class="token punctuation">(</span>resume<span class="token operator">=</span><span class="token boolean">True</span><span class="token punctuation">)</span><span class="token punctuation">,</span> cfg<span class="token punctuation">,</span> version<span class="token operator">=</span><span class="token string">"v2"</span><span class="token punctuation">)</span>
+<span class="token keyword">print</span><span class="token punctuation">(</span><span class="token string">"批准后："</span><span class="token punctuation">,</span> run2<span class="token punctuation">.</span>value<span class="token punctuation">[</span><span class="token string">"status"</span><span class="token punctuation">]</span><span class="token punctuation">,</span> run2<span class="token punctuation">.</span>value<span class="token punctuation">[</span><span class="token string">"audit"</span><span class="token punctuation">]</span><span class="token punctuation">)</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<h3 id="步骤-5：预期输出"><a href="#步骤-5：预期输出" class="headerlink" title="步骤 5：预期输出"></a>步骤 5：预期输出</h3><pre class="line-numbers language-text" data-language="text"><code class="language-text">第一次： pending (Interrupt(value=&#123;'question': '批准这个动作吗？', 'details': '给客户发报价单'&#125;, ...),)
+批准后： approved ['起草：给客户发报价单', '已发布']<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span></span></code></pre>
+
+<p>第一次没有 <code>.value[&quot;status&quot;]</code> 变 approved，只有 <code>pending</code> + 一个 <code>interrupts</code> 元组——图停住了；第二次 resume 传 <code>True</code>，<code>approval</code> 拿到 <code>True</code> 走 <code>publish</code>。</p>
+<h3 id="步骤-6：验证是否成功"><a href="#步骤-6：验证是否成功" class="headerlink" title="步骤 6：验证是否成功"></a>步骤 6：验证是否成功</h3><ul>
+<li>把 <code>Command(resume=True)</code> 换成 <code>Command(resume=False)</code>：走到 <code>cancel</code>，<code>status</code> 是 <code>rejected</code>，说明恢复值真的决定了走向；</li>
+<li>去掉 checkpointer 再跑：第一次 <code>invoke</code> 直接报错（<code>interrupt</code> 需要持久化）；</li>
+<li>换一个 <code>thread_id</code> 去 resume：报「没有待恢复的任务」，因为那是另一条线；</li>
+<li>在 <code>draft</code> 里打印一行、在 <code>approval</code> 的 <code>interrupt</code> 前打印一行：第二次 resume 时两处<strong>都会再打印一次</strong>，这就是「从头重跑」。</li>
+</ul>
+<h3 id="写法-A-·-输入校验：一节点一次-条件边回环"><a href="#写法-A-·-输入校验：一节点一次-条件边回环" class="headerlink" title="写法 A · 输入校验：一节点一次 + 条件边回环"></a>写法 A · 输入校验：一节点一次 + 条件边回环</h3><p>审批是「一次问完」，校验是「问到达标为止」。区别就在这个回环：</p>
+<pre class="line-numbers language-python" data-language="python"><code class="language-python"><span class="token keyword">class</span> <span class="token class-name">FormState</span><span class="token punctuation">(</span>TypedDict<span class="token punctuation">)</span><span class="token punctuation">:</span>
+    age<span class="token punctuation">:</span> <span class="token builtin">int</span> <span class="token operator">|</span> <span class="token boolean">None</span>
+    pending_question<span class="token punctuation">:</span> <span class="token builtin">str</span> <span class="token operator">|</span> <span class="token boolean">None</span>
+
+<span class="token keyword">def</span> <span class="token function">collect_age</span><span class="token punctuation">(</span>state<span class="token punctuation">:</span> FormState<span class="token punctuation">)</span><span class="token punctuation">:</span>
+    question <span class="token operator">=</span> state<span class="token punctuation">.</span>get<span class="token punctuation">(</span><span class="token string">"pending_question"</span><span class="token punctuation">)</span> <span class="token keyword">or</span> <span class="token string">"请输入年龄"</span>
+    answer <span class="token operator">=</span> interrupt<span class="token punctuation">(</span>question<span class="token punctuation">)</span>          <span class="token comment"># 每次进节点只调一次</span>
+    <span class="token keyword">if</span> <span class="token builtin">isinstance</span><span class="token punctuation">(</span>answer<span class="token punctuation">,</span> <span class="token builtin">int</span><span class="token punctuation">)</span> <span class="token keyword">and</span> <span class="token number">0</span> <span class="token operator">&lt;</span> answer <span class="token operator">&lt;</span> <span class="token number">130</span><span class="token punctuation">:</span>
+        <span class="token keyword">return</span> <span class="token punctuation">&#123;</span><span class="token string">"age"</span><span class="token punctuation">:</span> answer<span class="token punctuation">,</span> <span class="token string">"pending_question"</span><span class="token punctuation">:</span> <span class="token boolean">None</span><span class="token punctuation">&#125;</span>
+    <span class="token keyword">return</span> <span class="token punctuation">&#123;</span><span class="token string">"pending_question"</span><span class="token punctuation">:</span> <span class="token string-interpolation"><span class="token string">f"「</span><span class="token interpolation"><span class="token punctuation">&#123;</span>answer<span class="token punctuation">&#125;</span></span><span class="token string">」不是合法年龄，请重输"</span></span><span class="token punctuation">&#125;</span>
+
+<span class="token keyword">def</span> <span class="token function">route</span><span class="token punctuation">(</span>state<span class="token punctuation">:</span> FormState<span class="token punctuation">)</span><span class="token punctuation">:</span>
+    <span class="token keyword">return</span> END <span class="token keyword">if</span> state<span class="token punctuation">.</span>get<span class="token punctuation">(</span><span class="token string">"age"</span><span class="token punctuation">)</span> <span class="token keyword">is</span> <span class="token keyword">not</span> <span class="token boolean">None</span> <span class="token keyword">else</span> <span class="token string">"collect_age"</span>
+
+builder <span class="token operator">=</span> StateGraph<span class="token punctuation">(</span>FormState<span class="token punctuation">)</span>
+builder<span class="token punctuation">.</span>add_node<span class="token punctuation">(</span><span class="token string">"collect_age"</span><span class="token punctuation">,</span> collect_age<span class="token punctuation">)</span>
+builder<span class="token punctuation">.</span>add_edge<span class="token punctuation">(</span>START<span class="token punctuation">,</span> <span class="token string">"collect_age"</span><span class="token punctuation">)</span>
+builder<span class="token punctuation">.</span>add_conditional_edges<span class="token punctuation">(</span><span class="token string">"collect_age"</span><span class="token punctuation">,</span> route<span class="token punctuation">)</span>
+graph <span class="token operator">=</span> builder<span class="token punctuation">.</span><span class="token builtin">compile</span><span class="token punctuation">(</span>checkpointer<span class="token operator">=</span>InMemorySaver<span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<p>为什么不能写成 <code>while True: answer = interrupt(...)</code>：恢复会重放整个节点，第 N 次恢复要重放前 N−1 轮提问，越用越慢，而且下标一对不上就串味。</p>
+<h3 id="换-provider-速查（本篇不涉及模型）"><a href="#换-provider-速查（本篇不涉及模型）" class="headerlink" title="换 provider 速查（本篇不涉及模型）"></a>换 provider 速查（本篇不涉及模型）</h3><div class="data-grid data-grid-link-table"><div class="grid-header"><div class="grid-cell">涉及点</div><div class="grid-cell">本篇写法</div><div class="grid-cell">接模型时</div><div class="grid-cell">替换方式</div></div><div class="grid-row"><div class="grid-cell">审批节点</div><div class="grid-cell">纯函数</div><div class="grid-cell"><code>init_chat_model(...)</code> 生成建议</div><div class="grid-cell">在 <code>draft</code> 里加一行</div></div><div class="grid-row"><div class="grid-cell">装包</div><div class="grid-cell"><code>langgraph</code></div><div class="grid-cell">再加 <code>langchain-*</code></div><div class="grid-cell">换 extra</div></div><div class="grid-row"><div class="grid-cell">凭证</div><div class="grid-cell">无</div><div class="grid-cell"><code>*_API_KEY</code></div><div class="grid-cell">补 <code>.env</code></div></div><div class="grid-row"><div class="grid-cell">interrupt &#x2F; resume</div><div class="grid-cell">—</div><div class="grid-cell">完全相同</div><div class="grid-cell">不改</div></div></div>
+
+<h2 id="七、常见坑（官方明确限制-版本差异）"><a href="#七、常见坑（官方明确限制-版本差异）" class="headerlink" title="七、常见坑（官方明确限制&#x2F;版本差异）"></a>七、常见坑（官方明确限制&#x2F;版本差异）</h2><ol>
+<li><strong><code>while True</code> 里反复 <code>interrupt</code></strong>。每次恢复重放全部轮次，第一次恢复重放 1 遍、第二次 2 遍；官方明确要求改用条件边。</li>
+<li><strong>条件跳过 <code>interrupt</code></strong>。同节点里 <code>if 条件: interrupt(...)</code>，两次执行个数不同 → 下标错位，恢复值张冠李戴。</li>
+<li><strong>在 <code>interrupt()</code> 前写外部副作用</strong>。恢复会重跑，重复建记录、重复发通知；要么放后面，要么幂等。</li>
+<li><strong>拿 <code>Command(update=...)</code> 当普通输入续聊</strong>。官方原话：只有 <code>Command(resume=...)</code> 适合当 <code>invoke</code> 的输入，其它参数是给节点返回用的。</li>
+<li><strong>恢复时换了 <code>thread_id</code></strong>。恢复的不是同一条线，报错或行为诡异。</li>
+<li><strong>把静态断点当 HITL</strong>。<code>interrupt_before/after</code> 是调试单步用的，业务审批用 <code>interrupt()</code>。</li>
+</ol>
+<h2 id="八、课后小结"><a href="#八、课后小结" class="headerlink" title="八、课后小结"></a>八、课后小结</h2><ul>
+<li><code>interrupt(payload)</code> 暂停并落检查点，<code>Command(resume=x)</code> 恢复，<code>x</code> 成为 <code>interrupt()</code> 的返回值；</li>
+<li>恢复必须同 <code>thread_id</code>；节点<strong>从头重跑</strong>，<code>interrupt</code> 前的代码要幂等；</li>
+<li>一个节点只调一次 <code>interrupt</code>，校验类需求用条件边回环；</li>
+<li>多个并行分支同时中断时，按 <code>Interrupt.id</code> 组一个 resume 映射一次交回去；</li>
+<li><code>interrupt_before/after</code> 只用于调试，不是人工介入方案。</li>
+</ul>
+<h2 id="九、思考题"><a href="#九、思考题" class="headerlink" title="九、思考题"></a>九、思考题</h2><p><strong>1、为什么恢复后节点要「从头重跑」，而不是从 <code>interrupt()</code> 那一行继续？</strong></p>
+<p>参考回答：运行时只能从检查点恢复「输入状态」，没有保存函数内部的栈帧；重跑整个节点是唯一确定性的复原方式。代价就是前面的副作用必须幂等。</p>
+<p><strong>2、审批节点里能不能先写审计日志再 <code>interrupt()</code>？</strong></p>
+<p>参考回答：不能。恢复会重跑，日志会重复。正确做法是把 <code>interrupt()</code> 放前面，批准后再写日志；或者写日志时用幂等键去重。</p>
+<p><strong>3、<code>Command(resume=True)</code> 能不能直接当下一轮用户消息用？</strong></p>
+<p>参考回答：不能。它只回答当前暂停点，不进 state 的 <code>messages</code>；要多轮对话请传普通输入 dict。</p>
+<p><strong>4、并行两个节点都 <code>interrupt()</code> 了，怎么一次恢复？</strong></p>
+<p>参考回答：读 <code>result.interrupts</code> 里每个 <code>Interrupt</code> 的 <code>id</code>，组 <code>&#123;id: 答案&#125;</code> 传给 <code>Command(resume=映射)</code>，一次调用把两个都答上。</p>
+<h2 id="十、下一篇预告"><a href="#十、下一篇预告" class="headerlink" title="十、下一篇预告"></a>十、下一篇预告</h2><p><strong>下一篇标题</strong>：07 时间旅行、分叉与持久化强度。</p>
+<p><strong>一句话内容</strong>：状态存下来了、能暂停了，接下来就能往回走——从历史检查点回放、改完状态分叉出一条新线，以及「每步必落盘」值不值。</p>
+<p><strong>承接关系</strong>：本篇用的 <code>resume</code> 是「向前」；LG07 讲「向后」与「岔开」，共用同一套检查点。</p>
+<p><strong>跳转位置</strong>：M2 第三讲。</p>
+<h2 id="十一、官方资料"><a href="#十一、官方资料" class="headerlink" title="十一、官方资料"></a>十一、官方资料</h2><ul>
+<li>Interrupts（恢复机制、Rules of interrupts、多个中断）：<a target="_blank" rel="noopener" href="https://docs.langchain.com/oss/python/langgraph/interrupts">https://docs.langchain.com/oss/python/langgraph/interrupts</a></li>
+<li>Checkpointers（恢复所需的持久化底座）：<a target="_blank" rel="noopener" href="https://docs.langchain.com/oss/python/langgraph/checkpointers">https://docs.langchain.com/oss/python/langgraph/checkpointers</a></li>
+<li>Use time-travel（<code>update_state</code> 与分叉，LG07 原文）：<a target="_blank" rel="noopener" href="https://docs.langchain.com/oss/python/langgraph/use-time-travel">https://docs.langchain.com/oss/python/langgraph/use-time-travel</a></li>
+<li>LangChain LC09（中间件里的人工介入，框架版做法）：<a href="https://wu4yong.github.io/2026/12/07/ai/langchain/langchain-9-middleware/">https://wu4yong.github.io/2026/12/07/ai/langchain/langchain-9-middleware/</a></li>
+</ul>
+<p>上一篇：<a href="/2026/12/18/ai/langgraph/langgraph-5-checkpointer/">LG05 checkpointer 与线程</a> ｜ 下一篇：<a href="/2026/12/20/ai/langgraph/langgraph-7-time-travel/">LG07 时间旅行、分叉与持久化强度</a> ｜ <a href="/2026/12/13/ai/langgraph/langgraph-0-series-index/">总目录</a></p>
+</div>
+
+  <div class="mb-foot">
+    <a href="/phone/">返回手机首页</a>
+    <a href="/phone/tags/">星迹索引</a>
+  </div>
+</div>
+
+
+<script>
+  /* 作用：懒加载本地 mermaid 库；无 mermaid 代码块时不加载 */
+  function loadLocalMermaid(){
+    return new Promise(function(resolve, reject){
+      if(window.mermaid) return resolve(window.mermaid);
+      var s = document.createElement('script');
+      s.src = '/js/third-party/mermaid/mermaid.min.js?v=10';
+      s.onload = function(){ resolve(window.mermaid); };
+      s.onerror = function(){ reject(new Error('mermaid local load failed')); };
+      document.head.appendChild(s);
+    });
+  }
+
+  /* 作用：把 ```mermaid 代码块替换成 SVG 图（手机端字号略小、图可横向滚动） */
+  async function renderMermaidDiagram(){
+    var blocks = document.querySelectorAll('pre[class*="language-mermaid"]');
+    if(!blocks.length) return;
+    var mermaid;
+    try { mermaid = await loadLocalMermaid(); }
+    catch(e){ console.warn('[mermaid] 本地库加载失败：', e); return; }
+
+    mermaid.initialize({
+      startOnLoad: false,
+      theme: 'base',
+      themeVariables: {
+        darkMode: true,
+        background: 'transparent',
+        fontFamily: '"Microsoft YaHei", "PingFang SC", "Segoe UI", sans-serif',
+        fontSize: '12px',
+        primaryColor: '#062f3d',
+        primaryTextColor: '#d6f6ff',
+        primaryBorderColor: '#00eeff',
+        secondaryColor: '#04222d',
+        tertiaryColor: '#04222d',
+        mainBkg: '#062f3d',
+        nodeBorder: '#00eeff',
+        clusterBkg: '#02161f',
+        clusterBorder: '#00eeff55',
+        lineColor: '#00eeff',
+        textColor: '#c0e8ff',
+        edgeLabelBackground: '#02161f'
+      },
+      flowchart: { curve: 'basis', useMaxWidth: false, htmlLabels: false, nodeSpacing: 30, rankSpacing: 40, padding: 10 }
+    });
+
+    var targets = [];
+    blocks.forEach(function(el){
+      var codeEl = el.querySelector('code');
+      if(!codeEl) return;
+      var div = document.createElement('div');
+      div.className = 'mermaid';
+      div.textContent = codeEl.textContent;
+      el.parentNode.replaceChild(div, el);
+      targets.push(div);
+    });
+    if(!targets.length) return;
+    try { await mermaid.run({ nodes: targets }); }
+    catch(e){ console.warn('[mermaid] 渲染失败：', e); }
+  }
+  /* 作用：多次触发兜底（延迟重试 + DOM 变化），防止某次时机没跑到导致图表留在代码块 */
+  var mmBusy = false;
+  function scheduleMermaid(){
+    if(mmBusy) return;
+    mmBusy = true;
+    renderMermaidDiagram().then(function(){ mmBusy = false; }, function(){ mmBusy = false; });
+  }
+  scheduleMermaid();
+  window.addEventListener('load', scheduleMermaid);
+  [1000, 3000, 8000].forEach(function(ms){ setTimeout(scheduleMermaid, ms); });
+  if(document.readyState !== 'loading') scheduleMermaid();
+  if(window.MutationObserver){
+    var mmTimer = null;
+    var mmObserver = new MutationObserver(function(){
+      clearTimeout(mmTimer);
+      mmTimer = setTimeout(scheduleMermaid, 400);
+    });
+    mmObserver.observe(document.querySelector('.mb-article') || document.body, { childList: true, subtree: true });
+  }
+</script>
+</body>
+</html>

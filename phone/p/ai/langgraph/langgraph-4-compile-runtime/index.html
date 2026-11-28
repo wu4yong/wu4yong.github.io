@@ -1,0 +1,453 @@
+<!--
+  ============================================
+  手机端 · 文章原文页
+  文件：phone/post.njk
+  适用终端：手机端（路由 /phone/p/<slug>/，由 scripts/phone-routes.js 生成）
+  作用：手机阅读单篇文章；单列布局、无侧栏无雷达，替代电脑端 post.njk
+        数据由生成期算好：page.item = { title, dateStr, content, cats, tags }
+  样式依赖：source/css/theme/phone/common.css、source/css/theme/phone/list.css
+  组件依赖：phone/_components/Particles.njk
+  最后修改：2026-11-11
+  ============================================
+-->
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="color-scheme" content="dark">
+  <meta name="theme-color" content="#020817">
+  <!-- 首帧兜底：浏览器默认画布是白的，样式未解析前会闪一下白。这条规则先锁死深空底色 -->
+  <style>html{background-color:#020817}</style>
+  <title>LangGraph 04 · 编译、super-step 与运行配置 - 时空秘境</title>
+  <!-- 手机端样式：基础 + 列表/正文，外链引入（源文件 source/css/theme/phone/） -->
+  <link rel="stylesheet" href="/css/theme/phone/common.css">
+  <link rel="stylesheet" href="/css/theme/phone/list.css">
+<meta name="generator" content="Hexo 8.1.2"></head>
+<body>
+<div class="mb-shell">
+  <!--
+  ============================================
+  手机端星空粒子组件
+  文件：Particles.njk
+  适用终端：手机端
+  作用：Particles.njk 的手机端副本（nunjucks 子目录 include 取不到上级）
+        参数与电脑端 _components/Particles.njk 保持一致：
+        粒子 95 / 连线 118px / opacity 0.32，外加星座层与零星闪烁层
+  最后修改：2026-11-12
+  ============================================
+--><!-- z-index 必须是 0：负层级会被 body 不透明背景盖住，粒子在跑却看不见 -->
+<div id="particles" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 0; pointer-events: none;"></div>
+<!-- 星座层（与首页同一套：随机零星散布星座图形 + 偶尔闪烁的小星） -->
+<div id="constellations" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 1; pointer-events: none;" aria-hidden="true"></div>
+<script src="/js/particles.min.js"></script>
+<script>
+particlesJS("particles", {
+  particles: {
+    number: {
+      value: 95,
+      density: {
+        enable: true,
+        value_area: 800
+      }
+    },
+    color: {
+      value: "#00eeff"
+    },
+    shape: {
+      type: "circle",
+      stroke: {
+        width: 0,
+        color: "#000000"
+      }
+    },
+    opacity: {
+      value: 0.6,
+      random: true,
+      anim: {
+        enable: true,
+        speed: 0.5,
+        opacity_min: 0.1,
+        sync: false
+      }
+    },
+    size: {
+      value: 3,
+      random: true,
+      anim: {
+        enable: true,
+        speed: 2,
+        size_min: 0.1,
+        sync: false
+      }
+    },
+    line_linked: {
+      enable: true,
+      distance: 118,
+      color: "#00eeff",
+      opacity: 0.32,
+      width: 1
+    },
+    move: {
+      enable: true,
+      speed: 0.8,
+      direction: "none",
+      random: true,
+      straight: false,
+      out_mode: "out",
+      bounce: false,
+      attract: {
+        enable: true,
+        rotateX: 600,
+        rotateY: 1200
+      }
+    }
+  },
+  interactivity: {
+    detect_on: "canvas",
+    events: {
+      onhover: {
+        enable: true,
+        mode: "grab"       // 手指按住时粒子聚集
+      },
+      onclick: {
+        enable: true,
+        mode: "push"       // 点击时产生新粒子
+      },
+      resize: true
+    },
+    modes: {
+      grab: {
+        distance: 200,
+        line_linked: {
+          opacity: 1
+        }
+      },
+      push: {
+        particles_nb: 6
+      }
+    }
+  },
+  retina_detect: true
+});
+</script>
+<!-- 星座 + 零星闪烁层：与电脑端共用同一份绘制脚本 -->
+<script src="/js/theme/home/starfield.js"></script>
+
+
+  <div class="mb-top">
+    <a class="mb-back" href="/phone/">← 返回手机首页</a>
+    <span class="mb-sub" style="margin:0">2026-12-17</span>
+  </div>
+
+  <h1 class="mb-title">LangGraph 04 · 编译、super-step 与运行配置</h1>
+  <div class="mb-sub">
+    分类：ai · langgraph
+     ｜ 标签：AI · 系统课 · LangGraph
+  </div>
+
+  <div class="mb-article"><div class="essay-banner essay-langgraph"></div>
+
+<h1 id="04-编译、super-step-与运行配置"><a href="#04-编译、super-step-与运行配置" class="headerlink" title="04 编译、super-step 与运行配置"></a>04 编译、super-step 与运行配置</h1><p><img src="https://wu4yong.github.io/starry-images/assets/img/langgraph/v1/lg-4-superstep.svg" alt="一轮 super-step：并行分支在同一轮里互相看不见，合并发生在轮末"></p>
+<p><em><code>recursion_limit</code> 数的是轮次，不是节点调用次数｜依据官方 Graph API · 执行模型自绘</em></p>
+
+<div class="ver-note"><p><strong>版本不一致提示</strong></p>
+<ul>
+<li>本篇基线是 <strong>LangGraph 1.2.x + Python 3.13</strong>；官方要求 Python ≥ 3.10；</li>
+<li>1.x 的 <code>invoke()</code> &#x2F; <code>stream()</code> 默认仍是 <code>version=&quot;v1&quot;</code>（返回 dict &#x2F; 旧 chunk 结构）；1.1 起可传 <code>version=&quot;v2&quot;</code> 拿 <code>GraphOutput</code> 与 <code>StreamPart</code>，本系列统一显式传 v2；</li>
+<li><code>recursion_limit</code> 官方默认是 25，超限抛 <code>GraphRecursionError</code>；它是「轮次上限」，不是「节点调用上限」；</li>
+<li><code>durability</code>（<code>&quot;exit&quot;</code> &#x2F; <code>&quot;async&quot;</code> &#x2F; <code>&quot;sync&quot;</code>）属于持久化篇的内容，本篇只在运行参数里点名，真实语义在 LG07 讲。</li>
+</ul>
+</div>
+
+
+<h2 id="一、学习目标"><a href="#一、学习目标" class="headerlink" title="一、学习目标"></a>一、学习目标</h2><p>学完这一讲，你要能做到三件事：</p>
+<ol>
+<li>说清一个 super-step 里发生了什么：并行执行、轮末合并、下一轮才可见；</li>
+<li>会用 <code>stream_mode=&quot;updates&quot;</code> 把每一轮的产出打出来，用 <code>recursion_limit</code> 给循环设上限并看懂报错；</li>
+<li>分清 <code>config</code> 里 <code>configurable</code> &#x2F; <code>tags</code> &#x2F; <code>metadata</code> &#x2F; <code>recursion_limit</code> 各自管什么，以及 <code>version=&quot;v2&quot;</code> 返回的 <code>GraphOutput</code> 怎么用。</li>
+</ol>
+<h2 id="二、前置知识"><a href="#二、前置知识" class="headerlink" title="二、前置知识"></a>二、前置知识</h2><ul>
+<li>读完 LG01–LG03：会 compile、会写节点与边、知道 <code>Command</code> &#x2F; <code>Send</code> 会产生并行分支；</li>
+<li>理解「状态是共享快照」；</li>
+<li>有一个可用的模型 key（本篇示例会调一次模型，用来演示并行耗时）。</li>
+</ul>
+<h2 id="三、理论讲解（官方定义）"><a href="#三、理论讲解（官方定义）" class="headerlink" title="三、理论讲解（官方定义）"></a>三、理论讲解（官方定义）</h2><p>顺序照官方 Graph API 的 Compiling → 执行模型（super-step）→ 运行配置几节，补充 1.1 版本说明里的 <code>version=&quot;v2&quot;</code>。</p>
+<h3 id="1-compile-除了校验还做了什么"><a href="#1-compile-除了校验还做了什么" class="headerlink" title="1. compile() 除了校验还做了什么"></a>1. <code>compile()</code> 除了校验还做了什么</h3><p>官方的说法是：编译检查图结构（例如孤立节点），并把运行时选项挂到执行对象上——<code>checkpointer</code>、<code>store</code>、断点都在这一步绑定。</p>
+<p><code>compile()</code> 可以反复调用：同一份 builder 编出带 checkpointer 的、不带 checkpointer 的两个对象，是常见做法（测试与生产分开）。</p>
+<h3 id="2-super-step-是执行单位"><a href="#2-super-step-是执行单位" class="headerlink" title="2. super-step 是执行单位"></a>2. super-step 是执行单位</h3><p>LangGraph 的执行是「按轮推进」的：</p>
+<ol>
+<li>这一轮该跑的节点<strong>并行执行</strong>；</li>
+<li>全部跑完后，把它们的返回值按 channel 的 reducer <strong>合并</strong>进 state；</li>
+<li>再根据边和路由决定下一轮跑谁。</li>
+</ol>
+<p>由此推出三条结论，官方在并行边、reducer 两节分别提过：</p>
+<ul>
+<li>同一轮的节点<strong>读到的都是本轮开始时的 state</strong>，看不到同轮别人的写入；</li>
+<li>一轮里两个节点写同一个 key，没有 reducer 就是覆盖；</li>
+<li>「扇出」是同一轮多分支，不是线程池调度。</li>
+</ul>
+<h3 id="3-recursion-limit"><a href="#3-recursion-limit" class="headerlink" title="3. recursion_limit"></a>3. <code>recursion_limit</code></h3><p>官方示例用 <code>config=&#123;&quot;recursion_limit&quot;: 25&#125;</code>。它限制的是<strong>图推进的轮次数</strong>，超过就抛 <code>GraphRecursionError</code>。默认值 25——一个正常的 Agent 循环通常在 5–10 轮内结束，25 已经很宽松。</p>
+<p>这条限制存在的意义：模型可能一直要工具、条件边可能一直把你送回同一个节点，没有上限就是死循环。</p>
+<h3 id="4-config-里有什么"><a href="#4-config-里有什么" class="headerlink" title="4. config 里有什么"></a>4. <code>config</code> 里有什么</h3><div class="data-grid data-grid-link-table"><div class="grid-header"><div class="grid-cell">字段</div><div class="grid-cell">管什么</div><div class="grid-cell">常见用法</div></div><div class="grid-row"><div class="grid-cell"><code>configurable</code></div><div class="grid-cell">运行时可变配置</div><div class="grid-cell">会话标识、多轮对话</div></div><div class="grid-row"><div class="grid-cell"><code>recursion_limit</code></div><div class="grid-cell">轮次上限（顶层字段）</div><div class="grid-cell">给循环兜底</div></div><div class="grid-row"><div class="grid-cell"><code>tags</code></div><div class="grid-cell">给这次运行打标签</div><div class="grid-cell">追踪、按标签过滤</div></div><div class="grid-row"><div class="grid-cell"><code>metadata</code></div><div class="grid-cell">附带的键值信息</div><div class="grid-cell">业务侧关联（订单号等）</div></div></div>
+
+<p><code>thread_id</code> 只是 <code>configurable</code> 里的一个约定键，LG05 会讲它怎么和 checkpointer 配合。</p>
+<h3 id="5-version-v2-的返回对象"><a href="#5-version-v2-的返回对象" class="headerlink" title="5. version=&quot;v2&quot; 的返回对象"></a>5. <code>version=&quot;v2&quot;</code> 的返回对象</h3><p>1.1 的版本说明写了两件事：</p>
+<ul>
+<li><code>invoke(..., version=&quot;v2&quot;)</code> 返回 <code>GraphOutput</code>，状态在 <code>.value</code>，中断在 <code>.interrupts</code>；</li>
+<li><code>stream(..., version=&quot;v2&quot;)</code> 返回统一的 <code>StreamPart</code>（<code>type</code> &#x2F; <code>ns</code> &#x2F; <code>data</code>），每种模式有自己的 <code>TypedDict</code>。</li>
+</ul>
+<p>默认仍是 v1。官方建议新代码显式传 v2，原因很实际：v1 的 dict 与旧 chunk 结构在多节点并行、子图场景下不好区分来源。</p>
+<h2 id="四、原理拆解"><a href="#四、原理拆解" class="headerlink" title="四、原理拆解"></a>四、原理拆解</h2><p>把一轮 super-step 想成<strong>一次班组交接</strong>：</p>
+<ul>
+<li>这一轮所有工人（节点）同时上班，各自拿着<strong>上班时拿到的那份工件</strong>干活；</li>
+<li>下班时统一把各自改的部分交到仓库（合并）；</li>
+<li>下一班的人才能看到上一班的全部改动。</li>
+</ul>
+<p>三个关键判断：</p>
+<ol>
+<li><strong>并行不是「同时改一个本子」</strong>：每人一份复印件，下班才汇总；</li>
+<li><strong>合并顺序不保证</strong>：所以依赖顺序的累积要小心（比如「第一条」「最后一条」）；</li>
+<li><strong>轮次上限是安全阀</strong>：它防的不是慢，是「永远不结束」。</li>
+</ol>
+<h2 id="五、场景说明"><a href="#五、场景说明" class="headerlink" title="五、场景说明"></a>五、场景说明</h2><ol>
+<li><strong>并行取数</strong>：FAQ 查库 + 模型回答同时跑，合并时拼成一条回复；</li>
+<li><strong>循环型 Agent</strong>：手搭工具循环时，靠 <code>recursion_limit</code> + 显式退出条件双保险；</li>
+<li><strong>调试顺序问题</strong>：用 <code>stream_mode=&quot;updates&quot;</code> 看每一轮到底跑了谁；</li>
+<li><strong>多环境编译</strong>：同一 builder 编出带&#x2F;不带 checkpointer 的两个版本，测试用内存、生产用 Postgres。</li>
+</ol>
+<h2 id="六、示例代码"><a href="#六、示例代码" class="headerlink" title="六、示例代码"></a>六、示例代码</h2><h3 id="步骤-1：环境准备"><a href="#步骤-1：环境准备" class="headerlink" title="步骤 1：环境准备"></a>步骤 1：环境准备</h3><pre class="line-numbers language-bash" data-language="bash"><code class="language-bash"><span class="token comment"># 04 编译、super-step 与运行配置</span>
+uv python pin <span class="token number">3.13</span>
+uv init lg-runtime
+<span class="token builtin class-name">cd</span> lg-runtime
+uv <span class="token function">add</span> langgraph <span class="token string">"langchain[openai]"</span> python-dotenv<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<h3 id="步骤-2：凭证配置"><a href="#步骤-2：凭证配置" class="headerlink" title="步骤 2：凭证配置"></a>步骤 2：凭证配置</h3><p><code>.env</code> 放 <code>OPENAI_API_KEY</code>，<code>load_dotenv()</code> 读取。</p>
+<h3 id="步骤-3：导入"><a href="#步骤-3：导入" class="headerlink" title="步骤 3：导入"></a>步骤 3：导入</h3><pre class="line-numbers language-python" data-language="python"><code class="language-python"><span class="token keyword">import</span> time
+<span class="token keyword">from</span> typing_extensions <span class="token keyword">import</span> TypedDict
+<span class="token keyword">from</span> langgraph<span class="token punctuation">.</span>graph <span class="token keyword">import</span> StateGraph<span class="token punctuation">,</span> START<span class="token punctuation">,</span> END
+<span class="token keyword">from</span> langgraph<span class="token punctuation">.</span>errors <span class="token keyword">import</span> GraphRecursionError
+<span class="token keyword">from</span> langchain<span class="token punctuation">.</span>chat_models <span class="token keyword">import</span> init_chat_model<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<h3 id="步骤-4：最小可运行代码"><a href="#步骤-4：最小可运行代码" class="headerlink" title="步骤 4：最小可运行代码"></a>步骤 4：最小可运行代码</h3><p>存成 <code>runtime_demo.py</code>，<code>uv run runtime_demo.py</code>。</p>
+<pre class="line-numbers language-python" data-language="python"><code class="language-python"><span class="token keyword">import</span> time
+<span class="token keyword">from</span> dotenv <span class="token keyword">import</span> load_dotenv
+<span class="token keyword">from</span> typing_extensions <span class="token keyword">import</span> TypedDict
+<span class="token keyword">from</span> langgraph<span class="token punctuation">.</span>graph <span class="token keyword">import</span> StateGraph<span class="token punctuation">,</span> START<span class="token punctuation">,</span> END
+<span class="token keyword">from</span> langgraph<span class="token punctuation">.</span>errors <span class="token keyword">import</span> GraphRecursionError
+<span class="token keyword">from</span> langchain<span class="token punctuation">.</span>chat_models <span class="token keyword">import</span> init_chat_model
+
+load_dotenv<span class="token punctuation">(</span><span class="token punctuation">)</span>
+model <span class="token operator">=</span> init_chat_model<span class="token punctuation">(</span><span class="token string">"openai:gpt-5-nano"</span><span class="token punctuation">)</span>
+
+<span class="token keyword">class</span> <span class="token class-name">State</span><span class="token punctuation">(</span>TypedDict<span class="token punctuation">)</span><span class="token punctuation">:</span>
+    q<span class="token punctuation">:</span> <span class="token builtin">str</span>
+    faq<span class="token punctuation">:</span> <span class="token builtin">str</span>
+    answer<span class="token punctuation">:</span> <span class="token builtin">str</span>
+    merged<span class="token punctuation">:</span> <span class="token builtin">str</span>
+
+<span class="token keyword">def</span> <span class="token function">load</span><span class="token punctuation">(</span>state<span class="token punctuation">:</span> State<span class="token punctuation">)</span><span class="token punctuation">:</span>
+    <span class="token keyword">return</span> <span class="token punctuation">&#123;</span><span class="token string">"q"</span><span class="token punctuation">:</span> state<span class="token punctuation">[</span><span class="token string">"q"</span><span class="token punctuation">]</span><span class="token punctuation">.</span>strip<span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">&#125;</span>
+
+<span class="token keyword">def</span> <span class="token function">faq_lookup</span><span class="token punctuation">(</span>state<span class="token punctuation">:</span> State<span class="token punctuation">)</span><span class="token punctuation">:</span>
+    time<span class="token punctuation">.</span>sleep<span class="token punctuation">(</span><span class="token number">0.3</span><span class="token punctuation">)</span>                       <span class="token comment"># 假装在查库</span>
+    <span class="token keyword">return</span> <span class="token punctuation">&#123;</span><span class="token string">"faq"</span><span class="token punctuation">:</span> <span class="token string">"FAQ：退款 7 个工作日到账"</span><span class="token punctuation">&#125;</span>
+
+<span class="token keyword">def</span> <span class="token function">llm_answer</span><span class="token punctuation">(</span>state<span class="token punctuation">:</span> State<span class="token punctuation">)</span><span class="token punctuation">:</span>
+    <span class="token keyword">return</span> <span class="token punctuation">&#123;</span><span class="token string">"answer"</span><span class="token punctuation">:</span> model<span class="token punctuation">.</span>invoke<span class="token punctuation">(</span>state<span class="token punctuation">[</span><span class="token string">"q"</span><span class="token punctuation">]</span><span class="token punctuation">)</span><span class="token punctuation">.</span>text<span class="token punctuation">&#125;</span>
+
+<span class="token keyword">def</span> <span class="token function">merge</span><span class="token punctuation">(</span>state<span class="token punctuation">:</span> State<span class="token punctuation">)</span><span class="token punctuation">:</span>
+    <span class="token keyword">return</span> <span class="token punctuation">&#123;</span><span class="token string">"merged"</span><span class="token punctuation">:</span> <span class="token string-interpolation"><span class="token string">f"</span><span class="token interpolation"><span class="token punctuation">&#123;</span>state<span class="token punctuation">[</span><span class="token string">'faq'</span><span class="token punctuation">]</span><span class="token punctuation">&#125;</span></span><span class="token string"> / </span><span class="token interpolation"><span class="token punctuation">&#123;</span>state<span class="token punctuation">[</span><span class="token string">'answer'</span><span class="token punctuation">]</span><span class="token punctuation">&#125;</span></span><span class="token string">"</span></span><span class="token punctuation">&#125;</span>
+
+builder <span class="token operator">=</span> StateGraph<span class="token punctuation">(</span>State<span class="token punctuation">)</span>
+builder<span class="token punctuation">.</span>add_node<span class="token punctuation">(</span><span class="token string">"load"</span><span class="token punctuation">,</span> load<span class="token punctuation">)</span>
+builder<span class="token punctuation">.</span>add_node<span class="token punctuation">(</span><span class="token string">"faq_lookup"</span><span class="token punctuation">,</span> faq_lookup<span class="token punctuation">)</span>
+builder<span class="token punctuation">.</span>add_node<span class="token punctuation">(</span><span class="token string">"llm_answer"</span><span class="token punctuation">,</span> llm_answer<span class="token punctuation">)</span>
+builder<span class="token punctuation">.</span>add_node<span class="token punctuation">(</span><span class="token string">"merge"</span><span class="token punctuation">,</span> merge<span class="token punctuation">)</span>
+builder<span class="token punctuation">.</span>add_edge<span class="token punctuation">(</span>START<span class="token punctuation">,</span> <span class="token string">"load"</span><span class="token punctuation">)</span>
+builder<span class="token punctuation">.</span>add_edge<span class="token punctuation">(</span><span class="token string">"load"</span><span class="token punctuation">,</span> <span class="token string">"faq_lookup"</span><span class="token punctuation">)</span>     <span class="token comment"># 两条出边 → 下一轮并行</span>
+builder<span class="token punctuation">.</span>add_edge<span class="token punctuation">(</span><span class="token string">"load"</span><span class="token punctuation">,</span> <span class="token string">"llm_answer"</span><span class="token punctuation">)</span>
+builder<span class="token punctuation">.</span>add_edge<span class="token punctuation">(</span><span class="token string">"faq_lookup"</span><span class="token punctuation">,</span> <span class="token string">"merge"</span><span class="token punctuation">)</span>
+builder<span class="token punctuation">.</span>add_edge<span class="token punctuation">(</span><span class="token string">"llm_answer"</span><span class="token punctuation">,</span> <span class="token string">"merge"</span><span class="token punctuation">)</span>
+builder<span class="token punctuation">.</span>add_edge<span class="token punctuation">(</span><span class="token string">"merge"</span><span class="token punctuation">,</span> END<span class="token punctuation">)</span>
+graph <span class="token operator">=</span> builder<span class="token punctuation">.</span><span class="token builtin">compile</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+
+<span class="token keyword">if</span> __name__ <span class="token operator">==</span> <span class="token string">"__main__"</span><span class="token punctuation">:</span>
+    t0 <span class="token operator">=</span> time<span class="token punctuation">.</span>perf_counter<span class="token punctuation">(</span><span class="token punctuation">)</span>
+    result <span class="token operator">=</span> graph<span class="token punctuation">.</span>invoke<span class="token punctuation">(</span><span class="token punctuation">&#123;</span><span class="token string">"q"</span><span class="token punctuation">:</span> <span class="token string">" 退款多久到账？ "</span><span class="token punctuation">,</span> <span class="token string">"faq"</span><span class="token punctuation">:</span> <span class="token string">""</span><span class="token punctuation">,</span> <span class="token string">"answer"</span><span class="token punctuation">:</span> <span class="token string">""</span><span class="token punctuation">,</span> <span class="token string">"merged"</span><span class="token punctuation">:</span> <span class="token string">""</span><span class="token punctuation">&#125;</span><span class="token punctuation">,</span> version<span class="token operator">=</span><span class="token string">"v2"</span><span class="token punctuation">)</span>
+    <span class="token keyword">print</span><span class="token punctuation">(</span><span class="token string-interpolation"><span class="token string">f"耗时 </span><span class="token interpolation"><span class="token punctuation">&#123;</span>time<span class="token punctuation">.</span>perf_counter<span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token operator">-</span> t0<span class="token punctuation">:</span><span class="token format-spec">.2f</span><span class="token punctuation">&#125;</span></span><span class="token string">s"</span></span><span class="token punctuation">)</span>
+    <span class="token keyword">print</span><span class="token punctuation">(</span><span class="token builtin">type</span><span class="token punctuation">(</span>result<span class="token punctuation">)</span><span class="token punctuation">.</span>__name__<span class="token punctuation">)</span>
+    <span class="token keyword">print</span><span class="token punctuation">(</span>result<span class="token punctuation">.</span>value<span class="token punctuation">[</span><span class="token string">"merged"</span><span class="token punctuation">]</span><span class="token punctuation">)</span>
+
+    <span class="token keyword">print</span><span class="token punctuation">(</span><span class="token string">"---- 每一轮跑了谁 ----"</span><span class="token punctuation">)</span>
+    <span class="token keyword">for</span> chunk <span class="token keyword">in</span> graph<span class="token punctuation">.</span>stream<span class="token punctuation">(</span><span class="token punctuation">&#123;</span><span class="token string">"q"</span><span class="token punctuation">:</span> <span class="token string">"退款多久到账？"</span><span class="token punctuation">,</span> <span class="token string">"faq"</span><span class="token punctuation">:</span> <span class="token string">""</span><span class="token punctuation">,</span> <span class="token string">"answer"</span><span class="token punctuation">:</span> <span class="token string">""</span><span class="token punctuation">,</span> <span class="token string">"merged"</span><span class="token punctuation">:</span> <span class="token string">""</span><span class="token punctuation">&#125;</span><span class="token punctuation">,</span> stream_mode<span class="token operator">=</span><span class="token string">"updates"</span><span class="token punctuation">)</span><span class="token punctuation">:</span>
+        <span class="token keyword">print</span><span class="token punctuation">(</span><span class="token builtin">list</span><span class="token punctuation">(</span>chunk<span class="token punctuation">.</span>keys<span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<h3 id="步骤-5：预期输出"><a href="#步骤-5：预期输出" class="headerlink" title="步骤 5：预期输出"></a>步骤 5：预期输出</h3><pre class="line-numbers language-text" data-language="text"><code class="language-text">耗时 0.6s
+GraphOutput
+FAQ：退款 7 个工作日到账 / 退款一般 7 个工作日内到账，具体以支付渠道为准。
+---- 每一轮跑了谁 ----
+['load']
+['faq_lookup', 'llm_answer']
+['merge']<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<p>第二轮一次冒出两个节点，就是「同一 super-step 并行」的可视证据；耗时接近 <code>max(查库, 模型)</code> 而不是两者相加（具体秒数随模型响应变化，看的是「没被 0.3 秒叠加」）。</p>
+<h3 id="步骤-6：验证是否成功"><a href="#步骤-6：验证是否成功" class="headerlink" title="步骤 6：验证是否成功"></a>步骤 6：验证是否成功</h3><ul>
+<li>把 <code>faq_lookup</code> 的 <code>sleep</code> 调到 2 秒：总耗时仍由模型决定，不会被串行相加；</li>
+<li>在 <code>merge</code> 里打印 <code>state</code>：能看到 <code>faq</code> 与 <code>answer</code> 都在——合并发生在轮末，<code>merge</code> 是下一轮才跑的；</li>
+<li>把 <code>add_edge(&quot;load&quot;, &quot;faq_lookup&quot;)</code> 改成 <code>add_edge(&quot;load&quot;, &quot;llm_answer&quot;)</code>、再 <code>add_edge(&quot;llm_answer&quot;, &quot;faq_lookup&quot;)</code>：两轮变串行，耗时相加，<code>updates</code> 里也不再同时出现两个节点。</li>
+</ul>
+<p>再单独验一次轮次上限：</p>
+<pre class="line-numbers language-python" data-language="python"><code class="language-python"><span class="token keyword">class</span> <span class="token class-name">Loop</span><span class="token punctuation">(</span>TypedDict<span class="token punctuation">)</span><span class="token punctuation">:</span>
+    n<span class="token punctuation">:</span> <span class="token builtin">int</span>
+
+<span class="token keyword">def</span> <span class="token function">tick</span><span class="token punctuation">(</span>state<span class="token punctuation">:</span> Loop<span class="token punctuation">)</span><span class="token punctuation">:</span>
+    <span class="token keyword">return</span> <span class="token punctuation">&#123;</span><span class="token string">"n"</span><span class="token punctuation">:</span> state<span class="token punctuation">[</span><span class="token string">"n"</span><span class="token punctuation">]</span> <span class="token operator">+</span> <span class="token number">1</span><span class="token punctuation">&#125;</span>
+
+<span class="token keyword">def</span> <span class="token function">again</span><span class="token punctuation">(</span>state<span class="token punctuation">:</span> Loop<span class="token punctuation">)</span><span class="token punctuation">:</span>
+    <span class="token keyword">return</span> state<span class="token punctuation">[</span><span class="token string">"n"</span><span class="token punctuation">]</span> <span class="token operator">&lt;</span> <span class="token number">10</span>          <span class="token comment"># 永远为 True，制造死循环</span>
+
+b <span class="token operator">=</span> StateGraph<span class="token punctuation">(</span>Loop<span class="token punctuation">)</span>
+b<span class="token punctuation">.</span>add_node<span class="token punctuation">(</span><span class="token string">"tick"</span><span class="token punctuation">,</span> tick<span class="token punctuation">)</span>
+b<span class="token punctuation">.</span>add_edge<span class="token punctuation">(</span>START<span class="token punctuation">,</span> <span class="token string">"tick"</span><span class="token punctuation">)</span>
+b<span class="token punctuation">.</span>add_conditional_edges<span class="token punctuation">(</span><span class="token string">"tick"</span><span class="token punctuation">,</span> again<span class="token punctuation">,</span> <span class="token punctuation">&#123;</span><span class="token boolean">True</span><span class="token punctuation">:</span> <span class="token string">"tick"</span><span class="token punctuation">,</span> <span class="token boolean">False</span><span class="token punctuation">:</span> END<span class="token punctuation">&#125;</span><span class="token punctuation">)</span>
+g <span class="token operator">=</span> b<span class="token punctuation">.</span><span class="token builtin">compile</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+<span class="token keyword">try</span><span class="token punctuation">:</span>
+    g<span class="token punctuation">.</span>invoke<span class="token punctuation">(</span><span class="token punctuation">&#123;</span><span class="token string">"n"</span><span class="token punctuation">:</span> <span class="token number">0</span><span class="token punctuation">&#125;</span><span class="token punctuation">,</span> config<span class="token operator">=</span><span class="token punctuation">&#123;</span><span class="token string">"recursion_limit"</span><span class="token punctuation">:</span> <span class="token number">5</span><span class="token punctuation">&#125;</span><span class="token punctuation">)</span>
+<span class="token keyword">except</span> GraphRecursionError <span class="token keyword">as</span> e<span class="token punctuation">:</span>
+    <span class="token keyword">print</span><span class="token punctuation">(</span><span class="token string">"触到上限："</span><span class="token punctuation">,</span> <span class="token builtin">type</span><span class="token punctuation">(</span>e<span class="token punctuation">)</span><span class="token punctuation">.</span>__name__<span class="token punctuation">)</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<p>预期输出 <code>触到上限： GraphRecursionError</code>。这里 <code>recursion_limit=5</code> 大约只允许 5 轮 <code>tick</code>，<code>n</code> 停在 4 附近。</p>
+<h3 id="写法-A-·-统一入口：同一份代码换成-DeepSeek"><a href="#写法-A-·-统一入口：同一份代码换成-DeepSeek" class="headerlink" title="写法 A · 统一入口：同一份代码换成 DeepSeek"></a>写法 A · 统一入口：同一份代码换成 DeepSeek</h3><pre class="line-numbers language-bash" data-language="bash"><code class="language-bash"><span class="token comment"># 04 编译、super-step 与运行配置</span>
+uv <span class="token function">add</span> langchain-deepseek<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span></span></code></pre>
+
+<pre class="line-numbers language-python" data-language="python"><code class="language-python">model <span class="token operator">=</span> init_chat_model<span class="token punctuation">(</span><span class="token string">"deepseek:deepseek-chat"</span><span class="token punctuation">)</span>   <span class="token comment"># 只改这一行</span><span aria-hidden="true" class="line-numbers-rows"><span></span></span></code></pre>
+
+<p><code>faq_lookup</code> 的 <code>sleep</code>、边的拓扑、<code>recursion_limit</code>、<code>version=&quot;v2&quot;</code> 全部不变——执行模型是运行时的事。</p>
+<h3 id="换-provider-速查（本篇只涉及模型节点）"><a href="#换-provider-速查（本篇只涉及模型节点）" class="headerlink" title="换 provider 速查（本篇只涉及模型节点）"></a>换 provider 速查（本篇只涉及模型节点）</h3><div class="data-grid data-grid-link-table"><div class="grid-header"><div class="grid-cell">涉及点</div><div class="grid-cell">OpenAI</div><div class="grid-cell">DeepSeek</div><div class="grid-cell">替换方式</div></div><div class="grid-row"><div class="grid-cell">模型入口</div><div class="grid-cell"><code>&quot;openai:gpt-5-nano&quot;</code></div><div class="grid-cell"><code>&quot;deepseek:deepseek-chat&quot;</code></div><div class="grid-cell">换字符串</div></div><div class="grid-row"><div class="grid-cell">装包 &#x2F; 凭证</div><div class="grid-cell"><code>langchain[openai]</code> &#x2F; <code>OPENAI_API_KEY</code></div><div class="grid-cell"><code>langchain-deepseek</code> &#x2F; <code>DEEPSEEK_API_KEY</code></div><div class="grid-cell">换包与 key</div></div><div class="grid-row"><div class="grid-cell">单次调用耗时</div><div class="grid-cell">受模型档位影响</div><div class="grid-cell">同上</div><div class="grid-cell">会影响 parallel 的实测数字，不影响行为</div></div><div class="grid-row"><div class="grid-cell">图 &#x2F; super-step &#x2F; 配置</div><div class="grid-cell">—</div><div class="grid-cell">完全相同</div><div class="grid-cell">不改</div></div></div>
+
+<p><strong>智谱 &#x2F; 通义</strong>：不在统一入口里，直接 <code>ChatZhipuAI(model=&quot;glm-4&quot;)</code> &#x2F; <code>ChatTongyi(model=&quot;qwen-plus&quot;)</code>；两者的 <code>invoke</code> 用法一样，只是 <code>ChatTongyi</code> 默认返回流式对象，打印文本前要 <code>.text</code> 或先聚合。<strong>Claude</strong> 走 <code>anthropic:</code>，记得显式传 <code>max_tokens</code>。</p>
+<h2 id="七、常见坑（官方明确限制-版本差异）"><a href="#七、常见坑（官方明确限制-版本差异）" class="headerlink" title="七、常见坑（官方明确限制&#x2F;版本差异）"></a>七、常见坑（官方明确限制&#x2F;版本差异）</h2><ol>
+<li><strong>以为节点按添加顺序串行</strong>。只要有两条出边，下一轮就是并行；顺序由边决定，不由 <code>add_node</code> 的先后决定。</li>
+<li><strong>并行分支配 reducer 不当</strong>。同轮写同一 key 必然冲突，默认覆盖、顺序还不保证。</li>
+<li><strong><code>recursion_limit</code> 当成节点数上限</strong>。它数的是轮次；一轮两个节点只算一轮。</li>
+<li><strong>把 <code>thread_id</code> 放在 <code>config</code> 顶层</strong>。它属于 <code>configurable</code>，写错位置不会报错，但也不生效（LG05 详述）。</li>
+<li><strong>v1 &#x2F; v2 结构混用</strong>。传了 <code>version=&quot;v2&quot;</code> 就不要再 <code>result[&quot;merged&quot;]</code>，用 <code>result.value[&quot;merged&quot;]</code>；stream 的 chunk 结构同理。</li>
+<li><strong>以为编译一次就固定</strong>。<code>compile()</code> 可重复调用，不同运行时选项要分别编译，别在同一个对象上改来改去。</li>
+</ol>
+<h2 id="八、课后小结"><a href="#八、课后小结" class="headerlink" title="八、课后小结"></a>八、课后小结</h2><ul>
+<li>一轮 super-step &#x3D; 并行执行 + 轮末合并，下一轮才可见；</li>
+<li>并行分支写同一 key 要靠 reducer，顺序不保证；</li>
+<li><code>recursion_limit</code> 数轮次，默认 25，超限抛 <code>GraphRecursionError</code>；</li>
+<li><code>config</code> 分 <code>configurable</code> &#x2F; 顶层限制 &#x2F; <code>tags</code> &#x2F; <code>metadata</code> 几类；</li>
+<li><code>version=&quot;v2&quot;</code> 给 <code>GraphOutput</code> 与 <code>StreamPart</code>，本系列统一显式传。</li>
+</ul>
+<h2 id="九、思考题"><a href="#九、思考题" class="headerlink" title="九、思考题"></a>九、思考题</h2><p><strong>1、为什么并行分支「互相看不见」对方的写入，而不是「看到最新值」？</strong></p>
+<p>参考回答：因为合并发生在轮末。每个节点读的是本轮开始时的快照，运行时不做中途同步——这保证了同一轮内执行结果与调度顺序无关，可复现。</p>
+<p><strong>2、<code>recursion_limit=25</code> 意味着最多跑 25 个节点吗？</strong></p>
+<p>参考回答：不是，是 25 轮。一轮里并行几个节点都只算一轮；所以一个「每次只跑一个节点」的循环，上限就是 25 次。</p>
+<p><strong>3、<code>stream_mode=&quot;updates&quot;</code> 与 <code>&quot;values&quot;</code> 的区别是什么？</strong></p>
+<p>参考回答：<code>updates</code> 每轮只给这一轮节点返回的增量（谁改了什么），<code>values</code> 每轮给完整 state。调试「谁跑了、改了什么」用 updates，回放完整状态用 values（LG09 展开五种模式）。</p>
+<p><strong>4、<code>compile()</code> 为什么允许带不同参数重复调用？</strong></p>
+<p>参考回答：运行时选项（checkpointer、store、断点）是执行环境的差异，不是图结构的差异。同一份图在测试、生产、本地调试需要不同配置，重复编译比复制代码更可靠。</p>
+<h2 id="十、下一篇预告"><a href="#十、下一篇预告" class="headerlink" title="十、下一篇预告"></a>十、下一篇预告</h2><p><strong>下一篇标题</strong>：05 checkpointer 与线程。</p>
+<p><strong>一句话内容</strong>：M1 的图跑完就忘，M2 开始让它记住——checkpointer 存什么、<code>thread_id</code> 怎么归属会话、<code>get_state</code> &#x2F; <code>get_state_history</code> 怎么读，以及内存版为什么不能上生产。</p>
+<p><strong>承接关系</strong>：M1 的图都是「一次性的」；没有 checkpoint，就没有后面的 interrupt 恢复、时间旅行与跨轮记忆。</p>
+<p><strong>跳转位置</strong>：M2 第一讲。</p>
+<h2 id="十一、官方资料"><a href="#十一、官方资料" class="headerlink" title="十一、官方资料"></a>十一、官方资料</h2><ul>
+<li>Graph API · Compiling your graph：<a target="_blank" rel="noopener" href="https://docs.langchain.com/oss/python/langgraph/graph-api">https://docs.langchain.com/oss/python/langgraph/graph-api</a></li>
+<li>执行模型与并行（同一 super-step、reducer 合并）：<a target="_blank" rel="noopener" href="https://docs.langchain.com/oss/python/langgraph/graph-api">https://docs.langchain.com/oss/python/langgraph/graph-api</a></li>
+<li>LangGraph v1.1 版本说明（<code>version=&quot;v2&quot;</code>、<code>GraphOutput</code>、<code>StreamPart</code>）：<a target="_blank" rel="noopener" href="https://docs.langchain.com/oss/python/releases/changelog">https://docs.langchain.com/oss/python/releases/changelog</a></li>
+<li>LangGraph v1 迁移指南：<a target="_blank" rel="noopener" href="https://docs.langchain.com/oss/python/migrate/langgraph-v1">https://docs.langchain.com/oss/python/migrate/langgraph-v1</a></li>
+</ul>
+<p>上一篇：<a href="/2026/12/16/ai/langgraph/langgraph-3-nodes-edges-command/">LG03 节点、边、Command 与 Send</a> ｜ 下一篇：<a href="/2026/12/18/ai/langgraph/langgraph-5-checkpointer/">LG05 checkpointer 与线程</a> ｜ <a href="/2026/12/13/ai/langgraph/langgraph-0-series-index/">总目录</a></p>
+</div>
+
+  <div class="mb-foot">
+    <a href="/phone/">返回手机首页</a>
+    <a href="/phone/tags/">星迹索引</a>
+  </div>
+</div>
+
+
+<script>
+  /* 作用：懒加载本地 mermaid 库；无 mermaid 代码块时不加载 */
+  function loadLocalMermaid(){
+    return new Promise(function(resolve, reject){
+      if(window.mermaid) return resolve(window.mermaid);
+      var s = document.createElement('script');
+      s.src = '/js/third-party/mermaid/mermaid.min.js?v=10';
+      s.onload = function(){ resolve(window.mermaid); };
+      s.onerror = function(){ reject(new Error('mermaid local load failed')); };
+      document.head.appendChild(s);
+    });
+  }
+
+  /* 作用：把 ```mermaid 代码块替换成 SVG 图（手机端字号略小、图可横向滚动） */
+  async function renderMermaidDiagram(){
+    var blocks = document.querySelectorAll('pre[class*="language-mermaid"]');
+    if(!blocks.length) return;
+    var mermaid;
+    try { mermaid = await loadLocalMermaid(); }
+    catch(e){ console.warn('[mermaid] 本地库加载失败：', e); return; }
+
+    mermaid.initialize({
+      startOnLoad: false,
+      theme: 'base',
+      themeVariables: {
+        darkMode: true,
+        background: 'transparent',
+        fontFamily: '"Microsoft YaHei", "PingFang SC", "Segoe UI", sans-serif',
+        fontSize: '12px',
+        primaryColor: '#062f3d',
+        primaryTextColor: '#d6f6ff',
+        primaryBorderColor: '#00eeff',
+        secondaryColor: '#04222d',
+        tertiaryColor: '#04222d',
+        mainBkg: '#062f3d',
+        nodeBorder: '#00eeff',
+        clusterBkg: '#02161f',
+        clusterBorder: '#00eeff55',
+        lineColor: '#00eeff',
+        textColor: '#c0e8ff',
+        edgeLabelBackground: '#02161f'
+      },
+      flowchart: { curve: 'basis', useMaxWidth: false, htmlLabels: false, nodeSpacing: 30, rankSpacing: 40, padding: 10 }
+    });
+
+    var targets = [];
+    blocks.forEach(function(el){
+      var codeEl = el.querySelector('code');
+      if(!codeEl) return;
+      var div = document.createElement('div');
+      div.className = 'mermaid';
+      div.textContent = codeEl.textContent;
+      el.parentNode.replaceChild(div, el);
+      targets.push(div);
+    });
+    if(!targets.length) return;
+    try { await mermaid.run({ nodes: targets }); }
+    catch(e){ console.warn('[mermaid] 渲染失败：', e); }
+  }
+  /* 作用：多次触发兜底（延迟重试 + DOM 变化），防止某次时机没跑到导致图表留在代码块 */
+  var mmBusy = false;
+  function scheduleMermaid(){
+    if(mmBusy) return;
+    mmBusy = true;
+    renderMermaidDiagram().then(function(){ mmBusy = false; }, function(){ mmBusy = false; });
+  }
+  scheduleMermaid();
+  window.addEventListener('load', scheduleMermaid);
+  [1000, 3000, 8000].forEach(function(ms){ setTimeout(scheduleMermaid, ms); });
+  if(document.readyState !== 'loading') scheduleMermaid();
+  if(window.MutationObserver){
+    var mmTimer = null;
+    var mmObserver = new MutationObserver(function(){
+      clearTimeout(mmTimer);
+      mmTimer = setTimeout(scheduleMermaid, 400);
+    });
+    mmObserver.observe(document.querySelector('.mb-article') || document.body, { childList: true, subtree: true });
+  }
+</script>
+</body>
+</html>
