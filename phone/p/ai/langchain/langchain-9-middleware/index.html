@@ -1,0 +1,472 @@
+<!--
+  ============================================
+  手机端 · 文章原文页
+  文件：phone/post.njk
+  适用终端：手机端（路由 /phone/p/<slug>/，由 scripts/phone-routes.js 生成）
+  作用：手机阅读单篇文章；单列布局、无侧栏无雷达，替代电脑端 post.njk
+        数据由生成期算好：page.item = { title, dateStr, content, cats, tags }
+  样式依赖：source/css/theme/phone/common.css、source/css/theme/phone/list.css
+  组件依赖：phone/_components/Particles.njk
+  最后修改：2026-11-11
+  ============================================
+-->
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="color-scheme" content="dark">
+  <meta name="theme-color" content="#020817">
+  <!-- 首帧兜底：浏览器默认画布是白的，样式未解析前会闪一下白。这条规则先锁死深空底色 -->
+  <style>html{background-color:#020817}</style>
+  <title>LangChain 09 · 内置中间件：摘要、人工确认、PII 与调用上限 - 时空秘境</title>
+  <!-- 手机端样式：基础 + 列表/正文，外链引入（源文件 source/css/theme/phone/） -->
+  <link rel="stylesheet" href="/css/theme/phone/common.css">
+  <link rel="stylesheet" href="/css/theme/phone/list.css">
+<meta name="generator" content="Hexo 8.1.2"></head>
+<body>
+<div class="mb-shell">
+  <!--
+  ============================================
+  手机端星空粒子组件
+  文件：Particles.njk
+  适用终端：手机端
+  作用：Particles.njk 的手机端副本（nunjucks 子目录 include 取不到上级）
+        参数与电脑端 _components/Particles.njk 保持一致：
+        粒子 95 / 连线 118px / opacity 0.32，外加星座层与零星闪烁层
+  最后修改：2026-11-12
+  ============================================
+--><!-- z-index 必须是 0：负层级会被 body 不透明背景盖住，粒子在跑却看不见 -->
+<div id="particles" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 0; pointer-events: none;"></div>
+<!-- 星座层（与首页同一套：随机零星散布星座图形 + 偶尔闪烁的小星） -->
+<div id="constellations" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 1; pointer-events: none;" aria-hidden="true"></div>
+<script src="/js/particles.min.js"></script>
+<script>
+particlesJS("particles", {
+  particles: {
+    number: {
+      value: 95,
+      density: {
+        enable: true,
+        value_area: 800
+      }
+    },
+    color: {
+      value: "#00eeff"
+    },
+    shape: {
+      type: "circle",
+      stroke: {
+        width: 0,
+        color: "#000000"
+      }
+    },
+    opacity: {
+      value: 0.6,
+      random: true,
+      anim: {
+        enable: true,
+        speed: 0.5,
+        opacity_min: 0.1,
+        sync: false
+      }
+    },
+    size: {
+      value: 3,
+      random: true,
+      anim: {
+        enable: true,
+        speed: 2,
+        size_min: 0.1,
+        sync: false
+      }
+    },
+    line_linked: {
+      enable: true,
+      distance: 118,
+      color: "#00eeff",
+      opacity: 0.32,
+      width: 1
+    },
+    move: {
+      enable: true,
+      speed: 0.8,
+      direction: "none",
+      random: true,
+      straight: false,
+      out_mode: "out",
+      bounce: false,
+      attract: {
+        enable: true,
+        rotateX: 600,
+        rotateY: 1200
+      }
+    }
+  },
+  interactivity: {
+    detect_on: "canvas",
+    events: {
+      onhover: {
+        enable: true,
+        mode: "grab"       // 手指按住时粒子聚集
+      },
+      onclick: {
+        enable: true,
+        mode: "push"       // 点击时产生新粒子
+      },
+      resize: true
+    },
+    modes: {
+      grab: {
+        distance: 200,
+        line_linked: {
+          opacity: 1
+        }
+      },
+      push: {
+        particles_nb: 6
+      }
+    }
+  },
+  retina_detect: true
+});
+</script>
+<!-- 星座 + 零星闪烁层：与电脑端共用同一份绘制脚本 -->
+<script src="/js/theme/home/starfield.js"></script>
+
+
+  <div class="mb-top">
+    <a class="mb-back" href="/phone/">← 返回手机首页</a>
+    <span class="mb-sub" style="margin:0">2026-12-07</span>
+  </div>
+
+  <h1 class="mb-title">LangChain 09 · 内置中间件：摘要、人工确认、PII 与调用上限</h1>
+  <div class="mb-sub">
+    分类：ai · langchain
+     ｜ 标签：LangChain · AI · 系统课
+  </div>
+
+  <div class="mb-article"><div class="essay-banner essay-langchain"></div>
+
+<h1 id="09-内置中间件：摘要、人工确认、PII-与调用上限"><a href="#09-内置中间件：摘要、人工确认、PII-与调用上限" class="headerlink" title="09 内置中间件：摘要、人工确认、PII 与调用上限"></a>09 内置中间件：摘要、人工确认、PII 与调用上限</h1><p><img src="https://wu4yong.github.io/starry-images/assets/img/langchain/v1/lc-9-builtin.svg" alt="官方内置中间件分四类：可靠性、上下文、安全、成本"></p>
+<p><em>不必自己写钩子：官方的预置件覆盖了「重试、摘要、人工确认、脱敏、限流」这些高频需求｜依据官方 Prebuilt middleware 页自绘</em></p>
+<p><strong>版本不一致提示</strong>：</p>
+<ul>
+<li>本篇基线是 LangChain v1（1.x）+ Python 3.13，官方示例环境是 Python 3.11，仅解释器版本不同；</li>
+<li><code>ModelRefusalMiddleware</code> 需要 <code>langchain&gt;=1.4.9</code>；PII 的流式脱敏需要 <code>langchain&gt;=1.3.2</code>；摘要按比例的条件需要 <code>&gt;=1.1</code> 的 profile data；</li>
+<li>官方示例模型名随 provider 更新，配置项名称不受影响。</li>
+</ul>
+<h2 id="一、学习目标"><a href="#一、学习目标" class="headerlink" title="一、学习目标"></a>一、学习目标</h2><p>学完这一讲，你要能做到三件事：</p>
+<ol>
+<li>记住官方预置中间件的清单，知道哪些是「几乎必装」；</li>
+<li>会配三件最常用的：<code>SummarizationMiddleware</code>（历史压缩）、<code>HumanInTheLoopMiddleware</code>（写操作确认）、<code>PIIMiddleware</code>（脱敏）；</li>
+<li>会用 <code>ModelCallLimitMiddleware</code> &#x2F; <code>ToolCallLimitMiddleware</code> 给成本兜底，并说清它们和「循环终止」的关系。</li>
+</ol>
+<h2 id="二、前置知识"><a href="#二、前置知识" class="headerlink" title="二、前置知识"></a>二、前置知识</h2><ul>
+<li>读完 LC08（<code>create_agent</code> 与循环、<code>checkpointer</code>）；</li>
+<li>知道中间件是「加在循环里的钩子」（LC07 用过 <code>wrap_tool_call</code>）；</li>
+<li>手上有一个能跑通的 Agent 示例。</li>
+</ul>
+<h2 id="三、理论讲解（官方定义）"><a href="#三、理论讲解（官方定义）" class="headerlink" title="三、理论讲解（官方定义）"></a>三、理论讲解（官方定义）</h2><h3 id="1-官方清单（provider-无关的部分）"><a href="#1-官方清单（provider-无关的部分）" class="headerlink" title="1. 官方清单（provider 无关的部分）"></a>1. 官方清单（provider 无关的部分）</h3><p>官方 Prebuilt middleware 页按「与 provider 无关」列出这些：</p>
+<table>
+<thead>
+<tr>
+<th>中间件</th>
+<th>干什么</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Tool error</td>
+<td>捕获工具异常并转成给模型的错误消息</td>
+</tr>
+<tr>
+<td>Tool retry</td>
+<td>工具失败自动重试，指数退避</td>
+</tr>
+<tr>
+<td>Model retry</td>
+<td>模型调用失败自动重试，指数退避</td>
+</tr>
+<tr>
+<td>Model fallback</td>
+<td>主模型失败时自动切换备用模型</td>
+</tr>
+<tr>
+<td>Model refusal</td>
+<td>模型拒答时抛错，而不是把拒答当最终答案</td>
+</tr>
+<tr>
+<td>Summarization</td>
+<td>接近 token 上限时自动摘要历史</td>
+</tr>
+<tr>
+<td>Human-in-the-loop</td>
+<td>暂停执行，等人工确认工具调用</td>
+</tr>
+<tr>
+<td>Model call limit</td>
+<td>限制模型调用次数，防成本失控</td>
+</tr>
+<tr>
+<td>Tool call limit</td>
+<td>限制工具执行次数</td>
+</tr>
+<tr>
+<td>PII detection</td>
+<td>检测并处理个人身份信息</td>
+</tr>
+<tr>
+<td>To-do list</td>
+<td>给 Agent 任务规划与跟踪能力</td>
+</tr>
+<tr>
+<td>LLM tool selector</td>
+<td>调主模型前，先用 LLM 挑相关工具</td>
+</tr>
+</tbody></table>
+<p>装法统一：<code>create_agent(..., middleware=[...])</code>，顺序会影响执行先后（见 LC10 的执行顺序）。</p>
+<h3 id="2-SummarizationMiddleware：历史压缩"><a href="#2-SummarizationMiddleware：历史压缩" class="headerlink" title="2. SummarizationMiddleware：历史压缩"></a>2. <code>SummarizationMiddleware</code>：历史压缩</h3><p>官方示例：</p>
+<pre class="line-numbers language-python" data-language="python"><code class="language-python"><span class="token keyword">from</span> langchain<span class="token punctuation">.</span>agents<span class="token punctuation">.</span>middleware <span class="token keyword">import</span> SummarizationMiddleware
+
+agent <span class="token operator">=</span> create_agent<span class="token punctuation">(</span>
+    model<span class="token operator">=</span><span class="token string">"..."</span><span class="token punctuation">,</span>
+    tools<span class="token operator">=</span><span class="token punctuation">[</span><span class="token punctuation">.</span><span class="token punctuation">.</span><span class="token punctuation">.</span><span class="token punctuation">]</span><span class="token punctuation">,</span>
+    middleware<span class="token operator">=</span><span class="token punctuation">[</span>SummarizationMiddleware<span class="token punctuation">(</span>model<span class="token operator">=</span><span class="token string">"..."</span><span class="token punctuation">,</span> trigger<span class="token operator">=</span><span class="token punctuation">(</span><span class="token string">"tokens"</span><span class="token punctuation">,</span> <span class="token number">4000</span><span class="token punctuation">)</span><span class="token punctuation">,</span> keep<span class="token operator">=</span><span class="token punctuation">(</span><span class="token string">"messages"</span><span class="token punctuation">,</span> <span class="token number">20</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">]</span><span class="token punctuation">,</span>
+<span class="token punctuation">)</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<p>关键参数与官方口径：</p>
+<ul>
+<li><code>model</code> 必填：用来生成摘要的模型（可以和主模型不同，官方示例就是用便宜的小模型做摘要）；</li>
+<li><code>trigger</code>：什么时候触发，示例是「token 到 4000」；</li>
+<li><code>keep</code>：保留什么，示例是「最近 20 条消息」。</li>
+</ul>
+<p>官方明确两点限制：<strong>摘要只压缩文本</strong>，不压缩图片&#x2F;音视频负载；<code>keep</code> 保留的近期消息仍带原始多模态块，被摘要的旧消息只留文本摘要。所以图片类应用应把媒体放对象存储、消息里只放 URL。</p>
+<p><code>fraction</code> 类条件依赖模型的 profile data（<code>langchain&gt;=1.1</code>），拿不到就手工给 profile。</p>
+<h3 id="3-HumanInTheLoopMiddleware：写操作先点确认"><a href="#3-HumanInTheLoopMiddleware：写操作先点确认" class="headerlink" title="3. HumanInTheLoopMiddleware：写操作先点确认"></a>3. <code>HumanInTheLoopMiddleware</code>：写操作先点确认</h3><p>官方示例（配合 checkpointer）：</p>
+<pre class="line-numbers language-python" data-language="python"><code class="language-python">agent <span class="token operator">=</span> create_agent<span class="token punctuation">(</span>
+    model<span class="token operator">=</span><span class="token string">"..."</span><span class="token punctuation">,</span>
+    tools<span class="token operator">=</span><span class="token punctuation">[</span>your_read_email_tool<span class="token punctuation">,</span> your_send_email_tool<span class="token punctuation">]</span><span class="token punctuation">,</span>
+    checkpointer<span class="token operator">=</span>InMemorySaver<span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">,</span>
+    middleware<span class="token operator">=</span><span class="token punctuation">[</span>HumanInTheLoopMiddleware<span class="token punctuation">(</span>interrupt_on<span class="token operator">=</span><span class="token punctuation">&#123;</span>
+        <span class="token string">"your_send_email_tool"</span><span class="token punctuation">:</span> <span class="token punctuation">&#123;</span><span class="token string">"allowed_decisions"</span><span class="token punctuation">:</span> <span class="token punctuation">[</span><span class="token string">"approve"</span><span class="token punctuation">,</span> <span class="token string">"edit"</span><span class="token punctuation">,</span> <span class="token string">"reject"</span><span class="token punctuation">]</span><span class="token punctuation">&#125;</span><span class="token punctuation">,</span>
+        <span class="token string">"your_read_email_tool"</span><span class="token punctuation">:</span> <span class="token boolean">False</span><span class="token punctuation">,</span>
+    <span class="token punctuation">&#125;</span><span class="token punctuation">)</span><span class="token punctuation">]</span><span class="token punctuation">,</span>
+<span class="token punctuation">)</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<p>要点：</p>
+<ul>
+<li><code>interrupt_on</code> 的键是<strong>工具名</strong>（Python 里 <code>@tool</code> 的函数名）；</li>
+<li>值是 <code>False</code> 表示「这个工具不用确认」，给字典则能配允许的决策；</li>
+<li>必须配 <code>checkpointer</code>，否则中断后无法恢复；</li>
+<li>恢复方式见官方 HITL 章节：把决策按顺序回传（LC04 的流式示例里就是收 <code>__interrupt__</code> 再 <code>Command(resume=...)</code>）。</li>
+</ul>
+<h3 id="4-PIIMiddleware：脱敏"><a href="#4-PIIMiddleware：脱敏" class="headerlink" title="4. PIIMiddleware：脱敏"></a>4. <code>PIIMiddleware</code>：脱敏</h3><pre class="line-numbers language-python" data-language="python"><code class="language-python">middleware<span class="token operator">=</span><span class="token punctuation">[</span>PIIMiddleware<span class="token punctuation">(</span><span class="token string">"email"</span><span class="token punctuation">,</span> strategy<span class="token operator">=</span><span class="token string">"redact"</span><span class="token punctuation">,</span> apply_to_input<span class="token operator">=</span><span class="token boolean">True</span><span class="token punctuation">)</span><span class="token punctuation">,</span>
+            PIIMiddleware<span class="token punctuation">(</span><span class="token string">"credit_card"</span><span class="token punctuation">,</span> strategy<span class="token operator">=</span><span class="token string">"mask"</span><span class="token punctuation">,</span> apply_to_input<span class="token operator">=</span><span class="token boolean">True</span><span class="token punctuation">)</span><span class="token punctuation">]</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span></span></code></pre>
+
+<p>官方参数表里几个关键点：</p>
+<ul>
+<li><code>pii_type</code>：内置类型有 <code>email</code>、<code>credit_card</code>、<code>ip</code>、<code>mac_address</code>、<code>url</code>，也可自定义；</li>
+<li><code>strategy</code>：<code>block</code>（命中即抛异常）、<code>redact</code>（替换为 <code>[REDACTED_TYPE]</code>）、<code>mask</code>（部分打码）、<code>hash</code>（确定性哈希），默认 <code>redact</code>；</li>
+<li><code>apply_to_input</code> 默认 <code>True</code>，<code>apply_to_output</code> 默认 <code>False</code>，<code>apply_to_tool_results</code> 默认 <code>False</code>；</li>
+<li>自 <code>langchain&gt;=1.3.2</code> 起，<code>apply_to_output=True</code> 还会通过流式转换器改写<strong>流给客户端的输出</strong>，官方提醒：转换器会扣住每段文本最后 128 字符，自定义检测的匹配串不要超过 128 字符。</li>
+</ul>
+<p>自定义检测器有三种：正则字符串、编译后的正则、自定义函数（返回 <code>PIIMatch</code> 列表）。自定义函数可以带校验逻辑（官方给了 SSN 首三位合法性校验的例子）。</p>
+<h3 id="5-成本兜底：调用上限"><a href="#5-成本兜底：调用上限" class="headerlink" title="5. 成本兜底：调用上限"></a>5. 成本兜底：调用上限</h3><p><code>ModelCallLimitMiddleware</code> &#x2F; <code>ToolCallLimitMiddleware</code> 是 LC08 说的「安全带」：循环终止条件仍是「模型不给 tool_call」，但真实业务需要硬上限，防止模型空转把账单刷爆。配合 <code>ModelFallbackMiddleware</code> 还能在主模型故障时降级。</p>
+<h2 id="四、原理拆解"><a href="#四、原理拆解" class="headerlink" title="四、原理拆解"></a>四、原理拆解</h2><p><img src="https://wu4yong.github.io/starry-images/assets/img/langchain/v1/lc-9b-group.svg" alt="中间件清单按「问题类型」分组：可靠性 &#x2F; 上下文 &#x2F; 安全 &#x2F; 成本"></p>
+<p><em>选中间件的顺序应该是「先想清楚怕什么」，再对照清单找对应件｜自绘</em></p>
+<p>四类问题对应四类件：</p>
+<ul>
+<li><strong>怕崩</strong>：Tool error、Tool retry、Model retry、Model fallback、Model refusal；</li>
+<li><strong>怕撑爆上下文</strong>：Summarization、LLM tool selector（先挑工具，少塞无关定义）；</li>
+<li><strong>怕出事</strong>：Human-in-the-loop、PII detection；</li>
+<li><strong>怕花钱</strong>：Model call limit、Tool call limit。</li>
+</ul>
+<p>装之前先答一个问题：<strong>这件中间件在循环的哪一步介入？</strong> 介入点错了，行为就不是你预期的——比如把「摘要」装在最外层、把「脱敏」装在内层，先用后脱，等于没脱。</p>
+<h2 id="五、场景说明"><a href="#五、场景说明" class="headerlink" title="五、场景说明"></a>五、场景说明</h2><ol>
+<li><strong>客服长会话</strong>：Summarization（trigger 按 token、keep 按条数）+ PII（输入脱敏）；</li>
+<li><strong>发邮件 &#x2F; 改库 &#x2F; 下单</strong>：HumanInTheLoop + checkpointer，决策走 <code>approve / edit / reject</code>；</li>
+<li><strong>多模型灰度</strong>：ModelFallback 主备切换，配合日志记录实际走了谁；</li>
+<li><strong>对外 API</strong>：Model call limit + Tool call limit，把「单次请求最多几轮」变成可配置项。</li>
+</ol>
+<h2 id="六、示例代码"><a href="#六、示例代码" class="headerlink" title="六、示例代码"></a>六、示例代码</h2><h3 id="步骤-1：环境准备"><a href="#步骤-1：环境准备" class="headerlink" title="步骤 1：环境准备"></a>步骤 1：环境准备</h3><pre class="line-numbers language-bash" data-language="bash"><code class="language-bash">uv <span class="token function">add</span> <span class="token string">"langchain[openai]"</span>
+<span class="token comment"># pip 等价：pip install -U "langchain[openai]"</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span></span></code></pre>
+
+<h3 id="步骤-2：凭证配置"><a href="#步骤-2：凭证配置" class="headerlink" title="步骤 2：凭证配置"></a>步骤 2：凭证配置</h3><p>同 LC01，<code>OPENAI_API_KEY</code> 放 <code>.env</code>。</p>
+<h3 id="步骤-3：导入"><a href="#步骤-3：导入" class="headerlink" title="步骤 3：导入"></a>步骤 3：导入</h3><pre class="line-numbers language-python" data-language="python"><code class="language-python"><span class="token keyword">from</span> langchain<span class="token punctuation">.</span>agents <span class="token keyword">import</span> create_agent
+<span class="token keyword">from</span> langchain<span class="token punctuation">.</span>agents<span class="token punctuation">.</span>middleware <span class="token keyword">import</span> <span class="token punctuation">(</span>
+    SummarizationMiddleware<span class="token punctuation">,</span> HumanInTheLoopMiddleware<span class="token punctuation">,</span> PIIMiddleware<span class="token punctuation">,</span>
+<span class="token punctuation">)</span>
+<span class="token keyword">from</span> langgraph<span class="token punctuation">.</span>checkpoint<span class="token punctuation">.</span>memory <span class="token keyword">import</span> InMemorySaver<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<h3 id="步骤-4：最小可运行代码"><a href="#步骤-4：最小可运行代码" class="headerlink" title="步骤 4：最小可运行代码"></a>步骤 4：最小可运行代码</h3><p>存成 <code>middleware_demo.py</code>，<code>uv run middleware_demo.py</code>。</p>
+<pre class="line-numbers language-python" data-language="python"><code class="language-python"><span class="token keyword">from</span> dotenv <span class="token keyword">import</span> load_dotenv
+<span class="token keyword">from</span> langchain<span class="token punctuation">.</span>agents <span class="token keyword">import</span> create_agent
+<span class="token keyword">from</span> langchain<span class="token punctuation">.</span>agents<span class="token punctuation">.</span>middleware <span class="token keyword">import</span> SummarizationMiddleware<span class="token punctuation">,</span> PIIMiddleware<span class="token punctuation">,</span> HumanInTheLoopMiddleware
+<span class="token keyword">from</span> langchain<span class="token punctuation">.</span>tools <span class="token keyword">import</span> tool
+<span class="token keyword">from</span> langgraph<span class="token punctuation">.</span>checkpoint<span class="token punctuation">.</span>memory <span class="token keyword">import</span> InMemorySaver
+
+<span class="token decorator annotation punctuation">@tool</span>
+<span class="token keyword">def</span> <span class="token function">send_email</span><span class="token punctuation">(</span>to<span class="token punctuation">:</span> <span class="token builtin">str</span><span class="token punctuation">,</span> body<span class="token punctuation">:</span> <span class="token builtin">str</span><span class="token punctuation">)</span> <span class="token operator">-</span><span class="token operator">></span> <span class="token builtin">str</span><span class="token punctuation">:</span>
+    <span class="token triple-quoted-string string">"""发送一封邮件。写操作，必须人工确认后才能执行。"""</span>
+    <span class="token keyword">return</span> <span class="token string-interpolation"><span class="token string">f"已发送给 </span><span class="token interpolation"><span class="token punctuation">&#123;</span>to<span class="token punctuation">&#125;</span></span><span class="token string">"</span></span>
+
+<span class="token decorator annotation punctuation">@tool</span>
+<span class="token keyword">def</span> <span class="token function">get_order</span><span class="token punctuation">(</span>order_id<span class="token punctuation">:</span> <span class="token builtin">str</span><span class="token punctuation">)</span> <span class="token operator">-</span><span class="token operator">></span> <span class="token builtin">str</span><span class="token punctuation">:</span>
+    <span class="token triple-quoted-string string">"""查询订单状态，订单号形如 SO-2026-0001。"""</span>
+    <span class="token keyword">return</span> <span class="token string">"已发货"</span>
+
+load_dotenv<span class="token punctuation">(</span><span class="token punctuation">)</span>
+agent <span class="token operator">=</span> create_agent<span class="token punctuation">(</span>
+    model<span class="token operator">=</span><span class="token string">"openai:gpt-5-nano"</span><span class="token punctuation">,</span>
+    tools<span class="token operator">=</span><span class="token punctuation">[</span>send_email<span class="token punctuation">,</span> get_order<span class="token punctuation">]</span><span class="token punctuation">,</span>
+    system_prompt<span class="token operator">=</span><span class="token string">"你是客服助手。查单直接调 get_order；发邮件前要说清收件人与正文。"</span><span class="token punctuation">,</span>
+    checkpointer<span class="token operator">=</span>InMemorySaver<span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">,</span>                        <span class="token comment"># HITL 需要它才能恢复</span>
+    middleware<span class="token operator">=</span><span class="token punctuation">[</span>
+        PIIMiddleware<span class="token punctuation">(</span><span class="token string">"email"</span><span class="token punctuation">,</span> strategy<span class="token operator">=</span><span class="token string">"redact"</span><span class="token punctuation">,</span> apply_to_input<span class="token operator">=</span><span class="token boolean">True</span><span class="token punctuation">)</span><span class="token punctuation">,</span>      <span class="token comment"># 先把邮箱脱敏</span>
+        HumanInTheLoopMiddleware<span class="token punctuation">(</span>interrupt_on<span class="token operator">=</span><span class="token punctuation">&#123;</span><span class="token string">"send_email"</span><span class="token punctuation">:</span> <span class="token boolean">True</span><span class="token punctuation">&#125;</span><span class="token punctuation">)</span><span class="token punctuation">,</span>         <span class="token comment"># 写操作挂起等确认</span>
+        SummarizationMiddleware<span class="token punctuation">(</span>model<span class="token operator">=</span><span class="token string">"openai:gpt-5-nano"</span><span class="token punctuation">,</span>
+                                trigger<span class="token operator">=</span><span class="token punctuation">(</span><span class="token string">"tokens"</span><span class="token punctuation">,</span> <span class="token number">6000</span><span class="token punctuation">)</span><span class="token punctuation">,</span>
+                                keep<span class="token operator">=</span><span class="token punctuation">(</span><span class="token string">"messages"</span><span class="token punctuation">,</span> <span class="token number">20</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">,</span>                       <span class="token comment"># 历史压缩</span>
+    <span class="token punctuation">]</span><span class="token punctuation">,</span>
+<span class="token punctuation">)</span>
+
+config <span class="token operator">=</span> <span class="token punctuation">&#123;</span><span class="token string">"configurable"</span><span class="token punctuation">:</span> <span class="token punctuation">&#123;</span><span class="token string">"thread_id"</span><span class="token punctuation">:</span> <span class="token string">"demo-1"</span><span class="token punctuation">&#125;</span><span class="token punctuation">&#125;</span>
+result <span class="token operator">=</span> agent<span class="token punctuation">.</span>invoke<span class="token punctuation">(</span>
+    <span class="token punctuation">&#123;</span><span class="token string">"messages"</span><span class="token punctuation">:</span> <span class="token punctuation">[</span><span class="token punctuation">&#123;</span><span class="token string">"role"</span><span class="token punctuation">:</span> <span class="token string">"user"</span><span class="token punctuation">,</span> <span class="token string">"content"</span><span class="token punctuation">:</span> <span class="token string">"给 zhang@example.com 发邮件问他对账有没有问题"</span><span class="token punctuation">&#125;</span><span class="token punctuation">]</span><span class="token punctuation">&#125;</span><span class="token punctuation">,</span>
+    config<span class="token operator">=</span>config<span class="token punctuation">,</span>
+<span class="token punctuation">)</span>
+<span class="token keyword">print</span><span class="token punctuation">(</span><span class="token string">"是否有中断:"</span><span class="token punctuation">,</span> <span class="token builtin">bool</span><span class="token punctuation">(</span>result<span class="token punctuation">.</span>get<span class="token punctuation">(</span><span class="token string">"__interrupt__"</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">)</span>
+<span class="token keyword">if</span> result<span class="token punctuation">.</span>get<span class="token punctuation">(</span><span class="token string">"__interrupt__"</span><span class="token punctuation">)</span><span class="token punctuation">:</span>
+    <span class="token keyword">print</span><span class="token punctuation">(</span><span class="token string">"待确认的工具调用:"</span><span class="token punctuation">,</span> result<span class="token punctuation">[</span><span class="token string">"__interrupt__"</span><span class="token punctuation">]</span><span class="token punctuation">[</span><span class="token number">0</span><span class="token punctuation">]</span><span class="token punctuation">.</span>value<span class="token punctuation">[</span><span class="token string">"action_requests"</span><span class="token punctuation">]</span><span class="token punctuation">)</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<h3 id="步骤-5：预期输出"><a href="#步骤-5：预期输出" class="headerlink" title="步骤 5：预期输出"></a>步骤 5：预期输出</h3><pre class="line-numbers language-text" data-language="text"><code class="language-text">是否有中断: True
+待确认的工具调用: [&#123;'name': 'send_email', 'args': &#123;'to': '[REDACTED_EMAIL]', 'body': '...'&#125;, 'id': 'call_xxx'&#125;]<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span></span></code></pre>
+
+<p>注意 <code>to</code> 已经被 PII 中间件替换成 <code>[REDACTED_EMAIL]</code>——<strong>这就是「顺序」的意义</strong>：脱敏装在人工确认前面，人看到的是脱敏后的参数。若想让人看到真实邮箱，就得把两个中间件的位置对调，并接受「真实 PII 会出现在确认界面」。</p>
+<h3 id="步骤-6：验证是否成功"><a href="#步骤-6：验证是否成功" class="headerlink" title="步骤 6：验证是否成功"></a>步骤 6：验证是否成功</h3><ul>
+<li>收到中断且 <code>action_requests</code> 里只有 <code>send_email</code>，说明 HITL 命中且没有误伤只读工具；</li>
+<li>参数里出现 <code>[REDACTED_EMAIL]</code>，说明 PII 中间件生效；</li>
+<li>用 <code>agent.invoke(Command(resume={&quot;decisions&quot;: [{&quot;type&quot;: &quot;approve&quot;}]}), config=config)</code> 恢复后能拿到「已发送」，说明中断—恢复闭环完整。</li>
+</ul>
+<h2 id="七、常见坑（官方明确限制-版本差异）"><a href="#七、常见坑（官方明确限制-版本差异）" class="headerlink" title="七、常见坑（官方明确限制&#x2F;版本差异）"></a>七、常见坑（官方明确限制&#x2F;版本差异）</h2><ol>
+<li><strong>HITL 不配 checkpointer</strong>。中断后无处保存状态，无法恢复；官方示例一律带 <code>InMemorySaver()</code>。</li>
+<li><strong><code>interrupt_on</code> 的键写成函数显示名</strong>。键是工具名（<code>@tool</code> 下就是函数名），写错则静默不生效。</li>
+<li><strong>以为摘要会压缩图片</strong>。官方明确摘要只压文本，多模态内容要么落对象存储、要么接受「旧图只剩摘要文本」。</li>
+<li><strong>脱敏装在最内层却要求「对外输出也脱敏」</strong>。要覆盖输出与工具结果，得开 <code>apply_to_output</code> &#x2F; <code>apply_to_tool_results</code>，且流式脱敏需要 <code>langchain&gt;=1.3.2</code>。</li>
+<li><strong>只装上限不看上限</strong>。<code>ModelCallLimitMiddleware</code> 命中后是「中止并返回」，不是「自动继续」；文案与兜底策略要自己设计。</li>
+</ol>
+<h2 id="八、课后小结"><a href="#八、课后小结" class="headerlink" title="八、课后小结"></a>八、课后小结</h2><ul>
+<li>官方预置中间件覆盖可靠性、上下文、安全、成本四类，装法都是 <code>middleware=[...]</code>；</li>
+<li>摘要只压文本，<code>trigger</code> &#x2F; <code>keep</code> 各管「何时压、留多少」；</li>
+<li>HITL 的 <code>interrupt_on</code> 按工具名配置，必须配 checkpointer；</li>
+<li>PII 有四种策略（block &#x2F; redact &#x2F; mask &#x2F; hash），默认只处理输入；</li>
+<li>调用上限是「终止条件」之外的安全带。</li>
+</ul>
+<h2 id="九、思考题"><a href="#九、思考题" class="headerlink" title="九、思考题"></a>九、思考题</h2><p><strong>1、为什么 <code>HumanInTheLoopMiddleware</code> 必须配 checkpointer？</strong></p>
+<p>参考回答：中断意味着执行停在半途，需要把当时的状态持久化，恢复时才能从断点继续；没有 checkpointer，中断即是结束，<code>resume</code> 无从谈起。</p>
+<p><strong>2、摘要中间件的 <code>model</code> 为什么不建议用主模型？</strong></p>
+<p>参考回答：摘要是一次独立的、低难度的文本压缩调用，用便宜的小模型即可；官方示例就用更小的模型做摘要，主模型留给真正需要推理的步骤，成本更可控。</p>
+<p><strong>3、PII 的 <code>redact</code> 与 <code>mask</code> 该选哪个？</strong></p>
+<p>参考回答：<code>redact</code> 完全替换，适合日志与对外展示、不需要保留任何可识别信息；<code>mask</code> 保留尾部（如卡号后四位），适合需要人工核对但又不能全文暴露的场景。合规要求「不可复原」时只能用 <code>redact</code> 或 <code>hash</code>。</p>
+<p><strong>4、中间件顺序为什么会影响安全效果？</strong></p>
+<p>参考回答：钩子是嵌套执行，外层的 <code>before_*</code> 先跑、内层的 <code>after_*</code> 先跑。把脱敏放外层、确认放内层，人看到的就是脱敏后参数；反过来，脱敏在人之后执行，人已经在界面上看到了原始 PII。</p>
+<h2 id="十、下一篇预告"><a href="#十、下一篇预告" class="headerlink" title="十、下一篇预告"></a>十、下一篇预告</h2><p><strong>下一篇标题</strong>：10 自定义中间件：六个钩子与执行顺序。</p>
+<p><strong>一句话内容</strong>：内置件不够用时自己写——<code>before_agent</code> &#x2F; <code>before_model</code> &#x2F; <code>after_model</code> &#x2F; <code>after_agent</code> &#x2F; <code>wrap_model_call</code> &#x2F; <code>wrap_tool_call</code> 六个钩子各自能改什么、返回什么、怎么提前结束，以及装饰器与类两种写法。</p>
+<p><strong>承接关系</strong>：本篇讲「用官方的」，下一篇讲「写自己的」；顺序、嵌套、<code>jump_to</code> 这些规则在两篇里是同一条。</p>
+<p><strong>跳转位置</strong>：M3 最后一讲。</p>
+<h2 id="十一、官方资料"><a href="#十一、官方资料" class="headerlink" title="十一、官方资料"></a>十一、官方资料</h2><ul>
+<li>Prebuilt middleware（清单与各件参数）：<a target="_blank" rel="noopener" href="https://docs.langchain.com/oss/python/langchain/middleware/built-in">https://docs.langchain.com/oss/python/langchain/middleware/built-in</a></li>
+<li>Middleware Overview（循环与钩子位置）：<a target="_blank" rel="noopener" href="https://docs.langchain.com/oss/python/langchain/middleware">https://docs.langchain.com/oss/python/langchain/middleware</a></li>
+<li>Human-in-the-loop（中断与恢复）：<a target="_blank" rel="noopener" href="https://docs.langchain.com/oss/python/langchain/human-in-the-loop">https://docs.langchain.com/oss/python/langchain/human-in-the-loop</a></li>
+</ul>
+<p>上一篇：<a href="/2026/12/06/ai/langchain/langchain-8-create-agent/">LC08 create_agent 循环</a> ｜ 下一篇：<a href="/2026/12/08/ai/langchain/langchain-10-custom-middleware/">LC10 自定义中间件</a> ｜ <a href="/2026/11/28/ai/langchain/langchain-0-series-index/">总目录</a></p>
+</div>
+
+  <div class="mb-foot">
+    <a href="/phone/">返回手机首页</a>
+    <a href="/phone/tags/">星迹索引</a>
+  </div>
+</div>
+
+
+<script>
+  /* 作用：懒加载本地 mermaid 库；无 mermaid 代码块时不加载 */
+  function loadLocalMermaid(){
+    return new Promise(function(resolve, reject){
+      if(window.mermaid) return resolve(window.mermaid);
+      var s = document.createElement('script');
+      s.src = '/js/third-party/mermaid/mermaid.min.js?v=10';
+      s.onload = function(){ resolve(window.mermaid); };
+      s.onerror = function(){ reject(new Error('mermaid local load failed')); };
+      document.head.appendChild(s);
+    });
+  }
+
+  /* 作用：把 ```mermaid 代码块替换成 SVG 图（手机端字号略小、图可横向滚动） */
+  async function renderMermaidDiagram(){
+    var blocks = document.querySelectorAll('pre[class*="language-mermaid"]');
+    if(!blocks.length) return;
+    var mermaid;
+    try { mermaid = await loadLocalMermaid(); }
+    catch(e){ console.warn('[mermaid] 本地库加载失败：', e); return; }
+
+    mermaid.initialize({
+      startOnLoad: false,
+      theme: 'base',
+      themeVariables: {
+        darkMode: true,
+        background: 'transparent',
+        fontFamily: '"Microsoft YaHei", "PingFang SC", "Segoe UI", sans-serif',
+        fontSize: '12px',
+        primaryColor: '#062f3d',
+        primaryTextColor: '#d6f6ff',
+        primaryBorderColor: '#00eeff',
+        secondaryColor: '#04222d',
+        tertiaryColor: '#04222d',
+        mainBkg: '#062f3d',
+        nodeBorder: '#00eeff',
+        clusterBkg: '#02161f',
+        clusterBorder: '#00eeff55',
+        lineColor: '#00eeff',
+        textColor: '#c0e8ff',
+        edgeLabelBackground: '#02161f'
+      },
+      flowchart: { curve: 'basis', useMaxWidth: false, htmlLabels: false, nodeSpacing: 30, rankSpacing: 40, padding: 10 }
+    });
+
+    var targets = [];
+    blocks.forEach(function(el){
+      var codeEl = el.querySelector('code');
+      if(!codeEl) return;
+      var div = document.createElement('div');
+      div.className = 'mermaid';
+      div.textContent = codeEl.textContent;
+      el.parentNode.replaceChild(div, el);
+      targets.push(div);
+    });
+    if(!targets.length) return;
+    try { await mermaid.run({ nodes: targets }); }
+    catch(e){ console.warn('[mermaid] 渲染失败：', e); }
+  }
+  /* 作用：多次触发兜底（延迟重试 + DOM 变化），防止某次时机没跑到导致图表留在代码块 */
+  var mmBusy = false;
+  function scheduleMermaid(){
+    if(mmBusy) return;
+    mmBusy = true;
+    renderMermaidDiagram().then(function(){ mmBusy = false; }, function(){ mmBusy = false; });
+  }
+  scheduleMermaid();
+  window.addEventListener('load', scheduleMermaid);
+  [1000, 3000, 8000].forEach(function(ms){ setTimeout(scheduleMermaid, ms); });
+  if(document.readyState !== 'loading') scheduleMermaid();
+  if(window.MutationObserver){
+    var mmTimer = null;
+    var mmObserver = new MutationObserver(function(){
+      clearTimeout(mmTimer);
+      mmTimer = setTimeout(scheduleMermaid, 400);
+    });
+    mmObserver.observe(document.querySelector('.mb-article') || document.body, { childList: true, subtree: true });
+  }
+</script>
+</body>
+</html>

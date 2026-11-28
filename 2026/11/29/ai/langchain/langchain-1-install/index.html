@@ -1,0 +1,3975 @@
+<!--
+  ============================================
+  文章原文页模板
+  文件：post.njk
+  适用终端：电脑端
+  作用：文章正文 + 侧栏；手机 UA 跳 /phone/p/<slug>/
+  最后修改：2026-11-11
+  ============================================
+-->
+
+
+<!DOCTYPE html>
+<html class="post-page">
+<!--
+  ============================================
+  公共 head 组件
+  文件：Head.njk
+  适用终端：电脑端
+  作用：输出 charset/viewport/title，并按 pageCss 输出外链样式表
+  样式资源：themes/butterfly/source/css/theme/{base,home,starmap,media,phone}/*.css
+            （Hexo 复制到 /css/theme/，pageCss 里写子目录 + 文件名，如 "base/common.css"）
+  引入层级顺序（= CSS 层叠顺序，调整只允许追加，不要打乱前后）：
+    1 基础  base/common.css
+    2 布局  base/post-layout.css
+    3 组件  base/sidebar.css
+    4 正文  base/post.css
+    5 页面  starmap/tags.css · starmap/chronicle.css · home/about.css · starmap/tag.css · starmap/category-shared.css · home/pc-home.css
+    6 浮层  media/star-reader.css
+    7 特效  starmap/starmap-live.css
+  最后修改：2026-11-12
+  ============================================
+--><head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="color-scheme" content="dark">
+  <meta name="theme-color" content="#020817">
+  <!-- 首帧兜底：浏览器默认画布是白的，样式表还没解析完就画会闪一下白。这条 8 字节规则先锁死深空底色 -->
+  <style>html{background-color:#020817}</style>
+  <title>时空秘境 - LangChain 01 · 安装与项目结构：v1 的包拆分与最小工程</title>
+  
+  <link rel="stylesheet" href="/css/theme/base/common.css">
+  
+  <link rel="stylesheet" href="/css/theme/base/post-layout.css">
+  
+  <link rel="stylesheet" href="/css/theme/base/sidebar.css">
+  
+  <link rel="stylesheet" href="/css/theme/base/post.css">
+  
+  <!-- 全站代码高亮配色（One Dark Pro）：所有版面统一在最外层加载，任意入口进入都生效 -->
+  <link rel="stylesheet" href="/css/code-table.css">
+  <!-- KaTeX 公式样式：配套字体在 /css/fonts/，由 scripts/math-katex.js 在构建期渲染公式 -->
+  <link rel="stylesheet" href="/css/katex.min.css">
+<meta name="generator" content="Hexo 8.1.2"></head>
+
+<script>
+  /* 手机 UA 分流：电脑端这套控制台不再给手机用，直接换成手机版页面 */
+  (function () {
+    var ua = navigator.userAgent || '';
+    if (/Android|iPhone|iPod|HarmonyOS|Windows Phone|MicroMessenger|Mobile Safari/i.test(ua)) {
+      location.replace('/phone/p/ai/langchain/langchain-1-install/');
+    }
+  })();
+</script>
+
+<body>
+  <!--
+  ============================================
+  星空粒子背景组件
+  文件：Particles.njk
+  适用终端：电脑端
+  作用：particles.js 全站星空动画，鼠标悬停互动
+  最后修改：2026-11-11
+  ============================================
+--><!-- z-index 必须是 0 而不是 -1：body 带着不透明的 radial-gradient 底色，
+     负层级的子元素会被父元素背景整个盖住，粒子在跑但一个点都看不见 -->
+<div id="particles" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 0; pointer-events: none;"></div>
+<!-- 星座层：随机零星散布星座图形，叠在粒子之上、页面内容之下 -->
+<div id="constellations" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 1; pointer-events: none;" aria-hidden="true"></div>
+<script src="/js/particles.min.js"></script>
+<script>/* 本地库在仓库里，缺失时只提示、不再回退外网 CDN：
+   jsdelivr 在部分网络下会长时间挂起，而它是在这里同步插入的，会阻塞后面所有脚本（含 mermaid 渲染） */
+if (typeof particlesJS === "undefined") {
+  console.warn("[particles] 本地 /js/particles.min.js 未加载，跳过星空背景");
+}
+</script>
+<script>
+particlesJS("particles", {
+  particles: {
+    number: {
+      value: 95,
+      density: {
+        enable: true,
+        value_area: 800
+      }
+    },
+    color: {
+      value: "#00eeff"
+    },
+    shape: {
+      type: "circle",
+      stroke: {
+        width: 0,
+        color: "#000000"
+      }
+    },
+    opacity: {
+      value: 0.6,
+      random: true,
+      anim: {
+        enable: true,
+        speed: 0.5,
+        opacity_min: 0.1,
+        sync: false
+      }
+    },
+    size: {
+      value: 3,
+      random: true,
+      anim: {
+        enable: true,
+        speed: 2,
+        size_min: 0.1,
+        sync: false
+      }
+    },
+    line_linked: {
+      enable: true,
+      distance: 118,          /* 比原来 150 收紧，让粒子网络稀疏些，给星座留出视觉空间 */
+      color: "#00eeff",
+      opacity: 0.32,
+      width: 1
+    },
+    move: {
+      enable: true,
+      speed: 0.8,
+      direction: "none",
+      random: true,
+      straight: false,
+      out_mode: "out",
+      bounce: false,
+      attract: {
+        enable: true,
+        rotateX: 600,
+        rotateY: 1200
+      }
+    }
+  },
+  interactivity: {
+    detect_on: "canvas",
+    events: {
+      onhover: {
+        enable: true,
+        mode: "grab"       // 鼠标悬停时粒子聚集
+      },
+      onclick: {
+        enable: true,
+        mode: "push"       // 点击时产生新粒子
+      },
+      resize: true
+    },
+    modes: {
+      grab: {
+        distance: 200,
+        line_linked: {
+          opacity: 1
+        }
+      },
+      push: {
+        particles_nb: 6
+      }
+    }
+  },
+  retina_detect: true
+});
+</script>
+<!-- 星座层：独立 canvas，随机散布真实星座图形（依赖上面的 #constellations 容器） -->
+<script src="/js/theme/home/starfield.js"></script>
+
+  <!-- 返回按钮：按来源回到星图手记 / 星迹索引，默认回星图手记。
+       放在 body 顶层（不进 main-content），避免被其溢出裁剪切掉右半边 -->
+  <a class="article-back" id="articleBack" href="/archives/">← 返回星图手记</a>
+
+  <div class="app-layout">
+    <!--
+  ============================================
+  左侧栏个人卡组件
+  文件：_components/Sidebar.njk
+  适用终端：电脑端（星图手记 / 星迹索引 / 秘境主人 页面通栏侧栏）
+  作用：头像、昵称、站点统计、导航菜单、底部信息与全局搜索面板（结果落在雷达区，无结果播「内容走丢 → 404」动画）
+  样式依赖：source/css/theme/base/sidebar.css
+  脚本依赖：source/js/theme/base/sidebar.js
+  最后修改：2026-11-11
+  ============================================
+-->
+<aside class="sidebar" id="sidebar">
+  <div class="profile-card">
+    <div class="avatar">
+      
+      <div class="avatar-orb" aria-hidden="true">
+        <svg class="orb-svg" viewBox="0 0 80 80" width="80" height="80" role="img">
+          <defs>
+            <radialGradient id="orbBg" cx="50%" cy="46%" r="56%">
+              <stop offset="0%" stop-color="#0d1b4a" />
+              <stop offset="100%" stop-color="#060a20" />
+            </radialGradient>
+            <linearGradient id="orbMainGrad" x1="0" y1="0" x2="1" y2="1">
+              <stop offset="0%" stop-color="#ffffff" />
+              <stop offset="52%" stop-color="#a8f4ff" />
+              <stop offset="100%" stop-color="#3fd8ff" />
+            </linearGradient>
+          </defs>
+          <circle cx="40" cy="40" r="37" fill="url(#orbBg)" stroke="#00eeff" stroke-width="2" />
+          <circle cx="40" cy="40" r="32.5" fill="none" stroke="rgba(0,238,255,0.22)" stroke-width="1" />
+          <!-- 主星 -->
+          <path class="orb-star-main" fill="url(#orbMainGrad)"
+            d="M40.5 21.5 L43.5 35 L57 38 L43.5 41 L40.5 54.5 L37.5 41 L24 38 L37.5 35 Z" />
+          <!-- 三颗小星：位置/颜色错开，闪烁节奏随机 -->
+          <path class="orb-star s1" fill="#9ff0ff"
+            d="M22 17.4 L23 22 L27.6 23 L23 24 L22 28.6 L21 24 L16.4 23 L21 22 Z" />
+          <path class="orb-star s2" fill="#bcd9ff"
+            d="M58.5 25.6 L59.3 29.2 L62.9 30 L59.3 30.8 L58.5 34.4 L57.7 30.8 L54.1 30 L57.7 29.2 Z" />
+          <path class="orb-star s3" fill="#ffe1a6"
+            d="M33 51 L34.1 55.9 L39 57 L34.1 58.1 L33 63 L31.9 58.1 L27 57 L31.9 55.9 Z" />
+        </svg>
+      </div>
+    </div>
+    <h3 class="nickname">时空行者</h3>
+    <p class="bio">星辰大海，代码为舟</p>
+    <div class="stats">
+      <div class="stat-item">
+        <span class="stat-num">711</span>
+        <span class="stat-label">文章</span>
+      </div>
+      <div class="stat-item">
+        <span class="stat-num" id="fans-count" data-base="1088">1088</span>
+        <span class="stat-label">粉丝</span>
+      </div>
+      <div class="stat-item">
+        <span class="stat-num" id="follow-count" style="cursor:pointer;">66</span>
+        <span class="stat-label">关注</span>
+      </div>
+    </div>
+    <button class="follow-btn" id="followBtn" type="button" aria-pressed="false">+ 关注</button>
+  </div>
+  <div class="search-box">
+    <input type="text" placeholder="找找看..." id="search-input">
+    <button class="search-btn" id="searchModalOpen">🔍</button>
+  </div>
+  <div class="links-card">
+    <h4>常用链接</h4>
+    <ul>
+      <li><a href="/about/">秘境主人</a></li>
+      <li><a href="/archives/">星图手记</a></li>
+      <li><a href="/tags/">星迹索引</a></li>
+      <li><a href="/fun/">星屿乐园</a></li>
+      <!-- 音乐专区不再放侧栏：入口统一收在「星屿乐园」的休闲分区矩阵里 -->
+      <!-- ✅ 新增联系我 -->
+      <li><a class="contact-trigger" href="javascript:void(0)">星语传书</a></li>
+      <li><a class="donate-trigger" href="javascript:void(0)">星芒赠礼</a></li>
+    </ul>
+  </div>
+  <div class="tags-card">
+    <h4>热门标签</h4>
+    
+    <div class="tag-cloud">
+      
+      <a href="/tags/AICoding/" class="tag-link" data-tag="AICoding"
+        data-count="14">AICoding</a>
+      
+      <a href="/tags/LangChain/" class="tag-link" data-tag="LangChain"
+        data-count="15">LangChain</a>
+      
+      <a href="/tags/AI/" class="tag-link" data-tag="AI"
+        data-count="16">AI</a>
+      
+      <a href="/tags/系统课/" class="tag-link" data-tag="系统课"
+        data-count="180">系统课</a>
+      
+      <a href="/tags/深度研搜/" class="tag-link" data-tag="深度研搜"
+        data-count="15">深度研搜</a>
+      
+      <a href="/tags/web/" class="tag-link" data-tag="web"
+        data-count="229">web</a>
+      
+      <a href="/tags/电商问数/" class="tag-link" data-tag="电商问数"
+        data-count="18">电商问数</a>
+      
+      <a href="/tags/llmheima/" class="tag-link" data-tag="llmheima"
+        data-count="17">llmheima</a>
+      
+      <a href="/tags/大模型/" class="tag-link" data-tag="大模型"
+        data-count="40">大模型</a>
+      
+      <a href="/tags/Docker/" class="tag-link" data-tag="Docker"
+        data-count="13">Docker</a>
+      
+      <a href="/tags/Elasticsearch/" class="tag-link" data-tag="Elasticsearch"
+        data-count="52">Elasticsearch</a>
+      
+      <a href="/tags/全文检索/" class="tag-link" data-tag="全文检索"
+        data-count="6">全文检索</a>
+      
+      <a href="/tags/中文分词/" class="tag-link" data-tag="中文分词"
+        data-count="1">中文分词</a>
+      
+      <a href="/tags/jenkins/" class="tag-link" data-tag="jenkins"
+        data-count="9">jenkins</a>
+      
+      <a href="/tags/Flink/" class="tag-link" data-tag="Flink"
+        data-count="8">Flink</a>
+      
+      <a href="/tags/git/" class="tag-link" data-tag="git"
+        data-count="7">git</a>
+      
+      <a href="/tags/linux/" class="tag-link" data-tag="linux"
+        data-count="12">linux</a>
+      
+      <a href="/tags/Hive/" class="tag-link" data-tag="Hive"
+        data-count="6">Hive</a>
+      
+      <a href="/tags/idea/" class="tag-link" data-tag="idea"
+        data-count="2">idea</a>
+      
+      <a href="/tags/HBase/" class="tag-link" data-tag="HBase"
+        data-count="7">HBase</a>
+      
+      <a href="/tags/Hadoop/" class="tag-link" data-tag="Hadoop"
+        data-count="7">Hadoop</a>
+      
+      <a href="/tags/mac/" class="tag-link" data-tag="mac"
+        data-count="1">mac</a>
+      
+      <a href="/tags/Spark/" class="tag-link" data-tag="Spark"
+        data-count="8">Spark</a>
+      
+      <a href="/tags/游戏/" class="tag-link" data-tag="游戏"
+        data-count="1">游戏</a>
+      
+      <a href="/tags/Kafka/" class="tag-link" data-tag="Kafka"
+        data-count="8">Kafka</a>
+      
+      <a href="/tags/电影/" class="tag-link" data-tag="电影"
+        data-count="5">电影</a>
+      
+      <a href="/tags/吉他/" class="tag-link" data-tag="吉他"
+        data-count="2">吉他</a>
+      
+      <a href="/tags/随笔杂谈/" class="tag-link" data-tag="随笔杂谈"
+        data-count="2">随笔杂谈</a>
+      
+      <a href="/tags/面试/" class="tag-link" data-tag="面试"
+        data-count="11">面试</a>
+      
+      <a href="/tags/视频剪辑/" class="tag-link" data-tag="视频剪辑"
+        data-count="1">视频剪辑</a>
+      
+      <a href="/tags/MySQL/" class="tag-link" data-tag="MySQL"
+        data-count="55">MySQL</a>
+      
+      <a href="/tags/数据库/" class="tag-link" data-tag="数据库"
+        data-count="55">数据库</a>
+      
+      <a href="/tags/画册/" class="tag-link" data-tag="画册"
+        data-count="3">画册</a>
+      
+      <a href="/tags/SpringAi/" class="tag-link" data-tag="SpringAi"
+        data-count="15">SpringAi</a>
+      
+      <a href="/tags/Java/" class="tag-link" data-tag="Java"
+        data-count="22">Java</a>
+      
+      <a href="/tags/集合/" class="tag-link" data-tag="集合"
+        data-count="1">集合</a>
+      
+      <a href="/tags/设计模式/" class="tag-link" data-tag="设计模式"
+        data-count="1">设计模式</a>
+      
+      <a href="/tags/算法/" class="tag-link" data-tag="算法"
+        data-count="1">算法</a>
+      
+      <a href="/tags/排序/" class="tag-link" data-tag="排序"
+        data-count="1">排序</a>
+      
+      <a href="/tags/Netty/" class="tag-link" data-tag="Netty"
+        data-count="4">Netty</a>
+      
+      <a href="/tags/Redis/" class="tag-link" data-tag="Redis"
+        data-count="58">Redis</a>
+      
+      <a href="/tags/缓存/" class="tag-link" data-tag="缓存"
+        data-count="10">缓存</a>
+      
+      <a href="/tags/数据结构/" class="tag-link" data-tag="数据结构"
+        data-count="6">数据结构</a>
+      
+      <a href="/tags/内存管理/" class="tag-link" data-tag="内存管理"
+        data-count="1">内存管理</a>
+      
+      <a href="/tags/消息队列/" class="tag-link" data-tag="消息队列"
+        data-count="1">消息队列</a>
+      
+      <a href="/tags/持久化/" class="tag-link" data-tag="持久化"
+        data-count="3">持久化</a>
+      
+      <a href="/tags/性能/" class="tag-link" data-tag="性能"
+        data-count="4">性能</a>
+      
+      <a href="/tags/高可用/" class="tag-link" data-tag="高可用"
+        data-count="5">高可用</a>
+      
+      <a href="/tags/运维/" class="tag-link" data-tag="运维"
+        data-count="9">运维</a>
+      
+      <a href="/tags/Cluster/" class="tag-link" data-tag="Cluster"
+        data-count="3">Cluster</a>
+      
+      <a href="/tags/架构/" class="tag-link" data-tag="架构"
+        data-count="1">架构</a>
+      
+      <a href="/tags/底层原理/" class="tag-link" data-tag="底层原理"
+        data-count="5">底层原理</a>
+      
+      <a href="/tags/内存/" class="tag-link" data-tag="内存"
+        data-count="1">内存</a>
+      
+      <a href="/tags/事务/" class="tag-link" data-tag="事务"
+        data-count="1">事务</a>
+      
+      <a href="/tags/脚本/" class="tag-link" data-tag="脚本"
+        data-count="2">脚本</a>
+      
+      <a href="/tags/排障/" class="tag-link" data-tag="排障"
+        data-count="1">排障</a>
+      
+      <a href="/tags/消息/" class="tag-link" data-tag="消息"
+        data-count="2">消息</a>
+      
+      <a href="/tags/分布式/" class="tag-link" data-tag="分布式"
+        data-count="2">分布式</a>
+      
+      <a href="/tags/限流/" class="tag-link" data-tag="限流"
+        data-count="1">限流</a>
+      
+      <a href="/tags/安全/" class="tag-link" data-tag="安全"
+        data-count="2">安全</a>
+      
+      <a href="/tags/实战/" class="tag-link" data-tag="实战"
+        data-count="4">实战</a>
+      
+      <a href="/tags/MyBatisPlus/" class="tag-link" data-tag="MyBatisPlus"
+        data-count="8">MyBatisPlus</a>
+      
+      <a href="/tags/SpringBoot/" class="tag-link" data-tag="SpringBoot"
+        data-count="9">SpringBoot</a>
+      
+      <a href="/tags/SpringCloud/" class="tag-link" data-tag="SpringCloud"
+        data-count="10">SpringCloud</a>
+      
+      <a href="/tags/SpringSession/" class="tag-link" data-tag="SpringSession"
+        data-count="4">SpringSession</a>
+      
+      <a href="/tags/SpringData/" class="tag-link" data-tag="SpringData"
+        data-count="6">SpringData</a>
+      
+      <a href="/tags/vue/" class="tag-link" data-tag="vue"
+        data-count="9">vue</a>
+      
+    </div>
+    <script>
+      /*
+  ============================================
+  侧栏热门标签排序（首帧前执行）
+  文件：_js/hot-tags.js
+  引入位置：_components/Sidebar.njk 里 .tag-cloud 闭合标签之后（紧跟着写死）
+  作用：按点击次数排序、只露前 5 个、点一下立刻重排
+  为什么单独拆出来：以前放在 sidebar.js 的 DOMContentLoaded 里，首帧渲染的还是
+  模板顺序的 20 个标签，等脚本跑完才收成 5 个；配合跨页淡入（View Transition）
+  会出现「新旧两套标签叠在一起、影子跳一下」。紧跟标签节点内联执行就没有中间态。
+  最后修改：2026-11-12
+  ============================================
+*/
+(function () {
+  var cloud = document.querySelector('.tag-cloud');
+  if (!cloud) return;
+  var links = Array.prototype.slice.call(cloud.querySelectorAll('.tag-link'));
+  if (!links.length) return;
+
+  var KEY = 'starry_tag_visits'; // 标签名 -> 点击次数
+  var TOP = 5;
+  var visits = {};
+
+  try {
+    var raw = JSON.parse(localStorage.getItem(KEY) || '{}');
+    visits = (raw && typeof raw === 'object') ? raw : {};
+  } catch (e) {
+    visits = {};
+  }
+
+  links.forEach(function (link) {
+    var name = link.dataset.tag || (link.textContent || '').trim();
+    link.dataset.tag = name;
+    if (!link.dataset.count) link.dataset.count = '0';
+  });
+
+  // 排序：点击次数降序 → 文章数降序 → 名字，保证同分时顺序稳定不来回跳
+  function order() {
+    return links.slice().sort(function (a, b) {
+      var va = visits[a.dataset.tag] || 0;
+      var vb = visits[b.dataset.tag] || 0;
+      if (vb !== va) return vb - va;
+      var ca = Number(a.dataset.count) || 0;
+      var cb = Number(b.dataset.count) || 0;
+      if (cb !== ca) return cb - ca;
+      return String(a.dataset.tag).localeCompare(String(b.dataset.tag), 'zh');
+    });
+  }
+
+  // 重排 DOM：按名次 append，超出 5 个的 hidden（仍留在 DOM，等名次升上来再显示）
+  function render() {
+    order().forEach(function (link, i) {
+      link.dataset.visits = visits[link.dataset.tag] || 0;
+      cloud.appendChild(link);
+      link.hidden = i >= TOP;
+    });
+  }
+
+  links.forEach(function (link) {
+    link.addEventListener('click', function () {
+      var name = link.dataset.tag;
+      visits[name] = (visits[name] || 0) + 1;
+      try { localStorage.setItem(KEY, JSON.stringify(visits)); } catch (e) { /* 忽略配额错误 */ }
+      render(); // 当前页立刻看到「谁被点多了谁上前」
+    });
+  });
+
+  render();
+})();
+
+    </script>
+  </div>
+  <div class="archive-card">
+    <h4>按月归档</h4>
+    <ul class="archive-list">
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2026/12/">
+          2026年12月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2026/11/">
+          2026年11月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2026/10/">
+          2026年10月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2026/09/">
+          2026年09月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2026/08/">
+          2026年08月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2026/07/">
+          2026年07月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2026/06/">
+          2026年06月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2026/05/">
+          2026年05月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2026/04/">
+          2026年04月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2026/03/">
+          2026年03月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2026/02/">
+          2026年02月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2026/01/">
+          2026年01月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2025/12/">
+          2025年12月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2025/11/">
+          2025年11月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2025/10/">
+          2025年10月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2025/09/">
+          2025年09月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2025/08/">
+          2025年08月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2025/07/">
+          2025年07月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2025/05/">
+          2025年05月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2025/04/">
+          2025年04月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2025/03/">
+          2025年03月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2025/02/">
+          2025年02月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2025/01/">
+          2025年01月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2024/12/">
+          2024年12月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2024/11/">
+          2024年11月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2024/10/">
+          2024年10月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2024/09/">
+          2024年09月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2024/08/">
+          2024年08月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2024/07/">
+          2024年07月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2024/06/">
+          2024年06月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2024/05/">
+          2024年05月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2024/04/">
+          2024年04月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2024/03/">
+          2024年03月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2024/02/">
+          2024年02月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2024/01/">
+          2024年01月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2023/12/">
+          2023年12月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2023/11/">
+          2023年11月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2023/10/">
+          2023年10月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2023/09/">
+          2023年09月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2023/08/">
+          2023年08月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2023/07/">
+          2023年07月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2023/06/">
+          2023年06月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2023/05/">
+          2023年05月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2023/04/">
+          2023年04月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2023/03/">
+          2023年03月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2023/02/">
+          2023年02月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2023/01/">
+          2023年01月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2022/12/">
+          2022年12月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2022/11/">
+          2022年11月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2022/10/">
+          2022年10月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2022/09/">
+          2022年09月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2022/08/">
+          2022年08月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2022/07/">
+          2022年07月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2022/06/">
+          2022年06月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2022/05/">
+          2022年05月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2022/04/">
+          2022年04月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2022/03/">
+          2022年03月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2022/02/">
+          2022年02月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2022/01/">
+          2022年01月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2021/12/">
+          2021年12月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2021/11/">
+          2021年11月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2021/10/">
+          2021年10月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2021/09/">
+          2021年09月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2021/08/">
+          2021年08月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2021/07/">
+          2021年07月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2021/06/">
+          2021年06月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2021/05/">
+          2021年05月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2021/04/">
+          2021年04月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2021/03/">
+          2021年03月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2021/02/">
+          2021年02月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2021/01/">
+          2021年01月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2020/12/">
+          2020年12月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2020/11/">
+          2020年11月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2020/10/">
+          2020年10月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2020/09/">
+          2020年09月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2020/08/">
+          2020年08月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2020/07/">
+          2020年07月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2020/06/">
+          2020年06月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2020/05/">
+          2020年05月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2020/04/">
+          2020年04月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2020/03/">
+          2020年03月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2020/02/">
+          2020年02月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2020/01/">
+          2020年01月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2019/12/">
+          2019年12月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2019/11/">
+          2019年11月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2019/10/">
+          2019年10月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2019/09/">
+          2019年09月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2019/08/">
+          2019年08月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2019/07/">
+          2019年07月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2019/06/">
+          2019年06月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2019/05/">
+          2019年05月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2019/04/">
+          2019年04月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2019/03/">
+          2019年03月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2019/02/">
+          2019年02月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2019/01/">
+          2019年01月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2018/12/">
+          2018年12月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2018/11/">
+          2018年11月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2018/10/">
+          2018年10月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2018/09/">
+          2018年09月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2018/08/">
+          2018年08月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2018/07/">
+          2018年07月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2018/06/">
+          2018年06月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2018/05/">
+          2018年05月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2018/04/">
+          2018年04月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2018/03/">
+          2018年03月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2018/02/">
+          2018年02月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      <li>
+        <a href="/archives/2018/01/">
+          2018年01月
+        </a>
+      </li>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+    </ul>
+  </div>
+
+  <!-- ========== 星语传书（雷达区弹窗，与搜索面板同一套面板样式） ========== -->
+  <div class="search-panel dock-panel" id="contactModal" hidden>
+    <div class="sp-mask" data-dock-close></div>
+    <div class="sp-box" role="dialog" aria-modal="true" aria-label="星语传书">
+      <div class="sp-head">
+        <span class="sp-dot"></span>
+        <span class="sp-title">星语传书</span>
+        <span class="sp-title-sub">/ SIGNAL CHANNEL</span>
+        <span class="sp-meta">SYS.REPLY ≤ 48H</span>
+        <button class="sp-close" type="button" data-dock-close title="关闭">×</button>
+      </div>
+      <div class="sp-body dock-body">
+        <p class="dock-lead">写信给时空行者：文章里的错字、跑不通的 demo、想聊的一句技术，都可以从这里进来。信号收到，我会尽量回。</p>
+        <div class="dock-grid">
+          <div class="dock-list">
+            <a class="dock-row" href="https://wpa.qq.com/msgrd?v=3&amp;uin=372109355&amp;site=qq&amp;menu=yes"
+              target="_blank" rel="noopener">
+              <span class="dock-ico">企</span>
+              <span class="dock-k"><b>QQ</b><span>372109355</span></span>
+            </a>
+            <a class="dock-row" href="https://wu4yong.github.io" target="_blank" rel="noopener">
+              <span class="dock-ico">⌂</span>
+              <span class="dock-k"><b>站点主站</b><span>wu4yong.github.io</span></span>
+            </a>
+            <div class="dock-row dock-row-static">
+              <span class="dock-ico">✉</span>
+              <span class="dock-k"><b>电子邮箱</b><span>暂未公开 · 任何问题QQ留言</span></span>
+            </div>
+            <a class="dock-row" href="#" target="_blank" rel="noopener">
+              <span class="dock-ico">◈</span>
+              <span class="dock-k"><b>GitHub</b><span>暂未公开 · 任何问题QQ留言</span></span>
+            </a>
+            <a class="dock-row" href="#" target="_blank" rel="noopener">
+              <span class="dock-ico">◇</span>
+              <span class="dock-k"><b>Gitee</b><span>暂未公开 · 任何问题QQ留言</span></span>
+            </a>
+          </div>
+          <div class="dock-side">
+            <div class="dock-qr">
+              <em>WECHAT · 微信</em>
+              <img src="/images/wechat-qr.png" alt="微信二维码">
+              <span class="dock-qr-tip">扫码添加，备注「来自时空秘境」</span>
+            </div>
+          </div>
+        </div>
+        <div class="dock-chips">
+          <span class="dock-chip">文章纠错</span>
+          <span class="dock-chip">Demo 答疑</span>
+          <span class="dock-chip">转载授权</span>
+          <span class="dock-chip">技术交流</span>
+          <span class="dock-chip">内推 / 合作</span>
+        </div>
+        <p class="dock-note">无正文的「在吗」容易被当作信号干扰滤掉，直接把问题写清楚，回信会快很多。</p>
+      </div>
+      <!-- 开合转场层：百叶窗 / 电影幕布 / 淡入，由 source/js/theme/base/sidebar.js 轮换播放 -->
+      <div class="dock-fx" aria-hidden="true">
+        <div class="dock-fx-slats"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+        <div class="dock-fx-curtain"><span class="top"></span><span class="bottom"></span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========== 全局搜索面板 ==========
+       索引来自构建期生成的 /search.json（hexo-generator-searchdb），随文章新增自动更新；
+       打开时由 source/js/theme/base/sidebar.js 把整块挪进 Radar 中间区（无雷达的页面退化为居中浮层） -->
+  <div class="search-panel" id="searchPanel" hidden>
+    <div class="sp-mask" id="searchMask"></div>
+    <div class="sp-box" role="dialog" aria-modal="true" aria-label="全文搜索">
+      <div class="sp-head">
+        <span class="sp-dot"></span>
+        <span class="sp-title">全文搜索</span>
+        <span class="sp-title-sub">/ GLOBAL SEARCH</span>
+        <span class="sp-meta" id="spMeta"></span>
+        <button class="sp-close" id="searchPanelClose" type="button" title="关闭搜索">×</button>
+      </div>
+      <div class="sp-body" id="spBody">
+        <div class="sp-loading" id="spLoading">正在扫描星图索引…</div>
+        <ul class="sp-list" id="spList"></ul>
+        <!-- 无结果：内容走丢 → 慢速落 404 -->
+        <div class="sp-empty" id="spEmpty" hidden>
+          <div class="sp-drift-wrap">
+            <span class="sp-trail"></span>
+            <span class="sp-drift"></span>
+            <span class="sp-lost">SIGNAL LOST · 信号已丢失</span>
+          </div>
+          <div class="sp-404"><span>4</span><span>0</span><span>4</span></div>
+          <p class="sp-empty-main">内容走丢在星海里了</p>
+          <p class="sp-empty-tip">换个关键词，或去〈星迹索引 / 星图手记〉里慢慢逛</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========== 星芒赠礼（雷达区弹窗，收款码图片沿用原图不改） ========== -->
+  <div class="search-panel dock-panel" id="donateModal" hidden>
+    <div class="sp-mask" data-dock-close></div>
+    <div class="sp-box" role="dialog" aria-modal="true" aria-label="星芒赠礼">
+      <div class="sp-head">
+        <span class="sp-dot"></span>
+        <span class="sp-title">星芒赠礼</span>
+        <span class="sp-title-sub">/ STAR OFFERING</span>
+        <span class="sp-meta">THANKS FOR THE LIGHT</span>
+        <button class="sp-close" type="button" data-dock-close title="关闭">×</button>
+      </div>
+      <div class="sp-body dock-body">
+        <div class="dock-thanks">
+          <p>这片星空是工作闲暇时光一个个凌晨攒出来的：一篇文章、一次复盘、一个修不完的 bug。</p>
+          <p>如果你在这里找到了能用的东西，愿意赏一杯凌晨三点的咖啡 —— 这份心意我会记很久。</p>
+          <p>不打赏也完全没关系：所有文章永久免费，愿你我在各自的轨道上都跑得稳一点。</p>
+        </div>
+        <div class="dock-donate">
+          <div class="dock-hero">
+            <div class="dock-hero-pic">
+              <span class="dock-hero-halo" aria-hidden="true"></span>
+              <span class="dock-hero-ring dock-hero-ring-a" aria-hidden="true"></span>
+              <span class="dock-hero-ring dock-hero-ring-b" aria-hidden="true"></span>
+              <img src="/images/donate-boy.png" alt="感谢支持">
+            </div>
+            <em>THANKS FOR THE LIGHT</em>
+            <span class="dock-hero-tip">愿每一次凌晨，都有人替你留一盏灯</span>
+          </div>
+          <div class="dock-pay">
+            <div class="dock-qr dock-qr-row">
+              <img src="/images/alipay-qr.jpg" alt="支付宝收款码">
+              <div class="dock-qr-txt">
+                <b>支付宝 · 星途赞赏</b>
+                <span>请我喝一杯凌晨三点的咖啡</span>
+              </div>
+            </div>
+            <div class="dock-qr dock-qr-row">
+              <img src="/images/wechat-pay-qr.jpg" alt="微信收款码">
+              <div class="dock-qr-txt">
+                <b>微信 · 星河致谢</b>
+                <span>金额随意，心意已经收到</span>
+              </div>
+            </div>
+          </div>
+        </div>        <div class="dock-chips">
+          <span class="dock-chip">域名与服务器</span>
+          <span class="dock-chip">图床与备份</span>
+          <span class="dock-chip">一本技术书</span>
+          <span class="dock-chip">深夜的一杯咖啡</span>
+        </div>
+        <p class="dock-note">赠礼纯属心意，不产生任何付费内容或额外承诺；扫码前请确认收款人，小心仿冒。</p>
+      </div>
+      <!-- 开合转场层：百叶窗 / 电影幕布 / 淡入，由 source/js/theme/base/sidebar.js 轮换播放 -->
+      <div class="dock-fx" aria-hidden="true">
+        <div class="dock-fx-slats"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+        <div class="dock-fx-curtain"><span class="top"></span><span class="bottom"></span></div>
+      </div>
+    </div>
+  </div>
+
+
+</aside>
+<!-- 引入侧边栏交互脚本：外链（源文件 themes/butterfly/source/js/theme/base/sidebar.js） -->
+<script src="/js/theme/base/sidebar.js"></script>
+
+    
+    <button id="sidebarToggle" class="sidebar-toggle" title="隐藏侧栏"></button>
+
+    <main class="main-content">
+      <div class="article-card">
+        <h1 class="article-title">LangChain 01 · 安装与项目结构：v1 的包拆分与最小工程</h1>
+        <div class="article-meta">📅 2026-11-29</div>
+        <div class="article-content"><div class="essay-banner essay-langchain"></div>
+
+<h1 id="01-安装与项目结构：v1-的包拆分与最小工程"><a href="#01-安装与项目结构：v1-的包拆分与最小工程" class="headerlink" title="01 安装与项目结构：v1 的包拆分与最小工程"></a>01 安装与项目结构：v1 的包拆分与最小工程</h1><p><img src="https://wu4yong.github.io/starry-images/assets/img/langchain/v1/lc-1-install.svg" alt="LangChain v1 的包拆分：langchain 只管入口，provider 包各管一家"></p>
+<p><em>v1 把 <code>langchain</code> 收缩为「入口 + 核心组件」，provider 拆成独立包，旧链迁到 <code>langchain-classic</code>｜依据 docs.langchain.com 迁移指南自绘</em></p>
+<p><strong>版本不一致提示</strong>：</p>
+<ul>
+<li>本篇基线是 LangChain v1（1.x）+ Python 3.13，官方 Quickstart 的示例环境写的是 Python 3.11，只是解释器版本不同，装包与 API 行为一致；</li>
+<li>旧教程里 <code>pip install langchain</code> 之后直接用 <code>LLMChain</code>、<code>AgentExecutor</code> 的写法属于 0.x，与 v1 的包拆分不兼容；</li>
+<li>包结构请按「<code>langchain</code> 入口 + provider extra + <code>langchain-classic</code> 储物间」三层理解，不要照 0.x 的单包心智模型装。</li>
+</ul>
+<h2 id="一、学习目标"><a href="#一、学习目标" class="headerlink" title="一、学习目标"></a>一、学习目标</h2><p>学完这一讲，你要能做到三件事：</p>
+<ol>
+<li>说清 v1 里 <code>langchain</code> &#x2F; <code>langchain-core</code> &#x2F; provider 包 &#x2F; <code>langchain-classic</code> 各自负责什么，为什么装完 <code>langchain</code> 还调不动模型；</li>
+<li>从零起一个能跑的最小工程：虚拟环境、依赖、<code>.env</code>、import、跑通一次模型调用；</li>
+<li>看到 <code>ModuleNotFoundError</code>、<code>ValueError: model provider not supported</code> 这类报错时，知道是包没装对，而不是代码写错。</li>
+</ol>
+<h2 id="二、前置知识"><a href="#二、前置知识" class="headerlink" title="二、前置知识"></a>二、前置知识</h2><ul>
+<li>会 Python 基础语法，能在命令行里执行 <code>uv</code> &#x2F; <code>pip</code> &#x2F; <code>python</code>（本系列默认 <code>uv</code>，没有就装一个，装法见本篇第三节）；</li>
+<li>知道「环境变量」是什么（不要求熟练）；</li>
+<li>不需要任何 LangChain 旧版经验——这一讲按 v1 从零讲，旧写法只在不教就会踩坑的地方提一句「v1 已改为……」。</li>
+</ul>
+<h2 id="三、理论讲解（官方定义）"><a href="#三、理论讲解（官方定义）" class="headerlink" title="三、理论讲解（官方定义）"></a>三、理论讲解（官方定义）</h2><p>这一节的顺序照官方 <a target="_blank" rel="noopener" href="https://docs.langchain.com/oss/python/langchain/quickstart">Quickstart</a> 的前两节（Install dependencies → Set up API keys），再补官方 <a target="_blank" rel="noopener" href="https://docs.langchain.com/oss/python/migrate/langchain-v1">v1 迁移指南</a> 的「Simplified package」一节的包结构。</p>
+<h3 id="1-安装依赖（官方-Quickstart「Install-dependencies」）"><a href="#1-安装依赖（官方-Quickstart「Install-dependencies」）" class="headerlink" title="1. 安装依赖（官方 Quickstart「Install dependencies」）"></a>1. 安装依赖（官方 Quickstart「Install dependencies」）</h3><p>官方给出的三条安装路径，按你的工具链选一条：</p>
+<pre class="line-numbers language-bash" data-language="bash"><code class="language-bash"><span class="token comment"># 方式一：uv（官方 Quickstart 默认展示，本系列统一用它）</span>
+uv python pin <span class="token number">3.13</span>
+uv init
+uv <span class="token function">add</span> langchain
+uv <span class="token function">sync</span>
+
+<span class="token comment"># 方式二：pip（不用 uv 时最省事的一条）</span>
+<span class="token comment"># 需要自带 Python 3.10+；装完再 pip install python-dotenv</span>
+pip <span class="token function">install</span> <span class="token parameter variable">-U</span> langchain
+
+<span class="token comment"># 方式三：venv + pip（想隔离环境又不想引 uv）</span>
+python3.13 <span class="token parameter variable">-m</span> venv .venv
+<span class="token builtin class-name">source</span> .venv/bin/activate
+<span class="token comment"># Windows: .venv\Scripts\activate</span>
+pip <span class="token function">install</span> <span class="token parameter variable">-U</span> langchain<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<p>三种方式装出来的包完全一样，区别只在「谁来管虚拟环境和锁文件」：uv 用 <code>pyproject.toml</code> + <code>uv.lock</code>，pip 用你手写的 <code>requirements.txt</code> 或干脆不锁。本系列后续的命令一律写 <code>uv add</code> &#x2F; <code>uv run</code>，pip 用户在命令后面注释里能看到等价写法。</p>
+<p>机器上还没有 uv 的话，一条命令就够：<code>pip install uv</code>（Windows 也可 <code>winget install astral-sh.uv</code>，macOS&#x2F;Linux 可用 <code>brew install uv</code> 或官方安装脚本）。</p>
+<p>Python 版本是硬门槛。官方迁移指南的「Breaking changes → Dropped Python 3.9 support」明确写了 v1 不再支持 Python 3.9，因此 <strong>v1 的最低版本是 3.10</strong>。官方 Quickstart 的示例环境钉的是 3.11，本系列统一用 <strong>3.13</strong>——当前 3.13 已是主流稳定版，v1 全部依赖都能正常安装；两者不矛盾：3.10 只是下限，往上到 3.13 都在支持范围，越新的版本在性能和 asyncio 表现上越好。</p>
+<h3 id="2-配置凭证（官方-Quickstart「Set-up-API-keys」）"><a href="#2-配置凭证（官方-Quickstart「Set-up-API-keys」）" class="headerlink" title="2. 配置凭证（官方 Quickstart「Set up API keys」）"></a>2. 配置凭证（官方 Quickstart「Set up API keys」）</h3><p>官方的原话是：从任意受支持的 provider 拿一个 API key（例如 Google Gemini 或 OpenAI），把 key 设在 shell 环境变量或 <code>.env</code> 文件里。以 OpenAI 为例：</p>
+<pre class="line-numbers language-bash" data-language="bash"><code class="language-bash"><span class="token comment"># Shell</span>
+<span class="token builtin class-name">export</span> <span class="token assign-left variable">OPENAI_API_KEY</span><span class="token operator">=</span><span class="token string">"your-api-key"</span>
+
+<span class="token comment"># .env</span>
+<span class="token assign-left variable">OPENAI_API_KEY</span><span class="token operator">=</span>your-api-key<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<p>要读 <code>.env</code>，官方要求用 <code>python-dotenv</code> 的 <code>load_dotenv()</code>。其他 provider 的环境变量名各不相同：Anthropic 是 <code>ANTHROPIC_API_KEY</code>，Google 是 <code>GOOGLE_API_KEY</code>，OpenRouter 是 <code>OPENROUTER_API_KEY</code>，AWS Bedrock 是 <code>AWS_ACCESS_KEY_ID</code> + <code>AWS_SECRET_ACCESS_KEY</code> + <code>AWS_REGION</code>（完整清单见官方 Quickstart 的分页签）。</p>
+<h3 id="3-简化后的包命名空间（官方迁移指南「Simplified-package-→-Namespace」）"><a href="#3-简化后的包命名空间（官方迁移指南「Simplified-package-→-Namespace」）" class="headerlink" title="3. 简化后的包命名空间（官方迁移指南「Simplified package → Namespace」）"></a>3. 简化后的包命名空间（官方迁移指南「Simplified package → Namespace」）</h3><p>v1 把 <code>langchain</code> 包的命名空间砍到只留智能体的必需件，官方给的对照表是：</p>
+<table>
+<thead>
+<tr>
+<th>模块</th>
+<th>提供什么</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>langchain.agents</code></td>
+<td><code>create_agent</code>、<code>AgentState</code></td>
+<td>核心的智能体创建能力</td>
+</tr>
+<tr>
+<td><code>langchain.messages</code></td>
+<td>消息类型、content blocks、<code>trim_messages</code></td>
+<td>从 <code>langchain-core</code> 再导出</td>
+</tr>
+<tr>
+<td><code>langchain.tools</code></td>
+<td><code>@tool</code>、<code>BaseTool</code>、注入辅助</td>
+<td>从 <code>langchain-core</code> 再导出</td>
+</tr>
+<tr>
+<td><code>langchain.chat_models</code></td>
+<td><code>init_chat_model</code>、<code>BaseChatModel</code></td>
+<td>统一的模型初始化</td>
+</tr>
+<tr>
+<td><code>langchain.embeddings</code></td>
+<td><code>init_embeddings</code>、<code>Embeddings</code></td>
+<td>向量化模型</td>
+</tr>
+</tbody></table>
+<p>这张表要背下来。它解释了为什么 v1 的教程里 import 只有五个来源——不是作者偷懒，是官方就把入口收到了这五处。</p>
+<h3 id="4-旧功能去哪了：langchain-classic（官方迁移指南「Simplifying-the-package」）"><a href="#4-旧功能去哪了：langchain-classic（官方迁移指南「Simplifying-the-package」）" class="headerlink" title="4. 旧功能去哪了：langchain-classic（官方迁移指南「Simplifying the package」）"></a>4. 旧功能去哪了：<code>langchain-classic</code>（官方迁移指南「Simplifying the package」）</h3><p>官方列的搬家清单：旧式 Chain（<code>LLMChain</code>、<code>ConversationChain</code> 等）、Retriever（如 <code>MultiQueryRetriever</code>）、indexing API、hub 模块、Embedding 相关模块（如 <code>CacheBackedEmbeddings</code>）、<code>langchain-community</code> 的再导出、以及其他已废弃能力。</p>
+<pre class="line-numbers language-bash" data-language="bash"><code class="language-bash">uv <span class="token function">add</span> langchain-classic
+<span class="token comment"># pip 等价：pip install -U langchain-classic</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span></span></code></pre>
+
+<pre class="line-numbers language-python" data-language="python"><code class="language-python"><span class="token comment"># v1：旧能力从 langchain_classic 拿</span>
+<span class="token keyword">from</span> langchain_classic<span class="token punctuation">.</span>chains <span class="token keyword">import</span> LLMChain
+<span class="token keyword">from</span> langchain_classic<span class="token punctuation">.</span>retrievers <span class="token keyword">import</span> <span class="token punctuation">.</span><span class="token punctuation">.</span><span class="token punctuation">.</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span></span></code></pre>
+
+<p><strong>版本备注</strong>：【旧版是 <code>from langchain.chains import LLMChain</code> 这类写法，v1 已改为安装 <code>langchain-classic</code> 并从 <code>langchain_classic</code> 导入】。来源：LangChain v1 migration guide · Simplified package。</p>
+<h3 id="5-provider-包要单独装（官方-Models-页「Initialize-a-model」）"><a href="#5-provider-包要单独装（官方-Models-页「Initialize-a-model」）" class="headerlink" title="5. provider 包要单独装（官方 Models 页「Initialize a model」）"></a>5. provider 包要单独装（官方 Models 页「Initialize a model」）</h3><p>官方在 Models 页给每个 provider 配了安装命令，形式是 extra。用 uv 时把 extra 一起写进包名：</p>
+<pre class="line-numbers language-bash" data-language="bash"><code class="language-bash">uv <span class="token function">add</span> <span class="token string">"langchain[openai]"</span>
+uv <span class="token function">add</span> <span class="token string">"langchain[anthropic]"</span>
+uv <span class="token function">add</span> <span class="token string">"langchain[google-genai]"</span>
+uv <span class="token function">add</span> <span class="token string">"langchain[aws]"</span>
+uv <span class="token function">add</span> <span class="token string">"langchain[huggingface]"</span>
+uv <span class="token function">add</span> langchain-openrouter
+
+<span class="token comment"># pip 等价写法（其余几行同理）</span>
+pip <span class="token function">install</span> <span class="token parameter variable">-U</span> <span class="token string">"langchain[openai]"</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<p><code>uv add</code> 会顺带写进 <code>pyproject.toml</code> 并更新 <code>uv.lock</code>，团队里别人 <code>uv sync</code> 就装到同一套版本；pip 则要自己记着 <code>pip freeze &gt; requirements.txt</code>。</p>
+<p>这些包不是可选的装饰：<code>init_chat_model(&quot;openai:gpt-5-nano&quot;)</code> 在运行时要去查 <code>langchain_openai</code>，没装就直接报错。</p>
+<h3 id="6-最小工程结构（实践补充）"><a href="#6-最小工程结构（实践补充）" class="headerlink" title="6. 最小工程结构（实践补充）"></a>6. 最小工程结构（实践补充）</h3><p><strong>【实践补充，非官方文档内容】</strong> 官方 Quickstart 只给了单文件示例，工程化落地建议这样分：</p>
+<pre class="line-numbers language-text" data-language="text"><code class="language-text">lc-demo/
+├─ pyproject.toml       # uv 的依赖声明（pip 方案换成 requirements.txt）
+├─ uv.lock              # 锁死实际版本，进仓库
+├─ .env                 # 凭证，必须进 .gitignore
+├─ src/
+│  ├─ config.py        # 读环境变量，集中出口
+│  ├─ model.py         # init_chat_model 的唯一创建点
+│  └─ main.py          # 业务入口
+└─ tests/
+   └─ test_smoke.py    # 一条「能不能调通」的冒烟测试<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<p>三条理由：凭证只有 <code>config.py</code> 一个出口，泄漏时只需改一处；模型只有 <code>model.py</code> 一个创建点，换 provider 不搜全仓库；冒烟测试能在 CI 里第一时间发现 key 过期或包没装。</p>
+<h2 id="四、原理拆解"><a href="#四、原理拆解" class="headerlink" title="四、原理拆解"></a>四、原理拆解</h2><p><img src="https://wu4yong.github.io/starry-images/assets/img/langchain/v1/lc-1b-flow.svg" alt="从装包到跑通：六个环节，缺一环就报错"></p>
+<p><em>装包 → 凭证 → 导入 → 初始化 → 调用 → 验证，v1 的失败几乎都落在前四环｜自绘</em></p>
+<p>把 LangChain 想成家里的影音系统：</p>
+<ul>
+<li><code>langchain-core</code> 是插座标准（消息、Runnable、工具接口的定义），所有设备都得按它接线；</li>
+<li><code>langchain</code> 是遥控器，只保留「开机、选台、调音量」这几个真正常用的键；</li>
+<li>provider 包是各品牌电视的驱动（<code>langchain-openai</code>、<code>langchain-anthropic</code>……），遥控器本身不认识电视，是驱动去认的；</li>
+<li><code>langchain-classic</code> 是储物间，旧型号的线材都收在那里，要用自己去拿。</li>
+</ul>
+<p>这个类比能解释最常见的困惑：<strong>装了遥控器却没有驱动，按开机键当然没反应</strong>。报错信息里的 <code>model provider not supported</code> 说的就是这个——不是模型名字写错，是驱动没装。</p>
+<h2 id="五、场景说明"><a href="#五、场景说明" class="headerlink" title="五、场景说明"></a>五、场景说明</h2><p>三种典型起步方式，选一种即可：</p>
+<ol>
+<li><strong>学习 &#x2F; 脚本</strong>：单文件 + <code>.env</code>，官方 Quickstart 就是这个形态，跑通优先；</li>
+<li><strong>服务化</strong>：<code>src/</code> 分包 + <code>pyproject.toml</code> &#x2F; <code>uv.lock</code> 锁版本（pip 方案用 <code>requirements.txt</code>），key 从部署平台注入（环境变量），代码里不出现明文；</li>
+<li><strong>多 provider 并存</strong>：<code>model.py</code> 里用 <code>init_chat_model</code> 按配置字符串切换，不要在业务代码里 <code>ChatOpenAI(...)</code> 硬编码——这是 v1 官方推荐的统一入口。</li>
+</ol>
+<h2 id="六、示例代码"><a href="#六、示例代码" class="headerlink" title="六、示例代码"></a>六、示例代码</h2><h3 id="步骤-1：环境准备（本篇写全，后续篇目引用）"><a href="#步骤-1：环境准备（本篇写全，后续篇目引用）" class="headerlink" title="步骤 1：环境准备（本篇写全，后续篇目引用）"></a>步骤 1：环境准备（本篇写全，后续篇目引用）</h3><pre class="line-numbers language-bash" data-language="bash"><code class="language-bash">uv python <span class="token function">install</span> <span class="token number">3.13</span>      <span class="token comment"># 只装解释器，uv 自己管，不动系统 Python</span>
+uv init lc-demo             <span class="token comment"># 生成 pyproject.toml + .python-version</span>
+<span class="token builtin class-name">cd</span> lc-demo
+uv <span class="token function">add</span> langchain <span class="token string">"langchain[openai]"</span> python-dotenv
+uv <span class="token function">sync</span>                     <span class="token comment"># 按 uv.lock 建 .venv</span>
+
+<span class="token comment"># 不用 uv 的话，等价于：</span>
+<span class="token comment"># python -m venv .venv</span>
+<span class="token comment"># .venv\Scripts\activate            （macOS/Linux: source .venv/bin/activate）</span>
+<span class="token comment"># pip install -U langchain "langchain[openai]" python-dotenv</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<p><code>uv add</code> 一次把运行依赖、provider extra、<code>python-dotenv</code> 全部写进 <code>pyproject.toml</code> 并解析版本；<code>uv run</code> 之后每次都会自动对齐依赖，不用记着「先 activate 再跑」。官方安装说明来源：<a target="_blank" rel="noopener" href="https://docs.langchain.com/oss/python/langchain/quickstart">Quickstart · Install dependencies</a>。</p>
+<h3 id="步骤-2：配置凭证"><a href="#步骤-2：配置凭证" class="headerlink" title="步骤 2：配置凭证"></a>步骤 2：配置凭证</h3><p><code>.env</code> 文件放在项目根目录：</p>
+<pre class="line-numbers language-bash" data-language="bash"><code class="language-bash"><span class="token assign-left variable">OPENAI_API_KEY</span><span class="token operator">=</span>sk-<span class="token punctuation">..</span>.<span aria-hidden="true" class="line-numbers-rows"><span></span></span></code></pre>
+
+<p><code>.gitignore</code> 里必须有 <code>.env</code>。<strong>不要把 key 硬编码进代码</strong>，也不要提交到仓库——官方的示例一律用环境变量。</p>
+<h3 id="步骤-3：导入（标注是否为-v1-路径）"><a href="#步骤-3：导入（标注是否为-v1-路径）" class="headerlink" title="步骤 3：导入（标注是否为 v1 路径）"></a>步骤 3：导入（标注是否为 v1 路径）</h3><pre class="line-numbers language-python" data-language="python"><code class="language-python"><span class="token keyword">import</span> os                                  <span class="token comment"># 读环境变量</span>
+<span class="token keyword">from</span> dotenv <span class="token keyword">import</span> load_dotenv              <span class="token comment"># 官方要求用它加载 .env</span>
+<span class="token keyword">from</span> langchain<span class="token punctuation">.</span>chat_models <span class="token keyword">import</span> init_chat_model  <span class="token comment"># v1 路径：统一模型初始化入口</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span></span></code></pre>
+
+<p>三行 import 对应三件事：<code>load_dotenv</code> 把 <code>.env</code> 灌进 <code>os.environ</code>；<code>init_chat_model</code> 来自 <code>langchain.chat_models</code>，是 v1 官方认可的模型入口（迁移指南 Namespace 表第一列就写着它）。</p>
+<h3 id="步骤-4：最小可运行代码"><a href="#步骤-4：最小可运行代码" class="headerlink" title="步骤 4：最小可运行代码"></a>步骤 4：最小可运行代码</h3><p>把下面这段存成 <code>main.py</code> 放在 <code>lc-demo/</code> 根目录：</p>
+<pre class="line-numbers language-python" data-language="python"><code class="language-python"><span class="token keyword">import</span> os
+
+<span class="token keyword">from</span> dotenv <span class="token keyword">import</span> load_dotenv
+<span class="token keyword">from</span> langchain<span class="token punctuation">.</span>chat_models <span class="token keyword">import</span> init_chat_model
+
+load_dotenv<span class="token punctuation">(</span><span class="token punctuation">)</span>  <span class="token comment"># 把 .env 里的 key 读进环境变量</span>
+
+<span class="token comment"># 确认 key 真的到位了，第 1 篇最容易错的一步</span>
+<span class="token keyword">assert</span> os<span class="token punctuation">.</span>environ<span class="token punctuation">.</span>get<span class="token punctuation">(</span><span class="token string">"OPENAI_API_KEY"</span><span class="token punctuation">)</span><span class="token punctuation">,</span> <span class="token string">"OPENAI_API_KEY 没有加载成功"</span>
+
+<span class="token comment"># 模型名用 "provider:model" 形式，LangChain 据此选择 provider 包</span>
+model <span class="token operator">=</span> init_chat_model<span class="token punctuation">(</span><span class="token string">"openai:gpt-5-nano"</span><span class="token punctuation">)</span>
+
+<span class="token comment"># invoke 是最基本的调用方式：一次输入，一次完整输出</span>
+response <span class="token operator">=</span> model<span class="token punctuation">.</span>invoke<span class="token punctuation">(</span><span class="token string">"用一句话解释什么是 LangChain"</span><span class="token punctuation">)</span>
+
+<span class="token keyword">print</span><span class="token punctuation">(</span><span class="token builtin">type</span><span class="token punctuation">(</span>response<span class="token punctuation">)</span><span class="token punctuation">)</span>          <span class="token comment"># &lt;class 'langchain.messages.AIMessage'></span>
+<span class="token keyword">print</span><span class="token punctuation">(</span>response<span class="token punctuation">.</span>text<span class="token punctuation">)</span>           <span class="token comment"># 文本内容</span>
+<span class="token keyword">print</span><span class="token punctuation">(</span>response<span class="token punctuation">.</span>usage_metadata<span class="token punctuation">)</span> <span class="token comment"># token 用量（provider 支持时才有）</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<p>跑起来：</p>
+<pre class="line-numbers language-bash" data-language="bash"><code class="language-bash">uv run main.py
+<span class="token comment"># 没装 uv：python main.py</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span></span></code></pre>
+
+<h3 id="步骤-5：预期输出"><a href="#步骤-5：预期输出" class="headerlink" title="步骤 5：预期输出"></a>步骤 5：预期输出</h3><pre class="line-numbers language-text" data-language="text"><code class="language-text">&lt;class 'langchain.messages.AIMessage'>
+LangChain 是一个把大模型、工具与数据串起来的应用框架。
+&#123;'input_tokens': 12, 'output_tokens': 42, 'total_tokens': 54&#125;<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span></span></code></pre>
+
+<p>输出内容会因模型不同而不同，结构大致为：第一行是返回类型，第二行是文本，第三行是 token 统计。<code>usage_metadata</code> 在某些 provider 上可能是 <code>None</code>，这不算失败。</p>
+<h3 id="步骤-6：验证是否成功"><a href="#步骤-6：验证是否成功" class="headerlink" title="步骤 6：验证是否成功"></a>步骤 6：验证是否成功</h3><p>看到 <code>type(response)</code> 打印出 <code>AIMessage</code>、且 <code>response.text</code> 有正常中文回答，就说明<strong>装包、凭证、导入、初始化、调用</strong>五环全通。若只想知道「包是否装对」，一句 <code>uv run python -c &quot;import langchain; print(langchain.__version__)&quot;</code>（pip 方案：<code>python -c ...</code>）也能给出 v1 的版本号。</p>
+<h2 id="七、常见坑（官方明确限制-版本差异）"><a href="#七、常见坑（官方明确限制-版本差异）" class="headerlink" title="七、常见坑（官方明确限制&#x2F;版本差异）"></a>七、常见坑（官方明确限制&#x2F;版本差异）</h2><ol>
+<li><strong>只装 <code>langchain</code>，没装 provider 包</strong>。官方 Models 页为每个 provider 单独给了安装命令，uv 下写 <code>uv add &quot;langchain[xxx]&quot;</code>（pip 下 <code>pip install -U &quot;langchain[xxx]&quot;</code>），缺包时 <code>init_chat_model</code> 会直接失败。判断方法：报错里出现 provider 名称 → 补装对应包。</li>
+<li><strong>Python 3.9</strong>。官方迁移指南「Dropped Python 3.9 support」是明确的破坏性变更，3.9 上装 v1 会失败或装到旧版。</li>
+<li><strong>旧 import 找不到</strong>。<code>from langchain.chains import ...</code> 在 v1 会 <code>ModuleNotFoundError</code>，因为 Chain 已迁到 <code>langchain-classic</code>（官方迁移指南原文列举）。</li>
+<li><strong>把 key 写进代码</strong>。官方 Quickstart 一律用环境变量或 <code>.env</code>；写进代码再提交，等于把账单交给别人。</li>
+<li><strong><code>max_tokens</code> 在 <code>langchain-anthropic</code> 上的默认值变化</strong>。官方迁移指南的 Breaking changes 里列有「Default max_tokens in langchain-anthropic」一项，正文未给统一数值，结论是：不要依赖默认值，显式传。</li>
+</ol>
+<p>本篇涉及的 API 在 LangChain v1 迁移指南中有对应条目的有：<code>langchain</code> 包命名空间收缩（Simplified package）、<code>langchain-classic</code> 迁移、Python 3.9 支持移除。其余安装命令本身无版本语义。</p>
+<h2 id="八、课后小结"><a href="#八、课后小结" class="headerlink" title="八、课后小结"></a>八、课后小结</h2><ul>
+<li>v1 的 <code>langchain</code> 只有五个入口模块：<code>agents</code>、<code>messages</code>、<code>tools</code>、<code>chat_models</code>、<code>embeddings</code>；</li>
+<li>装 <code>langchain</code> 不等于能调模型，provider 包必须单独装；</li>
+<li>Python 最低 3.10，本系列统一用 3.13；</li>
+<li>旧 Chain &#x2F; Retriever &#x2F; hub 都在 <code>langchain-classic</code>；</li>
+<li>工程化的底线是：key 只有一个出口、模型只有一个创建点、有一条冒烟测试。</li>
+</ul>
+<h2 id="九、思考题"><a href="#九、思考题" class="headerlink" title="九、思考题"></a>九、思考题</h2><p><strong>1、为什么官方要把 <code>langchain</code> 的命名空间砍到只剩五个模块？砍掉的东西去哪了？</strong></p>
+<p>参考回答：因为 v1 的定位收敛为「智能体构建」，入口越少，学的人越不需要在几十个模块里猜该用哪个。被砍掉的旧 Chain、Retriever、indexing、hub 等统一迁到 <code>langchain-classic</code>，需要时单独安装、单独导入，主包保持轻量。</p>
+<p><strong>2、<code>uv add langchain</code> 之后立刻 <code>init_chat_model(&quot;openai:gpt-5-nano&quot;)</code> 报 provider 不支持，最可能的原因是什么？</strong></p>
+<p>参考回答：provider 包没装。<code>init_chat_model</code> 需要 <code>langchain-openai</code> 才能构造 <code>ChatOpenAI</code>，官方在 Models 页为每个 provider 单独给了安装命令，正确做法是 <code>uv add &quot;langchain[openai]&quot;</code>（pip：<code>pip install -U &quot;langchain[openai]&quot;</code>）。</p>
+<p><strong>3、<code>from langchain.chains import LLMChain</code> 在 v1 报 <code>ModuleNotFoundError</code>，是版本装错了吗？</strong></p>
+<p>参考回答：不是。v1 已把旧 Chain 迁到 <code>langchain-classic</code>，正确写法是 <code>uv add langchain-classic</code> 后 <code>from langchain_classic.chains import LLMChain</code>。官方迁移指南明确说明这是有意的包拆分，不是安装问题。</p>
+<p><strong>4、为什么官方示例的 key 都从环境变量读，而不是写在代码里？</strong></p>
+<p>参考回答：代码会进版本库、进镜像、进日志，key 一旦写死就等于公开泄漏；环境变量由运行环境注入，换环境不用改代码，泄漏时只需换一处注入点。</p>
+<h2 id="十、下一篇预告"><a href="#十、下一篇预告" class="headerlink" title="十、下一篇预告"></a>十、下一篇预告</h2><p><strong>下一篇标题</strong>：02 模型初始化：<code>init_chat_model</code> 与 provider 切换。</p>
+<p><strong>一句话内容</strong>：讲透 v1 唯一的模型入口 <code>init_chat_model</code>——它怎么把 <code>&quot;provider:model&quot;</code> 字符串变成具体模型对象、参数表里每一项在什么时候必须显式给、换 provider 时到底要改几行代码。</p>
+<p><strong>承接关系</strong>：本篇跑通的 <code>model.invoke(&quot;...&quot;)</code> 用的就是 <code>init_chat_model</code> 的返回值，但那只是「能用」；下一篇把这个对象拆开，讲清它的参数与调用方式，否则后面讲工具、讲 Agent 时你不知道模型层还能调什么。</p>
+<p><strong>跳转位置</strong>：下一篇紧接本篇的模型层内容，建议按目录顺序阅读。</p>
+<h2 id="十一、官方资料"><a href="#十一、官方资料" class="headerlink" title="十一、官方资料"></a>十一、官方资料</h2><ul>
+<li>Quickstart（Install dependencies &#x2F; Set up API keys）：<a target="_blank" rel="noopener" href="https://docs.langchain.com/oss/python/langchain/quickstart">https://docs.langchain.com/oss/python/langchain/quickstart</a></li>
+<li>Models（provider 安装命令、Initialize a model）：<a target="_blank" rel="noopener" href="https://docs.langchain.com/oss/python/langchain/models">https://docs.langchain.com/oss/python/langchain/models</a></li>
+<li>v1 迁移指南（Simplified package、Dropped Python 3.9 support）：<a target="_blank" rel="noopener" href="https://docs.langchain.com/oss/python/migrate/langchain-v1">https://docs.langchain.com/oss/python/migrate/langchain-v1</a></li>
+</ul>
+<p>上一篇：<a href="/2026/11/28/ai/langchain/langchain-0-series-index/">LC00 系列目录</a> ｜ 下一篇：<a href="/2026/11/30/ai/langchain/langchain-2-model-init/">LC02 模型初始化</a> ｜ <a href="/2026/11/28/ai/langchain/langchain-0-series-index/">总目录</a></p>
+</div>
+      </div>
+    </main>
+  </div>
+
+  <div class="float-buttons">
+    <button id="back-to-top" class="float-btn" title="返回顶部">↑</button>
+    <a href="/" class="float-btn" title="返回首页">🏠</a>
+  </div>
+
+  
+  <!-- 浮动按钮脚本：外链（源文件 themes/butterfly/source/js/theme/base/post-float-btn.js） -->
+  <script src="/js/theme/base/post-float-btn.js"></script>
+
+  
+  <!--
+  ============================================
+  音频播放器组件
+  文件：APlayer.njk
+  适用终端：电脑端
+  作用：全站左下角固定迷你歌单播放器（数据来自 /music/playlist.json）
+  说明：
+    - 由 post.njk / page.njk 引入；独立页可用 front-matter 的 player: false 单独关闭
+    - 歌单是本站自己的音频（背景音乐 + 自学吉他），不再走网易云 Meting
+    - 加歌只改 source/music/playlist.json，这里不用动
+    - 渲染逻辑在 /js/theme/media/star-player.js
+  ============================================
+-->
+<link rel="stylesheet" href="/js/third-party/aplayer/APlayer.min.css">
+<link rel="stylesheet" href="/css/theme/media/star-player.css">
+<script defer src="/js/third-party/aplayer/APlayer.min.js"></script>
+<script defer src="/js/theme/media/star-player.js"></script>
+<div id="star-mini"></div>
+
+
+
+<script>
+  /* 作用：懒加载本地 mermaid 库（不走外部 CDN，避免网络波动导致图表不渲染） */
+  function loadLocalMermaid(){
+    return new Promise(function(resolve, reject){
+      if(window.mermaid) return resolve(window.mermaid);
+      var s = document.createElement('script');
+      s.src = '/js/third-party/mermaid/mermaid.min.js?v=10';
+      s.onload = function(){ resolve(window.mermaid); };
+      s.onerror = function(){ reject(new Error('mermaid local load failed')); };
+      document.head.appendChild(s);
+    });
+  }
+
+  /* 作用：把 ```mermaid 代码块替换成渲染后的 SVG 图 */
+  async function renderMermaidDiagram(){
+    var blocks = document.querySelectorAll('pre[class*="language-mermaid"]');
+    if(!blocks.length) return;
+    var mermaid;
+    try { mermaid = await loadLocalMermaid(); }
+    catch(e){ console.warn('[mermaid] 本地库加载失败：', e); return; }
+
+    mermaid.initialize({
+      startOnLoad: false,
+      theme: 'base',
+      themeVariables: {
+        darkMode: true,
+        background: 'transparent',
+        fontFamily: '"Microsoft YaHei", "PingFang SC", "Segoe UI", sans-serif',
+        fontSize: '14px',
+        primaryColor: '#062f3d',
+        primaryTextColor: '#d6f6ff',
+        primaryBorderColor: '#00eeff',
+        secondaryColor: '#04222d',
+        tertiaryColor: '#04222d',
+        mainBkg: '#062f3d',
+        nodeBorder: '#00eeff',
+        clusterBkg: '#02161f',
+        clusterBorder: '#00eeff55',
+        lineColor: '#00eeff',
+        textColor: '#c0e8ff',
+        edgeLabelBackground: '#02161f'
+      },
+      flowchart: { curve: 'basis', useMaxWidth: true, htmlLabels: false, nodeSpacing: 46, rankSpacing: 64, padding: 14 }
+    });
+
+    var targets = [];
+    blocks.forEach(function(el){
+      var codeEl = el.querySelector('code');
+      if(!codeEl) return;
+      var div = document.createElement('div');
+      div.className = 'mermaid';
+      div.textContent = codeEl.textContent;
+      el.parentNode.replaceChild(div, el);
+      targets.push(div);
+    });
+    if(!targets.length) return;
+    try { await mermaid.run({ nodes: targets }); }
+    catch(e){ console.warn('[mermaid] 渲染失败：', e); }
+  }
+  /* 作用：多次触发兜底。某些时机（pjax 局部加载、标签页从后台恢复、库加载慢）
+     脚本可能一次没跑到，用「延迟重试 + DOM 变化监听」保证最终一定渲染成图 */
+  var mmBusy = false;
+  function scheduleMermaid(){
+    if(mmBusy) return;
+    mmBusy = true;
+    renderMermaidDiagram().then(function(){ mmBusy = false; }, function(){ mmBusy = false; });
+  }
+
+  document.addEventListener('DOMContentLoaded', scheduleMermaid);
+  window.addEventListener('load', scheduleMermaid);
+  ['pjax:complete', 'pjax:success', 'render'].forEach(function(ev){
+    document.addEventListener(ev, scheduleMermaid);
+  });
+  [1000, 3000, 8000].forEach(function(ms){ setTimeout(scheduleMermaid, ms); });
+  if(document.readyState !== 'loading') scheduleMermaid();
+
+  /* 作用：正文被动态替换（局部刷新 / 回到前台）时再兜一次，防漏渲染 */
+  if(window.MutationObserver){
+    var mmTimer = null;
+    var mmObserver = new MutationObserver(function(){
+      clearTimeout(mmTimer);
+      mmTimer = setTimeout(scheduleMermaid, 400);
+    });
+    document.addEventListener('DOMContentLoaded', function(){
+      var root = document.querySelector('#article-container') || document.body;
+      mmObserver.observe(root, { childList: true, subtree: true });
+    });
+  }
+</script>
+
+
+  <script>
+    /* 返回按钮来源判定：从星迹索引进来回 /tags/，从星图手记进来回 /archives/；
+       直接从地址栏/站外进入时默认回星图手记，保证按钮始终可用 */
+    (function () {
+      var back = document.getElementById('articleBack');
+      if (!back) return;
+      var from = '';
+      try {
+        var q = new URLSearchParams(location.search);
+        from = q.get('from') || '';
+      } catch (e) {}
+      if (!from) {
+        var ref = document.referrer || '';
+        if (ref.indexOf('/tags') > -1) from = 'tags';
+        else if (ref.indexOf('/archives') > -1) from = 'archive';
+      }
+      if (from === 'tags') {
+        back.href = '/tags/';
+        back.textContent = '← 返回星迹索引';
+      } else if (from === 'search') {
+        back.href = '/';
+        back.textContent = '← 返回首页';
+      } else {
+        back.href = '/archives/';
+        back.textContent = '← 返回星图手记';
+      }
+    })();
+  </script>
+</body>
+</html>

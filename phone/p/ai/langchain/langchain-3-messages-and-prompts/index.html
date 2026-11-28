@@ -1,0 +1,551 @@
+<!--
+  ============================================
+  手机端 · 文章原文页
+  文件：phone/post.njk
+  适用终端：手机端（路由 /phone/p/<slug>/，由 scripts/phone-routes.js 生成）
+  作用：手机阅读单篇文章；单列布局、无侧栏无雷达，替代电脑端 post.njk
+        数据由生成期算好：page.item = { title, dateStr, content, cats, tags }
+  样式依赖：source/css/theme/phone/common.css、source/css/theme/phone/list.css
+  组件依赖：phone/_components/Particles.njk
+  最后修改：2026-11-11
+  ============================================
+-->
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="color-scheme" content="dark">
+  <meta name="theme-color" content="#020817">
+  <!-- 首帧兜底：浏览器默认画布是白的，样式未解析前会闪一下白。这条规则先锁死深空底色 -->
+  <style>html{background-color:#020817}</style>
+  <title>LangChain 03 · 消息与提示模板：content_blocks 与 trim_messages - 时空秘境</title>
+  <!-- 手机端样式：基础 + 列表/正文，外链引入（源文件 source/css/theme/phone/） -->
+  <link rel="stylesheet" href="/css/theme/phone/common.css">
+  <link rel="stylesheet" href="/css/theme/phone/list.css">
+<meta name="generator" content="Hexo 8.1.2"></head>
+<body>
+<div class="mb-shell">
+  <!--
+  ============================================
+  手机端星空粒子组件
+  文件：Particles.njk
+  适用终端：手机端
+  作用：Particles.njk 的手机端副本（nunjucks 子目录 include 取不到上级）
+        参数与电脑端 _components/Particles.njk 保持一致：
+        粒子 95 / 连线 118px / opacity 0.32，外加星座层与零星闪烁层
+  最后修改：2026-11-12
+  ============================================
+--><!-- z-index 必须是 0：负层级会被 body 不透明背景盖住，粒子在跑却看不见 -->
+<div id="particles" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 0; pointer-events: none;"></div>
+<!-- 星座层（与首页同一套：随机零星散布星座图形 + 偶尔闪烁的小星） -->
+<div id="constellations" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 1; pointer-events: none;" aria-hidden="true"></div>
+<script src="/js/particles.min.js"></script>
+<script>
+particlesJS("particles", {
+  particles: {
+    number: {
+      value: 95,
+      density: {
+        enable: true,
+        value_area: 800
+      }
+    },
+    color: {
+      value: "#00eeff"
+    },
+    shape: {
+      type: "circle",
+      stroke: {
+        width: 0,
+        color: "#000000"
+      }
+    },
+    opacity: {
+      value: 0.6,
+      random: true,
+      anim: {
+        enable: true,
+        speed: 0.5,
+        opacity_min: 0.1,
+        sync: false
+      }
+    },
+    size: {
+      value: 3,
+      random: true,
+      anim: {
+        enable: true,
+        speed: 2,
+        size_min: 0.1,
+        sync: false
+      }
+    },
+    line_linked: {
+      enable: true,
+      distance: 118,
+      color: "#00eeff",
+      opacity: 0.32,
+      width: 1
+    },
+    move: {
+      enable: true,
+      speed: 0.8,
+      direction: "none",
+      random: true,
+      straight: false,
+      out_mode: "out",
+      bounce: false,
+      attract: {
+        enable: true,
+        rotateX: 600,
+        rotateY: 1200
+      }
+    }
+  },
+  interactivity: {
+    detect_on: "canvas",
+    events: {
+      onhover: {
+        enable: true,
+        mode: "grab"       // 手指按住时粒子聚集
+      },
+      onclick: {
+        enable: true,
+        mode: "push"       // 点击时产生新粒子
+      },
+      resize: true
+    },
+    modes: {
+      grab: {
+        distance: 200,
+        line_linked: {
+          opacity: 1
+        }
+      },
+      push: {
+        particles_nb: 6
+      }
+    }
+  },
+  retina_detect: true
+});
+</script>
+<!-- 星座 + 零星闪烁层：与电脑端共用同一份绘制脚本 -->
+<script src="/js/theme/home/starfield.js"></script>
+
+
+  <div class="mb-top">
+    <a class="mb-back" href="/phone/">← 返回手机首页</a>
+    <span class="mb-sub" style="margin:0">2026-12-01</span>
+  </div>
+
+  <h1 class="mb-title">LangChain 03 · 消息与提示模板：content_blocks 与 trim_messages</h1>
+  <div class="mb-sub">
+    分类：ai · langchain
+     ｜ 标签：LangChain · AI · 系统课
+  </div>
+
+  <div class="mb-article"><div class="essay-banner essay-langchain"></div>
+
+<h1 id="03-消息与提示模板：content-blocks-与-trim-messages"><a href="#03-消息与提示模板：content-blocks-与-trim-messages" class="headerlink" title="03 消息与提示模板：content_blocks 与 trim_messages"></a>03 消息与提示模板：<code>content_blocks</code> 与 <code>trim_messages</code></h1><p><img src="https://wu4yong.github.io/starry-images/assets/img/langchain/v1/lc-3-messages.svg" alt="四种消息角色与一条消息的三层结构：role、content、metadata"></p>
+<p><em>消息 &#x3D; 角色 + 内容 + 元数据；v1 把内容统一成 <code>content_blocks</code>，跨 provider 一致｜依据 docs.langchain.com&#x2F;oss&#x2F;python&#x2F;langchain&#x2F;messages 自绘</em></p>
+<p><strong>版本不一致提示</strong>：</p>
+<ul>
+<li>本篇基线是 LangChain v1（1.x）+ Python 3.13，官方 Quickstart 的示例环境是 Python 3.11，仅解释器版本不同；</li>
+<li>旧 0.x 消息对象只有 <code>content</code> 一个字段、各家 provider 格式不一；v1 才把输出统一到 <code>content_blocks</code>；</li>
+<li>旧教程里「直接取 <code>response.content</code> 里的字符串」的写法属于版本差异，不是本篇写错。</li>
+</ul>
+<h2 id="一、学习目标"><a href="#一、学习目标" class="headerlink" title="一、学习目标"></a>一、学习目标</h2><p>学完这一讲，你要能做到三件事：</p>
+<ol>
+<li>分清 <code>SystemMessage</code>、<code>HumanMessage</code>、<code>AIMessage</code>、<code>ToolMessage</code> 各自代表谁说的话，什么时候该用哪个；</li>
+<li>会用 <code>content_blocks</code> 读模型输出，而不是在 <code>response.content</code> 里猜结构；</li>
+<li>历史消息变长时，用 <code>trim_messages</code> 按 token 预算裁剪，而不是靠 <code>[-10:]</code> 硬切。</li>
+</ol>
+<h2 id="二、前置知识"><a href="#二、前置知识" class="headerlink" title="二、前置知识"></a>二、前置知识</h2><ul>
+<li>第 01、02 篇已完成：能初始化模型并 <code>invoke</code>；</li>
+<li>知道「上下文窗口」的概念，知道超了会报错或截断。</li>
+</ul>
+<h2 id="三、理论讲解（官方定义）"><a href="#三、理论讲解（官方定义）" class="headerlink" title="三、理论讲解（官方定义）"></a>三、理论讲解（官方定义）</h2><p>骨架照官方 <a target="_blank" rel="noopener" href="https://docs.langchain.com/oss/python/langchain/messages">Messages</a> 页：Basic usage（Text prompts &#x2F; Message prompts &#x2F; Dictionary format）→ Message types（System &#x2F; Human &#x2F; AI &#x2F; Tool）→ Message content（Standard content blocks &#x2F; Multimodal &#x2F; Content block reference）。<code>trim_messages</code> 不在 Messages 页正文，但官方迁移指南的 Namespace 表把它列在 <code>langchain.messages</code> 之下，本篇作为「官方导出、实践常用」的能力单独一节。</p>
+<h3 id="1-消息是什么（官方原文直译）"><a href="#1-消息是什么（官方原文直译）" class="headerlink" title="1. 消息是什么（官方原文直译）"></a>1. 消息是什么（官方原文直译）</h3><p>官方定义：消息是 LangChain 中模型上下文的<strong>基本单位</strong>，代表模型的输入与输出，既携带内容也携带元数据。一条消息包含三部分：</p>
+<ul>
+<li><strong>Role</strong>——标识消息类型（如 <code>system</code>、<code>user</code>）；</li>
+<li><strong>Content</strong>——实际内容（文本、图片、音频、文档等）；</li>
+<li><strong>Metadata</strong>——可选字段，如响应信息、消息 ID、token 用量。</li>
+</ul>
+<p>官方强调：LangChain 提供跨所有 provider 通用的标准消息类型，因此换模型时消息行为一致。</p>
+<h3 id="2-三种基本用法（官方-Messages「Basic-usage」）"><a href="#2-三种基本用法（官方-Messages「Basic-usage」）" class="headerlink" title="2. 三种基本用法（官方 Messages「Basic usage」）"></a>2. 三种基本用法（官方 Messages「Basic usage」）</h3><p><strong>Text prompts</strong>：直接传字符串，适合单次、无需保留历史的生成。</p>
+<pre class="line-numbers language-python" data-language="python"><code class="language-python">response <span class="token operator">=</span> model<span class="token punctuation">.</span>invoke<span class="token punctuation">(</span><span class="token string">"Write a haiku about spring"</span><span class="token punctuation">)</span><span aria-hidden="true" class="line-numbers-rows"><span></span></span></code></pre>
+
+<p><strong>Message prompts</strong>：传消息对象列表，适合多轮、多模态、需要系统指令。</p>
+<pre class="line-numbers language-python" data-language="python"><code class="language-python"><span class="token keyword">from</span> langchain<span class="token punctuation">.</span>messages <span class="token keyword">import</span> SystemMessage<span class="token punctuation">,</span> HumanMessage<span class="token punctuation">,</span> AIMessage
+
+messages <span class="token operator">=</span> <span class="token punctuation">[</span>
+    SystemMessage<span class="token punctuation">(</span><span class="token string">"You are a poetry expert"</span><span class="token punctuation">)</span><span class="token punctuation">,</span>
+    HumanMessage<span class="token punctuation">(</span><span class="token string">"Write a haiku about spring"</span><span class="token punctuation">)</span><span class="token punctuation">,</span>
+    AIMessage<span class="token punctuation">(</span><span class="token string">"Cherry blossoms bloom..."</span><span class="token punctuation">)</span><span class="token punctuation">,</span>
+<span class="token punctuation">]</span>
+response <span class="token operator">=</span> model<span class="token punctuation">.</span>invoke<span class="token punctuation">(</span>messages<span class="token punctuation">)</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<p><strong>Dictionary format</strong>：用 OpenAI chat completions 的字典格式。</p>
+<pre class="line-numbers language-python" data-language="python"><code class="language-python">messages <span class="token operator">=</span> <span class="token punctuation">[</span>
+    <span class="token punctuation">&#123;</span><span class="token string">"role"</span><span class="token punctuation">:</span> <span class="token string">"system"</span><span class="token punctuation">,</span> <span class="token string">"content"</span><span class="token punctuation">:</span> <span class="token string">"You are a poetry expert"</span><span class="token punctuation">&#125;</span><span class="token punctuation">,</span>
+    <span class="token punctuation">&#123;</span><span class="token string">"role"</span><span class="token punctuation">:</span> <span class="token string">"user"</span><span class="token punctuation">,</span> <span class="token string">"content"</span><span class="token punctuation">:</span> <span class="token string">"Write a haiku about spring"</span><span class="token punctuation">&#125;</span><span class="token punctuation">,</span>
+    <span class="token punctuation">&#123;</span><span class="token string">"role"</span><span class="token punctuation">:</span> <span class="token string">"assistant"</span><span class="token punctuation">,</span> <span class="token string">"content"</span><span class="token punctuation">:</span> <span class="token string">"Cherry blossoms bloom..."</span><span class="token punctuation">&#125;</span><span class="token punctuation">,</span>
+<span class="token punctuation">]</span>
+response <span class="token operator">=</span> model<span class="token punctuation">.</span>invoke<span class="token punctuation">(</span>messages<span class="token punctuation">)</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<p>官方给了三条选择标准：单次独立请求用字符串；要管多轮、多模态、系统指令用消息对象；要跟 OpenAI 生态对齐用字典。</p>
+<h3 id="3-四种消息类型（官方-Messages「Message-types」）"><a href="#3-四种消息类型（官方-Messages「Message-types」）" class="headerlink" title="3. 四种消息类型（官方 Messages「Message types」）"></a>3. 四种消息类型（官方 Messages「Message types」）</h3><table>
+<thead>
+<tr>
+<th>类型</th>
+<th>代表</th>
+<th>导入路径</th>
+<th>典型用途</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>SystemMessage</code></td>
+<td>初始指令，给模型定角色与规则</td>
+<td><code>langchain.messages</code></td>
+<td>设定人设、约束输出格式</td>
+</tr>
+<tr>
+<td><code>HumanMessage</code></td>
+<td>用户输入</td>
+<td><code>langchain.messages</code></td>
+<td>提问、上传图片&#x2F;音频&#x2F;文件</td>
+</tr>
+<tr>
+<td><code>AIMessage</code></td>
+<td>模型输出</td>
+<td><code>langchain.messages</code></td>
+<td>携带文本、工具调用、用量元数据</td>
+</tr>
+<tr>
+<td><code>ToolMessage</code></td>
+<td>工具执行结果</td>
+<td><code>langchain.messages</code></td>
+<td>把工具返回值回灌给模型</td>
+</tr>
+</tbody></table>
+<p><strong>版本备注</strong>：【v0.x 与 v1 一致，无迁移动作】。消息类型本身在 0.x 就是这套；v1 的变化在于统一导出到 <code>langchain.messages</code>（迁移指南 Namespace 表：消息类型与 content blocks 从 <code>langchain-core</code> 再导出）。</p>
+<h3 id="4-HumanMessage-的文本与元数据（官方「Human-message」「Text-content」「Message-metadata」）"><a href="#4-HumanMessage-的文本与元数据（官方「Human-message」「Text-content」「Message-metadata」）" class="headerlink" title="4. HumanMessage 的文本与元数据（官方「Human message」「Text content」「Message metadata」）"></a>4. HumanMessage 的文本与元数据（官方「Human message」「Text content」「Message metadata」）</h3><p>文本内容两种写法等价：</p>
+<pre class="line-numbers language-python" data-language="python"><code class="language-python"><span class="token comment"># 消息对象</span>
+response <span class="token operator">=</span> model<span class="token punctuation">.</span>invoke<span class="token punctuation">(</span><span class="token punctuation">[</span>HumanMessage<span class="token punctuation">(</span><span class="token string">"What is machine learning?"</span><span class="token punctuation">)</span><span class="token punctuation">]</span><span class="token punctuation">)</span>
+
+<span class="token comment"># 字符串是单个 HumanMessage 的快捷方式</span>
+response <span class="token operator">=</span> model<span class="token punctuation">.</span>invoke<span class="token punctuation">(</span><span class="token string">"What is machine learning?"</span><span class="token punctuation">)</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<p>元数据可以带 <code>name</code> 与 <code>id</code>：</p>
+<pre class="line-numbers language-python" data-language="python"><code class="language-python">human_msg <span class="token operator">=</span> HumanMessage<span class="token punctuation">(</span>
+    content<span class="token operator">=</span><span class="token string">"Hello!"</span><span class="token punctuation">,</span>
+    name<span class="token operator">=</span><span class="token string">"alice"</span><span class="token punctuation">,</span>   <span class="token comment"># 可选：区分不同用户</span>
+    <span class="token builtin">id</span><span class="token operator">=</span><span class="token string">"msg_123"</span><span class="token punctuation">,</span>   <span class="token comment"># 可选：追踪用的唯一标识</span>
+<span class="token punctuation">)</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<p>官方提醒：<code>name</code> 字段的行为<strong>因 provider 而异</strong>，有的用它做用户标识，有的直接忽略，需要查对应 provider 的文档。</p>
+<h3 id="5-AIMessage-的属性（官方「AI-message」）"><a href="#5-AIMessage-的属性（官方「AI-message」）" class="headerlink" title="5. AIMessage 的属性（官方「AI message」）"></a>5. AIMessage 的属性（官方「AI message」）</h3><p>官方列出的属性：</p>
+<table>
+<thead>
+<tr>
+<th>属性</th>
+<th>类型</th>
+<th>含义</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>text</code></td>
+<td><code>string</code></td>
+<td>消息的文本内容</td>
+</tr>
+<tr>
+<td><code>content</code></td>
+<td><code>string | dict[]</code></td>
+<td>原始内容</td>
+</tr>
+<tr>
+<td><code>content_blocks</code></td>
+<td><code>ContentBlock[]</code></td>
+<td>标准化的内容块</td>
+</tr>
+<tr>
+<td><code>tool_calls</code></td>
+<td><code>dict[] | None</code></td>
+<td>模型发起的工具调用，未调用时为空</td>
+</tr>
+<tr>
+<td><code>id</code></td>
+<td><code>string</code></td>
+<td>消息唯一标识（LangChain 生成或 provider 返回）</td>
+</tr>
+<tr>
+<td><code>usage_metadata</code></td>
+<td><code>dict | None</code></td>
+<td>用量元数据，可用时含 token 计数</td>
+</tr>
+<tr>
+<td><code>response_metadata</code></td>
+<td><code>ResponseMetadata | None</code></td>
+<td>响应元数据</td>
+</tr>
+</tbody></table>
+<p>官方还说明：有时需要手动构造 <code>AIMessage</code> 插进历史，让模型「以为」这句话是它说的（例如构造少样本示例）。</p>
+<h3 id="6-工具调用、用量与结束原因（官方「Tool-calls」「Token-usage」「Finish-reason」）"><a href="#6-工具调用、用量与结束原因（官方「Tool-calls」「Token-usage」「Finish-reason」）" class="headerlink" title="6. 工具调用、用量与结束原因（官方「Tool calls」「Token usage」「Finish reason」）"></a>6. 工具调用、用量与结束原因（官方「Tool calls」「Token usage」「Finish reason」）</h3><pre class="line-numbers language-python" data-language="python"><code class="language-python">model_with_tools <span class="token operator">=</span> model<span class="token punctuation">.</span>bind_tools<span class="token punctuation">(</span><span class="token punctuation">[</span>get_weather<span class="token punctuation">]</span><span class="token punctuation">)</span>
+response <span class="token operator">=</span> model_with_tools<span class="token punctuation">.</span>invoke<span class="token punctuation">(</span><span class="token string">"What's the weather in Paris?"</span><span class="token punctuation">)</span>
+
+<span class="token keyword">for</span> tool_call <span class="token keyword">in</span> response<span class="token punctuation">.</span>tool_calls<span class="token punctuation">:</span>
+    <span class="token keyword">print</span><span class="token punctuation">(</span>tool_call<span class="token punctuation">[</span><span class="token string">"name"</span><span class="token punctuation">]</span><span class="token punctuation">,</span> tool_call<span class="token punctuation">[</span><span class="token string">"args"</span><span class="token punctuation">]</span><span class="token punctuation">,</span> tool_call<span class="token punctuation">[</span><span class="token string">"id"</span><span class="token punctuation">]</span><span class="token punctuation">)</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<p>用量：</p>
+<pre class="line-numbers language-python" data-language="python"><code class="language-python">response <span class="token operator">=</span> model<span class="token punctuation">.</span>invoke<span class="token punctuation">(</span><span class="token string">"Hello!"</span><span class="token punctuation">)</span>
+response<span class="token punctuation">.</span>usage_metadata
+<span class="token comment"># &#123;'input_tokens': 8, 'output_tokens': 304, 'total_tokens': 312,</span>
+<span class="token comment">#  'input_token_details': &#123;...&#125;, 'output_token_details': &#123;...&#125;&#125;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span></span></code></pre>
+
+<p>结束原因有个前置条件：官方写明该能力需要 <code>langchain-core&gt;=1.8.4</code> 且集成负责映射（如 <code>langchain-openai</code>、<code>langchain-anthropic</code>、<code>langchain-google-genai</code>、<code>langchain-aws</code> 的相应版本）。<code>response_metadata</code> 里会出现三个键：</p>
+<table>
+<thead>
+<tr>
+<th>键</th>
+<th>含义</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>finish_reason</code></td>
+<td>provider 的原始值，如 Anthropic 的 <code>end_turn</code>、Gemini 的 <code>MAX_TOKENS</code></td>
+</tr>
+<tr>
+<td><code>normalized_finish_reason</code></td>
+<td>归一化后的统一取值</td>
+</tr>
+<tr>
+<td><code>finish_state</code></td>
+<td>仅 Anthropic：<code>complete</code>，或需要续发请求时的 <code>suspended</code></td>
+</tr>
+</tbody></table>
+<p>归一化取值官方列了：<code>stop</code>、<code>length</code>、<code>context_exceeded</code>、<code>tool_call</code>、<code>content_filter</code>、<code>refusal</code>、<code>error</code>、<code>other</code>。工程上判断「是不是被截断」看 <code>normalized_finish_reason == &quot;length&quot;</code> 就够了。</p>
+<h3 id="7-标准化内容块-content-blocks（官方「Standard-content-blocks」）"><a href="#7-标准化内容块-content-blocks（官方「Standard-content-blocks」）" class="headerlink" title="7. 标准化内容块 content_blocks（官方「Standard content blocks」）"></a>7. 标准化内容块 content_blocks（官方「Standard content blocks」）</h3><p>这是 v1 最该掌握的一处变化。官方迁移指南「Standard content」一节的说法是：v1 把不同 provider 各自的内容格式统一成标准块，读完 <code>content_blocks</code> 就不用再对着 <code>content</code> 里嵌套的 provider 私有字段做分支。</p>
+<p>常见块类型（官方 content block reference 列出，各 provider 支持程度不同）：</p>
+<table>
+<thead>
+<tr>
+<th><code>type</code></th>
+<th>承载什么</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>text</code></td>
+<td>纯文本</td>
+</tr>
+<tr>
+<td><code>reasoning</code></td>
+<td>推理过程（部分模型提供）</td>
+</tr>
+<tr>
+<td><code>tool_call</code></td>
+<td>完整的工具调用（含 id、name、args）</td>
+</tr>
+<tr>
+<td><code>tool_call_chunk</code></td>
+<td>流式过程中的工具调用片段</td>
+</tr>
+<tr>
+<td><code>image</code></td>
+<td>图片（多模态输入&#x2F;输出）</td>
+</tr>
+<tr>
+<td><code>audio</code></td>
+<td>音频</td>
+</tr>
+<tr>
+<td><code>file</code></td>
+<td>文件</td>
+</tr>
+<tr>
+<td><code>refusal</code></td>
+<td>模型拒答（与 <code>normalized_finish_reason=refusal</code> 对应）</td>
+</tr>
+</tbody></table>
+<p><strong>版本备注</strong>：【旧版是把 provider 原始内容放在 <code>content</code> 里各写各的，v1 已改为提供标准化 <code>content_blocks</code>】。来源：LangChain v1 migration guide · Standard content。</p>
+<h2 id="四、原理拆解"><a href="#四、原理拆解" class="headerlink" title="四、原理拆解"></a>四、原理拆解</h2><p><img src="https://wu4yong.github.io/starry-images/assets/img/langchain/v1/lc-3b-blocks.svg" alt="content_blocks：把七家 provider 的私有格式压成一套标准块"></p>
+<p><em>provider 原始 content → 标准化 content_blocks → 业务代码只认 type｜自绘</em></p>
+<p>消息像快递面单，三栏必填：寄件人（role）、包裹内容（content）、面单信息（metadata）。</p>
+<p><code>content_blocks</code> 的作用是「统一包装规格」。以前每家 provider 的包裹长得不一样：OpenAI 用 <code>tool_calls</code>、Anthropic 用 <code>tool_use</code> 块、Gemini 又是另一套字段，你写业务代码得先判断「这是谁家的包裹」。v1 之后，全部先拆成标准件：文本是 <code>text</code> 块、工具调用是 <code>tool_call</code> 块、图片是 <code>image</code> 块。你只按 <code>block[&quot;type&quot;]</code> 分派，不用管 provider。</p>
+<h2 id="五、场景说明"><a href="#五、场景说明" class="headerlink" title="五、场景说明"></a>五、场景说明</h2><ol>
+<li><strong>多轮客服</strong>：<code>SystemMessage</code> 定人设 + 历史 <code>HumanMessage</code>&#x2F;<code>AIMessage</code> 交替 + 每轮追加新 <code>HumanMessage</code>；</li>
+<li><strong>多模态问答</strong>：<code>HumanMessage</code> 里放 <code>image</code> 块 + 文本块，同一个接口；</li>
+<li><strong>长会话控成本</strong>：历史超过预算时用 <code>trim_messages</code> 裁剪，保留 system 与最近若干轮；</li>
+<li><strong>工具闭环</strong>：<code>AIMessage.tool_calls</code> → 执行 → <code>ToolMessage</code> 回灌，这是第 05、08 篇的骨架。</li>
+</ol>
+<h2 id="六、示例代码"><a href="#六、示例代码" class="headerlink" title="六、示例代码"></a>六、示例代码</h2><h3 id="步骤-1：环境准备"><a href="#步骤-1：环境准备" class="headerlink" title="步骤 1：环境准备"></a>步骤 1：环境准备</h3><p>同第 01 篇步骤 1；本篇只依赖 <code>langchain</code> 与 provider 包，无额外依赖：</p>
+<pre class="line-numbers language-bash" data-language="bash"><code class="language-bash">uv <span class="token function">add</span> <span class="token string">"langchain[openai]"</span>
+<span class="token comment"># pip 等价：pip install -U "langchain[openai]"</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span></span></code></pre>
+
+<h3 id="步骤-2：凭证配置"><a href="#步骤-2：凭证配置" class="headerlink" title="步骤 2：凭证配置"></a>步骤 2：凭证配置</h3><p>同第 01 篇步骤 2，需要 <code>OPENAI_API_KEY</code>。</p>
+<h3 id="步骤-3：导入"><a href="#步骤-3：导入" class="headerlink" title="步骤 3：导入"></a>步骤 3：导入</h3><pre class="line-numbers language-python" data-language="python"><code class="language-python"><span class="token keyword">from</span> langchain<span class="token punctuation">.</span>chat_models <span class="token keyword">import</span> init_chat_model            <span class="token comment"># 模型入口</span>
+<span class="token keyword">from</span> langchain<span class="token punctuation">.</span>messages <span class="token keyword">import</span> <span class="token punctuation">(</span>                            <span class="token comment"># v1 统一消息导出</span>
+    SystemMessage<span class="token punctuation">,</span> HumanMessage<span class="token punctuation">,</span> AIMessage<span class="token punctuation">,</span> ToolMessage<span class="token punctuation">,</span>
+    trim_messages<span class="token punctuation">,</span>
+<span class="token punctuation">)</span>
+<span class="token keyword">from</span> langchain<span class="token punctuation">.</span>messages <span class="token keyword">import</span> count_tokens_approximately    <span class="token comment"># 轻量 token 估算</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<h3 id="步骤-4：最小可运行代码"><a href="#步骤-4：最小可运行代码" class="headerlink" title="步骤 4：最小可运行代码"></a>步骤 4：最小可运行代码</h3><p>存成 <code>main.py</code>，<code>uv run main.py</code> 执行（pip 方案：<code>python main.py</code>）。</p>
+<pre class="line-numbers language-python" data-language="python"><code class="language-python"><span class="token keyword">from</span> langchain<span class="token punctuation">.</span>chat_models <span class="token keyword">import</span> init_chat_model
+<span class="token keyword">from</span> langchain<span class="token punctuation">.</span>messages <span class="token keyword">import</span> SystemMessage<span class="token punctuation">,</span> HumanMessage<span class="token punctuation">,</span> AIMessage<span class="token punctuation">,</span> trim_messages
+<span class="token keyword">from</span> langchain<span class="token punctuation">.</span>messages <span class="token keyword">import</span> count_tokens_approximately
+
+model <span class="token operator">=</span> init_chat_model<span class="token punctuation">(</span><span class="token string">"openai:gpt-5-nano"</span><span class="token punctuation">)</span>
+
+history <span class="token operator">=</span> <span class="token punctuation">[</span>
+    SystemMessage<span class="token punctuation">(</span><span class="token string">"你是一名数据库助教，回答控制在三句以内。"</span><span class="token punctuation">)</span><span class="token punctuation">,</span>
+    HumanMessage<span class="token punctuation">(</span><span class="token string">"什么是覆盖索引？"</span><span class="token punctuation">)</span><span class="token punctuation">,</span>
+    AIMessage<span class="token punctuation">(</span><span class="token string">"覆盖索引是指查询需要的列全部在索引里，不必回表。"</span><span class="token punctuation">)</span><span class="token punctuation">,</span>
+    HumanMessage<span class="token punctuation">(</span><span class="token string">"那它一定更快吗？"</span><span class="token punctuation">)</span><span class="token punctuation">,</span>
+<span class="token punctuation">]</span>
+
+<span class="token comment"># 1) 正常调用，读标准化内容块</span>
+response <span class="token operator">=</span> model<span class="token punctuation">.</span>invoke<span class="token punctuation">(</span>history<span class="token punctuation">)</span>
+<span class="token keyword">for</span> block <span class="token keyword">in</span> response<span class="token punctuation">.</span>content_blocks<span class="token punctuation">:</span>
+    <span class="token keyword">print</span><span class="token punctuation">(</span>block<span class="token punctuation">[</span><span class="token string">"type"</span><span class="token punctuation">]</span><span class="token punctuation">,</span> block<span class="token punctuation">.</span>get<span class="token punctuation">(</span><span class="token string">"text"</span><span class="token punctuation">)</span><span class="token punctuation">)</span>
+
+<span class="token comment"># 2) 历史太长时按 token 预算裁剪：保留 system + 最近的消息</span>
+trimmed <span class="token operator">=</span> trim_messages<span class="token punctuation">(</span>
+    history<span class="token punctuation">,</span>
+    max_tokens<span class="token operator">=</span><span class="token number">200</span><span class="token punctuation">,</span>                 <span class="token comment"># 预算，按 token 算</span>
+    token_counter<span class="token operator">=</span>count_tokens_approximately<span class="token punctuation">,</span>  <span class="token comment"># 官方示例里常用的估算器</span>
+    strategy<span class="token operator">=</span><span class="token string">"last"</span><span class="token punctuation">,</span>                <span class="token comment"># 从最新往回留</span>
+    include_system<span class="token operator">=</span><span class="token boolean">True</span><span class="token punctuation">,</span>            <span class="token comment"># 系统消息一定要留</span>
+    start_on<span class="token operator">=</span><span class="token string">"human"</span><span class="token punctuation">,</span>               <span class="token comment"># 裁剪后必须以用户消息开头</span>
+<span class="token punctuation">)</span>
+<span class="token keyword">print</span><span class="token punctuation">(</span><span class="token builtin">len</span><span class="token punctuation">(</span>history<span class="token punctuation">)</span><span class="token punctuation">,</span> <span class="token string">"->"</span><span class="token punctuation">,</span> <span class="token builtin">len</span><span class="token punctuation">(</span>trimmed<span class="token punctuation">)</span><span class="token punctuation">)</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<h3 id="步骤-5：预期输出"><a href="#步骤-5：预期输出" class="headerlink" title="步骤 5：预期输出"></a>步骤 5：预期输出</h3><pre class="line-numbers language-text" data-language="text"><code class="language-text">text 覆盖索引不一定更快，取决于回表成本和索引选择性。
+4 -> 3<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span></span></code></pre>
+
+<p>裁剪前后条数会因预算不同而变化，结构大致为：先打印内容块类型与文本，再打印「原条数 -&gt; 裁剪后条数」。</p>
+<h3 id="步骤-6：验证是否成功"><a href="#步骤-6：验证是否成功" class="headerlink" title="步骤 6：验证是否成功"></a>步骤 6：验证是否成功</h3><p>看到 <code>content_blocks</code> 打印出 <code>text</code> 类型的块、且裁剪后条数小于原条数、首条仍是 <code>HumanMessage</code>，就说明消息结构与裁剪都跑通了。</p>
+<h2 id="七、常见坑（官方明确限制-版本差异）"><a href="#七、常见坑（官方明确限制-版本差异）" class="headerlink" title="七、常见坑（官方明确限制&#x2F;版本差异）"></a>七、常见坑（官方明确限制&#x2F;版本差异）</h2><ol>
+<li><strong>还在用 <code>response.content</code> 猜结构</strong>。官方已提供 <code>content_blocks</code>，用 <code>content</code> 就要自己判 provider 私有格式，这正是 v1 想消灭的。</li>
+<li><strong><code>name</code> 字段以为通用</strong>。官方写明行为因 provider 而异，别把 <code>name</code> 当稳定标识，用 <code>id</code> 追踪更靠谱。</li>
+<li><strong>拿 <code>finish_reason</code> 判断截断</strong>。要跨 provider 判断，用 <code>normalized_finish_reason == &quot;length&quot;</code>；且该字段要求 <code>langchain-core&gt;=1.8.4</code> 与集成支持，版本不够时字段就是空的。</li>
+<li><strong><code>trim_messages</code> 用 <code>[-10:]</code> 代替</strong>。按条数切不看 token，长消息一样爆窗；官方给的是按 token 预算裁。</li>
+<li><strong>裁剪后角色错位</strong>。裁完第一条变成 <code>AIMessage</code> 会引起部分 provider 报错或行为异常，用 <code>start_on=&quot;human&quot;</code> 约束。</li>
+</ol>
+<p>本篇涉及 API 在 LangChain v1 迁移指南中的对应条目：Standard content（<code>content_blocks</code> 标准化）、Namespace（消息类型与 <code>trim_messages</code> 从 <code>langchain-core</code> 再导出）。<code>trim_messages</code> 的签名本身，官方迁移指南与 Release Notes 均未标注变更。</p>
+<h2 id="八、课后小结"><a href="#八、课后小结" class="headerlink" title="八、课后小结"></a>八、课后小结</h2><ul>
+<li>消息三要素：role、content、metadata；</li>
+<li>四种角色：System &#x2F; Human &#x2F; AI &#x2F; Tool，导入统一在 <code>langchain.messages</code>；</li>
+<li>读模型输出优先用 <code>content_blocks</code>，按 <code>type</code> 分派；</li>
+<li>判断截断看 <code>normalized_finish_reason</code>；</li>
+<li>长历史用 <code>trim_messages</code> 按 token 预算裁，并约束起点角色。</li>
+</ul>
+<h2 id="九、思考题"><a href="#九、思考题" class="headerlink" title="九、思考题"></a>九、思考题</h2><p><strong>1、<code>model.invoke(&quot;你好&quot;)</code> 和 <code>model.invoke([HumanMessage(&quot;你好&quot;)])</code> 有什么区别？</strong></p>
+<p>参考回答：官方明确说字符串是「单个 HumanMessage 的快捷方式」，两者等价。区别只在需要附加 <code>name</code>、<code>id</code> 或混排多种角色时，必须用消息对象。</p>
+<p><strong>2、为什么要用 <code>content_blocks</code> 而不是 <code>content</code>？</strong></p>
+<p>参考回答：因为 <code>content</code> 保留 provider 的原始结构，各家字段不同；<code>content_blocks</code> 是 v1 标准化后的统一形状，按 <code>type</code> 分派即可跨 provider 复用业务逻辑。官方迁移指南把这列为 v1 的 Standard content 变更。</p>
+<p><strong>3、<code>trim_messages</code> 里 <code>include_system=True</code> 不加会怎样？</strong></p>
+<p>参考回答：系统消息会被当作普通历史一起裁掉，模型失去人设与规则约束，输出风格漂移。官方参数就是为「保留系统指令」设计的，长会话场景应当开启。</p>
+<p><strong>4、一条 <code>AIMessage</code> 里会同时出现 <code>text</code> 和 <code>tool_call</code> 两种块吗？</strong></p>
+<p>参考回答：会。模型可以先输出一句话再发起工具调用，此时 <code>content_blocks</code> 里既有 <code>text</code> 块也有 <code>tool_call</code> 块；判断「是否要执行工具」看 <code>tool_calls</code> 是否非空，而不是看文本有没有内容。</p>
+<h2 id="十、下一篇预告"><a href="#十、下一篇预告" class="headerlink" title="十、下一篇预告"></a>十、下一篇预告</h2><p><strong>下一篇标题</strong>：04 流式输出：token、tool call 与 reasoning 三种流。</p>
+<p><strong>一句话内容</strong>：讲 <code>stream()</code> 与 <code>astream_events()</code> 怎么把一次生成拆成增量块，<code>AIMessageChunk</code> 如何相加拼回完整消息，以及工具调用与推理内容在流里长什么样。</p>
+<p><strong>承接关系</strong>：本篇学会了按 <code>content_blocks</code> 读完整消息；流式就是把这些块边生成边吐出来，<code>tool_call_chunk</code> 正是 <code>tool_call</code> 的流式形态，不先懂块结构就看不懂流。</p>
+<p><strong>跳转位置</strong>：下一篇回到 Models 页的「Stream」与「Key methods」，是 M1 模块最后一讲。</p>
+<h2 id="十一、官方资料"><a href="#十一、官方资料" class="headerlink" title="十一、官方资料"></a>十一、官方资料</h2><ul>
+<li>Messages（消息类型、<code>content_blocks</code>、<code>trim_messages</code>）：<a target="_blank" rel="noopener" href="https://docs.langchain.com/oss/python/langchain/messages">https://docs.langchain.com/oss/python/langchain/messages</a></li>
+<li>Models（<code>invoke</code> &#x2F; <code>stream</code> &#x2F; <code>batch</code> 与返回类型）：<a target="_blank" rel="noopener" href="https://docs.langchain.com/oss/python/langchain/models">https://docs.langchain.com/oss/python/langchain/models</a></li>
+<li>v1 迁移指南（消息与 content blocks 的标准化）：<a target="_blank" rel="noopener" href="https://docs.langchain.com/oss/python/migrate/langchain-v1">https://docs.langchain.com/oss/python/migrate/langchain-v1</a></li>
+</ul>
+<p>上一篇：<a href="/2026/11/30/ai/langchain/langchain-2-model-init/">LC02 模型初始化</a> ｜ 下一篇：LC04 流式输出（待发布） ｜ <a href="/2026/11/28/ai/langchain/langchain-0-series-index/">总目录</a></p>
+</div>
+
+  <div class="mb-foot">
+    <a href="/phone/">返回手机首页</a>
+    <a href="/phone/tags/">星迹索引</a>
+  </div>
+</div>
+
+
+<script>
+  /* 作用：懒加载本地 mermaid 库；无 mermaid 代码块时不加载 */
+  function loadLocalMermaid(){
+    return new Promise(function(resolve, reject){
+      if(window.mermaid) return resolve(window.mermaid);
+      var s = document.createElement('script');
+      s.src = '/js/third-party/mermaid/mermaid.min.js?v=10';
+      s.onload = function(){ resolve(window.mermaid); };
+      s.onerror = function(){ reject(new Error('mermaid local load failed')); };
+      document.head.appendChild(s);
+    });
+  }
+
+  /* 作用：把 ```mermaid 代码块替换成 SVG 图（手机端字号略小、图可横向滚动） */
+  async function renderMermaidDiagram(){
+    var blocks = document.querySelectorAll('pre[class*="language-mermaid"]');
+    if(!blocks.length) return;
+    var mermaid;
+    try { mermaid = await loadLocalMermaid(); }
+    catch(e){ console.warn('[mermaid] 本地库加载失败：', e); return; }
+
+    mermaid.initialize({
+      startOnLoad: false,
+      theme: 'base',
+      themeVariables: {
+        darkMode: true,
+        background: 'transparent',
+        fontFamily: '"Microsoft YaHei", "PingFang SC", "Segoe UI", sans-serif',
+        fontSize: '12px',
+        primaryColor: '#062f3d',
+        primaryTextColor: '#d6f6ff',
+        primaryBorderColor: '#00eeff',
+        secondaryColor: '#04222d',
+        tertiaryColor: '#04222d',
+        mainBkg: '#062f3d',
+        nodeBorder: '#00eeff',
+        clusterBkg: '#02161f',
+        clusterBorder: '#00eeff55',
+        lineColor: '#00eeff',
+        textColor: '#c0e8ff',
+        edgeLabelBackground: '#02161f'
+      },
+      flowchart: { curve: 'basis', useMaxWidth: false, htmlLabels: false, nodeSpacing: 30, rankSpacing: 40, padding: 10 }
+    });
+
+    var targets = [];
+    blocks.forEach(function(el){
+      var codeEl = el.querySelector('code');
+      if(!codeEl) return;
+      var div = document.createElement('div');
+      div.className = 'mermaid';
+      div.textContent = codeEl.textContent;
+      el.parentNode.replaceChild(div, el);
+      targets.push(div);
+    });
+    if(!targets.length) return;
+    try { await mermaid.run({ nodes: targets }); }
+    catch(e){ console.warn('[mermaid] 渲染失败：', e); }
+  }
+  /* 作用：多次触发兜底（延迟重试 + DOM 变化），防止某次时机没跑到导致图表留在代码块 */
+  var mmBusy = false;
+  function scheduleMermaid(){
+    if(mmBusy) return;
+    mmBusy = true;
+    renderMermaidDiagram().then(function(){ mmBusy = false; }, function(){ mmBusy = false; });
+  }
+  scheduleMermaid();
+  window.addEventListener('load', scheduleMermaid);
+  [1000, 3000, 8000].forEach(function(ms){ setTimeout(scheduleMermaid, ms); });
+  if(document.readyState !== 'loading') scheduleMermaid();
+  if(window.MutationObserver){
+    var mmTimer = null;
+    var mmObserver = new MutationObserver(function(){
+      clearTimeout(mmTimer);
+      mmTimer = setTimeout(scheduleMermaid, 400);
+    });
+    mmObserver.observe(document.querySelector('.mb-article') || document.body, { childList: true, subtree: true });
+  }
+</script>
+</body>
+</html>

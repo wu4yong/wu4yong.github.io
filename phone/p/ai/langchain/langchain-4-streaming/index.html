@@ -1,0 +1,383 @@
+<!--
+  ============================================
+  手机端 · 文章原文页
+  文件：phone/post.njk
+  适用终端：手机端（路由 /phone/p/<slug>/，由 scripts/phone-routes.js 生成）
+  作用：手机阅读单篇文章；单列布局、无侧栏无雷达，替代电脑端 post.njk
+        数据由生成期算好：page.item = { title, dateStr, content, cats, tags }
+  样式依赖：source/css/theme/phone/common.css、source/css/theme/phone/list.css
+  组件依赖：phone/_components/Particles.njk
+  最后修改：2026-11-11
+  ============================================
+-->
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="color-scheme" content="dark">
+  <meta name="theme-color" content="#020817">
+  <!-- 首帧兜底：浏览器默认画布是白的，样式未解析前会闪一下白。这条规则先锁死深空底色 -->
+  <style>html{background-color:#020817}</style>
+  <title>LangChain 04 · 流式输出：token、tool call 与 reasoning 三种流 - 时空秘境</title>
+  <!-- 手机端样式：基础 + 列表/正文，外链引入（源文件 source/css/theme/phone/） -->
+  <link rel="stylesheet" href="/css/theme/phone/common.css">
+  <link rel="stylesheet" href="/css/theme/phone/list.css">
+<meta name="generator" content="Hexo 8.1.2"></head>
+<body>
+<div class="mb-shell">
+  <!--
+  ============================================
+  手机端星空粒子组件
+  文件：Particles.njk
+  适用终端：手机端
+  作用：Particles.njk 的手机端副本（nunjucks 子目录 include 取不到上级）
+        参数与电脑端 _components/Particles.njk 保持一致：
+        粒子 95 / 连线 118px / opacity 0.32，外加星座层与零星闪烁层
+  最后修改：2026-11-12
+  ============================================
+--><!-- z-index 必须是 0：负层级会被 body 不透明背景盖住，粒子在跑却看不见 -->
+<div id="particles" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 0; pointer-events: none;"></div>
+<!-- 星座层（与首页同一套：随机零星散布星座图形 + 偶尔闪烁的小星） -->
+<div id="constellations" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 1; pointer-events: none;" aria-hidden="true"></div>
+<script src="/js/particles.min.js"></script>
+<script>
+particlesJS("particles", {
+  particles: {
+    number: {
+      value: 95,
+      density: {
+        enable: true,
+        value_area: 800
+      }
+    },
+    color: {
+      value: "#00eeff"
+    },
+    shape: {
+      type: "circle",
+      stroke: {
+        width: 0,
+        color: "#000000"
+      }
+    },
+    opacity: {
+      value: 0.6,
+      random: true,
+      anim: {
+        enable: true,
+        speed: 0.5,
+        opacity_min: 0.1,
+        sync: false
+      }
+    },
+    size: {
+      value: 3,
+      random: true,
+      anim: {
+        enable: true,
+        speed: 2,
+        size_min: 0.1,
+        sync: false
+      }
+    },
+    line_linked: {
+      enable: true,
+      distance: 118,
+      color: "#00eeff",
+      opacity: 0.32,
+      width: 1
+    },
+    move: {
+      enable: true,
+      speed: 0.8,
+      direction: "none",
+      random: true,
+      straight: false,
+      out_mode: "out",
+      bounce: false,
+      attract: {
+        enable: true,
+        rotateX: 600,
+        rotateY: 1200
+      }
+    }
+  },
+  interactivity: {
+    detect_on: "canvas",
+    events: {
+      onhover: {
+        enable: true,
+        mode: "grab"       // 手指按住时粒子聚集
+      },
+      onclick: {
+        enable: true,
+        mode: "push"       // 点击时产生新粒子
+      },
+      resize: true
+    },
+    modes: {
+      grab: {
+        distance: 200,
+        line_linked: {
+          opacity: 1
+        }
+      },
+      push: {
+        particles_nb: 6
+      }
+    }
+  },
+  retina_detect: true
+});
+</script>
+<!-- 星座 + 零星闪烁层：与电脑端共用同一份绘制脚本 -->
+<script src="/js/theme/home/starfield.js"></script>
+
+
+  <div class="mb-top">
+    <a class="mb-back" href="/phone/">← 返回手机首页</a>
+    <span class="mb-sub" style="margin:0">2026-12-02</span>
+  </div>
+
+  <h1 class="mb-title">LangChain 04 · 流式输出：token、tool call 与 reasoning 三种流</h1>
+  <div class="mb-sub">
+    分类：ai · langchain
+     ｜ 标签：LangChain · AI · 系统课
+  </div>
+
+  <div class="mb-article"><div class="essay-banner essay-langchain"></div>
+
+<h1 id="04-流式输出：token、tool-call-与-reasoning-三种流"><a href="#04-流式输出：token、tool-call-与-reasoning-三种流" class="headerlink" title="04 流式输出：token、tool call 与 reasoning 三种流"></a>04 流式输出：token、tool call 与 reasoning 三种流</h1><p><img src="https://wu4yong.github.io/starry-images/assets/img/langchain/v1/lc-4-stream.svg" alt="三种流：模型层 token 流、Agent 层 messages&#x2F;updates&#x2F;custom 三种模式"></p>
+<p><em>模型层的 <code>stream()</code> 只吐 token；Agent 层的 <code>stream_mode</code> 才决定你看到的是进度、token 还是自定义事件｜依据官方 Streaming 页自绘</em></p>
+<p><strong>版本不一致提示</strong>：</p>
+<ul>
+<li>本篇基线是 LangChain v1（1.x）+ Python 3.13，官方示例环境是 Python 3.11，仅解释器版本不同；</li>
+<li><code>version=&quot;v2&quot;</code> 需要 LangGraph 1.1 以上，低于该版本只能按元组解包，这是本篇最需要注意的版本门槛；</li>
+<li>官方页面里的模型名（如 <code>gpt-6.1-sol</code>）随 provider 更新，模型名由 provider 透传，与本系列示例不同不代表写法过时。</li>
+</ul>
+<h2 id="一、学习目标"><a href="#一、学习目标" class="headerlink" title="一、学习目标"></a>一、学习目标</h2><p>学完这一讲，你要能做到三件事：</p>
+<ol>
+<li>分清「模型级流式」和「Agent 级流式」——前者是 <code>model.stream()</code> 返回 <code>AIMessageChunk</code>，后者是 <code>agent.stream(stream_mode=...)</code> 返回带模式标签的事件；</li>
+<li>会选 <code>stream_mode</code>：<code>messages</code>（token）、<code>updates</code>（每步状态）、<code>custom</code>（自己塞的进度），以及列表组合用法；</li>
+<li>会处理 v1 的两处坑：<code>version=&quot;v2&quot;</code> 的 <code>StreamPart</code> 结构与旧 <code>(mode, chunk)</code> 元组的区别，以及 provider 不支持流式时怎么关掉。</li>
+</ol>
+<h2 id="二、前置知识"><a href="#二、前置知识" class="headerlink" title="二、前置知识"></a>二、前置知识</h2><ul>
+<li>读完 LC02（<code>invoke</code> 的入参、<code>AIMessage</code> 字段）与 LC03（<code>content_blocks</code>）；</li>
+<li>知道生成器（<code>for ... in ...</code>）是什么，本篇大量迭代；</li>
+<li>环境沿用 LC01 的 <code>lc-demo</code> 工程，已有 <code>langchain[openai]</code>。</li>
+</ul>
+<h2 id="三、理论讲解（官方定义）"><a href="#三、理论讲解（官方定义）" class="headerlink" title="三、理论讲解（官方定义）"></a>三、理论讲解（官方定义）</h2><h3 id="1-模型层：stream-的返回不是消息，是消息块"><a href="#1-模型层：stream-的返回不是消息，是消息块" class="headerlink" title="1. 模型层：stream() 的返回不是消息，是消息块"></a>1. 模型层：<code>stream()</code> 的返回不是消息，是消息块</h3><p>官方 Models 页「Key methods」把 <code>Stream</code> 定义为：调用模型，但<strong>边生成边返回</strong>。它的返回类型是 <code>AIMessageChunk</code>，不是 <code>AIMessage</code>——块与消息的区别，在于块可以被「加」起来：</p>
+<pre class="line-numbers language-python" data-language="python"><code class="language-python">chunk1 <span class="token operator">+</span> chunk2   <span class="token comment"># AIMessageChunk 支持相加，结果仍是 AIMessageChunk</span><span aria-hidden="true" class="line-numbers-rows"><span></span></span></code></pre>
+
+<p>把一批块累加到最后，等价于一次 <code>invoke</code> 的结果。这条性质是后面 Agent 流式、断点续传、UI 增量渲染的基础。</p>
+<h3 id="2-Agent-层：三种-stream-mode"><a href="#2-Agent-层：三种-stream-mode" class="headerlink" title="2. Agent 层：三种 stream mode"></a>2. Agent 层：三种 stream mode</h3><p>官方 Streaming 页把 Agent 的流式能力归成三个模式，作为列表传给 <code>stream()</code> &#x2F; <code>astream()</code>：</p>
+<table>
+<thead>
+<tr>
+<th>模式</th>
+<th>吐什么</th>
+<th>典型用途</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>updates</code></td>
+<td>每个 Agent 步骤后的状态更新；同一步内多个节点的更新会分开吐</td>
+<td>展示「正在调用工具」「工具返回了」</td>
+</tr>
+<tr>
+<td><code>messages</code></td>
+<td>任意调用 LLM 的节点产生的 <code>(token, metadata)</code> 元组</td>
+<td>打字机效果、字幕</td>
+</tr>
+<tr>
+<td><code>custom</code></td>
+<td>工具或节点里用 stream writer 主动写的任意数据</td>
+<td>「已抓取 10&#x2F;100 条」这类进度</td>
+</tr>
+</tbody></table>
+<p><code>messages</code> 模式最常用的用途是 token 级输出；<code>updates</code> 是「步骤级」，粒度粗但省流量。</p>
+<h3 id="3-reasoning（思考）与-tool-call-也在流里"><a href="#3-reasoning（思考）与-tool-call-也在流里" class="headerlink" title="3. reasoning（思考）与 tool call 也在流里"></a>3. reasoning（思考）与 tool call 也在流里</h3><p>官方 Streaming 页单列两节：</p>
+<ul>
+<li><strong>思考流</strong>：部分模型会先做内部推理再给答案，推理 token 以 content block 的 <code>reasoning</code> 类型出现，需要模型侧开启推理输出，然后在 <code>messages</code> 流里按 <code>type == &quot;reasoning&quot;</code> 过滤；</li>
+<li><strong>工具调用流</strong>：<code>messages</code> 模式会吐出增量 JSON 的 <code>tool_call_chunk</code>，等工具真正执行时，完整、已解析的 tool call 出现在状态更新里。官方给的做法是 <code>stream_mode=[&quot;messages&quot;, &quot;updates&quot;]</code>——一边看 JSON 逐字拼，一边看解析完的调用。</li>
+</ul>
+<h3 id="4-v2-输出格式（版本差异点）"><a href="#4-v2-输出格式（版本差异点）" class="headerlink" title="4. v2 输出格式（版本差异点）"></a>4. v2 输出格式（版本差异点）</h3><p>官方写明：<code>version=&quot;v2&quot;</code> 需要 <strong>LangGraph 1.1 或更高</strong>。开启后每个 chunk 是统一的 <code>StreamPart</code> 字典：</p>
+<pre class="line-numbers language-python" data-language="python"><code class="language-python"><span class="token punctuation">&#123;</span><span class="token string">"type"</span><span class="token punctuation">:</span> <span class="token string">"updates"</span> <span class="token operator">|</span> <span class="token string">"messages"</span> <span class="token operator">|</span> <span class="token string">"custom"</span><span class="token punctuation">,</span> <span class="token string">"ns"</span><span class="token punctuation">:</span> <span class="token punctuation">.</span><span class="token punctuation">.</span><span class="token punctuation">.</span><span class="token punctuation">,</span> <span class="token string">"data"</span><span class="token punctuation">:</span> <span class="token punctuation">.</span><span class="token punctuation">.</span><span class="token punctuation">.</span><span class="token punctuation">&#125;</span><span aria-hidden="true" class="line-numbers-rows"><span></span></span></code></pre>
+
+<p>不开 v2（当前默认）则要按元组解包 <code>for mode, chunk in agent.stream(...)</code>。v2 还改了 <code>invoke()</code> 的返回：变成 <code>GraphOutput</code>，用 <code>.value</code> 拿状态、<code>.interrupts</code> 拿中断。</p>
+<h3 id="5-关掉流式"><a href="#5-关掉流式" class="headerlink" title="5. 关掉流式"></a>5. 关掉流式</h3><p>官方给了两种写法：在支持该参数的集成上 <code>ChatOpenAI(..., streaming=False)</code>；不支持的模型用基类都认的 <code>disable_streaming=True</code>。部署到 LangSmith 时，不想让某个模型输出被流给客户端，就设这两个之一。</p>
+<h2 id="四、原理拆解"><a href="#四、原理拆解" class="headerlink" title="四、原理拆解"></a>四、原理拆解</h2><p><img src="https://wu4yong.github.io/starry-images/assets/img/langchain/v1/lc-4b-chain.svg" alt="三种流的边界：模型层只产 chunk，Agent 层再决定怎么分发"></p>
+<p><em><code>invoke</code> 是「攒完再给」，<code>stream</code> 是「给一块算一块」，两者的终点是同一条 <code>AIMessage</code>｜自绘</em></p>
+<p>用送快递打比方：</p>
+<ul>
+<li><code>invoke</code> 是等你收齐一整车货再签收，快但看不到过程；</li>
+<li><code>stream</code> 是每到一个包裹就通知你，慢一点点但你知道进度；</li>
+<li><code>stream_mode</code> 决定通知的是什么——<code>messages</code> 通知「箱子里每件商品」（token），<code>updates</code> 通知「第几个包裹到了」（步骤），<code>custom</code> 是你自己让快递员打的电话（进度条）。</li>
+</ul>
+<p>关键点：<strong>流式不改变结果，只改变「你什么时候能看到」</strong>。所以调试时先用 <code>invoke</code> 看全量结果，确认逻辑对了，再换 <code>stream</code> 做交互，是本系列推荐的顺序。</p>
+<h2 id="五、场景说明"><a href="#五、场景说明" class="headerlink" title="五、场景说明"></a>五、场景说明</h2><ol>
+<li><strong>聊天界面</strong>：必须 <code>messages</code> 模式，否则用户盯着转圈等 8 秒；</li>
+<li><strong>长任务 Agent</strong>：「查库 → 调工具 → 再查」这种多步，<code>updates</code> 模式给状态文案，<code>messages</code> 给正文，二者组合；</li>
+<li><strong>批量数据处理</strong>：工具里用 <code>get_stream_writer()</code> 写「已处理 30&#x2F;200」，前端进度条；</li>
+<li><strong>后台批跑 &#x2F; 评测</strong>：直接 <code>invoke</code>，流式在这里没有收益，反而增加拼接成本。</li>
+</ol>
+<h2 id="六、示例代码"><a href="#六、示例代码" class="headerlink" title="六、示例代码"></a>六、示例代码</h2><h3 id="步骤-1：环境准备"><a href="#步骤-1：环境准备" class="headerlink" title="步骤 1：环境准备"></a>步骤 1：环境准备</h3><pre class="line-numbers language-bash" data-language="bash"><code class="language-bash">uv <span class="token function">add</span> <span class="token string">"langchain[openai]"</span>
+<span class="token comment"># pip 等价：pip install -U "langchain[openai]"</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span></span></code></pre>
+
+<h3 id="步骤-2：凭证配置"><a href="#步骤-2：凭证配置" class="headerlink" title="步骤 2：凭证配置"></a>步骤 2：凭证配置</h3><p>同 LC01，需要 <code>OPENAI_API_KEY</code>，写在 <code>.env</code>，由 <code>load_dotenv()</code> 读入。</p>
+<h3 id="步骤-3：导入"><a href="#步骤-3：导入" class="headerlink" title="步骤 3：导入"></a>步骤 3：导入</h3><pre class="line-numbers language-python" data-language="python"><code class="language-python"><span class="token keyword">from</span> dotenv <span class="token keyword">import</span> load_dotenv
+<span class="token keyword">from</span> langchain<span class="token punctuation">.</span>chat_models <span class="token keyword">import</span> init_chat_model
+<span class="token keyword">from</span> langchain<span class="token punctuation">.</span>messages <span class="token keyword">import</span> AIMessageChunk   <span class="token comment"># 块类型，用于类型判断与累加</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span></span></code></pre>
+
+<h3 id="步骤-4：最小可运行代码"><a href="#步骤-4：最小可运行代码" class="headerlink" title="步骤 4：最小可运行代码"></a>步骤 4：最小可运行代码</h3><p>存成 <code>stream_demo.py</code>，<code>uv run stream_demo.py</code>（pip 方案：<code>python stream_demo.py</code>）。</p>
+<pre class="line-numbers language-python" data-language="python"><code class="language-python"><span class="token keyword">from</span> dotenv <span class="token keyword">import</span> load_dotenv
+<span class="token keyword">from</span> langchain<span class="token punctuation">.</span>chat_models <span class="token keyword">import</span> init_chat_model
+<span class="token keyword">from</span> langchain<span class="token punctuation">.</span>messages <span class="token keyword">import</span> AIMessageChunk
+
+load_dotenv<span class="token punctuation">(</span><span class="token punctuation">)</span>
+model <span class="token operator">=</span> init_chat_model<span class="token punctuation">(</span><span class="token string">"openai:gpt-5-nano"</span><span class="token punctuation">)</span>
+
+acc <span class="token operator">=</span> <span class="token boolean">None</span>                      <span class="token comment"># 累加器：用来把块拼回完整消息</span>
+<span class="token keyword">for</span> chunk <span class="token keyword">in</span> model<span class="token punctuation">.</span>stream<span class="token punctuation">(</span><span class="token string">"用三句话讲清楚什么是流式输出"</span><span class="token punctuation">)</span><span class="token punctuation">:</span>
+    acc <span class="token operator">=</span> chunk <span class="token keyword">if</span> acc <span class="token keyword">is</span> <span class="token boolean">None</span> <span class="token keyword">else</span> acc <span class="token operator">+</span> chunk
+    <span class="token keyword">print</span><span class="token punctuation">(</span>chunk<span class="token punctuation">.</span>text<span class="token punctuation">,</span> end<span class="token operator">=</span><span class="token string">""</span><span class="token punctuation">,</span> flush<span class="token operator">=</span><span class="token boolean">True</span><span class="token punctuation">)</span>   <span class="token comment"># 边生成边打印</span>
+
+<span class="token keyword">print</span><span class="token punctuation">(</span><span class="token punctuation">)</span>                                     <span class="token comment"># 换行</span>
+<span class="token keyword">print</span><span class="token punctuation">(</span><span class="token builtin">type</span><span class="token punctuation">(</span>acc<span class="token punctuation">)</span><span class="token punctuation">)</span>                            <span class="token comment"># AIMessageChunk</span>
+<span class="token keyword">print</span><span class="token punctuation">(</span><span class="token builtin">len</span><span class="token punctuation">(</span>acc<span class="token punctuation">.</span>content_blocks<span class="token punctuation">)</span><span class="token punctuation">,</span> <span class="token string">"blocks"</span><span class="token punctuation">)</span>    <span class="token comment"># 拼完后的块数量</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<p>想看点更细的块结构，把循环体换成打印 <code>chunk.content_blocks</code>：能看到每块都是 <code>{&#39;type&#39;: &#39;text&#39;, &#39;text&#39;: &#39;...&#39;}</code> 的增量片段，最后一块可能带 <code>usage_metadata</code>。</p>
+<h3 id="步骤-5：预期输出"><a href="#步骤-5：预期输出" class="headerlink" title="步骤 5：预期输出"></a>步骤 5：预期输出</h3><pre class="line-numbers language-text" data-language="text"><code class="language-text">流式输出是把模型的生成结果分块返回……（逐字出现）
+&lt;class 'langchain.messages.AIMessageChunk'>
+1 blocks<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span></span></code></pre>
+
+<p>逐字出现的速度取决于 provider 与网络，块数取决于模型的分词粒度，具体数字不必对上。</p>
+<h3 id="步骤-6：验证是否成功"><a href="#步骤-6：验证是否成功" class="headerlink" title="步骤 6：验证是否成功"></a>步骤 6：验证是否成功</h3><p>三条判据：</p>
+<ol>
+<li>文字是<strong>逐渐出现</strong>而不是一次性刷出，说明真的在流式；</li>
+<li>循环里没有报 <code>AttributeError</code>，说明你用的是 <code>chunk.text</code> 而不是把块当字符串；</li>
+<li>累加结果的 <code>content_blocks</code> 长度 ≥ 1 且文本与打印的总文本一致，说明「块能加」这条性质成立。</li>
+</ol>
+<h2 id="七、常见坑（官方明确限制-版本差异）"><a href="#七、常见坑（官方明确限制-版本差异）" class="headerlink" title="七、常见坑（官方明确限制&#x2F;版本差异）"></a>七、常见坑（官方明确限制&#x2F;版本差异）</h2><ol>
+<li><strong>把 chunk 当消息用</strong>。<code>AIMessageChunk</code> 没有 <code>usage_metadata</code> 的完整值（通常只在末尾），也没有稳定的 <code>id</code>；要完整消息就累加，别直接读字段。</li>
+<li><strong>不传 <code>version=&quot;v2&quot;</code> 却按 v2 结构取值</strong>。默认仍是 <code>(mode, chunk)</code> 元组解包，v2 的 <code>StreamPart</code> 要显式开启，且需要 LangGraph 1.1+。</li>
+<li><strong>想用 <code>messages</code> 模式却拿到了 <code>updates</code> 的内容</strong>。多模式组合时必须按 <code>chunk[&quot;type&quot;]</code> 分派，否则会把状态字典当 token 打出来。</li>
+<li><strong>provider 不支持流式</strong>。部分集成没有 <code>streaming</code> 参数，用基类通用的 <code>disable_streaming=True</code>；官方提醒：不支持时硬开会静默退化为一次性返回。</li>
+<li><strong>reasoning 流拿不到</strong>。官方写明推理输出必须在模型侧开启，且要看 content block 的 <code>reasoning</code> 类型；模型没开推理，<code>messages</code> 流里就只有普通文本。</li>
+</ol>
+<h2 id="八、课后小结"><a href="#八、课后小结" class="headerlink" title="八、课后小结"></a>八、课后小结</h2><ul>
+<li><code>stream()</code> 返回 <code>AIMessageChunk</code>，块可以相加，加完等价于一次 <code>invoke</code>；</li>
+<li>Agent 层三种模式：<code>updates</code>（步骤）、<code>messages</code>（token）、<code>custom</code>（自定义），可用列表组合；</li>
+<li>工具调用的增量 JSON 在 <code>tool_call_chunk</code>，解析完的调用看 <code>updates</code>；</li>
+<li><code>version=&quot;v2&quot;</code> 统一成 <code>StreamPart</code>（需要 LangGraph 1.1+），<code>invoke</code> 同时变成 <code>GraphOutput</code>；</li>
+<li>能不用流式的地方（批跑、评测）就别用。</li>
+</ul>
+<h2 id="九、思考题"><a href="#九、思考题" class="headerlink" title="九、思考题"></a>九、思考题</h2><p><strong>1、为什么 <code>AIMessageChunk</code> 支持相加，而 <code>AIMessage</code> 不支持？</strong></p>
+<p>参考回答：块是同一个消息的碎片，相加就是把碎片按顺序合并成完整内容与合并元数据，这是流式 UI 增量渲染与「块拼回消息」的必需品；完整消息已经终态，没有合并语义，所以官方只给块定义 <code>+</code>。</p>
+<p><strong>2、<code>stream_mode</code> 选 <code>messages</code> 和选 <code>updates</code>，分别在什么场景下更合适？</strong></p>
+<p>参考回答：要看「用户在意的是字还是步骤」。聊天打字机效果用 <code>messages</code>；多步 Agent 想让用户知道「现在在调工具、工具返回了什么」用 <code>updates</code>。两者可组合，按 <code>type</code> 分派处理。</p>
+<p><strong>3、工具调用的流式输出里，为什么既要 <code>tool_call_chunk</code> 又要完整 tool call？</strong></p>
+<p>参考回答：<code>tool_call_chunk</code> 是未完成的增量 JSON，只能展示「正在生成调用」；真正执行需要已解析、id 完整的 tool call，官方建议用 <code>[&quot;messages&quot;,&quot;updates&quot;]</code> 组合，前者看进度，后者拿可执行版本。</p>
+<p><strong>4、<code>version=&quot;v2&quot;</code> 开启后，为什么老的流式代码会报错？</strong></p>
+<p>参考回答：v1 默认返回 <code>(mode, chunk)</code> 元组，v2 返回统一的 <code>StreamPart</code> 字典（<code>type</code>&#x2F;<code>ns</code>&#x2F;<code>data</code>）。原来的 <code>for mode, chunk in ...</code> 解包在 v2 下拿不到预期结构，需要改成按 <code>chunk[&quot;type&quot;]</code> 取值；同时 v2 依赖 LangGraph 1.1 以上。</p>
+<h2 id="十、下一篇预告"><a href="#十、下一篇预告" class="headerlink" title="十、下一篇预告"></a>十、下一篇预告</h2><p><strong>下一篇标题</strong>：05 工具定义与协议：<code>@tool</code>、输入 schema 与注入参数。</p>
+<p><strong>一句话内容</strong>：讲 v1 工具的三件事——名字与描述怎么变成模型看到的 schema、<code>args_schema</code> 什么时候必须写、<code>ToolRuntime</code> 这类注入参数为什么不进 schema，以及工具返回什么才算「模型能看懂」。</p>
+<p><strong>承接关系</strong>：本篇的流里已经出现 <code>tool_call_chunk</code>，但工具本身还没定义过；不先把工具协议讲清，后面 Agent 循环里「模型为什么选错工具」就无从判断。</p>
+<p><strong>跳转位置</strong>：进入 M2 模块第一讲。</p>
+<h2 id="十一、官方资料"><a href="#十一、官方资料" class="headerlink" title="十一、官方资料"></a>十一、官方资料</h2><ul>
+<li>Streaming（三种 stream mode、reasoning 与 tool call 流、v2 格式、关闭流式）：<a target="_blank" rel="noopener" href="https://docs.langchain.com/oss/python/langchain/streaming">https://docs.langchain.com/oss/python/langchain/streaming</a></li>
+<li>Models（Key methods：<code>invoke</code> &#x2F; <code>stream</code> &#x2F; <code>batch</code>）：<a target="_blank" rel="noopener" href="https://docs.langchain.com/oss/python/langchain/models">https://docs.langchain.com/oss/python/langchain/models</a></li>
+<li>LangGraph streaming 指南（v2 格式细节）：<a target="_blank" rel="noopener" href="https://docs.langchain.com/oss/python/langgraph/streaming">https://docs.langchain.com/oss/python/langgraph/streaming</a></li>
+</ul>
+<p>上一篇：<a href="/2026/12/01/ai/langchain/langchain-3-messages-and-prompts/">LC03 消息与提示模板</a> ｜ 下一篇：<a href="/2026/12/03/ai/langchain/langchain-5-tools/">LC05 工具定义与协议</a> ｜ <a href="/2026/11/28/ai/langchain/langchain-0-series-index/">总目录</a></p>
+</div>
+
+  <div class="mb-foot">
+    <a href="/phone/">返回手机首页</a>
+    <a href="/phone/tags/">星迹索引</a>
+  </div>
+</div>
+
+
+<script>
+  /* 作用：懒加载本地 mermaid 库；无 mermaid 代码块时不加载 */
+  function loadLocalMermaid(){
+    return new Promise(function(resolve, reject){
+      if(window.mermaid) return resolve(window.mermaid);
+      var s = document.createElement('script');
+      s.src = '/js/third-party/mermaid/mermaid.min.js?v=10';
+      s.onload = function(){ resolve(window.mermaid); };
+      s.onerror = function(){ reject(new Error('mermaid local load failed')); };
+      document.head.appendChild(s);
+    });
+  }
+
+  /* 作用：把 ```mermaid 代码块替换成 SVG 图（手机端字号略小、图可横向滚动） */
+  async function renderMermaidDiagram(){
+    var blocks = document.querySelectorAll('pre[class*="language-mermaid"]');
+    if(!blocks.length) return;
+    var mermaid;
+    try { mermaid = await loadLocalMermaid(); }
+    catch(e){ console.warn('[mermaid] 本地库加载失败：', e); return; }
+
+    mermaid.initialize({
+      startOnLoad: false,
+      theme: 'base',
+      themeVariables: {
+        darkMode: true,
+        background: 'transparent',
+        fontFamily: '"Microsoft YaHei", "PingFang SC", "Segoe UI", sans-serif',
+        fontSize: '12px',
+        primaryColor: '#062f3d',
+        primaryTextColor: '#d6f6ff',
+        primaryBorderColor: '#00eeff',
+        secondaryColor: '#04222d',
+        tertiaryColor: '#04222d',
+        mainBkg: '#062f3d',
+        nodeBorder: '#00eeff',
+        clusterBkg: '#02161f',
+        clusterBorder: '#00eeff55',
+        lineColor: '#00eeff',
+        textColor: '#c0e8ff',
+        edgeLabelBackground: '#02161f'
+      },
+      flowchart: { curve: 'basis', useMaxWidth: false, htmlLabels: false, nodeSpacing: 30, rankSpacing: 40, padding: 10 }
+    });
+
+    var targets = [];
+    blocks.forEach(function(el){
+      var codeEl = el.querySelector('code');
+      if(!codeEl) return;
+      var div = document.createElement('div');
+      div.className = 'mermaid';
+      div.textContent = codeEl.textContent;
+      el.parentNode.replaceChild(div, el);
+      targets.push(div);
+    });
+    if(!targets.length) return;
+    try { await mermaid.run({ nodes: targets }); }
+    catch(e){ console.warn('[mermaid] 渲染失败：', e); }
+  }
+  /* 作用：多次触发兜底（延迟重试 + DOM 变化），防止某次时机没跑到导致图表留在代码块 */
+  var mmBusy = false;
+  function scheduleMermaid(){
+    if(mmBusy) return;
+    mmBusy = true;
+    renderMermaidDiagram().then(function(){ mmBusy = false; }, function(){ mmBusy = false; });
+  }
+  scheduleMermaid();
+  window.addEventListener('load', scheduleMermaid);
+  [1000, 3000, 8000].forEach(function(ms){ setTimeout(scheduleMermaid, ms); });
+  if(document.readyState !== 'loading') scheduleMermaid();
+  if(window.MutationObserver){
+    var mmTimer = null;
+    var mmObserver = new MutationObserver(function(){
+      clearTimeout(mmTimer);
+      mmTimer = setTimeout(scheduleMermaid, 400);
+    });
+    mmObserver.observe(document.querySelector('.mb-article') || document.body, { childList: true, subtree: true });
+  }
+</script>
+</body>
+</html>

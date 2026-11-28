@@ -1,0 +1,465 @@
+<!--
+  ============================================
+  手机端 · 文章原文页
+  文件：phone/post.njk
+  适用终端：手机端（路由 /phone/p/<slug>/，由 scripts/phone-routes.js 生成）
+  作用：手机阅读单篇文章；单列布局、无侧栏无雷达，替代电脑端 post.njk
+        数据由生成期算好：page.item = { title, dateStr, content, cats, tags }
+  样式依赖：source/css/theme/phone/common.css、source/css/theme/phone/list.css
+  组件依赖：phone/_components/Particles.njk
+  最后修改：2026-11-11
+  ============================================
+-->
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="color-scheme" content="dark">
+  <meta name="theme-color" content="#020817">
+  <!-- 首帧兜底：浏览器默认画布是白的，样式未解析前会闪一下白。这条规则先锁死深空底色 -->
+  <style>html{background-color:#020817}</style>
+  <title>LangChain 07 · 工具失败处理：重试、回灌与「不静默失败」 - 时空秘境</title>
+  <!-- 手机端样式：基础 + 列表/正文，外链引入（源文件 source/css/theme/phone/） -->
+  <link rel="stylesheet" href="/css/theme/phone/common.css">
+  <link rel="stylesheet" href="/css/theme/phone/list.css">
+<meta name="generator" content="Hexo 8.1.2"></head>
+<body>
+<div class="mb-shell">
+  <!--
+  ============================================
+  手机端星空粒子组件
+  文件：Particles.njk
+  适用终端：手机端
+  作用：Particles.njk 的手机端副本（nunjucks 子目录 include 取不到上级）
+        参数与电脑端 _components/Particles.njk 保持一致：
+        粒子 95 / 连线 118px / opacity 0.32，外加星座层与零星闪烁层
+  最后修改：2026-11-12
+  ============================================
+--><!-- z-index 必须是 0：负层级会被 body 不透明背景盖住，粒子在跑却看不见 -->
+<div id="particles" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 0; pointer-events: none;"></div>
+<!-- 星座层（与首页同一套：随机零星散布星座图形 + 偶尔闪烁的小星） -->
+<div id="constellations" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 1; pointer-events: none;" aria-hidden="true"></div>
+<script src="/js/particles.min.js"></script>
+<script>
+particlesJS("particles", {
+  particles: {
+    number: {
+      value: 95,
+      density: {
+        enable: true,
+        value_area: 800
+      }
+    },
+    color: {
+      value: "#00eeff"
+    },
+    shape: {
+      type: "circle",
+      stroke: {
+        width: 0,
+        color: "#000000"
+      }
+    },
+    opacity: {
+      value: 0.6,
+      random: true,
+      anim: {
+        enable: true,
+        speed: 0.5,
+        opacity_min: 0.1,
+        sync: false
+      }
+    },
+    size: {
+      value: 3,
+      random: true,
+      anim: {
+        enable: true,
+        speed: 2,
+        size_min: 0.1,
+        sync: false
+      }
+    },
+    line_linked: {
+      enable: true,
+      distance: 118,
+      color: "#00eeff",
+      opacity: 0.32,
+      width: 1
+    },
+    move: {
+      enable: true,
+      speed: 0.8,
+      direction: "none",
+      random: true,
+      straight: false,
+      out_mode: "out",
+      bounce: false,
+      attract: {
+        enable: true,
+        rotateX: 600,
+        rotateY: 1200
+      }
+    }
+  },
+  interactivity: {
+    detect_on: "canvas",
+    events: {
+      onhover: {
+        enable: true,
+        mode: "grab"       // 手指按住时粒子聚集
+      },
+      onclick: {
+        enable: true,
+        mode: "push"       // 点击时产生新粒子
+      },
+      resize: true
+    },
+    modes: {
+      grab: {
+        distance: 200,
+        line_linked: {
+          opacity: 1
+        }
+      },
+      push: {
+        particles_nb: 6
+      }
+    }
+  },
+  retina_detect: true
+});
+</script>
+<!-- 星座 + 零星闪烁层：与电脑端共用同一份绘制脚本 -->
+<script src="/js/theme/home/starfield.js"></script>
+
+
+  <div class="mb-top">
+    <a class="mb-back" href="/phone/">← 返回手机首页</a>
+    <span class="mb-sub" style="margin:0">2026-12-05</span>
+  </div>
+
+  <h1 class="mb-title">LangChain 07 · 工具失败处理：重试、回灌与「不静默失败」</h1>
+  <div class="mb-sub">
+    分类：ai · langchain
+     ｜ 标签：LangChain · AI · 系统课
+  </div>
+
+  <div class="mb-article"><div class="essay-banner essay-langchain"></div>
+
+<h1 id="07-工具失败处理：重试、回灌与「不静默失败」"><a href="#07-工具失败处理：重试、回灌与「不静默失败」" class="headerlink" title="07 工具失败处理：重试、回灌与「不静默失败」"></a>07 工具失败处理：重试、回灌与「不静默失败」</h1><p><img src="https://wu4yong.github.io/starry-images/assets/img/langchain/v1/lc-7-failure.svg" alt="三类失败的三种处理位置：模型调用、工具调用、结构化校验"></p>
+<p><em>失败不是一种，是三种；处理位置也不同：<code>wrap_model_call</code>、<code>wrap_tool_call</code>、<code>handle_errors</code>｜依据官方 Custom middleware 与 Tools 页自绘</em></p>
+<p><strong>版本不一致提示</strong>：</p>
+<ul>
+<li>本篇基线是 LangChain v1（1.x）+ Python 3.13，官方示例环境是 Python 3.11，仅解释器版本不同；</li>
+<li>旧 0.x 用 <code>handle_tool_error=True</code> 或工具类里的 <code>_handle_error</code>，v1 收敛到中间件 <code>wrap_tool_call</code>，两套写法不兼容；</li>
+<li>官方示例里 <code>ToolCallRequest</code> 的导入路径为 <code>langchain.tools.tool_node</code>，随小版本可能调整，导入失败时以官方当前页面为准。</li>
+</ul>
+<h2 id="一、学习目标"><a href="#一、学习目标" class="headerlink" title="一、学习目标"></a>一、学习目标</h2><p>学完这一讲，你要能做到三件事：</p>
+<ol>
+<li>用 <code>@wrap_tool_call</code> 把工具异常转成 <code>ToolMessage</code> 回灌给模型，让 Agent 继续走而不是崩；</li>
+<li>用 <code>@wrap_model_call</code> 做模型调用的有限重试，并且知道重试该放在哪一层；</li>
+<li>识别「静默失败」——返回空字符串、返回 <code>None</code>、吞异常——为什么它比报错更危险，以及怎么改。</li>
+</ol>
+<h2 id="二、前置知识"><a href="#二、前置知识" class="headerlink" title="二、前置知识"></a>二、前置知识</h2><ul>
+<li>读完 LC05（<code>@tool</code> 与 <code>ToolMessage</code>）、LC06（<code>handle_errors</code>）；</li>
+<li>知道 Python 的 <code>try / except</code>，会写 <code>Callable</code> 作为参数；</li>
+<li>了解「中间件」这个词即可，细节在 LC09、LC10。</li>
+</ul>
+<h2 id="三、理论讲解（官方定义）"><a href="#三、理论讲解（官方定义）" class="headerlink" title="三、理论讲解（官方定义）"></a>三、理论讲解（官方定义）</h2><h3 id="1-官方的标准解法：wrap-tool-call-转异常"><a href="#1-官方的标准解法：wrap-tool-call-转异常" class="headerlink" title="1. 官方的标准解法：wrap_tool_call 转异常"></a>1. 官方的标准解法：<code>wrap_tool_call</code> 转异常</h3><p>官方 Tools 页在「Tool errors」一节给的示例，就是本讲主线：用 <code>wrap_tool_call</code> 中间件包住工具执行，捕获异常后返回一条 <code>ToolMessage</code>。</p>
+<pre class="line-numbers language-python" data-language="python"><code class="language-python"><span class="token keyword">from</span> collections<span class="token punctuation">.</span>abc <span class="token keyword">import</span> Callable
+<span class="token keyword">from</span> langchain<span class="token punctuation">.</span>agents <span class="token keyword">import</span> create_agent
+<span class="token keyword">from</span> langchain<span class="token punctuation">.</span>agents<span class="token punctuation">.</span>middleware <span class="token keyword">import</span> wrap_tool_call
+<span class="token keyword">from</span> langchain<span class="token punctuation">.</span>messages <span class="token keyword">import</span> ToolMessage
+<span class="token keyword">from</span> langchain<span class="token punctuation">.</span>tools<span class="token punctuation">.</span>tool_node <span class="token keyword">import</span> ToolCallRequest
+
+<span class="token decorator annotation punctuation">@wrap_tool_call</span>
+<span class="token keyword">def</span> <span class="token function">handle_tool_errors</span><span class="token punctuation">(</span>
+    request<span class="token punctuation">:</span> ToolCallRequest<span class="token punctuation">,</span>
+    handler<span class="token punctuation">:</span> Callable<span class="token punctuation">[</span><span class="token punctuation">[</span>ToolCallRequest<span class="token punctuation">]</span><span class="token punctuation">,</span> ToolMessage<span class="token punctuation">]</span><span class="token punctuation">,</span>
+<span class="token punctuation">)</span> <span class="token operator">-</span><span class="token operator">></span> ToolMessage<span class="token punctuation">:</span>
+    <span class="token triple-quoted-string string">"""Convert tool exceptions into ToolMessages the model can handle."""</span>
+    <span class="token keyword">try</span><span class="token punctuation">:</span>
+        <span class="token keyword">return</span> handler<span class="token punctuation">(</span>request<span class="token punctuation">)</span>
+    <span class="token keyword">except</span> Exception <span class="token keyword">as</span> e<span class="token punctuation">:</span>
+        <span class="token keyword">return</span> ToolMessage<span class="token punctuation">(</span>
+            content<span class="token operator">=</span><span class="token string-interpolation"><span class="token string">f"Tool error: Please check your input and try again. (</span><span class="token interpolation"><span class="token punctuation">&#123;</span>e<span class="token punctuation">&#125;</span></span><span class="token string">)"</span></span><span class="token punctuation">,</span>
+            tool_call_id<span class="token operator">=</span>request<span class="token punctuation">.</span>tool_call<span class="token punctuation">[</span><span class="token string">"id"</span><span class="token punctuation">]</span><span class="token punctuation">,</span>
+        <span class="token punctuation">)</span>
+
+agent <span class="token operator">=</span> create_agent<span class="token punctuation">(</span>model<span class="token operator">=</span><span class="token punctuation">.</span><span class="token punctuation">.</span><span class="token punctuation">.</span><span class="token punctuation">,</span> tools<span class="token operator">=</span><span class="token punctuation">[</span><span class="token punctuation">.</span><span class="token punctuation">.</span><span class="token punctuation">.</span><span class="token punctuation">]</span><span class="token punctuation">,</span> middleware<span class="token operator">=</span><span class="token punctuation">[</span>handle_tool_errors<span class="token punctuation">]</span><span class="token punctuation">)</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<p>三个要点：</p>
+<ul>
+<li>签名固定为 <code>(request, handler)</code>，返回值是 <code>ToolMessage</code>；</li>
+<li><code>handler(request)</code> 才是真正执行工具，你不调它，工具就不会跑（可以据此做短路）；</li>
+<li>异常必须变成消息，且必须带 <code>tool_call_id</code>，模型才能把错误与那次调用对上。</li>
+</ul>
+<h3 id="2-两种重试，位置不同"><a href="#2-两种重试，位置不同" class="headerlink" title="2. 两种重试，位置不同"></a>2. 两种重试，位置不同</h3><p>官方 Custom middleware 页把钩子分成两族：</p>
+<table>
+<thead>
+<tr>
+<th>钩子</th>
+<th>时机</th>
+<th>适合放什么</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>before_agent</code> &#x2F; <code>after_agent</code></td>
+<td>每次调用前后各一次</td>
+<td>初始化、收尾统计</td>
+</tr>
+<tr>
+<td><code>before_model</code> &#x2F; <code>after_model</code></td>
+<td>每次模型调用前后</td>
+<td>改提示、限流、日志、early exit</td>
+</tr>
+<tr>
+<td><code>wrap_model_call</code></td>
+<td>包住每次模型调用</td>
+<td>重试、缓存、降级、改 system prompt</td>
+</tr>
+<tr>
+<td><code>wrap_tool_call</code></td>
+<td>包住每次工具调用</td>
+<td>工具重试、异常转消息、参数清洗</td>
+</tr>
+</tbody></table>
+<p>也就是说：<strong>模型调用的重试放 <code>wrap_model_call</code>，工具调用的重试放 <code>wrap_tool_call</code>，两者不要混在一起</strong>。把工具重试塞进模型重试里，会让整个多步流程从头再跑一遍，成本翻倍。</p>
+<p>官方给的 <code>wrap_model_call</code> 重试写法：</p>
+<pre class="line-numbers language-python" data-language="python"><code class="language-python"><span class="token decorator annotation punctuation">@wrap_model_call</span>
+<span class="token keyword">def</span> <span class="token function">retry_model</span><span class="token punctuation">(</span>request<span class="token punctuation">:</span> ModelRequest<span class="token punctuation">,</span> handler<span class="token punctuation">:</span> Callable<span class="token punctuation">[</span><span class="token punctuation">[</span>ModelRequest<span class="token punctuation">]</span><span class="token punctuation">,</span> ModelResponse<span class="token punctuation">]</span><span class="token punctuation">)</span> <span class="token operator">-</span><span class="token operator">></span> ModelResponse<span class="token punctuation">:</span>
+    <span class="token keyword">for</span> attempt <span class="token keyword">in</span> <span class="token builtin">range</span><span class="token punctuation">(</span><span class="token number">3</span><span class="token punctuation">)</span><span class="token punctuation">:</span>
+        <span class="token keyword">try</span><span class="token punctuation">:</span>
+            <span class="token keyword">return</span> handler<span class="token punctuation">(</span>request<span class="token punctuation">)</span>
+        <span class="token keyword">except</span> Exception <span class="token keyword">as</span> e<span class="token punctuation">:</span>
+            <span class="token keyword">if</span> attempt <span class="token operator">==</span> <span class="token number">2</span><span class="token punctuation">:</span>
+                <span class="token keyword">raise</span>
+            <span class="token keyword">print</span><span class="token punctuation">(</span><span class="token string-interpolation"><span class="token string">f"Retry </span><span class="token interpolation"><span class="token punctuation">&#123;</span>attempt <span class="token operator">+</span> <span class="token number">1</span><span class="token punctuation">&#125;</span></span><span class="token string">/3 after error: </span><span class="token interpolation"><span class="token punctuation">&#123;</span>e<span class="token punctuation">&#125;</span></span><span class="token string">"</span></span><span class="token punctuation">)</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<h3 id="3-执行顺序（决定重试覆盖范围）"><a href="#3-执行顺序（决定重试覆盖范围）" class="headerlink" title="3. 执行顺序（决定重试覆盖范围）"></a>3. 执行顺序（决定重试覆盖范围）</h3><p>官方在 Execution order 一节写明：<code>before_*</code> 按注册顺序执行，<code>after_*</code> 逆序执行，<code>wrap_*</code> 是<strong>嵌套</strong>——第一个中间件包住后面所有。所以：</p>
+<ul>
+<li>想「外层重试、内层记录」：把重试中间件放列表前面；</li>
+<li>想「先清洗参数再执行」：清洗的 <code>wrap_tool_call</code> 要排在重试外层，否则重试会带着脏参数反复打。</li>
+</ul>
+<h3 id="4-handle-errors-属于第三层"><a href="#4-handle-errors-属于第三层" class="headerlink" title="4. handle_errors 属于第三层"></a>4. <code>handle_errors</code> 属于第三层</h3><p>LC06 讲的 <code>ToolStrategy(handle_errors=...)</code> 只管「结构化校验失败」，不处理工具抛异常。三层分工是：</p>
+<table>
+<thead>
+<tr>
+<th>失败类型</th>
+<th>处理位置</th>
+<th>处理方式</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>模型调用超时 &#x2F; 5xx &#x2F; 429</td>
+<td><code>wrap_model_call</code></td>
+<td>有限重试，401&#x2F;404 不重试</td>
+</tr>
+<tr>
+<td>工具内部异常</td>
+<td><code>wrap_tool_call</code></td>
+<td>转 <code>ToolMessage</code>，或按异常类型重试</td>
+</tr>
+<tr>
+<td>结构化输出校验失败</td>
+<td><code>ToolStrategy.handle_errors</code></td>
+<td>让模型按 schema 重出</td>
+</tr>
+</tbody></table>
+<h3 id="5-错误信息怎么写才有用"><a href="#5-错误信息怎么写才有用" class="headerlink" title="5. 错误信息怎么写才有用"></a>5. 错误信息怎么写才有用</h3><p>官方示例文案是 <code>Tool error: Please check your input and try again. ({e})</code>——注意它既说「错了」，也说「下一步该干什么」。只写 <code>Error</code> 的文案，模型只会原样再调一次；写「参数 order_id 格式应为 SO-年份-序号」的文案，模型第二次就能纠正。</p>
+<h2 id="四、原理拆解"><a href="#四、原理拆解" class="headerlink" title="四、原理拆解"></a>四、原理拆解</h2><p><img src="https://wu4yong.github.io/starry-images/assets/img/langchain/v1/lc-7b-order.svg" alt="失败处理的三个落点与顺序：谁先接住异常"></p>
+<p><em>异常沿调用栈往上走，最先接住它的中间件决定后续一切｜自绘</em></p>
+<p>把 Agent 想成一个办事窗口：</p>
+<ul>
+<li><strong>工具</strong>是窗口里的办事员，办不成会喊一声（抛异常）；</li>
+<li><strong><code>wrap_tool_call</code></strong> 是窗口前的接待员，听到喊声就写一张条子（<code>ToolMessage</code>）递给客户（模型），客户据此改主意；</li>
+<li><strong><code>wrap_model_call</code></strong> 是电话交换台，客户连着打不通就重拨几次，但不会替办事员办事；</li>
+<li><strong><code>handle_errors</code></strong> 是质检，只查客户交上来的表格格式对不对。</li>
+</ul>
+<p>三层各管一段，混用就会出现「办不成 → 重拨电话 → 再办一次 → 还是办不成」的空转。</p>
+<h2 id="五、场景说明"><a href="#五、场景说明" class="headerlink" title="五、场景说明"></a>五、场景说明</h2><ol>
+<li><strong>外部 API 不稳</strong>（HTTP 429 &#x2F; 502）：<code>wrap_tool_call</code> 里按异常类型重试 2 次，仍失败就回灌「上游限流，请稍后再试」；</li>
+<li><strong>参数格式错</strong>（订单号写错）：不重试，直接回灌「格式应为 SO-2026-0001」，让模型自己改；</li>
+<li><strong>写操作失败</strong>（发邮件失败）：回灌明确状态，避免模型「以为发出去了」继续下一步；</li>
+<li><strong>模型调用抖动</strong>：<code>wrap_model_call</code> 重试，注意官方口径——401&#x2F;404 这类客户端错误不重试。</li>
+</ol>
+<h2 id="六、示例代码"><a href="#六、示例代码" class="headerlink" title="六、示例代码"></a>六、示例代码</h2><h3 id="步骤-1：环境准备"><a href="#步骤-1：环境准备" class="headerlink" title="步骤 1：环境准备"></a>步骤 1：环境准备</h3><pre class="line-numbers language-bash" data-language="bash"><code class="language-bash">uv <span class="token function">add</span> <span class="token string">"langchain[openai]"</span>
+<span class="token comment"># pip 等价：pip install -U "langchain[openai]"</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span></span></code></pre>
+
+<h3 id="步骤-2：凭证配置"><a href="#步骤-2：凭证配置" class="headerlink" title="步骤 2：凭证配置"></a>步骤 2：凭证配置</h3><p>同 LC01，<code>OPENAI_API_KEY</code> 放 <code>.env</code>。</p>
+<h3 id="步骤-3：导入"><a href="#步骤-3：导入" class="headerlink" title="步骤 3：导入"></a>步骤 3：导入</h3><pre class="line-numbers language-python" data-language="python"><code class="language-python"><span class="token keyword">from</span> collections<span class="token punctuation">.</span>abc <span class="token keyword">import</span> Callable
+<span class="token keyword">from</span> langchain<span class="token punctuation">.</span>agents <span class="token keyword">import</span> create_agent
+<span class="token keyword">from</span> langchain<span class="token punctuation">.</span>agents<span class="token punctuation">.</span>middleware <span class="token keyword">import</span> wrap_tool_call<span class="token punctuation">,</span> wrap_model_call<span class="token punctuation">,</span> ModelRequest<span class="token punctuation">,</span> ModelResponse
+<span class="token keyword">from</span> langchain<span class="token punctuation">.</span>messages <span class="token keyword">import</span> ToolMessage
+<span class="token keyword">from</span> langchain<span class="token punctuation">.</span>tools<span class="token punctuation">.</span>tool_node <span class="token keyword">import</span> ToolCallRequest<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<h3 id="步骤-4：最小可运行代码"><a href="#步骤-4：最小可运行代码" class="headerlink" title="步骤 4：最小可运行代码"></a>步骤 4：最小可运行代码</h3><p>存成 <code>tool_failure.py</code>，<code>uv run tool_failure.py</code>。</p>
+<pre class="line-numbers language-python" data-language="python"><code class="language-python"><span class="token keyword">from</span> dotenv <span class="token keyword">import</span> load_dotenv
+<span class="token keyword">from</span> langchain<span class="token punctuation">.</span>agents <span class="token keyword">import</span> create_agent
+<span class="token keyword">from</span> langchain<span class="token punctuation">.</span>agents<span class="token punctuation">.</span>middleware <span class="token keyword">import</span> wrap_tool_call
+<span class="token keyword">from</span> langchain<span class="token punctuation">.</span>messages <span class="token keyword">import</span> ToolMessage
+<span class="token keyword">from</span> langchain<span class="token punctuation">.</span>tools <span class="token keyword">import</span> tool
+<span class="token keyword">from</span> langchain<span class="token punctuation">.</span>tools<span class="token punctuation">.</span>tool_node <span class="token keyword">import</span> ToolCallRequest
+<span class="token keyword">from</span> collections<span class="token punctuation">.</span>abc <span class="token keyword">import</span> Callable
+<span class="token keyword">import</span> re
+
+<span class="token decorator annotation punctuation">@tool</span>
+<span class="token keyword">def</span> <span class="token function">get_order</span><span class="token punctuation">(</span>order_id<span class="token punctuation">:</span> <span class="token builtin">str</span><span class="token punctuation">)</span> <span class="token operator">-</span><span class="token operator">></span> <span class="token builtin">str</span><span class="token punctuation">:</span>
+    <span class="token triple-quoted-string string">"""按订单号查询订单，订单号形如 SO-2026-0001。"""</span>
+    <span class="token keyword">if</span> <span class="token keyword">not</span> re<span class="token punctuation">.</span>fullmatch<span class="token punctuation">(</span><span class="token string">r"SO-\d&#123;4&#125;-\d&#123;4&#125;"</span><span class="token punctuation">,</span> order_id<span class="token punctuation">)</span><span class="token punctuation">:</span>
+        <span class="token comment"># 故意的「坏输入」：让工具抛异常，由中间件接住</span>
+        <span class="token keyword">raise</span> ValueError<span class="token punctuation">(</span><span class="token string-interpolation"><span class="token string">f"订单号格式应为 SO-年份-序号，收到：</span><span class="token interpolation"><span class="token punctuation">&#123;</span>order_id<span class="token punctuation">&#125;</span></span><span class="token string">"</span></span><span class="token punctuation">)</span>
+    <span class="token keyword">return</span> <span class="token string-interpolation"><span class="token string">f"订单 </span><span class="token interpolation"><span class="token punctuation">&#123;</span>order_id<span class="token punctuation">&#125;</span></span><span class="token string">：已发货"</span></span>
+
+<span class="token decorator annotation punctuation">@wrap_tool_call</span>
+<span class="token keyword">def</span> <span class="token function">tool_guard</span><span class="token punctuation">(</span>request<span class="token punctuation">:</span> ToolCallRequest<span class="token punctuation">,</span> handler<span class="token punctuation">:</span> Callable<span class="token punctuation">[</span><span class="token punctuation">[</span>ToolCallRequest<span class="token punctuation">]</span><span class="token punctuation">,</span> ToolMessage<span class="token punctuation">]</span><span class="token punctuation">)</span> <span class="token operator">-</span><span class="token operator">></span> ToolMessage<span class="token punctuation">:</span>
+    <span class="token keyword">try</span><span class="token punctuation">:</span>
+        <span class="token keyword">return</span> handler<span class="token punctuation">(</span>request<span class="token punctuation">)</span>
+    <span class="token keyword">except</span> ValueError <span class="token keyword">as</span> e<span class="token punctuation">:</span>          <span class="token comment"># 参数类错误：不重试，告诉模型怎么改</span>
+        <span class="token keyword">return</span> ToolMessage<span class="token punctuation">(</span>content<span class="token operator">=</span><span class="token string-interpolation"><span class="token string">f"参数不合法，请修正后重调：</span><span class="token interpolation"><span class="token punctuation">&#123;</span>e<span class="token punctuation">&#125;</span></span><span class="token string">"</span></span><span class="token punctuation">,</span> tool_call_id<span class="token operator">=</span>request<span class="token punctuation">.</span>tool_call<span class="token punctuation">[</span><span class="token string">"id"</span><span class="token punctuation">]</span><span class="token punctuation">)</span>
+    <span class="token keyword">except</span> Exception <span class="token keyword">as</span> e<span class="token punctuation">:</span>           <span class="token comment"># 其他错误：回灌，不让 Agent 崩</span>
+        <span class="token keyword">return</span> ToolMessage<span class="token punctuation">(</span>content<span class="token operator">=</span><span class="token string-interpolation"><span class="token string">f"工具执行失败：</span><span class="token interpolation"><span class="token punctuation">&#123;</span><span class="token builtin">type</span><span class="token punctuation">(</span>e<span class="token punctuation">)</span><span class="token punctuation">.</span>__name__<span class="token punctuation">&#125;</span></span><span class="token string">: </span><span class="token interpolation"><span class="token punctuation">&#123;</span>e<span class="token punctuation">&#125;</span></span><span class="token string">"</span></span><span class="token punctuation">,</span> tool_call_id<span class="token operator">=</span>request<span class="token punctuation">.</span>tool_call<span class="token punctuation">[</span><span class="token string">"id"</span><span class="token punctuation">]</span><span class="token punctuation">)</span>
+
+load_dotenv<span class="token punctuation">(</span><span class="token punctuation">)</span>
+agent <span class="token operator">=</span> create_agent<span class="token punctuation">(</span>
+    model<span class="token operator">=</span><span class="token string">"openai:gpt-5-nano"</span><span class="token punctuation">,</span>
+    tools<span class="token operator">=</span><span class="token punctuation">[</span>get_order<span class="token punctuation">]</span><span class="token punctuation">,</span>
+    middleware<span class="token operator">=</span><span class="token punctuation">[</span>tool_guard<span class="token punctuation">]</span><span class="token punctuation">,</span>
+<span class="token punctuation">)</span>
+
+result <span class="token operator">=</span> agent<span class="token punctuation">.</span>invoke<span class="token punctuation">(</span><span class="token punctuation">&#123;</span><span class="token string">"messages"</span><span class="token punctuation">:</span> <span class="token punctuation">[</span><span class="token punctuation">&#123;</span><span class="token string">"role"</span><span class="token punctuation">:</span> <span class="token string">"user"</span><span class="token punctuation">,</span> <span class="token string">"content"</span><span class="token punctuation">:</span> <span class="token string">"查一下订单 12345 到哪了"</span><span class="token punctuation">&#125;</span><span class="token punctuation">]</span><span class="token punctuation">&#125;</span><span class="token punctuation">)</span>
+<span class="token keyword">print</span><span class="token punctuation">(</span>result<span class="token punctuation">[</span><span class="token string">"messages"</span><span class="token punctuation">]</span><span class="token punctuation">[</span><span class="token operator">-</span><span class="token number">1</span><span class="token punctuation">]</span><span class="token punctuation">.</span>text<span class="token punctuation">)</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<h3 id="步骤-5：预期输出"><a href="#步骤-5：预期输出" class="headerlink" title="步骤 5：预期输出"></a>步骤 5：预期输出</h3><pre class="line-numbers language-text" data-language="text"><code class="language-text">订单号格式不对，需要形如 SO-2026-0001 的格式，请提供正确订单号。<span aria-hidden="true" class="line-numbers-rows"><span></span></span></code></pre>
+
+<p>模型会先调 <code>get_order(&quot;12345&quot;)</code>，被 <code>tool_guard</code> 接住并回灌「参数不合法」，随后自己组织一句道歉&#x2F;追问。若你给的是合法订单号，输出会变成该订单的物流状态。</p>
+<h3 id="步骤-6：验证是否成功"><a href="#步骤-6：验证是否成功" class="headerlink" title="步骤 6：验证是否成功"></a>步骤 6：验证是否成功</h3><p>三条判据：</p>
+<ol>
+<li>全程没有抛出 <code>ValueError</code> 到终端，说明异常被中间件接住了；</li>
+<li><code>messages</code> 里能看到一条 <code>ToolMessage</code>（内容以「参数不合法」开头），说明回灌成功；</li>
+<li>模型第二轮没有再拿同样的错参数去重试，说明错误文案起到了纠偏作用。</li>
+</ol>
+<h2 id="七、常见坑（官方明确限制-版本差异）"><a href="#七、常见坑（官方明确限制-版本差异）" class="headerlink" title="七、常见坑（官方明确限制&#x2F;版本差异）"></a>七、常见坑（官方明确限制&#x2F;版本差异）</h2><ol>
+<li><strong><code>ToolMessage</code> 忘带 <code>tool_call_id</code></strong>。模型无法把错误对应到那次调用，会重复调用或直接放弃。</li>
+<li><strong>捕获了异常却 <code>return None</code></strong>。<code>wrap_tool_call</code> 的返回类型是 <code>ToolMessage</code>；返回 <code>None</code> 会让后续节点拿到空值，表现为「模型当作没发生」。</li>
+<li><strong>把重试写在工具函数内部</strong>。工具内部 <code>sleep</code> 重试会占住执行槽，且外层中间件看不到真实失败次数；官方范式是重试放在 <code>wrap_*</code> 层。</li>
+<li><strong>401 &#x2F; 404 也重试</strong>。官方在 Models 的 Connection resilience 一节明确：客户端错误不重试；模型层重试也要遵守这条，否则只是把账单刷大。</li>
+<li><strong>静默失败</strong>。工具返回空字符串或 <code>&quot;ok&quot;</code> 掩盖失败，模型会以为成功并继续下一步——这类 bug 在日志里最难看，因为「什么都没报错」。</li>
+</ol>
+<h2 id="八、课后小结"><a href="#八、课后小结" class="headerlink" title="八、课后小结"></a>八、课后小结</h2><ul>
+<li>工具异常的标准出口是 <code>wrap_tool_call</code> + <code>ToolMessage</code> + <code>tool_call_id</code>；</li>
+<li>模型调用重试放 <code>wrap_model_call</code>，工具重试放 <code>wrap_tool_call</code>，不要混层；</li>
+<li><code>wrap_*</code> 是嵌套执行，顺序决定谁接住异常；</li>
+<li><code>handle_errors</code> 只管结构化校验，不管工具异常；</li>
+<li>错误文案要写「错在哪 + 下一步怎么改」，否则模型只会原样重试。</li>
+</ul>
+<h2 id="九、思考题"><a href="#九、思考题" class="headerlink" title="九、思考题"></a>九、思考题</h2><p><strong>1、<code>wrap_tool_call</code> 的 <code>handler</code> 不调用会怎样？</strong></p>
+<p>参考回答：工具根本不会执行，中间件直接返回自己构造的 <code>ToolMessage</code> 就是短路。这既是风险也是能力：可以做「参数不合规直接打回」「命中缓存直接返回」这类优化，但要清楚自己在跳过真实执行。</p>
+<p><strong>2、为什么工具重试不能放在 <code>wrap_model_call</code> 里？</strong></p>
+<p>参考回答：<code>wrap_model_call</code> 包的是整次模型调用，重试意味着整轮「模型决策 → 工具执行」重来，已经成功的步骤会被重复执行、成本翻倍；工具级失败应该只重跑那次工具。</p>
+<p><strong>3、工具失败时返回「空字符串」为什么是最差实践？</strong></p>
+<p>参考回答：空字符串是合法返回值，模型无法区分「查到了但没内容」和「查失败了」，会继续按成功路径推理；正确做法是回灌明确的失败内容（含错误类型与修正建议），让模型进入纠错分支。</p>
+<p><strong>4、<code>before_model</code> 与 <code>wrap_model_call</code> 都能改提示，选哪个？</strong></p>
+<p>参考回答：只改内容、不需要控制执行次数用 <code>before_model</code>；需要重试、缓存、短路、或包住 handler 做前后处理用 <code>wrap_model_call</code>。判断依据是「要不要控制 handler 被调用几次」。</p>
+<h2 id="十、下一篇预告"><a href="#十、下一篇预告" class="headerlink" title="十、下一篇预告"></a>十、下一篇预告</h2><p><strong>下一篇标题</strong>：08 <code>create_agent</code> 循环：状态、工具回灌与终止条件。</p>
+<p><strong>一句话内容</strong>：把前面所有零件装成一台机器——<code>create_agent</code> 的参数、<code>AgentState</code> 里到底存了什么、一轮循环怎么从「模型给 tool_call」走到「工具结果回灌」再到终止。</p>
+<p><strong>承接关系</strong>：前七讲分别讲了模型、消息、流、工具、结构化、失败处理；这一讲是它们第一次合体，也是 M3 的入口。</p>
+<p><strong>跳转位置</strong>：进入 M3 模块第一讲。</p>
+<h2 id="十一、官方资料"><a href="#十一、官方资料" class="headerlink" title="十一、官方资料"></a>十一、官方资料</h2><ul>
+<li>Tools（Tool errors：<code>wrap_tool_call</code> 转 <code>ToolMessage</code>）：<a target="_blank" rel="noopener" href="https://docs.langchain.com/oss/python/langchain/tools">https://docs.langchain.com/oss/python/langchain/tools</a></li>
+<li>Custom middleware（钩子表、执行顺序、<code>wrap_model_call</code> 重试示例）：<a target="_blank" rel="noopener" href="https://docs.langchain.com/oss/python/langchain/middleware/custom">https://docs.langchain.com/oss/python/langchain/middleware/custom</a></li>
+<li>Models（Connection resilience：哪些错误重试、哪些不重试）：<a target="_blank" rel="noopener" href="https://docs.langchain.com/oss/python/langchain/models">https://docs.langchain.com/oss/python/langchain/models</a></li>
+</ul>
+<p>上一篇：<a href="/2026/12/04/ai/langchain/langchain-6-structured-output/">LC06 结构化输出</a> ｜ 下一篇：<a href="/2026/12/06/ai/langchain/langchain-8-create-agent/">LC08 create_agent 循环</a> ｜ <a href="/2026/11/28/ai/langchain/langchain-0-series-index/">总目录</a></p>
+</div>
+
+  <div class="mb-foot">
+    <a href="/phone/">返回手机首页</a>
+    <a href="/phone/tags/">星迹索引</a>
+  </div>
+</div>
+
+
+<script>
+  /* 作用：懒加载本地 mermaid 库；无 mermaid 代码块时不加载 */
+  function loadLocalMermaid(){
+    return new Promise(function(resolve, reject){
+      if(window.mermaid) return resolve(window.mermaid);
+      var s = document.createElement('script');
+      s.src = '/js/third-party/mermaid/mermaid.min.js?v=10';
+      s.onload = function(){ resolve(window.mermaid); };
+      s.onerror = function(){ reject(new Error('mermaid local load failed')); };
+      document.head.appendChild(s);
+    });
+  }
+
+  /* 作用：把 ```mermaid 代码块替换成 SVG 图（手机端字号略小、图可横向滚动） */
+  async function renderMermaidDiagram(){
+    var blocks = document.querySelectorAll('pre[class*="language-mermaid"]');
+    if(!blocks.length) return;
+    var mermaid;
+    try { mermaid = await loadLocalMermaid(); }
+    catch(e){ console.warn('[mermaid] 本地库加载失败：', e); return; }
+
+    mermaid.initialize({
+      startOnLoad: false,
+      theme: 'base',
+      themeVariables: {
+        darkMode: true,
+        background: 'transparent',
+        fontFamily: '"Microsoft YaHei", "PingFang SC", "Segoe UI", sans-serif',
+        fontSize: '12px',
+        primaryColor: '#062f3d',
+        primaryTextColor: '#d6f6ff',
+        primaryBorderColor: '#00eeff',
+        secondaryColor: '#04222d',
+        tertiaryColor: '#04222d',
+        mainBkg: '#062f3d',
+        nodeBorder: '#00eeff',
+        clusterBkg: '#02161f',
+        clusterBorder: '#00eeff55',
+        lineColor: '#00eeff',
+        textColor: '#c0e8ff',
+        edgeLabelBackground: '#02161f'
+      },
+      flowchart: { curve: 'basis', useMaxWidth: false, htmlLabels: false, nodeSpacing: 30, rankSpacing: 40, padding: 10 }
+    });
+
+    var targets = [];
+    blocks.forEach(function(el){
+      var codeEl = el.querySelector('code');
+      if(!codeEl) return;
+      var div = document.createElement('div');
+      div.className = 'mermaid';
+      div.textContent = codeEl.textContent;
+      el.parentNode.replaceChild(div, el);
+      targets.push(div);
+    });
+    if(!targets.length) return;
+    try { await mermaid.run({ nodes: targets }); }
+    catch(e){ console.warn('[mermaid] 渲染失败：', e); }
+  }
+  /* 作用：多次触发兜底（延迟重试 + DOM 变化），防止某次时机没跑到导致图表留在代码块 */
+  var mmBusy = false;
+  function scheduleMermaid(){
+    if(mmBusy) return;
+    mmBusy = true;
+    renderMermaidDiagram().then(function(){ mmBusy = false; }, function(){ mmBusy = false; });
+  }
+  scheduleMermaid();
+  window.addEventListener('load', scheduleMermaid);
+  [1000, 3000, 8000].forEach(function(ms){ setTimeout(scheduleMermaid, ms); });
+  if(document.readyState !== 'loading') scheduleMermaid();
+  if(window.MutationObserver){
+    var mmTimer = null;
+    var mmObserver = new MutationObserver(function(){
+      clearTimeout(mmTimer);
+      mmTimer = setTimeout(scheduleMermaid, 400);
+    });
+    mmObserver.observe(document.querySelector('.mb-article') || document.body, { childList: true, subtree: true });
+  }
+</script>
+</body>
+</html>

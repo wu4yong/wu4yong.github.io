@@ -1,0 +1,441 @@
+<!--
+  ============================================
+  手机端 · 文章原文页
+  文件：phone/post.njk
+  适用终端：手机端（路由 /phone/p/<slug>/，由 scripts/phone-routes.js 生成）
+  作用：手机阅读单篇文章；单列布局、无侧栏无雷达，替代电脑端 post.njk
+        数据由生成期算好：page.item = { title, dateStr, content, cats, tags }
+  样式依赖：source/css/theme/phone/common.css、source/css/theme/phone/list.css
+  组件依赖：phone/_components/Particles.njk
+  最后修改：2026-11-11
+  ============================================
+-->
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="color-scheme" content="dark">
+  <meta name="theme-color" content="#020817">
+  <!-- 首帧兜底：浏览器默认画布是白的，样式未解析前会闪一下白。这条规则先锁死深空底色 -->
+  <style>html{background-color:#020817}</style>
+  <title>LangChain 02 · 模型初始化：init_chat_model 与 provider 切换 - 时空秘境</title>
+  <!-- 手机端样式：基础 + 列表/正文，外链引入（源文件 source/css/theme/phone/） -->
+  <link rel="stylesheet" href="/css/theme/phone/common.css">
+  <link rel="stylesheet" href="/css/theme/phone/list.css">
+<meta name="generator" content="Hexo 8.1.2"></head>
+<body>
+<div class="mb-shell">
+  <!--
+  ============================================
+  手机端星空粒子组件
+  文件：Particles.njk
+  适用终端：手机端
+  作用：Particles.njk 的手机端副本（nunjucks 子目录 include 取不到上级）
+        参数与电脑端 _components/Particles.njk 保持一致：
+        粒子 95 / 连线 118px / opacity 0.32，外加星座层与零星闪烁层
+  最后修改：2026-11-12
+  ============================================
+--><!-- z-index 必须是 0：负层级会被 body 不透明背景盖住，粒子在跑却看不见 -->
+<div id="particles" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 0; pointer-events: none;"></div>
+<!-- 星座层（与首页同一套：随机零星散布星座图形 + 偶尔闪烁的小星） -->
+<div id="constellations" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 1; pointer-events: none;" aria-hidden="true"></div>
+<script src="/js/particles.min.js"></script>
+<script>
+particlesJS("particles", {
+  particles: {
+    number: {
+      value: 95,
+      density: {
+        enable: true,
+        value_area: 800
+      }
+    },
+    color: {
+      value: "#00eeff"
+    },
+    shape: {
+      type: "circle",
+      stroke: {
+        width: 0,
+        color: "#000000"
+      }
+    },
+    opacity: {
+      value: 0.6,
+      random: true,
+      anim: {
+        enable: true,
+        speed: 0.5,
+        opacity_min: 0.1,
+        sync: false
+      }
+    },
+    size: {
+      value: 3,
+      random: true,
+      anim: {
+        enable: true,
+        speed: 2,
+        size_min: 0.1,
+        sync: false
+      }
+    },
+    line_linked: {
+      enable: true,
+      distance: 118,
+      color: "#00eeff",
+      opacity: 0.32,
+      width: 1
+    },
+    move: {
+      enable: true,
+      speed: 0.8,
+      direction: "none",
+      random: true,
+      straight: false,
+      out_mode: "out",
+      bounce: false,
+      attract: {
+        enable: true,
+        rotateX: 600,
+        rotateY: 1200
+      }
+    }
+  },
+  interactivity: {
+    detect_on: "canvas",
+    events: {
+      onhover: {
+        enable: true,
+        mode: "grab"       // 手指按住时粒子聚集
+      },
+      onclick: {
+        enable: true,
+        mode: "push"       // 点击时产生新粒子
+      },
+      resize: true
+    },
+    modes: {
+      grab: {
+        distance: 200,
+        line_linked: {
+          opacity: 1
+        }
+      },
+      push: {
+        particles_nb: 6
+      }
+    }
+  },
+  retina_detect: true
+});
+</script>
+<!-- 星座 + 零星闪烁层：与电脑端共用同一份绘制脚本 -->
+<script src="/js/theme/home/starfield.js"></script>
+
+
+  <div class="mb-top">
+    <a class="mb-back" href="/phone/">← 返回手机首页</a>
+    <span class="mb-sub" style="margin:0">2026-11-30</span>
+  </div>
+
+  <h1 class="mb-title">LangChain 02 · 模型初始化：init_chat_model 与 provider 切换</h1>
+  <div class="mb-sub">
+    分类：ai · langchain
+     ｜ 标签：LangChain · AI · 系统课
+  </div>
+
+  <div class="mb-article"><div class="essay-banner essay-langchain"></div>
+
+<h1 id="02-模型初始化：init-chat-model-与-provider-切换"><a href="#02-模型初始化：init-chat-model-与-provider-切换" class="headerlink" title="02 模型初始化：init_chat_model 与 provider 切换"></a>02 模型初始化：<code>init_chat_model</code> 与 provider 切换</h1><p><img src="https://wu4yong.github.io/starry-images/assets/img/langchain/v1/lc-2-model.svg" alt="一个入口，七家 provider：init_chat_model 把模型字符串解析成具体模型对象"></p>
+<p><em><code>provider:model</code> 字符串 → provider 包 → 具体 ChatModel 实例，换模型只改一个字符串｜依据 docs.langchain.com&#x2F;oss&#x2F;python&#x2F;langchain&#x2F;models 自绘</em></p>
+<p><strong>版本不一致提示</strong>：</p>
+<ul>
+<li>本篇基线是 LangChain v1（1.x）+ Python 3.13，官方 Quickstart 的示例环境是 Python 3.11，仅解释器版本不同；</li>
+<li><code>max_retries</code> 在 <code>init_chat_model</code> 文档里默认 6，官方又写明 <code>ChatOpenAI</code>、<code>ChatAnthropic</code> 自身默认 2 次，这属于封装层与集成层两个不同默认值，官方原文并列存在，本篇照原样保留、不合并成单一结论；</li>
+<li><code>langchain-anthropic</code> 的 <code>max_tokens</code> 默认值在 v1 有变化（迁移指南 Breaking changes），官方未给统一数值，结论是显式传值。</li>
+</ul>
+<h2 id="一、学习目标"><a href="#一、学习目标" class="headerlink" title="一、学习目标"></a>一、学习目标</h2><p>学完这一讲，你要能做到三件事：</p>
+<ol>
+<li>用 <code>init_chat_model</code> 初始化任意受支持 provider 的模型，并说清 <code>&quot;provider:model&quot;</code> 与 <code>model_provider=</code> 两种写法的区别；</li>
+<li>看懂模型参数表里 <code>temperature</code>、<code>max_tokens</code>、<code>timeout</code>、<code>max_retries</code> 各自管什么，知道哪些必须显式给；</li>
+<li>在不动业务代码的前提下，把一个 provider 换成另一个 provider。</li>
+</ol>
+<h2 id="二、前置知识"><a href="#二、前置知识" class="headerlink" title="二、前置知识"></a>二、前置知识</h2><ul>
+<li>第 01 篇已完成：环境、凭证、<code>langchain</code> + provider 包装好，能跑通一次 <code>invoke</code>；</li>
+<li>知道什么是 token（不要求会估）。</li>
+</ul>
+<h2 id="三、理论讲解（官方定义）"><a href="#三、理论讲解（官方定义）" class="headerlink" title="三、理论讲解（官方定义）"></a>三、理论讲解（官方定义）</h2><p>本轮骨架照官方 <a target="_blank" rel="noopener" href="https://docs.langchain.com/oss/python/langchain/models">Models</a> 页的组织：Basic usage（Initialize a model &#x2F; Supported providers and models &#x2F; Key methods）→ Parameters → Connection resilience → Invocation。本篇只讲到 Invocation 的 <code>invoke</code>，<code>stream</code> &#x2F; <code>batch</code> 留给第 04 篇讲流式时展开。</p>
+<h3 id="1-模型的两种用法（官方-Models「Basic-usage」）"><a href="#1-模型的两种用法（官方-Models「Basic-usage」）" class="headerlink" title="1. 模型的两种用法（官方 Models「Basic usage」）"></a>1. 模型的两种用法（官方 Models「Basic usage」）</h3><p>官方把模型的使用分成两类：</p>
+<ol>
+<li><strong>With agents</strong>——在创建 agent 时动态指定模型；</li>
+<li><strong>Standalone</strong>——脱离 agent 循环直接调用，用于文本生成、分类、抽取。</li>
+</ol>
+<p>官方强调「同一套模型接口在两种场景下通用」，所以这一讲先把 standalone 讲透，第 08 篇再把它交给 <code>create_agent</code>。</p>
+<h3 id="2-初始化模型（官方-Models「Initialize-a-model」）"><a href="#2-初始化模型（官方-Models「Initialize-a-model」）" class="headerlink" title="2. 初始化模型（官方 Models「Initialize a model」）"></a>2. 初始化模型（官方 Models「Initialize a model」）</h3><p>官方原文：入门 standalone 最省事的方式是用 <code>init_chat_model</code>，从你选的 provider 初始化一个模型。它给了两种写法：</p>
+<pre class="line-numbers language-python" data-language="python"><code class="language-python"><span class="token comment"># 写法一：一个字符串搞定，provider 写在冒号前</span>
+model <span class="token operator">=</span> init_chat_model<span class="token punctuation">(</span><span class="token string">"gpt-5-nano"</span><span class="token punctuation">)</span>
+
+<span class="token comment"># 写法二：模型名与 provider 分开传</span>
+model <span class="token operator">=</span> init_chat_model<span class="token punctuation">(</span><span class="token string">"claude-sonnet-4-6"</span><span class="token punctuation">,</span> model_provider<span class="token operator">=</span><span class="token string">"anthropic"</span><span class="token punctuation">)</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<p><strong>导入路径</strong>：<code>from langchain.chat_models import init_chat_model</code>（v1 路径，官方迁移指南 Namespace 表列出）。</p>
+<p><strong>官方定义（直译）</strong>：<code>init_chat_model</code> 根据模型标识符从指定的 chat model provider 初始化一个聊天模型；标识符可以用 <code>provider:model</code> 的冒号形式一次给全，也可以用 <code>model_provider</code> 单独指定。</p>
+<p><strong>参数表</strong>：</p>
+<table>
+<thead>
+<tr>
+<th>参数</th>
+<th>类型</th>
+<th>默认值</th>
+<th>作用</th>
+<th>易错点</th>
+<th>v1 变化</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>model</code></td>
+<td><code>str</code></td>
+<td>无（必填）</td>
+<td>模型标识符，可写成 <code>provider:model</code></td>
+<td>写成 <code>openai/gpt-5-nano</code> 之类分隔符会解析失败</td>
+<td>官方未说明</td>
+</tr>
+<tr>
+<td><code>model_provider</code></td>
+<td><code>str</code></td>
+<td><code>None</code></td>
+<td>单独指定 provider，与冒号写法二选一</td>
+<td>两处都给且不一致时以显式参数为准，容易误判实际走了谁</td>
+<td>官方未说明</td>
+</tr>
+<tr>
+<td><code>api_key</code></td>
+<td><code>str</code></td>
+<td>由 provider 从环境变量读取</td>
+<td>覆盖环境变量里的凭证</td>
+<td>传了空字符串会当成有效值，导致 401</td>
+<td>官方未说明</td>
+</tr>
+<tr>
+<td><code>temperature</code></td>
+<td><code>number</code></td>
+<td>由 provider 决定</td>
+<td>控制输出随机性，越高越发散</td>
+<td>不同 provider 的取值范围与默认不同</td>
+<td>官方未说明</td>
+</tr>
+<tr>
+<td><code>max_tokens</code></td>
+<td><code>number</code></td>
+<td>由 provider 决定</td>
+<td>限制响应 token 总量</td>
+<td>设太小会把答案截断，且不一定报错</td>
+<td>官方未说明（见第七节 anthropic 条目）</td>
+</tr>
+<tr>
+<td><code>timeout</code></td>
+<td><code>number</code></td>
+<td>由 provider 决定</td>
+<td>单次请求最长等待秒数</td>
+<td>长任务设太小会超时重试，反而更慢</td>
+<td>官方未说明</td>
+</tr>
+<tr>
+<td><code>max_retries</code></td>
+<td><code>number</code></td>
+<td><code>6</code></td>
+<td>失败重试次数，指数退避 + 抖动</td>
+<td>401&#x2F;404 这类客户端错误不会重试，调大也没用</td>
+<td>官方未说明</td>
+</tr>
+</tbody></table>
+<p>其余 provider 专有参数（如 Azure 的 <code>azure_deployment</code>、<code>ChatOpenAI</code> 的 <code>use_responses_api</code>）以官方 chat model integrations 页为准，官方说明每家的参数集不同。</p>
+<h3 id="3-受支持的-provider（官方-Models「Supported-providers-and-models」）"><a href="#3-受支持的-provider（官方-Models「Supported-providers-and-models」）" class="headerlink" title="3. 受支持的 provider（官方 Models「Supported providers and models」）"></a>3. 受支持的 provider（官方 Models「Supported providers and models」）</h3><p>官方原话大意：LangChain 通过专门的集成包支持所有主流 provider，每个包实现同一套标准接口，因此可以<strong>换 provider 而不重写业务逻辑</strong>；新模型名不需要等 LangChain 发版，因为 provider 包把模型名直接透传给 provider 的 API。</p>
+<p>这句话要记住，它意味着两件事：模型名是「透传」的，官方没列的新型号通常也能用；接口是统一的，<code>invoke</code> 的用法不随 provider 变。</p>
+<h3 id="4-关键方法（官方-Models「Key-methods」）"><a href="#4-关键方法（官方-Models「Key-methods」）" class="headerlink" title="4. 关键方法（官方 Models「Key methods」）"></a>4. 关键方法（官方 Models「Key methods」）</h3><p>官方列了三个：</p>
+<ul>
+<li><strong>Invoke</strong>：模型接收消息作为输入，生成完整响应后返回消息；</li>
+<li><strong>Stream</strong>：调用模型，但边生成边返回（第 04 篇）；</li>
+<li><strong>Batch</strong>：把多个请求打包批量发送，处理更高效。</li>
+</ul>
+<h3 id="5-参数与连接韧性（官方-Models「Parameters」「Connection-resilience」）"><a href="#5-参数与连接韧性（官方-Models「Parameters」「Connection-resilience」）" class="headerlink" title="5. 参数与连接韧性（官方 Models「Parameters」「Connection resilience」）"></a>5. 参数与连接韧性（官方 Models「Parameters」「Connection resilience」）</h3><p>官方把标准参数归纳为 <code>model</code>、<code>api_key</code>、<code>temperature</code>、<code>max_tokens</code>、<code>timeout</code>、<code>max_retries</code>，并说明用 <code>init_chat_model</code> 时这些参数作为 <code>**kwargs</code> 传进去：</p>
+<pre class="line-numbers language-python" data-language="python"><code class="language-python">model <span class="token operator">=</span> init_chat_model<span class="token punctuation">(</span>
+    <span class="token string">"claude-sonnet-4-6"</span><span class="token punctuation">,</span>
+    temperature<span class="token operator">=</span><span class="token number">0.7</span><span class="token punctuation">,</span>
+    timeout<span class="token operator">=</span><span class="token number">30</span><span class="token punctuation">,</span>
+    max_tokens<span class="token operator">=</span><span class="token number">1000</span><span class="token punctuation">,</span>
+    max_retries<span class="token operator">=</span><span class="token number">6</span><span class="token punctuation">,</span>  <span class="token comment"># 默认值，网络不稳时可加大</span>
+<span class="token punctuation">)</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<p>「Connection resilience」一节的事实：多数集成会自动重试失败请求，重试网络错误、限流（429）、服务端错误（5xx），<strong>不重试</strong> 401 未授权、404 这类客户端错误；默认重试次数因包而异——官方点名 <code>ChatOpenAI</code> 与 <code>ChatAnthropic</code> 默认 2 次，<code>ChatGoogleGenerativeAI</code> 默认 6 次，<code>ChatOllama</code> 不重试。而通过 <code>init_chat_model</code> 看到的 <code>max_retries</code> 默认值是 6，这两处口径不同，官方原文并列存在，实际行为以你用的 provider 包为准。</p>
+<h2 id="四、原理拆解"><a href="#四、原理拆解" class="headerlink" title="四、原理拆解"></a>四、原理拆解</h2><p><img src="https://wu4yong.github.io/starry-images/assets/img/langchain/v1/lc-2b-invoke.svg" alt="invoke &#x2F; stream &#x2F; batch 三条调用路径，共用同一个模型对象"></p>
+<p><em>同一个 <code>model</code> 对象，三种调用方式：一次一答、边生成边返、打包并发｜自绘</em></p>
+<p><code>init_chat_model</code> 干的事，等价于前台登记：</p>
+<p>你递过去一张写着「openai:gpt-5-nano」的单子（字符串），前台先看冒号前的姓（provider），去对应的通讯录（已安装的 provider 包）里找人，把冒号后的名（model）连同你附带的偏好（temperature 等）一起报上去，最后交给你一个「已经能对话的人」（<code>BaseChatModel</code> 实例）。</p>
+<p>所以三类报错都能对上号：</p>
+<ul>
+<li>姓不认识 → provider 包没装（第 01 篇的坑）；</li>
+<li>名不存在 → 模型名写错，或该 provider 没这个型号；</li>
+<li>人到了但不肯说话 → 凭证问题，401。</li>
+</ul>
+<h2 id="五、场景说明"><a href="#五、场景说明" class="headerlink" title="五、场景说明"></a>五、场景说明</h2><ol>
+<li><strong>本地调试省钱</strong>：<code>init_chat_model(&quot;ollama:qwen3&quot;)</code> 走本地，不烧钱；</li>
+<li><strong>生产多模型灰度</strong>：配置里放 <code>MODEL_NAME=openai:gpt-5-nano</code>，代码只读配置，切换 provider 不用改代码；</li>
+<li><strong>同一应用内多模型</strong>：便宜模型做分类、强模型做总结，各建一个实例即可，互不影响。</li>
+</ol>
+<h2 id="六、示例代码"><a href="#六、示例代码" class="headerlink" title="六、示例代码"></a>六、示例代码</h2><h3 id="步骤-1：环境准备"><a href="#步骤-1：环境准备" class="headerlink" title="步骤 1：环境准备"></a>步骤 1：环境准备</h3><p>同第 01 篇步骤 1；本篇额外依赖是 provider 包，本篇用 <code>langchain[openai]</code>：</p>
+<pre class="line-numbers language-bash" data-language="bash"><code class="language-bash">uv <span class="token function">add</span> <span class="token string">"langchain[openai]"</span>
+<span class="token comment"># pip 等价：pip install -U "langchain[openai]"</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span></span></code></pre>
+
+<h3 id="步骤-2：凭证配置"><a href="#步骤-2：凭证配置" class="headerlink" title="步骤 2：凭证配置"></a>步骤 2：凭证配置</h3><p>同第 01 篇步骤 2，本篇需要 <code>OPENAI_API_KEY</code>。</p>
+<h3 id="步骤-3：导入"><a href="#步骤-3：导入" class="headerlink" title="步骤 3：导入"></a>步骤 3：导入</h3><pre class="line-numbers language-python" data-language="python"><code class="language-python"><span class="token keyword">from</span> langchain<span class="token punctuation">.</span>chat_models <span class="token keyword">import</span> init_chat_model  <span class="token comment"># v1：统一模型入口</span><span aria-hidden="true" class="line-numbers-rows"><span></span></span></code></pre>
+
+<h3 id="步骤-4：最小可运行代码"><a href="#步骤-4：最小可运行代码" class="headerlink" title="步骤 4：最小可运行代码"></a>步骤 4：最小可运行代码</h3><p>存成 <code>main.py</code>，然后 <code>uv run main.py</code>（pip 方案：<code>python main.py</code>）。</p>
+<pre class="line-numbers language-python" data-language="python"><code class="language-python"><span class="token keyword">from</span> langchain<span class="token punctuation">.</span>chat_models <span class="token keyword">import</span> init_chat_model
+
+<span class="token comment"># provider 写在冒号前；模型名透传给 provider，官方没列的新型号通常也能用</span>
+model <span class="token operator">=</span> init_chat_model<span class="token punctuation">(</span>
+    <span class="token string">"openai:gpt-5-nano"</span><span class="token punctuation">,</span>
+    temperature<span class="token operator">=</span><span class="token number">0.3</span><span class="token punctuation">,</span>   <span class="token comment"># 越低越稳定，抽取类任务建议 0~0.3</span>
+    timeout<span class="token operator">=</span><span class="token number">30</span><span class="token punctuation">,</span>        <span class="token comment"># 单次请求上限，超时会重试</span>
+    max_retries<span class="token operator">=</span><span class="token number">6</span><span class="token punctuation">,</span>     <span class="token comment"># 官方默认值；弱网可提到 10~15</span>
+<span class="token punctuation">)</span>
+
+<span class="token comment"># invoke：给一条消息，拿一条完整回复</span>
+response <span class="token operator">=</span> model<span class="token punctuation">.</span>invoke<span class="token punctuation">(</span><span class="token string">"把这句话翻译成英文：今天下雨了。"</span><span class="token punctuation">)</span>
+
+<span class="token keyword">print</span><span class="token punctuation">(</span>response<span class="token punctuation">.</span>text<span class="token punctuation">)</span>              <span class="token comment"># 文本</span>
+<span class="token keyword">print</span><span class="token punctuation">(</span>response<span class="token punctuation">.</span>content_blocks<span class="token punctuation">)</span>    <span class="token comment"># 标准化内容块（第 03 篇细讲）</span>
+<span class="token keyword">print</span><span class="token punctuation">(</span>response<span class="token punctuation">.</span>usage_metadata<span class="token punctuation">)</span>    <span class="token comment"># token 用量</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<h3 id="步骤-5：预期输出"><a href="#步骤-5：预期输出" class="headerlink" title="步骤 5：预期输出"></a>步骤 5：预期输出</h3><pre class="line-numbers language-text" data-language="text"><code class="language-text">It rained today.
+[&#123;'type': 'text', 'text': 'It rained today.'&#125;]
+&#123;'input_tokens': 18, 'output_tokens': 6, 'total_tokens': 24&#125;<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span></span></code></pre>
+
+<p>输出内容会因模型不同而不同，结构大致为：文本、内容块列表、用量字典三部分。</p>
+<h3 id="步骤-6：验证是否成功"><a href="#步骤-6：验证是否成功" class="headerlink" title="步骤 6：验证是否成功"></a>步骤 6：验证是否成功</h3><p><code>response.text</code> 不为空且 <code>response.content_blocks</code> 里能看到 <code>{&#39;type&#39;: &#39;text&#39;, ...}</code>，说明初始化与调用都通了。想验证「换 provider 只改字符串」，把模型换成 <code>&quot;ollama:qwen3&quot;</code>（本地已起 Ollama，先 <code>uv add &quot;langchain[ollama]&quot;</code>）再 <code>uv run main.py</code> 一次，代码其余部分一行不用动。</p>
+<h2 id="七、常见坑（官方明确限制-版本差异）"><a href="#七、常见坑（官方明确限制-版本差异）" class="headerlink" title="七、常见坑（官方明确限制&#x2F;版本差异）"></a>七、常见坑（官方明确限制&#x2F;版本差异）</h2><ol>
+<li><strong>两处都写 provider 且不一致</strong>。<code>init_chat_model(&quot;openai:gpt-5-nano&quot;, model_provider=&quot;anthropic&quot;)</code> 这种写法不会报错，但实际行为容易误判；统一只用一种写法。</li>
+<li><strong>以为 <code>max_retries=6</code> 对所有 provider 生效</strong>。官方 Models 页明确点名 <code>ChatOpenAI</code> &#x2F; <code>ChatAnthropic</code> 默认 2 次、<code>ChatGoogleGenerativeAI</code> 6 次、<code>ChatOllama</code> 不重试——重试是 provider 包的能力，不是模型接口的保证。</li>
+<li><strong>401 &#x2F; 404 一直重试</strong>。官方写明客户端错误不重试，遇到 401 先查 key，别调大 <code>max_retries</code>。</li>
+<li><strong><code>langchain-anthropic</code> 的 <code>max_tokens</code> 默认值在 v1 有变化</strong>。官方迁移指南 Breaking changes 列有「Default max_tokens in langchain-anthropic」条目，正文未给统一数值，实践结论：显式传 <code>max_tokens</code>，不依赖默认。</li>
+<li><strong>把模型名当版本号</strong>。官方说明模型名由 provider 透传，因此 <code>gpt-5-nano</code> 是否可用取决于 provider 侧，不是 LangChain 版本。</li>
+</ol>
+<p>本篇涉及 API 在 v1 迁移指南中的对应条目：Models 页本身未标注 <code>init_chat_model</code> 的签名变更；迁移指南 Breaking changes 中与本篇相关的是 <code>langchain-anthropic</code> 的 <code>max_tokens</code> 默认值。除此之外，官方迁移指南与 Release Notes 均未标注 <code>init_chat_model</code> 的跨版本差异。</p>
+<h2 id="八、课后小结"><a href="#八、课后小结" class="headerlink" title="八、课后小结"></a>八、课后小结</h2><ul>
+<li><code>init_chat_model</code> 是 v1 唯一的模型初始化入口，导入路径 <code>langchain.chat_models</code>；</li>
+<li>模型标识符支持 <code>provider:model</code> 与 <code>model_provider=</code> 两种写法，别混用；</li>
+<li>标准参数六个：<code>model</code>、<code>api_key</code>、<code>temperature</code>、<code>max_tokens</code>、<code>timeout</code>、<code>max_retries</code>；</li>
+<li>重试只对网络错误、429、5xx 生效，401&#x2F;404 不重试；</li>
+<li>换 provider 的代价应该只是改一个字符串。</li>
+</ul>
+<h2 id="九、思考题"><a href="#九、思考题" class="headerlink" title="九、思考题"></a>九、思考题</h2><p><strong>1、为什么官方推荐用 <code>init_chat_model</code>，而不是直接 <code>ChatOpenAI(model=...)</code>？</strong></p>
+<p>参考回答：<code>init_chat_model</code> 把「选哪家 provider」收敛成一个字符串，业务代码不出现 provider 类名，切换 provider 只改配置；直接实例化 provider 类会把厂商绑进代码，换一家就要改 import 和构造调用。两者底层等价，官方把前者作为统一入口。</p>
+<p><strong>2、<code>max_retries</code> 在 <code>init_chat_model</code> 文档里默认 6，但官方又说 <code>ChatOpenAI</code> 默认重试 2 次，冲突吗？</strong></p>
+<p>参考回答：不冲突，是两个层面。6 是 <code>init_chat_model</code> 这个封装层传入的默认值，2 是 <code>ChatOpenAI</code> 集成自身在未显式指定时的默认重试次数。官方把两处口径并列写出，实际以你最终构造出的 provider 包行为为准；对稳定性有要求时显式传值最稳。</p>
+<p><strong>3、模型名 <code>gpt-5-nano</code> 在 LangChain 里需要等框架发版支持吗？</strong></p>
+<p>参考回答：不需要。官方说明 provider 包把模型名直接透传给 provider 的 API，所以新模型名通常立刻可用，前提是 provider 侧确实提供该模型。</p>
+<p><strong>4、什么情况下应该把 <code>temperature</code> 设成 0？</strong></p>
+<p>参考回答：需要可复现、可对比的输出时，例如分类、信息抽取、结构化输出、评测基线。创意写作、对话润色这类任务才需要调高。注意官方未承诺 <code>temperature=0</code> 一定完全确定，provider 实现仍有差异。</p>
+<h2 id="十、下一篇预告"><a href="#十、下一篇预告" class="headerlink" title="十、下一篇预告"></a>十、下一篇预告</h2><p><strong>下一篇标题</strong>：03 消息与提示模板：<code>content_blocks</code>、<code>trim_messages</code> 与消息裁剪。</p>
+<p><strong>一句话内容</strong>：讲清 <code>SystemMessage</code> &#x2F; <code>HumanMessage</code> &#x2F; <code>AIMessage</code> &#x2F; <code>ToolMessage</code> 四种角色各自承载什么，v1 为什么要把模型输出统一成 <code>content_blocks</code>，以及历史过长时怎么用 <code>trim_messages</code> 裁。</p>
+<p><strong>承接关系</strong>：本篇 <code>invoke</code> 的入参可以是一句话，也可以是一串消息；返回的 <code>AIMessage</code> 里那个 <code>content_blocks</code> 我们只扫了一眼。下一篇把输入输出的消息结构讲透，这是后面接工具调用、接 Agent 循环的前提。</p>
+<p><strong>跳转位置</strong>：下一篇从消息结构接续，属于同一模块 M1 的基础篇。</p>
+<h2 id="十一、官方资料"><a href="#十一、官方资料" class="headerlink" title="十一、官方资料"></a>十一、官方资料</h2><ul>
+<li>Models（Initialize a model &#x2F; Parameters &#x2F; Key methods &#x2F; Connection resilience）：<a target="_blank" rel="noopener" href="https://docs.langchain.com/oss/python/langchain/models">https://docs.langchain.com/oss/python/langchain/models</a></li>
+<li>Messages（<code>AIMessage</code> 的字段与 <code>content_blocks</code>）：<a target="_blank" rel="noopener" href="https://docs.langchain.com/oss/python/langchain/messages">https://docs.langchain.com/oss/python/langchain/messages</a></li>
+<li>v1 迁移指南（<code>langchain-anthropic</code> 的 <code>max_tokens</code> 默认值变化）：<a target="_blank" rel="noopener" href="https://docs.langchain.com/oss/python/migrate/langchain-v1">https://docs.langchain.com/oss/python/migrate/langchain-v1</a></li>
+</ul>
+<p>上一篇：<a href="/2026/11/29/ai/langchain/langchain-1-install/">LC01 安装与项目结构</a> ｜ 下一篇：<a href="/2026/12/01/ai/langchain/langchain-3-messages-and-prompts/">LC03 消息与提示模板</a> ｜ <a href="/2026/11/28/ai/langchain/langchain-0-series-index/">总目录</a></p>
+</div>
+
+  <div class="mb-foot">
+    <a href="/phone/">返回手机首页</a>
+    <a href="/phone/tags/">星迹索引</a>
+  </div>
+</div>
+
+
+<script>
+  /* 作用：懒加载本地 mermaid 库；无 mermaid 代码块时不加载 */
+  function loadLocalMermaid(){
+    return new Promise(function(resolve, reject){
+      if(window.mermaid) return resolve(window.mermaid);
+      var s = document.createElement('script');
+      s.src = '/js/third-party/mermaid/mermaid.min.js?v=10';
+      s.onload = function(){ resolve(window.mermaid); };
+      s.onerror = function(){ reject(new Error('mermaid local load failed')); };
+      document.head.appendChild(s);
+    });
+  }
+
+  /* 作用：把 ```mermaid 代码块替换成 SVG 图（手机端字号略小、图可横向滚动） */
+  async function renderMermaidDiagram(){
+    var blocks = document.querySelectorAll('pre[class*="language-mermaid"]');
+    if(!blocks.length) return;
+    var mermaid;
+    try { mermaid = await loadLocalMermaid(); }
+    catch(e){ console.warn('[mermaid] 本地库加载失败：', e); return; }
+
+    mermaid.initialize({
+      startOnLoad: false,
+      theme: 'base',
+      themeVariables: {
+        darkMode: true,
+        background: 'transparent',
+        fontFamily: '"Microsoft YaHei", "PingFang SC", "Segoe UI", sans-serif',
+        fontSize: '12px',
+        primaryColor: '#062f3d',
+        primaryTextColor: '#d6f6ff',
+        primaryBorderColor: '#00eeff',
+        secondaryColor: '#04222d',
+        tertiaryColor: '#04222d',
+        mainBkg: '#062f3d',
+        nodeBorder: '#00eeff',
+        clusterBkg: '#02161f',
+        clusterBorder: '#00eeff55',
+        lineColor: '#00eeff',
+        textColor: '#c0e8ff',
+        edgeLabelBackground: '#02161f'
+      },
+      flowchart: { curve: 'basis', useMaxWidth: false, htmlLabels: false, nodeSpacing: 30, rankSpacing: 40, padding: 10 }
+    });
+
+    var targets = [];
+    blocks.forEach(function(el){
+      var codeEl = el.querySelector('code');
+      if(!codeEl) return;
+      var div = document.createElement('div');
+      div.className = 'mermaid';
+      div.textContent = codeEl.textContent;
+      el.parentNode.replaceChild(div, el);
+      targets.push(div);
+    });
+    if(!targets.length) return;
+    try { await mermaid.run({ nodes: targets }); }
+    catch(e){ console.warn('[mermaid] 渲染失败：', e); }
+  }
+  /* 作用：多次触发兜底（延迟重试 + DOM 变化），防止某次时机没跑到导致图表留在代码块 */
+  var mmBusy = false;
+  function scheduleMermaid(){
+    if(mmBusy) return;
+    mmBusy = true;
+    renderMermaidDiagram().then(function(){ mmBusy = false; }, function(){ mmBusy = false; });
+  }
+  scheduleMermaid();
+  window.addEventListener('load', scheduleMermaid);
+  [1000, 3000, 8000].forEach(function(ms){ setTimeout(scheduleMermaid, ms); });
+  if(document.readyState !== 'loading') scheduleMermaid();
+  if(window.MutationObserver){
+    var mmTimer = null;
+    var mmObserver = new MutationObserver(function(){
+      clearTimeout(mmTimer);
+      mmTimer = setTimeout(scheduleMermaid, 400);
+    });
+    mmObserver.observe(document.querySelector('.mb-article') || document.body, { childList: true, subtree: true });
+  }
+</script>
+</body>
+</html>

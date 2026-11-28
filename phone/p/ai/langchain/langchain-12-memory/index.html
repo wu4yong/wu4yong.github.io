@@ -1,0 +1,396 @@
+<!--
+  ============================================
+  手机端 · 文章原文页
+  文件：phone/post.njk
+  适用终端：手机端（路由 /phone/p/<slug>/，由 scripts/phone-routes.js 生成）
+  作用：手机阅读单篇文章；单列布局、无侧栏无雷达，替代电脑端 post.njk
+        数据由生成期算好：page.item = { title, dateStr, content, cats, tags }
+  样式依赖：source/css/theme/phone/common.css、source/css/theme/phone/list.css
+  组件依赖：phone/_components/Particles.njk
+  最后修改：2026-11-11
+  ============================================
+-->
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="color-scheme" content="dark">
+  <meta name="theme-color" content="#020817">
+  <!-- 首帧兜底：浏览器默认画布是白的，样式未解析前会闪一下白。这条规则先锁死深空底色 -->
+  <style>html{background-color:#020817}</style>
+  <title>LangChain 12 · 短期与长期记忆：checkpointer、store 与跨会话 - 时空秘境</title>
+  <!-- 手机端样式：基础 + 列表/正文，外链引入（源文件 source/css/theme/phone/） -->
+  <link rel="stylesheet" href="/css/theme/phone/common.css">
+  <link rel="stylesheet" href="/css/theme/phone/list.css">
+<meta name="generator" content="Hexo 8.1.2"></head>
+<body>
+<div class="mb-shell">
+  <!--
+  ============================================
+  手机端星空粒子组件
+  文件：Particles.njk
+  适用终端：手机端
+  作用：Particles.njk 的手机端副本（nunjucks 子目录 include 取不到上级）
+        参数与电脑端 _components/Particles.njk 保持一致：
+        粒子 95 / 连线 118px / opacity 0.32，外加星座层与零星闪烁层
+  最后修改：2026-11-12
+  ============================================
+--><!-- z-index 必须是 0：负层级会被 body 不透明背景盖住，粒子在跑却看不见 -->
+<div id="particles" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 0; pointer-events: none;"></div>
+<!-- 星座层（与首页同一套：随机零星散布星座图形 + 偶尔闪烁的小星） -->
+<div id="constellations" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 1; pointer-events: none;" aria-hidden="true"></div>
+<script src="/js/particles.min.js"></script>
+<script>
+particlesJS("particles", {
+  particles: {
+    number: {
+      value: 95,
+      density: {
+        enable: true,
+        value_area: 800
+      }
+    },
+    color: {
+      value: "#00eeff"
+    },
+    shape: {
+      type: "circle",
+      stroke: {
+        width: 0,
+        color: "#000000"
+      }
+    },
+    opacity: {
+      value: 0.6,
+      random: true,
+      anim: {
+        enable: true,
+        speed: 0.5,
+        opacity_min: 0.1,
+        sync: false
+      }
+    },
+    size: {
+      value: 3,
+      random: true,
+      anim: {
+        enable: true,
+        speed: 2,
+        size_min: 0.1,
+        sync: false
+      }
+    },
+    line_linked: {
+      enable: true,
+      distance: 118,
+      color: "#00eeff",
+      opacity: 0.32,
+      width: 1
+    },
+    move: {
+      enable: true,
+      speed: 0.8,
+      direction: "none",
+      random: true,
+      straight: false,
+      out_mode: "out",
+      bounce: false,
+      attract: {
+        enable: true,
+        rotateX: 600,
+        rotateY: 1200
+      }
+    }
+  },
+  interactivity: {
+    detect_on: "canvas",
+    events: {
+      onhover: {
+        enable: true,
+        mode: "grab"       // 手指按住时粒子聚集
+      },
+      onclick: {
+        enable: true,
+        mode: "push"       // 点击时产生新粒子
+      },
+      resize: true
+    },
+    modes: {
+      grab: {
+        distance: 200,
+        line_linked: {
+          opacity: 1
+        }
+      },
+      push: {
+        particles_nb: 6
+      }
+    }
+  },
+  retina_detect: true
+});
+</script>
+<!-- 星座 + 零星闪烁层：与电脑端共用同一份绘制脚本 -->
+<script src="/js/theme/home/starfield.js"></script>
+
+
+  <div class="mb-top">
+    <a class="mb-back" href="/phone/">← 返回手机首页</a>
+    <span class="mb-sub" style="margin:0">2026-12-10</span>
+  </div>
+
+  <h1 class="mb-title">LangChain 12 · 短期与长期记忆：checkpointer、store 与跨会话</h1>
+  <div class="mb-sub">
+    分类：ai · langchain
+     ｜ 标签：LangChain · AI · 系统课
+  </div>
+
+  <div class="mb-article"><div class="essay-banner essay-langchain"></div>
+
+<h1 id="12-短期与长期记忆：checkpointer、store-与跨会话"><a href="#12-短期与长期记忆：checkpointer、store-与跨会话" class="headerlink" title="12 短期与长期记忆：checkpointer、store 与跨会话"></a>12 短期与长期记忆：checkpointer、store 与跨会话</h1><p><img src="https://wu4yong.github.io/starry-images/assets/img/langchain/v1/lc-12-memory.svg" alt="两层记忆：thread 内靠 checkpointer，跨 thread 靠 store"></p>
+<p><em>同一份代码，换一个存储后端，记忆的寿命就从「一次会话」变成「永久」｜依据官方 Short-term &#x2F; Long-term memory 页自绘</em></p>
+<p><strong>版本不一致提示</strong>：</p>
+<ul>
+<li>本篇基线是 LangChain v1（1.x）+ Python 3.13，官方示例环境是 Python 3.11，仅解释器版本不同；</li>
+<li>官方示例模型名随 provider 更新，<code>checkpointer</code> &#x2F; <code>store</code> 的接口不受影响；</li>
+<li><code>PostgresSaver</code>、<code>PostgresStore</code> 来自 <code>langgraph-checkpoint-postgres</code>，官方标注为可选依赖，装在哪个版本以官方安装页为准。</li>
+</ul>
+<h2 id="一、学习目标"><a href="#一、学习目标" class="headerlink" title="一、学习目标"></a>一、学习目标</h2><p>学完这一讲，你要能做到三件事：</p>
+<ol>
+<li>分清两层记忆：<code>checkpointer</code>（thread 内、短期）与 <code>store</code>（跨 thread、长期），并说清各自的键结构；</li>
+<li>会写：<code>checkpointer=InMemorySaver()</code> + 稳定 <code>thread_id</code> 记会话；<code>store.put/search</code> 记画像；工具里用 <code>runtime.store</code> 读写；</li>
+<li>知道生产上该换成什么后端（Postgres &#x2F; SQLite &#x2F; Redis &#x2F; MongoDB），以及「记忆该由谁来写」的取舍。</li>
+</ol>
+<h2 id="二、前置知识"><a href="#二、前置知识" class="headerlink" title="二、前置知识"></a>二、前置知识</h2><ul>
+<li>读完 LC08（<code>create_agent</code> 与 <code>checkpointer</code>）、LC11（上下文与持久改动）；</li>
+<li>知道 <code>thread_id</code> 是会话的主键；</li>
+<li>了解 <code>ToolRuntime</code> 注入参数不进模型 schema（LC05）。</li>
+</ul>
+<h2 id="三、理论讲解（官方定义）"><a href="#三、理论讲解（官方定义）" class="headerlink" title="三、理论讲解（官方定义）"></a>三、理论讲解（官方定义）</h2><h3 id="1-两层记忆的定义"><a href="#1-两层记忆的定义" class="headerlink" title="1. 两层记忆的定义"></a>1. 两层记忆的定义</h3><p>官方对短期记忆的说法：<strong>让应用记住单个 thread &#x2F; 会话内的交互</strong>。thread 像一封邮件串起多条消息；会话历史是最常见的短期记忆形态，用 <code>checkpointer</code> 把 state 持久化到数据库或内存，thread 随时可恢复。</p>
+<p>对长期记忆：<strong>跨会话、跨 thread 存取</strong>，建立在 LangGraph store 之上，数据是「按 namespace + key 组织的 JSON 文档」。</p>
+<h3 id="2-短期记忆的关键点"><a href="#2-短期记忆的关键点" class="headerlink" title="2. 短期记忆的关键点"></a>2. 短期记忆的关键点</h3><ul>
+<li>只需在 <code>create_agent</code> 里传 <code>checkpointer</code>；</li>
+<li>状态在每次 <code>invoke</code> 或每个步骤（如工具调用）完成时更新，步骤开始时读取；</li>
+<li><code>state_schema</code> 可扩展 <code>AgentState</code>，加自己的字段（如 <code>user_id</code>、<code>preferences</code>），并通过 <code>invoke</code> 传入。</li>
+</ul>
+<p>官方还点明一个现实问题：即便模型支持超长上下文，<strong>长上下文本身也会让模型「分心」</strong>，并且更慢更贵——所以要裁剪、删除、摘要（LC11 已讲）。</p>
+<h3 id="3-长期记忆的键结构"><a href="#3-长期记忆的键结构" class="headerlink" title="3. 长期记忆的键结构"></a>3. 长期记忆的键结构</h3><pre class="line-numbers language-python" data-language="python"><code class="language-python">namespace <span class="token operator">=</span> <span class="token punctuation">(</span><span class="token string">"users"</span><span class="token punctuation">,</span><span class="token punctuation">)</span>     <span class="token comment"># 类似文件夹，常带 user_id / org_id</span>
+key <span class="token operator">=</span> <span class="token string">"user_123"</span>           <span class="token comment"># 类似文件名</span>
+store<span class="token punctuation">.</span>put<span class="token punctuation">(</span>namespace<span class="token punctuation">,</span> key<span class="token punctuation">,</span> <span class="token punctuation">&#123;</span><span class="token string">"name"</span><span class="token punctuation">:</span> <span class="token string">"John Smith"</span><span class="token punctuation">,</span> <span class="token string">"language"</span><span class="token punctuation">:</span> <span class="token string">"English"</span><span class="token punctuation">&#125;</span><span class="token punctuation">)</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span></span></code></pre>
+
+<p><code>store.get(namespace, key)</code> 返回带 <code>value</code> 与元数据的 <code>StoreValue</code>；<code>store.search(namespace, filter={...}, query=&quot;...&quot;)</code> 支持按内容过滤 + 向量相似度检索（需要给 store 配 <code>IndexConfig(embed=..., dims=...)</code>）。</p>
+<h3 id="4-工具里的读写"><a href="#4-工具里的读写" class="headerlink" title="4. 工具里的读写"></a>4. 工具里的读写</h3><ul>
+<li>读：<code>@tool def get_user_info(runtime: ToolRuntime[Context])</code>，<code>runtime.store.get((&quot;users&quot;,), runtime.context.user_id)</code>；</li>
+<li>写：同样的 <code>runtime.store.put(...)</code>，官方示例用 <code>TypedDict</code> 定义给模型看的字段结构；</li>
+<li>前提：<code>create_agent(..., store=store)</code> 必须传，否则 <code>runtime.store</code> 是 <code>None</code>。</li>
+</ul>
+<h3 id="5-生产环境"><a href="#5-生产环境" class="headerlink" title="5. 生产环境"></a>5. 生产环境</h3><p>官方给的替换路径很直接：短期用 <code>PostgresSaver.from_conn_string(DB_URI)</code> + <code>checkpointer.setup()</code>；长期用 <code>PostgresStore.from_conn_string(DB_URI)</code> + <code>store.setup()</code>。内存版（<code>InMemorySaver</code> &#x2F; <code>InMemoryStore</code>）明确是给开发和测试用的。</p>
+<h2 id="四、原理拆解"><a href="#四、原理拆解" class="headerlink" title="四、原理拆解"></a>四、原理拆解</h2><p><img src="https://wu4yong.github.io/starry-images/assets/img/langchain/v1/lc-12b-scope.svg" alt="记忆的三个键：thread_id 管会话、namespace 管归属、key 管个体"></p>
+<p><em>两层记忆的分界线只有一条：换个 thread_id，短期记忆就查不到；换个 namespace，长期记忆还能读到｜自绘</em></p>
+<p>三条判断线，能解决绝大多数「记忆不生效」的问题：</p>
+<ol>
+<li><strong><code>thread_id</code> 决定「这是不是同一段对话」</strong>。同一个 id 连续 invoke 就是多轮；换 id 就是新会话，即便用户是同一个人。</li>
+<li><strong><code>namespace</code> 决定「这份记忆属于谁」</strong>。官方建议把 user_id &#x2F; org_id 放进 namespace；只放 key 会把不同租户的数据混在一个目录里。</li>
+<li><strong><code>runtime.store</code> 是否存在，取决于你有没有把 store 传给 <code>create_agent</code></strong>。忘了传，工具里 <code>assert runtime.store is not None</code> 会直接炸。</li>
+</ol>
+<p>再记一条官方原话的含义：短期记忆存在 state 里，所以它能被「上下文工程」改写（裁剪、摘要都作用在 state 上）；长期记忆存在 store 里，中间件的裁剪动不到它——<strong>想让记忆免于被压掉，就落 store</strong>。</p>
+<h2 id="五、场景说明"><a href="#五、场景说明" class="headerlink" title="五、场景说明"></a>五、场景说明</h2><ol>
+<li><strong>多轮客服</strong>：<code>thread_id</code> 用会话 id，短期记忆装本次对话；用户画像落 store，跨会话复用；</li>
+<li><strong>个人助手</strong>：<code>store.put((&quot;preferences&quot;,), user_id, {...})</code> 记写作风格、常用地址、禁用话题；</li>
+<li><strong>团队协作</strong>：namespace 用 <code>(org_id, &quot;shared&quot;)</code> 存团队级知识，<code>(org_id, user_id)</code> 存个人偏好；</li>
+<li><strong>合规要求可追溯</strong>：把关键决策写进 store 并保留时间戳（store 的 value 是任意 JSON），便于审计。</li>
+</ol>
+<h2 id="六、示例代码"><a href="#六、示例代码" class="headerlink" title="六、示例代码"></a>六、示例代码</h2><h3 id="步骤-1：环境准备"><a href="#步骤-1：环境准备" class="headerlink" title="步骤 1：环境准备"></a>步骤 1：环境准备</h3><pre class="line-numbers language-bash" data-language="bash"><code class="language-bash">uv <span class="token function">add</span> <span class="token string">"langchain[openai]"</span> langgraph
+<span class="token comment"># pip 等价：pip install -U "langchain[openai]" langgraph</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span></span></code></pre>
+
+<h3 id="步骤-2：凭证配置"><a href="#步骤-2：凭证配置" class="headerlink" title="步骤 2：凭证配置"></a>步骤 2：凭证配置</h3><p>同 LC01，<code>OPENAI_API_KEY</code> 放 <code>.env</code>。</p>
+<h3 id="步骤-3：导入"><a href="#步骤-3：导入" class="headerlink" title="步骤 3：导入"></a>步骤 3：导入</h3><pre class="line-numbers language-python" data-language="python"><code class="language-python"><span class="token keyword">from</span> dataclasses <span class="token keyword">import</span> dataclass
+<span class="token keyword">from</span> typing <span class="token keyword">import</span> TypedDict
+<span class="token keyword">from</span> langchain<span class="token punctuation">.</span>agents <span class="token keyword">import</span> create_agent
+<span class="token keyword">from</span> langchain<span class="token punctuation">.</span>tools <span class="token keyword">import</span> tool<span class="token punctuation">,</span> ToolRuntime
+<span class="token keyword">from</span> langgraph<span class="token punctuation">.</span>checkpoint<span class="token punctuation">.</span>memory <span class="token keyword">import</span> InMemorySaver
+<span class="token keyword">from</span> langgraph<span class="token punctuation">.</span>store<span class="token punctuation">.</span>memory <span class="token keyword">import</span> InMemoryStore<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<h3 id="步骤-4：最小可运行代码"><a href="#步骤-4：最小可运行代码" class="headerlink" title="步骤 4：最小可运行代码"></a>步骤 4：最小可运行代码</h3><p>存成 <code>memory_demo.py</code>，<code>uv run memory_demo.py</code>。</p>
+<pre class="line-numbers language-python" data-language="python"><code class="language-python"><span class="token keyword">from</span> dataclasses <span class="token keyword">import</span> dataclass
+<span class="token keyword">from</span> dotenv <span class="token keyword">import</span> load_dotenv
+<span class="token keyword">from</span> langchain<span class="token punctuation">.</span>agents <span class="token keyword">import</span> create_agent
+<span class="token keyword">from</span> langchain<span class="token punctuation">.</span>tools <span class="token keyword">import</span> tool<span class="token punctuation">,</span> ToolRuntime
+<span class="token keyword">from</span> langgraph<span class="token punctuation">.</span>checkpoint<span class="token punctuation">.</span>memory <span class="token keyword">import</span> InMemorySaver
+<span class="token keyword">from</span> langgraph<span class="token punctuation">.</span>store<span class="token punctuation">.</span>memory <span class="token keyword">import</span> InMemoryStore
+
+<span class="token decorator annotation punctuation">@dataclass</span>
+<span class="token keyword">class</span> <span class="token class-name">Context</span><span class="token punctuation">:</span>
+    user_id<span class="token punctuation">:</span> <span class="token builtin">str</span>
+
+<span class="token keyword">class</span> <span class="token class-name">UserInfo</span><span class="token punctuation">(</span>TypedDict<span class="token punctuation">)</span><span class="token punctuation">:</span>
+    nickname<span class="token punctuation">:</span> <span class="token builtin">str</span>
+    city<span class="token punctuation">:</span> <span class="token builtin">str</span>
+
+<span class="token decorator annotation punctuation">@tool</span>
+<span class="token keyword">def</span> <span class="token function">save_profile</span><span class="token punctuation">(</span>user_info<span class="token punctuation">:</span> UserInfo<span class="token punctuation">,</span> runtime<span class="token punctuation">:</span> ToolRuntime<span class="token punctuation">[</span>Context<span class="token punctuation">]</span><span class="token punctuation">)</span> <span class="token operator">-</span><span class="token operator">></span> <span class="token builtin">str</span><span class="token punctuation">:</span>
+    <span class="token triple-quoted-string string">"""保存用户资料。当用户主动告知昵称或城市时调用。"""</span>
+    <span class="token keyword">assert</span> runtime<span class="token punctuation">.</span>store <span class="token keyword">is</span> <span class="token keyword">not</span> <span class="token boolean">None</span>
+    runtime<span class="token punctuation">.</span>store<span class="token punctuation">.</span>put<span class="token punctuation">(</span><span class="token punctuation">(</span><span class="token string">"users"</span><span class="token punctuation">,</span><span class="token punctuation">)</span><span class="token punctuation">,</span> runtime<span class="token punctuation">.</span>context<span class="token punctuation">.</span>user_id<span class="token punctuation">,</span> <span class="token builtin">dict</span><span class="token punctuation">(</span>user_info<span class="token punctuation">)</span><span class="token punctuation">)</span>
+    <span class="token keyword">return</span> <span class="token string">"资料已保存"</span>
+
+<span class="token decorator annotation punctuation">@tool</span>
+<span class="token keyword">def</span> <span class="token function">load_profile</span><span class="token punctuation">(</span>runtime<span class="token punctuation">:</span> ToolRuntime<span class="token punctuation">[</span>Context<span class="token punctuation">]</span><span class="token punctuation">)</span> <span class="token operator">-</span><span class="token operator">></span> <span class="token builtin">str</span><span class="token punctuation">:</span>
+    <span class="token triple-quoted-string string">"""读取用户资料。回答涉及用户个人信息前先调用。"""</span>
+    <span class="token keyword">assert</span> runtime<span class="token punctuation">.</span>store <span class="token keyword">is</span> <span class="token keyword">not</span> <span class="token boolean">None</span>
+    item <span class="token operator">=</span> runtime<span class="token punctuation">.</span>store<span class="token punctuation">.</span>get<span class="token punctuation">(</span><span class="token punctuation">(</span><span class="token string">"users"</span><span class="token punctuation">,</span><span class="token punctuation">)</span><span class="token punctuation">,</span> runtime<span class="token punctuation">.</span>context<span class="token punctuation">.</span>user_id<span class="token punctuation">)</span>
+    <span class="token keyword">return</span> <span class="token builtin">str</span><span class="token punctuation">(</span>item<span class="token punctuation">.</span>value<span class="token punctuation">)</span> <span class="token keyword">if</span> item <span class="token keyword">else</span> <span class="token string">"没有历史资料"</span>
+
+load_dotenv<span class="token punctuation">(</span><span class="token punctuation">)</span>
+store <span class="token operator">=</span> InMemoryStore<span class="token punctuation">(</span><span class="token punctuation">)</span>
+agent <span class="token operator">=</span> create_agent<span class="token punctuation">(</span>
+    model<span class="token operator">=</span><span class="token string">"openai:gpt-5-nano"</span><span class="token punctuation">,</span>
+    tools<span class="token operator">=</span><span class="token punctuation">[</span>save_profile<span class="token punctuation">,</span> load_profile<span class="token punctuation">]</span><span class="token punctuation">,</span>
+    store<span class="token operator">=</span>store<span class="token punctuation">,</span>
+    context_schema<span class="token operator">=</span>Context<span class="token punctuation">,</span>
+    checkpointer<span class="token operator">=</span>InMemorySaver<span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">,</span>
+<span class="token punctuation">)</span>
+ctx <span class="token operator">=</span> Context<span class="token punctuation">(</span>user_id<span class="token operator">=</span><span class="token string">"u_001"</span><span class="token punctuation">)</span>
+
+<span class="token comment"># 会话 A：用户报上资料</span>
+c1 <span class="token operator">=</span> <span class="token punctuation">&#123;</span><span class="token string">"configurable"</span><span class="token punctuation">:</span> <span class="token punctuation">&#123;</span><span class="token string">"thread_id"</span><span class="token punctuation">:</span> <span class="token string">"chat-A"</span><span class="token punctuation">&#125;</span><span class="token punctuation">&#125;</span>
+agent<span class="token punctuation">.</span>invoke<span class="token punctuation">(</span><span class="token punctuation">&#123;</span><span class="token string">"messages"</span><span class="token punctuation">:</span> <span class="token punctuation">[</span><span class="token punctuation">&#123;</span><span class="token string">"role"</span><span class="token punctuation">:</span> <span class="token string">"user"</span><span class="token punctuation">,</span> <span class="token string">"content"</span><span class="token punctuation">:</span> <span class="token string">"我叫阿勇，常驻成都"</span><span class="token punctuation">&#125;</span><span class="token punctuation">]</span><span class="token punctuation">&#125;</span><span class="token punctuation">,</span> config<span class="token operator">=</span>c1<span class="token punctuation">,</span> context<span class="token operator">=</span>ctx<span class="token punctuation">)</span>
+
+<span class="token comment"># 会话 B：全新 thread，短期记忆已丢，但长期记忆还在</span>
+c2 <span class="token operator">=</span> <span class="token punctuation">&#123;</span><span class="token string">"configurable"</span><span class="token punctuation">:</span> <span class="token punctuation">&#123;</span><span class="token string">"thread_id"</span><span class="token punctuation">:</span> <span class="token string">"chat-B"</span><span class="token punctuation">&#125;</span><span class="token punctuation">&#125;</span>
+r <span class="token operator">=</span> agent<span class="token punctuation">.</span>invoke<span class="token punctuation">(</span><span class="token punctuation">&#123;</span><span class="token string">"messages"</span><span class="token punctuation">:</span> <span class="token punctuation">[</span><span class="token punctuation">&#123;</span><span class="token string">"role"</span><span class="token punctuation">:</span> <span class="token string">"user"</span><span class="token punctuation">,</span> <span class="token string">"content"</span><span class="token punctuation">:</span> <span class="token string">"帮我查一下我的资料"</span><span class="token punctuation">&#125;</span><span class="token punctuation">]</span><span class="token punctuation">&#125;</span><span class="token punctuation">,</span> config<span class="token operator">=</span>c2<span class="token punctuation">,</span> context<span class="token operator">=</span>ctx<span class="token punctuation">)</span>
+<span class="token keyword">print</span><span class="token punctuation">(</span><span class="token string">"会话B回复:"</span><span class="token punctuation">,</span> r<span class="token punctuation">[</span><span class="token string">"messages"</span><span class="token punctuation">]</span><span class="token punctuation">[</span><span class="token operator">-</span><span class="token number">1</span><span class="token punctuation">]</span><span class="token punctuation">.</span>text<span class="token punctuation">)</span>
+<span class="token keyword">print</span><span class="token punctuation">(</span><span class="token string">"store 直读:"</span><span class="token punctuation">,</span> store<span class="token punctuation">.</span>get<span class="token punctuation">(</span><span class="token punctuation">(</span><span class="token string">"users"</span><span class="token punctuation">,</span><span class="token punctuation">)</span><span class="token punctuation">,</span> <span class="token string">"u_001"</span><span class="token punctuation">)</span><span class="token punctuation">.</span>value<span class="token punctuation">)</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<h3 id="步骤-5：预期输出"><a href="#步骤-5：预期输出" class="headerlink" title="步骤 5：预期输出"></a>步骤 5：预期输出</h3><pre class="line-numbers language-text" data-language="text"><code class="language-text">会话B回复: 你的资料：昵称 阿勇，城市 成都。
+store 直读: &#123;'nickname': '阿勇', 'city': '成都'&#125;<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span></span></code></pre>
+
+<p>会话 B 是全新 <code>thread_id</code>，短期历史为空；能答出资料，说明走的是 store。</p>
+<h3 id="步骤-6：验证是否成功"><a href="#步骤-6：验证是否成功" class="headerlink" title="步骤 6：验证是否成功"></a>步骤 6：验证是否成功</h3><ul>
+<li>把 <code>c2</code> 改成同一个 <code>thread_id</code>（<code>chat-A</code>）再跑，模型不需要调工具也能凭历史回答——这是短期记忆在起作用；</li>
+<li>临时删掉 <code>store=store</code> 参数，工具里的 <code>assert</code> 会抛错，说明 store 必须显式传入；</li>
+<li>换 <code>user_id</code> 为 <code>u_002</code> 再跑，读到「没有历史资料」，说明 namespace + key 的隔离有效。</li>
+</ul>
+<h2 id="七、常见坑（官方明确限制-版本差异）"><a href="#七、常见坑（官方明确限制-版本差异）" class="headerlink" title="七、常见坑（官方明确限制&#x2F;版本差异）"></a>七、常见坑（官方明确限制&#x2F;版本差异）</h2><ol>
+<li><strong>以为换了 <code>thread_id</code> 记忆就没了</strong>。短期记忆确实没了；但 store 仍能读到——搞混这两层，会误判「记忆丢失」。</li>
+<li><strong>用 <code>InMemorySaver</code> 上线</strong>。官方明确它是开发用的，进程重启即失；生产换 Postgres &#x2F; SQLite。</li>
+<li><strong>namespace 不带 user_id</strong>。多个用户共用一个 namespace + key，会互相覆盖（官方示例特意把 user_id 放进 namespace）。</li>
+<li><strong>store 写入不做去重</strong>。同名 key 反复 <code>put</code> 是覆盖语义，想保留历史要自己设计多 key 或版本字段（官方未给默认策略）。</li>
+<li><strong>工具里忘记 <code>assert runtime.store is not None</code></strong>。忘了传 store 时报的是 <code>NoneType</code> 错误，排查成本高；显式断言能立刻定位。</li>
+</ol>
+<h2 id="八、课后小结"><a href="#八、课后小结" class="headerlink" title="八、课后小结"></a>八、课后小结</h2><ul>
+<li>短期&#x3D;thread 内，靠 <code>checkpointer</code> + <code>thread_id</code>；长期&#x3D;跨 thread，靠 <code>store</code> + namespace&#x2F;key；</li>
+<li><code>state_schema</code> 扩展自定义字段，<code>context_schema</code> 传身份；</li>
+<li>工具读写长期记忆：<code>runtime.store.get/put/search</code>，前提是 <code>create_agent(store=...)</code>；</li>
+<li>生产换 Postgres（Saver &#x2F; Store 各一个包），内存版只用于开发；</li>
+<li>想让记忆免于被上下文裁剪，就落 store。</li>
+</ul>
+<h2 id="九、思考题"><a href="#九、思考题" class="headerlink" title="九、思考题"></a>九、思考题</h2><p><strong>1、<code>checkpointer</code> 和 <code>store</code> 都能「记住」，区别到底是什么？</strong></p>
+<p>参考回答：作用域与键不同。<code>checkpointer</code> 按 <code>thread_id</code> 存整份图状态（含消息历史），只在同一 thread 内可读；<code>store</code> 按 namespace+key 存 JSON 文档，跨 thread 可读。前者是「这段对话的过程」，后者是「这个人的事实」。</p>
+<p><strong>2、为什么短期记忆能被 <code>SummarizationMiddleware</code> 压缩，而 store 里的记忆不会？</strong></p>
+<p>参考回答：摘要中间件作用于 <code>state[&quot;messages&quot;]</code>；store 是另一个存储，中间件不碰它。这也正是把关键事实落 store 的理由——它不会因为上下文压缩而消失。</p>
+<p><strong>3、多租户场景，namespace 应该怎么设计？</strong></p>
+<p>参考回答：至少两级：<code>(org_id, user_id)</code> 存个人数据，<code>(org_id, &quot;shared&quot;)</code> 存组织共享数据；这样既隔离租户，又能做组织级共享，还能用 <code>store.search</code> 在单层内做过滤检索。</p>
+<p><strong>4、生产上要同时换 <code>PostgresSaver</code> 和 <code>PostgresStore</code> 吗？</strong></p>
+<p>参考回答：看你要哪种记忆。只要多轮会话，换 Saver 就够；要跨会话画像，再上 Store。两者都来自 <code>langgraph-checkpoint-postgres</code>，但都是独立对象，各自 <code>setup()</code> 建表。</p>
+<h2 id="十、下一篇预告"><a href="#十、下一篇预告" class="headerlink" title="十、下一篇预告"></a>十、下一篇预告</h2><p><strong>下一篇标题</strong>：13 RAG：加载、切分、向量库与带出处的检索。</p>
+<p><strong>一句话内容</strong>：把外部知识接进来——<code>Document</code> 与 metadata、切分器参数、embedding 与向量库、<code>as_retriever</code> 的三种检索模式，以及怎么让回答带上「来源 + 页码」。</p>
+<p><strong>承接关系</strong>：本篇解决「记住用户说过什么」，下一篇解决「知道文档里写了什么」；两者最终都作为上下文喂给同一个 Agent。</p>
+<p><strong>跳转位置</strong>：M4 第三讲。</p>
+<h2 id="十一、官方资料"><a href="#十一、官方资料" class="headerlink" title="十一、官方资料"></a>十一、官方资料</h2><ul>
+<li>Short-term memory（checkpointer、state 扩展、三种压缩策略）：<a target="_blank" rel="noopener" href="https://docs.langchain.com/oss/python/langchain/short-term-memory">https://docs.langchain.com/oss/python/langchain/short-term-memory</a></li>
+<li>Long-term memory（store 用法、namespace&#x2F;key、工具读写）：<a target="_blank" rel="noopener" href="https://docs.langchain.com/oss/python/langchain/long-term-memory">https://docs.langchain.com/oss/python/langchain/long-term-memory</a></li>
+<li>Persistence（checkpointer 库清单与 Postgres&#x2F;Redis 后端）：<a target="_blank" rel="noopener" href="https://docs.langchain.com/oss/python/langgraph/persistence">https://docs.langchain.com/oss/python/langgraph/persistence</a></li>
+</ul>
+<p>上一篇：<a href="/2026/12/09/ai/langchain/langchain-11-context/">LC11 上下文工程</a> ｜ 下一篇：<a href="/2026/12/11/ai/langchain/langchain-13-rag/">LC13 RAG 检索</a> ｜ <a href="/2026/11/28/ai/langchain/langchain-0-series-index/">总目录</a></p>
+</div>
+
+  <div class="mb-foot">
+    <a href="/phone/">返回手机首页</a>
+    <a href="/phone/tags/">星迹索引</a>
+  </div>
+</div>
+
+
+<script>
+  /* 作用：懒加载本地 mermaid 库；无 mermaid 代码块时不加载 */
+  function loadLocalMermaid(){
+    return new Promise(function(resolve, reject){
+      if(window.mermaid) return resolve(window.mermaid);
+      var s = document.createElement('script');
+      s.src = '/js/third-party/mermaid/mermaid.min.js?v=10';
+      s.onload = function(){ resolve(window.mermaid); };
+      s.onerror = function(){ reject(new Error('mermaid local load failed')); };
+      document.head.appendChild(s);
+    });
+  }
+
+  /* 作用：把 ```mermaid 代码块替换成 SVG 图（手机端字号略小、图可横向滚动） */
+  async function renderMermaidDiagram(){
+    var blocks = document.querySelectorAll('pre[class*="language-mermaid"]');
+    if(!blocks.length) return;
+    var mermaid;
+    try { mermaid = await loadLocalMermaid(); }
+    catch(e){ console.warn('[mermaid] 本地库加载失败：', e); return; }
+
+    mermaid.initialize({
+      startOnLoad: false,
+      theme: 'base',
+      themeVariables: {
+        darkMode: true,
+        background: 'transparent',
+        fontFamily: '"Microsoft YaHei", "PingFang SC", "Segoe UI", sans-serif',
+        fontSize: '12px',
+        primaryColor: '#062f3d',
+        primaryTextColor: '#d6f6ff',
+        primaryBorderColor: '#00eeff',
+        secondaryColor: '#04222d',
+        tertiaryColor: '#04222d',
+        mainBkg: '#062f3d',
+        nodeBorder: '#00eeff',
+        clusterBkg: '#02161f',
+        clusterBorder: '#00eeff55',
+        lineColor: '#00eeff',
+        textColor: '#c0e8ff',
+        edgeLabelBackground: '#02161f'
+      },
+      flowchart: { curve: 'basis', useMaxWidth: false, htmlLabels: false, nodeSpacing: 30, rankSpacing: 40, padding: 10 }
+    });
+
+    var targets = [];
+    blocks.forEach(function(el){
+      var codeEl = el.querySelector('code');
+      if(!codeEl) return;
+      var div = document.createElement('div');
+      div.className = 'mermaid';
+      div.textContent = codeEl.textContent;
+      el.parentNode.replaceChild(div, el);
+      targets.push(div);
+    });
+    if(!targets.length) return;
+    try { await mermaid.run({ nodes: targets }); }
+    catch(e){ console.warn('[mermaid] 渲染失败：', e); }
+  }
+  /* 作用：多次触发兜底（延迟重试 + DOM 变化），防止某次时机没跑到导致图表留在代码块 */
+  var mmBusy = false;
+  function scheduleMermaid(){
+    if(mmBusy) return;
+    mmBusy = true;
+    renderMermaidDiagram().then(function(){ mmBusy = false; }, function(){ mmBusy = false; });
+  }
+  scheduleMermaid();
+  window.addEventListener('load', scheduleMermaid);
+  [1000, 3000, 8000].forEach(function(ms){ setTimeout(scheduleMermaid, ms); });
+  if(document.readyState !== 'loading') scheduleMermaid();
+  if(window.MutationObserver){
+    var mmTimer = null;
+    var mmObserver = new MutationObserver(function(){
+      clearTimeout(mmTimer);
+      mmTimer = setTimeout(scheduleMermaid, 400);
+    });
+    mmObserver.observe(document.querySelector('.mb-article') || document.body, { childList: true, subtree: true });
+  }
+</script>
+</body>
+</html>

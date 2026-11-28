@@ -1,0 +1,451 @@
+<!--
+  ============================================
+  手机端 · 文章原文页
+  文件：phone/post.njk
+  适用终端：手机端（路由 /phone/p/<slug>/，由 scripts/phone-routes.js 生成）
+  作用：手机阅读单篇文章；单列布局、无侧栏无雷达，替代电脑端 post.njk
+        数据由生成期算好：page.item = { title, dateStr, content, cats, tags }
+  样式依赖：source/css/theme/phone/common.css、source/css/theme/phone/list.css
+  组件依赖：phone/_components/Particles.njk
+  最后修改：2026-11-11
+  ============================================
+-->
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="color-scheme" content="dark">
+  <meta name="theme-color" content="#020817">
+  <!-- 首帧兜底：浏览器默认画布是白的，样式未解析前会闪一下白。这条规则先锁死深空底色 -->
+  <style>html{background-color:#020817}</style>
+  <title>LangChain 08 · create_agent 循环：状态、工具回灌与终止条件 - 时空秘境</title>
+  <!-- 手机端样式：基础 + 列表/正文，外链引入（源文件 source/css/theme/phone/） -->
+  <link rel="stylesheet" href="/css/theme/phone/common.css">
+  <link rel="stylesheet" href="/css/theme/phone/list.css">
+<meta name="generator" content="Hexo 8.1.2"></head>
+<body>
+<div class="mb-shell">
+  <!--
+  ============================================
+  手机端星空粒子组件
+  文件：Particles.njk
+  适用终端：手机端
+  作用：Particles.njk 的手机端副本（nunjucks 子目录 include 取不到上级）
+        参数与电脑端 _components/Particles.njk 保持一致：
+        粒子 95 / 连线 118px / opacity 0.32，外加星座层与零星闪烁层
+  最后修改：2026-11-12
+  ============================================
+--><!-- z-index 必须是 0：负层级会被 body 不透明背景盖住，粒子在跑却看不见 -->
+<div id="particles" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 0; pointer-events: none;"></div>
+<!-- 星座层（与首页同一套：随机零星散布星座图形 + 偶尔闪烁的小星） -->
+<div id="constellations" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 1; pointer-events: none;" aria-hidden="true"></div>
+<script src="/js/particles.min.js"></script>
+<script>
+particlesJS("particles", {
+  particles: {
+    number: {
+      value: 95,
+      density: {
+        enable: true,
+        value_area: 800
+      }
+    },
+    color: {
+      value: "#00eeff"
+    },
+    shape: {
+      type: "circle",
+      stroke: {
+        width: 0,
+        color: "#000000"
+      }
+    },
+    opacity: {
+      value: 0.6,
+      random: true,
+      anim: {
+        enable: true,
+        speed: 0.5,
+        opacity_min: 0.1,
+        sync: false
+      }
+    },
+    size: {
+      value: 3,
+      random: true,
+      anim: {
+        enable: true,
+        speed: 2,
+        size_min: 0.1,
+        sync: false
+      }
+    },
+    line_linked: {
+      enable: true,
+      distance: 118,
+      color: "#00eeff",
+      opacity: 0.32,
+      width: 1
+    },
+    move: {
+      enable: true,
+      speed: 0.8,
+      direction: "none",
+      random: true,
+      straight: false,
+      out_mode: "out",
+      bounce: false,
+      attract: {
+        enable: true,
+        rotateX: 600,
+        rotateY: 1200
+      }
+    }
+  },
+  interactivity: {
+    detect_on: "canvas",
+    events: {
+      onhover: {
+        enable: true,
+        mode: "grab"       // 手指按住时粒子聚集
+      },
+      onclick: {
+        enable: true,
+        mode: "push"       // 点击时产生新粒子
+      },
+      resize: true
+    },
+    modes: {
+      grab: {
+        distance: 200,
+        line_linked: {
+          opacity: 1
+        }
+      },
+      push: {
+        particles_nb: 6
+      }
+    }
+  },
+  retina_detect: true
+});
+</script>
+<!-- 星座 + 零星闪烁层：与电脑端共用同一份绘制脚本 -->
+<script src="/js/theme/home/starfield.js"></script>
+
+
+  <div class="mb-top">
+    <a class="mb-back" href="/phone/">← 返回手机首页</a>
+    <span class="mb-sub" style="margin:0">2026-12-06</span>
+  </div>
+
+  <h1 class="mb-title">LangChain 08 · create_agent 循环：状态、工具回灌与终止条件</h1>
+  <div class="mb-sub">
+    分类：ai · langchain
+     ｜ 标签：LangChain · AI · 系统课
+  </div>
+
+  <div class="mb-article"><div class="essay-banner essay-langchain"></div>
+
+<h1 id="08-create-agent-循环：状态、工具回灌与终止条件"><a href="#08-create-agent-循环：状态、工具回灌与终止条件" class="headerlink" title="08 create_agent 循环：状态、工具回灌与终止条件"></a>08 <code>create_agent</code> 循环：状态、工具回灌与终止条件</h1><p><img src="https://wu4yong.github.io/starry-images/assets/img/langchain/v1/lc-8-loop.svg" alt="Agent 的一轮循环：model 节点 → 有 tool_call 就进 tools 节点 → 回灌 → 再问模型"></p>
+<p><em>循环没有「最大轮数」这个魔法参数，退出条件是「模型这一轮不再给 tool_call」｜依据官方 Agents 页自绘</em></p>
+<p><strong>版本不一致提示</strong>：</p>
+<ul>
+<li>本篇基线是 LangChain v1（1.x）+ Python 3.13，官方示例环境是 Python 3.11，仅解释器版本不同；</li>
+<li>旧 0.x 的 <code>AgentExecutor</code> + <code>max_iterations</code> 在 v1 已从主包移除，对应的「轮数上限」能力改由中间件提供；</li>
+<li>官方示例模型名随 provider 更新（如 <code>gpt-6.1-sol</code>），不影响 <code>create_agent</code> 的写法。</li>
+</ul>
+<h2 id="一、学习目标"><a href="#一、学习目标" class="headerlink" title="一、学习目标"></a>一、学习目标</h2><p>学完这一讲，你要能做到三件事：</p>
+<ol>
+<li>说清 <code>create_agent</code> 的几个关键参数，以及哪些必须给、哪些给了才有对话记忆；</li>
+<li>画出 Agent 的一轮循环：模型节点怎么产出 <code>tool_call</code>、工具节点怎么回灌 <code>ToolMessage</code>、什么时候停；</li>
+<li>会用 <code>checkpointer</code> + <code>thread_id</code> 做多轮，会用 <code>context_schema</code> + <code>context</code> 把身份传进工具。</li>
+</ol>
+<h2 id="二、前置知识"><a href="#二、前置知识" class="headerlink" title="二、前置知识"></a>二、前置知识</h2><ul>
+<li>读完 LC05（工具协议）、LC07（失败回灌）、LC03（消息结构）；</li>
+<li>知道「状态」这个词在 Agent 语境里指「这一轮对话累积的消息与自定义字段」；</li>
+<li>不要求懂 LangGraph 的图 API，本讲只用到 <code>create_agent</code> 对外暴露的部分。</li>
+</ul>
+<h2 id="三、理论讲解（官方定义）"><a href="#三、理论讲解（官方定义）" class="headerlink" title="三、理论讲解（官方定义）"></a>三、理论讲解（官方定义）</h2><h3 id="1-create-agent-是一个「装好的图」"><a href="#1-create-agent-是一个「装好的图」" class="headerlink" title="1. create_agent 是一个「装好的图」"></a>1. <code>create_agent</code> 是一个「装好的图」</h3><p>官方 Agents 页的定位很直白：<code>create_agent</code> 返回的是一个<strong>编译好的 LangGraph</strong>，中间件钩子就跑在这张图里。所以你拿到的 <code>agent</code> 既能 <code>invoke</code> &#x2F; <code>stream</code>，也能当子图塞进更大的 <code>StateGraph</code>。</p>
+<p>常用参数（按重要性）：</p>
+<table>
+<thead>
+<tr>
+<th>参数</th>
+<th>作用</th>
+<th>不给会怎样</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>model</code></td>
+<td>模型标识符或模型实例</td>
+<td>必须给</td>
+</tr>
+<tr>
+<td><code>tools</code></td>
+<td>工具列表，可为空</td>
+<td>不给就是纯对话 Agent</td>
+</tr>
+<tr>
+<td><code>system_prompt</code></td>
+<td>系统提示，字符串或 <code>SystemMessage</code></td>
+<td>没有角色约束</td>
+</tr>
+<tr>
+<td><code>middleware</code></td>
+<td>中间件列表</td>
+<td>没有重试、摘要、人工确认等能力</td>
+</tr>
+<tr>
+<td><code>response_format</code></td>
+<td>结构化输出策略（LC06）</td>
+<td>返回自然语言</td>
+</tr>
+<tr>
+<td><code>state_schema</code></td>
+<td>自定义状态字段（继承 <code>AgentState</code>）</td>
+<td>只有 <code>messages</code></td>
+</tr>
+<tr>
+<td><code>context_schema</code></td>
+<td>每次调用传入的不可变上下文的类型</td>
+<td>无法按身份个性化</td>
+</tr>
+<tr>
+<td><code>checkpointer</code></td>
+<td>状态持久化</td>
+<td>多轮之间不记忆</td>
+</tr>
+<tr>
+<td><code>name</code></td>
+<td>Agent 名字，流式里用于区分来源</td>
+<td>子 Agent 场景下难分辨</td>
+</tr>
+</tbody></table>
+<h3 id="2-循环本体"><a href="#2-循环本体" class="headerlink" title="2. 循环本体"></a>2. 循环本体</h3><p>官方 Middleware Overview 对循环的描述是：「调用模型 → 让模型选择要执行的工具 → 当它不再调用工具时结束」。落到节点上：</p>
+<ol>
+<li><strong>model 节点</strong>：把当前 <code>messages</code> 发给模型，拿回一条 <code>AIMessage</code>；</li>
+<li><strong>判断</strong>：<code>AIMessage.tool_calls</code> 非空 → 进 tools 节点；为空 → 结束；</li>
+<li><strong>tools 节点</strong>：按每个 tool call 执行工具，产出 <code>ToolMessage</code>（带 <code>tool_call_id</code>）追加进 <code>messages</code>；</li>
+<li><strong>回到 model 节点</strong>，带着新的 <code>ToolMessage</code> 再问一次。</li>
+</ol>
+<p>这也解释了两个常见现象：模型「多调一轮」不一定是 bug，而是它还有没消化的工具结果；「循环停不下来」通常是工具总在返回错误、模型一直重试。</p>
+<h3 id="3-状态里到底有什么"><a href="#3-状态里到底有什么" class="headerlink" title="3. 状态里到底有什么"></a>3. 状态里到底有什么</h3><p><code>AgentState</code> 的最小形态就是 <code>messages</code>，官方在中间件、工具章节里反复用 <code>state[&quot;messages&quot;]</code> 读写。要在状态里加字段，就继承 <code>AgentState</code> 传给 <code>state_schema</code>；这也是 LC05 里「工具用 <code>Command</code> 改状态」的落点。</p>
+<h3 id="4-多轮记忆：checkpointer-thread-id"><a href="#4-多轮记忆：checkpointer-thread-id" class="headerlink" title="4. 多轮记忆：checkpointer + thread_id"></a>4. 多轮记忆：checkpointer + thread_id</h3><p>官方给的范式：</p>
+<pre class="line-numbers language-python" data-language="python"><code class="language-python"><span class="token keyword">from</span> langchain_core<span class="token punctuation">.</span>utils<span class="token punctuation">.</span>uuid <span class="token keyword">import</span> uuid7
+<span class="token keyword">from</span> langgraph<span class="token punctuation">.</span>checkpoint<span class="token punctuation">.</span>memory <span class="token keyword">import</span> InMemorySaver
+
+agent <span class="token operator">=</span> create_agent<span class="token punctuation">(</span>model<span class="token operator">=</span><span class="token punctuation">.</span><span class="token punctuation">.</span><span class="token punctuation">.</span><span class="token punctuation">,</span> tools<span class="token operator">=</span><span class="token punctuation">[</span><span class="token punctuation">]</span><span class="token punctuation">,</span> checkpointer<span class="token operator">=</span>InMemorySaver<span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span>
+config <span class="token operator">=</span> <span class="token punctuation">&#123;</span><span class="token string">"configurable"</span><span class="token punctuation">:</span> <span class="token punctuation">&#123;</span><span class="token string">"thread_id"</span><span class="token punctuation">:</span> <span class="token builtin">str</span><span class="token punctuation">(</span>uuid7<span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">&#125;</span><span class="token punctuation">&#125;</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<p>同一个 <code>thread_id</code> 复用 &#x3D; 同一段对话；换 <code>thread_id</code> &#x3D; 新会话。官方提醒：部署到 LangSmith Agent Server 时会自动配好 checkpointer，本地跑必须显式传。</p>
+<h3 id="5-每次调用的上下文：context-schema-context"><a href="#5-每次调用的上下文：context-schema-context" class="headerlink" title="5. 每次调用的上下文：context_schema + context"></a>5. 每次调用的上下文：<code>context_schema</code> + <code>context</code></h3><p>如果要把「用户 ID、租户、开关」传给工具与中间件，用 <code>context_schema</code> 声明形状，<code>invoke</code> 时传 <code>context</code>：</p>
+<pre class="line-numbers language-python" data-language="python"><code class="language-python"><span class="token decorator annotation punctuation">@dataclass</span>
+<span class="token keyword">class</span> <span class="token class-name">Context</span><span class="token punctuation">:</span>
+    user_id<span class="token punctuation">:</span> <span class="token builtin">str</span>
+
+agent <span class="token operator">=</span> create_agent<span class="token punctuation">(</span>model<span class="token operator">=</span><span class="token punctuation">.</span><span class="token punctuation">.</span><span class="token punctuation">.</span><span class="token punctuation">,</span> tools<span class="token operator">=</span><span class="token punctuation">[</span><span class="token punctuation">]</span><span class="token punctuation">,</span> context_schema<span class="token operator">=</span>Context<span class="token punctuation">,</span> checkpointer<span class="token operator">=</span>InMemorySaver<span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span>
+result <span class="token operator">=</span> agent<span class="token punctuation">.</span>invoke<span class="token punctuation">(</span><span class="token punctuation">&#123;</span><span class="token string">"messages"</span><span class="token punctuation">:</span> <span class="token punctuation">[</span><span class="token punctuation">.</span><span class="token punctuation">.</span><span class="token punctuation">.</span><span class="token punctuation">]</span><span class="token punctuation">&#125;</span><span class="token punctuation">,</span> config<span class="token operator">=</span><span class="token punctuation">&#123;</span><span class="token string">"configurable"</span><span class="token punctuation">:</span> <span class="token punctuation">&#123;</span><span class="token string">"thread_id"</span><span class="token punctuation">:</span> <span class="token string">"t1"</span><span class="token punctuation">&#125;</span><span class="token punctuation">&#125;</span><span class="token punctuation">,</span> context<span class="token operator">=</span>Context<span class="token punctuation">(</span>user_id<span class="token operator">=</span><span class="token string">"user-123"</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<p>工具里通过 <code>runtime.context</code> 取（LC05）。这条链路和「把 <code>user_id</code> 塞进工具参数」是两回事：前者不可伪造。</p>
+<h2 id="四、原理拆解"><a href="#四、原理拆解" class="headerlink" title="四、原理拆解"></a>四、原理拆解</h2><p><img src="https://wu4yong.github.io/starry-images/assets/img/langchain/v1/lc-8b-exit.svg" alt="终止条件与四类退出：无 tool_call、中间件 jump_to、调用上限、人工中断"></p>
+<p><em>正常退出靠「不给 tool_call」，异常退出靠中间件与上限兜底｜自绘</em></p>
+<p>把 Agent 想成客服工单的流转：</p>
+<ul>
+<li><strong>model 节点</strong>是坐席，看工单（<code>messages</code>）决定「自己能答」还是「要查系统」；</li>
+<li><strong>tools 节点</strong>是后台，查完往工单上贴一条结果（<code>ToolMessage</code>）；</li>
+<li>坐席看到结果再判断：能答就答（本轮无 <code>tool_call</code>，流程结束），还要再查就继续开单。</li>
+</ul>
+<p>三个关键判断：</p>
+<ol>
+<li><strong>谁决定停</strong>：模型，不是框架。框架只认「这一轮有没有 tool_call」。</li>
+<li><strong>为什么需要上限</strong>：模型可能一直要工具（尤其工具总失败时），<code>ModelCallLimitMiddleware</code> &#x2F; <code>ToolCallLimitMiddleware</code> 是安全带。</li>
+<li><strong>记忆从哪来</strong>：<code>messages</code> 是每轮传入的，<code>checkpointer</code> 负责把它跨轮存住；不传 checkpointer，第二轮就是「失忆的新会话」。</li>
+</ol>
+<h2 id="五、场景说明"><a href="#五、场景说明" class="headerlink" title="五、场景说明"></a>五、场景说明</h2><ol>
+<li><strong>单轮问答 Agent</strong>：<code>tools</code> 空、不传 checkpointer，最省；</li>
+<li><strong>多轮客服</strong>：<code>checkpointer</code> + 稳定 <code>thread_id</code>（如用户会话 ID），配 <code>context_schema</code> 传租户；</li>
+<li><strong>多 Agent 协作</strong>：给每个 Agent 设 <code>name</code>，流式里靠 <code>lc_agent_name</code> 区分谁在说话；</li>
+<li><strong>要审计的流程</strong>：中间件里做调用上限 + 日志，把每轮 tool call 落库。</li>
+</ol>
+<h2 id="六、示例代码"><a href="#六、示例代码" class="headerlink" title="六、示例代码"></a>六、示例代码</h2><h3 id="步骤-1：环境准备"><a href="#步骤-1：环境准备" class="headerlink" title="步骤 1：环境准备"></a>步骤 1：环境准备</h3><pre class="line-numbers language-bash" data-language="bash"><code class="language-bash">uv <span class="token function">add</span> <span class="token string">"langchain[openai]"</span>
+<span class="token comment"># pip 等价：pip install -U "langchain[openai]"</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span></span></code></pre>
+
+<h3 id="步骤-2：凭证配置"><a href="#步骤-2：凭证配置" class="headerlink" title="步骤 2：凭证配置"></a>步骤 2：凭证配置</h3><p>同 LC01，<code>OPENAI_API_KEY</code> 放 <code>.env</code>。</p>
+<h3 id="步骤-3：导入"><a href="#步骤-3：导入" class="headerlink" title="步骤 3：导入"></a>步骤 3：导入</h3><pre class="line-numbers language-python" data-language="python"><code class="language-python"><span class="token keyword">from</span> langchain<span class="token punctuation">.</span>agents <span class="token keyword">import</span> create_agent<span class="token punctuation">,</span> AgentState   <span class="token comment"># AgentState 用于自定义状态</span>
+<span class="token keyword">from</span> langgraph<span class="token punctuation">.</span>checkpoint<span class="token punctuation">.</span>memory <span class="token keyword">import</span> InMemorySaver   <span class="token comment"># 本地多轮记忆</span>
+<span class="token keyword">from</span> langchain_core<span class="token punctuation">.</span>utils<span class="token punctuation">.</span>uuid <span class="token keyword">import</span> uuid7<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span></span></code></pre>
+
+<h3 id="步骤-4：最小可运行代码"><a href="#步骤-4：最小可运行代码" class="headerlink" title="步骤 4：最小可运行代码"></a>步骤 4：最小可运行代码</h3><p>存成 <code>agent_demo.py</code>，<code>uv run agent_demo.py</code>。</p>
+<pre class="line-numbers language-python" data-language="python"><code class="language-python"><span class="token keyword">from</span> dataclasses <span class="token keyword">import</span> dataclass
+<span class="token keyword">from</span> dotenv <span class="token keyword">import</span> load_dotenv
+<span class="token keyword">from</span> langchain<span class="token punctuation">.</span>agents <span class="token keyword">import</span> create_agent
+<span class="token keyword">from</span> langchain<span class="token punctuation">.</span>tools <span class="token keyword">import</span> tool<span class="token punctuation">,</span> ToolRuntime
+<span class="token keyword">from</span> langchain_core<span class="token punctuation">.</span>utils<span class="token punctuation">.</span>uuid <span class="token keyword">import</span> uuid7
+<span class="token keyword">from</span> langgraph<span class="token punctuation">.</span>checkpoint<span class="token punctuation">.</span>memory <span class="token keyword">import</span> InMemorySaver
+
+ORDERS <span class="token operator">=</span> <span class="token punctuation">&#123;</span><span class="token string">"SO-2026-0001"</span><span class="token punctuation">:</span> <span class="token string">"已发货，预计明天送达"</span><span class="token punctuation">&#125;</span>
+
+<span class="token decorator annotation punctuation">@tool</span>
+<span class="token keyword">def</span> <span class="token function">get_order</span><span class="token punctuation">(</span>order_id<span class="token punctuation">:</span> <span class="token builtin">str</span><span class="token punctuation">,</span> runtime<span class="token punctuation">:</span> ToolRuntime<span class="token punctuation">)</span> <span class="token operator">-</span><span class="token operator">></span> <span class="token builtin">str</span><span class="token punctuation">:</span>
+    <span class="token triple-quoted-string string">"""查询订单状态。订单号形如 SO-2026-0001。"""</span>
+    <span class="token comment"># runtime 里能拿到上下文，本例只用来演示「注入参数不进 schema」</span>
+    <span class="token keyword">return</span> ORDERS<span class="token punctuation">.</span>get<span class="token punctuation">(</span>order_id<span class="token punctuation">,</span> <span class="token string">"没有这个订单"</span><span class="token punctuation">)</span>
+
+<span class="token decorator annotation punctuation">@dataclass</span>
+<span class="token keyword">class</span> <span class="token class-name">Ctx</span><span class="token punctuation">:</span>
+    user_id<span class="token punctuation">:</span> <span class="token builtin">str</span>
+
+load_dotenv<span class="token punctuation">(</span><span class="token punctuation">)</span>
+agent <span class="token operator">=</span> create_agent<span class="token punctuation">(</span>
+    model<span class="token operator">=</span><span class="token string">"openai:gpt-5-nano"</span><span class="token punctuation">,</span>
+    tools<span class="token operator">=</span><span class="token punctuation">[</span>get_order<span class="token punctuation">]</span><span class="token punctuation">,</span>
+    system_prompt<span class="token operator">=</span><span class="token string">"你是订单客服，需要查单就调用 get_order。"</span><span class="token punctuation">,</span>
+    context_schema<span class="token operator">=</span>Ctx<span class="token punctuation">,</span>
+    checkpointer<span class="token operator">=</span>InMemorySaver<span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">,</span>
+<span class="token punctuation">)</span>
+
+config <span class="token operator">=</span> <span class="token punctuation">&#123;</span><span class="token string">"configurable"</span><span class="token punctuation">:</span> <span class="token punctuation">&#123;</span><span class="token string">"thread_id"</span><span class="token punctuation">:</span> <span class="token builtin">str</span><span class="token punctuation">(</span>uuid7<span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">&#125;</span><span class="token punctuation">&#125;</span>
+
+r1 <span class="token operator">=</span> agent<span class="token punctuation">.</span>invoke<span class="token punctuation">(</span><span class="token punctuation">&#123;</span><span class="token string">"messages"</span><span class="token punctuation">:</span> <span class="token punctuation">[</span><span class="token punctuation">&#123;</span><span class="token string">"role"</span><span class="token punctuation">:</span> <span class="token string">"user"</span><span class="token punctuation">,</span> <span class="token string">"content"</span><span class="token punctuation">:</span> <span class="token string">"SO-2026-0001 到哪了？"</span><span class="token punctuation">&#125;</span><span class="token punctuation">]</span><span class="token punctuation">&#125;</span><span class="token punctuation">,</span>
+                  config<span class="token operator">=</span>config<span class="token punctuation">,</span> context<span class="token operator">=</span>Ctx<span class="token punctuation">(</span>user_id<span class="token operator">=</span><span class="token string">"u-1"</span><span class="token punctuation">)</span><span class="token punctuation">)</span>
+<span class="token keyword">print</span><span class="token punctuation">(</span><span class="token string">"轮次消息数:"</span><span class="token punctuation">,</span> <span class="token builtin">len</span><span class="token punctuation">(</span>r1<span class="token punctuation">[</span><span class="token string">"messages"</span><span class="token punctuation">]</span><span class="token punctuation">)</span><span class="token punctuation">)</span>         <span class="token comment"># 用户 + tool_call + tool 结果 + 回答</span>
+
+r2 <span class="token operator">=</span> agent<span class="token punctuation">.</span>invoke<span class="token punctuation">(</span><span class="token punctuation">&#123;</span><span class="token string">"messages"</span><span class="token punctuation">:</span> <span class="token punctuation">[</span><span class="token punctuation">&#123;</span><span class="token string">"role"</span><span class="token punctuation">:</span> <span class="token string">"user"</span><span class="token punctuation">,</span> <span class="token string">"content"</span><span class="token punctuation">:</span> <span class="token string">"那明天能到吗？"</span><span class="token punctuation">&#125;</span><span class="token punctuation">]</span><span class="token punctuation">&#125;</span><span class="token punctuation">,</span>
+                  config<span class="token operator">=</span>config<span class="token punctuation">,</span> context<span class="token operator">=</span>Ctx<span class="token punctuation">(</span>user_id<span class="token operator">=</span><span class="token string">"u-1"</span><span class="token punctuation">)</span><span class="token punctuation">)</span>
+<span class="token keyword">print</span><span class="token punctuation">(</span><span class="token string">"轮次消息数:"</span><span class="token punctuation">,</span> <span class="token builtin">len</span><span class="token punctuation">(</span>r2<span class="token punctuation">[</span><span class="token string">"messages"</span><span class="token punctuation">]</span><span class="token punctuation">)</span><span class="token punctuation">)</span>         <span class="token comment"># 累加，说明记忆生效</span>
+<span class="token keyword">print</span><span class="token punctuation">(</span>r2<span class="token punctuation">[</span><span class="token string">"messages"</span><span class="token punctuation">]</span><span class="token punctuation">[</span><span class="token operator">-</span><span class="token number">1</span><span class="token punctuation">]</span><span class="token punctuation">.</span>text<span class="token punctuation">)</span><span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+<h3 id="步骤-5：预期输出"><a href="#步骤-5：预期输出" class="headerlink" title="步骤 5：预期输出"></a>步骤 5：预期输出</h3><pre class="line-numbers language-text" data-language="text"><code class="language-text">轮次消息数: 5
+轮次消息数: 7
+能，预计明天送达。<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span></span></code></pre>
+
+<p>第二轮消息数比第一轮多 2（一条用户消息 + 一条回答），说明 <code>checkpointer</code> 把历史带过来了；具体条数取决于模型是否选择调工具。</p>
+<h3 id="步骤-6：验证是否成功"><a href="#步骤-6：验证是否成功" class="headerlink" title="步骤 6：验证是否成功"></a>步骤 6：验证是否成功</h3><ul>
+<li>第一轮 <code>messages</code> 里能找到 <code>ToolMessage</code>，说明 tools 节点跑过；</li>
+<li>第二轮的消息数 ≥ 第一轮 + 2，说明同一 <code>thread_id</code> 记忆生效；</li>
+<li>把 <code>config</code> 换一个 <code>thread_id</code> 再问「那明天能到吗」，模型会说「不知道你指哪个订单」，说明记忆边界正确。</li>
+</ul>
+<h2 id="七、常见坑（官方明确限制-版本差异）"><a href="#七、常见坑（官方明确限制-版本差异）" class="headerlink" title="七、常见坑（官方明确限制&#x2F;版本差异）"></a>七、常见坑（官方明确限制&#x2F;版本差异）</h2><ol>
+<li><strong>不传 checkpointer 却期待多轮记忆</strong>。<code>messages</code> 是每次调用传进去的；没有 checkpointer，上一轮不在状态里。</li>
+<li><strong><code>thread_id</code> 每次新建</strong>。用 <code>uuid7()</code> 每轮生成新 ID 等于每轮新会话；稳定 ID 应由业务给（会话 ID、用户+日期）。</li>
+<li><strong>把 <code>user_id</code> 当工具参数</strong>。应走 <code>context_schema</code> + <code>runtime.context</code>，否则模型可伪造。</li>
+<li><strong>指望框架自己限轮数</strong>。官方没有「最大轮数」基础参数，要靠 <code>ModelCallLimitMiddleware</code> &#x2F; <code>ToolCallLimitMiddleware</code>。</li>
+<li><strong>子 Agent 不设 <code>name</code></strong>。多 Agent 流式时无法区分来源，官方给的键是 <code>lc_agent_name</code>。</li>
+</ol>
+<h2 id="八、课后小结"><a href="#八、课后小结" class="headerlink" title="八、课后小结"></a>八、课后小结</h2><ul>
+<li><code>create_agent</code> 返回编译好的图，中间件钩子跑在图里；</li>
+<li>循环 &#x3D; model → (有 tool_call?) tools → model …，退出条件是「模型本轮无 tool_call」；</li>
+<li>状态最小是 <code>messages</code>，要加字段就继承 <code>AgentState</code> 传 <code>state_schema</code>；</li>
+<li>多轮靠 <code>checkpointer</code> + 稳定 <code>thread_id</code>；</li>
+<li>身份类信息走 <code>context_schema</code> + <code>context</code> + <code>runtime.context</code>。</li>
+</ul>
+<h2 id="九、思考题"><a href="#九、思考题" class="headerlink" title="九、思考题"></a>九、思考题</h2><p><strong>1、Agent 循环的终止条件是什么？为什么不在框架里写死「最多 N 轮」？</strong></p>
+<p>参考回答：终止条件是「这一轮模型没有给 <code>tool_calls</code>」。官方不写死轮数，因为合理轮数随任务差异极大；需要上限时用 <code>ModelCallLimitMiddleware</code> 显式配置，把策略交给使用者。</p>
+<p><strong>2、<code>messages</code> 与 <code>checkpointer</code> 各自负责什么，缺一个会怎样？</strong></p>
+<p>参考回答：<code>messages</code> 是本次调用状态的载体，<code>checkpointer</code> 负责跨调用持久化。只传 <code>messages</code> 不传 checkpointer &#x3D; 每轮失忆；只配 checkpointer 不传 <code>thread_id</code> &#x3D; 记忆没有归属，多个会话互相串。</p>
+<p><strong>3、工具为什么可能「多调一轮」？什么时候说明出问题了？</strong></p>
+<p>参考回答：模型拿到 <code>ToolMessage</code> 后需要再推理一次才能给最终答复，所以多一轮是正常的。异常信号是同一工具、同一参数被反复调用且结果相同——通常说明回灌内容没让模型看懂，或工具在静默失败。</p>
+<p><strong>4、<code>context</code> 与「把用户 ID 塞进 system_prompt」相比好在哪？</strong></p>
+<p>参考回答：<code>context</code> 是结构化、不可伪造、可被工具与中间件直接读取的数据；写进提示词只是文本，既会被模型改写，也会泄漏到日志与输出里。</p>
+<h2 id="十、下一篇预告"><a href="#十、下一篇预告" class="headerlink" title="十、下一篇预告"></a>十、下一篇预告</h2><p><strong>下一篇标题</strong>：09 内置中间件：摘要、人工确认、PII 与调用上限。</p>
+<p><strong>一句话内容</strong>：官方预置了十几件中间件，本讲挑最常用的五六个讲清「什么时候必须上、参数怎么配、装上之后 Agent 行为变成什么样」。</p>
+<p><strong>承接关系</strong>：本篇的循环是「裸机」；真实业务要的不是循环本身，而是可控的循环——限流、压缩历史、写操作前要人点确认。</p>
+<p><strong>跳转位置</strong>：M3 第二讲。</p>
+<h2 id="十一、官方资料"><a href="#十一、官方资料" class="headerlink" title="十一、官方资料"></a>十一、官方资料</h2><ul>
+<li>Agents（<code>create_agent</code> 参数、循环、<code>checkpointer</code>、<code>context_schema</code>）：<a target="_blank" rel="noopener" href="https://docs.langchain.com/oss/python/langchain/agents">https://docs.langchain.com/oss/python/langchain/agents</a></li>
+<li>Middleware Overview（Agent 循环与钩子位置）：<a target="_blank" rel="noopener" href="https://docs.langchain.com/oss/python/langchain/middleware">https://docs.langchain.com/oss/python/langchain/middleware</a></li>
+<li>Tools（<code>ToolRuntime</code> 与 <code>runtime.context</code>）：<a target="_blank" rel="noopener" href="https://docs.langchain.com/oss/python/langchain/tools">https://docs.langchain.com/oss/python/langchain/tools</a></li>
+</ul>
+<p>上一篇：<a href="/2026/12/05/ai/langchain/langchain-7-tool-failure/">LC07 工具失败处理</a> ｜ 下一篇：<a href="/2026/12/07/ai/langchain/langchain-9-middleware/">LC09 内置中间件</a> ｜ <a href="/2026/11/28/ai/langchain/langchain-0-series-index/">总目录</a></p>
+</div>
+
+  <div class="mb-foot">
+    <a href="/phone/">返回手机首页</a>
+    <a href="/phone/tags/">星迹索引</a>
+  </div>
+</div>
+
+
+<script>
+  /* 作用：懒加载本地 mermaid 库；无 mermaid 代码块时不加载 */
+  function loadLocalMermaid(){
+    return new Promise(function(resolve, reject){
+      if(window.mermaid) return resolve(window.mermaid);
+      var s = document.createElement('script');
+      s.src = '/js/third-party/mermaid/mermaid.min.js?v=10';
+      s.onload = function(){ resolve(window.mermaid); };
+      s.onerror = function(){ reject(new Error('mermaid local load failed')); };
+      document.head.appendChild(s);
+    });
+  }
+
+  /* 作用：把 ```mermaid 代码块替换成 SVG 图（手机端字号略小、图可横向滚动） */
+  async function renderMermaidDiagram(){
+    var blocks = document.querySelectorAll('pre[class*="language-mermaid"]');
+    if(!blocks.length) return;
+    var mermaid;
+    try { mermaid = await loadLocalMermaid(); }
+    catch(e){ console.warn('[mermaid] 本地库加载失败：', e); return; }
+
+    mermaid.initialize({
+      startOnLoad: false,
+      theme: 'base',
+      themeVariables: {
+        darkMode: true,
+        background: 'transparent',
+        fontFamily: '"Microsoft YaHei", "PingFang SC", "Segoe UI", sans-serif',
+        fontSize: '12px',
+        primaryColor: '#062f3d',
+        primaryTextColor: '#d6f6ff',
+        primaryBorderColor: '#00eeff',
+        secondaryColor: '#04222d',
+        tertiaryColor: '#04222d',
+        mainBkg: '#062f3d',
+        nodeBorder: '#00eeff',
+        clusterBkg: '#02161f',
+        clusterBorder: '#00eeff55',
+        lineColor: '#00eeff',
+        textColor: '#c0e8ff',
+        edgeLabelBackground: '#02161f'
+      },
+      flowchart: { curve: 'basis', useMaxWidth: false, htmlLabels: false, nodeSpacing: 30, rankSpacing: 40, padding: 10 }
+    });
+
+    var targets = [];
+    blocks.forEach(function(el){
+      var codeEl = el.querySelector('code');
+      if(!codeEl) return;
+      var div = document.createElement('div');
+      div.className = 'mermaid';
+      div.textContent = codeEl.textContent;
+      el.parentNode.replaceChild(div, el);
+      targets.push(div);
+    });
+    if(!targets.length) return;
+    try { await mermaid.run({ nodes: targets }); }
+    catch(e){ console.warn('[mermaid] 渲染失败：', e); }
+  }
+  /* 作用：多次触发兜底（延迟重试 + DOM 变化），防止某次时机没跑到导致图表留在代码块 */
+  var mmBusy = false;
+  function scheduleMermaid(){
+    if(mmBusy) return;
+    mmBusy = true;
+    renderMermaidDiagram().then(function(){ mmBusy = false; }, function(){ mmBusy = false; });
+  }
+  scheduleMermaid();
+  window.addEventListener('load', scheduleMermaid);
+  [1000, 3000, 8000].forEach(function(ms){ setTimeout(scheduleMermaid, ms); });
+  if(document.readyState !== 'loading') scheduleMermaid();
+  if(window.MutationObserver){
+    var mmTimer = null;
+    var mmObserver = new MutationObserver(function(){
+      clearTimeout(mmTimer);
+      mmTimer = setTimeout(scheduleMermaid, 400);
+    });
+    mmObserver.observe(document.querySelector('.mb-article') || document.body, { childList: true, subtree: true });
+  }
+</script>
+</body>
+</html>
